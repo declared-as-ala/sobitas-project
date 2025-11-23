@@ -2,7 +2,7 @@ APP_NAME=sobitas
 APP_ENV=local
 APP_KEY=base64:PH7zZeadZns0fdfraRujqg/OY36VwwleUm97+f/a+aA=
 APP_DEBUG=true
-APP_URL=http://admin.protein.tn
+APP_URL=http://admin.sobitas.tn
 
 LOG_CHANNEL=stack
 LOG_DEPRECATIONS_CHANNEL=null

@@ -173,7 +173,7 @@ CREATE TABLE `coordinates` (
 --
 
 INSERT INTO `coordinates` (`id`, `designation_fr`, `abbreviation`, `matricule`, `rib`, `email`, `adresse_fr`, `phone_1`, `phone_2`, `cover`, `site_web`, `facebook_link`, `youtube_link`, `favicon`, `logo`, `logo_facture`, `logo_footer`, `short_description_fr`, `description_fr`, `created_by`, `updated_by`, `created_at`, `updated_at`, `timbre`, `tva`, `short_description_ticket`, `footer_ticket`) VALUES
-(1, NULL, 'SOBITAS', '1411068/Q/A/M/000', '12503000003301717490', 'contact@protein.tn', 'Rue Ribat, 4000 Sousse Tunisie', '27 612 500', '73 200 169', NULL, 'https://sobitas.tn/', 'https://www.facebook.com/sobitass/', NULL, NULL, NULL, 'coordonnees\\June2023\\mZ6VWG8biAMklodyYzzE.png', NULL, NULL, NULL, NULL, NULL, '2023-05-20 11:23:37', '2023-06-03 23:34:42', 1, 19, 'Bienvenue chez SOBITAS', 'SOBITAS vous remercie de votre visite');
+(1, NULL, 'SOBITAS', '1411068/Q/A/M/000', '12503000003301717490', 'contact@sobitas.tn', 'Rue Ribat, 4000 Sousse Tunisie', '27 612 500', '73 200 169', NULL, 'https://sobitas.tn/', 'https://www.facebook.com/sobitass/', NULL, NULL, NULL, 'coordonnees\\June2023\\mZ6VWG8biAMklodyYzzE.png', NULL, NULL, NULL, NULL, NULL, '2023-05-20 11:23:37', '2023-06-03 23:34:42', 1, 19, 'Bienvenue chez SOBITAS', 'SOBITAS vous remercie de votre visite');
 
 -- --------------------------------------------------------
 

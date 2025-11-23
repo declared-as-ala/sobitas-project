@@ -28,6 +28,6 @@ class SoumissionMail extends Mailable
      */
     public function build()
     {
-        return $this->from('contact@protein.tn')->subject('Protein.TN | Suivi de commande')->view('emails.SoumissionMail');
+        return $this->from('contact@sobitas.tn')->subject('Protein.TN | Suivi de commande')->view('emails.SoumissionMail');
     }
 }

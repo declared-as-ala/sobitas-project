@@ -80,7 +80,7 @@
 
                 <div class="col-md-4 col-4 col-lg-4">
                     <div class="panel widget center bgimage"
-                        style="margin-bottom:0;overflow:hidden; background-image: url(https://admin.protein.tn/public/admin/voyager-assets?path=images%2Fwidget-backgrounds%2F02.jpg);">
+                        style="margin-bottom:0;overflow:hidden; background-image: url(https://admin.sobitas.tn/public/admin/voyager-assets?path=images%2Fwidget-backgrounds%2F02.jpg);">
                         <div class="dimmer"></div>
                         <div class="panel-content">
                             <i class="voyager-file-text"></i>
@@ -94,7 +94,7 @@
 
                 <div class="col-md-4  col-4 col-lg-4">
                     <div class="panel widget center bgimage"
-                        style="margin-bottom:0;overflow:hidden; background-image: url(https://admin.protein.tn/public/admin/voyager-assets?path=images%2Fwidget-backgrounds%2F01.jpg);">
+                        style="margin-bottom:0;overflow:hidden; background-image: url(https://admin.sobitas.tn/public/admin/voyager-assets?path=images%2Fwidget-backgrounds%2F01.jpg);">
                         <div class="dimmer"></div>
                         <div class="panel-content">
                             <i class="voyager-group"></i>
@@ -107,7 +107,7 @@
                 </div>
                 <div class="col-md-4  col-4 col-lg-4">
                     <div class="panel widget center bgimage"
-                        style="margin-bottom:0;overflow:hidden;background-image: url(https://admin.protein.tn/public/admin/voyager-assets?path=images%2Fwidget-backgrounds%2F03.jpg);">
+                        style="margin-bottom:0;overflow:hidden;background-image: url(https://admin.sobitas.tn/public/admin/voyager-assets?path=images%2Fwidget-backgrounds%2F03.jpg);">
                         <div class="dimmer"></div>
                         <div class="panel-content">
                             <i class="voyager-archive"></i>
