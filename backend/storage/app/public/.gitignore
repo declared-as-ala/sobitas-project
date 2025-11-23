@@ -1,9 +1,2 @@
-# Ignore everything by default
 *
-
-# Keep this file
 !.gitignore
-
-# Keep all folders and all their contents
-!*/
-!*/**
