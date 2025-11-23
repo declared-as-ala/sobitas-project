@@ -381,7 +381,7 @@ export class ProductsListComponent implements OnInit {
     link.setAttribute('rel', 'canonical');
     this._document.head.appendChild(link);
     let url = this._document.URL
-    url = url.replace('https://', 'https://')
+    url = url.replace('http://', 'https://')
     link.setAttribute('href', url);
   }
 
