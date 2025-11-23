@@ -7,7 +7,7 @@ import { host } from './config';
 })
 export class CommandeService {
 
-  constructor(private https: HttpClient) { }
+  constructor(private http:HttpClient) { }
 
 
   passer_commande(commande: any, panier: any) {
