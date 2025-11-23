@@ -6,7 +6,7 @@ import { host } from './config';
 })
 export class AuthService {
 
-  constructor(private http: HttpClient) { }
+  constructor(private https: HttpClient) { }
 
 
   registre(form: any) {

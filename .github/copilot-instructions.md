@@ -26,7 +26,7 @@ Purpose: give AI coding agents the minimal, actionable knowledge to be productiv
     - From `backend/`: `composer install`, copy `.env.example` -> `.env` (composer `post-root-package-install` does this in new projects), then `php artisan key:generate` and `php artisan serve` (or use Docker for parity).
   - Frontend dev: from `frontend/`:
     - `npm install`
-    - `npm run start` (runs `ng serve` → http://localhost:4200)
+    - `npm run start` (runs `ng serve` → https://localhost:4200)
     - Build production bundle: `npm run build` (produces `dist/`) — production container uses the built `dist` directory.
   - Frontend SSR:
     - Build SSR: `npm run build:ssr` then `npm run serve:ssr` (see `frontend/package.json` scripts). `frontend/server.ts` is the SSR entry.

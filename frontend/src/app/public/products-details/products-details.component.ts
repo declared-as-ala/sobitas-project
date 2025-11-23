@@ -246,7 +246,7 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
     link.setAttribute('rel', 'canonical');
     this._document.head.appendChild(link);
     let url = this._document.URL
-    url = url.replace('http://', 'https://')
+    url = url.replace('https://', 'https://')
     link.setAttribute('href', url);
   }
 

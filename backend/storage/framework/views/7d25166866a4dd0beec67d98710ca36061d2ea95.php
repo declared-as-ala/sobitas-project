@@ -493,7 +493,7 @@
                         e.then(function o(e) {
                             var c = e.result;
                             c.items ? r = r.concat(c.items) : i(new Error(
-                                    "You do not have any Google Analytics accounts. Go to http://google.com/analytics to sign up."
+                                    "You do not have any Google Analytics accounts. Go to https://google.com/analytics to sign up."
                                     )), c.startIndex + c.itemsPerPage <= c.totalResults ? gapi.client
                                 .request({
                                     path: n,

@@ -9,7 +9,7 @@ export class ForumService {
 
   constructor(private http : HttpClient) { }
 
-  url = 'http://localhost/bestlife-admin/public/api'
+  url = 'https://localhost/bestlife-admin/public/api'
 
   liste_publications(){
     return this.http.get(host+'/liste_publications')

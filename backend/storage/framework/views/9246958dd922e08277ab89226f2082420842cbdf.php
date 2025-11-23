@@ -77,7 +77,7 @@
             top:0px;
             width:100%;
             height:100%;
-            /* Permalink - use to edit and share this gradient: http://colorzilla.com/gradient-editor/#f8f8f8+0,f8f8f8+100&0.95+0,1+80 */
+            /* Permalink - use to edit and share this gradient: https://colorzilla.com/gradient-editor/#f8f8f8+0,f8f8f8+100&0.95+0,1+80 */
             background: -moz-linear-gradient(top, rgba(248,248,248,0.93) 0%, rgba(248,248,248,1) 80%, rgba(248,248,248,1) 100%); /* FF3.6-15 */
             background: -webkit-linear-gradient(top, rgba(248,248,248,0.93) 0%,rgba(248,248,248,1) 80%,rgba(248,248,248,1) 100%); /* Chrome10-25,Safari5.1-6 */
             background: linear-gradient(to bottom, rgba(248,248,248,0.93) 0%,rgba(248,248,248,1) 80%,rgba(248,248,248,1) 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */

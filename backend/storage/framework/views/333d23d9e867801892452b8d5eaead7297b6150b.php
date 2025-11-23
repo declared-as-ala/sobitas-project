@@ -37,7 +37,7 @@
                                     <?php $__currentLoopData = $dataType->browseRows; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $row): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                     <td>
                                         <?php if($row->type == 'image'): ?>
-                                            <img src="<?php if( strpos($data->{$row->field}, 'http://') === false && strpos($data->{$row->field}, 'https://') === false): ?><?php echo e(Voyager::image( $data->{$row->field} )); ?><?php else: ?><?php echo e($data->{$row->field}); ?><?php endif; ?>" style="width:100px">
+                                            <img src="<?php if( strpos($data->{$row->field}, 'https://') === false && strpos($data->{$row->field}, 'https://') === false): ?><?php echo e(Voyager::image( $data->{$row->field} )); ?><?php else: ?><?php echo e($data->{$row->field}); ?><?php endif; ?>" style="width:100px">
                                         <?php else: ?>
                                             <?php echo e($data->{$row->field}); ?>
 

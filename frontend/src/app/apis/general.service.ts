@@ -10,7 +10,7 @@ import { ShopSection } from '../public/products-list/ShopSection';
   providedIn: 'root',
 })
 export class GeneralService {
-  constructor(private http: HttpClient , @Inject(DOCUMENT) private document: Document) {}
+  constructor(private https: HttpClient , @Inject(DOCUMENT) private document: Document) {}
 
   @Cacheable()
   coordonnees() {
