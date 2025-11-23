@@ -22,7 +22,7 @@ export class HomeComponent implements OnInit {
 
   slides: any = [
     {
-        "cover": "assets/img/slides/sobitas_slide.webp",
+        "cover": "assets/img/slides/sobitas_slide2.webp",
         "designation_fr": "Sobitas, votre boutique de compléments alimentaires en ligne",
         "description_fr": null,
         "btn_text_fr": "Liste des produits",
@@ -33,7 +33,18 @@ export class HomeComponent implements OnInit {
         "type": "web"
     },
     {
-        "cover": "assets/img/slides/sobitas_slide2.webp",
+        "cover": "assets/img/slides/sobitas_slide_2.webp",
+        "designation_fr": "Sobitas, votre boutique de compléments alimentaires en ligne en Tunisie",
+        "description_fr": null,
+        "btn_text_fr": null,
+        "btn_link": null,
+        "position": "right",
+        "text_color": "#07e921",
+        "text_weight": "600",
+        "type": "web"
+    },
+    {
+        "cover": "assets/img/slides/sobitas_slide.webp",
         "designation_fr": "Sobitas, votre boutique de compléments alimentaires en ligne en Tunisie",
         "description_fr": null,
         "btn_text_fr": null,
@@ -146,7 +157,7 @@ export class HomeComponent implements OnInit {
     link.setAttribute('rel', 'canonical');
     this._document.head.appendChild(link);
     let url = this._document.URL
-    url = url.replace('https://', 'https://')
+    url = url.replace('http://', 'https://')
     link.setAttribute('href', url);
   }
 }
