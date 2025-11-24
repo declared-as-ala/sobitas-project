@@ -66,6 +66,17 @@ export class HomeComponent implements OnInit {
         "type": "mobile"
     },
     {
+        "cover": "hardmass_sliderm.webp",
+        "designation_fr": null,
+        "description_fr": null,
+        "btn_text_fr": null,
+        "btn_link": null,
+        "position": "right",
+        "text_color": "#ff0000",
+        "text_weight": "100",
+        "type": "mobile"
+    },
+    {
         "cover": "assets/img/slides/sobitas_slide2m.webp",
         "designation_fr": null,
         "description_fr": null,
