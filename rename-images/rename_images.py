@@ -23,7 +23,7 @@ products = cursor.fetchall()
 # -------------------------
 # Path to your Laravel public folder (mount this folder in Docker)
 # -------------------------
-public_dir = os.getenv("PUBLIC_DIR", "/app/public")
+public_dir = os.getenv("PUBLIC_DIR", "/app")
 
 def slugify(text):
     """Convert string to safe filename"""
