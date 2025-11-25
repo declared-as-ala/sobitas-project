@@ -22,6 +22,6 @@ Route::group(['prefix' => 'admin'], function () {
     Voyager::routes();
     
     // Override only the media upload route
-    Route::post('media/upload', [CustomVoyagerMediaController::class, 'upload'])
+    Route::post('produits', [CustomVoyagerMediaController::class, 'upload'])
         ->name('voyager.media.upload');
 });
