@@ -143,7 +143,28 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-
+  # -------------------------
+  # Rename Images Python Script
+  # -------------------------
+  rename-images:
+    build:
+      context: ./rename-images
+      dockerfile: Dockerfile
+    container_name: sobitas-rename-images
+    restart: "no"
+    networks:
+      - sobitas-net
+    depends_on:
+      - mysql
+      - backend
+    environment:
+      DB_HOST: mysql
+      DB_USER: ${MYSQL_USER}
+      DB_PASSWORD: ${MYSQL_PASSWORD}
+      DB_NAME: ${MYSQL_DATABASE}
+      PUBLIC_DIR: /app/public
+    volumes:
+       - ./backend/storage/app/public/produits:/app/produits:delegated
 volumes:
   mysql-data:
   npm-data:
