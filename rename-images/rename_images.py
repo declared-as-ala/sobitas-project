@@ -38,7 +38,10 @@ def slugify(text):
 for product in products:
     old_path = os.path.join(public_dir, product['cover'])
     if not os.path.exists(old_path):
+        print("===================================")
+        print(f"Product: {product['id']} - {f"cover: {product['cover']}" if product['cover'] else 'no cover'}")
         print(f"File not found: {old_path}")
+        print("Skipping...")
         continue
 
     ext = os.path.splitext(old_path)[1]
