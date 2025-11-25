@@ -162,7 +162,7 @@ services:
       DB_USER: ${MYSQL_USER}
       DB_PASSWORD: ${MYSQL_PASSWORD}
       DB_NAME: ${MYSQL_DATABASE}
-      PUBLIC_DIR: /app/public
+      PUBLIC_DIR: /app
     volumes:
        - ./backend/storage/app/public/produits:/app/produits:delegated
 volumes:
