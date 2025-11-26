@@ -21247,6 +21247,23 @@ textarea:-ms-input-placeholder {
   }
 }
 
+@media only screen and (max-width: 375px) {
+  .mini_cart_wrapper>a {
+    height: 35px;
+    line-height: 35px;
+    padding: 0 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  .menumobile{
+    gap: 25px;
+    /* justify-content: end; */
+    padding-right: 0px;
+
+  }
+}
+
 .mini_cart_wrapper>a:hover {
   color: #222222;
 }
@@ -22667,6 +22684,7 @@ textarea:-ms-input-placeholder {
 }
 
 .offcanvas_two .canvas_open a {
+  margin-top: 5px ;
   color: #222222;
   border: 1px solid #222222;
 }
