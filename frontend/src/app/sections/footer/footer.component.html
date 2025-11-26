@@ -1,5 +1,5 @@
 
-<div class="choseus_area" style="margin: 0; padding-bottom: 5px;padding-top: 25px;">
+<div class="choseus_area">
   <div class="container">
     <div class="row">
       <div class="col-lg-3 col-md-3 col-sm-6 col-6" *ngFor="let service of services" >
@@ -22,7 +22,7 @@
   </div>
 </div>
 <!--brand area start-->
-<div class="container" style="width: 90%; margin:auto ; margin-top:50px; margin-bottom : 50px">
+<div class="container" class = "brands_section">
   <div class="row" *ngIf="show_brands && brands1.length">
 
     <!-- Swiper Brands Carousel (replaces owl-carousel-o) -->
@@ -38,7 +38,7 @@
       navigation="false"
       grab-cursor="true"
       breakpoints='{
-        "400": { "slidesPerView": 4 },
+        "400": { "slidesPerView": 2 },
         "740": { "slidesPerView": 5 },
         "940": { "slidesPerView": 6 },
         "1200": { "slidesPerView": 6 }

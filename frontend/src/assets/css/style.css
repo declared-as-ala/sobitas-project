@@ -29802,6 +29802,7 @@ textarea:-ms-input-placeholder {
   background-position: center center;
   background-size: cover;
   padding: 4px 0 96px;
+  margin: 0; padding-bottom: 5px;padding-top: 25px;
 }
 
 @media only screen and (min-width: 768px) and (max-width: 991px) {
@@ -29813,6 +29814,7 @@ textarea:-ms-input-placeholder {
 @media only screen and (max-width: 767px) {
   .choseus_area {
     padding: 60px 0 28px;
+    padding-bottom: 00px;
   }
 }
 
@@ -29825,7 +29827,20 @@ textarea:-ms-input-placeholder {
     margin-bottom: 25px;
   }
 }
+.brands_section {
+  width: 90%; margin:auto ; margin-top:50px; margin-bottom : 50px
+}
 
+@media only screen and (min-width: 768px) and (max-width: 991px) {
+  .brands_section {
+    width: 90%; margin:auto ; margin-top:40px; margin-bottom : 40px
+  }
+}
+@media only screen and (max-width: 767px) {
+  .brands_section {
+    width: 90%; margin:auto ; margin-top:0px; margin-bottom : 20px
+  }
+}
 .single_chose:hover .chose_icone {
   -webkit-transform: rotatey(180deg);
   transform: rotatey(180deg);
