@@ -55,7 +55,7 @@
             width="200" 
             height="80" 
             style="height: 90px; padding: 15px; cursor: pointer; object-fit: contain; background: white;"
-            [routerLink]="['/brand', slide.designation_fr, slide.id]"
+            [routerLink]="['/brand', slide.designation_fr?.toLowerCase().split(' ').join('-'), slide.id]"
           >
         </swiper-slide>
       </ng-container>
