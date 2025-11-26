@@ -112,8 +112,8 @@
               </select>
             </div>
             <div class="product_variant quantity" *ngIf="product.rupture != 0">
-              <label>Quantité</label>
-              <button (click)="inc_dec_qte('dec' )" [disabled]="product.quantity<=1" class="pm">-</button>
+              <label></label>
+              <button (click)="inc_dec_qte('dec' )" [disabled]="product.quantity<=1" class="pm" style="margin-left: 0 !important;">-</button>
               <input min="1" max="100" [(ngModel)]="quantity" title="Quantity" type="number"
                 style="text-align: center;">
               <button (click)="inc_dec_qte('inc' )" class="pm">+</button>
