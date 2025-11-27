@@ -59,7 +59,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libwebp7 \
     libwebpmux3 \
     libwebpdemux2 \
-    libzip4 \
+    libzip5 \
     && rm -rf /var/lib/apt/lists/*
 
 # Same GD configuration as builder → WebP works 100%
