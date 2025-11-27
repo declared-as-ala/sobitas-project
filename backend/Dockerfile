@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y \
     libjpeg-dev \
     libwebp-dev \
     libfreetype6-dev \
+    libwebp7 \
     libzip-dev \
     zip \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
