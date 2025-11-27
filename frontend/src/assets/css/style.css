@@ -23856,6 +23856,21 @@ textarea:-ms-input-placeholder {
   -webkit-box-shadow: 0px 4px 5px 0px rgba(0, 0, 0, 0.15);
   box-shadow: 0px 4px 5px 0px rgba(0, 0, 0, 0.15);
 }
+@media screen and (max-width: 767px) {
+  .single_product:hover .action_links {
+    bottom: -75px;
+    margin-bottom: 0px;
+    padding: 3px 13px;
+    height: auto;
+  }
+  .ul_action_links{
+    padding: 0px !important;
+    margin: 0px !important;
+    box-sizing: border-box;
+    max-height: initial;
+  }
+  
+}
 
 .single_product:hover .quick_button {
   opacity: 1;
