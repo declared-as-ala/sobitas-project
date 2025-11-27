@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y \
     unzip \
     libpng-dev \
     libjpeg-dev \
+    libwebp-dev \
     libfreetype6-dev \
     libzip-dev \
     zip \
