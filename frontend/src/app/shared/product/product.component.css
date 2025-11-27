@@ -22,10 +22,9 @@
 
 @media only screen and (max-width: 767px) {
   .product_name{
-    min-height: 56px;
   }
 .sign{
-  font-size: 14px;
+  font-size: 1em;
   line-height: 20px;
 }
 }
