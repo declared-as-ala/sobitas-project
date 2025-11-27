@@ -1,7 +1,8 @@
 import { AsyncPipe, CommonModule, NgFor, NgIf, NgOptimizedImage } from '@angular/common';
-import { Component, Input } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { storage } from 'src/app/apis/config';
+import { SlugService } from 'src/app/home/home.component';
 
 @Component({
   selector: 'app-article',
@@ -10,8 +11,21 @@ import { storage } from 'src/app/apis/config';
   templateUrl: './article.component.html',
   styleUrls: ['./article.component.css']
 })
-export class ArticleComponent {
+export class ArticleComponent implements OnInit {
+  @Input() article: any;
+  storage = storage;
 
-storage  = storage
-  @Input() article : any
+  // Injecting the SlugService into the component
+  constructor() {}
+
+  ngOnInit(): void {
+    // Generate the slug when the article is initialized
+    if (this.article && this.article.slug) {
+      this.article.slug = this.createSlug(this.article.slug);
+    }
+  }
+    createSlug(input: string): string {
+    return input
+      .replace(/\s+/g, '-') // Replace spaces with hyphens  
+  }
 }

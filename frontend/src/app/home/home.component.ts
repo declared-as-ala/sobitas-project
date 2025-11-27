@@ -171,4 +171,14 @@ export class HomeComponent implements OnInit {
     url = url.replace('http://', 'https://')
     link.setAttribute('href', url);
   }
+  
+}
+export class SlugService {
+  // Function to create a SEO-friendly slug
+  createSlug(input: string): string {
+    return input
+      .trim()              // Remove leading/trailing whitespace
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .toLowerCase();      // Optionally, convert everything to lowercase
+  }
 }

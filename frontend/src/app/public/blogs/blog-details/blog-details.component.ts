@@ -26,7 +26,10 @@ export class BlogDetailsComponent implements OnInit {
   storage =storage
   article : any
   articles : any = []
-  slug = this.route.snapshot.params['slug']
+  slug = this.reverseSlug(this.route.snapshot.params['slug'])
+  reverseSlug(input: string): string {
+    return input.replace(/-/g, ' ');
+  }
   ngOnInit(): void {
     this.general.article(this.slug)
     .subscribe((data : any)=>{
