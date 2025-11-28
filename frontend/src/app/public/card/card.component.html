@@ -22,7 +22,7 @@
                                           </thead>
                                           <tbody>
                                               <tr *ngFor="let p of panier ; let position = index">
-                                                 <td class="product_remove"><a (click)="supprimer(position)"><i class="fa fa-trash-o"></i></a></td>
+                                                 <td class="product_remove"><a (click)="supprimer(position)"><i class="fa fa-trash"></i></a></td>
                                                   <td class="product_thumb"><a ><img [src]="p.product.cover ? storage+p.product.cover :'assets/img/product/p1.webp'" [alt]="p.product.designation_fr"
                                                     fetchpriority="auto"></a></td>
                                                   <td class="product_name"><a  [routerLink]="['/shop' , p.product?.slug]">{{p.product?.designation_fr}}</a></td>
