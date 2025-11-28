@@ -99,7 +99,7 @@ export class HomeComponent implements OnInit {
     {
         "cover": "https://i.imgur.com/CVFd8hV.png",
         "slug": "complements-alimentaires",
-        "designation_fr": "ACIDES AMINES"
+        "designation_fr": "COMPLÉMENTS ALIMENTAIRES"
     },
     {
         "cover": "https://i.imgur.com/YcR1O0I.png",
