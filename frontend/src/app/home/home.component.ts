@@ -98,7 +98,7 @@ export class HomeComponent implements OnInit {
   categories = [
     {
         "cover": "https://i.imgur.com/CVFd8hV.png",
-        "slug": "acides-amines",
+        "slug": "complements-alimentaires",
         "designation_fr": "ACIDES AMINES"
     },
     {
@@ -118,12 +118,12 @@ export class HomeComponent implements OnInit {
     },
     {
         "cover": "https://i.imgur.com/5jN4Y3p.png",
-        "slug": "pre-intra-and-post-workout",
+        "slug": "complements-d-entrainement",
         "designation_fr": "PRE, INTRA & POST WORKOUT"
     },
     {
         "cover": "https://i.imgur.com/Lj0ymUa.png",
-        "slug": "vetements-et-accessoires",
+        "slug": "equipements-et-accessoires-sportifs",
         "designation_fr": "VETEMENTS ET ACCESSOIRES"
     }
 ]
