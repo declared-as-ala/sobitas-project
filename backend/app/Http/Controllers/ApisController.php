@@ -123,13 +123,32 @@ class ApisController extends Controller
 
     public function productsByCategoryId($slug)
     {
-        $category = Categ::where('slug' , $slug)->first();
+        // Try to find the category by slug
+        $category = Categ::where('slug', $slug)->first();
+
+        // If the category doesn't exist, return a 404 response
+        if (!$category) {
+            return response()->json(['error' => 'Category not found'], 404);
+        }
+
+        // Now that we know $category is not null, proceed with the rest of the logic
         $sous_categories = SousCategory::where('categorie_id', $category->id)->get();
-        $products = Product::where('publier', 1)->whereIn('sous_categorie_id', $sous_categories->pluck('id'))
-            ->with('aromes')->with('tags')->get();
+        $products = Product::where('publier', 1)
+            ->whereIn('sous_categorie_id', $sous_categories->pluck('id'))
+            ->with('aromes')
+            ->with('tags')
+            ->get();
+
         $brands = Brand::whereIn('id', $products->pluck('brand_id'))->get();
-        return ['category' => $category, 'sous_categories' => $sous_categories, 'products' => $products, 'brands' => $brands];
+
+        return [
+            'category' => $category,
+            'sous_categories' => $sous_categories,
+            'products' => $products,
+            'brands' => $brands
+        ];
     }
+
 
     public function productsByBrandId($brand_id)
     {
