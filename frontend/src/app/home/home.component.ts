@@ -22,7 +22,7 @@ export class HomeComponent implements OnInit {
 
   slides: any = [
     {
-        "cover": "assets/img/slides/sobitas_slide2.webp",
+        "cover": "assets/img/slides/silde1.webp",
         "designation_fr": "Sobitas, votre boutique de compléments alimentaires en ligne",
         "description_fr": null,
         "btn_text_fr": "Liste des produits",
@@ -33,7 +33,7 @@ export class HomeComponent implements OnInit {
         "type": "web"
     },
     {
-        "cover": "assets/img/slides/sobitas_slide_22v0.webp",
+        "cover": "assets/img/slides/hardmas_cover.webp",
         "designation_fr": "Sobitas, votre boutique de compléments alimentaires en ligne en Tunisie",
         "description_fr": null,
         "btn_text_fr": null,
@@ -44,7 +44,7 @@ export class HomeComponent implements OnInit {
         "type": "web"
     },
     {
-        "cover": "assets/img/slides/sobitas_slide.webp_3.webp",
+        "cover": "assets/img/slides/855e5d4b-6e9b-470e-a274-c677a0925a88.jpeg",
         "designation_fr": "Sobitas, votre boutique de compléments alimentaires en ligne en Tunisie",
         "description_fr": null,
         "btn_text_fr": null,
@@ -55,7 +55,7 @@ export class HomeComponent implements OnInit {
         "type": "web"
     },
     {
-      "cover": "assets/img/slides/sobitas_slidem.webp",
+      "cover": "assets/img/slides/platinum_creatine_cover.webp",
         "designation_fr": null,
         "description_fr": null,
         "btn_text_fr": null,
