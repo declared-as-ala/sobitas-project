@@ -39,16 +39,22 @@
               "node_modules/ngx-sharebuttons/themes/modern.scss"
             ],
             "scripts": [
-              "src/assets/js/plugins.js",
-              "src/assets/js/main.js",
-              "node_modules/aos/dist/aos.js"
+              {
+                "input": "src/assets/js/plugins.js",
+                "lazy": true
+              },
+              {
+                "input": "src/assets/js/main.js",
+                "lazy": true
+              },
+              {
+                "input": "node_modules/aos/dist/aos.js",
+                "lazy": true
+              }
             ]
           },
           "configurations": {
             "production": {
-              "cache": {
-                "enabled": true
-              },
               "budgets": [
                 {
                   "type": "initial",
@@ -69,7 +75,7 @@
                 "scripts": true,
                 "styles": {
                   "minify": true,
-                  "inlineCritical": false
+                  "inlineCritical": true
                 },
                 "fonts": true
               }
@@ -138,7 +144,7 @@
               "optimization": false,
               "sourceMap": true,
               "extractLicenses": false,
-              "vendorChunk": true
+              "vendorChunk": false
             }
           },
           "defaultConfiguration": "production"
