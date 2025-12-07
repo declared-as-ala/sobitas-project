@@ -55,6 +55,18 @@ export class HomeComponent implements OnInit {
         "type": "web"
     },
         {
+      "cover": "assets/img/slides/platinum_creatine_cover.webp",
+        "designation_fr": null,
+        "description_fr": null,
+        "btn_text_fr": null,
+        "btn_link": null,
+        "position": "right",
+        "text_color": "#000000",
+        "text_weight": "100",
+        "type": "mobile"
+    },
+       
+        {
         "cover": "assets/img/slides/sobitas_slidem.webp",
         "designation_fr": null,
         "description_fr": null,
