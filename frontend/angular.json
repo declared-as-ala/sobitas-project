@@ -46,6 +46,9 @@
           },
           "configurations": {
             "production": {
+              "cache": {
+                "enabled": true
+              },
               "budgets": [
                 {
                   "type": "initial",
