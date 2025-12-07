@@ -39,18 +39,9 @@
               "node_modules/ngx-sharebuttons/themes/modern.scss"
             ],
             "scripts": [
-              {
-                "input": "src/assets/js/plugins.js",
-                "lazy": true
-              },
-              {
-                "input": "src/assets/js/main.js",
-                "lazy": true
-              },
-              {
-                "input": "node_modules/aos/dist/aos.js",
-                "lazy": true
-              }
+              "src/assets/js/plugins.js",
+              "src/assets/js/main.js",
+              "node_modules/aos/dist/aos.js"
             ]
           },
           "configurations": {
