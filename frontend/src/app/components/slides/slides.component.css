@@ -1,15 +1,17 @@
-.single_slider {
-  aspect-ratio: 16/9;
+.single_slider{
   height: calc(100vh - 160px);
-  background-size: cover;
-  background-position: center !important;
+    /* background-repeat: no-repeat; */
+
+    background-size: cover;
+    background-position: center !important;
   max-height: 660px;
 }
 
-@media screen and (max-width: 700px) {
-  .single_slider {
+
+@media screen and (max-width : 700px) {
+  .single_slider{
+    /* height: 170px; */
     height: calc(100vh - 170px);
-    aspect-ratio: 4/3;
     max-height: 660px;
   }
 }
