@@ -44,7 +44,7 @@ export class HomeComponent implements OnInit {
         "type": "web"
     },
     {
-        "cover": "assets/img/slides/sobitas_slide.webp",
+        "cover": "assets/img/slides/sobitas_slide.webp_3.webp",
         "designation_fr": "Sobitas, votre boutique de compléments alimentaires en ligne en Tunisie",
         "description_fr": null,
         "btn_text_fr": null,
