@@ -44,17 +44,6 @@ export class HomeComponent implements OnInit {
         "type": "web"
     },
     {
-        "cover": "assets/img/slides/855e5d4b-6e9b-470e-a274-c677a0925a88.jpeg",
-        "designation_fr": "Sobitas, votre boutique de compléments alimentaires en ligne en Tunisie",
-        "description_fr": null,
-        "btn_text_fr": null,
-        "btn_link": null,
-        "position": "right",
-        "text_color": "#07e921",
-        "text_weight": "600",
-        "type": "web"
-    },
-    {
       "cover": "assets/img/slides/platinum_creatine_cover.webp",
         "designation_fr": null,
         "description_fr": null,
@@ -62,6 +51,17 @@ export class HomeComponent implements OnInit {
         "btn_link": null,
         "position": "right",
         "text_color": "#000000",
+        "text_weight": "100",
+        "type": "web"
+    },
+        {
+        "cover": "assets/img/slides/sobitas_slidem.webp",
+        "designation_fr": null,
+        "description_fr": null,
+        "btn_text_fr": null,
+        "btn_link": null,
+        "position": "right",
+        "text_color": "#ff0000",
         "text_weight": "100",
         "type": "mobile"
     },

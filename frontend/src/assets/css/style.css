@@ -22863,19 +22863,19 @@ textarea:-ms-input-placeholder {
 
 @media only screen and (min-width: 1200px) and (max-width: 1600px) {
   .single_slider {
-    height: 418px;
+    height: auto !important;
   }
 }
 
 @media only screen and (min-width: 992px) and (max-width: 1199px) {
   .single_slider {
-    height: 351px;
+    height: auto !important;
   }
 }
 
 @media only screen and (min-width: 768px) and (max-width: 991px) {
   .single_slider {
-    height: 330px;
+    height: auto !important;
     background-position: 55%;
   }
 }
@@ -22883,7 +22883,7 @@ textarea:-ms-input-placeholder {
 @media only screen and (max-width: 767px) {
   .single_slider {
     background-position: 10%;
-    height: 300px;
+    height: auto !important;
   }
 }
 
