@@ -171,6 +171,14 @@ export class HomeComponent implements OnInit {
     url = url.replace('http://', 'https://')
     link.setAttribute('href', url);
   }
+  trackByProduct(index: number, item: any) {
+  return item.id || index;
+}
+
+trackByArticle(index: number, item: any) {
+  return item.id || index;
+}
+
   
 }
 export class SlugService {
