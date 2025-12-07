@@ -22858,18 +22858,21 @@ textarea:-ms-input-placeholder {
   background-size: cover;
   height: 500px;
   background: #000000;
+  max-height: 100vh !important;
   margin-right: 0 !important;
 }
 
 @media only screen and (min-width: 1200px) and (max-width: 1600px) {
   .single_slider {
     height: auto !important;
+    max-height: 100vh !important;
   }
 }
 
 @media only screen and (min-width: 992px) and (max-width: 1199px) {
   .single_slider {
     height: auto !important;
+    max-height: 100vh !important;
   }
 }
 
@@ -22877,6 +22880,7 @@ textarea:-ms-input-placeholder {
   .single_slider {
     height: auto !important;
     background-position: 55%;
+    max-height: 100vh !important;
   }
 }
 
@@ -22884,6 +22888,7 @@ textarea:-ms-input-placeholder {
   .single_slider {
     background-position: 10%;
     height: auto !important;
+    max-height: 100vh !important;
   }
 }
 
