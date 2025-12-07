@@ -76,7 +76,7 @@ export class HomeComponent implements OnInit {
         "text_weight": "100",
         "type": "mobile"
     },
-    {
+    /*{
         "cover": "assets/img/slides/sobitas_slide2m.webp",
         "designation_fr": null,
         "description_fr": null,
@@ -86,7 +86,7 @@ export class HomeComponent implements OnInit {
         "text_color": "#ff0000",
         "text_weight": "100",
         "type": "mobile"
-    },
+    },*/
 ]
   articles: any[] = [];
   best_sellers: any = [];
