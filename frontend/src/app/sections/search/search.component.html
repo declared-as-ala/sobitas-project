@@ -45,7 +45,7 @@
           <li *ngFor="let p of searchedProducts">
             <div class="row pointer"   (click)="navigate(p.slug)">
               <div class="col-md-3">
-                <img [src]="p.cover ? storage+p.cover : 'assets/img/product/p1.webp'" alt="{{p.designation_fr}}" style="
+                <img [src]="p.cover ? storage+p.cover : 'assets/img/product/p1.webp'" fetchpriority="high"decoding="async" alt="{{p.designation_fr}}" style="
 
                     width: 63px;
                     margin: auto;

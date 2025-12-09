@@ -9,6 +9,7 @@
             fetchpriority="auto"
             [alt]="service.designation_fr"
             [title]="service.designation_fr"
+            fetchpriority="high"decoding="async"
          />
           </div>
           <div class="chose_content">
@@ -56,6 +57,7 @@
             height="80" 
             style="height: 90px; padding: 15px; cursor: pointer; object-fit: contain; background: white;"
             [routerLink]="['/brand', slide.designation_fr?.toLowerCase().split(' ').join('-'), slide.id]"
+            fetchpriority="high"decoding="async"
           >
         </swiper-slide>
       </ng-container>
@@ -165,7 +167,7 @@
                   </li>
                   <li>
                     <a href="{{coordonnees.playstore_link}}" target="_blank"
-                      ><img  src="assets/img/appstore-336-119.webp" width="336" height="119" alt="playstore" loading="lazy"
+                      ><img  src="assets/img/appstore-336-119.webp" fetchpriority="high"decoding="async" width="336" height="119" alt="playstore" loading="lazy"
                       fetchpriority="auto"
                     /></a>
                   </li>

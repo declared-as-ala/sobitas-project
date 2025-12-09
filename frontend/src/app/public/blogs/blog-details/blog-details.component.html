@@ -21,6 +21,7 @@
                   <img [src]="article.cover ? storage+article.cover : 'assets/img/blog/blog-big1.jpg'"
                     [alt]="article.alt_cover ? article.alt_cover : article.designation_fr"
                     [title]="article.description_cover ? article.description_cover : article.designation_fr"
+                    fetchpriority="high"decoding="async"
                     loading="lazy" fetchpriority="auto">
                 </div>
                 <div>

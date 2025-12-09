@@ -194,7 +194,7 @@
                     >
                       <div class="modal_tab_img">
                         <a href="#"
-                          ><img [src]="storage + photo.download_link" alt="" loading="lazy"
+                          ><img [src]="storage + photo.download_link" alt="" loading="lazy" fetchpriority="high"decoding="async"
                         /></a>
                       </div>
                     </div>
@@ -232,7 +232,7 @@
                         role="tab"
                         aria-controls="tab2"
                         aria-selected="false"
-                        ><img [src]="storage + photo.download_link" alt="" loading="lazy"
+                        ><img [src]="storage + photo.download_link" alt="" loading="lazy" fetchpriority="high"decoding="async"
                       /></a>
                     </li>
                   </ul>
