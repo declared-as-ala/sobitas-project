@@ -1,0 +1,73 @@
+<app-breadcrumbs [page]="page?.title"></app-breadcrumbs>
+<div class="about_bg_area" *ngIf="page">
+  <div class="container">
+    <!--about section area -->
+    <section class="about_section mb-60">
+      <div class="row align-items-center">
+        <div class="col-12" *ngIf="slug == 'qui-sommes-nous'">
+          <p [innerHTML]="map"></p>
+        </div>
+        <div class="col-12">
+          <figure>
+            <figcaption class="about_content">
+              <h2>{{page.title}}</h2>
+              <br /><br />
+              <p [innerHTML]="page.body" style="zoom: 125%"></p>
+            </figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+    <!--about section end-->
+
+
+
+
+
+    <!--testimonial area start-->
+    <div class="faq-client-say-area"  *ngIf="slug == 'qui-sommes-nous'">
+      <div class="row">
+        <div class="col-lg-12 col-md-12">
+          <div class="faq-client_title">
+            <h2>{{coordonnees.title_faq}}</h2>
+          </div>
+          <div class="faq-style-wrap" id="faq-five">
+            <!-- Panel-default -->
+            <div class="panel panel-default" *ngFor="let faq of faqs; let i=index">
+              <div class="panel-heading">
+                <h5 class="panel-title">
+                  <a
+                    id="octagon"
+                    class="collapsed"
+                    role="button"
+                    data-bs-toggle="collapse"
+                    [attr.data-bs-target]="'#faq-collapse'+i"
+                    aria-expanded="true"
+                    [attr.aria-controls]="'faq-collapse'+i"
+                  >
+                    <span class="button-faq"></span>{{faq.question}}</a
+                  >
+                </h5>
+              </div>
+              <div
+                id="faq-collapse{{i}}"
+                class="collapse "
+                aria-expanded="false"
+                role="tabpanel"
+                data-bs-parent="#faq-five"
+              >
+                <div class="panel-body" [innerHTML]="faq.answer">
+                </div>
+              </div>
+            </div>
+            <!--// Panel-default -->
+
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <!--testimonial area end-->
+  </div>
+</div>

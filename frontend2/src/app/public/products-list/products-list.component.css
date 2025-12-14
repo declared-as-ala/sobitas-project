@@ -1,0 +1,43 @@
+.widget_list.widget_filter  button {
+  height: 30px;
+  line-height: 30px;
+  padding: 0 20px;
+  text-transform: capitalize;
+  color: #ffffff;
+  background: #222222;
+  border: 0;
+  border-radius: 30px;
+  -webkit-transition: 0.3s;
+  transition: 0.3s;
+}
+.widget_list.widget_filter  input {
+  background: none;
+  border: none;
+  font-size: 12px;
+  float: right;
+  text-align: right;
+  line-height: 31px;
+}
+.active_cat{
+  color: red;
+}
+  .my-pagination ::ng-deep .ngx-pagination .current {
+    background: #ff4000;
+  }
+
+
+  .categs a{
+    font-weight: 600;
+  }
+
+  .brands label{
+    font-weight: bold;
+  }
+.btf{
+  font-weight: 600;
+    font-size: 18px;
+    color: #fff;
+}
+.nav-link {
+  color: black;
+}

@@ -1,0 +1,23 @@
+
+<h3>Gérer votre profil </h3>
+<div class="login">
+    <div class="login_form_container">
+        <div class="account_login_form">
+            <form [formGroup]="profil">
+
+                <label>Nom et prénom</label>
+                <input type="text" name="first-name" formControlName="name">
+
+                <label>Email</label>
+                <input type="email" name="email-name" formControlName="email">
+                <label>Numéro de téléphone</label>
+                <input type="number" name="user-password"  formControlName="phone">
+
+             <br>
+                <div class="save_button primary_btn default_button">
+                   <button type="submit" (click)="save()">Modifier</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

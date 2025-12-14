@@ -1,0 +1,32 @@
+.search_box{
+  position: relative;
+}
+
+.search-result{
+  position: absolute;
+  width: 100%;
+  min-height: 20px;
+  background : #fff;
+  z-index: 111;
+  max-height: 70vh;
+  overflow: scroll;
+
+  font-size: 13px;
+  font-weight: bold;
+
+}
+.select_option{
+  padding: 5px;
+}
+
+.search-result li{
+  border-bottom: 1px solid #d7d7d7;
+  cursor: pointer;
+}
+
+@media screen and (max-width : 700px) {
+  .test{
+    /* height: 170px; */
+    width: 100%;
+  }
+}

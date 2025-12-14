@@ -1,0 +1,34 @@
+
+<h3>Mes commandes</h3>
+<div class="table-responsive">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Numero de commande</th>
+                <th>Date commande</th>
+                <th>Montant totale</th>
+                <th>Etat</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr *ngFor="let c of commandes">
+                <td>{{c.numero}}</td>
+                <td>{{c.created_at |date:'dd MMM yyy HH:mm'}}</td>
+                <td>{{c.prix_ttc  |number:'1.3-5'}} DT </td>
+                <td>
+                  <span *ngIf="c.etat == 'nouvelle_commande'" class="success">Nouvelle Commande</span>
+                  <span *ngIf="c.etat == 'en_cours_de_preparation'">En cours de préparations</span>
+                  <span *ngIf="c.etat == 'prete'">Prête</span>
+                  <span *ngIf="c.etat == 'en_cours_de_livraison'" class="success">En cours de livraison</span>
+                  <span *ngIf="c.etat == 'expidee'" class="success">Expidée</span>
+                  <span *ngIf="c.etat == 'annuler'">Annuler</span>
+
+                  </td>
+
+                <td><a [routerLink]="['/commande' , c.id]" class="view">Voire B.L</a></td>
+            </tr>
+
+        </tbody>
+    </table>
+</div>

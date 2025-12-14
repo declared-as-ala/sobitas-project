@@ -1,0 +1,509 @@
+<div class="checkout_page_bg">
+  <div class="container">
+    <div class="Checkout_section" id="accordion">
+      <!--   <div class="row">
+             <div class="col-12">
+                  <div class="user-actions">
+                      <h3>
+                          <i class="fa fa-file-o" aria-hidden="true"></i>
+                          Returning customer?
+                          <a class="Returning" href="#" data-bs-toggle="collapse" data-bs-target="#checkout_login" aria-expanded="true">Click here to login</a>
+
+                      </h3>
+                       <div id="checkout_login" class="collapse" data-bs-parent="#accordion">
+                          <div class="checkout_info">
+                              <p>If you have shopped with us before, please enter your details in the boxes below. If you are a new customer please proceed to the Billing & Shipping section.</p>
+                              <form action="#">
+                                  <div class="form_group">
+                                      <label>Username or email <span>*</span></label>
+                                      <input type="text">
+                                  </div>
+                                  <div class="form_group">
+                                      <label>Password  <span>*</span></label>
+                                      <input type="text">
+                                  </div>
+                                  <div class="form_group group_3 ">
+                                      <button type="submit">Login</button>
+                                      <label for="remember_box">
+                                          <input id="remember_box" type="checkbox">
+                                          <span> Remember me </span>
+                                      </label>
+                                  </div>
+                                  <a href="#">Lost your password?</a>
+                              </form>
+                          </div>
+                      </div>
+                  </div>
+                  <div class="user-actions">
+                      <h3>
+                          <i class="fa fa-file-o" aria-hidden="true"></i>
+                          Returning customer?
+                          <a class="Returning" href="#" data-bs-toggle="collapse" data-bs-target="#checkout_coupon" aria-expanded="true">Click here to enter your code</a>
+
+                      </h3>
+                       <div id="checkout_coupon" class="collapse" data-bs-parent="#accordion">
+                          <div class="checkout_info">
+                              <form action="#">
+                                  <input placeholder="Coupon code" type="text">
+                                  <button type="submit">Apply coupon</button>
+                              </form>
+                          </div>
+                      </div>
+                  </div>
+             </div>
+          </div> -->
+      <div class="checkout_form">
+        <div class="row">
+          <div class="col-lg-6 col-md-6">
+            <div class="checkout_form_left">
+              <form [formGroup]="form">
+                <h3>Détails de la commande</h3>
+                <div class="row">
+                  <div class="col-lg-6 mb-20">
+                    <label>Nom <span>*</span></label>
+                    <input type="text" formControlName="nom" />
+                    <small
+                      class="text-danger"
+                      *ngIf="
+                        form.get('nom')?.invalid &&
+                        (form.get('nom')?.dirty || form.get('nom')?.touched)
+                      "
+                    >
+                      <span *ngIf="form.get('nom')?.errors?.['minlength']"
+                        >Votre champ Nom doit contenir au minimum 3
+                        caractéres</span
+                      >
+                    </small>
+                  </div>
+                  <div class="col-lg-6 mb-20">
+                    <label>Prénom <span>*</span></label>
+                    <input type="text" formControlName="prenom" />
+                    <small
+                      class="text-danger"
+                      *ngIf="
+                        form.get('prenom')?.invalid &&
+                        (form.get('prenom')?.dirty ||
+                          form.get('prenom')?.touched)
+                      "
+                    >
+                      <span *ngIf="form.get('prenom')?.errors?.['minlength']"
+                        >Votre Prénom doit contenir au minimum 3
+                        caractéres</span
+                      >
+                    </small>
+                  </div>
+
+                  <div class="col-12 mb-20" *ngIf="livraison == 'true'">
+                    <label>Adresse 1 <span>*</span></label>
+                    <input
+                      placeholder="Nom du rue - numéro d'appartment/ maison"
+                      type="text"
+                      formControlName="adresse1"
+                    />
+                    <small
+                      class="text-danger"
+                      *ngIf="
+                        form.get('adresse1')?.invalid &&
+                        (form.get('adresse1')?.dirty ||
+                          form.get('adresse1')?.touched)
+                      "
+                    >
+                      <span *ngIf="form.get('adresse1')?.errors?.['minlength']"
+                        >Votre Adresse doit contenir au minimum 12
+                        caractéres</span
+                      >
+                    </small>
+                  </div>
+                  <div class="col-12 mb-20" *ngIf="livraison == 'true'">
+                    <label>Adresse 2</label>
+                    <input
+                      placeholder="Nom du rue - numéro d'appartment/ maison"
+                      type="text"
+                      formControlName="adresse2"
+                    />
+                    <small
+                    class="text-danger" *ngIf="form.get('adresse2')?.errors?.['minlength']"
+                      >Votre Adresse doit contenir au minimum 12
+                      caractéres</small
+                    >
+                  </div>
+                  <div class="col-lg-6 mb-20" *ngIf="livraison == 'true'">
+                    <label for="country">Pays <span>*</span></label>
+                    <select
+                      class="niceselect_option"
+                      formControlName="pays"
+                      id="country"
+                    >
+                      <option value="Tunisie" selected>Tunisie</option>
+                    </select>
+                  </div>
+
+                  <div class="col-lg-6 mb-20" *ngIf="livraison == 'true'">
+                    <label>Ville <span>*</span></label>
+                    <input type="text" formControlName="ville" />
+                    <small
+                    class="text-danger" *ngIf="form.get('ville')?.errors?.['minlength']"
+                      >Veuillez entrer une donnée valide</small
+                    >
+                  </div>
+                  <div class="col-lg-6 mb-20" *ngIf="livraison == 'true'">
+                    <label>Région/Département <span>*</span></label>
+                    <input type="text" formControlName="region" />
+                    <small
+                    class="text-danger" *ngIf="form.get('region')?.errors?.['minlength']"
+                      >Veuillez entrer une donnée valide</small
+                    >
+                  </div>
+                  <div class="col-lg-6 mb-20" *ngIf="livraison == 'true'">
+                    <label>Code Postale <span>*</span></label>
+                    <input type="number" formControlName="code_postale" />
+                    <small
+                      class="text-danger"
+                      *ngIf="
+                        form.get('code_postale')?.invalid &&
+                        (form.get('code_postale')?.dirty ||
+                          form.get('code_postale')?.touched)
+                      "
+                    >
+                      <span
+                        *ngIf="form.get('code_postale')?.errors?.['min'] || form.get('code_postale')?.errors?.['max']"
+                        >Veuillez entrer un code postale valide ( 4
+                        chiffres)</span
+                      >
+                    </small>
+                  </div>
+                  <div class="col-lg-6 mb-20">
+                    <label>Téléphone<span>*</span></label>
+                    <input type="number" formControlName="phone" />
+                    <small
+                      class="text-danger"
+                      *ngIf="
+                        form.get('phone')?.invalid &&
+                        (form.get('phone')?.dirty || form.get('phone')?.touched)
+                      "
+                    >
+                      <span
+                        *ngIf="form.get('phone')?.errors?.['min'] || form.get('phone')?.errors?.['max']"
+                        >Veuillez entrer un numéro de téléphone valide ( 8
+                        chiffres)</span
+                      >
+                    </small>
+                  </div>
+                  <div class="col-lg-6 mb-20">
+                    <label> Email <span>*</span></label>
+                    <input type="email" formControlName="email" />
+                    <small
+                      class="text-danger"
+                      *ngIf="
+                        form.get('email')?.invalid &&
+                        (form.get('email')?.dirty || form.get('email')?.touched)
+                      "
+                    >
+                      <span *ngIf="form.get('email')?.errors?.['minlength']"
+                        >Adresse mail non valide</span
+                      >
+                    </small>
+                  </div>
+
+                  <div class="col-12 mb-20" *ngIf="livraison == 'true'">
+                    <input
+                      id="address"
+                      type="hidden"
+                      formControlName="livraison_address"
+                      data-bs-target="createp_account"
+                    />
+                    <label
+                      class="righ_0"
+                      for="address"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#collapsetwo"
+                      aria-controls="collapseOne"
+                      >Expédier à une adresse differente ?</label
+                    >
+
+                    <div
+                      id="collapsetwo"
+                      class="collapse one"
+                      data-bs-parent="#accordion"
+                    >
+                      <div class="row">
+                        <div class="col-lg-6 mb-20">
+                          <label>Nom <span>*</span></label>
+
+                          <input type="text" formControlName="livraison_nom" />
+                          <small
+                          class="text-danger"
+                            *ngIf="form.get('livraison_nom')?.errors?.['minlength']"
+                            >Votre Nom doit contenir au minimum 3
+                            caractéres</small
+                          >
+                        </div>
+                        <div class="col-lg-6 mb-20">
+                          <label>Prénom <span>*</span></label>
+                          <input
+                            type="text"
+                            formControlName="livraison_prenom"
+                          />
+                          <small
+                          class="text-danger"
+                            *ngIf="form.get('livraison_prenom')?.errors?.['minlength']"
+                            >Votre prénom doit contenir au minimum 3
+                            caractéres</small
+                          >
+                        </div>
+
+                        <div class="col-12 mb-20">
+                          <label>Adresse 1 <span>*</span></label>
+                          <input
+                            placeholder="Nom du rue - numéro d'appartment/ maison"
+                            type="text"
+                            formControlName="livraison_adresse1"
+                          />
+                          <small
+                          class="text-danger"
+                            *ngIf="form.get('livraison_adresse1')?.errors?.['minlength']"
+                            >Votre Adresse doit contenir au minimum 12
+                            caractéres</small
+                          >
+                        </div>
+                        <div class="col-12 mb-20">
+                          <label>Adresse 2</label>
+                          <input
+                            placeholder="Nom du rue - numéro d'appartment/ maison"
+                            type="text"
+                            formControlName="livraison_adresse2"
+                          />
+                          <small
+                          class="text-danger"
+                            *ngIf="form.get('livraison_adresse2')?.errors?.['minlength']"
+                            >Votre Adresse doit contenir au minimum 12
+                            caractéres</small
+                          >
+                        </div>
+                        <div class="col-lg-6 mb-20">
+                          <label for="country">Pays <span>*</span></label>
+                          <select
+                            formControlName="livraison_pays"
+                            class="niceselect_option"
+                            name="cuntry"
+                            id="country"
+                          >
+                            <option value="Tunisie" selected>Tunisie</option>
+                          </select>
+                        </div>
+
+                        <div class="col-lg-6 mb-20">
+                          <label>Ville <span>*</span></label>
+                          <input
+                            type="text"
+                            formControlName="livraison_ville"
+                          />
+                          <small
+                          class="text-danger"
+                            *ngIf="form.get('livraison_ville')?.errors?.['minlength']"
+                            >Veuillez entrer une donnée valide</small
+                          >
+                        </div>
+                        <div class="col-lg-6 mb-20">
+                          <label>Région/Département <span>*</span></label>
+                          <input
+                            type="text"
+                            formControlName="livraison_region"
+                          />
+                          <small
+                          class="text-danger"
+                            *ngIf="form.get('livraison_region')?.errors?.['minlength']"
+                            >Veuillez entrer une donnée valide</small
+                          >
+                        </div>
+                        <div class="col-lg-6 mb-20">
+                          <label>Code Postale <span>*</span></label>
+                          <input
+                            type="number"
+                            formControlName="livraison_code_postale"
+                          />
+                          <small
+                            class="text-danger"
+                            *ngIf="
+                              form.get('livraison_code_postale')?.invalid &&
+                              (form.get('livraison_code_postale')?.dirty ||
+                                form.get('livraison_code_postale')?.touched)
+                            "
+                          >
+                            <span
+                              *ngIf="form.get('livraison_code_postale')?.errors?.['min'] || form.get('livraison_code_postale')?.errors?.['max']"
+                              >Veuillez entrer un code postale valide ( 4
+                              chiffres)</span
+                            >
+                          </small>
+                        </div>
+                        <div class="col-lg-6 mb-20">
+                          <label>Téléphone<span>*</span></label>
+                          <input
+                            type="number"
+                            formControlName="livraison_phone"
+                          />
+                          <small
+                          class="text-danger"
+                            *ngIf="form.get('livraison_phone')?.errors?.['min'] || form.get('livraison_phone')?.errors?.['max']"
+                            >Veuillez entrer un numéro de téléphone valide ( 8
+                            chiffres)</small
+                          >
+                        </div>
+                        <div class="col-lg-6 mb-20">
+                          <label> Email <span>*</span></label>
+                          <input
+                            type="text"
+                            formControlName="livraison_email"
+                          />
+                          <small
+                          class="text-danger"
+                            *ngIf="form.get('livraison_email')?.errors?.['minlength']"
+                            >Veuillez entrer une donnée valide</small
+                          >
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <div class="order-notes">
+                      <label for="order_note"
+                        >Note de commande (facultatif)</label
+                      >
+                      <textarea
+                        id="order_note"
+                        placeholder="Notes à propos votre commandes , details de livraison ..."
+                      ></textarea>
+                      <small
+                      class="text-danger"
+                        *ngIf="form.get('order_note')?.errors?.['minlength']"
+                        >Veuillez entrer une donnée valide</small
+                      >
+                    </div>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+          <div class="col-lg-6 col-md-6">
+            <div class="checkout_form_right">
+              <h3>Votre commande</h3>
+              <div class="order_table table-responsive">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Produits</th>
+                      <th>Totale</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let p of panier; let position = index">
+                      <td>
+                        {{ p.product?.designation_fr }}
+                        <strong> × {{ p.quantite }}</strong>
+                      </td>
+                      <td>{{ p.prix_totale | number : "1.3-5" }} DT</td>
+                    </tr>
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <th>Sous totale</th>
+                      <td>
+                        <strong>{{ totale | number : "1.3-5" }} DT </strong>
+                      </td>
+                    </tr>
+                    <tr>
+                      <th>Livraison</th>
+                      <td>
+                        <strong> {{ frais_livraison | number : "1.3-5" }} DT</strong>
+                      </td>
+                    </tr>
+                    <tr class="order_total">
+                      <th>Totale</th>
+                      <td>
+                        <strong
+                          >{{
+                            totale + frais_livraison | number : "1.3-5"
+                          }}
+                          DT</strong
+                        >
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              <div class="payment_method">
+                <!--   <div class="panel-default">
+                    <input
+                      id="payment"
+                      name="check_method"
+                      type="radio"
+                      data-bs-target="createp_account"
+                    />
+                    <label
+                      for="payment"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#method"
+                      aria-controls="method"
+                      >Create an account?</label
+                    >
+
+                    <div
+                      id="method"
+                      class="collapse one"
+                      data-bs-parent="#accordion"
+                    >
+                      <div class="card-body1">
+                        <p>
+                          Please send a check to Store Name, Store Street, Store
+                          Town, Store State / County, Store Postcode.
+                        </p>
+                      </div>
+                    </div>
+                  </div> -->
+                <!--   <div class="panel-default">
+                    <input
+                      id="payment_defult"
+                      name="check_method"
+                      type="radio"
+                      data-bs-target="createp_account"
+                    />
+                    <label
+                      for="payment_defult"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#collapsedefult"
+                      aria-controls="collapsedefult"
+                      >PayPal <img src="assets/img/icon/papyel.png" alt=""
+                    /></label>
+
+                    <div
+                      id="collapsedefult"
+                      class="collapse one"
+                      data-bs-parent="#accordion"
+                    >
+                      <div class="card-body1">
+                        <p>
+                          Pay via PayPal; you can pay with your credit card if
+                          you don’t have a PayPal account.
+                        </p>
+                      </div>
+                    </div>
+                  </div> -->
+                <div class="order_button">
+                  <button
+                    type="submit"
+                    [disabled]="!form.valid"
+                    (click)="valider()"
+                  >
+                    Valider la commande
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<app-loader *ngIf="isLoading"></app-loader>

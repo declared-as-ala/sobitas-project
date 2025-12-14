@@ -1,0 +1,264 @@
+@import 'assets/css/style.css';
+@import 'swiper/swiper-bundle.css';
+@import 'ngx-sharebuttons';
+.ng-invalid:not(form)  {
+  border-left: 5px solid #ff4000 !important; /* red */
+}
+
+.hide_print{
+  display: block;
+}
+
+@media print{
+  .hide_print{
+    display: none !important;
+  }
+}
+
+.btn2{
+  border: 1px solid;
+  padding: 5px 8px;
+  border-radius: 17px;
+}
+
+.ion-android-star{
+color : #ffca10
+}
+.ion-android-star-outline{
+color : #ffca10
+
+}
+.brand-footer{
+height: 80px;
+margin: auto;
+float: none;
+display: block;
+}
+.brand-footer:hover{
+height: 110px;
+}
+.category-mega{
+color: #ff4000;
+font-weight: 600;
+}
+
+
+.checkout_btn:hover{
+color : white
+}
+
+
+.order_button button:disabled,
+.order_button button[disabled]{
+background-color: #ff40008c;
+cursor: auto;
+}
+.checkout_form select {
+border: 1px solid #ebebeb;
+background: none;
+height: 40px;
+width: 100%;
+padding: 0 20px;
+color: #222222;
+}
+.menuul{
+text-align: center;
+}
+
+.menuul>li>a{
+
+  font-size: 16px !important;
+}
+
+.desc a{
+color: #ff4000;
+  text-decoration: underline;
+}
+
+.chose_content h3{
+
+color: #ff4000;
+font-weight: 600 !important;
+}
+.sign{
+position: absolute;
+top: 0;
+width: 100%;
+  text-align: center;
+  font-weight: 600;
+  color: #fff;
+  font-size: 16px;
+  background: linear-gradient(45deg, #ff4000, #ff9a78);
+  padding: 5px;
+  opacity: 0.9;
+}
+
+
+.dropdown {
+  width: 200px;
+  background-color: #fff;
+  border: 1px solid #e2e2e2;
+}
+.dropdown .options {
+  display: none;
+}
+.dropdown .options div {
+  position: relative;
+  height: 30px;
+  padding: 5px 5px 5px 50px;
+  cursor: pointer;
+  line-height: 30px;
+}
+.dropdown .options div:nth-of-type(2n+1){
+  background-color: #efefef;
+}
+.dropdown .options div:before {
+  content: "";
+  width: 32px;
+  height: 24px;
+  background-image: url(https://i.ibb.co/3C5F68J/flags.png);
+  background-repeat: no-repeat;
+  position: absolute;
+  left: 5px;
+  top: 8px;
+}
+.dropdown .options div.sp:before {
+  background-position: 0 0;
+}
+.dropdown .options div.en:before {
+  background-position: 0 -47px;;
+}
+.dropdown .options div.fr:before {
+  background-position: 0 -95px;
+}
+.dropdown .options div.it:before {
+  background-position: 0 -143px;
+}
+.dropdown div.select-country {
+  position: relative;
+  height: 30px;
+  padding: 5px 50px 5px 5px;
+  cursor: pointer;
+  line-height: 30px;
+  border: 1px solid #e2e2e2;
+}
+.dropdown div.select-country:before {
+  content: "";
+  width: 32px;
+  height: 24px;
+  background-image: url(https://i.ibb.co/3C5F68J/flags.png);
+  background-repeat: no-repeat;
+  background-position: 0 -191px;
+  position: absolute;
+  right: 5px;
+  top: 8px;
+}
+
+.single_banner2{
+  height: 200px;
+  width: 100%;
+  background-size: cover;
+  background-repeat-x: no-repeat;
+  background-repeat-y: no-repeat;
+}
+.wh100{
+  width: 100%;
+  height: 100%;
+}
+
+.text-center{
+  text-align: center;
+}
+
+
+.store li {
+  display: inline;
+}
+.store img {
+  width: 170px;
+}
+.pointer {
+  cursor: pointer;
+}
+/* .footer_social i{
+  font-size: 20px;
+}
+
+.footer_social a {
+  padding-top: 5px;
+} */
+
+.w100{
+  width: 100%;
+}
+
+
+option:hover{
+  background-color: #ff4000 !important;
+}
+
+
+.pm{
+ width: 28px;
+}
+.displayblock{
+  display: block !important;
+}
+
+.sub-menu{
+  display: none;
+  margin-left: 10px;
+  color: #616161;
+}
+
+#menu li{
+  min-height: 40px;
+    border-bottom: 1px solid #eaeaea;
+    padding-top: 5px;
+}
+
+.mrl0{
+  margin-right: 0 !important;
+  margin-left : 0 !important
+}
+
+.hidden_content *{
+  margin: 0 !important;
+  padding: 0 !important;
+  height: 1px !important;
+  font-size: 1px !important;
+  color: transparent !important;
+}
+.star-color{
+  color: #28a745;
+}
+.bg-green{
+  background-color: #28a745!important;
+}
+.whatsapp-float {
+  position: fixed;
+  width: 60px;
+  height: 60px;
+  bottom: 25px;
+  right: 25px;
+  background-color: #25D366;
+  color: white;
+  border-radius: 50%;
+  text-align: center;
+  font-size: 30px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.25s ease;
+  text-decoration: none;
+}
+
+.whatsapp-float:hover {
+  transform: scale(1.1);
+}
+
+.whatsapp-icon {
+  font-size: 32px;
+}

@@ -1,0 +1,22 @@
+<app-breadcrumbs [page]="'Blogs'"></app-breadcrumbs>
+
+<div class="blog_bg_area">
+  <div class="container">
+    <!--blog area start-->
+    <div class="row">
+      <div class="col-12">
+        <div class="blog_header">
+          <h1>Blog</h1>
+        </div>
+        <div class="blog_area">
+          <div class="row">
+            <div class="col-md-3 col-sm-6 col-6" *ngFor="let article of articles">
+              <app-article [article]="article"></app-article>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!--blog area end-->
+  </div>
+</div>

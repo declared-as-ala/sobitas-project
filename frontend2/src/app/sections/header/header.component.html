@@ -1,0 +1,286 @@
+<!--header area start-->
+
+<!--offcanvas menu area start-->
+<div class="off_canvars_overlay"></div>
+<div class="offcanvas_menu offcanvas_two">
+  <div class="container">
+    <div class="row">
+      <div class="col-12">
+        <div class="canvas_open">
+          <a href="#" (click)="prevent($event)"><i class="fa-solid fa-bars"></i></a>
+        </div>
+        <div class="offcanvas_menu_wrapper">
+          <div class="canvas_close">
+            <a href="#" (click)="prevent($event)"><i class="fa-solid fa-x"></i></a>
+          </div>
+          <div class="call_support d-flex gap-2" style="justify-content: space-evenly;">
+
+            <a href="tel:{{ coordonnees?.phone_1 }}">
+              <i class="fa fa-phone" aria-hidden="true"></i>{{
+              coordonnees?.phone_1
+              }}</a>
+            <a href="tel:{{ coordonnees?.phone_2 }}">
+              <i class="fa fa-phone" aria-hidden="true"></i>
+              {{
+              coordonnees?.phone_2
+              }}</a>
+          </div>
+          <!-- <div class="header_top_links ">
+            <ul>
+              <li class="text-dark" >Livraison gratuite à partir de 300 DT</li>
+
+            </ul>
+          </div> -->
+          <div class="search_container">
+            <app-search></app-search>
+          </div>
+          <div id="menu" class="text-left">
+            <ul>
+              <li class="menu-item-has-children" routerLinkActive="active">
+                <a routerLink="/" style="font-weight: 600; font-size: 15px;">Accueil</a>
+              </li>
+
+
+              <li *ngFor="let category of menu , let i = index" id="categ{{i}}" class="menu-item-has-children">
+                <a [routerLink]="['/categorie',category.slug ]" style="font-weight: 600;">
+                  {{ category.designation_fr }}
+                </a>
+                <a (click)="expand(i)" style="float: right; font-weight: 600;">+</a>
+                <ul id="sub{{i}}" *ngIf="category.sous_categories &&category.sous_categories.length > 0"
+                  class="sub-menu">
+                  <li *ngFor="let sous_category of category.sous_categories">
+                    <a [routerLink]="[
+                          '/category',
+                          sous_category.slug
+                        ]">{{ sous_category.designation_fr }}</a>
+                  </li>
+                </ul>
+              </li>
+
+
+              <li class="menu-item-has-children">
+                <a routerLink="/blogs" style="font-weight: 600; font-size: 15px;">Blog</a>
+              </li>
+
+              <li class="menu-item-has-children">
+                <a routerLink="/page/qui-sommes-nous" style="font-weight: 600; font-size: 15px;">Qui nous sommes ? </a>
+              </li>
+              <li class="menu-item-has-children">
+                <a routerLink="/contact" style="font-weight: 600; font-size: 15px;"> Contacter nous</a>
+              </li>
+            </ul>
+          </div>
+          <div class="offcanvas_footer">
+            <span><a href="#"><i class="fa fa-envelope-o"></i> {{coordonnees?.email}}</a></span>
+            <div><a
+                href="https://www.google.tn/maps/place/SOBITAS+:+PROTEINE+TUNISIE/@35.8363758,10.6280385,17z/data=!3m1!4b1!4m6!3m5!1s0x1302131b30e891b1:0x51dae0f25849b20c!8m2!3d35.8363715!4d10.6306134!16s%2Fg%2F11g4j5rl1d?hl=fr&entry=ttu"><i
+                  class="fa fa-map-marker"></i> {{coordonnees?.adresse_fr}}</a></div>
+            <ul>
+              <li *ngIf="coordonnees?.facebook_link" class="facebook">
+                <a [href]="coordonnees?.facebook_link" target="_blank"><i class="fa-brands fa-facebook"></i></a>
+              </li>
+              <li *ngIf="coordonnees?.youtube_link" class="google-plus">
+                <a [href]="coordonnees?.youtube_link" target="_blank"><i class="fa-brands fa-youtube"></i></a>
+              </li>
+              <li *ngIf="coordonnees?.twitter_link" class="twitter">
+                <a [href]="coordonnees?.twitter_link" target="_blank"><i class="fa-brands fa-twitter"></i></a>
+              </li>
+
+              <li *ngIf="coordonnees?.instagram_link" class="google-plus">
+                <a [href]="coordonnees?.instagram_link" target="_blank"><i class="fa-brands fa-instagram"></i></a>
+              </li>
+
+              <li *ngIf="coordonnees?.whatsapp_link" class="google-plus">
+                <a [href]="coordonnees?.whatsapp_link" target="_blank"><i class="fa-brands fa-whatsapp"></i></a>
+              </li>
+              <li *ngIf="coordonnees?.linkedin_link" class="linkedin">
+                <a [href]="coordonnees?.linkedin_link" target="_blank"><i class="fa-brands fa-linkedin"></i></a>
+              </li>
+              <li *ngIf="coordonnees?.tiktok_link" class="tiktok" style="background: #ff4000;border-radius: 25px;">
+                <a [href]="coordonnees?.tiktok_link" target="_blank">
+                  <svg xmlns="https://www.w3.org/2000/svg" fill="white" height="16" width="14" viewBox="0 0 448 512">
+                    <path
+                      d="M448 209.9a210.1 210.1 0 0 1 -122.8-39.3V349.4A162.6 162.6 0 1 1 185 188.3V278.2a74.6 74.6 0 1 0 52.2 71.2V0l88 0a121.2 121.2 0 0 0 1.9 22.2h0A122.2 122.2 0 0 0 381 102.4a121.4 121.4 0 0 0 67 20.1z" />
+                  </svg>
+                </a>
+              </li>
+
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!--offcanvas menu area end-->
+<!-- menu phone version end  -->
+<header>
+  <div class="main_header header_two">
+    <!--header top start-->
+    <div class="header_top">
+      <div class="container">
+        <div class="row align-items-center ">
+          <div class="col-lg-4 col-md-4">
+            <div class="header_account">
+              <p style="color: white">
+                <i class="fa fa-phone" aria-hidden="true"></i>
+                <span>&nbsp;Contactez-nous
+                  <a href="tel:{{ coordonnees?.phone_1 }}">{{ coordonnees?.phone_1 }}
+                    {{
+                    coordonnees && coordonnees.phone_2
+                    ? " | " + coordonnees.phone_2
+                    : ""
+                    }}</a></span>
+              </p>
+            </div>
+          </div>
+          <div class="col-lg-4 col-md-4">
+            <div class="header_account text-center">
+              <p style="color: white">
+                <i class="fa-solid fa-location-pin" aria-hidden="true"></i>
+                <a href="https://www.google.tn/maps/place/SOBITAS+:+PROTEINE+TUNISIE/@35.8363758,10.6280385,17z/data=!3m1!4b1!4m6!3m5!1s0x1302131b30e891b1:0x51dae0f25849b20c!8m2!3d35.8363715!4d10.6306134!16s%2Fg%2F11g4j5rl1d?hl=fr&entry=ttu"
+                  target="_blank"> {{ coordonnees.adresse_fr }} </a>
+              </p>
+            </div>
+          </div>
+          <div class="col-lg-4 col-md-4">
+            <div class="header_top_links text-right">
+              <ul>
+                <li>Livraison gratuite à partir de 300 DT</li>
+                <!--  <li><a routerLink="/inscription">S'inscrire</a></li>
+                                    <li><a routerLink="/connexion">Connexion</a></li>
+                                    <li><a routerLink="/cart">Panier</a></li>
+ -->
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!--header top start-->
+
+    <!--header middel start-->
+    <div class="header_middle h_middle_two">
+      <div class="container">
+        <div class="row align-items-center d-flex menumobile" >
+          <div class="col-lg-2 col-md-4 col-sm-4 col-4">
+            <div class="logo">
+              <a routerLink="/"><img [src]="
+                    coordonnees && coordonnees.logo
+                      ? storage + coordonnees.logo
+                      : '/assets/img/logo/logo.webp'
+                  " alt="logo" fetchpriority="high"decoding="async" fetchpriority="high" width="200" height="80" /></a>
+            </div>
+          </div>
+          <div class="col-lg-10 col-md-5 col-sm-5 col-5">
+            <div class="header_right_box">
+              <app-search></app-search>
+              <div class="header_configure_area d-flex align-items-center">
+
+                <div class="mini_cart_wrapper d-flex align-items-center">
+                  <a routerLink="/cart">
+                    <i class="fa-solid fa-cart-shopping"></i>
+                    <span class="cart_price" id="panier_totale">{{ somme_panier }} DT
+                    </span>
+                    <span class="cart_count" id="panier_nb">{{
+                      panier.length
+                      }}</span>
+                  </a>
+                  <!--mini cart-->
+                  <div id="mini_cart" class="mini_cart">
+                    <div class="mini_cart_inner">
+                      <div class="cart_close">
+                        <div class="cart_text">
+                          <h3>Panier</h3>
+                        </div>
+                        <div class="mini_cart_close">
+                          <i class="fa-solid fa-x" (click)="closeMinicart()"></i>
+                        </div>
+                      </div>
+                      <div id="cart_items"></div>
+                    </div>
+                    <div class="mini_cart_footer">
+                      <div class="cart_button">
+                        <a routerLink="/cart" class="active" (click)="closeMinicart()">Afficher votre panier</a>
+                      </div>
+                      <!-- <div class="cart_button">
+                        <a
+                          class="active"
+                          routerLink="/checkout"
+                          (click)="closeMinicart()"
+                          >Passer votre commande</a
+                        >
+                      </div> -->
+                    </div>
+                    <div class="mini_cart_footer">
+                      <div class="cart_button">
+                        <a class="active" (click)="closeMinicart()" style="background: transparent;
+                        color: #ff4000;">Continuer mes achats</a>
+                      </div>
+                    </div>
+                  </div>
+                  <!--mini cart end-->
+                </div>
+                <div class="header_wishlist">
+                  <a (click)="account()"><i class="fa-regular fa-user" style="color: #fff;"></i>
+                    <!-- <span class="wishlist_count">3</span>   -->
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!--header middel end-->
+
+    <!--header bottom satrt-->
+    <div class="header_bottom h_bottom_two sticky-header">
+      <div class="row align-items-center mrl0">
+        <div class="col-lg-12">
+          <div class="main_menu menu_two menu_position text-left">
+            <nav>
+              <ul class="menuul">
+                <li><a class="active" routerLink="/">Accueil</a></li>
+                <li>
+                  <a routerLink="/page/qui-sommes-nous">Qui somme nous</a>
+                </li>
+                <li class="mega_items">
+                  <a routerLink="/shop">Nos produits<i class="fa fa-angle-down"></i></a>
+                  <div class="mega_menu">
+                    <ul class="mega_menu_inner">
+                      <li *ngFor="let category of menu">
+                        <a [routerLink]="[
+                          '/categorie',
+                          category.slug
+                        ]" class="category-mega">{{ category.designation_fr }}</a>
+                        <ul *ngIf="
+                          category.sous_categories &&
+                          category.sous_categories.length > 0
+                        ">
+                          <li *ngFor="
+                            let sous_category of category.sous_categories
+                          ">
+                            <a [routerLink]="[
+                              '/category',
+                              sous_category.slug
+                            ]">{{ sous_category.designation_fr }}</a>
+                          </li>
+                        </ul>
+                      </li>
+                    </ul>
+                  </div>
+                </li>
+                <li><a routerLink="/pack/packs">Packs</a></li>
+                <li><a routerLink="/blogs">Blog</a></li>
+
+                <li><a routerLink="/contact"> Contacter nous</a></li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!--header bottom end-->
+  </div>
+</header>

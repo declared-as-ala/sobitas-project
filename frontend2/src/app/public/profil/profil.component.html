@@ -1,0 +1,45 @@
+
+<main class="main-content" *ngIf="profil">
+
+ 
+
+  
+    <!--== End Page Header Area Wrapper ==-->
+
+    <!--== Start Product Details Area Wrapper ==-->
+    <section >
+        <div class="container portfolio">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="heading">
+                        <img src="https://image.ibb.co/cbCMvA/logo.png" />
+                    </div>
+                </div>
+            </div>
+            <div class="bio-info">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="bio-image">
+                                    <img [src]="storage+profil.avatar" alt="image" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="bio-content">
+                            <h1>{{profil.name}} <small>( {{profil.type}} )</small></h1>
+                            <h6>{{profil.apropos}}</h6>
+                            <p> Adresse : {{profil.adresse}}</p>
+                            <p> Spécialité : {{profil.specialite}}</p>
+                            <p> Contact : {{profil.numero_telephone}}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </section>
+
+</main>

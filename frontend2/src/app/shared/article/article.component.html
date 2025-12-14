@@ -1,0 +1,28 @@
+<article class="single_blog mb-5">
+  <figure>
+    <div class="blog_thumb">
+      <a [routerLink]="['/blogs' , article.slug]"><img loading="lazy" fetchpriority="high"decoding="async"
+          [ngSrc]="article.cover ? storage+article.cover : 'assets/img/blog/blog1.webp'"
+          [alt]="article.alt_cover ? article.alt_cover : article.designation_fr"
+          [title]="article.description_cover? article.description_cover : article.designation_fr" width="500"
+          height="300" style="height: auto;width: auto;object-fit: cover;"></a>
+    </div>
+    <figcaption class="blog_content">
+      <h4><a class="lc" [routerLink]="['/blogs' , article.slug]">{{article.designation_fr}}</a></h4>
+      <div class="post_meta">
+        <p><i class="fa fa-calendar"></i> {{article.created_at | date:'dd-MM-yyy'}} </p>
+      </div>
+      <footer class="post_readmore">
+        <a [routerLink]="['/blogs' , article.slug]">Voir plus </a>
+      </footer>
+    </figcaption>
+  </figure>
+</article>
+<style>
+  .lc {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+</style>
