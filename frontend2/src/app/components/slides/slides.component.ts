@@ -1,64 +1,70 @@
-// slides.component.ts
-import { Component, Input, OnInit, Inject, PLATFORM_ID, HostListener, AfterViewInit, ViewChild, ElementRef, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
-import { register as registerSwiperElements } from 'swiper/element/bundle';
-import { storage } from '../../apis/config';
-
-// Register once (you can also do it in main.ts)
-registerSwiperElements();
+import {
+  Component,
+  Input,
+  Inject,
+  PLATFORM_ID,
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  signal,
+  computed,
+  effect,
+} from '@angular/core';
+import { CommonModule, isPlatformBrowser, NgOptimizedImage } from '@angular/common';
 
 @Component({
   selector: 'app-slides',
   standalone: true,
-  schemas: [CUSTOM_ELEMENTS_SCHEMA],   // ← THIS IS THE FIX
+  imports: [CommonModule, NgOptimizedImage],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './slides.component.html',
-  styleUrls: ['./slides.component.css']
+  styleUrls: ['./slides.component.css'],
 })
-export class SlidesComponent implements OnInit, AfterViewInit {
-  @Input() slides: any[] = [];
-  data: any[] = [];
-  screenwidth = 1000;
-  storage = storage;
+export class SlidesComponent {
+  @Input({ required: true }) slides: any[] = [];
 
-  @ViewChild('swiperEl') swiperEl!: ElementRef<HTMLElement>;
+  private isBrowser!: boolean;
 
-  constructor(@Inject(PLATFORM_ID) private platformId: Object) {}
+  screenWidth = signal(1200);
+  current = signal(0);
 
-  ngOnInit(): void {
-    if (isPlatformBrowser(this.platformId)) {
-      this.screenwidth = window.innerWidth;
+  slidesForDevice = computed(() => {
+    const type = this.screenWidth() > 700 ? 'web' : 'mobile';
+    return this.slides.filter(s => s.type === type);
+  });
+
+  constructor(
+    @Inject(PLATFORM_ID) platformId: Object,
+    private cdr: ChangeDetectorRef
+  ) {
+    this.isBrowser = isPlatformBrowser(platformId);
+
+    if (this.isBrowser) {
+      this.screenWidth.set(window.innerWidth);
+
+      effect(() => {
+        const slides = this.slidesForDevice();
+        if (!slides.length) return;
+
+        // delay the interval slightly to avoid NG0100
+        const timer = setTimeout(() => {
+          const interval = setInterval(() => {
+            this.current.update(i => (i + 1) % slides.length);
+            this.cdr.markForCheck(); // trigger change detection
+          }, 3000);
+
+          // cleanup
+          return () => clearInterval(interval);
+        }, 0);
+
+        return () => clearTimeout(timer);
+      });
     }
-    this.applyResponsiveSlides();
   }
 
-  ngAfterViewInit(): void {
-    if (isPlatformBrowser(this.platformId) && this.swiperEl?.nativeElement) {
-      (this.swiperEl.nativeElement as any).initialize?.();
-    }
-  }
-
-  @HostListener('window:resize')
   onResize() {
-    if (isPlatformBrowser(this.platformId)) {
-      this.screenwidth = window.innerWidth;
-      this.applyResponsiveSlides();
-
-      // Re-init Swiper after data change
-      setTimeout(() => {
-        if (this.swiperEl?.nativeElement) {
-          (this.swiperEl.nativeElement as any).initialize?.();
-        }
-      }, 50);
-    }
-  }
-
-  applyResponsiveSlides() {
-    if (!this.slides?.length) {
-      this.data = [];
-      return;
-    }
-    this.data = this.screenwidth > 700
-      ? this.slides.filter(s => s.type === 'web')
-      : this.slides.filter(s => s.type === 'mobile');
+    if (!this.isBrowser) return;
+    this.screenWidth.set(window.innerWidth);
+    this.current.set(0);
+    this.cdr.markForCheck(); // ensure CD updates on resize
   }
 }

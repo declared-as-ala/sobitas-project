@@ -8,7 +8,8 @@ import {
   PLATFORM_ID,
   ViewChild,
   ElementRef,
-  CUSTOM_ELEMENTS_SCHEMA
+  CUSTOM_ELEMENTS_SCHEMA,
+  ChangeDetectorRef
 } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DomSanitizer } from '@angular/platform-browser';
@@ -41,7 +42,8 @@ export class FooterComponent implements OnInit, AfterViewInit {
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
     private general: GeneralService,
-    private sanitizer: DomSanitizer
+    private sanitizer: DomSanitizer,
+    private cdr: ChangeDetectorRef
   ) {}
 
   form: FormGroup = new FormGroup({
@@ -89,6 +91,7 @@ export class FooterComponent implements OnInit, AfterViewInit {
         });
       }, 5000);
     }
+    this.cdr.detectChanges();
   }
 
   ngAfterViewInit(): void {}
@@ -120,5 +123,6 @@ export class FooterComponent implements OnInit, AfterViewInit {
         }
       );
     }
+    this.cdr.detectChanges();
   }
 }

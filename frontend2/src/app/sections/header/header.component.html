@@ -41,7 +41,7 @@
               </li>
 
 
-              <li *ngFor="let category of menu , let i = index" id="categ{{i}}" class="menu-item-has-children">
+              <li *ngFor="let category of menu() , let i = index" id="categ{{i}}" class="menu-item-has-children">
                 <a [routerLink]="['/categorie',category.slug ]" style="font-weight: 600;">
                   {{ category.designation_fr }}
                 </a>
@@ -180,10 +180,10 @@
                 <div class="mini_cart_wrapper d-flex align-items-center">
                   <a routerLink="/cart">
                     <i class="fa-solid fa-cart-shopping"></i>
-                    <span class="cart_price" id="panier_totale">{{ somme_panier }} DT
+                    <span class="cart_price" id="panier_totale">{{ somme_panier() }} DT
                     </span>
                     <span class="cart_count" id="panier_nb">{{
-                      panier.length
+                      panier().length
                       }}</span>
                   </a>
                   <!--mini cart-->
@@ -249,7 +249,7 @@
                   <a routerLink="/shop">Nos produits<i class="fa fa-angle-down"></i></a>
                   <div class="mega_menu">
                     <ul class="mega_menu_inner">
-                      <li *ngFor="let category of menu">
+                      <li *ngFor="let category of menu()">
                         <a [routerLink]="[
                           '/categorie',
                           category.slug

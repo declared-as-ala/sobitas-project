@@ -35,7 +35,7 @@
 
 .product_thumb a img{
   width: 90% !important;
-  height: auto !important;
+  height: 240px !important;
   position: unset !important;
   margin : 5%
 }
@@ -50,8 +50,25 @@
   color: #ff4000;
   text-decoration: underline;
 }
-
-/* .product-image{
+@media screen and (max-width: 768px) {
+  .product_thumb a img{
+    width: 95% !important;
+    height: 180px !important;
+    position: unset !important;
+    margin : 0
+  }
+  
+}
+@media screen and (max-width: 468px) {
+  .product_thumb a img{
+    width: 95% !important;
+    height: 150px !important;
+    position: unset !important;
+    margin : 0
+  }
+  
+}
+/*.product-image{
   height: 300px !important;
   width: min-content !important;
   margin: auto;

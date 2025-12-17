@@ -1,4 +1,4 @@
-import { Component, OnInit, Pipe } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, Pipe } from '@angular/core';
 import { ActivatedRoute , Router } from '@angular/router';
 import { CommandeService } from '../../apis/commande.service';
 import { GeneralService } from './../../apis/general.service';
@@ -12,7 +12,7 @@ import { CommonModule, DecimalPipe } from '@angular/common';
 })
 export class DetailCommandeComponent implements OnInit {
 
-  constructor(private router : Router , private route : ActivatedRoute , private api : CommandeService){}
+  constructor(private router : Router , private route : ActivatedRoute , private api : CommandeService, private cdr : ChangeDetectorRef){}
   id : any;
 
   commande : any
@@ -32,8 +32,8 @@ export class DetailCommandeComponent implements OnInit {
         this.commande = data.facture;
         this.details = data.details_facture
 
-
       })
+      this.cdr.detectChanges();
     }
 
 }

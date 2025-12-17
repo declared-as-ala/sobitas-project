@@ -1,13 +1,14 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../../apis/auth.service';
 import Swal from 'sweetalert2';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-profile',
   templateUrl: './profile.component.html',
   styleUrls: ['./profile.component.css'],
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule,CommonModule],
 })
 export class ProfileComponent implements OnInit{
 
@@ -23,16 +24,16 @@ export class ProfileComponent implements OnInit{
 
 
 
-  constructor(private auth : AuthService){
+  constructor(private auth : AuthService, private cdr: ChangeDetectorRef){
 
   }
 
   ngOnInit(): void {
     this.auth.profil()
     .subscribe((data:any)=>{
-
       this.profil.patchValue(data)
     })
+    this.cdr.detectChanges();
   }
 /*   upload(event : any){
     let files = event.target.files
@@ -59,5 +60,6 @@ export class ProfileComponent implements OnInit{
         icon : 'success' , toast : true , timer : 4000 , showConfirmButton : false , title :'Votre profil a été bien modifié'
       })
     })
+    this.cdr.detectChanges();
   }
 }

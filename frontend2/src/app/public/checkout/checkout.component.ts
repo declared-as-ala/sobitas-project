@@ -1,8 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { CommandeService } from '../../apis/commande.service';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../apis/auth.service';
-import { CommandeService } from '../../apis/commande.service';
 import { storage } from '../../apis/config';
 import Swal from 'sweetalert2';
 import { CommonModule, DecimalPipe } from '@angular/common';
@@ -14,12 +14,7 @@ declare var $ : any;
   templateUrl: './checkout.component.html',
   styles: [
   ],
-  imports: [
-    CommonModule,
-    DecimalPipe,
-    ReactiveFormsModule,
-    LoaderComponent
-  ]
+  imports: [ReactiveFormsModule,DecimalPipe,LoaderComponent,CommonModule]
 })
 
 export class CheckoutComponent implements OnInit{
@@ -31,7 +26,7 @@ export class CheckoutComponent implements OnInit{
 
   user_id = localStorage.getItem('id')
 
-  constructor(private router : Router , private api : CommandeService , private user : AuthService){
+  constructor(private router : Router , private api : CommandeService , private user : AuthService, private cdr: ChangeDetectorRef){
 
   }
 
@@ -103,14 +98,13 @@ export class CheckoutComponent implements OnInit{
       })
     }
     this.calcule()
+    this.cdr.detectChanges();
   }
 
 
   totale = 0
   calcule(){
     this.totale = this.panier.reduce((accumulateur : number , p : any)=> accumulateur + p.prix_totale , 0)
-
-
   }
 
 valider(){
@@ -135,7 +129,7 @@ valider(){
         $('#panier_nb').text('0');
         $('#panier_totale').text('0.000');
       }, 1);
-
+      this.cdr.detectChanges();
       localStorage.setItem('last_checkout' , result.id+'')
       Swal.fire({
         title: 'Merci pour votre commande',
@@ -149,6 +143,7 @@ valider(){
 
     })
   }
+  this.cdr.detectChanges();
 }
 
 }

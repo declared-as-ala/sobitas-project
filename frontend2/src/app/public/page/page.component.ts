@@ -1,23 +1,23 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
-import { GeneralService } from './../../apis/general.service';
-import { CommonModule } from '@angular/common';
+import { GeneralService } from '../../apis/general.service';
 import { BreadcrumbsComponent } from '../../shared/breadcrumbs/breadcrumbs.component';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-page',
   templateUrl: './page.component.html',
   styleUrls: ['./page.component.css'],
-  imports: [CommonModule, BreadcrumbsComponent],
+  imports: [BreadcrumbsComponent,CommonModule]
 })
 export class PageComponent implements OnInit{
   coordonnees: any = JSON.parse(localStorage.getItem('coordonnees') || '{}');
 
-  constructor(private route : ActivatedRoute , private general : GeneralService ,  private sanitizer: DomSanitizer){}
+  constructor(private route : ActivatedRoute , private general : GeneralService ,  private sanitizer: DomSanitizer, private cdr: ChangeDetectorRef){}
 
   page : any;
-  slug : any;
+  slug  :any;
 map : any = ''
 
 faqs : any = []
@@ -33,7 +33,7 @@ faqs : any = []
     this.general.faqs()
     .subscribe((data)=>this.faqs = data)
 
-
+    this.cdr.detectChanges();
   }
 
 }

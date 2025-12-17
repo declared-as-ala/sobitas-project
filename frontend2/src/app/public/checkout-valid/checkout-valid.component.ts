@@ -1,17 +1,17 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommandeService } from '../../apis/commande.service';
 import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
+
 @Component({
   selector: 'app-checkout-valid',
   templateUrl: './checkout-valid.component.html',
-  styles: [
-  ],
-  imports: [ DecimalPipe, DatePipe, CommonModule ],
+  styles: [],
+  imports: [DatePipe,DecimalPipe,CommonModule]
 })
 export class CheckoutValidComponent implements OnInit{
 
-  constructor(private api : CommandeService , private router : Router){
+  constructor(private api : CommandeService , private router : Router,private cdr : ChangeDetectorRef){
 
   }
 
@@ -23,18 +23,12 @@ details : any
     if(!this.id){
       this.router.navigate(['/'])
     }
-
     localStorage.removeItem('last_checkout')
-
-
     this.api.details_commande(this.id)
     .subscribe((data : any)=>{
-
       this.commande = data.facture;
       this.details = data.details_facture
-
-
-
     })
+    this.cdr.detectChanges();
   }
 }

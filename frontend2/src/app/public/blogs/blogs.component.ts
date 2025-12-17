@@ -1,5 +1,5 @@
-import { Component, OnInit } from '@angular/core';
-import { GeneralService } from './../../apis/general.service';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { GeneralService } from '../../apis/general.service';
 import { CommonModule } from '@angular/common';
 import { BreadcrumbsComponent } from '../../shared/breadcrumbs/breadcrumbs.component';
 import { ArticleComponent } from '../../shared/article/article.component';
@@ -8,11 +8,11 @@ import { ArticleComponent } from '../../shared/article/article.component';
   selector: 'app-blogs',
   templateUrl: './blogs.component.html',
   styleUrls: ['./blogs.component.css'],
-  imports: [CommonModule, ArticleComponent, BreadcrumbsComponent],
+  imports: [CommonModule,BreadcrumbsComponent,ArticleComponent]
 })
 export class BlogsComponent implements OnInit {
 
-  constructor(private general : GeneralService){}
+  constructor(private general : GeneralService, private cdr : ChangeDetectorRef){}
 
   articles : any = []
   ngOnInit(): void {
@@ -20,5 +20,6 @@ export class BlogsComponent implements OnInit {
       .subscribe((data : any)=>{
         this.articles = data
       })
+      this.cdr.detectChanges();
   }
 }

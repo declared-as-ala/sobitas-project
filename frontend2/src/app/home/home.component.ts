@@ -1,5 +1,5 @@
 import { CommonModule, DOCUMENT, isPlatformBrowser } from '@angular/common';
-import { Component, Inject, OnInit, PLATFORM_ID } from '@angular/core';
+import { ChangeDetectorRef, Component, Inject, OnInit, PLATFORM_ID } from '@angular/core';
 import { storage } from '../apis/config';
 import { GeneralService } from '../apis/general.service';
 import { ProductComponent } from '../shared/product/product.component';
@@ -17,8 +17,8 @@ export class HomeComponent implements OnInit {
   constructor(
     @Inject(PLATFORM_ID) private platform_id: Object,
     private general: GeneralService,
-    @Inject(DOCUMENT) private _document: Document
-
+    @Inject(DOCUMENT) private _document: Document,
+    private cdr: ChangeDetectorRef
   ) { }
 
   marques: any;
@@ -147,8 +147,9 @@ export class HomeComponent implements OnInit {
       this.new_products = data.new_product.slice(0, 4);
       this.best_sellers = data.best_sellers;
       this.packs = data.packs
-
+      this.cdr.detectChanges();
     });
+    
     this.createCanonicalURL()
     setTimeout(() => {
     }, 100);
@@ -166,7 +167,7 @@ export class HomeComponent implements OnInit {
       }, 0);
     }
 
-
+    this.cdr.detectChanges();
   }
   createCanonicalURL() {
     let link: HTMLLinkElement = this._document.createElement('link');
@@ -175,6 +176,7 @@ export class HomeComponent implements OnInit {
     let url = this._document.URL
     url = url.replace('http://', 'https://')
     link.setAttribute('href', url);
+    this.cdr.detectChanges();
   }
   trackByProduct(index: number, item: any) {
   return item.id || index;

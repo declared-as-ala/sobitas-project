@@ -1,5 +1,5 @@
 import { CommandeService } from './../../apis/commande.service';
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../apis/auth.service';
 import Swal from 'sweetalert2';
@@ -14,12 +14,12 @@ import { CommonModule, DecimalPipe } from '@angular/common';
 export class HistoriqueComponent implements OnInit {
 
 
-  constructor(private api : AuthService , private router : Router){}
+  constructor(private api : AuthService , private router : Router, private cdr: ChangeDetectorRef){}
 
   commandes : any[] = []
   ngOnInit(): void {
     this.api.commandes().subscribe((res: any) => this.commandes = res)
-
+    this.cdr.detectChanges();
   }
   /* annuler(id : number){
     Swal.fire({

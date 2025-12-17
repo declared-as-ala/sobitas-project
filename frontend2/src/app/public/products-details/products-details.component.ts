@@ -1,25 +1,24 @@
+import { GeneralService } from '../../apis/general.service';
 import { AuthService } from '../../apis/auth.service';
-import { GeneralService } from './../../apis/general.service';
-import { Component, ElementRef, Inject, OnDestroy, OnInit, Renderer2, ViewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, Inject, OnDestroy, OnInit, Renderer2, ViewChild } from '@angular/core';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { storage } from '../../apis/config';
 import Swal from 'sweetalert2';
 import { Title } from "@angular/platform-browser";
-import { CommonModule, DatePipe, DOCUMENT } from '@angular/common';
+import { CommonModule, DOCUMENT } from '@angular/common';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { NgxPaginationModule } from 'ngx-pagination';
-import { ProductComponent } from '../../shared/product/product.component';
 import { BreadcrumbsComponent } from '../../shared/breadcrumbs/breadcrumbs.component';
+import { ProductComponent } from '../../shared/product/product.component';
+import { NgxPaginationModule } from 'ngx-pagination';
 import { SocialShareComponent } from '../../shared/social-share/social-share.component';
-
 
 declare var $: any;
 @Component({
   selector: 'app-products-details',
   templateUrl: './products-details.component.html',
   styleUrls: ['./products-details.component.css'],
-  imports: [CommonModule,RouterModule,DatePipe,NgxPaginationModule,ProductComponent,FormsModule,BreadcrumbsComponent,SocialShareComponent,ReactiveFormsModule]
+  imports: [BreadcrumbsComponent,CommonModule,RouterModule,ProductComponent,ReactiveFormsModule,NgxPaginationModule,SocialShareComponent,FormsModule]
 
 })
 export class ProductsDetailsComponent implements OnInit, OnDestroy {
@@ -38,7 +37,8 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
     private metaService: Meta,
     private title: Title,
     private _render2: Renderer2,
-    @Inject(DOCUMENT) private _document: Document
+    @Inject(DOCUMENT) private _document: Document,
+    private cdr: ChangeDetectorRef
   ) {
     this.login = new FormGroup({
       email: new FormControl('', [Validators.required, Validators.email]),
@@ -50,8 +50,9 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
       }, 0);
       return false;
     };
+    this.cdr.detectChanges();
   }
-  slug !: string;
+  slug: any ;
   product: any;
   storage = storage;
   gallery: any = [];
@@ -69,7 +70,6 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
   }
   ngOnInit() {
     this.slug = this.route.snapshot.params['slug'];
-
     this.general.produit(this.slug).subscribe((res) => {
       this.product = res;
       this.average = this.calculateAverageStars()
@@ -88,7 +88,7 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
       }
     });
     this.isUserAuthenticated = this.isAuthenticated();
-
+    this.cdr.detectChanges();
   }
   public isAuthenticated(): boolean {
     if (localStorage.getItem('token') == null) {
@@ -98,34 +98,34 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
       return true
   }
   settupSchema() {
-    let avg = this.calculateAverageStars();
+    if (!this.product) return;
 
-    let script = this._render2.createElement('script');
-    script.type = `application/ld+json`
-    if (this.product.reviews) {
-      script.text = `{
-        "@context": "https://schema.org/",
-        "@type": "Product",
-        "name": "${this.product.designation_fr}",
-        "description": "${this.product.content_seo}",
-        "image": "${storage}${this.product.cover}",
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "bestRating": "5",
-          "ratingCount": "${this.product.reviews.length}",
-          "ratingValue": "${avg}"
-        }
-      }`
-    } else {
-      script.text = `{
-        "@context": "https://schema.org/",
-        "@type": "Product",
-        "name": "${this.product.designation_fr}",
-        "description": "${this.product.content_seo}",
-        "image": "${storage}${this.product.cover}"
-      }`
+    const avg = this.calculateAverageStars();
+
+    const productData: any = {
+      "@context": "https://schema.org/",
+      "@type": "Product",
+      "name": this.product.designation_fr,
+      "description": this.product.content_seo,
+      "image": `${storage}${this.product.cover}`
+    };
+
+    if (this.product.reviews && this.product.reviews.length > 0) {
+      productData.aggregateRating = {
+        "@type": "AggregateRating",
+        "bestRating": "5",
+        "ratingCount": this.product.reviews.length,
+        "ratingValue": avg
+      };
     }
-    this._render2.appendChild(this._document.body, script)
+
+    const script = this._render2.createElement('script');
+    script.type = 'application/ld+json';
+    script.text = JSON.stringify(productData); // safe JSON serialization
+
+    this._render2.appendChild(this._document.head, script); // append to head for SEO
+
+    this.cdr.detectChanges(); // only needed for client updates
   }
   addToCard() {
     let panier = JSON.parse(localStorage.getItem('panier') || '[]');
@@ -200,6 +200,7 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
 
     }, 1);
     localStorage.setItem('panier', JSON.stringify(panier));
+    this.cdr.detectChanges();
   }
 
   ngOnDestroy(): void {
@@ -235,7 +236,7 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
       this.metaService.updateTag({ name: 'title', content: this.product.designation_fr });
       this.metaService.updateTag({ name: 'description', content: this.product.description_fr });
     }
-
+    this.cdr.detectChanges();
   }
 
   inc_dec_qte(type: string) {
@@ -246,6 +247,7 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
         this.quantity--
       }
     }
+    this.cdr.detectChanges();
   }
 
   createCanonicalURL() {
@@ -255,6 +257,7 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
     let url = this._document.URL
     url = url.replace('https://', 'https://')
     link.setAttribute('href', url);
+    this.cdr.detectChanges();
   }
 
   clicked: boolean = false
@@ -315,7 +318,7 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
         }
       )
     }
-
+    this.cdr.detectChanges();
   }
 
   public stars: boolean[] = Array(5).fill(false);
@@ -323,10 +326,10 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
   public rate(rating: number) {
     this.rating = rating;
     this.stars = this.stars.map((_, i) => rating > i);
+    this.cdr.detectChanges();
   }
   validateReview() {
     if (this.rating == 0 ) { return false } else { return true }
-
   }
 
 }

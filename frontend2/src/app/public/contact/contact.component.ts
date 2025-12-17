@@ -1,7 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { GeneralService } from '../../apis/general.service';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FormGroup, FormControl, Validators, ReactiveFormsModule } from '@angular/forms';
 import { DomSanitizer } from '@angular/platform-browser';
-import { GeneralService } from './../../apis/general.service';
 import Swal from 'sweetalert2';
 import { BreadcrumbsComponent } from '../../shared/breadcrumbs/breadcrumbs.component';
 
@@ -9,12 +9,12 @@ import { BreadcrumbsComponent } from '../../shared/breadcrumbs/breadcrumbs.compo
   selector: 'app-contact',
   templateUrl: './contact.component.html',
   styleUrls: ['./contact.component.css'],
-  imports: [BreadcrumbsComponent,ReactiveFormsModule],
+  imports: [BreadcrumbsComponent,ReactiveFormsModule]
 })
 export class ContactComponent implements OnInit {
   coordonnees: any = JSON.parse(localStorage.getItem('coordonnees') || '{}');
 
-  constructor(private general: GeneralService , private sanitizer: DomSanitizer) {}
+  constructor(private general: GeneralService , private sanitizer: DomSanitizer, private cdr: ChangeDetectorRef) {}
   contactForm: FormGroup = new FormGroup({
     name: new FormControl('', Validators.required),
     email: new FormControl('', [Validators.required, Validators.email]),
@@ -33,6 +33,7 @@ export class ContactComponent implements OnInit {
       setTimeout(() => {
           document.querySelector('meta[name="description"]')?.setAttribute("content" , "_desc")
       }, 0);
+      this.cdr.detectChanges();
   }
 
   sendEmail() {
@@ -40,7 +41,7 @@ export class ContactComponent implements OnInit {
 
       this.general.contact(this.contactForm.value)
       .subscribe((data : any)=>{
-
+        
         Swal.fire({
           title: data.success,
           icon: 'success',
@@ -54,5 +55,6 @@ export class ContactComponent implements OnInit {
       })
 
     }
+    this.cdr.detectChanges();
   }
 }

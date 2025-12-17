@@ -1,89 +1,113 @@
-import { Component, Input, OnInit } from '@angular/core';
+import {
+  Component,
+  Input,
+  OnInit,
+  Inject,
+  PLATFORM_ID,
+  signal,
+} from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { storage } from '../../apis/config';
 import { GeneralService } from './../../apis/general.service';
 import { SearchComponent } from '../search/search.component';
-declare var $ : any
+
+declare var $: any;
+
 @Component({
   selector: 'app-header',
+  standalone: true,
+  imports: [SearchComponent, RouterModule, CommonModule],
   templateUrl: './header.component.html',
   styles: [],
-  imports: [SearchComponent, RouterModule],
 })
 export class HeaderComponent implements OnInit {
-  menu: any = JSON.parse(localStorage.getItem('menu') || '[]');
-  panier = JSON.parse(localStorage.getItem('panier') || '[]');
-  id = localStorage.getItem('id');
-storage = storage
-  somme_panier = 0;
+  menu = signal<any[]>([]);
+  panier = signal<any[]>([]);
+  somme_panier = signal<number>(0);
 
+  storage = storage;
+  @Input() coordonnees: any;
+  id: string | null = null;
+  search2 = '';
 
+  private isBrowser: boolean;
 
-  @Input() coordonnees : any
+  constructor(
+    private general: GeneralService,
+    private router: Router,
+    @Inject(PLATFORM_ID) platformId: Object
+  ) {
+    this.isBrowser = isPlatformBrowser(platformId);
+  }
 
-
-
-  constructor(private general: GeneralService , private router : Router) {}
   ngOnInit(): void {
+    if (this.isBrowser) this.loadLocalStorage();
 
-
-    this.somme_panier = this.panier.reduce(
-      (a: number, b: any) => a + b.prix_totale,
-      0
-    );
-    this.general.loadScript();
-setTimeout(() => {
-
-}, 200);
-
-    this.general.categories().subscribe((data: any) => {
-      this.menu = data;
+    // Fetch menu
+    this.general.categories().subscribe({
+      next: (data: any) => {
+        this.menu.set(data || []);
+        if (this.isBrowser) localStorage.setItem('menu', JSON.stringify(data));
+      },
+      error: () => {
+        this.menu.set(this.menu() || []);
+      },
     });
 
+    if (this.isBrowser) this.general.loadScript();
   }
 
+  private loadLocalStorage() {
+    try {
+      const panierStr = localStorage.getItem('panier');
+      if (panierStr) {
+        const items = JSON.parse(panierStr);
+        this.panier.set(items);
+        this.somme_panier.set(
+          items.reduce((acc: number, item: any) => acc + (item.prix_totale || 0), 0)
+        );
+      }
 
-  closeMinicart(){
-    setTimeout(() => {
-      $('#mini_cart').removeClass('active')
-    }, 0);
-  }
+      const menuStr = localStorage.getItem('menu');
+      if (menuStr) this.menu.set(JSON.parse(menuStr));
 
-
-  search2 = ''
-  search2Action(){
-    if(this.search2 && this.search2 != ''){
-      this.router.navigate(['/produits-search', this.search2]);
+      this.id = localStorage.getItem('id');
+    } catch (e) {
+      console.warn('Failed to parse localStorage', e);
     }
-
   }
 
-
-  prevent(e : any){
-    e.preventDefault()
+  closeMinicart() {
+    if (this.isBrowser) setTimeout(() => $('#mini_cart').removeClass('active'), 0);
   }
 
-  expand(index : any){
+  search2Action() {
+    if (this.search2?.trim()) this.router.navigate(['/produits-search', this.search2.trim()]);
+  }
 
-    let id = '#categ'+index
-    let sub = '#sub'+index
-     setTimeout(() => {
-      if ($( id ).hasClass('menu-open')) {
-        $( id ).removeClass( 'menu-open');
-        $( sub ).removeClass( 'displayblock');
+  prevent(e: Event) {
+    e.preventDefault();
+  }
+
+  expand(index: number) {
+    if (!this.isBrowser) return;
+    const id = '#categ' + index;
+    const sub = '#sub' + index;
+
+    setTimeout(() => {
+      if ($(id).hasClass('menu-open')) {
+        $(id).removeClass('menu-open');
+        $(sub).removeClass('displayblock');
       } else {
-        $(id ).addClass( 'menu-open');
-        $( sub ).addClass( 'displayblock');
-
+        $(id).addClass('menu-open');
+        $(sub).addClass('displayblock');
       }
     }, 0);
   }
 
-  account(){
-    if(localStorage.getItem('token')){
-      this.router.navigate(['/compte'])
-    }else{
-      this.router.navigate(['/login'])
-    }
+  account() {
+    if (this.isBrowser && localStorage.getItem('token')) this.router.navigate(['/compte']);
+    else this.router.navigate(['/login']);
   }
 }

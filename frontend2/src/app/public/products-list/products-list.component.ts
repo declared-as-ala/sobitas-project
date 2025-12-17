@@ -1,5 +1,7 @@
+import { NgxPaginationModule } from 'ngx-pagination';
 import { CommonModule, DOCUMENT, isPlatformBrowser } from '@angular/common';
 import {
+  ChangeDetectorRef,
   Component,
   HostListener,
   Inject,
@@ -12,18 +14,17 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { storage } from '../../apis/config';
 import { GeneralService } from '../../apis/general.service';
 import { ShopSection } from './ShopSection';
+import { BreadcrumbsComponent } from '../../shared/breadcrumbs/breadcrumbs.component';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ProductComponent } from '../../shared/product/product.component';
 import { LoaderComponent } from '../../shared/loader/loader.component';
-import { BreadcrumbsComponent } from '../../shared/breadcrumbs/breadcrumbs.component';
-import { FormsModule } from '@angular/forms';
-import { NgxPaginationModule } from 'ngx-pagination';
 
 declare var $: any;
 @Component({
   selector: 'app-products-list',
   templateUrl: './products-list.component.html',
   styleUrls: ['./products-list.component.css'],
-  imports: [RouterModule, ProductComponent, LoaderComponent, BreadcrumbsComponent,CommonModule, FormsModule, NgxPaginationModule],
+  imports: [BreadcrumbsComponent,RouterModule,FormsModule,ReactiveFormsModule,ProductComponent,NgxPaginationModule,LoaderComponent,CommonModule],
 })
 export class ProductsListComponent implements OnInit {
   constructor(
@@ -32,7 +33,7 @@ export class ProductsListComponent implements OnInit {
     private router: Router,
     private title: Title,
     private metaService: Meta,
-
+    private cdr: ChangeDetectorRef,
     private _render2: Renderer2,
     @Inject(DOCUMENT) private _document: Document,
     @Inject(PLATFORM_ID) private platformId: Object
@@ -46,11 +47,11 @@ export class ProductsListComponent implements OnInit {
   }
   shopSectionInfo:ShopSection | undefined;
   Surnom = '';
-  nom : any;
-  slug_sous_categ : any;
-  slug_categ : any;
-  tag : any;
-  id_brand : any;
+  nom :any;
+  slug_sous_categ :any;
+  slug_categ :any;
+  tag :any;
+  id_brand :any;
   packs : any;
   storage = storage;
   produits: any = [];
@@ -72,7 +73,6 @@ export class ProductsListComponent implements OnInit {
   isLoading = true;
   screenwidth = 1000;
   ngOnInit(): void {
-
     this.nom = this.route.snapshot.params['nom'];
     this.slug_sous_categ = this.route.snapshot.params['slug_sub'];
     this.slug_categ = this.route.snapshot.params['slug_cat'];
@@ -178,7 +178,7 @@ export class ProductsListComponent implements OnInit {
       this.media = data;
     });
     this.isShopRoute()
-
+    this.cdr.detectChanges();
   }
   @HostListener('window:resize', ['$event'])
   getScreenSize(event?: any) {
@@ -186,6 +186,7 @@ export class ProductsListComponent implements OnInit {
     if (this.screenwidth < 600) {
       this.isFilter = false;
     }
+    this.cdr.detectChanges();
   }
   filtrer() {
     let amount = $('#amount').val();
@@ -199,6 +200,7 @@ export class ProductsListComponent implements OnInit {
     );
 
     this.isFilter = false;
+    this.cdr.detectChanges();
   }
 
   trier(event: any) {
@@ -229,6 +231,7 @@ export class ProductsListComponent implements OnInit {
         0
       );
     }
+    this.cdr.detectChanges();
   }
 
   loadScript() {
@@ -249,6 +252,7 @@ export class ProductsListComponent implements OnInit {
         $('#slider-range').slider('values', 0) +' - ' + $('#slider-range').slider('values', 1)
       ); */
     }, 0);
+    this.cdr.detectChanges();
   }
 
   arome: any;
@@ -272,6 +276,7 @@ export class ProductsListComponent implements OnInit {
     this.isFilter = false;
 
     this.getMaxMin();
+    this.cdr.detectChanges();
   }
 
   filter_tag(tag: any) {
@@ -291,6 +296,7 @@ export class ProductsListComponent implements OnInit {
     this.isFilter = false;
 
     this.getMaxMin();
+    this.cdr.detectChanges();
   }
 
   getMaxMin() {
@@ -301,94 +307,71 @@ export class ProductsListComponent implements OnInit {
     this.min = this.produits.map((x : any)=> x.prix < this.min ? x.prix : this.min)
  */
     this.loadScript();
+    this.cdr.detectChanges();
   }
 
   setup() {
-    this.title.setTitle(this.selected.designation_fr);
-    //bug_here_todo
-    this.createCanonicalURL()
-    if (this.selected) {
-      if (this.selected.cover!=undefined) {
-        this.metaService.updateTag({
-          property: 'og:image',
-          content: storage + this.selected.cover,
-        })
-        this.metaService.updateTag({
-          property: 'og:image:image:secure_url',
-          content: storage + this.selected.cover,
-        })
-      }
+  if (!this.selected) return;
 
+  // Set page title
+  this.title.setTitle(this.selected.designation_fr);
 
+  // Canonical URL
+  this.createCanonicalURL();
 
-      this.metaService.updateTag({
-        property: 'og:title',
-        content: this.selected.designation_fr,
-      });
-
-      this.metaService.updateTag({
-        property: 'og:description',
-        content: this.selected.description_cover,
-      });
-      if (this.selected.meta && this.selected.meta != '') {
-        let tags = this.selected.meta.split('|');
-
-        if (tags && tags.length > 0) {
-          tags.map((tag: any) => {
-            let meta_data = tag.split(';');
-            if (meta_data && meta_data.length > 1) {
-              this.metaService.updateTag({
-                name: meta_data[0].trim(),
-                content: meta_data[1],
-              });
-
-              if (meta_data[0].trim() == 'title') {
-                this.title.setTitle(meta_data[1]);
-              }
-            }
-          });
-        }
-      } else {
-        this.metaService.updateTag({
-          name: 'title',
-          content: this.selected.designation_fr,
-        });
-        this.metaService.updateTag({
-          name: 'description',
-          content: this.selected.description_fr,
-        });
-        this.metaService.updateTag({
-          name: 'image',
-          content: storage + this.selected.cover,
-        });
-
-      }
-      let script = this._render2.createElement('script');
-      script.type = `application/ld+json`
-      if (this.selected.review) {
-        script.text = `{
-          "@context": "https://schema.org/",
-          "@type": "Product",
-          "name": "${this.selected.designation_fr}",
-          "description": "${this.selected.content_seo}",
-          "image": "${storage}${this.selected.cover}",
-          "review": ${this.selected.review},
-          "aggregateRating": ${this.selected.aggregateRating}
-        }`
-      } else {
-        script.text = `{
-          "@context": "https://schema.org/",
-          "@type": "Product",
-          "name": "${this.selected.designation_fr}",
-          "description": "${this.selected.content_seo}",
-          "image": "${storage}${this.selected.cover}"
-        }`
-      }
-
-      this._render2.appendChild(this._document.body, script)
-
-    }
+  // Open Graph meta tags
+  if (this.selected.cover) {
+    this.metaService.updateTag({ property: 'og:image', content: storage + this.selected.cover });
+    this.metaService.updateTag({ property: 'og:image:image:secure_url', content: storage + this.selected.cover });
   }
+  this.metaService.updateTag({ property: 'og:title', content: this.selected.designation_fr });
+  this.metaService.updateTag({ property: 'og:description', content: this.selected.description_cover });
+
+  // Custom meta tags
+  if (this.selected.meta && this.selected.meta !== '') {
+    const tags = this.selected.meta.split('|');
+    tags.forEach((tag: string) => {
+      const meta_data = tag.split(';');
+      if (meta_data.length > 1) {
+        this.metaService.updateTag({ name: meta_data[0].trim(), content: meta_data[1] });
+        if (meta_data[0].trim() === 'title') {
+          this.title.setTitle(meta_data[1]);
+        }
+      }
+    });
+  } else {
+    this.metaService.updateTag({ name: 'title', content: this.selected.designation_fr });
+    this.metaService.updateTag({ name: 'description', content: this.selected.description_fr });
+    this.metaService.updateTag({ name: 'image', content: storage + this.selected.cover });
+  }
+
+  // JSON-LD Product schema (SSR-friendly)
+  const productData: any = {
+    "@context": "https://schema.org/",
+    "@type": "Product",
+    "name": this.selected.designation_fr,
+    "description": this.selected.content_seo,
+    "image": `${storage}${this.selected.cover}`
+  };
+
+  if (this.selected.review) {
+    productData.review = this.selected.review;
+    productData.aggregateRating = {
+      "@type": "AggregateRating",
+      "bestRating": "5",
+      "ratingCount": this.selected.reviews.length,
+      "ratingValue": this.calculateAverageStars()
+    };
+  }
+
+  const script = this._render2.createElement('script');
+  script.type = 'application/ld+json';
+  script.text = JSON.stringify(productData); // safe serialization
+  this._render2.appendChild(this._document.head, script); // head for SEO
+
+  this.cdr.detectChanges(); // only needed for client updates
+}
+
   createCanonicalURL() {
     let link: HTMLLinkElement = this._document.createElement('link');
     link.setAttribute('rel', 'canonical');
@@ -396,6 +379,7 @@ export class ProductsListComponent implements OnInit {
     let url = this._document.URL
     url = url.replace('http://', 'https://')
     link.setAttribute('href', url);
+    this.cdr.detectChanges();
   }
 
   isShopRoute() {
@@ -404,5 +388,13 @@ export class ProductsListComponent implements OnInit {
         this.shopSectionInfo=data
       });
     }
+    this.cdr.detectChanges();
+  }
+  calculateAverageStars() {
+    if (this.selected.reviews.length === 0) {
+      return 0
+    }
+    const totalStars = this.selected.reviews.reduce((sum: any, review: any) => sum + review.stars, 0);
+    return (totalStars / this.selected.reviews.length).toFixed(1);
   }
 }

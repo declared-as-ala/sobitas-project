@@ -1,12 +1,13 @@
 import { Component } from '@angular/core';
 import { storage } from '../apis/config';
 import { Router, RouterModule } from '@angular/router';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-compte',
   templateUrl: './compte.component.html',
   styleUrls: ['./compte.component.css'],
-  imports: [RouterModule]
+  imports: [RouterModule,CommonModule]
 })
 export class CompteComponent {
 

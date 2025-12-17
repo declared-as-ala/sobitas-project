@@ -7,7 +7,7 @@ import { SlugService } from '../../home/home.component';
 @Component({
   selector: 'app-article',
   standalone : true,
-  imports : [CommonModule , NgOptimizedImage , NgFor, NgIf, AsyncPipe, RouterLink],
+  imports : [CommonModule , NgOptimizedImage , RouterLink],
   templateUrl: './article.component.html',
   styleUrls: ['./article.component.css']
 })

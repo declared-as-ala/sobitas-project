@@ -18,7 +18,8 @@
                   </div>
                 </div>
                 <div class="blog_thumb">
-                  <img [src]="article.cover ? storage+article.cover : 'assets/img/blog/blog-big1.jpg'"
+                  <img [ngSrc]="article.cover ? storage+article.cover : 'assets/img/blog/blog-big1.jpg'",
+                    width="500" height="500"
                     [alt]="article.alt_cover ? article.alt_cover : article.designation_fr"
                     [title]="article.description_cover ? article.description_cover : article.designation_fr"
                     fetchpriority="high"decoding="async"

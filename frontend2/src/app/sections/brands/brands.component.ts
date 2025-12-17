@@ -2,12 +2,14 @@ import { Component, Input, ViewChild, ElementRef, AfterViewInit, CUSTOM_ELEMENTS
 import { DomSanitizer } from '@angular/platform-browser';
 import { storage } from '../../apis/config';
 import { GeneralService } from '../../apis/general.service';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-brands',
   standalone: true,
   templateUrl: './brands.component.html',
   styleUrls: ['./brands.component.css'],
+  imports: [CommonModule],
   schemas: [CUSTOM_ELEMENTS_SCHEMA] // Required for <swiper-container> and <swiper-slide>
 })
 export class BrandsComponent implements AfterViewInit {

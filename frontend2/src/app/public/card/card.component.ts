@@ -1,22 +1,16 @@
-import { Component, OnInit } from '@angular/core';
-import { Router, RouterModule } from '@angular/router';
 import { storage } from '../../apis/config';
-import { CommonModule, DecimalPipe } from '@angular/common';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { Router, RouterModule } from '@angular/router';
 import { BreadcrumbsComponent } from '../../shared/breadcrumbs/breadcrumbs.component';
-import { FormsModule } from '@angular/forms';
+import { CommonModule, DecimalPipe } from '@angular/common';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 declare var $ : any
 @Component({
   selector: 'app-card',
   templateUrl: './card.component.html',
   styles: [
   ],
-  imports: [
-    CommonModule,
-    RouterModule,
-    DecimalPipe,
-    BreadcrumbsComponent,
-    FormsModule,
-  ],
+  imports: [RouterModule,BreadcrumbsComponent,DecimalPipe,ReactiveFormsModule,FormsModule,CommonModule]
 })
 
 export class CardComponent implements OnInit {
@@ -25,7 +19,7 @@ export class CardComponent implements OnInit {
 
   frais_livraison = 10;
   livraison = true
-  constructor(private router : Router ){}
+  constructor(private router : Router, private cdr: ChangeDetectorRef){}
   ngOnInit(): void {
     this.calcule()
   }
@@ -39,6 +33,7 @@ export class CardComponent implements OnInit {
       $('#panier_nb').text(this.panier.length);
       $('#panier_totale').text(this.totale.toFixed(3));
     }, 1);
+    this.cdr.detectChanges();
   }
 
   totale = 0
@@ -46,6 +41,7 @@ export class CardComponent implements OnInit {
     this.totale = this.panier.reduce((accumulateur : number , p : any)=> accumulateur + p.prix_totale , 0)
 
    this.test()
+   this.cdr.detectChanges();
 
   }
 
@@ -57,13 +53,13 @@ export class CardComponent implements OnInit {
       $('#panier_nb').text(this.panier.length);
       $('#panier_totale').text(this.totale.toFixed(3));
     }, 1);
+    this.cdr.detectChanges();
   }
   passerCommande(){
-
-
     localStorage.setItem('frais_livraison' , this.frais_livraison+'')
     localStorage.setItem('livraison' , this.livraison+'')
     this.router.navigate(['/checkout'])
+    this.cdr.detectChanges();
   }
 
   test(){
@@ -75,6 +71,7 @@ export class CardComponent implements OnInit {
     if(this.totale >= 300){
       this.frais_livraison = 0
     }
+    this.cdr.detectChanges();
   }
 
   inc_dec_qte(type : string , position : number){
@@ -101,5 +98,6 @@ export class CardComponent implements OnInit {
       $('#panier_nb').text(this.panier.length);
       $('#panier_totale').text(this.totale.toFixed(3));
     }, 1);
+    this.cdr.detectChanges();
   }
 }

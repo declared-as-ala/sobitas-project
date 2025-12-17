@@ -1,5 +1,5 @@
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { Component, Inject, Input, OnInit, PLATFORM_ID } from '@angular/core';
+import { ChangeDetectorRef, Component, Inject, Input, OnInit, PLATFORM_ID } from '@angular/core';
 import { storage } from '../../apis/config';
 import Swal from 'sweetalert2';
 import { interval, map, Observable } from 'rxjs';
@@ -14,7 +14,7 @@ declare var $: any;
 export class VenteFlashProductComponent implements OnInit {
   @Input() product: any;
 
-  constructor(@Inject(PLATFORM_ID) private platformId: Object) {}
+  constructor(@Inject(PLATFORM_ID) private platformId: Object, private cdr: ChangeDetectorRef) {}
 
   gallery: any = [];
   storage = storage;
@@ -58,6 +58,7 @@ export class VenteFlashProductComponent implements OnInit {
           this._seconds = this.getSeconds(this._diff);
         });
     }
+    this.cdr.detectChanges();
   }
 
   getDays(t: number) {
@@ -123,5 +124,6 @@ export class VenteFlashProductComponent implements OnInit {
       $('#panier_totale').text(total.toFixed(3));
     }, 1);
     localStorage.setItem('panier', JSON.stringify(panier));
+    this.cdr.detectChanges();
   }
 }

@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, Input, OnInit } from '@angular/core';
 import { storage } from '../../apis/config';
 import { GeneralService } from './../../apis/general.service';
 import { VenteFlashProductComponent } from '../vente-flash-product/vente-flash-product.component';
@@ -11,14 +11,13 @@ import { CommonModule } from '@angular/common';
   imports: [CommonModule ,VenteFlashProductComponent],
 })
 export class VenteFlashComponent implements OnInit {
-  constructor(private general: GeneralService) {}
+  constructor(private general: GeneralService, private cdr: ChangeDetectorRef) {}
 
   products: any = [];
   ngOnInit(): void {
     this.general.ventes_flash().subscribe((data: any) => {
       this.products = data;
-
-
     });
+    this.cdr.detectChanges();
   }
 }

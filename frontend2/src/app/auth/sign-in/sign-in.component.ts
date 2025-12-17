@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectorRef, Component } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../apis/auth.service';
@@ -15,7 +15,7 @@ import { CommonModule } from '@angular/common';
 export class SignInComponent  {
 
 
-  constructor(private api : AuthService , private router : Router){
+  constructor(private api : AuthService , private router : Router, private cdr: ChangeDetectorRef){
     if(localStorage.getItem('token')){
       this.router.navigate(['/compte'])
     }
@@ -50,6 +50,7 @@ export class SignInComponent  {
           icon : 'error' , toast : true , timer : 4000 , showConfirmButton : false , title : err.error.message
         })
       })
+      this.cdr.detectChanges();
     }
   }
   registre =new FormGroup({
@@ -86,6 +87,7 @@ export class SignInComponent  {
           icon : 'error' , toast : true , timer : 4000 , showConfirmButton : false , title : err.error.message
         })
       })
+      this.cdr.detectChanges();
     }
   }
 
