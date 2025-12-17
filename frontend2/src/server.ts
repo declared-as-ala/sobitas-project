@@ -40,7 +40,7 @@ app.use(
 app.use(async (req, res, next) => {
   try {
     const response = await angularApp.handle(req);
-
+    res.setHeader('Cache-Control', 'public, max-age=600, s-maxage=600');
     if (!response) {
       return next();
     }
