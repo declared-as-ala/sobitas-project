@@ -318,13 +318,39 @@
   <link rel="canonical" href="https://sobitas.tn/" />
   <meta http-equiv="Content-Language" content="fr" />
   <!-- SEO By Wajih -->
-  <script src="https://code.jquery.com/jquery-3.7.1.min.js" crossorigin="anonymous"></script>
- <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-migrate/3.3.2/jquery-migrate.min.js" integrity="sha512-3fMsI1vtU2e/tVxZORSEeuMhXnT9By80xlmXlsOku7hNwZSHJjwcOBpmy+uu+fyWwGCLkMvdVbHkeoXdAzBv+w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400..700;1,400..700&display=swap" as="style">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400..700;1,400..700&display=swap">
+  <link rel="preconnect" href="https://fonts.googleapis.com" defer>
+  <link rel="preconnect" href="https://fonts.gstatic.com" defer crossorigin>
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400..700;1,400..700&display=swap" defer as="style">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400..700;1,400..700&display=swap" defer >
+<script>
+function loadSliderScripts() {
+  const s1 = document.createElement('script');
+  s1.src = 'https://code.jquery.com/jquery-3.7.1.min.js';
+  s1.defer = true;
+  document.body.appendChild(s1);
+
+  const s2 = document.createElement('script');
+  s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/jquery-migrate/3.3.2/jquery-migrate.min.js';
+  s2.defer = true;
+  document.body.appendChild(s2);
+
+  const s3 = document.createElement('script');
+  s3.src = 'https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.9.0/slick.min.js';
+  s3.defer = true;
+  document.body.appendChild(s3);
+
+  s1.onload = () => {
+    console.log('Slider script loaded');
+    // initialiser le carousel ici
+  };
+}
+
+// Appeler loadSliderScripts() seulement quand l’utilisateur arrive sur la section slider
+document.addEventListener('DOMContentLoaded', () => {
+  const sliderSection = document.querySelector('#slider');
+  if (sliderSection) loadSliderScripts();
+});
+</script>
 
 </head>
 
