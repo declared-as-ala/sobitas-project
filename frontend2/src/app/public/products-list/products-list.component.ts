@@ -1,6 +1,7 @@
 import { NgxPaginationModule } from 'ngx-pagination';
 import { CommonModule, DOCUMENT, isPlatformBrowser } from '@angular/common';
 import {
+  ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
   HostListener,
@@ -26,6 +27,7 @@ declare var $: any;
   templateUrl: './products-list.component.html',
   styleUrls: ['./products-list.component.css'],
   imports: [BreadcrumbsComponent,RouterModule,FormsModule,ReactiveFormsModule,ProductComponent,NgxPaginationModule,LoaderComponent,CommonModule],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ProductsListComponent implements OnInit {
   constructor(
@@ -179,7 +181,7 @@ export class ProductsListComponent implements OnInit {
       this.media = data;
     });
     this.isShopRoute()
-    this.cdr.detectChanges();
+    this.cdr.markForCheck();
   }
   @HostListener('window:resize', ['$event'])
   getScreenSize(event?: any) {
@@ -187,7 +189,7 @@ export class ProductsListComponent implements OnInit {
     if (this.screenwidth < 600) {
       this.isFilter = false;
     }
-    this.cdr.detectChanges();
+    this.cdr.markForCheck();
   }
   filtrer() {
     let amount = $('#amount').val();
@@ -201,7 +203,7 @@ export class ProductsListComponent implements OnInit {
     );
 
     this.isFilter = false;
-    this.cdr.detectChanges();
+    this.cdr.markForCheck();
   }
 
   trier(event: any) {
@@ -232,7 +234,7 @@ export class ProductsListComponent implements OnInit {
         0
       );
     }
-    this.cdr.detectChanges();
+    this.cdr.markForCheck();
   }
 
   loadScript() {
@@ -253,7 +255,7 @@ export class ProductsListComponent implements OnInit {
         $('#slider-range').slider('values', 0) +' - ' + $('#slider-range').slider('values', 1)
       ); */
     }, 0);
-    this.cdr.detectChanges();
+    this.cdr.markForCheck();
   }
 
   arome: any;
@@ -277,7 +279,7 @@ export class ProductsListComponent implements OnInit {
     this.isFilter = false;
 
     this.getMaxMin();
-    this.cdr.detectChanges();
+    this.cdr.markForCheck();
   }
 
   filter_tag(tag: any) {
@@ -297,7 +299,7 @@ export class ProductsListComponent implements OnInit {
     this.isFilter = false;
 
     this.getMaxMin();
-    this.cdr.detectChanges();
+    this.cdr.markForCheck();
   }
 
   getMaxMin() {
@@ -308,7 +310,7 @@ export class ProductsListComponent implements OnInit {
     this.min = this.produits.map((x : any)=> x.prix < this.min ? x.prix : this.min)
  */
     this.loadScript();
-    this.cdr.detectChanges();
+    this.cdr.markForCheck();
   }
 
   setup() {
@@ -370,7 +372,7 @@ export class ProductsListComponent implements OnInit {
   script.text = JSON.stringify(productData); // safe serialization
   this._render2.appendChild(this._document.head, script); // head for SEO
 
-  this.cdr.detectChanges(); // only needed for client updates
+  this.cdr.markForCheck(); // only needed for client updates
 }
 
 createCanonicalURL() {
@@ -397,7 +399,7 @@ createCanonicalURL() {
         this.shopSectionInfo=data
       });
     }
-    this.cdr.detectChanges();
+    this.cdr.markForCheck();
   }
   calculateAverageStars() {
     if (this.selected.reviews.length === 0) {

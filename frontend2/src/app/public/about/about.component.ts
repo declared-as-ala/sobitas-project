@@ -1,11 +1,12 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { GeneralService } from '../../apis/general.service';
 import { BreadcrumbsComponent } from '../../shared/breadcrumbs/breadcrumbs.component';
 @Component({
   selector: 'app-about',
   templateUrl: './about.component.html',
   styleUrls: ['./about.component.css'],
-  imports: [BreadcrumbsComponent]
+  imports: [BreadcrumbsComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AboutComponent implements OnInit{
 
@@ -16,7 +17,7 @@ export class AboutComponent implements OnInit{
   ngOnInit(): void {
     this.general.coordonnees()
     .subscribe((data : any)=>this.coordonnees = data)
-    this.cdr.detectChanges();
+    this.cdr.markForCheck();
   }
 
 }

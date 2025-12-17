@@ -1,4 +1,4 @@
-import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { CommonModule, isPlatformBrowser, NgOptimizedImage } from '@angular/common';
 import { ChangeDetectorRef, Component, Inject, Input, OnInit, PLATFORM_ID } from '@angular/core';
 import { storage } from '../../apis/config';
 import Swal from 'sweetalert2';
@@ -9,7 +9,7 @@ declare var $: any;
   selector: 'app-vente-flash-product',
   templateUrl: './vente-flash-product.component.html',
   styleUrls: ['./vente-flash-product.component.css'],
-  imports: [CommonModule, RouterModule]
+  imports: [CommonModule, RouterModule, NgOptimizedImage]
 })
 export class VenteFlashProductComponent implements OnInit {
   @Input() product: any;

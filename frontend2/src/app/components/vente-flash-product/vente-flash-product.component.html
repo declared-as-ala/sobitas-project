@@ -2,7 +2,7 @@
   <figure>
     <div class="product_thumb">
       <a aria-label="lien vers protein.tn" class="primary_img aimg" [routerLink]="['/shop', product.slug]">
-        <img [src]="
+        <img [ngSrc]="
             product.cover
               ? storage + product.cover
               : 'assets/img/product/p1.webp'
@@ -10,7 +10,10 @@
             product.description_cover
               ? product.description_cover
               : product.designation_fr
-          " decoding="async" /></a>
+          " decoding="async"
+          width="200"
+          height="200"
+          srcset/></a>
       <div class="label_product">
         <span class="label_sale">-{{ percentage }}%</span>
       </div>

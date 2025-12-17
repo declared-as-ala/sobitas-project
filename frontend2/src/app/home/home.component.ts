@@ -1,5 +1,5 @@
 import { CommonModule, DOCUMENT, isPlatformBrowser } from '@angular/common';
-import { ChangeDetectorRef, Component, Inject, OnInit, PLATFORM_ID } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Inject, OnInit, PLATFORM_ID } from '@angular/core';
 import { storage } from '../apis/config';
 import { GeneralService } from '../apis/general.service';
 import { ProductComponent } from '../shared/product/product.component';
@@ -13,6 +13,7 @@ import { environment } from '../apis/config';
   templateUrl: './home.component.html',
   styleUrls:[],
   imports: [CommonModule,ProductComponent, ArticleComponent, SlidesComponent, CategoriesComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class HomeComponent implements OnInit {
   constructor(
@@ -148,7 +149,7 @@ export class HomeComponent implements OnInit {
       this.new_products = data.new_product.slice(0, 4);
       this.best_sellers = data.best_sellers;
       this.packs = data.packs
-      this.cdr.detectChanges();
+      this.cdr.markForCheck();
     });
     
     this.createCanonicalURL()
@@ -168,7 +169,7 @@ export class HomeComponent implements OnInit {
       }, 0);
     }
 
-    this.cdr.detectChanges();
+    this.cdr.markForCheck();
   }
   createCanonicalURL() {
     const link: HTMLLinkElement = this._document.createElement('link');
