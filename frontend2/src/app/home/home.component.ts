@@ -6,6 +6,7 @@ import { ProductComponent } from '../shared/product/product.component';
 import { ArticleComponent } from '../shared/article/article.component';
 import { SlidesComponent } from '../components/slides/slides.component';
 import { CategoriesComponent } from '../components/categories/categories.component';
+import { environment } from '../apis/config';
 
 @Component({
   selector: 'app-home',
@@ -170,13 +171,21 @@ export class HomeComponent implements OnInit {
     this.cdr.detectChanges();
   }
   createCanonicalURL() {
-    let link: HTMLLinkElement = this._document.createElement('link');
+    const link: HTMLLinkElement = this._document.createElement('link');
     link.setAttribute('rel', 'canonical');
-    this._document.head.appendChild(link);
-    let url = this._document.URL
-    url = url.replace('http://', 'https://')
+
+    let url = this._document.URL;
+
+    // Use production base URL if in production
+    if (environment.production) {
+      const path = this._document.location.pathname + this._document.location.search;
+      url = environment.baseUrl + path;
+    } else {
+      url = url.replace('http://', 'https://');
+    }
+
     link.setAttribute('href', url);
-    this.cdr.detectChanges();
+    this._document.head.appendChild(link);
   }
   trackByProduct(index: number, item: any) {
   return item.id || index;

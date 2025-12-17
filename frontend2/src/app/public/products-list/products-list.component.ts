@@ -18,6 +18,7 @@ import { BreadcrumbsComponent } from '../../shared/breadcrumbs/breadcrumbs.compo
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ProductComponent } from '../../shared/product/product.component';
 import { LoaderComponent } from '../../shared/loader/loader.component';
+import { environment } from '../../apis/config';
 
 declare var $: any;
 @Component({
@@ -372,15 +373,23 @@ export class ProductsListComponent implements OnInit {
   this.cdr.detectChanges(); // only needed for client updates
 }
 
-  createCanonicalURL() {
-    let link: HTMLLinkElement = this._document.createElement('link');
-    link.setAttribute('rel', 'canonical');
-    this._document.head.appendChild(link);
-    let url = this._document.URL
-    url = url.replace('http://', 'https://')
-    link.setAttribute('href', url);
-    this.cdr.detectChanges();
+createCanonicalURL() {
+  const link: HTMLLinkElement = this._document.createElement('link');
+  link.setAttribute('rel', 'canonical');
+
+  let url = this._document.URL;
+
+  // Use production base URL if in production
+  if (environment.production) {
+    const path = this._document.location.pathname + this._document.location.search;
+    url = environment.baseUrl + path;
+  } else {
+    url = url.replace('http://', 'https://');
   }
+
+  link.setAttribute('href', url);
+  this._document.head.appendChild(link);
+}
 
   isShopRoute() {
     if (this.router.url === '/shop') {

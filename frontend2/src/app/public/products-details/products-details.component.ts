@@ -12,6 +12,7 @@ import { BreadcrumbsComponent } from '../../shared/breadcrumbs/breadcrumbs.compo
 import { ProductComponent } from '../../shared/product/product.component';
 import { NgxPaginationModule } from 'ngx-pagination';
 import { SocialShareComponent } from '../../shared/social-share/social-share.component';
+import { environment } from '../../apis/config';
 
 declare var $: any;
 @Component({
@@ -251,13 +252,21 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
   }
 
   createCanonicalURL() {
-    let link: HTMLLinkElement = this._document.createElement('link');
+    const link: HTMLLinkElement = this._document.createElement('link');
     link.setAttribute('rel', 'canonical');
-    this._document.head.appendChild(link);
-    let url = this._document.URL
-    url = url.replace('https://', 'https://')
+
+    let url = this._document.URL;
+
+    // Use production base URL if in production
+    if (environment.production) {
+      const path = this._document.location.pathname + this._document.location.search;
+      url = environment.baseUrl + path;
+    } else {
+      url = url.replace('http://', 'https://');
+    }
+
     link.setAttribute('href', url);
-    this.cdr.detectChanges();
+    this._document.head.appendChild(link);
   }
 
   clicked: boolean = false
