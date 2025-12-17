@@ -11,6 +11,7 @@
         <img
           [ngSrc]="slide.cover"
           fill
+          shareButton=""
           [priority]="i === 0"
           fetchpriority="high"
           sizes="100vw"
@@ -19,6 +20,7 @@
       }@else {
         <img
           [ngSrc]="slide.cover"
+          srcset
           width="300"
           height="300"
           [priority]="i === 0"
