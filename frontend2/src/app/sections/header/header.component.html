@@ -45,7 +45,7 @@
                 <a [routerLink]="['/categorie',category.slug ]" style="font-weight: 600;">
                   {{ category.designation_fr }}
                 </a>
-                <a (click)="expand(i)" style="float: right; font-weight: 600;">+</a>
+                <a (click)="expand(i)" href="#" style="float: right; font-weight: 600;">+</a>
                 <ul id="sub{{i}}" *ngIf="category.sous_categories &&category.sous_categories.length > 0"
                   class="sub-menu">
                   <li *ngFor="let sous_category of category.sous_categories">
