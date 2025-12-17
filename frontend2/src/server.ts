@@ -21,6 +21,17 @@ const angularApp = new AngularNodeAppEngine();
  */
 
 /**
+ * Serve sitemap.xml & robots.txt
+ */
+app.get('/robots.txt', (req, res) => {
+  res.sendFile(join(browserDistFolder, 'robots.txt'));
+});
+
+app.get('/sitemap.xml', (req, res) => {
+  res.sendFile(join(browserDistFolder, 'sitemap.xml'));
+});
+
+/**
  * Serve static files from /browser
  */
 app.use(
