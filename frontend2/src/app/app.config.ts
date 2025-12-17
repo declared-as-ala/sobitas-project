@@ -5,6 +5,7 @@ import { provideHttpClient, withFetch } from '@angular/common/http';  // ← Imp
 
 import { routes } from './app.routes';
 import { provideServiceWorker } from '@angular/service-worker';
+import { environment } from './apis/config';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -18,7 +19,7 @@ export const appConfig: ApplicationConfig = {
     ),
     provideClientHydration(withEventReplay()),  // Hydration + replay buffered events
     provideHttpClient(withFetch()), provideServiceWorker('ngsw-worker.js', {
-            enabled: !isDevMode(),
+            enabled: environment.production,
             registrationStrategy: 'registerWhenStable:30000'
           })  // ← Fixes the warning + better SSR performance
   ]
