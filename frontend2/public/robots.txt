@@ -1,5 +1,3 @@
 User-agent: *
-Disallow: /admin/
-Disallow: /login/
-Allow: / 
+Allow: /
 Sitemap: https://sobitas.tn/sitemap.xml
