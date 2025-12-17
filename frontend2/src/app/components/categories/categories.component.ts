@@ -1,12 +1,12 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { storage } from '../../apis/config';
-import { CommonModule } from '@angular/common';
+import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { RouterModule } from '@angular/router';
 @Component({
   selector: 'app-categories',
   templateUrl: './categories.component.html',
   styleUrls: ['./categories.component.css'],
-  imports: [CommonModule,RouterModule ],
+  imports: [CommonModule, RouterModule, NgOptimizedImage],
 })
 export class CategoriesComponent implements OnInit {
 

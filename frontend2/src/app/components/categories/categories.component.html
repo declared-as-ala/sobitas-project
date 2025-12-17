@@ -14,7 +14,11 @@
             <figure class="single_banner">
               <div class="banner_thumb">
                 <a aria-label="lien vers protein.tn" [routerLink]="['/categorie' , category.slug ]">
-                  <img [src]="category.cover ? category.cover :  'assets/img/bg/banner1.jpg'"
+                  <img [ngSrc]="category.cover ? category.cover :  'assets/img/bg/banner1.jpg'"
+                    height="144" width="222"
+                    srcset
+                    loading="lazy"
+                    fetchpriority="high"
                     [alt]="category.alt_cover ? category.alt_cover : category.designation_fr"
                     [title]="category.description_cover ? category.description_cover : category.designation_fr"
                     style="width: 100%;" height="144" width="222" ></a>
