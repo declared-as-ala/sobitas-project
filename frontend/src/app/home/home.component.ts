@@ -2,6 +2,7 @@ import { DOCUMENT, isPlatformBrowser } from '@angular/common';
 import { Component, Inject, OnInit, PLATFORM_ID } from '@angular/core';
 import { storage } from 'src/app/apis/config';
 import { GeneralService } from 'src/app/apis/general.service';
+import { production, baseUrl}
 
 @Component({
   selector: 'app-home',
@@ -164,12 +165,21 @@ export class HomeComponent implements OnInit {
 
   }
   createCanonicalURL() {
-    let link: HTMLLinkElement = this._document.createElement('link');
+    const link: HTMLLinkElement = this._document.createElement('link');
     link.setAttribute('rel', 'canonical');
-    this._document.head.appendChild(link);
-    let url = this._document.URL
-    url = url.replace('http://', 'https://')
+
+    let url = this._document.URL;
+
+    // Use production base URL if in production
+    if (production) {
+      const path = this._document.location.pathname + this._document.location.search;
+      url = baseUrl + path;
+    } else {
+      url = url.replace('http://', 'https://');
+    }
+
     link.setAttribute('href', url);
+    this._document.head.appendChild(link);
   }
   trackByProduct(index: number, item: any) {
   return item.id || index;
