@@ -6,7 +6,6 @@ import {
 } from '@angular/ssr/node';
 import express from 'express';
 import { join } from 'node:path';
-import { readFileSync } from 'node:fs';
 
 const browserDistFolder = join(import.meta.dirname, '../browser');
 
@@ -14,30 +13,18 @@ const app = express();
 const angularApp = new AngularNodeAppEngine();
 
 /**
- * Serve sitemap.xml & robots.txt
+ * Serve sitemap.xml & robots.txt BEFORE Angular SSR
  */
 app.get('/robots.txt', (req, res) => {
-  const robotsPath = join(browserDistFolder, 'robots.txt');
-  try {
-    res.type('text/plain');
-    res.send(readFileSync(robotsPath, 'utf-8'));
-  } catch (err) {
-    res.status(404).send('robots.txt not found');
-  }
+  res.sendFile(join(browserDistFolder, 'robots.txt'));
 });
 
 app.get('/sitemap.xml', (req, res) => {
-  const sitemapPath = join(browserDistFolder, 'sitemap.xml');
-  try {
-    res.type('application/xml');
-    res.send(readFileSync(sitemapPath, 'utf-8'));
-  } catch (err) {
-    res.status(404).send('sitemap.xml not found');
-  }
+  res.sendFile(join(browserDistFolder, 'sitemap.xml'));
 });
 
 /**
- * Serve static files from /browser
+ * Serve other static files from /browser
  */
 app.use(
   express.static(browserDistFolder, {
@@ -48,8 +35,7 @@ app.use(
 );
 
 /**
- * Handle all other requests by rendering the Angular application.
- * Angular 21 SSR (Fetch-based)
+ * Handle all other requests by rendering the Angular application
  */
 app.use(async (req, res, next) => {
   try {
@@ -59,12 +45,8 @@ app.use(async (req, res, next) => {
       return next();
     }
 
-    /**
-     * ✅ Handle HTTP status codes (404, 301, etc.)
-     * Sent from Angular via response headers
-     */
+    // Handle HTTP status codes sent by Angular
     const angularStatus = response.headers.get('x-angular-status');
-
     if (angularStatus) {
       res.status(Number(angularStatus));
     }
@@ -76,23 +58,19 @@ app.use(async (req, res, next) => {
 });
 
 /**
- * Start the server if this module is the main entry point,
- * or if it is run via PM2.
+ * Start the server if this module is the main entry point
  */
 if (isMainModule(import.meta.url) || process.env['pm_id']) {
   const port = process.env['PORT'] || 4000;
-
   app.listen(port, (error) => {
     if (error) {
       throw error;
     }
-
     console.log(`Node Express server listening on http://localhost:${port}`);
   });
 }
 
 /**
  * Request handler used by Angular CLI (dev-server, build)
- * or Firebase Cloud Functions.
  */
 export const reqHandler = createNodeRequestHandler(app);
