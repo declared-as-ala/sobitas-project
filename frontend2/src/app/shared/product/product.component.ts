@@ -75,12 +75,12 @@ export class ProductComponent implements OnInit {
         html += `
           <div class="cart_item">
             <div class="cart_img">
-              <a href="/shop/${line.product?.slug}">
+              <a aria-label="lien vers protein.tn" href="/shop/${line.product?.slug}">
                 <img src="${storage}${line.product?.cover}" alt="${line.product?.designation_fr}">
               </a>
             </div>
             <div class="cart_info">
-              <a href="/shop/${line.product?.slug}">${line.product?.designation_fr}</a>
+              <a aria-label="lien vers protein.tn" href="/shop/${line.product?.slug}">${line.product?.designation_fr}</a>
               <p>Qty: ${line.quantite} X ${line.prix_totale.toFixed(3)}</p>
             </div>
           </div>`;

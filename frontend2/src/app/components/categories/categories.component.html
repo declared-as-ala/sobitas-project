@@ -13,7 +13,7 @@
             style="margin: 0; padding: 0px; margin: 15px 0; padding-bottom: 15px;">
             <figure class="single_banner">
               <div class="banner_thumb">
-                <a [routerLink]="['/categorie' , category.slug ]">
+                <a aria-label="lien vers protein.tn" [routerLink]="['/categorie' , category.slug ]">
                   <img [src]="category.cover ? category.cover :  'assets/img/bg/banner1.jpg'"
                     [alt]="category.alt_cover ? category.alt_cover : category.designation_fr"
                     [title]="category.description_cover ? category.description_cover : category.designation_fr"
@@ -21,7 +21,7 @@
               </div>
             </figure>
             <div class="categories_product_content">
-              <h1><a [routerLink]="['/categorie' , category.slug ]"> {{category.designation_fr }}</a></h1>
+              <h1><a aria-label="lien vers protein.tn" [routerLink]="['/categorie' , category.slug ]"> {{category.designation_fr }}</a></h1>
             </div>
           </div>
         </div>

@@ -8,12 +8,12 @@
                       <h3>{{now > 17 ? 'Bonsoir' : 'Bonjour'}} {{user_name}} !</h3>
                       <div class="dashboard_tab_button">
                           <ul role="tablist" class="nav flex-column dashboard-list">
-                              <li><a routerLink="/compte" data-bs-toggle="tab" class="nav-link " routerLinkActive="active">Profil</a></li>
-                              <li> <a routerLink="/compte/historique" data-bs-toggle="tab" class="nav-link">Mes commandes</a></li>
-                            <!--   <li><a href="#downloads" data-bs-toggle="tab" class="nav-link">Downloads</a></li>
-                              <li><a href="#address" data-bs-toggle="tab" class="nav-link">Addresses</a></li>
-                              <li><a href="#account-details" data-bs-toggle="tab" class="nav-link">Account details</a></li>
-                               --><li><a (click)="logout()" class="nav-link">Déconnexion</a></li>
+                              <li><a aria-label="lien vers protein.tn" routerLink="/compte" data-bs-toggle="tab" class="nav-link " routerLinkActive="active">Profil</a></li>
+                              <li> <a aria-label="lien vers protein.tn" routerLink="/compte/historique" data-bs-toggle="tab" class="nav-link">Mes commandes</a></li>
+                            <!--   <li><a aria-label="lien vers protein.tn" href="#downloads" data-bs-toggle="tab" class="nav-link">Downloads</a></li>
+                              <li><a aria-label="lien vers protein.tn" href="#address" data-bs-toggle="tab" class="nav-link">Addresses</a></li>
+                              <li><a aria-label="lien vers protein.tn" href="#account-details" data-bs-toggle="tab" class="nav-link">Account details</a></li>
+                               --><li><a aria-label="lien vers protein.tn" (click)="logout()" class="nav-link">Déconnexion</a></li>
                           </ul>
                       </div>
                   </div>

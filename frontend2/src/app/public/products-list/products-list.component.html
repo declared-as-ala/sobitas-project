@@ -61,7 +61,7 @@
           <div class="widget_list tags_widget">
             <h3>Mots clés</h3>
             <div class="tag_cloud">
-              <a *ngFor="let tag of tags"
+              <a aria-label="lien vers protein.tn" *ngFor="let tag of tags"
                 [routerLink]="['/produits-search' , tag.designation_fr]">{{tag.designation_fr}}</a>
 
             </div>

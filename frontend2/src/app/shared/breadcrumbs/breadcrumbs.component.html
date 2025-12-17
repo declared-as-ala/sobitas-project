@@ -4,7 +4,7 @@
           <div class="col-12">
               <div class="breadcrumb_content">
                   <ul>
-                      <li><a routerLink="/">Accueil</a></li>
+                      <li><a aria-label="lien vers protein.tn" routerLink="/">Accueil</a></li>
                       <li *ngIf="parent" [routerLink]="[parent_route]">{{parent}}</li>
                       <li>{{page}}</li>
                   </ul>

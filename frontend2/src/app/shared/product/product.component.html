@@ -2,7 +2,7 @@
   <article class="single_product" (mouseover)="clicked = true">
     <figure>
       <div class="product_thumb pdiv">
-        <a class="primary_img" [routerLink]="['/shop', product.slug]"
+        <a aria-label="lien vers protein.tn" class="primary_img" [routerLink]="['/shop', product.slug]"
           ><img
             [ngSrc]="
               product.cover
@@ -56,7 +56,7 @@
       <div class="product_content">
         <div class="product_content_inner">
           <h2 class="product_name">
-            <a [routerLink]="['/shop', product.slug]" sty>
+            <a aria-label="lien vers protein.tn" [routerLink]="['/shop', product.slug]" sty>
               <!-- {{
               product.sous_category?.designation_fr
             }} -->
@@ -171,7 +171,7 @@
                     role="tabpanel"
                   >
                     <div class="modal_tab_img">
-                      <a href="#" style="position: relative"
+                      <a aria-label="lien vers protein.tn" href="#" style="position: relative"
                         ><img
                           [src]="
                             product.cover
@@ -195,7 +195,7 @@
                       role="tabpanel"
                     >
                       <div class="modal_tab_img">
-                        <a href="#"
+                        <a aria-label="lien vers protein.tn" href="#"
                           ><img [src]="storage + photo.download_link" alt="" loading="lazy" fetchpriority="high"decoding="async"
                         /></a>
                       </div>
@@ -329,11 +329,11 @@
                 <!-- <div class="modal_social">
                                   <h2>Partager ce produit</h2>
                                   <ul>
-                                      <li class="facebook"><a href="#"><i class="fa fa-facebook"></i></a></li>
-                                      <li class="twitter"><a href="#"><i class="fa fa-twitter"></i></a></li>
-                                      <li class="pinterest"><a href="#"><i class="fa fa-pinterest"></i></a></li>
-                                      <li class="google-plus"><a href="#"><i class="fa fa-google-plus"></i></a></li>
-                                      <li class="linkedin"><a href="#"><i class="fa fa-linkedin"></i></a></li>
+                                      <li class="facebook"><a aria-label="lien vers protein.tn" href="#"><i class="fa fa-facebook"></i></a></li>
+                                      <li class="twitter"><a aria-label="lien vers protein.tn" href="#"><i class="fa fa-twitter"></i></a></li>
+                                      <li class="pinterest"><a aria-label="lien vers protein.tn" href="#"><i class="fa fa-pinterest"></i></a></li>
+                                      <li class="google-plus"><a aria-label="lien vers protein.tn" href="#"><i class="fa fa-google-plus"></i></a></li>
+                                      <li class="linkedin"><a aria-label="lien vers protein.tn" href="#"><i class="fa fa-linkedin"></i></a></li>
                                   </ul>
                               </div> -->
               </div>

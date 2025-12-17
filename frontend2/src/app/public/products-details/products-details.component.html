@@ -17,7 +17,7 @@
         <div class="col-lg-4 col-md-4 col-sm-12">
           <div class="product-details-tab">
             <div id="img-1" class="zoomWrapper single-zoom" style="min-height: 300px;">
-              <a style="position: relative;" href="#">
+              <a aria-label="lien vers protein.tn" style="position: relative;" href="#">
                 <img id="zoom1" [src]="
                     product.cover
                       ? storage + product.cover
@@ -35,7 +35,7 @@
             <div class="single-zoom-thumb">
               <ul class="s-tab-zoom owl-carousel single-product-active" id="gallery_01">
                 <li *ngFor="let photo of gallery; let i = index">
-                  <a href="#" class="elevatezoom-gallery active" data-update=""
+                  <a aria-label="lien vers protein.tn" href="#" class="elevatezoom-gallery active" data-update=""
                     [attr.data-image]="storage + photo.download_link"
                     [attr.data-zoom-image]="storage + photo.download_link">
                     <img [src]="storage + photo.download_link" fetchpriority="auto"
@@ -50,7 +50,7 @@
         <div class="col-lg-8 col-md-8 col-sm-12">
           <div class="product_d_right">
             <h1 style="font-size: 22px;">
-              <a href="#">{{ product.designation_fr }}</a>
+              <a aria-label="lien vers protein.tn" href="#">{{ product.designation_fr }}</a>
             </h1>
             <div *ngIf="product.rupture == 0" class="mb-2">
               <span class="badge bg-danger p-2 fs-6">Rupture De Stock</span>
@@ -124,11 +124,11 @@
 
             <div class="product_meta">
               <span>Categories:
-                <a *ngIf="product.sous_categorie" [routerLink]="[
+                <a aria-label="lien vers protein.tn" *ngIf="product.sous_categorie" [routerLink]="[
                     '/category',
                     product.sous_categorie?.slug
                   ]">{{ product.sous_categorie?.designation_fr }} ,</a>
-                <a *ngIf="product.sous_categorie && product.sous_categorie" [routerLink]="[
+                <a aria-label="lien vers protein.tn" *ngIf="product.sous_categorie && product.sous_categorie" [routerLink]="[
                     '/categorie',
                     product.sous_categorie.categorie?.slug
                   ]">{{ product.sous_categorie?.categorie?.designation_fr }}</a></span>
@@ -189,7 +189,7 @@
                     <span>{{product.reviews.length}} avis sur ce produit</span>
                   </div>
                 </div>
-                <a class="btn btn-outline-success" href="#" data-bs-toggle="modal" [attr.data-bs-target]="'#rv'"
+                <a aria-label="lien vers protein.tn" class="btn btn-outline-success" href="#" data-bs-toggle="modal" [attr.data-bs-target]="'#rv'"
                   title="quick view"> Ajouter un avis</a>
               </div>
             </div>
@@ -224,7 +224,7 @@
                     <span>Soyez le premier à rédiger un avis</span>
                   </div>
                 </div>
-                <a class="btn btn-outline-success" href="#" data-bs-toggle="modal" [attr.data-bs-target]="'#rv'"
+                <a aria-label="lien vers protein.tn" class="btn btn-outline-success" href="#" data-bs-toggle="modal" [attr.data-bs-target]="'#rv'"
                   title="quick view"> Ajouter un avis</a>
               </div>
             </div>
@@ -299,7 +299,7 @@
                   <input type="password" formControlName="password">
                   <small class="text-danger" *ngIf="login.get('password')?.errors?.['minlength']">Le
                     mot de passe doit contenir au minimum 6 caractéres</small>
-                  <span class="pt-1"> Vous n'avez pas de compte? <a href="/login" title="créer compte">s'inscrire
+                  <span class="pt-1"> Vous n'avez pas de compte? <a aria-label="lien vers protein.tn" href="/login" title="créer compte">s'inscrire
                     </a> </span>
                 </p>
                 <p class="text-center">

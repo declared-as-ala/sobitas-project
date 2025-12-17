@@ -1,7 +1,7 @@
 <article class="single_product" style="margin-bottom: 15px">
   <figure>
     <div class="product_thumb">
-      <a class="primary_img aimg" [routerLink]="['/shop', product.slug]">
+      <a aria-label="lien vers protein.tn" class="primary_img aimg" [routerLink]="['/shop', product.slug]">
         <img [src]="
             product.cover
               ? storage + product.cover
@@ -17,7 +17,7 @@
     </div>
     <div class="product_content">
       <h4 class="product_name">
-        <a [routerLink]="['/shop', product.slug]">
+        <a aria-label="lien vers protein.tn" [routerLink]="['/shop', product.slug]">
           {{ product.designation_fr }}</a>
       </h4>
       <div class="product_rating">
