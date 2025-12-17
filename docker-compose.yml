@@ -77,7 +77,7 @@ services:
   # -------------------------
   frontend:
     build:
-      context: ./frontend
+      context: ./frontend2
       dockerfile: Dockerfile
     container_name: sobitas-frontend
     restart: unless-stopped
