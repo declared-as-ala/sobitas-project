@@ -80,14 +80,11 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
   }
   ngOnInit() {
     this.slug = this.route.snapshot.params['slug'];
+    
     this.general.produit(this.slug).subscribe((res) => {
       this.product = res;
       this.average = this.calculateAverageStars()
-
-      this.setup()
-      this.settupSchema()
-      this.gallery = JSON.parse(this.product?.gallery);
-
+     
       if (this.product.sous_categorie_id) {
         this.general
           .similar(this.product.sous_categorie_id)
@@ -97,19 +94,13 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
           });
       }
     });
+    if (isPlatformBrowser(this.platformId)) {
+     this.setup()
+      this.settupSchema()
+      this.gallery = JSON.parse(this.product?.gallery);
+
+    }
     this.isUserAuthenticated = this.isAuthenticated();
-    if (this.product && this.product.nutrition_values) {
-      this.safeNutritionValues = safeHtmlToText(this.sanitizer.bypassSecurityTrustHtml(this.product.nutrition_values));
-    }
-    if (this.product && this.product.questions){
-      this.safeQuestions = safeHtmlToText(this.sanitizer.bypassSecurityTrustHtml(this.product.questions));
-    }
-    if (this.product && this.product.meta_description_fr){
-      this.safeMeta_description_fr = safeHtmlToText(this.sanitizer.bypassSecurityTrustHtml(this.product.meta_description_fr));
-    }
-    if (this.product && this.product.description_fr){
-      this.safeDescriptionFr = safeHtmlToText(this.sanitizer.bypassSecurityTrustHtml(this.product.description_fr));
-    }
     this.cdr.markForCheck(); 
   }
   public isAuthenticated(): boolean {
