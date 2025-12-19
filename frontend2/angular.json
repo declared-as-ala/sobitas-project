@@ -26,15 +26,13 @@
             ],
             "styles": [
               "src/styles.css",
-              "node_modules/aos/dist/aos.css",
               "node_modules/ngx-sharebuttons/themes/circles.scss",
               "node_modules/ngx-sharebuttons/themes/modern.scss",
               "node_modules/@fortawesome/fontawesome-free/css/all.min.css"
             ],
             "scripts": [
               "src/assets/js/plugins.js",
-              "src/assets/js/main.js",
-              "node_modules/aos/dist/aos.js"
+              "src/assets/js/main.js"
             ],
             "server": "src/main.server.ts",
             "outputMode": "server",
