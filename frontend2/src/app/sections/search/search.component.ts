@@ -11,6 +11,9 @@ import { Router } from '@angular/router';
 import { isPlatformBrowser, CommonModule } from '@angular/common';
 import { storage } from '../../apis/config';
 import { GeneralService } from './../../apis/general.service';
+import { FaIconLibrary } from '@fortawesome/angular-fontawesome';
+import { faLink } from '@fortawesome/free-solid-svg-icons';
+import { faFacebookF, faFacebookMessenger, faLinkedinIn, faTelegramPlane, faViber, faWhatsapp } from '@fortawesome/free-brands-svg-icons';
 
 declare var $: any;
 
@@ -38,9 +41,11 @@ export class SearchComponent implements OnInit {
     private general: GeneralService,
     private router: Router,
     @Inject(PLATFORM_ID) private platformId: Object,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private library: FaIconLibrary
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
+    library.addIcons(faLink, faFacebookF,faTelegramPlane, faViber, faWhatsapp, faFacebookMessenger, faLinkedinIn);
   }
 
   ngOnInit(): void {

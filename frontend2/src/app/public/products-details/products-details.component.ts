@@ -1,7 +1,7 @@
 import { GeneralService } from '../../apis/general.service';
 import { AuthService } from '../../apis/auth.service';
-import { ChangeDetectorRef, Component, ElementRef, Inject, OnDestroy, OnInit, Renderer2, ViewChild } from '@angular/core';
-import { Meta } from '@angular/platform-browser';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, Inject, OnDestroy, OnInit, PLATFORM_ID, Renderer2, ViewChild } from '@angular/core';
+import { DomSanitizer, Meta, SafeHtml } from '@angular/platform-browser';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { storage } from '../../apis/config';
 import Swal from 'sweetalert2';
@@ -13,14 +13,15 @@ import { ProductComponent } from '../../shared/product/product.component';
 import { NgxPaginationModule } from 'ngx-pagination';
 import { SocialShareComponent } from '../../shared/social-share/social-share.component';
 import { environment } from '../../apis/config';
+import { isPlatformBrowser } from '@angular/common';
 
 declare var $: any;
 @Component({
   selector: 'app-products-details',
   templateUrl: './products-details.component.html',
   styleUrls: ['./products-details.component.css'],
-  imports: [BreadcrumbsComponent,CommonModule,RouterModule,ProductComponent,ReactiveFormsModule,NgxPaginationModule,SocialShareComponent,FormsModule]
-
+  imports: [BreadcrumbsComponent,CommonModule,RouterModule,ProductComponent,ReactiveFormsModule,NgxPaginationModule,SocialShareComponent,FormsModule],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ProductsDetailsComponent implements OnInit, OnDestroy {
   @ViewChild('container')
@@ -30,6 +31,11 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
   login: FormGroup
   isUserAuthenticated: boolean = false
   reviewComment: any;
+  isBrowser: boolean;
+  safeNutritionValues: string = '';
+  safeQuestions: string = '';
+  safeMeta_description_fr : string = '';
+  safeDescriptionFr : string = '';
   constructor(
     private api: AuthService,
     private general: GeneralService,
@@ -39,19 +45,22 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
     private title: Title,
     private _render2: Renderer2,
     @Inject(DOCUMENT) private _document: Document,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    @Inject(PLATFORM_ID) private platformId: Object,
+    private sanitizer: DomSanitizer,
   ) {
     this.login = new FormGroup({
       email: new FormControl('', [Validators.required, Validators.email]),
       password: new FormControl('', [Validators.required, Validators.minLength(6)]),
     })
+    this.isBrowser = isPlatformBrowser(this.platformId);
     this.router.routeReuseStrategy.shouldReuseRoute = function () {
       setTimeout(() => {
         $('div.zoomContainer').remove();
       }, 0);
       return false;
     };
-    this.cdr.detectChanges();
+
   }
   slug: any ;
   product: any;
@@ -89,9 +98,22 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
       }
     });
     this.isUserAuthenticated = this.isAuthenticated();
-    this.cdr.detectChanges();
+    if (this.product && this.product.nutrition_values) {
+      this.safeNutritionValues = this.sanitizer.bypassSecurityTrustHtml(this.product.nutrition_values) as string;
+    }
+    if (this.product && this.product.questions){
+      this.safeQuestions = this.sanitizer.bypassSecurityTrustHtml(this.product.questions) as string;
+    }
+    if (this.product && this.product.meta_description_fr){
+      this.safeMeta_description_fr = this.sanitizer.bypassSecurityTrustHtml(this.product.meta_description_fr) as string;
+    }
+    if (this.product && this.product.description_fr){
+      this.safeDescriptionFr = this.sanitizer.bypassSecurityTrustHtml(this.product.description_fr) as string;
+    }
+    this.cdr.markForCheck(); 
   }
   public isAuthenticated(): boolean {
+    if (!this.isBrowser) return false; 
     if (localStorage.getItem('token') == null) {
       return false
     }
@@ -126,7 +148,7 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
 
     this._render2.appendChild(this._document.head, script); // append to head for SEO
 
-    this.cdr.detectChanges(); // only needed for client updates
+    this.cdr.markForCheck();  // only needed for client updates
   }
   addToCard() {
     let panier = JSON.parse(localStorage.getItem('panier') || '[]');
@@ -201,7 +223,7 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
 
     }, 1);
     localStorage.setItem('panier', JSON.stringify(panier));
-    this.cdr.detectChanges();
+    this.cdr.markForCheck(); 
   }
 
   ngOnDestroy(): void {
@@ -235,9 +257,9 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
       }
     } else {
       this.metaService.updateTag({ name: 'title', content: this.product.designation_fr });
-      this.metaService.updateTag({ name: 'description', content: this.product.description_fr });
+      this.metaService.updateTag({ name: 'description', content: this.sanitizer.bypassSecurityTrustHtml(this.product.description_fr ) as string });
     }
-    this.cdr.detectChanges();
+    this.cdr.markForCheck(); 
   }
 
   inc_dec_qte(type: string) {
@@ -248,7 +270,7 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
         this.quantity--
       }
     }
-    this.cdr.detectChanges();
+    this.cdr.markForCheck(); 
   }
 
   createCanonicalURL() {
@@ -327,7 +349,7 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
         }
       )
     }
-    this.cdr.detectChanges();
+    this.cdr.markForCheck(); 
   }
 
   public stars: boolean[] = Array(5).fill(false);
@@ -335,7 +357,7 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
   public rate(rating: number) {
     this.rating = rating;
     this.stars = this.stars.map((_, i) => rating > i);
-    this.cdr.detectChanges();
+    this.cdr.markForCheck(); 
   }
   validateReview() {
     if (this.rating == 0 ) { return false } else { return true }
