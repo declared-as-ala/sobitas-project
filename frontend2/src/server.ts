@@ -13,25 +13,18 @@ const app = express();
 const angularApp = new AngularNodeAppEngine();
 
 /**
- * =====================================================
- * robots.txt & sitemap.xml (cache 24h)
- * =====================================================
+ * Serve sitemap.xml & robots.txt BEFORE Angular SSR
  */
 app.get('/robots.txt', (req, res) => {
-  res.setHeader('Cache-Control', 'public, max-age=86400');
   res.sendFile(join(browserDistFolder, 'robots.txt'));
 });
 
 app.get('/sitemap.xml', (req, res) => {
-  res.setHeader('Cache-Control', 'public, max-age=86400');
   res.sendFile(join(browserDistFolder, 'sitemap.xml'));
 });
 
 /**
- * =====================================================
- * Static assets (JS, CSS, fonts, images)
- * Cache 1 YEAR + immutable
- * =====================================================
+ * Serve other static files from /browser
  */
 app.use(
   express.static(browserDistFolder, {
@@ -39,36 +32,21 @@ app.use(
     immutable: true,
     index: false,
     redirect: false,
-    setHeaders(res, path) {
-      // Never cache HTML files
-      if (path.endsWith('.html')) {
-        res.setHeader(
-          'Cache-Control',
-          'no-store, no-cache, must-revalidate, proxy-revalidate'
-        );
-      }
-    },
-  })
+  }),
 );
 
 /**
- * =====================================================
- * Angular SSR (HTML)
- * NO browser cache
- * =====================================================
+ * Handle all other requests by rendering the Angular application
  */
 app.use(async (req, res, next) => {
   try {
     const response = await angularApp.handle(req);
-    if (!response) return next();
+    res.setHeader('Cache-Control', 'public, max-age=600, s-maxage=600');
+    if (!response) {
+      return next();
+    }
 
-    // HTML SSR should always be fresh
-    res.setHeader(
-      'Cache-Control',
-      'no-store, no-cache, must-revalidate, proxy-revalidate'
-    );
-
-    // Forward Angular HTTP status
+    // Handle HTTP status codes sent by Angular
     const angularStatus = response.headers.get('x-angular-status');
     if (angularStatus) {
       res.status(Number(angularStatus));
@@ -81,21 +59,19 @@ app.use(async (req, res, next) => {
 });
 
 /**
- * =====================================================
- * Start server
- * =====================================================
+ * Start the server if this module is the main entry point
  */
 if (isMainModule(import.meta.url) || process.env['pm_id']) {
   const port = process.env['PORT'] || 4000;
   app.listen(port, (error) => {
-    if (error) throw error;
-    console.log(`✅ Angular SSR server running on http://localhost:${port}`);
+    if (error) {
+      throw error;
+    }
+    console.log(`Node Express server listening on http://localhost:${port}`);
   });
 }
 
 /**
- * =====================================================
- * Angular CLI / Dev handler
- * =====================================================
+ * Request handler used by Angular CLI (dev-server, build)
  */
 export const reqHandler = createNodeRequestHandler(app);
