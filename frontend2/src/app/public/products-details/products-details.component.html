@@ -38,7 +38,7 @@
                   <a aria-label="lien vers protein.tn" href="#" class="elevatezoom-gallery active" data-update=""
                     [attr.data-image]="storage + photo.download_link"
                     [attr.data-zoom-image]="storage + photo.download_link">
-                    <img [src]="storage + photo.download_link" fetchpriority="auto"
+                    <img [src]="storage + photo.download_link" fetchpriority="low"
                       [alt]="product.alt_cover ? product.alt_cover : product.designation_fr"
                       [title]="product.description_cover ? product.description_cover : product.designation_fr" />
                   </a>

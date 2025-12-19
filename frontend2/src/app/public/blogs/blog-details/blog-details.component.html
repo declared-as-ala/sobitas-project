@@ -23,7 +23,7 @@
                     [alt]="article.alt_cover ? article.alt_cover : article.designation_fr"
                     [title]="article.description_cover ? article.description_cover : article.designation_fr"
                     fetchpriority="high"decoding="async"
-                    loading="lazy" fetchpriority="auto">
+                    loading="lazy" fetchpriority="low">
                 </div>
                 <div>
                   <app-social-share [description]="article.designation_fr"></app-social-share>
