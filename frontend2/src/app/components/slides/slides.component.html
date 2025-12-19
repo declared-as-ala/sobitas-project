@@ -8,6 +8,7 @@
         aria-hidden="{{ i !== current() }}"
       >
       @if (screenWidth() > 700) {
+        @if(i == 0){
         <img
           [ngSrc]="slide.cover"
           fill
@@ -17,7 +18,20 @@
           sizes="100vw"
           [alt]="slide.designation_fr || 'Proteine femme Tunisie'"
         >
+        }@else {
+          <img
+            [ngSrc]="slide.cover"
+            fill
+            shareButton=""
+            [priority]="i === 0"
+            fetchpriority="low"
+            sizes="100vw"
+            [alt]="slide.designation_fr || 'Proteine femme Tunisie'"
+          >
+        }
+
       }@else {
+        @if(i == 0){
         <img
           [ngSrc]="slide.cover"
           srcset
@@ -28,7 +42,19 @@
           sizes="100vw"
           [alt]="slide.designation_fr || 'Proteine Tunisie'"
         >
+      }@else {
+        <img
+          [ngSrc]="slide.cover"
+          srcset
+          width="300"
+          height="700"
+          [priority]="i === 0"
+          fetchpriority="low"
+          sizes="100vw"
+          [alt]="slide.designation_fr || 'Proteine Tunisie'"
+        >
       }
+    }
       </article>
     </ng-container>
 
