@@ -124,9 +124,9 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
     if (!this.product) return;
 
     // Calculer la moyenne en nombre
-    const avg = this.calculateAverageStars(); // Assure-toi que cette fonction renvoie un number
+    const avg = this.calculateAverageStars(); // doit retourner un number
 
-    // Construire le JSON-LD
+    // Construire le JSON-LD de base
     const productData: any = {
       "@context": "https://schema.org/",
       "@type": "Product",
@@ -139,9 +139,20 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
     if (this.product.reviews && this.product.reviews.length > 0 && avg > 0) {
       productData.aggregateRating = {
         "@type": "AggregateRating",
-        "bestRating": 5, // number
-        "ratingCount": this.product.reviews.length, // nombre positif
-        "ratingValue": avg // nombre
+        "bestRating": 5,
+        "ratingCount": this.product.reviews.length,
+        "ratingValue": avg
+      };
+    }
+
+    // Ajouter l'offre (stock et nombre d'offres)
+    if (this.product.stock != null) {
+      productData.offers = {
+        "@type": "Offer",
+        "availability": this.product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+        "offerCount": this.product.stock, // nombre d’unités disponibles
+        "price": this.product.price || 0,
+        "priceCurrency": this.product.currency || "TND"
       };
     }
 
@@ -153,7 +164,7 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
     // Ajouter au head
     this._render2.appendChild(this._document.head, script);
 
-    this.cdr.markForCheck(); // seulement si nécessaire côté client
+    this.cdr.markForCheck(); // côté client seulement si nécessaire
   }
 
   addToCard() {
