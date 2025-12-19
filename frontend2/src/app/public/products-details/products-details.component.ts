@@ -32,10 +32,6 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
   isUserAuthenticated: boolean = false
   reviewComment: any;
   isBrowser: boolean;
-  safeNutritionValues: string = '';
-  safeQuestions: string = '';
-  safeMeta_description_fr : string = '';
-  safeDescriptionFr : string = '';
   constructor(
     private api: AuthService,
     private general: GeneralService,
@@ -93,15 +89,16 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
             setTimeout(() => { }, 2);
           });
       }
+          this.cdr.markForCheck(); 
     });
     if (isPlatformBrowser(this.platformId)) {
      this.setup()
       this.settupSchema()
       this.gallery = JSON.parse(this.product?.gallery);
-
+          this.cdr.markForCheck(); 
     }
     this.isUserAuthenticated = this.isAuthenticated();
-    this.cdr.detectChanges(); 
+    this.cdr.markForCheck(); 
   }
   public isAuthenticated(): boolean {
     if (!this.isBrowser) return false; 
