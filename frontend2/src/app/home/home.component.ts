@@ -124,12 +124,12 @@ export class HomeComponent implements OnInit {
         "designation_fr": "PROTEINES"
     },
     {
-        "cover": "assets/img/categories/PreIntraPostWorkout.webp",
+        "cover": "assets/img/categories/PostWorkout.webp",
         "slug": "complements-d-entrainement",
         "designation_fr": "PRE, INTRA & POST WORKOUT"
     },
     {
-        "cover": "assets/img/categories/VetementsEtAccessoires.webp",
+        "cover": "assets/img/categories/VetAccess.webp",
         "slug": "equipements-et-accessoires-sportifs",
         "designation_fr": "VETEMENTS ET ACCESSOIRES"
     }
