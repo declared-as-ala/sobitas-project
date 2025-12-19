@@ -101,7 +101,7 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
 
     }
     this.isUserAuthenticated = this.isAuthenticated();
-    this.cdr.markForCheck(); 
+    this.cdr.detectChanges(); 
   }
   public isAuthenticated(): boolean {
     if (!this.isBrowser) return false; 
