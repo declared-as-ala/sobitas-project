@@ -101,7 +101,7 @@
               <span class="current_price">{{ product.promo ? product.promo : product.prix }} DT</span>
             </div>
             <div class="product_desc desc">
-              <p [innerHTML]="safeMeta_description_fr"></p>
+              <p [innerHTML]="product.meta_description_fr"></p>
             </div>
             <div class="product_variant color" *ngIf="product.aromes.length > 0">
               <h3>Arômes</h3>
@@ -169,7 +169,7 @@
       <div class="tab-content" id="nav-tabContent">
         <div class="tab-pane fade show active pt-3" id="nav-one" role="tabpanel" aria-labelledby="nav-one-tab">
           <div class="product_info_content desc">
-            <p [innerHTML]="safeDescriptionFr" #containera></p>
+            <p [innerHTML]="product.description_fr" #containera></p>
           </div>
         </div>
         <div class="tab-pane fade pt-3" id="nav-two" role="tabpanel" aria-labelledby="nav-two-tab">
@@ -232,10 +232,10 @@
           </div>
         </div>
         <div class="tab-pane fade pt-3" id="nav-three" role="tabpanel" aria-labelledby="nav-three-tab">
-          <p class="p-3" [innerHTML]="safeNutritionValues"></p>
+          <p class="p-3" [innerHTML]="product?.nutrition_values"></p>
         </div>
         <div class="tab-pane fade pt-3" id="nav-four" role="tabpanel" aria-labelledby="nav-four-tab">
-          <p class="p-3" [innerHTML]="safeQuestions"></p>
+          <p class="p-3" [innerHTML]="product?.questions"></p>
         </div>
       </div>
     </div>
