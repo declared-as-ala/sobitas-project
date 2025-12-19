@@ -2,6 +2,7 @@ import { Component, Inject, PLATFORM_ID, Input } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { ShareButtons } from 'ngx-sharebuttons/buttons';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { safeHtmlToText } from '../../public/products-details/products-details.component';
 
 @Component({
   selector: 'app-social-share',
@@ -27,7 +28,7 @@ export class SocialShareComponent {
   ngOnChanges() {
     if (this.description) {
       // Sanitize HTML for safe display (tooltip, preview, etc.)
-      this.safeDescription = this.sanitizer.bypassSecurityTrustHtml(this.description) as string;
+      this.safeDescription = safeHtmlToText(this.sanitizer.bypassSecurityTrustHtml(this.description));
     }
   }
 
@@ -37,3 +38,5 @@ export class SocialShareComponent {
     return this.description?.replace(/<[^>]*>/g, '') || 'Check this out!';
   }
 }
+
+

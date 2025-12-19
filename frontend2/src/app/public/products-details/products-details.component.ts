@@ -99,16 +99,16 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
     });
     this.isUserAuthenticated = this.isAuthenticated();
     if (this.product && this.product.nutrition_values) {
-      this.safeNutritionValues = this.sanitizer.bypassSecurityTrustHtml(this.product.nutrition_values) as string;
+      this.safeNutritionValues = safeHtmlToText(this.sanitizer.bypassSecurityTrustHtml(this.product.nutrition_values));
     }
     if (this.product && this.product.questions){
-      this.safeQuestions = this.sanitizer.bypassSecurityTrustHtml(this.product.questions) as string;
+      this.safeQuestions = safeHtmlToText(this.sanitizer.bypassSecurityTrustHtml(this.product.questions));
     }
     if (this.product && this.product.meta_description_fr){
-      this.safeMeta_description_fr = this.sanitizer.bypassSecurityTrustHtml(this.product.meta_description_fr) as string;
+      this.safeMeta_description_fr = safeHtmlToText(this.sanitizer.bypassSecurityTrustHtml(this.product.meta_description_fr));
     }
     if (this.product && this.product.description_fr){
-      this.safeDescriptionFr = this.sanitizer.bypassSecurityTrustHtml(this.product.description_fr) as string;
+      this.safeDescriptionFr = safeHtmlToText(this.sanitizer.bypassSecurityTrustHtml(this.product.description_fr));
     }
     this.cdr.markForCheck(); 
   }
@@ -274,7 +274,7 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
       }
     } else {
       this.metaService.updateTag({ name: 'title', content: this.product.designation_fr });
-      this.metaService.updateTag({ name: 'description', content: this.sanitizer.bypassSecurityTrustHtml(this.product.description_fr ) as string });
+      this.metaService.updateTag({ name: 'description', content: this.product.description_fr });
     }
     this.cdr.markForCheck(); 
   }
@@ -380,4 +380,10 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
     if (this.rating == 0 ) { return false } else { return true }
   }
 
+}
+export function safeHtmlToText(safeHtml: SafeHtml | string): string {
+  // If it's already a string, just return its text content
+  const htmlString = typeof safeHtml === 'string' ? safeHtml : safeHtml.toString();
+  // Parse HTML and get text content
+  return (new DOMParser().parseFromString(htmlString, 'text/html')).body.textContent || '';
 }
