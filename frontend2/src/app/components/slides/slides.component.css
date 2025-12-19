@@ -39,7 +39,8 @@
     object-position: center top;
   }
   .slider_wrapper{
-    height: 60vh;
+    height: 70vh;
+    max-height: 700px;
   }
 }
 
