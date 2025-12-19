@@ -104,32 +104,32 @@ export class HomeComponent implements OnInit {
   //from here you can add more categories and category images to the list
   categories = [
     {
-        "cover": "https://i.imgur.com/CVFd8hV.png",
+        "cover": "assets/img/categories/AcidesAmines.webp",
         "slug": "complements-alimentaires",
         "designation_fr": "COMPLÉMENTS ALIMENTAIRES"
     },
     {
-        "cover": "https://i.imgur.com/YcR1O0I.png",
+        "cover": "assets/img/categories/PerteDuPoids.webp",
         "slug": "perte-de-poids",
         "designation_fr": "PERTE DE POIDS"
     },
     {
-        "cover": "https://i.imgur.com/6hllFw7.png",
+        "cover": "assets/img/categories/PriseMasses.webp",
         "slug": "prise-de-masse",
         "designation_fr": "PRISE DE MASSE"
     },
     {
-        "cover": "https://i.imgur.com/LFH4dGf.png",
+        "cover": "assets/img/categories/Proteines.webp",
         "slug": "proteines",
         "designation_fr": "PROTEINES"
     },
     {
-        "cover": "https://i.imgur.com/5jN4Y3p.png",
+        "cover": "assets/img/categories/PreIntraPostWorkout.webp",
         "slug": "complements-d-entrainement",
         "designation_fr": "PRE, INTRA & POST WORKOUT"
     },
     {
-        "cover": "https://i.imgur.com/Lj0ymUa.png",
+        "cover": "assets/img/categories/VetementsEtAccessoires.webp",
         "slug": "equipements-et-accessoires-sportifs",
         "designation_fr": "VETEMENTS ET ACCESSOIRES"
     }
