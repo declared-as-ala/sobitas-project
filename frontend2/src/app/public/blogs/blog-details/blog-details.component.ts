@@ -107,6 +107,6 @@ export class BlogDetailsComponent implements OnInit {
       return 0
     }
     const totalStars = this.article.reviews.reduce((sum: any, review: any) => sum + review.stars, 0);
-    return (totalStars / this.article.reviews.length).toFixed(1);
+    return Number((totalStars / this.article.reviews.length).toFixed(1));
   }
 }

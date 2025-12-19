@@ -353,18 +353,30 @@ export class ProductsListComponent implements OnInit {
     "@context": "https://schema.org/",
     "@type": "Product",
     "name": this.selected.designation_fr,
-    "description": this.selected.content_seo,
-    "image": `${storage}${this.selected.cover}`
+    "description": this.selected.content_seo || this.selected.description_fr,
+    "image": storage + this.selected.cover,
+    "offers": {
+      "@type": "Offer",
+      "priceCurrency": "TND",
+      "price": this.selected.price || 0,
+      "availability": "https://schema.org/InStock",
+      "url": window.location.href,
+      "offerCount": 1
+    }
   };
 
-  if (this.selected.review) {
-    productData.review = this.selected.review;
-    productData.aggregateRating = {
-      "@type": "AggregateRating",
-      "bestRating": "5",
-      "ratingCount": this.selected.reviews.length,
-      "ratingValue": this.calculateAverageStars()
-    };
+  // Add reviews only if they exist
+  if (this.selected.reviews && this.selected.reviews.length > 0) {
+    const ratingValue = this.calculateAverageStars();
+    if (ratingValue > 0) {
+      productData.aggregateRating = {
+        "@type": "AggregateRating",
+        "ratingValue": Number(ratingValue.toFixed(1)),
+        "bestRating": 5,
+        "ratingCount": this.selected.reviews.length
+      };
+    }
+    productData.review = this.selected.reviews; // optional, can format properly
   }
 
   const script = this._render2.createElement('script');
@@ -402,10 +414,11 @@ createCanonicalURL() {
     this.cdr.markForCheck();
   }
   calculateAverageStars() {
-    if (this.selected.reviews.length === 0) {
-      return 0
+    if (!this.selected.reviews || this.selected.reviews.length === 0) {
+      return 0;
     }
-    const totalStars = this.selected.reviews.reduce((sum: any, review: any) => sum + review.stars, 0);
-    return (totalStars / this.selected.reviews.length).toFixed(1);
+    const totalStars = this.selected.reviews.reduce((sum: number, review: any) => sum + review.stars, 0);
+    return Number((totalStars / this.selected.reviews.length).toFixed(1));
   }
+
 }

@@ -76,7 +76,7 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
       return 0
     }
     const totalStars = this.product.reviews.reduce((sum: any, review: any) => sum + review.stars, 0);
-    return (totalStars / this.product.reviews.length).toFixed(1);
+    return Number((totalStars / this.product.reviews.length).toFixed(1));
   }
   ngOnInit() {
     this.slug = this.route.snapshot.params['slug'];
@@ -123,33 +123,39 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
   settupSchema() {
     if (!this.product) return;
 
-    const avg = this.calculateAverageStars();
+    // Calculer la moyenne en nombre
+    const avg = this.calculateAverageStars(); // Assure-toi que cette fonction renvoie un number
 
+    // Construire le JSON-LD
     const productData: any = {
       "@context": "https://schema.org/",
       "@type": "Product",
-      "name": this.product.designation_fr,
-      "description": this.product.content_seo,
-      "image": `${storage}${this.product.cover}`
+      "name": this.product.designation_fr || '',
+      "description": this.product.content_seo || '',
+      "image": this.product.cover ? `${storage}${this.product.cover}` : ''
     };
 
-    if (this.product.reviews && this.product.reviews.length > 0) {
+    // Ajouter les avis si existants
+    if (this.product.reviews && this.product.reviews.length > 0 && avg > 0) {
       productData.aggregateRating = {
         "@type": "AggregateRating",
-        "bestRating": "5",
-        "ratingCount": this.product.reviews.length,
-        "ratingValue": avg
+        "bestRating": 5, // number
+        "ratingCount": this.product.reviews.length, // nombre positif
+        "ratingValue": avg // nombre
       };
     }
 
+    // Créer le script JSON-LD
     const script = this._render2.createElement('script');
     script.type = 'application/ld+json';
-    script.text = JSON.stringify(productData); // safe JSON serialization
+    script.text = JSON.stringify(productData);
 
-    this._render2.appendChild(this._document.head, script); // append to head for SEO
+    // Ajouter au head
+    this._render2.appendChild(this._document.head, script);
 
-    this.cdr.markForCheck();  // only needed for client updates
+    this.cdr.markForCheck(); // seulement si nécessaire côté client
   }
+
   addToCard() {
     let panier = JSON.parse(localStorage.getItem('panier') || '[]');
     let exist = panier.findIndex(
