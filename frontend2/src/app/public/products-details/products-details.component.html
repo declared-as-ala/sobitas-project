@@ -25,7 +25,7 @@
                   " [attr.data-zoom-image]="product.cover
                   ? storage + product.cover
                   : 'assets/img/product/p1.webp'" [style.opacity]="product.rupture == 0 ? 1 : 1" loading="eager"
-                  fetchpriority="auto" [alt]="product.alt_cover ? product.alt_cover : product.designation_fr"
+                  fetchpriority="low" [alt]="product.alt_cover ? product.alt_cover : product.designation_fr"
                   [title]="product.description_cover ? product.description_cover : product.designation_fr" />
                 <!--<div class="sign" *ngIf="product.rupture == 0">
                   Rupture De Stock
