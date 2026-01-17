@@ -463,7 +463,7 @@
                         @endif
                     </main>
                     <footer>
-                        Bank UIB RIB : {{ $coordonnee->rib }}
+                        {{ $coordonnee->rib }}
                     </footer>
                 </div>
                 <!--DO NOT DELETE THIS div. IT is responsible for showing footer always at the bottom-->

@@ -22,7 +22,7 @@ Disallow: /checkout
 Disallow: /compte
 Allow: /
 Crawl-delay: 1
-Sitemap: https://sobitas.tn/sitemap.xml
+Sitemap: https://protein.tn/sitemap.xml
 
 # -----------------------------
 # Directives spécifiques pour Bing
@@ -34,7 +34,7 @@ Disallow: /checkout
 Disallow: /compte
 Allow: /
 Crawl-delay: 2
-Sitemap: https://sobitas.tn/sitemap.xml
+Sitemap: https://protein.tn/sitemap.xml
 
 # -----------------------------
 # Directives pour IA / chatbots
@@ -49,4 +49,4 @@ Allow: /
 # -----------------------------
 # Lien vers le sitemap
 # -----------------------------
-Sitemap: https://sobitas.tn/sitemap.xml
+Sitemap: https://protein.tn/sitemap.xml
