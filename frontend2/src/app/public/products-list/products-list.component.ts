@@ -86,8 +86,10 @@ export class ProductsListComponent implements OnInit {
     //if(){}
     if (isPlatformBrowser(this.platformId)) {
       this.getScreenSize();
+      this.setup();
+      
     }
-
+    
     if (this.tag && this.slug_sous_categ) {
       this.nom = this.tag;
       this.general
@@ -360,7 +362,7 @@ export class ProductsListComponent implements OnInit {
       "priceCurrency": "TND",
       "price": this.selected.price || 0,
       "availability": "https://schema.org/InStock",
-      "url": window.location.href,
+      "url": window.location.href ?? 'https://www.protein.tn',
       "offerCount": 1
     }
   };

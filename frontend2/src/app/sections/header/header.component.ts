@@ -20,6 +20,7 @@ declare var $: any;
   imports: [SearchComponent, RouterModule, CommonModule],
   templateUrl: './header.component.html',
   styles: [],
+  styleUrls: ['./header.css'],
 })
 export class HeaderComponent implements OnInit {
   menu = signal<any[]>([]);

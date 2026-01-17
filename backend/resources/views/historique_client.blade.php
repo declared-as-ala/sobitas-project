@@ -15,13 +15,13 @@
                 @if($user->adresse)  <h5 style="padding-left: 75px">Adresse : {{$user->adresse}}</h5>   @endif
             @endif
                 <h5 style="padding-left: 75px">Numéro de téléphone : {{ $tel }}</h5>
-           
-           
+
+
         </div>
         <div class="col-md-7">
             <form method="POST" action="{{ route('voyager.historique') }}" class="card" style="padding: 20px ; margin-top : 10px">
                 @csrf
-                <label style="color: #444"><b>Chercher l'historique de votre Client</b></label>
+                <label style="color: #444"><b>Chercher l'historique de votre Client </b></label>
                 <div class="row">
                     <div class="col-md-7">
                         <input type="number" min="20000001" max="99999999" class="form-control" name="tel" required placeholder="Numéro de téléphone" style="border-color: #444">

@@ -66,7 +66,7 @@
                 <a aria-label="lien vers protein.tn" routerLink="/page/qui-sommes-nous" style="font-weight: 600; font-size: 15px;">Qui nous sommes ? </a>
               </li>
               <li class="menu-item-has-children">
-                <a aria-label="lien vers protein.tn" routerLink="/contact" style="font-weight: 600; font-size: 15px;"> Contacter nous</a>
+                <a aria-label="lien vers protein.tn" routerLink="/contact" style="font-weight: 600; font-size: 1em;"> Contacter nous</a>
               </li>
             </ul>
           </div>
@@ -235,52 +235,57 @@
     <!--header middel end-->
 
     <!--header bottom satrt-->
-    <div class="header_bottom h_bottom_two sticky-header">
-      <div class="row align-items-center mrl0">
-        <div class="col-lg-12">
-          <div class="main_menu menu_two menu_position text-left">
-            <nav>
-              <ul class="menuul">
-                <li><a aria-label="lien vers protein.tn" class="active" routerLink="/">Accueil</a></li>
-                <li>
-                  <a aria-label="lien vers protein.tn" routerLink="/page/qui-sommes-nous">Qui somme nous</a>
-                </li>
-                <li class="mega_items">
-                  <a aria-label="lien vers protein.tn" routerLink="/shop">Nos produits<i class="fa fa-angle-down"></i></a>
-                  <div class="mega_menu">
-                    <ul class="mega_menu_inner">
-                      <li *ngFor="let category of menu()">
-                        <a aria-label="lien vers protein.tn" [routerLink]="[
-                          '/categorie',
-                          category.slug
-                        ]" class="category-mega">{{ category.designation_fr }}</a>
-                        <ul *ngIf="
-                          category.sous_categories &&
-                          category.sous_categories.length > 0
-                        ">
-                          <li *ngFor="
-                            let sous_category of category.sous_categories
-                          ">
-                            <a aria-label="lien vers protein.tn" [routerLink]="[
-                              '/category',
-                              sous_category.slug
-                            ]">{{ sous_category.designation_fr }}</a>
-                          </li>
-                        </ul>
+<div class="header_bottom h_bottom_two sticky-header">
+  <div class="row align-items-center mrl0">
+    <div class="col-lg-12">
+      <div class="main_menu menu_two menu_position text-left">
+        <nav>
+          <ul class="menuul">
+            <li>
+              <a aria-label="lien vers protein.tn" class="active" routerLink="/">Accueil</a>
+            </li>
+            <li>
+              <a aria-label="lien vers protein.tn" routerLink="/page/qui-sommes-nous">Qui somme nous</a>
+            </li>
+            <li class="mega_items">
+              <a aria-label="lien vers protein.tn" routerLink="/shop">
+                Nos produits <i class="fa fa-angle-down"></i>
+              </a>
+              <div class="mega_menu">
+                <ul class="mega_menu_inner">
+                  <li *ngFor="let category of menu()" class="category-item">
+                    <a 
+                      aria-label="lien vers protein.tn" 
+                      [routerLink]="['/categorie', category.slug]" 
+                      class="category-mega">
+                      {{ category.designation_fr }}
+                      <i *ngIf="category.sous_categories?.length > 0" class="fa fa-angle-right submenu-arrow"></i>
+                    </a>
+
+                    <!-- Submenu for sous_categories -->
+                    <ul *ngIf="category.sous_categories?.length > 0" class="submenu">
+                      <li *ngFor="let sous_category of category.sous_categories">
+                        <a 
+                          aria-label="lien vers protein.tn" 
+                          [routerLink]="['/category', sous_category.slug]">
+                          {{ sous_category.designation_fr }}
+                        </a>
                       </li>
                     </ul>
-                  </div>
-                </li>
-                <li><a aria-label="lien vers protein.tn" routerLink="/pack/packs">Packs</a></li>
-                <li><a aria-label="lien vers protein.tn" routerLink="/blogs">Blog</a></li>
-
-                <li><a aria-label="lien vers protein.tn" routerLink="/contact"> Contacter nous</a></li>
-              </ul>
-            </nav>
-          </div>
-        </div>
+                  </li>
+                </ul>
+              </div>
+            </li>
+            <li><a aria-label="lien vers protein.tn" routerLink="/pack/packs">Packs</a></li>
+            <li><a aria-label="lien vers protein.tn" routerLink="/blogs">Blog</a></li>
+            <li><a aria-label="lien vers protein.tn" routerLink="/contact">Contacter nous</a></li>
+          </ul>
+        </nav>
       </div>
     </div>
+  </div>
+</div>
+
     <!--header bottom end-->
   </div>
 </header>

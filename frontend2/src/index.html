@@ -326,7 +326,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" fetchpriority="high">
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400..700;1,400..700&amp;display=swap" defer="" onload="this.onload=null;this.rel='stylesheet'"fetchpriority="low" as="style">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400..700;1,400..700&amp;display=swap" defer="" media="print" onload="this.onload=null;this.rel='stylesheet'" fetchpriority="low">
-<script>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js" rel="preload" ></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-migrate/3.3.2/jquery-migrate.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.9.0/slick.min.js"></script>
+  <script>
 function loadSliderScripts() {
   const s1 = document.createElement('script');
   s1.src = 'https://code.jquery.com/jquery-3.7.1.min.js';
@@ -349,11 +352,6 @@ function loadSliderScripts() {
   };
 }
 
-// Appeler loadSliderScripts() seulement quand l’utilisateur arrive sur la section slider
-document.addEventListener('DOMContentLoaded', () => {
-  const sliderSection = document.querySelector('#slider');
-  if (sliderSection) loadSliderScripts();
-});
 </script>
 
   <link rel="manifest" href="manifest.webmanifest">
