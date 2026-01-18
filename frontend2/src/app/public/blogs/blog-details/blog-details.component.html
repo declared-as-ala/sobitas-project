@@ -1,4 +1,4 @@
-<app-breadcrumbs [page]="article?.designation_fr"></app-breadcrumbs>
+<app-breadcrumbs *ngIf="article" [page]="article?.designation_fr"></app-breadcrumbs>
 
 <div class="blog_bg_area blog_details_bg" *ngIf="article">
   <div class="container">
@@ -18,19 +18,22 @@
                   </div>
                 </div>
                 <div class="blog_thumb">
-                  <img [ngSrc]="article.cover ? storage+article.cover : 'assets/img/blog/blog-big1.jpg'",
+                  <img 
+                    [ngSrc]="getSafeImageUrl(article.cover)"
                     width="500" height="500"
-                    [alt]="article.alt_cover ? article.alt_cover : article.designation_fr"
-                    [title]="article.description_cover ? article.description_cover : article.designation_fr"
-                    fetchpriority="high"decoding="async"
-                    loading="lazy" fetchpriority="low">
+                    [alt]="article.alt_cover || article.designation_fr"
+                    [title]="article.description_cover || article.designation_fr"
+                    fetchpriority="high"
+                    decoding="async"
+                    loading="lazy">
+
                 </div>
                 <div>
                   <app-social-share [description]="article.designation_fr"></app-social-share>
                 </div>
                 <figcaption class="blog_content">
                   <div class="post_content">
-                    <p [innerHTML]="article.description | safe: 'html'"></p>
+                    <p [innerHTML]="article?.description | safe: 'html'"></p>
                   </div>
                 </figcaption>
               </figure>
@@ -58,5 +61,5 @@
     </div>
   </div>
 </div>
-<div class="hidden_content" [innerHTML]="article.content">
+<div class="hidden_content" [innerHTML]="article?.content || 'no content'">
 </div>

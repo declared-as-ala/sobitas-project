@@ -12,7 +12,7 @@ import { environment } from '../apis/config';
   selector: 'app-home',
   templateUrl: './home.component.html',
   styleUrls:[],
-  imports: [CommonModule,ProductComponent, ArticleComponent, SlidesComponent, CategoriesComponent],
+  imports: [CommonModule,ProductComponent, ArticleComponent, SlidesComponent, CategoriesComponent,CommonModule],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class HomeComponent implements OnInit {

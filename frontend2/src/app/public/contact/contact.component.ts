@@ -13,7 +13,7 @@ import { BreadcrumbsComponent } from '../../shared/breadcrumbs/breadcrumbs.compo
   imports: [BreadcrumbsComponent, ReactiveFormsModule]
 })
 export class ContactComponent implements OnInit {
-  coordonnees: any = JSON.parse(localStorage.getItem('coordonnees') || '{}');
+  coordonnees: any ;
   map: any;
 
   contactForm: FormGroup = new FormGroup({
@@ -31,6 +31,7 @@ export class ContactComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.coordonnees = JSON.parse(localStorage.getItem('coordonnees') || '{}');
     // Set SEO meta tags safely
     this.titleService.setTitle('Contactez Sobitas – Gainer et Protéines Tunisie');
     this.meta.updateTag({
