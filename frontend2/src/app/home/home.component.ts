@@ -30,7 +30,7 @@ export class HomeComponent implements OnInit {
   slides: any = [
     {
         "cover": "assets/img/slides/silde1.webp",
-        "designation_fr": "Sobitas, votre boutique de compléments alimentaires en ligne",
+        "designation_fr": "Protein Tunisie, votre boutique de compléments alimentaires en ligne",
         "description_fr": null,
         "btn_text_fr": "Liste des produits",
         "btn_link": null,
@@ -41,7 +41,7 @@ export class HomeComponent implements OnInit {
     },
     {
         "cover": "assets/img/slides/hardmas_cover.webp",
-        "designation_fr": "Sobitas, votre boutique de compléments alimentaires en ligne en Tunisie",
+        "designation_fr": "Protein Tunisie, votre boutique de compléments alimentaires en ligne en Tunisie",
         "description_fr": null,
         "btn_text_fr": null,
         "btn_link": null,
