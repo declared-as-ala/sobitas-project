@@ -1,6 +1,6 @@
 import { GeneralService } from '../../apis/general.service';
 import { AuthService } from '../../apis/auth.service';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, Inject, OnDestroy, OnInit, PLATFORM_ID, Renderer2, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, inject, Inject, OnDestroy, OnInit, PLATFORM_ID, Renderer2, ViewChild } from '@angular/core';
 import { DomSanitizer, Meta, SafeHtml } from '@angular/platform-browser';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { storage } from '../../apis/config';
@@ -370,8 +370,18 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
 
 }
 export function safeHtmlToText(safeHtml: SafeHtml | string): string {
-  // If it's already a string, just return its text content
-  const htmlString = typeof safeHtml === 'string' ? safeHtml : safeHtml.toString();
-  // Parse HTML and get text content
-  return (new DOMParser().parseFromString(htmlString, 'text/html')).body.textContent || '';
+  const htmlString =
+    typeof safeHtml === 'string' ? safeHtml : safeHtml?.toString() ?? '';
+
+  // SSR-safe check (Node has no window)
+  if (typeof window === 'undefined') {
+    return htmlString.replace(/<[^>]*>/g, '').trim();
+  }
+
+  // Browser-only
+  const parser = new DOMParser();
+  return (
+    parser.parseFromString(htmlString, 'text/html').body.textContent?.trim() ??
+    ''
+  );
 }

@@ -136,11 +136,14 @@
             <div>
               <div><app-social-share [description]="product.designation_fr"></app-social-share></div>
             </div>
-            <div class="product_meta" *ngIf="product.tags && product.tags.length > 0">
+            <div class="product_meta" *ngIf="product?.tags?.length">
               <span>Mots clés:
-                <span *ngFor="let tag of product.tags">{{ tag.designation_fr }},
-                </span></span>
+                <span *ngFor="let tag of product.tags; let last = last">
+                  {{ tag.designation_fr }}<span *ngIf="!last">, </span>
+                </span>
+              </span>
             </div>
+
           </div>
         </div>
       </div>
