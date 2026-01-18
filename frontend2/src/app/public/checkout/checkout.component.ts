@@ -140,7 +140,7 @@ valider(){
         position: 'top-end',
       });
       this.router.navigate(['/checkout-valid']);
-
+      this.cdr.detectChanges();
     })
   }
   this.cdr.detectChanges();
