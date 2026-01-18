@@ -16,7 +16,7 @@ import { SafePipe } from '../../../shared/safe.pipe';
   imports: [CommonModule, ArticleComponent, SocialShareComponent, BreadcrumbsComponent, SafePipe, NgOptimizedImage],
 })
 export class BlogDetailsComponent implements OnInit {
-  article: any = null;
+  article: any ;
   articles: any[] = [];
   slug: string = '';
   storage = storage;
@@ -62,6 +62,7 @@ export class BlogDetailsComponent implements OnInit {
       this.articles = d;
       this._cdr.markForCheck();
     });
+    this._cdr.detectChanges();
   }
 
   setupMetaTagsAndJSONLD(): void {

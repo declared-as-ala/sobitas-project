@@ -20,7 +20,9 @@ export class BlogsComponent implements OnInit {
       this.general.articles()
       .subscribe((data : any)=>{
         this.articles = data
+        this.cdr.markForCheck();
       })
-      this.cdr.markForCheck();
+      
+      this.cdr.detectChanges();
   }
 }
