@@ -2,7 +2,7 @@
   <article class="single_product" (mouseover)="clicked = true">
     <figure>
       <div class="product_thumb pdiv">
-        <a aria-label="lien vers protein.tn" class="primary_img" [routerLink]="['/shop', product.slug]"
+        <a aria-label="lien vers protein.tn" class="primary_img"  [routerLink]="['/shop', product.slug]"
           ><img
             [ngSrc]="
               product.cover
@@ -11,10 +11,10 @@
             "
             [style.opacity]="product.rupture == 0 ? 1 : 1"
             width="200" 
-            height="150" 
+            height="200" 
             srcset
             fetchpriority="low"
-            style="height: 200px; width: auto; object-fit: scale-down;"
+
             [alt]="
               product.alt_cover ? product.alt_cover : product.designation_fr
             "
@@ -24,6 +24,7 @@
                 : product.designation_fr
             "
             class="product-image"
+            style="height: auto; width: auto; object-fit: fill;"
             loading="lazy"
           />
           <!--<div class="sign" *ngIf="product.rupture == 0">Rupture De Stock</div>-->
