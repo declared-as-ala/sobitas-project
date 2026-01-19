@@ -2,10 +2,9 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-
+use App\Http\Controllers\AdminCommandeController;
 use App\Http\Controllers\ApisController;
 use App\Http\Controllers\ClientController;
-use TCG\Voyager\Http\Controllers\VoyagerCommandeController;
 
 /*
 |--------------------------------------------------------------------------
@@ -46,8 +45,8 @@ Route::get('/productsByBrandId/{brand_id}' , [ApisController::class , 'productsB
 Route::get('/productsBySubCategoryId/{slug}' , [ApisController::class , 'productsBySubCategoryId'] );
 Route::get('/searchProduct/{text}' , [ApisController::class , 'searchProduct'] );
 Route::get('/searchProductBySubCategoryText/{slug}/{text}' , [ApisController::class , 'searchProductBySubCategoryText'] );
-Route::post('/add_commande' , [VoyagerCommandeController::class , 'storeCommandeApi']);
-Route::get('/commande/{id}' , [VoyagerCommandeController::class , 'details']);
+Route::post('/add_commande' , [AdminCommandeController::class , 'storeCommandeApi']);
+Route::get('/commande/{id}' , [AdminCommandeController::class , 'details']);
 Route::get('/services' , [ApisController::class , 'services']);
 Route::post('/newsletter' , [ApisController::class , 'newsLetter']);
 Route::post('/contact' , [ApisController::class , 'sendContact']);
@@ -78,11 +77,6 @@ Route::group(['middleware' => 'auth:sanctum'], function (){
     Route::post('/update_profile' , [ClientController::class , 'update_profile']);
     Route::post('/detail_commande/{id}' , [ClientController::class , 'detail_commande']);
     Route::post('/add_review' , [ApisController::class , 'add_review']);
-
-
-
-
-
 
 
 });
