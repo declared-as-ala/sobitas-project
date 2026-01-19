@@ -4,7 +4,8 @@
       <a aria-label="lien vers protein.tn" [routerLink]="['/blogs' , article.slug]"><img loading="lazy" fetchpriority="high"decoding="async"
           [ngSrc]="article.cover ? storage+article.cover : 'assets/img/blog/blog1.webp'"
           [alt]="article.alt_cover ? article.alt_cover : article.designation_fr"
-          [title]="article.description_cover? article.description_cover : article.designation_fr" width="500"
+          [title]="article.description_cover? article.description_cover : article.designation_fr"
+          width="500"
           height="500" style="height: auto;width: auto;object-fit: cover;"></a>
     </div>
     <figcaption class="blog_content">

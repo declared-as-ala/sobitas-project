@@ -11,9 +11,10 @@
             "
             [style.opacity]="product.rupture == 0 ? 1 : 1"
             width="200" 
-            height="200" 
+            height="150" 
             srcset
             fetchpriority="low"
+            style="height: 200px; width: auto; object-fit: scale-down;"
             [alt]="
               product.alt_cover ? product.alt_cover : product.designation_fr
             "
