@@ -263,9 +263,9 @@ class AdminCommandeController extends Controller
             'commande' => $new_facture,
             'details'=>  $details
         ];
-        /*
+        
         Mail::to('bitoutawalid@gmail.com')->send(new SoumissionMail($dataa));
-        */
+        
         return [
             'id'=> $new_facture->id,
             'message'    => "Merci pour votre commande",
