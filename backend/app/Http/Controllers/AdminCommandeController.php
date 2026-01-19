@@ -249,7 +249,7 @@ class AdminCommandeController extends Controller
         $new_facture->save();
 
         //************sms********************* */
-        /*
+        
         $msg  = Message::first();
         $text = $msg->msg_passez_commande ;
         $sms = str_replace("[nom]" , $new_facture->nom , $text);
@@ -263,7 +263,7 @@ class AdminCommandeController extends Controller
             'commande' => $new_facture,
             'details'=>  $details
         ];
-        
+        /*
         Mail::to('bitoutawalid@gmail.com')->send(new SoumissionMail($dataa));
         */
         return [
