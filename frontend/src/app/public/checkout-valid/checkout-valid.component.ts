@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { map } from 'rxjs';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommandeService } from 'src/app/apis/commande.service';
 
@@ -10,7 +11,7 @@ import { CommandeService } from 'src/app/apis/commande.service';
 })
 export class CheckoutValidComponent implements OnInit{
 
-  constructor(private api : CommandeService , private router : Router){
+  constructor(private api : CommandeService , private router : Router,private cdr: ChangeDetectorRef){
 
   }
 
@@ -31,9 +32,9 @@ details : any
 
       this.commande = data.facture;
       this.details = data.details_facture
+      this.cdr.markForCheck();
 
-
-
-    })
+    });
+    this.cdr.detectChanges();
   }
 }
