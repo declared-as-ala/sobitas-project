@@ -12,6 +12,9 @@
     width: 100%;
   }
 }
+.fa-solid {
+  color: #ff4000;
+}
 
 .content {
   width: 420px;
