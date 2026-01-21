@@ -169,6 +169,9 @@ width: 100%;
   text-align: center;
 }
 
+.fa-solid {
+  color: #ffbb00;
+}
 
 .store li {
   display: inline;
