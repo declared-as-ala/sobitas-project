@@ -33,10 +33,10 @@ export class ContactComponent implements OnInit {
   ngOnInit(): void {
     this.coordonnees = JSON.parse(localStorage.getItem('coordonnees') || '{}');
     // Set SEO meta tags safely
-    this.titleService.setTitle('Contactez Protein Tunisie');
+    this.titleService.setTitle('Contactez Proteine Tunisie');
     this.meta.updateTag({
       name: 'description',
-      content: 'Contactez Protein Tunisie pour vos compléments alimentaires, gainer et protéines en Tunisie. Produits de meilleure qualité à bas prix.'
+      content: 'Contactez Proteine Tunisie pour vos compléments alimentaires, gainer et protéines en Tunisie. Produits de meilleure qualité à bas prix.'
     });
 
     // Load coordinates
