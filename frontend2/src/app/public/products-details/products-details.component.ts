@@ -32,6 +32,13 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
   isUserAuthenticated: boolean = false
   reviewComment: any;
   isBrowser: boolean;
+
+
+    activeTab: 'one' | 'two' | 'three' | 'four' = 'one';
+
+
+
+
   constructor(
     private api: AuthService,
     private general: GeneralService,
@@ -294,11 +301,13 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
 
     link.setAttribute('href', url);
     this._document.head.appendChild(link);
+    this.cdr.markForCheck();
   }
 
   clicked: boolean = false
   openReviewModal() {
     this.clicked = true;
+    this.cdr.markForCheck();
   }
 
   signin() {

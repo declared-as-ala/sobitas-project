@@ -405,12 +405,14 @@ createCanonicalURL() {
 
   link.setAttribute('href', url);
   this._document.head.appendChild(link);
+  this.cdr.markForCheck();
 }
 
   isShopRoute() {
     if (this.router.url === '/shop') {
       this.general.getShopSectionTitles().subscribe((data: ShopSection) => {
         this.shopSectionInfo=data
+        this.cdr.markForCheck();
       });
     }
     this.cdr.markForCheck();

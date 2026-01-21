@@ -149,99 +149,117 @@
       </div>
     </div>
     <div class="product_d_info">
-      <nav>
-        <div class="nav nav-tabs mobiletabs" id="nav-tab" role="tablist">
-          <button class="product_info_button nav-link active" id="nav-one-tab" data-bs-toggle="tab" data-bs-target="#nav-one"
-            type="button" role="tab" aria-controls="nav-one" aria-selected="true">
-            <h4 class="m-0">{{ product?.zone1 ? product?.zone1 : 'Description' }}</h4>
-          </button>
-          <button class="product_info_button nav-link" id="nav-two-tab" data-bs-toggle="tab" data-bs-target="#nav-two"
-            type="button" role="tab" aria-controls="nav-two" aria-selected="false">
-            <h4 class="m-0">{{ product?.zone2 ? product?.zone2 : 'Avis client' }}</h4>
-          </button>
-          <button class="product_info_button nav-link" id="nav-three-tab" data-bs-toggle="tab" data-bs-target="#nav-three"
-            type="button" role="tab" aria-controls="nav-three" aria-selected="false">
-            <h4 class="m-0">{{ product?.zone3 ? product?.zone3 : 'Valeurs nutritionnelles' }}</h4>
-          </button>
-          <button class="product_info_button nav-link" id="nav-four-tab" data-bs-toggle="tab" data-bs-target="#nav-four"
-            type="button" role="tab" aria-controls="nav-four" aria-selected="false">
-            <h4 class="m-0">{{ product?.zone4 ? product?.zone4 : 'Questions' }}</h4>
-          </button>
-        </div>
-      </nav>
-      <div class="tab-content" id="nav-tabContent">
-        <div class="tab-pane fade show active pt-3" id="nav-one" role="tabpanel" aria-labelledby="nav-one-tab">
-          <div class="product_info_content desc">
-            <p [innerHTML]="product.description_fr" #containera></p>
-          </div>
-        </div>
-        <div class="tab-pane fade pt-3" id="nav-two" role="tabpanel" aria-labelledby="nav-two-tab">
-          <div class="row" *ngIf="product.reviews.length>0">
-            <div class="col-md-3">
-              <div class="text-center">
-                <div class="ratings">
-                  <span class="product-rating">{{average}}</span><span>/5</span>
-                  <div class="stars">
-                    <i class="fa fa-star" *ngIf="average>=1"></i>
-                    <i class="fa fa-star" *ngIf="average>=2"></i>
-                    <i class="fa fa-star" *ngIf="average>=3"></i>
-                    <i class="fa fa-star" *ngIf="average>=4"></i>
-                    <i class="fa fa-star" *ngIf="average>=5"></i>
-                  </div>
-                  <div class="rating-text">
-                    <span>{{product.reviews.length}} avis sur ce produit</span>
-                  </div>
-                </div>
-                <a aria-label="lien vers protein.tn" class="btn btn-outline-success" href="#" data-bs-toggle="modal" [attr.data-bs-target]="'#rv'"
-                  title="quick view"> Ajouter un avis</a>
-              </div>
-            </div>
-            <div class="col-md-9">
-              <ul class="list-unstyled mb-0"
-                *ngFor="let review of product.reviews | paginate: { itemsPerPage: 4, currentPage: p }">
-                <li class="p-2 border-bottom">
-                  <div class="d-flex flex-row">
-                    <div class="pt-1">
-                      <p class="fw-bold mb-0">{{review.user.name}}</p>
-                      <p class="mb-0 small text-muted">{{review.created_at |date}}</p>
-                      <i class="fa fa-star" [ngClass]="{'star-color': review.stars>=1}"></i>
-                      <i class="fa fa-star" [ngClass]="{'star-color': review.stars>=2}"></i>
-                      <i class="fa fa-star" [ngClass]="{'star-color': review.stars>=3}"></i>
-                      <i class="fa fa-star" [ngClass]="{'star-color': review.stars>=4}"></i>
-                      <i class="fa fa-star" [ngClass]="{'star-color': review.stars>=5}"></i>
-                      <p class="small text-muted">{{review.comment}}</p>
-                    </div>
-                  </div>
 
-                </li>
-              </ul>
-              <pagination-controls (pageChange)="p = $event" class="my-pagination text-center"></pagination-controls>
+  <!-- TABS -->
+  <nav>
+    <div class="nav nav-tabs mobiletabs" role="tablist">
 
-            </div>
-          </div>
-          <div class="row" *ngIf="product.reviews.length==0">
-            <div class="col-md-12">
-              <div class="text-center">
-                <div class="ratings p-0 ">
-                  <div class="rating-text">
-                    <span>Soyez le premier à rédiger un avis</span>
-                  </div>
-                </div>
-                <a aria-label="lien vers protein.tn" class="btn btn-outline-success" href="#" data-bs-toggle="modal" [attr.data-bs-target]="'#rv'"
-                  title="quick view"> Ajouter un avis</a>
-              </div>
-            </div>
+      <button class="product_info_button nav-link"
+              [class.active]="activeTab === 'one'"
+              (click)="activeTab = 'one'">
+        <h4 class="m-0">{{ product?.zone1 || 'Description' }}</h4>
+      </button>
 
-          </div>
-        </div>
-        <div class="tab-pane fade pt-3" id="nav-three" role="tabpanel" aria-labelledby="nav-three-tab">
-          <p class="p-3" [innerHTML]="product?.nutrition_values"></p>
-        </div>
-        <div class="tab-pane fade pt-3" id="nav-four" role="tabpanel" aria-labelledby="nav-four-tab">
-          <p class="p-3" [innerHTML]="product?.questions"></p>
-        </div>
+      <button class="product_info_button nav-link"
+              [class.active]="activeTab === 'two'"
+              (click)="activeTab = 'two'">
+        <h4 class="m-0">{{ product?.zone2 || 'Avis client' }}</h4>
+      </button>
+
+      <button class="product_info_button nav-link"
+              [class.active]="activeTab === 'three'"
+              (click)="activeTab = 'three'">
+        <h4 class="m-0">{{ product?.zone3 || 'Valeurs nutritionnelles' }}</h4>
+      </button>
+
+      <button class="product_info_button nav-link"
+              [class.active]="activeTab === 'four'"
+              (click)="activeTab = 'four'">
+        <h4 class="m-0">{{ product?.zone4 || 'Questions' }}</h4>
+      </button>
+
+    </div>
+  </nav>
+
+  <!-- CONTENT -->
+  <div class="tab-content pt-3">
+
+    <!-- DESCRIPTION -->
+    <div *ngIf="activeTab === 'one'" class="tab-pane show active">
+      <div class="product_info_content desc">
+        <p [innerHTML]="product.description_fr"></p>
       </div>
     </div>
+
+    <!-- REVIEWS -->
+    <div *ngIf="activeTab === 'two'" class="tab-pane show active">
+
+      <div class="row" *ngIf="product.reviews.length > 0">
+
+        <div class="col-md-3 text-center">
+          <div class="ratings">
+            <span class="product-rating">{{ average }}</span><span>/5</span>
+
+            <div class="stars">
+              <i class="fa fa-star" *ngFor="let s of [1,2,3,4,5]"
+                 [class.star-color]="average >= s"></i>
+            </div>
+
+            <div class="rating-text">
+              <span>{{ product.reviews.length }} avis sur ce produit</span>
+            </div>
+          </div>
+
+          <!-- MODAL BUTTON (Angular-friendly placeholder) -->
+          <button class="btn btn-outline-success">
+            Ajouter un avis
+          </button>
+        </div>
+
+        <div class="col-md-9">
+          <ul class="list-unstyled mb-0"
+              *ngFor="let review of product.reviews">
+
+            <li class="p-2 border-bottom">
+              <p class="fw-bold mb-0">{{ review.user?.name }}</p>
+              <p class="small text-muted">{{ review.created_at | date }}</p>
+
+              <i class="fa fa-star"
+                 *ngFor="let s of [1,2,3,4,5]"
+                 [class.star-color]="review.stars >= s"></i>
+
+              <p class="small text-muted">{{ review.comment }}</p>
+            </li>
+
+          </ul>
+        </div>
+
+      </div>
+
+      <!-- NO REVIEWS -->
+      <div class="text-center" *ngIf="product.reviews.length === 0">
+        <p>Soyez le premier à rédiger un avis</p>
+        <button class="btn btn-outline-success">
+          Ajouter un avis
+        </button>
+      </div>
+
+    </div>
+
+    <!-- NUTRITION -->
+    <div *ngIf="activeTab === 'three'" class="tab-pane show active">
+      <p class="p-3" [innerHTML]="product?.nutrition_values"></p>
+    </div>
+
+    <!-- QUESTIONS -->
+    <div *ngIf="activeTab === 'four'" class="tab-pane show active">
+      <p class="p-3" [innerHTML]="product?.questions"></p>
+    </div>
+
+  </div>
+
+</div>
+
   </div>
   <!--product info end-->
   <!--product area start-->
