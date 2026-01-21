@@ -30,13 +30,11 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
   containerc!: ElementRef;
   login: FormGroup
   isUserAuthenticated: boolean = false
-  reviewComment: any;
+  comment: string = '';
   isBrowser: boolean;
-
-
     activeTab: 'one' | 'two' | 'three' | 'four' = 'one';
 
-
+showReviewModal = false;
 
 
   constructor(
@@ -55,6 +53,7 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
     this.login = new FormGroup({
       email: new FormControl('', [Validators.required, Validators.email]),
       password: new FormControl('', [Validators.required, Validators.minLength(6)]),
+      comment: new FormControl('', [Validators.required, Validators.minLength(1)]),
     })
     this.isBrowser = isPlatformBrowser(this.platformId);
     this.router.routeReuseStrategy.shouldReuseRoute = function () {
@@ -305,10 +304,10 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
   }
 
   clicked: boolean = false
-  openReviewModal() {
+  /*openReviewModal() {
     this.clicked = true;
     this.cdr.markForCheck();
-  }
+  }*/
 
   signin() {
 
@@ -321,14 +320,13 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
           let newReview = {
             "product_id": this.product.id,
             "stars": this.rating,
-            "comment": this.reviewComment
+            "comment": this.login.value.comment
           }
           this.api.sendReview(newReview).subscribe(
             data => {
               Swal.fire({
                 icon: 'success', toast: true, timer: 4000, showConfirmButton: false, title: 'Success ! '
               })
-              this.reviewComment = undefined
               $('#rv').modal('toggle');
               this.general.produit(this.slug).subscribe((res) => {
                 this.product = res;
@@ -346,14 +344,13 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
       let newReview = {
         "product_id": this.product.id,
         "stars": this.rating,
-        "comment": this.reviewComment
+        "comment": this.login.value.comment
       }
       this.api.sendReview(newReview).subscribe(
         data => {
           Swal.fire({
             icon: 'success', toast: true, timer: 4000, showConfirmButton: false, title: 'Success ! '
           })
-          this.reviewComment = undefined
           $('#rv').modal('toggle');
 
           this.general.produit(this.slug).subscribe((res) => {
@@ -363,6 +360,7 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
         }
       )
     }
+    this.comment = '';
     this.cdr.markForCheck(); 
   }
 
@@ -376,7 +374,18 @@ export class ProductsDetailsComponent implements OnInit, OnDestroy {
   validateReview() {
     if (this.rating == 0 ) { return false } else { return true }
   }
+  openReviewModal() {
+    this.showReviewModal = true;
+    document.body.classList.add('modal-open');
+    this.cdr.markForCheck();
 
+  }
+
+  closeReviewModal() {
+    this.showReviewModal = false;
+    document.body.classList.remove('modal-open');
+    this.cdr.markForCheck();
+  }
 }
 export function safeHtmlToText(safeHtml: SafeHtml | string): string {
   const htmlString =

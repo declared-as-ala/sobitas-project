@@ -42,6 +42,7 @@ export class AuthService {
     return this.http.get(host + 'client_commandes', options)
   }
   sendReview(body:any){
+    console.log(body);
     let options = {
       headers: new HttpHeaders({ 'Authorization': 'Bearer ' + localStorage.getItem('token') })
     }

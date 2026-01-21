@@ -211,9 +211,9 @@
           </div>
 
           <!-- MODAL BUTTON (Angular-friendly placeholder) -->
-          <button class="btn btn-outline-success">
-            Ajouter un avis
-          </button>
+        <button class="btn btn-outline-success" (click)="showReviewModal = true">
+          Ajouter un avis
+        </button>
         </div>
 
         <div class="col-md-9">
@@ -239,7 +239,7 @@
       <!-- NO REVIEWS -->
       <div class="text-center" *ngIf="product.reviews.length === 0">
         <p>Soyez le premier à rédiger un avis</p>
-        <button class="btn btn-outline-success">
+        <button class="btn btn-outline-success" (click)="showReviewModal = true">
           Ajouter un avis
         </button>
       </div>
@@ -292,57 +292,117 @@
 
 
 
+<!-- MODAL -->
+<div
+  *ngIf="showReviewModal"
+  class="modal fade show d-block"
+  id="rv"
+  tabindex="-1"
+  role="dialog"
+  aria-modal="true">
 
-
-
-
-<div class="modal fade" id="rv" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" role="document">
     <div class="modal-content">
-      <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
-        <span aria-hidden="true">&times;</span>
+
+      <!-- CLOSE BUTTON -->
+      <button
+        type="button"
+        class="btn-close position-absolute end-0 m-3"
+        aria-label="Close"
+        style="z-index: 1;"
+        (click)="closeReviewModal()">
+        x
       </button>
-      <div class="modal_body">
+
+      <!-- MODAL BODY -->
+      <div class="modal-body">
         <div class="container">
+          <!-- btn close modal -->
+
           <div class="row">
+
+            <!-- REVIEW FORM -->
             <form [formGroup]="login" (ngSubmit)="signin()">
 
-
+              <!-- LOGIN (IF NOT AUTHENTICATED) -->
               <div class="account_form login">
+
                 <p *ngIf="!isUserAuthenticated">
                   <label>Adresse mail <span>*</span></label>
-                  <input type="email" formControlName="email">
-                  <small class="text-danger" *ngIf="login.get('email')?.errors?.['email']">Format
-                    d'adresse mail non valide</small>
+                  <input type="email" formControlName="email" class="form-control">
+                  <small class="text-danger"
+                    *ngIf="login.get('email')?.errors?.['email']">
+                    Format d'adresse mail non valide
+                  </small>
                 </p>
+
                 <p *ngIf="!isUserAuthenticated">
                   <label>Mot de passe <span>*</span></label>
-                  <input type="password" formControlName="password">
-                  <small class="text-danger" *ngIf="login.get('password')?.errors?.['minlength']">Le
-                    mot de passe doit contenir au minimum 6 caractéres</small>
-                  <span class="pt-1"> Vous n'avez pas de compte? <a aria-label="lien vers protein.tn" href="/login" title="créer compte">s'inscrire
-                    </a> </span>
-                </p>
-                <p class="text-center">
-                  <label>Votre score <span>*</span></label>
-                  <span *ngFor="let star of stars; let i = index" (click)="rate(i + 1)">
-                    <ng-container *ngIf="star; else noStar"><i class="fs-16 fa fa-star star-color"></i></ng-container>
-                    <ng-template #noStar><i class=" fs-16 fa fa-star"></i></ng-template>
+                  <input type="password" formControlName="password" class="form-control">
+                  <small class="text-danger"
+                    *ngIf="login.get('password')?.errors?.['minlength']">
+                    Le mot de passe doit contenir au minimum 6 caractères
+                  </small>
+                  <span class="pt-1 d-block">
+                    Vous n'avez pas de compte ?
+                    <a href="/login">S'inscrire</a>
                   </span>
-                  {{rating}}/5
                 </p>
-                <textarea rows="4" [ngModelOptions]="{standalone: true}" placeholder="Ecrivez votre commentaire ici"
-                  [(ngModel)]="reviewComment" class="form-control w100 "></textarea>
-                <div class=" mt-2 d-flex justify-content-end ">
-                  <button class="bg-green rvb m-0" type="submit"
-                    [disabled]="!login.valid && !validateReview() && isUserAuthenticated || !isUserAuthenticated  && !validateReview() ">Envoyer
-                    votre avis</button>
+
+                <!-- STAR RATING -->
+                <p class="text-center mt-3">
+                  <label>Votre score <span>*</span></label><br>
+
+                  <span
+                    *ngFor="let star of stars; let i = index"
+                    (click)="rate(i + 1)"
+                    style="cursor:pointer">
+
+                    <i
+                      class="fa fa-star fs-16"
+                      [class.star-color]="star">
+                    </i>
+                  </span>
+
+                  <span class="ms-2">{{ rating }}/5</span>
+                </p>
+
+                <!-- COMMENT -->
+                <textarea
+                  rows="4"
+                  formControlName="comment"
+                  placeholder="Écrivez votre commentaire ici"
+                  class="form-control w-100 mt-2">
+                </textarea>
+
+                <!-- SUBMIT -->
+                <div class="mt-3 d-flex justify-content-end">
+                  <button
+                    type="submit"
+                    class="btn btn-success"
+                    [disabled]="!validateReview()">
+                    Envoyer votre avis
+                  </button>
                 </div>
+
               </div>
             </form>
+
           </div>
         </div>
       </div>
+
+    </div>
+  </div>
+</div>
+
+
+<!-- BACKDROP -->
+<div
+  class="modal-backdrop fade show"
+  *ngIf="showReviewModal">
+</div>
+
       <style>
         td {
           border-width: 1 !important;
