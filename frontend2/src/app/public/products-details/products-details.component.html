@@ -222,13 +222,13 @@
 
             <li class="p-2 border-bottom">
               <p class="fw-bold mb-0">{{ review.user?.name }}</p>
-              <p class="small text-muted">{{ review.created_at | date }}</p>
+              <p class="small text-muted mb-0">{{ review.created_at | date }}</p>
 
               <i class="fa fa-star"
                  *ngFor="let s of [1,2,3,4,5]"
                  [class.star-color]="review.stars >= s"></i>
+              <p class="small text-muted mb-0">{{ review.comment }}</p>
 
-              <p class="small text-muted">{{ review.comment }}</p>
             </li>
 
           </ul>
