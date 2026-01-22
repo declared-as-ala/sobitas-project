@@ -265,7 +265,7 @@ class AdminCommandeController extends Controller
         ];
         
         //Mail::to('bitoutawalid@gmail.com')->send(new SoumissionMail($dataa));
-        Mail::to('wajihsayes@gmail.com')->send(new SoumissionMail($dataa));
+        //Mail::to('wajihsayes@gmail.com')->send(new SoumissionMail($dataa));
         return [
             'id'=> $new_facture->id,
             'message'    => "Merci pour votre commande",
