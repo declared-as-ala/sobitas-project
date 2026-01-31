@@ -10,10 +10,11 @@ In the repo: **Settings → Secrets and variables → Actions** → **New reposi
 
 | Secret         | Description |
 |----------------|-------------|
-| `VPS_HOST`     | VPS IP or hostname (e.g. `123.45.67.89` or `vps.example.com`) |
-| `VPS_USER`     | SSH user (e.g. `root` or `deploy`) |
-| `VPS_SSH_KEY`  | Full private key content for SSH (the key you use to `ssh user@host`) |
-| `GHCR_PAT`     | GitHub Personal Access Token with **read:packages** (so the VPS can pull the image). Create at: GitHub → Settings → Developer settings → Personal access tokens. For public repos you can try without this first; if pull fails, add it. |
+| `VPS_HOST`     | VPS IP or hostname (e.g. `145.223.118.9`) |
+| `VPS_USER`     | SSH user (e.g. `root`) |
+| `VPS_PASSWORD` | SSH password (use this **or** `VPS_SSH_KEY`, not both) |
+| `VPS_SSH_KEY`  | Alternative: full private key content for SSH. Use this **or** `VPS_PASSWORD`. |
+| `GHCR_PAT`     | (Optional) GitHub PAT with **read:packages** so the VPS can pull the image. For public repos, try without first; add if pull fails. |
 
 ### 2. (Optional) Build-time variables
 
@@ -63,6 +64,6 @@ on:
 
 ## Troubleshooting
 
-- **SSH fails**: Check `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`. Test with `ssh -i keyfile user@host` locally.
+- **SSH fails**: Check `VPS_HOST`, `VPS_USER`, and either `VPS_PASSWORD` or `VPS_SSH_KEY`. Test with `ssh user@host` (password) or `ssh -i keyfile user@host` (key) locally.
 - **Docker pull unauthorized**: Add `GHCR_PAT` with **read:packages** and, if needed, make the package public (repo Settings → Packages).
 - **Port in use**: Change the `-p 3000:3000` in the workflow to another host port, or stop the existing container on the VPS first.
