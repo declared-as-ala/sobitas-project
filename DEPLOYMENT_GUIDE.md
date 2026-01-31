@@ -80,8 +80,8 @@ docker run -d \
   -e NODE_ENV=production \
   -e NEXT_PUBLIC_API_URL=https://protein.tn/api-proxy \
   -e NEXT_PUBLIC_STORAGE_URL=https://protein.tn/storage-proxy \
-  -e API_BACKEND_URL=https://admin.protein.tn/api \
-  -e STORAGE_BACKEND_URL=https://admin.protein.tn/storage \
+  -e API_BACKEND_URL=http://laravel-nginx:80/api \
+  -e STORAGE_BACKEND_URL=http://laravel-nginx:80/storage \
   ghcr.io/YOUR_USERNAME/sobitas-frontend:latest
 ```
 
