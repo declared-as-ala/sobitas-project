@@ -2,9 +2,19 @@
 set -e
 
 # Ensure Laravel cache directories exist (bind mount may not have them)
-mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views bootstrap/cache
-chmod -R 775 storage bootstrap/cache
-chown -R www-data:www-data storage bootstrap/cache
+# Use absolute paths - bootstrap/cache is a volume, storage is from bind mount
+mkdir -p /var/www/html/storage/framework/cache/data
+mkdir -p /var/www/html/storage/framework/sessions
+mkdir -p /var/www/html/storage/framework/views
+mkdir -p /var/www/html/storage/logs
+mkdir -p /var/www/html/bootstrap/cache
+chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+
+# Remove stale cached config that may have wrong paths (e.g. compiled => false)
+rm -f /var/www/html/bootstrap/cache/config.php \
+      /var/www/html/bootstrap/cache/services.php \
+      /var/www/html/bootstrap/cache/packages.php
 
 # When using a separate volume for vendor, ensure it's populated on first run
 if [ ! -f /var/www/html/vendor/autoload.php ]; then
