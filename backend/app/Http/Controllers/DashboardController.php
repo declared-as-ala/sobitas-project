@@ -23,7 +23,7 @@ class DashboardController extends Controller
      */
     public function index()
     {
-        return view('voyager::dashboard.index');
+        return view('dashboard.index');
     }
 
     /**
@@ -55,7 +55,7 @@ class DashboardController extends Controller
             'monthly_comparison' => $this->getMonthlyComparison(),
         ];
 
-        return $statistics;
+        return response()->json($statistics);
     }
 
     /**

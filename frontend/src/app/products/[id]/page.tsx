@@ -1,0 +1,93 @@
+import { Metadata } from 'next';
+import { notFound } from 'next/navigation';
+import { getProductDetails, getSimilarProducts } from '@/services/api';
+import { getStorageUrl } from '@/services/api';
+import { ProductDetailClient } from './ProductDetailClient';
+import type { Product } from '@/types';
+
+interface ProductPageProps {
+  params: Promise<{ id: string }>;
+}
+
+export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
+  const { id } = await params;
+  try {
+    const product = await getProductDetails(id);
+    const imageUrl = product.cover ? getStorageUrl(product.cover) : '';
+    
+    return {
+      title: product.designation_fr,
+      description: product.description_cover || product.description_fr || `Achetez ${product.designation_fr} en Tunisie – SOBITAS, protéines et compléments à Sousse.`,
+      openGraph: {
+        title: product.designation_fr,
+        description: product.description_cover || product.description_fr || '',
+        images: imageUrl ? [imageUrl] : [],
+        type: 'website',
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: product.designation_fr,
+        description: product.description_cover || product.description_fr || '',
+        images: imageUrl ? [imageUrl] : [],
+      },
+    };
+  } catch (error) {
+    return {
+      title: 'Produit | SOBITAS Tunisie',
+      description: 'Protéines, whey, créatine et compléments alimentaires en Tunisie.',
+    };
+  }
+}
+
+function buildProductJsonLd(product: Product, baseUrl: string) {
+  const imageUrl = product.cover ? getStorageUrl(product.cover) : '';
+  const price = product.promo ?? product.prix;
+  const inStock = (product as { rupture?: number }).rupture !== 1;
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.designation_fr,
+    description: (product.description_cover || product.description_fr || '').slice(0, 500),
+    image: imageUrl || undefined,
+    sku: String(product.id),
+    brand: product.brand ? { '@type': 'Brand', name: product.brand.designation_fr } : undefined,
+    offers: {
+      '@type': 'Offer',
+      url: `${baseUrl}/products/${product.slug}`,
+      priceCurrency: 'TND',
+      price: price ?? 0,
+      availability: inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+      seller: { '@type': 'Organization', name: 'SOBITAS' },
+    },
+  };
+}
+
+export default async function ProductDetailPage({ params }: ProductPageProps) {
+  const { id } = await params;
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://sobitas.tn';
+
+  try {
+    const [product, similarData] = await Promise.all([
+      getProductDetails(id),
+      getProductDetails(id).then(p =>
+        p.sous_categorie_id ? getSimilarProducts(p.sous_categorie_id) : Promise.resolve({ products: [] })
+      ).catch(() => ({ products: [] })),
+    ]);
+
+    if (!product) {
+      notFound();
+    }
+
+    const productSchema = buildProductJsonLd(product, baseUrl);
+
+    return (
+      <>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }} />
+        <ProductDetailClient product={product} similarProducts={similarData.products || []} />
+      </>
+    );
+  } catch (error) {
+    console.error('Error fetching product:', error);
+    notFound();
+  }
+}

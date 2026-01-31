@@ -79,9 +79,12 @@ class ApisController extends Controller
         }])->get();
     }
 
+    /**
+     * Return all slides (each has type: 'mobile' or 'web' for frontend to show the right slider per device).
+     */
     public function slides()
     {
-        return Slide::all();
+        return Slide::orderBy('id')->get();
     }
 
     public function coordonnees()

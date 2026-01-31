@@ -1,0 +1,15 @@
+# Copy this nextjs service into your docker-compose.yml (replace the existing nextjs block).
+# Do NOT use command: npm run dev or volumes that mount ./nextjs over /app when running production.
+
+  nextjs:
+    build:
+      context: ./nextjs
+      dockerfile: Dockerfile
+    env_file:
+      - ./nextjs/.env
+    ports:
+      - "3001:3000"
+    depends_on:
+      - backend
+    networks:
+      - sobitas-net

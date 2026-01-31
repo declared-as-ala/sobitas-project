@@ -6,7 +6,7 @@ services:
     image: mysql:8.0
     container_name: sobitas-mysql
     restart: unless-stopped
-    env_file: 
+    env_file:
       - .env
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
@@ -15,17 +15,17 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     volumes:
       - mysql-data:/var/lib/mysql
-      - ./db/protein_db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./newest.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - sobitas-net
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u${MYSQL_USER}", "-p${MYSQL_PASSWORD}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 10
 
   # -------------------------
-  # PHP-FPM (Laravel)
+  # PHP-FPM (Laravel Backend + Admin)
   # -------------------------
   backend:
     build:
@@ -34,33 +34,43 @@ services:
     container_name: sobitas-backend
     restart: unless-stopped
     env_file:
-      - ./backend/.env
+      - .env
+    environment:
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: ${MYSQL_DATABASE:-protein_db}
+      DB_USERNAME: ${MYSQL_USER:-laravel}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-secret}
     networks:
       - sobitas-net
     expose:
       - "9000"
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "php -v >/dev/null 2>&1 || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
     volumes:
-      - ./backend:/var/www/html:delegated   # artisan + storage:link OK
+      - ./backend:/var/www/html:delegated
+      - backend-vendor:/var/www/html/vendor
+      - backend-bootstrap-cache:/var/www/html/bootstrap/cache
 
   # -------------------------
-  # Nginx for Laravel
+  # Nginx for Laravel (backend / admin)
   # -------------------------
   laravel-nginx:
     image: nginx:stable
     container_name: sobitas-laravel-nginx
     restart: unless-stopped
-    ports:
-      - "8080:80"
+    expose:
+      - "80"
     volumes:
       - ./backend:/var/www/html:delegated
-      - ./backend/storage:/var/www/html/storage   # << ESSENTIAL FIX
+      - ./backend/storage:/var/www/html/storage
       - ./nginx/laravel.conf:/etc/nginx/conf.d/default.conf:ro
     networks:
       - sobitas-net
@@ -73,35 +83,59 @@ services:
       retries: 3
 
   # -------------------------
-  # Angular Frontend
+  # Next.js Frontend
   # -------------------------
   frontend:
     build:
-      context: ./frontend2
+      context: ./frontend
       dockerfile: Dockerfile
+      # No build args: Next.js uses frontend/.env (API + storage from deployed backend)
     container_name: sobitas-frontend
     restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      # Server-side API calls use deployed backend (same as client)
+      API_BACKEND_URL: https://admin.sobitas.tn
     ports:
-      - "4200:8080"
-    volumes:
-      - ./frontend/dist:/usr/share/nginx/html:ro
-      - ./nginx-frontend/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - "3000:3000"
     networks:
       - sobitas-net
     depends_on:
-      - backend
+      - laravel-nginx
 
   # -------------------------
-  # Nginx Proxy Manager
+  # Nginx reverse proxy (frontend + backend on port 80)
+  # -------------------------
+  nginx:
+    image: nginx:stable
+    container_name: sobitas-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/sobitas-proxy.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - sobitas-net
+    depends_on:
+      - frontend
+      - laravel-nginx
+    healthcheck:
+      test: ["CMD-SHELL", "nginx -t >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # -------------------------
+  # Nginx Proxy Manager (optional - for SSL / multiple domains)
   # -------------------------
   npm:
     image: jc21/nginx-proxy-manager:latest
     container_name: sobitas-npm
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
       - "81:81"
+      - "8080:80"
+      - "8443:443"
     environment:
       DB_MYSQL_HOST: npm-db
       DB_MYSQL_PORT: 3306
@@ -116,15 +150,9 @@ services:
       - sobitas-net
     depends_on:
       - npm-db
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f https://localhost:81 || exit 1"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
+    profiles:
+      - npm
 
-  # -------------------------
-  # NPM's MySQL
-  # -------------------------
   npm-db:
     image: mysql:8.0
     container_name: sobitas-npm-db
@@ -139,10 +167,13 @@ services:
     networks:
       - sobitas-net
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "npm", "-p npm"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "npm", "-pnpm"]
       interval: 10s
       timeout: 5s
       retries: 5
+    profiles:
+      - npm
+
   # -------------------------
   # Rename Images Python Script
   # -------------------------
@@ -164,9 +195,14 @@ services:
       DB_NAME: ${MYSQL_DATABASE}
       PUBLIC_DIR: /app
     volumes:
-       - ./backend/storage/app/public/produits:/app/produits:delegated
+      - ./backend/storage/app/public/produits:/app/produits:delegated
+    profiles:
+      - tools
+
 volumes:
   mysql-data:
+  backend-vendor:
+  backend-bootstrap-cache:
   npm-data:
   npm-letsencrypt:
   npm-db-data:
