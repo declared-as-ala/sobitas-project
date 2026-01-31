@@ -66,8 +66,8 @@ services:
     image: nginx:stable
     container_name: sobitas-laravel-nginx
     restart: unless-stopped
-    expose:
-      - "80"
+    ports:
+      - "8081:80"
     volumes:
       - ./backend:/var/www/html:delegated
       - ./backend/storage:/var/www/html/storage
