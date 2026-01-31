@@ -6,7 +6,7 @@ import { CartProvider } from "@/app/contexts/CartContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Toaster } from "sonner";
 
-const inter = Inter({ 
+const inter = Inter({
   subsets: ["latin"],
   display: 'swap',
   preload: true,
@@ -157,7 +157,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://admin.protein.tn" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://admin.protein.tn" />
         {/* Preload LCP hero image (Next/Image will request /_next/image?url=…; this warms cache) */}
-        <link rel="preload" as="image" href="/hero/webp/hero1.webp" fetchPriority="high" />
+
         {/* Structured data: Organization + LocalBusiness + WebSite for SEO (Tunisia local & rich results) */}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }} />

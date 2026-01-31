@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     type: 'website',
   },
   other: {
-    'preload-image': '/hero/webp/hero1.webp',
+
   },
 };
 
