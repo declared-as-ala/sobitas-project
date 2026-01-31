@@ -1,89 +1,43 @@
-name: Frontend CI/CD
+name: Build and Push Docker Image
 
 on:
   push:
-    branches: [main]
-    paths:
-      - "frontend/**"
-      - ".github/workflows/frontend-deploy.yml"
-
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: declared-as-ala/sobitas-frontend
+    branches:
+      - main  # أو أي فرع تريد trigger عليه
 
 jobs:
-  build-push-deploy:
+  build-and-push:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout
-      - name: Checkout code
-        uses: actions/checkout@v4
+      # 1. Checkout code
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      # 2️⃣ Setup Node.js
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      # 2. Log in to GHCR
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
         with:
-          node-version: 20
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
-
-      # 3️⃣ Install dependencies
-      - name: Install dependencies
-        run: npm ci
-        working-directory: frontend
-
-      # 4️⃣ Lint
-      - name: Lint
-        run: npm run lint
-        working-directory: frontend
-
-      # 5️⃣ Build
-      - name: Build
-        run: npm run build
-        working-directory: frontend
-        env:
-          NEXT_PUBLIC_API_URL: https://admin.sobitas.tn/api
-          NEXT_PUBLIC_STORAGE_URL: https://admin.sobitas.tn/storage
-
-      # 6️⃣ Login to GHCR (Docker registry)
-      - name: Login to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
+          registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GHCR_PAT }}
 
-      # 7️⃣ Build & push Docker image
-      - name: Build & Push Docker Image
+      # 3. Set up Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 4. Build and push Docker image
+      - name: Build and Push Docker Image
         uses: docker/build-push-action@v6
         with:
-          context: ./frontend
+          context: ./frontend   # مسار مشروع Next.js
+          file: ./frontend/Dockerfile
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          tags: ghcr.io/your-username/sobitas-frontend:latest
           build-args: |
             NEXT_PUBLIC_API_URL=https://admin.sobitas.tn/api
             NEXT_PUBLIC_STORAGE_URL=https://admin.sobitas.tn/storage
 
-      # 8️⃣ Deploy to VPS
-      - name: Deploy to VPS
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            set -e
-            echo "Pull latest image..."
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            echo "Stop old container..."
-            docker stop sobitas-frontend || true
-            docker rm sobitas-frontend || true
-            echo "Run new container..."
-            docker run -d \
-              --name sobitas-frontend \
-              --restart unless-stopped \
-              -p 3001:3000 \
-              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            docker image prune -f
-            echo "✅ Frontend deployed successfully."
+      # 5. Optional: Output image info
+      - name: Show image digest
+        run: docker inspect ghcr.io/your-username/sobitas-frontend:latest --format='{{index .RepoDigests 0}}'
