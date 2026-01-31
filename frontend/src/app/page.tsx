@@ -20,6 +20,10 @@ export const metadata: Metadata = {
   },
 };
 
+// Force dynamic rendering to ensure fresh data on every request
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 // Preload critical hero image for LCP optimization
 export function generateViewport() {
   return {

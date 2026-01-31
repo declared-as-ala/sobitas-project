@@ -34,6 +34,10 @@ const api: AxiosInstance = axios.create({
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
+    // Prevent caching at all levels (browser, proxy, nginx)
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0',
   },
 });
 
@@ -136,7 +140,7 @@ export const getAllProducts = async (): Promise<{ products: Product[]; brands: B
 export const getProductDetails = async (slug: string, cacheBust?: boolean): Promise<Product> => {
   // Remove any query parameters from slug if present
   const cleanSlug = slug.split('?')[0];
-  const url = cacheBust 
+  const url = cacheBust
     ? `/product_details/${cleanSlug}?t=${Date.now()}`
     : `/product_details/${cleanSlug}`;
   const response = await api.get<Product>(url);
@@ -337,7 +341,7 @@ export const createOrder = async (orderData: OrderRequest): Promise<{
 }> => {
   // Use Next.js API route as proxy in development to avoid CORS issues
   const isDevelopment = typeof window !== 'undefined' && window.location.hostname === 'localhost';
-  
+
   if (isDevelopment) {
     // Use Next.js API route proxy
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
@@ -350,12 +354,12 @@ export const createOrder = async (orderData: OrderRequest): Promise<{
       },
       body: JSON.stringify(orderData),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Erreur lors de la création de la commande');
     }
-    
+
     return response.json();
   } else {
     // Use direct API call in production
