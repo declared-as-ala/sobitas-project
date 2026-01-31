@@ -1,11 +1,12 @@
 /** @type {import('next').NextConfig} */
-// Use NEXT_PUBLIC_API_URL from .env (same as frontend api.ts)
-const API_BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || process.env.API_BACKEND_URL || 'https://admin.sobitas.tn/api';
+// NEXT_PUBLIC_API_URL = what the client calls (e.g. https://protein.tn/api-proxy for production)
+// API_BACKEND_URL = where /api-proxy rewrites to (must be the real API, e.g. https://admin.protein.tn/api)
+const API_BACKEND_URL = process.env.API_BACKEND_URL || 'https://admin.protein.tn/api';
 
 const nextConfig = {
   output: 'standalone',
   reactStrictMode: true,
-  // Proxy API when NEXT_PUBLIC_API_URL points to /api-proxy (avoids CORS and server→API connectivity on protein.tn)
+  // Proxy /api-proxy/* to real API (avoids CORS and server→API connectivity on protein.tn)
   async rewrites() {
     return [
       { source: '/api-proxy/:path*', destination: `${API_BACKEND_URL.replace(/\/$/, '')}/:path*` },

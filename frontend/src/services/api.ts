@@ -24,8 +24,8 @@ import type {
 } from '@/types';
 
 // Get API URL from .env (NEXT_PUBLIC_API_URL, NEXT_PUBLIC_STORAGE_URL)
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://admin.sobitas.tn/api';
-const STORAGE_URL = process.env.NEXT_PUBLIC_STORAGE_URL ?? 'https://admin.sobitas.tn/storage';
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://admin.protein.tn/api';
+const STORAGE_URL = process.env.NEXT_PUBLIC_STORAGE_URL ?? 'https://admin.protein.tn/storage';
 
 // Create axios instance
 const api: AxiosInstance = axios.create({

@@ -16,7 +16,13 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-# Build-time env: use .env (copied below) - no ARG override so Next.js reads frontend/.env
+# Build args for API URLs (used by GitHub Actions; .env overrides when building locally)
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_STORAGE_URL
+ARG API_BACKEND_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_STORAGE_URL=$NEXT_PUBLIC_STORAGE_URL
+ENV API_BACKEND_URL=$API_BACKEND_URL
 ENV NODE_OPTIONS=--no-deprecation
 RUN npx next build
 
