@@ -87,7 +87,7 @@ export function BrandsSection() {
     const tick = () => {
       const { scrollWidth } = el;
       const halfWidth = scrollWidth / 2;
-      let scrollLeft = el.scrollLeft;
+      const scrollLeft = el.scrollLeft;
       if (scrollLeft >= halfWidth) el.scrollLeft = scrollLeft - halfWidth;
       const next = el.scrollLeft + SCROLL_AMOUNT;
       el.scrollTo({ left: next, behavior: 'smooth' });

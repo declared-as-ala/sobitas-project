@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import Image from 'next/image';
 import { Facebook, Instagram, Twitter, Mail, Phone, MapPin, Sparkles, Loader2, MessageCircle } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
@@ -69,7 +70,7 @@ export function Footer() {
               transition={{ duration: 0.4, ease: 'easeOut' }}
               className="flex justify-start"
             >
-              <a href="/" className="block max-w-[140px] opacity-90 hover:opacity-100 transition-opacity duration-300">
+              <Link href="/" className="block max-w-[140px] opacity-90 hover:opacity-100 transition-opacity duration-300">
                 <Image
                   src="https://admin.protein.tn/storage/coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp"
                   alt="Protein.tn - SOBITAS"
@@ -79,7 +80,7 @@ export function Footer() {
                   sizes="(max-width: 480px) 100px, (max-width: 768px) 120px, 140px"
                   loading="lazy"
                 />
-              </a>
+              </Link>
             </motion.div>
             <p className="text-sm text-gray-400 leading-relaxed max-w-full">
               PROTEINE TUNISIE - SOBITAS votre distributeur officiel d&apos;articles de sport et de compléments alimentaires en Tunisie.
@@ -181,7 +182,7 @@ export function Footer() {
           <div className="space-y-3 w-full">
             <h3 className="font-bold text-white text-sm uppercase tracking-wide">Navigation</h3>
             <ul className="space-y-1.5">
-              <li><a href="/" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Accueil</a></li>
+              <li><Link href="/" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Accueil</Link></li>
               <li><a href="#products" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Nos produits</a></li>
               <li><a href="#packs" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Packs</a></li>
               <li><a href="#blog" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Blog</a></li>
@@ -285,9 +286,9 @@ export function Footer() {
             <h3 className="font-semibold text-white mb-6">Navigation</h3>
             <ul className="space-y-3">
               <li>
-                <a href="/" className="text-sm hover:text-red-500 transition-colors">
+                <Link href="/" className="text-sm hover:text-red-500 transition-colors">
                   Accueil
-                </a>
+                </Link>
               </li>
               <li>
                 <a href="#products" className="text-sm hover:text-red-500 transition-colors">

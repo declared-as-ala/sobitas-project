@@ -89,6 +89,8 @@ function useIsMobile() {
 
 export const HeroSlider = memo(function HeroSlider({ slides }: HeroSliderProps) {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const isMobile = useIsMobile();
 
   // Transform API slides: use getStorageUrl, sort by ordre, filter by type (mobile vs web)
@@ -169,10 +171,6 @@ export const HeroSlider = memo(function HeroSlider({ slides }: HeroSliderProps) 
   const isPhoto1 = currentSlide === 0;
   // Photo 3 (index 2) uses minimal scale
   const isPhoto3 = currentSlide === 2;
-
-  // Swipe gesture handlers for mobile
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
   const minSwipeDistance = 50;
 
