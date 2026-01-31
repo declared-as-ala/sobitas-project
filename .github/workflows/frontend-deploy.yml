@@ -41,10 +41,9 @@ jobs:
         run: npm run build
         working-directory: frontend
         env:
-          # API via protein.tn/api-proxy (requires NPM config). Storage direct from admin.protein.tn
-          # (img src works cross-origin; avoids 404 when user opens image in new tab)
+          # Same-origin proxy: API and storage via protein.tn (avoids CORS, Nginx proxy)
           NEXT_PUBLIC_API_URL: https://protein.tn/api-proxy
-          NEXT_PUBLIC_STORAGE_URL: https://admin.protein.tn/storage
+          NEXT_PUBLIC_STORAGE_URL: https://protein.tn/storage-proxy
           API_BACKEND_URL: https://admin.protein.tn/api
           STORAGE_BACKEND_URL: https://admin.protein.tn/storage
 
@@ -67,7 +66,7 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           build-args: |
             NEXT_PUBLIC_API_URL=https://protein.tn/api-proxy
-            NEXT_PUBLIC_STORAGE_URL=https://admin.protein.tn/storage
+            NEXT_PUBLIC_STORAGE_URL=https://protein.tn/storage-proxy
             API_BACKEND_URL=https://admin.protein.tn/api
             STORAGE_BACKEND_URL=https://admin.protein.tn/storage
 
@@ -92,7 +91,13 @@ jobs:
             docker run -d \
               --name sobitas-frontend \
               --restart unless-stopped \
+              --network sobitas-net \
               -p 3001:3000 \
+              -e NODE_ENV=production \
+              -e NEXT_PUBLIC_API_URL=https://protein.tn/api-proxy \
+              -e NEXT_PUBLIC_STORAGE_URL=https://protein.tn/storage-proxy \
+              -e API_BACKEND_URL=https://admin.protein.tn/api \
+              -e STORAGE_BACKEND_URL=https://admin.protein.tn/storage \
               ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             docker image prune -f
             echo "Frontend deployed successfully."

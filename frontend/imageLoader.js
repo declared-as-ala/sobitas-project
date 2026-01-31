@@ -8,10 +8,9 @@ module.exports = function imageLoader({ src, width, quality }) {
   const isStorageUrl =
     typeof src === 'string' &&
     (src.includes('/storage/') ||
-      src.includes('/storage-proxy/') ||
       src.startsWith('http://localhost/storage') ||
       src.startsWith('https://localhost/storage') ||
-      (src.startsWith('http') && (src.includes('/storage/') || src.includes('/storage-proxy/') || src.includes('admin.sobitas.tn') || src.includes('admin.protein.tn'))));
+      (src.startsWith('http') && (src.includes('/storage/') || src.includes('admin.sobitas.tn') || src.includes('admin.protein.tn'))));
   if (isStorageUrl) {
     // Include width to satisfy Next.js requirement (append as query param)
     const sep = src.includes('?') ? '&' : '?';
