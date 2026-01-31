@@ -96,8 +96,8 @@ services:
       NODE_ENV: production
       # Server-side API calls use deployed backend (same as client)
       API_BACKEND_URL: https://admin.sobitas.tn
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     networks:
       - sobitas-net
     depends_on:

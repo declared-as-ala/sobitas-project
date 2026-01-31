@@ -33,6 +33,10 @@ RUN composer install --no-dev --no-scripts --no-interaction --prefer-dist --opti
 # Copy application code
 COPY . .
 
+# Ensure Laravel cache paths exist (dockerignore may exclude their contents)
+RUN mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views \
+    && chmod -R 775 storage bootstrap/cache
+
 # Optimize Laravel before final stage
 RUN php artisan config:clear \
     && php artisan cache:clear \
