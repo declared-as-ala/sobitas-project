@@ -41,7 +41,7 @@ jobs:
         run: npm run build
         working-directory: frontend
         env:
-          # Use same-origin proxies so protein.tn loads API + images without CORS/blocked cross-origin
+          # Same-origin proxy: API and storage via protein.tn (avoids CORS, Nginx proxy)
           NEXT_PUBLIC_API_URL: https://protein.tn/api-proxy
           NEXT_PUBLIC_STORAGE_URL: https://protein.tn/storage-proxy
           API_BACKEND_URL: https://admin.protein.tn/api
@@ -76,27 +76,22 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           password: ${{ secrets.VPS_PASSWORD }}
-          script_timeout: 120s
-          command_timeout: 30m
           script: |
             set -e
-            echo "=== Deploying frontend to VPS ==="
             if [ -n "${{ secrets.GHCR_PAT }}" ]; then
-              echo "Logging in to GHCR..."
+              echo "Login to GHCR..."
               echo "${{ secrets.GHCR_PAT }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
-            else
-              echo "GHCR_PAT not set - pulling as public image (may fail if repo is private)"
             fi
-            echo "Pulling latest image..."
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest || { echo "Docker pull failed - check GHCR_PAT for private repos"; exit 1; }
-            echo "Stopping old container..."
+            echo "Pull latest image..."
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            echo "Stop old container..."
             docker stop sobitas-frontend 2>/dev/null || true
             docker rm sobitas-frontend 2>/dev/null || true
-            echo "Starting new container..."
+            echo "Run new container..."
             docker run -d \
               --name sobitas-frontend \
               --restart unless-stopped \
               -p 3001:3000 \
-              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest || { echo "Docker run failed - check port 3001"; exit 1; }
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             docker image prune -f
             echo "Frontend deployed successfully."

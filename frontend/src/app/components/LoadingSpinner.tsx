@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { getStorageUrl } from '@/services/api';
 import { motion } from 'motion/react';
 
 interface LoadingSpinnerProps {
@@ -37,7 +38,7 @@ export function LoadingSpinner({
           className={sizeClasses[size]}
         >
           <Image
-            src="https://admin.protein.tn/storage/coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp"
+            src={getStorageUrl('coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp')}
             alt="Loading"
             width={size === 'sm' ? 32 : size === 'md' ? 64 : 96}
             height={size === 'sm' ? 32 : size === 'md' ? 64 : 96}

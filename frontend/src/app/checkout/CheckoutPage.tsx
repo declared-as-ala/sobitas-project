@@ -7,7 +7,7 @@ import { Footer } from '@/app/components/Footer';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { useCart } from '@/app/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { createOrder, getStorageUrl, getOrderDetails, LOGO_PATH } from '@/services/api';
+import { createOrder, getStorageUrl, getOrderDetails } from '@/services/api';
 import type { OrderRequest, Order } from '@/types';
 import Image from 'next/image';
 import { Button } from '@/app/components/ui/button';
@@ -287,7 +287,7 @@ export default function CheckoutPage() {
       return;
     }
 
-    const logoUrl = getStorageUrl(LOGO_PATH);
+    const logoUrl = getStorageUrl('coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp');
     const order = orderData.order;
     const details = orderData.orderDetails;
 

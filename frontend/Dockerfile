@@ -16,7 +16,7 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-# Build args for API URLs (used by GitHub Actions; .env overrides when building locally)
+# Build args for API/Storage URLs (used by GitHub Actions; .env overrides when building locally)
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_STORAGE_URL
 ARG API_BACKEND_URL
