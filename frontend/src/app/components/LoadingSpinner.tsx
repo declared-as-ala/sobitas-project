@@ -10,10 +10,10 @@ interface LoadingSpinnerProps {
   message?: string;
 }
 
-export function LoadingSpinner({ 
-  size = 'md', 
+export function LoadingSpinner({
+  size = 'md',
   fullScreen = false,
-  message 
+  message
 }: LoadingSpinnerProps) {
   const sizeClasses = {
     sm: 'h-8 w-8',
@@ -39,8 +39,6 @@ export function LoadingSpinner({
         >
           <Image
             src={getStorageUrl(LOGO_PATH)}
-            <｜tool▁sep｜>path
-c:\Users\Ala\Desktop\sobitas\frontend\src\app\components\LoadingSpinner.tsx
             alt="Loading"
             width={size === 'sm' ? 32 : size === 'md' ? 64 : 96}
             height={size === 'sm' ? 32 : size === 'md' ? 64 : 96}
