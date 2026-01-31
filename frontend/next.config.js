@@ -29,6 +29,8 @@ const nextConfig = {
       { protocol: 'https', hostname: 'sobitas.tn' },
       { protocol: 'http', hostname: 'localhost' },
       { protocol: 'http', hostname: '127.0.0.1' },
+      // Internal Docker service
+      { protocol: 'http', hostname: 'laravel-nginx' },
     ],
     // Required for Image quality prop (70 used by ProductCard etc). Required in Next.js 16.
     qualities: [70, 75, 85, 90, 95, 100],

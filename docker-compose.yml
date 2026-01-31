@@ -94,8 +94,9 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      # Server-side API calls use deployed backend (same as client)
-      API_BACKEND_URL: https://admin.sobitas.tn
+      # Server-side API calls use deployed backend (internal docker DNS)
+      API_BACKEND_URL: http://laravel-nginx:80/api
+      STORAGE_BACKEND_URL: http://laravel-nginx:80/storage
     ports:
       - "3001:3000"
     networks:
