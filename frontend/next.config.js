@@ -8,13 +8,6 @@ const STORAGE_BACKEND_URL = process.env.STORAGE_BACKEND_URL || 'https://admin.pr
 const nextConfig = {
   output: 'standalone',
   reactStrictMode: true,
-  // Proxy API and storage (avoids CORS, same-origin requests on protein.tn)
-  async rewrites() {
-    return [
-      { source: '/api-proxy/:path*', destination: `${API_BACKEND_URL.replace(/\/$/, '')}/:path*` },
-      { source: '/storage-proxy/:path*', destination: `${STORAGE_BACKEND_URL.replace(/\/$/, '')}/:path*` },
-    ];
-  },
   images: {
     // Production fix: unoptimized=true bypasses Next.js image optimization API.
     // External images (admin.protein.tn) load directly in browser - no CORS,
@@ -29,8 +22,6 @@ const nextConfig = {
       { protocol: 'https', hostname: 'sobitas.tn' },
       { protocol: 'http', hostname: 'localhost' },
       { protocol: 'http', hostname: '127.0.0.1' },
-      // Internal Docker service
-      { protocol: 'http', hostname: 'laravel-nginx' },
     ],
     // Required for Image quality prop (70 used by ProductCard etc). Required in Next.js 16.
     qualities: [70, 75, 85, 90, 95, 100],

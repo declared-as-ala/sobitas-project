@@ -41,11 +41,9 @@ jobs:
         run: npm run build
         working-directory: frontend
         env:
-          # Same-origin proxy: API and storage via protein.tn (avoids CORS, Nginx proxy)
-          NEXT_PUBLIC_API_URL: https://protein.tn/api-proxy
-          NEXT_PUBLIC_STORAGE_URL: https://protein.tn/storage-proxy
-          API_BACKEND_URL: https://admin.protein.tn/api
-          STORAGE_BACKEND_URL: https://admin.protein.tn/storage
+          # Direct external API access
+          NEXT_PUBLIC_API_URL: https://admin.protein.tn/api
+          NEXT_PUBLIC_STORAGE_URL: https://admin.protein.tn/storage
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -65,10 +63,8 @@ jobs:
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           build-args: |
-            NEXT_PUBLIC_API_URL=https://protein.tn/api-proxy
-            NEXT_PUBLIC_STORAGE_URL=https://protein.tn/storage-proxy
-            API_BACKEND_URL=https://admin.protein.tn/api
-            STORAGE_BACKEND_URL=https://admin.protein.tn/storage
+            NEXT_PUBLIC_API_URL=https://admin.protein.tn/api
+            NEXT_PUBLIC_STORAGE_URL=https://admin.protein.tn/storage
 
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.0.3
@@ -96,10 +92,8 @@ jobs:
               --network sobitas-net \
               -p 3001:3000 \
               -e NODE_ENV=production \
-              -e NEXT_PUBLIC_API_URL=https://protein.tn/api-proxy \
-              -e NEXT_PUBLIC_STORAGE_URL=https://protein.tn/storage-proxy \
-              -e API_BACKEND_URL=http://laravel-nginx:80/api \
-              -e STORAGE_BACKEND_URL=http://laravel-nginx:80/storage \
+              -e NEXT_PUBLIC_API_URL=https://admin.protein.tn/api \
+              -e NEXT_PUBLIC_STORAGE_URL=https://admin.protein.tn/storage \
               ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             docker image prune -f
             echo "Frontend deployed successfully."

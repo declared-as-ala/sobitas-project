@@ -94,9 +94,9 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      # Server-side API calls use deployed backend (internal docker DNS)
-      API_BACKEND_URL: http://laravel-nginx:80/api
-      STORAGE_BACKEND_URL: http://laravel-nginx:80/storage
+      # Direct external API access
+      NEXT_PUBLIC_API_URL: https://admin.protein.tn/api
+      NEXT_PUBLIC_STORAGE_URL: https://admin.protein.tn/storage
     ports:
       - "3001:3000"
     networks:
