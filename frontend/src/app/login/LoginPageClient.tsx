@@ -15,7 +15,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { toast } from 'sonner';
 import { LoadingSpinner } from '@/app/components/LoadingSpinner';
-import { getStorageUrl, LOGO_PATH } from '@/services/api';
 
 function LoginContent() {
   const router = useRouter();
@@ -77,7 +76,7 @@ function LoginContent() {
               <div className="flex justify-center mb-4">
                 <Link href="/" className="relative h-12 w-auto">
                   <Image
-                    src={getStorageUrl(LOGO_PATH)}
+                    src="https://admin.protein.tn/storage/coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp"
                     alt="Sobitas Logo"
                     width={150}
                     height={48}

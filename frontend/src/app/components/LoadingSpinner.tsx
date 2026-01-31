@@ -2,7 +2,6 @@
 
 import Image from 'next/image';
 import { motion } from 'motion/react';
-import { getStorageUrl, LOGO_PATH } from '@/services/api';
 
 interface LoadingSpinnerProps {
   size?: 'sm' | 'md' | 'lg';
@@ -10,10 +9,10 @@ interface LoadingSpinnerProps {
   message?: string;
 }
 
-export function LoadingSpinner({
-  size = 'md',
+export function LoadingSpinner({ 
+  size = 'md', 
   fullScreen = false,
-  message
+  message 
 }: LoadingSpinnerProps) {
   const sizeClasses = {
     sm: 'h-8 w-8',
@@ -38,7 +37,7 @@ export function LoadingSpinner({
           className={sizeClasses[size]}
         >
           <Image
-            src={getStorageUrl(LOGO_PATH)}
+            src="https://admin.protein.tn/storage/coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp"
             alt="Loading"
             width={size === 'sm' ? 32 : size === 'md' ? 64 : 96}
             height={size === 'sm' ? 32 : size === 'md' ? 64 : 96}

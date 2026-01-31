@@ -153,7 +153,7 @@ export default function RootLayout({
   return (
     <html lang="fr" suppressHydrationWarning data-scroll-behavior="smooth">
       <head>
-        {/* Preconnect first for LCP/PageSpeed – image API origin */}
+        {/* Preconnect for image/storage origin – speeds up product images, slider, logo */}
         <link rel="preconnect" href="https://admin.protein.tn" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://admin.protein.tn" />
         {/* Preload LCP hero image (Next/Image will request /_next/image?url=…; this warms cache) */}
