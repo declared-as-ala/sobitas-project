@@ -68,7 +68,10 @@ docker rm sobitas-frontend
 # 3. Pull latest image (if already built)
 docker pull ghcr.io/YOUR_USERNAME/sobitas-frontend:latest
 
-# 4. Run with environment variables
+# 4. Create network if it doesn't exist
+docker network inspect sobitas-net >/dev/null 2>&1 || docker network create sobitas-net
+
+# 5. Run with environment variables
 docker run -d \
   --name sobitas-frontend \
   --restart unless-stopped \

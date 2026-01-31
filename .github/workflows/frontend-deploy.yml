@@ -87,6 +87,8 @@ jobs:
             echo "Stop old container..."
             docker stop sobitas-frontend 2>/dev/null || true
             docker rm sobitas-frontend 2>/dev/null || true
+            echo "Ensure Docker network exists..."
+            docker network inspect sobitas-net >/dev/null 2>&1 || docker network create sobitas-net
             echo "Run new container..."
             docker run -d \
               --name sobitas-frontend \
