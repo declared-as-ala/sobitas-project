@@ -41,9 +41,10 @@ jobs:
         run: npm run build
         working-directory: frontend
         env:
-          # Same-origin proxy: API and storage via protein.tn (avoids CORS, Nginx proxy)
+          # API via protein.tn/api-proxy (requires NPM config). Storage direct from admin.protein.tn
+          # (img src works cross-origin; avoids 404 when user opens image in new tab)
           NEXT_PUBLIC_API_URL: https://protein.tn/api-proxy
-          NEXT_PUBLIC_STORAGE_URL: https://protein.tn/storage-proxy
+          NEXT_PUBLIC_STORAGE_URL: https://admin.protein.tn/storage
           API_BACKEND_URL: https://admin.protein.tn/api
           STORAGE_BACKEND_URL: https://admin.protein.tn/storage
 
@@ -66,7 +67,7 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           build-args: |
             NEXT_PUBLIC_API_URL=https://protein.tn/api-proxy
-            NEXT_PUBLIC_STORAGE_URL=https://protein.tn/storage-proxy
+            NEXT_PUBLIC_STORAGE_URL=https://admin.protein.tn/storage
             API_BACKEND_URL=https://admin.protein.tn/api
             STORAGE_BACKEND_URL=https://admin.protein.tn/storage
 

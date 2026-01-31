@@ -107,7 +107,8 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
     >
       {/* Image + badges */}
       <div className="relative aspect-square w-full flex-shrink-0 overflow-hidden bg-gray-100 dark:bg-gray-700 rounded-t-[14px] sm:rounded-t-xl lg:rounded-t-2xl">
-        <Link href={`/products/${productData.slug || product.id}`} className="block size-full" aria-label={`Voir ${productData.name}`}>
+        {productData.slug ? (
+        <Link href={`/products/${productData.slug}`} className="block size-full" aria-label={`Voir ${productData.name}`}>
           {productData.image ? (
             <Image
               src={productData.image}
@@ -136,6 +137,26 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
             </div>
           )}
         </Link>
+        ) : (
+        <div className="block size-full" aria-label={productData.name}>
+          {productData.image ? (
+            <Image
+              src={productData.image}
+              alt={productData.name}
+              width={400}
+              height={400}
+              className={`size-full object-contain transition-transform duration-300 ${isCompact ? 'p-1.5 sm:p-2' : 'p-2 sm:p-4'}`}
+              loading="lazy"
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              quality={70}
+            />
+          ) : (
+            <div className="size-full flex items-center justify-center bg-gray-200 dark:bg-gray-700" aria-hidden="true">
+              <ShoppingCart className="h-12 w-12 text-gray-400" />
+            </div>
+          )}
+        </div>
+        )}
 
         {/* Badges – top-left, small and clean */}
         <div className={`absolute top-2 left-2 z-10 flex flex-col gap-1 ${isCompact ? 'gap-0.5' : 'gap-1'}`}>
@@ -190,13 +211,21 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
 
       {/* Content – flex-1 so CTA stays at bottom */}
       <div className="flex flex-col flex-1 min-h-0 p-3 sm:p-3 lg:p-4">
-        <Link href={`/products/${productData.slug || product.id}`} className="block mb-1">
+        {productData.slug ? (
+        <Link href={`/products/${productData.slug}`} className="block mb-1">
           <h3
             className={`font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug ${isCompact ? 'text-[13px] sm:text-xs min-h-[2.25rem]' : 'text-sm sm:text-base min-h-[2.5rem] sm:min-h-0'}`}
           >
             {productData.name}
           </h3>
         </Link>
+        ) : (
+        <h3
+          className={`font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug block mb-1 ${isCompact ? 'text-[13px] sm:text-xs min-h-[2.25rem]' : 'text-sm sm:text-base min-h-[2.5rem] sm:min-h-0'}`}
+        >
+          {productData.name}
+        </h3>
+        )}
 
         {!isCompact && productData.rating > 0 && (
           <div className="flex items-center gap-1 sm:gap-1.5 mb-2" aria-label={`Note: ${productData.rating.toFixed(1)} sur 5`}>
