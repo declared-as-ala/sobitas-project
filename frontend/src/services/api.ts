@@ -75,8 +75,10 @@ api.interceptors.response.use(
   }
 );
 
-// Helper to get storage URL - always use NEXT_PUBLIC_STORAGE_URL (admin.sobitas.tn)
-// Rewrites localhost URLs from backend so images load from deployed backend
+// Shared logo path (used in Header, Footer, etc.) - always use getStorageUrl so proxy works
+export const LOGO_PATH = 'coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp';
+
+// Helper to get storage URL - uses NEXT_PUBLIC_STORAGE_URL (protein.tn/storage-proxy in prod)
 export const getStorageUrl = (path?: string): string => {
   if (!path) return '';
   const base = STORAGE_URL.replace(/\/$/, '');

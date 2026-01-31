@@ -7,7 +7,7 @@ import { Facebook, Instagram, Twitter, Mail, Phone, MapPin, Sparkles, Loader2, M
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { motion } from 'motion/react';
-import { subscribeNewsletter } from '@/services/api';
+import { subscribeNewsletter, getStorageUrl, LOGO_PATH } from '@/services/api';
 import { toast } from 'sonner';
 
 export function Footer() {
@@ -72,7 +72,7 @@ export function Footer() {
             >
               <Link href="/" className="block max-w-[140px] opacity-90 hover:opacity-100 transition-opacity duration-300">
                 <Image
-                  src="https://admin.protein.tn/storage/coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp"
+                  src={getStorageUrl(LOGO_PATH)}
                   alt="Protein.tn - SOBITAS"
                   width={140}
                   height={45}
@@ -197,7 +197,7 @@ export function Footer() {
           <div className="space-y-6">
             <div className="relative h-12 w-auto mb-10 shrink-0">
               <Image
-                src="https://admin.protein.tn/storage/coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp"
+                src={getStorageUrl(LOGO_PATH)}
                 alt="Protein.tn"
                 width={150}
                 height={48}

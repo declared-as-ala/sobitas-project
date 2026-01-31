@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { motion } from 'motion/react';
+import { getStorageUrl, LOGO_PATH } from '@/services/api';
 
 interface LoadingSpinnerProps {
   size?: 'sm' | 'md' | 'lg';
@@ -37,7 +38,9 @@ export function LoadingSpinner({
           className={sizeClasses[size]}
         >
           <Image
-            src="https://admin.protein.tn/storage/coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp"
+            src={getStorageUrl(LOGO_PATH)}
+            <｜tool▁sep｜>path
+c:\Users\Ala\Desktop\sobitas\frontend\src\app\components\LoadingSpinner.tsx
             alt="Loading"
             width={size === 'sm' ? 32 : size === 'md' ? 64 : 96}
             height={size === 'sm' ? 32 : size === 'md' ? 64 : 96}

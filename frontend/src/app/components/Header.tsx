@@ -11,6 +11,7 @@ import { ProductsDropdown } from './ProductsDropdown';
 import { CartDrawer } from './CartDrawer';
 import { useCart } from '@/app/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { getStorageUrl, LOGO_PATH } from '@/services/api';
 import { motion } from 'motion/react';
 import {
   DropdownMenu,
@@ -117,7 +118,7 @@ export function Header() {
 
             <Link href="/" className="flex items-center justify-center flex-1 min-w-0 max-w-[6.5rem] sm:max-w-[7.5rem]" aria-label="Protein.tn - Accueil">
               <Image
-                src="https://admin.protein.tn/storage/coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp"
+                src={getStorageUrl(LOGO_PATH)}
                 alt="Protein.tn"
                 width={120}
                 height={40}
@@ -152,7 +153,7 @@ export function Header() {
           <div className="flex items-center justify-between h-16 lg:h-[4.5rem] gap-4 py-3">
             <Link href="/" className="flex-shrink-0" aria-label="Protein.tn - Accueil">
               <Image
-                src="https://admin.protein.tn/storage/coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp"
+                src={getStorageUrl(LOGO_PATH)}
                 alt="Protein.tn"
                 width={140}
                 height={44}
@@ -261,7 +262,7 @@ export function Header() {
             <SheetTitle className="sr-only">Menu</SheetTitle>
             <Link href="/" onClick={closeMobileMenu} className="block max-w-[120px]">
               <Image
-                src="https://admin.protein.tn/storage/coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp"
+                src={getStorageUrl(LOGO_PATH)}
                 alt="Protein.tn"
                 width={120}
                 height={38}
