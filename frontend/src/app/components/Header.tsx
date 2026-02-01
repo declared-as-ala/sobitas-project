@@ -113,18 +113,8 @@ export function Header() {
               scrolled ? 'h-12 py-2' : 'h-14 py-2.5'
             )}
           >
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-11 w-11 min-h-[44px] min-w-[44px] flex-shrink-0 rounded-xl -ml-1"
-              onClick={() => setMobileMenuOpen(true)}
-              aria-label="Menu"
-              aria-expanded={mobileMenuOpen}
-            >
-              <Menu className="h-5 w-5" aria-hidden />
-            </Button>
-
-            <Link href="/" className="flex items-center justify-center flex-1 min-w-0 max-w-[6.5rem] sm:max-w-[7.5rem]" aria-label="Protein.tn - Accueil">
+            {/* Logo - Left aligned */}
+            <Link href="/" className="flex items-center justify-start flex-1 min-w-0 max-w-[8rem] sm:max-w-[9rem] -ml-2" aria-label="Protein.tn - Accueil">
               <Image
                 src={getStorageUrl('coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp')}
                 alt="Protein.tn"
@@ -141,7 +131,7 @@ export function Header() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="relative h-11 w-11 min-h-[44px] min-w-[44px] flex-shrink-0 rounded-xl -mr-1 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+                className="relative h-11 w-11 min-h-[44px] min-w-[44px] flex-shrink-0 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
                 onClick={() => setCartDrawerOpen(true)}
                 aria-label={cartItemsCount > 0 ? `Panier - ${cartItemsCount} article${cartItemsCount > 1 ? 's' : ''}` : 'Panier'}
               >
@@ -151,6 +141,17 @@ export function Header() {
                     {cartItemsCount > 99 ? '99+' : cartItemsCount}
                   </span>
                 )}
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-11 w-11 min-h-[44px] min-w-[44px] flex-shrink-0 rounded-xl -mr-1"
+                onClick={() => setMobileMenuOpen(true)}
+                aria-label="Menu"
+                aria-expanded={mobileMenuOpen}
+              >
+                <Menu className="h-5 w-5" aria-hidden />
               </Button>
             </div>
           </div>
@@ -269,8 +270,8 @@ export function Header() {
       {/* ========== MOBILE DRAWER (Phone, Localisation, Nav, Account) ========== */}
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
         <SheetContent
-          side="left"
-          className="w-[85vw] max-w-[320px] p-0 flex flex-col rounded-r-2xl overflow-hidden"
+          side="right"
+          className="w-[85vw] max-w-[320px] p-0 flex flex-col rounded-l-2xl overflow-hidden"
         >
           <SheetHeader className="px-5 py-4 border-b border-gray-200 dark:border-gray-800 shrink-0">
             <SheetTitle className="sr-only">Menu</SheetTitle>

@@ -54,7 +54,7 @@ export function BlogSection({ articles }: BlogSectionProps) {
           </motion.div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8">
+        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
           {articles.slice(0, 4).map((article, index) => (
             <motion.article
               key={article.id}
@@ -62,7 +62,7 @@ export function BlogSection({ articles }: BlogSectionProps) {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: index * 0.1 }}
-              className="group bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-xl dark:shadow-none dark:hover:shadow-red-900/10 transition-all duration-300 overflow-hidden flex flex-col h-full border border-gray-100 dark:border-gray-700/50"
+              className="group bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl shadow-sm hover:shadow-xl dark:shadow-none dark:hover:shadow-red-900/10 transition-all duration-300 overflow-hidden flex flex-col h-full border border-gray-100 dark:border-gray-700/50"
             >
               <Link href={`/blog/${article.slug}`} className="relative block aspect-[4/3] overflow-hidden">
                 <Image
@@ -70,22 +70,22 @@ export function BlogSection({ articles }: BlogSectionProps) {
                   alt={article.designation_fr}
                   fill
                   className="object-cover transition-transform duration-500 group-hover:scale-110"
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               </Link>
 
-              <div className="p-5 flex flex-col flex-grow">
-                <div className="flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 mb-3">
-                  <Calendar className="h-3.5 w-3.5" />
+              <div className="p-3 sm:p-5 flex flex-col flex-grow">
+                <div className="flex items-center gap-2 text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 sm:mb-3">
+                  <Calendar className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                   {article.created_at ? new Date(article.created_at).toLocaleDateString('fr-FR', {
                     day: 'numeric',
-                    month: 'long',
+                    month: 'short',
                     year: 'numeric'
                   }) : 'Récent'}
                 </div>
 
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3 line-clamp-2 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
+                <h3 className="text-sm sm:text-xl font-bold text-gray-900 dark:text-white mb-2 sm:mb-3 line-clamp-2 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
                   <Link href={`/blog/${article.slug}`}>
                     {article.designation_fr}
                   </Link>
