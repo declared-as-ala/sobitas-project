@@ -254,8 +254,8 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
           )}
         </div>
 
-        {/* CTA – stable, full width, in flow, sticky to bottom (mobile: always visible; desktop: hidden, use overlay) */}
-        <div className="flex-shrink-0 pt-3 mt-2 border-t border-gray-100 dark:border-gray-700/60 [@media(hover:hover)]:lg:hidden">
+        {/* CTA – always visible on mobile, overlay on desktop hover */}
+        <div className="flex-shrink-0 pt-3 mt-2 border-t border-gray-100 dark:border-gray-700/60 lg:hidden block">
           <Button
             size="sm"
             className={`w-full min-h-[44px] rounded-xl font-semibold text-[11px] sm:text-sm active:scale-[0.98] transition-transform duration-150 select-none px-2 ${productData.isInStock ? 'bg-red-600 hover:bg-red-700 text-white shadow-[0_2px_8px_rgba(220,38,38,0.35)]' : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed text-white'}`}

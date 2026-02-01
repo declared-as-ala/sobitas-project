@@ -63,9 +63,9 @@ export const metadata: Metadata = {
     description: "Découvrez notre boutique de protéines en Tunisie : whey, créatine, gainer, BCAA et plus !",
     images: [
       {
-        url: "https://sobitas.tn/assets/img/logo/logo.webp",
-        width: 1200,
-        height: 630,
+        url: "/icon.png", // Fixed: Use local icon instead of broken external path
+        width: 512,
+        height: 512,
         alt: "Sobitas - Protéine Tunisie",
       },
     ],
@@ -74,7 +74,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Sobitas - Protéine Tunisie",
     description: "Découvrez notre boutique de protéines en Tunisie : whey, créatine, gainer, BCAA et plus !",
-    images: ["https://sobitas.tn/assets/img/logo/logo.webp"],
+    images: ["/icon.png"], // Fixed
   },
   robots: {
     index: true,
@@ -146,7 +146,7 @@ export default function RootLayout({
     name: 'SOBITAS – Protéine Tunisie',
     url: baseUrl,
     description: 'Boutique de protéines, whey, créatine et compléments alimentaires en Tunisie. Livraison Sousse, Tunis.',
-    publisher: { '@type': 'Organization', name: 'SOBITAS' },
+    publisher: { '@type': 'Organization', name: 'SOBITAS', logo: { '@type': 'ImageObject', url: `${baseUrl}/icon.png` } },
     inLanguage: 'fr-TN',
   };
 

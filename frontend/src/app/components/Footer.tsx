@@ -18,7 +18,7 @@ export function Footer() {
   // Lazy load Google Maps only when footer is visible (Intersection Observer)
   useEffect(() => {
     if (!mapRef.current) return;
-    
+
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) {
@@ -28,7 +28,7 @@ export function Footer() {
       },
       { rootMargin: '200px' } // Start loading 200px before footer is visible
     );
-    
+
     observer.observe(mapRef.current);
     return () => observer.disconnect();
   }, []);
@@ -168,11 +168,11 @@ export function Footer() {
           <div className="space-y-3 w-full">
             <h3 className="font-bold text-white text-sm uppercase tracking-wide">Services & Ventes</h3>
             <ul className="space-y-1.5">
-              <li><a href="#" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Conditions générales de vente</a></li>
-              <li><a href="#" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Politique de remboursement</a></li>
-              <li><a href="#" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Mentions légales</a></li>
-              <li><a href="#" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Politique des cookies</a></li>
-              <li><a href="#" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Qui sommes nous ?</a></li>
+              <li><Link href="/page/conditions-generales" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Conditions générales de vente</Link></li>
+              <li><Link href="/page/politique-de-remboursement" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Politique de remboursement</Link></li>
+              <li><Link href="/page/mentions-legales" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Mentions légales</Link></li>
+              <li><Link href="/page/cookies" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Politique des cookies</Link></li>
+              <li><Link href="/about" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Qui sommes nous ?</Link></li>
             </ul>
           </div>
 
@@ -183,10 +183,10 @@ export function Footer() {
             <h3 className="font-bold text-white text-sm uppercase tracking-wide">Navigation</h3>
             <ul className="space-y-1.5">
               <li><Link href="/" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Accueil</Link></li>
-              <li><a href="#products" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Nos produits</a></li>
-              <li><a href="#packs" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Packs</a></li>
-              <li><a href="#blog" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Blog</a></li>
-              <li><a href="#contact" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Contact</a></li>
+              <li><Link href="/shop" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Nos produits</Link></li>
+              <li><Link href="/packs" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Packs</Link></li>
+              <li><Link href="/blog" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Blog</Link></li>
+              <li><Link href="/contact" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Contact</Link></li>
             </ul>
           </div>
         </div>
@@ -209,7 +209,7 @@ export function Footer() {
             <p className="text-sm text-gray-400 leading-relaxed mt-6 pt-2">
               PROTEINE TUNISIE - SOBITAS votre distributeur officiel d'articles de sport et de compléments alimentaires en Tunisie.
             </p>
-            
+
             {/* Contact Details */}
             <div className="space-y-3">
               <a href="tel:+21627612500" className="flex items-center gap-3 text-sm hover:text-red-500 transition-colors" aria-label="Appeler au +216 27 612 500">
@@ -274,7 +274,7 @@ export function Footer() {
                   aria-label="TikTok"
                 >
                   <svg className="h-5 w-5 text-white group-hover:text-[#FF0050]" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+                    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
                   </svg>
                 </a>
               </div>
@@ -291,24 +291,24 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <a href="#products" className="text-sm hover:text-red-500 transition-colors">
+                <Link href="/shop" className="text-sm hover:text-red-500 transition-colors">
                   Nos produits
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#packs" className="text-sm hover:text-red-500 transition-colors">
+                <Link href="/packs" className="text-sm hover:text-red-500 transition-colors">
                   Packs
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#blog" className="text-sm hover:text-red-500 transition-colors">
+                <Link href="/blog" className="text-sm hover:text-red-500 transition-colors">
                   Blog
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#contact" className="text-sm hover:text-red-500 transition-colors">
+                <Link href="/contact" className="text-sm hover:text-red-500 transition-colors">
                   Contact
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -318,29 +318,29 @@ export function Footer() {
             <h3 className="font-semibold text-white mb-6">Services & Ventes</h3>
             <ul className="space-y-3">
               <li>
-                <a href="#" className="text-sm hover:text-red-500 transition-colors">
+                <Link href="/page/conditions-generales" className="text-sm hover:text-red-500 transition-colors">
                   Conditions générales
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-sm hover:text-red-500 transition-colors">
+                <Link href="/page/politique-de-remboursement" className="text-sm hover:text-red-500 transition-colors">
                   Politique de remboursement
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-sm hover:text-red-500 transition-colors">
+                <Link href="/page/cookies" className="text-sm hover:text-red-500 transition-colors">
                   Cookies
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-sm hover:text-red-500 transition-colors">
+                <Link href="/about" className="text-sm hover:text-red-500 transition-colors">
                   À propos
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-sm hover:text-red-500 transition-colors">
+                <Link href="/about" className="text-sm hover:text-red-500 transition-colors">
                   Qui sommes nous
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -364,7 +364,7 @@ export function Footer() {
                   className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 h-12 rounded-xl"
                   required
                 />
-                <Button 
+                <Button
                   type="submit"
                   className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white h-12 font-bold rounded-xl shadow-lg"
                   disabled={isSubscribing}

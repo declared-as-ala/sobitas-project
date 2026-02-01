@@ -25,6 +25,7 @@ import { getStorageUrl } from '@/services/api';
 
 const SCROLL_THRESHOLD = 24;
 const PHONE = '+216 27 612 500';
+const PHONE_FIXE = '+216 73 200 169';
 const MAPS_URL = 'https://www.google.com/maps/search/?api=1&query=35.836372,10.630613';
 const DELIVERY_MSG = 'Livraison gratuite à partir de 300 DT';
 
@@ -64,10 +65,17 @@ export function Header() {
       <div className="bg-gray-900 text-white border-b border-gray-800/50">
         {/* Desktop: full info */}
         <div className="hidden md:flex max-w-7xl mx-auto h-9 px-4 lg:px-8 items-center justify-between text-xs font-medium">
-          <a href={`tel:${PHONE.replace(/\s/g, '')}`} className="flex items-center gap-1.5 hover:text-red-500 transition-colors shrink-0" aria-label={`Appeler ${PHONE}`}>
-            <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            <span>{PHONE}</span>
-          </a>
+          <div className="flex items-center gap-4">
+            <a href={`tel:${PHONE.replace(/\s/g, '')}`} className="flex items-center gap-1.5 hover:text-red-500 transition-colors shrink-0" aria-label={`Appeler ${PHONE}`}>
+              <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              <span>{PHONE}</span>
+            </a>
+            <span className="text-gray-600">|</span>
+            <a href={`tel:${PHONE_FIXE.replace(/\s/g, '')}`} className="flex items-center gap-1.5 hover:text-red-500 transition-colors shrink-0" aria-label={`Appeler ${PHONE_FIXE}`}>
+              <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              <span>{PHONE_FIXE}</span>
+            </a>
+          </div>
           <a
             href={MAPS_URL}
             target="_blank"
@@ -150,29 +158,29 @@ export function Header() {
 
         {/* ----- DESKTOP: Logo | Search | Account + Theme + Cart ----- */}
         <div className="hidden md:block max-w-7xl mx-auto px-4 lg:px-8">
-          <div className="flex items-center justify-between h-16 lg:h-[4.5rem] gap-4 py-3">
+          <div className="flex items-center justify-between h-20 lg:h-24 gap-6 py-4">
             <Link href="/" className="flex-shrink-0" aria-label="Protein.tn - Accueil">
               <Image
                 src={getStorageUrl('coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp')}
                 alt="Protein.tn"
-                width={140}
-                height={44}
-                className="w-auto object-contain drop-shadow-md hover:opacity-90 transition-opacity"
-                style={{ height: 'clamp(2rem, 4.5vw, 2.75rem)', width: 'auto' }}
+                width={180}
+                height={56}
+                className="w-auto h-12 lg:h-16 object-contain drop-shadow-md hover:scale-105 transition-transform duration-200"
+                style={{ width: 'auto' }}
                 priority
               />
             </Link>
 
-            <div className="flex-1 max-w-xl mx-6 min-w-0">
+            <div className="flex-1 max-w-xl mx-8 min-w-0">
               <SearchBar variant="desktop" />
             </div>
 
-            <div className="flex items-center gap-1 flex-shrink-0">
+            <div className="flex items-center gap-3 flex-shrink-0">
               {isAuthenticated ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl shrink-0" aria-label="Mon compte">
-                      <User className="h-5 w-5" />
+                    <Button variant="ghost" size="icon" className="h-12 w-12 rounded-full border border-gray-100 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all shrink-0" aria-label="Mon compte">
+                      <User className="h-6 w-6 text-gray-700 dark:text-gray-300" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="z-[100] min-w-[200px] shadow-xl" sideOffset={8}>
@@ -197,29 +205,35 @@ export function Header() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <Button variant="outline" size="sm" className="h-10 px-4 rounded-xl font-medium" asChild>
-                  <Link href="/login">Connexion</Link>
+                <Button
+                  className="h-11 px-6 rounded-full font-bold bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg transition-all gap-2"
+                  asChild
+                >
+                  <Link href="/login">
+                    <User className="h-5 w-5" />
+                    <span>Connexion</span>
+                  </Link>
                 </Button>
               )}
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-10 w-10 rounded-xl shrink-0"
+                className="h-12 w-12 rounded-full border border-gray-100 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all shrink-0"
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                 aria-label="Changer le thème"
               >
-                {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+                {theme === 'dark' ? <Sun className="h-6 w-6 text-yellow-400" /> : <Moon className="h-6 w-6 text-gray-700" />}
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
-                className="relative h-10 w-10 rounded-xl shrink-0 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+                className="relative h-12 w-12 rounded-full border border-gray-100 dark:border-gray-800 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all shrink-0 group"
                 onClick={() => setCartDrawerOpen(true)}
                 aria-label={cartItemsCount > 0 ? `Panier - ${cartItemsCount} articles` : 'Panier'}
               >
-                <ShoppingCart className="h-5 w-5" />
+                <ShoppingCart className="h-6 w-6 text-gray-700 dark:text-gray-300 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors" />
                 {cartItemsCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center bg-red-600 text-white text-[10px] font-bold rounded-full">
+                  <span className="absolute -top-1 -right-1 min-w-[20px] h-[20px] flex items-center justify-center bg-red-600 text-white text-xs font-bold rounded-full border-2 border-white dark:border-gray-900">
                     {cartItemsCount > 99 ? '99+' : cartItemsCount}
                   </span>
                 )}
@@ -282,6 +296,15 @@ export function Header() {
               >
                 <Phone className="h-5 w-5 text-red-500 shrink-0" aria-hidden />
                 {PHONE}
+              </a>
+              <a
+                href={`tel:${PHONE_FIXE.replace(/\s/g, '')}`}
+                onClick={closeMobileMenu}
+                className="flex items-center gap-3 py-3 text-[15px] font-medium text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-500 transition-colors"
+                aria-label={`Appeler ${PHONE_FIXE}`}
+              >
+                <Phone className="h-5 w-5 text-red-500 shrink-0" aria-hidden />
+                {PHONE_FIXE}
               </a>
               <a
                 href={MAPS_URL}

@@ -35,6 +35,10 @@ const PromoBanner = dynamic(() => import('@/app/components/PromoBanner').then(mo
   ssr: false,
   loading: () => null, // Don't show loading for banner
 });
+const BlogSection = dynamic(() => import('@/app/components/BlogSection').then(mod => ({ default: mod.BlogSection })), {
+  ssr: false,
+  loading: () => null,
+});
 const BrandsSection = dynamic(() => import('@/app/components/BrandsSection').then(mod => ({ default: mod.BrandsSection })), {
   ssr: false,
   loading: () => null,
@@ -71,15 +75,15 @@ export function HomePageClient({ accueil, slides }: HomePageClientProps) {
     note: product.note,
   }), []);
 
-  const newProducts = useMemo(() => 
+  const newProducts = useMemo(() =>
     (accueil.new_product || []).slice(0, 8).map(transformProduct),
     [accueil.new_product, transformProduct]
   );
-  const bestSellers = useMemo(() => 
+  const bestSellers = useMemo(() =>
     (accueil.best_sellers || []).slice(0, 4).map(transformProduct),
     [accueil.best_sellers, transformProduct]
   );
-  const packs = useMemo(() => 
+  const packs = useMemo(() =>
     (accueil.packs || []).slice(0, 4).map(transformProduct),
     [accueil.packs, transformProduct]
   );
@@ -98,7 +102,7 @@ export function HomePageClient({ accueil, slides }: HomePageClientProps) {
   return (
     <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-white dark:bg-gray-950">
       <Header />
-      
+
       <main>
         {/* Above the fold - Critical content - Hero must render first */}
         <HeroSlider slides={slides} />
@@ -107,7 +111,7 @@ export function HomePageClient({ accueil, slides }: HomePageClientProps) {
           <FeaturesSection />
         </div>
         <CategoryGrid categories={accueil.categories || []} />
-        
+
         {/* Product sections – order: Nouveaux Produits → Meilleurs Ventes → Ventes Flash */}
         {(accueil.new_product?.length ?? 0) > 0 && (
           <ProductSection
@@ -144,16 +148,21 @@ export function HomePageClient({ accueil, slides }: HomePageClientProps) {
             viewAllLabel="Voir tous les packs"
           />
         )}
-        
+
         {/* Below the fold - Lazy loaded */}
         <Suspense fallback={null}>
           <PromoBanner />
         </Suspense>
+
+        <Suspense fallback={null}>
+          <BlogSection articles={accueil.last_articles || []} />
+        </Suspense>
+
         <Suspense fallback={null}>
           <BrandsSection />
         </Suspense>
       </main>
-      
+
       <Suspense fallback={<div className="h-64 bg-gray-50 dark:bg-gray-900" />}>
         <Footer />
       </Suspense>
