@@ -15,7 +15,7 @@ export function PacksPageClient({ packs }: PacksPageClientProps) {
   return (
     <div className="min-h-screen bg-[#F7F7F8] dark:bg-gray-950">
       <Header />
-      
+
       <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-10 lg:py-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -45,7 +45,7 @@ export function PacksPageClient({ packs }: PacksPageClientProps) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: Math.min(index * 0.05, 0.3) }}
               >
-                <ProductCard product={pack} variant="compact" />
+                <ProductCard product={pack} showDescription={true} />
               </motion.div>
             ))}
           </div>

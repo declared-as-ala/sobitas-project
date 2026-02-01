@@ -36,9 +36,10 @@ interface ProductCardProps {
   showBadge?: boolean;
   badgeText?: string;
   variant?: 'default' | 'compact';
+  showDescription?: boolean;
 }
 
-export const ProductCard = memo(function ProductCard({ product, showBadge, badgeText, variant = 'default' }: ProductCardProps) {
+export const ProductCard = memo(function ProductCard({ product, showBadge, badgeText, variant = 'default', showDescription = false }: ProductCardProps) {
   const { addToCart } = useCart();
   const [isAdding, setIsAdding] = useState(false);
 
@@ -46,6 +47,7 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
     const name = (product as any).name || product.designation_fr || '';
     const slug = product.slug || '';
     const image = (product as any).image || (product.cover ? getStorageUrl(product.cover) : '');
+    const description = (product as any).description_cover || (product as any).description_fr || '';
     const oldPrice = product.prix ?? (product as any).price ?? 0;
     const validPromo = hasValidPromo(product as any);
     const promoPrice = validPromo && product.promo != null ? product.promo : null;
@@ -61,6 +63,7 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
       name,
       slug,
       image,
+      description,
       oldPrice,
       promoPrice,
       newPrice,
@@ -197,6 +200,12 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
             {productData.name}
           </h3>
         </Link>
+
+        {showDescription && productData.description && (
+          <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mt-1 mb-2">
+            {productData.description}
+          </p>
+        )}
 
         {!isCompact && productData.rating > 0 && (
           <div className="flex items-center gap-1 sm:gap-1.5 mb-2" aria-label={`Note: ${productData.rating.toFixed(1)} sur 5`}>
