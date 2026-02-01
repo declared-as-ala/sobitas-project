@@ -93,20 +93,20 @@ export default function RegisterPage() {
         >
           <Card>
             <CardHeader className="text-center">
-              <div className="flex justify-center mb-4">
-                <Link href="/" className="relative h-8 md:h-12 w-auto">
+              <div className="flex justify-center mb-6">
+                <Link href="/" className="flex items-center justify-center">
                   <Image
                     src={getStorageUrl('coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp')}
                     alt="Sobitas Logo"
-                    width={150}
-                    height={48}
-                    className="h-8 md:h-12 w-auto"
-                    style={{ width: 'auto', height: 'auto' }}
+                    width={140}
+                    height={45}
+                    className="h-10 w-auto object-contain"
+                    style={{ maxWidth: '140px', height: 'auto' }}
                     priority
                   />
                 </Link>
               </div>
-              <CardTitle className="text-3xl font-bold">Créer un compte</CardTitle>
+              <CardTitle className="text-3xl font-bold mb-2">Créer un compte</CardTitle>
               <CardDescription>
                 Rejoignez-nous pour profiter de nos services
               </CardDescription>

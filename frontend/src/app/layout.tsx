@@ -18,14 +18,19 @@ const inter = Inter({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || 'https://sobitas.tn'),
   icons: {
-    icon: '/icon.png',
+    icon: [
+      { url: '/icon.png', sizes: 'any' },
+      { url: '/icon.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon.png', sizes: '512x512', type: 'image/png' },
+    ],
     apple: '/apple-icon.png',
+    shortcut: '/icon.png',
   },
   title: {
-    default: "Protéine Tunisie | Whey, Créatine & Compléments – SOBITAS Sousse",
-    template: "%s | SOBITAS Tunisie"
+    default: "Protein Tunisie – Whey Protein, Creatine & Sobitas Premium | Protein.tn",
+    template: "%s | Protein.tn"
   },
-  description: "Boutique officielle de protéines et compléments alimentaires en Tunisie. Whey, créatine, gainer, BCAA. Livraison Sousse, Tunis et toute la Tunisie.",
+  description: "Découvrez la meilleure proteine en Tunisie avec Sobitas : whey protein, creatine, BCAA et compléments certifiés premium. Livraison rapide et prix compétitifs. Commandez maintenant sur Protein.tn.",
   keywords: [
     "proteine tunisie",
     "protein tunisie",
@@ -59,8 +64,8 @@ export const metadata: Metadata = {
     locale: "fr_FR",
     url: "https://sobitas.tn",
     siteName: "Sobitas",
-    title: "Sobitas - Protéine Tunisie",
-    description: "Découvrez notre boutique de protéines en Tunisie : whey, créatine, gainer, BCAA et plus !",
+    title: "Protein Tunisie – Whey Protein, Creatine & Sobitas Premium | Protein.tn",
+    description: "Découvrez la meilleure proteine en Tunisie avec Sobitas : whey protein, creatine, BCAA et compléments certifiés premium. Livraison rapide et prix compétitifs. Commandez maintenant sur Protein.tn.",
     images: [
       {
         url: "/icon.png", // Fixed: Use local icon instead of broken external path
@@ -72,8 +77,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Sobitas - Protéine Tunisie",
-    description: "Découvrez notre boutique de protéines en Tunisie : whey, créatine, gainer, BCAA et plus !",
+    title: "Protein Tunisie – Whey Protein, Creatine & Sobitas Premium | Protein.tn",
+    description: "Découvrez la meilleure proteine en Tunisie avec Sobitas : whey protein, creatine, BCAA et compléments certifiés premium. Livraison rapide et prix compétitifs. Commandez maintenant sur Protein.tn.",
     images: ["/icon.png"], // Fixed
   },
   robots: {
@@ -153,6 +158,10 @@ export default function RootLayout({
   return (
     <html lang="fr" suppressHydrationWarning data-scroll-behavior="smooth">
       <head>
+        {/* Favicon and Icons for Google Search Results */}
+        <link rel="icon" type="image/png" sizes="192x192" href="/icon.png" />
+        <link rel="icon" type="image/png" sizes="512x512" href="/icon.png" />
+        <link rel="apple-touch-icon" href="/apple-icon.png" />
         {/* Preconnect for image/storage origin – speeds up product images, slider, logo */}
         <link rel="preconnect" href="https://admin.protein.tn" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://admin.protein.tn" />
