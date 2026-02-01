@@ -221,54 +221,82 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
         </SheetTrigger>
         <SheetContent
           side="top"
-          className="h-[85vh] overflow-hidden flex flex-col rounded-t-2xl bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800"
+          className="h-[100dvh] overflow-hidden flex flex-col rounded-none sm:rounded-b-2xl bg-white dark:bg-gray-950 border-none p-0 [&>button]:hidden"
         >
           <SheetHeader className="sr-only">
             <SheetTitle>Recherche produits</SheetTitle>
           </SheetHeader>
-          <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 pt-2">
-            <div className="relative flex-1 flex flex-col min-h-0">
-              <div className="relative mb-4">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" aria-hidden />
-                <Input
-                  ref={inputRef}
-                  type="search"
-                  placeholder={PLACEHOLDER}
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  autoComplete="off"
-                  autoFocus
-                  className="w-full pl-10 pr-10 h-12 text-base"
-                  aria-label="Rechercher un produit"
-                />
-                {query && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
-                    onClick={handleClear}
-                    aria-label="Effacer la recherche"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-              <div className="flex-1 overflow-y-auto min-h-0">
-                <SearchResults
-                  query={debouncedQuery}
-                  products={products}
-                  isLoading={isLoading}
-                  onProductClick={handleProductClick}
-                  onViewAll={handleViewAll}
-                />
-              </div>
+
+          <div className="flex flex-col h-full overflow-hidden">
+            {/* Header / Search Input Area */}
+            <div className="px-4 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3 shrink-0 bg-white dark:bg-gray-950">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="-ml-2 h-10 w-10 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                onClick={() => setIsOpen(false)}
+                type="button"
+              >
+                <ArrowRight className="h-6 w-6 rotate-180 text-gray-500" />
+              </Button>
+              <form onSubmit={handleSubmit} className="flex-1 relative group">
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none group-focus-within:text-red-500 transition-colors" aria-hidden />
+                  <Input
+                    ref={inputRef}
+                    type="text" // Use text instead of search to fully disable browser-native X buttons across all OS
+                    inputMode="search" // Still tells mobile OS to show search keyboard
+                    placeholder="Que recherchez-vous ?"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    autoComplete="off"
+                    autoFocus
+                    className="w-full pl-11 pr-11 h-12 text-base rounded-full bg-gray-100 dark:bg-gray-900 border-none focus:ring-2 focus:ring-red-500/20 focus:bg-white dark:focus:bg-gray-800 transition-all font-medium py-0"
+                    aria-label="Rechercher un produit"
+                  />
+                  {query && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 active:scale-90 transition-transform"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleClear();
+                      }}
+                      aria-label="Effacer la recherche"
+                    >
+                      <X className="h-5 w-5" />
+                    </Button>
+                  )}
+                </div>
+              </form>
             </div>
-            <Button type="submit" className="mt-4 h-12 w-full" size="lg">
-              <Search className="h-4 w-4 mr-2" />
-              Rechercher sur la boutique
-            </Button>
-          </form>
+
+            {/* Results Area */}
+            <div className="flex-1 overflow-y-auto p-4 min-h-0 bg-gray-50/50 dark:bg-gray-950">
+              <SearchResults
+                query={debouncedQuery}
+                products={products}
+                isLoading={isLoading}
+                onProductClick={handleProductClick}
+                onViewAll={handleViewAll}
+              />
+            </div>
+
+            {/* Bottom Action (optional, only show if query exists) */}
+            {query && (
+              <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shrink-0 safe-area-pb">
+                <Button
+                  onClick={handleSubmit}
+                  className="w-full h-12 rounded-xl text-base font-semibold bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-600/20"
+                >
+                  <Search className="h-5 w-5 mr-2" />
+                  Voir tous les résultats
+                </Button>
+              </div>
+            )}
+          </div>
         </SheetContent>
       </Sheet>
     );
@@ -284,7 +312,8 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
         />
         <Input
           ref={inputRef}
-          type="search"
+          type="text"
+          inputMode="search"
           placeholder={PLACEHOLDER}
           value={query}
           onChange={(e) => {
