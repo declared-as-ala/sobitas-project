@@ -8,26 +8,45 @@ interface ArticlePageProps {
   params: Promise<{ slug: string }>;
 }
 
+// Helper to strip HTML and get plain text
+function stripHtml(html: string): string {
+  if (!html) return '';
+  return html
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .substring(0, 160);
+}
+
 export async function generateMetadata({ params }: ArticlePageProps): Promise<Metadata> {
   const { slug } = await params;
   try {
     const article = await getArticleDetails(slug);
     const imageUrl = article.cover ? getStorageUrl(article.cover) : '';
+    const description = stripHtml(article.description_fr || article.description || '');
+    const metaDescription = description || `Découvrez ${article.designation_fr} sur le blog Sobitas - Conseils nutrition et sport`;
     
     return {
       title: `${article.designation_fr} | Blog Sobitas`,
-      description: article.description_fr || `Découvrez ${article.designation_fr} sur le blog Sobitas`,
+      description: metaDescription,
       openGraph: {
         title: article.designation_fr,
-        description: article.description_fr || '',
+        description: metaDescription,
         images: imageUrl ? [imageUrl] : [],
         type: 'article',
+        url: `https://protein.tn/blog/${slug}`,
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: article.designation_fr,
+        description: metaDescription,
+        images: imageUrl ? [imageUrl] : [],
       },
     };
   } catch (error) {
     return {
       title: 'Article | Blog Sobitas',
-      description: 'Découvrez nos articles',
+      description: 'Découvrez nos articles sur la nutrition et le sport',
     };
   }
 }
