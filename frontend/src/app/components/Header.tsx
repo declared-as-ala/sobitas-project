@@ -184,23 +184,30 @@ export function Header() {
                       <User className="h-6 w-6 text-gray-700 dark:text-gray-300" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="z-[100] min-w-[200px] shadow-xl" sideOffset={8}>
-                    <div className="px-3 py-2.5 border-b">
-                      <p className="text-sm font-semibold truncate">{user?.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                  <DropdownMenuContent 
+                    align="end" 
+                    className="z-[9999] min-w-[200px] shadow-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 backdrop-blur-sm" 
+                    sideOffset={8}
+                  >
+                    <div className="px-3 py-2.5 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+                      <p className="text-sm font-semibold truncate text-gray-900 dark:text-white">{user?.name}</p>
+                      <p className="text-xs text-muted-foreground truncate text-gray-600 dark:text-gray-400">{user?.email}</p>
                     </div>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
+                    <DropdownMenuItem asChild className="text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">
                       <Link href="/account">Mon Compte</Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
+                    <DropdownMenuItem asChild className="text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">
                       <Link href="/account/orders">
                         <Package className="h-4 w-4 mr-2" />
                         Mes Commandes
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={logout} className="text-red-600 dark:text-red-400">
+                    <DropdownMenuItem 
+                      onClick={logout} 
+                      className="text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20"
+                    >
                       Déconnexion
                     </DropdownMenuItem>
                   </DropdownMenuContent>
