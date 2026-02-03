@@ -177,8 +177,22 @@ export const getProductsBySubCategory = async (slug: string): Promise<{
   brands: Brand[];
   sous_categories: any[];
 }> => {
-  const response = await api.get(`/productsBySubCategoryId/${slug}`);
-  return response.data;
+  try {
+    const response = await api.get(`/productsBySubCategoryId/${slug}`);
+    return response.data;
+  } catch (error: any) {
+    // If 404, return empty data instead of throwing
+    if (error.response?.status === 404) {
+      console.warn(`Subcategory "${slug}" not found, returning empty results`);
+      return {
+        sous_category: null,
+        products: [],
+        brands: [],
+        sous_categories: [],
+      };
+    }
+    throw error;
+  }
 };
 
 export const getProductsByBrand = async (brandId: number): Promise<{

@@ -191,13 +191,13 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
       variant="ghost"
       size="icon"
       className={cn(
-        'h-11 w-11 min-h-[44px] min-w-[44px]',
+        'h-12 w-12 min-h-[48px] min-w-[48px]',
         'hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl active:scale-95 transition-transform',
         className
       )}
       aria-label="Rechercher un produit"
     >
-      <Search className="h-5 w-5" />
+      <Search className="h-6 w-6" />
     </Button>
   );
 
@@ -210,13 +210,13 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
             variant="ghost"
             size="icon"
             className={cn(
-              'h-11 w-11 min-h-[44px] min-w-[44px]',
+              'h-12 w-12 min-h-[48px] min-w-[48px]',
               'hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl active:scale-95 transition-transform',
               className
             )}
             aria-label="Rechercher un produit"
           >
-            <Search className="h-5 w-5" />
+            <Search className="h-6 w-6" />
           </Button>
         </SheetTrigger>
         <SheetContent

@@ -10,9 +10,11 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Slider } from '@/app/components/ui/slider';
 import { Checkbox } from '@/app/components/ui/checkbox';
-import { Filter, Search } from 'lucide-react';
+import { Filter, Search, X } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/app/components/ui/sheet';
-import { motion } from 'motion/react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/app/components/ui/accordion';
+import { Badge } from '@/app/components/ui/badge';
+import { motion, AnimatePresence } from 'motion/react';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { Pagination } from '@/app/components/ui/pagination';
 import type { Product, Category, Brand } from '@/types';
@@ -37,7 +39,9 @@ function ShopContent({ productsData, categories, brands }: ShopPageClientProps) 
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedBrands, setSelectedBrands] = useState<number[]>([]);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
+  const [debouncedPriceRange, setDebouncedPriceRange] = useState<[number, number]>([0, 1000]);
   const [showFilters, setShowFilters] = useState(false);
+  const [showFiltersDesktop, setShowFiltersDesktop] = useState(true);
   const [products, setProducts] = useState<Product[]>(productsData.products || []);
   const [isSearching, setIsSearching] = useState(false);
   const [inStockOnly, setInStockOnly] = useState(true);
@@ -138,8 +142,83 @@ function ShopContent({ productsData, categories, brands }: ShopPageClientProps) 
   useEffect(() => {
     if (priceBounds.max > 0) {
       setPriceRange([priceBounds.min, priceBounds.max]);
+      setDebouncedPriceRange([priceBounds.min, priceBounds.max]);
     }
   }, [priceBounds]);
+
+  // Debounce price range updates
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedPriceRange(priceRange);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [priceRange]);
+
+  // Calculate filter counts
+  const filterCounts = useMemo(() => {
+    const allProducts = productsData.products || [];
+    const categoryCounts = new Map<string, number>();
+    const brandCounts = new Map<number, number>();
+
+    allProducts.forEach(product => {
+      // Count by category
+      if (product.sous_categorie?.categorie) {
+        const catSlug = product.sous_categorie.categorie.slug;
+        categoryCounts.set(catSlug, (categoryCounts.get(catSlug) || 0) + 1);
+      }
+      // Count by brand
+      if (product.brand_id) {
+        brandCounts.set(product.brand_id, (brandCounts.get(product.brand_id) || 0) + 1);
+      }
+    });
+
+    return { categoryCounts, brandCounts };
+  }, [productsData.products]);
+
+  // Get applied filters as chips
+  const appliedFilters = useMemo(() => {
+    const filters: Array<{ type: 'category' | 'brand' | 'price' | 'stock'; label: string; value: string | number }> = [];
+    
+    selectedCategories.forEach(slug => {
+      const category = categories.find(c => c.slug === slug);
+      if (category) {
+        filters.push({ type: 'category', label: category.designation_fr, value: slug });
+      }
+    });
+
+    selectedBrands.forEach(id => {
+      const brand = brands.find(b => b.id === id) || productsData.brands.find(b => b.id === id);
+      if (brand) {
+        filters.push({ type: 'brand', label: brand.designation_fr, value: id });
+      }
+    });
+
+    if (priceRange[0] !== priceBounds.min || priceRange[1] !== priceBounds.max) {
+      filters.push({ 
+        type: 'price', 
+        label: `${priceRange[0]} - ${priceRange[1]} DT`, 
+        value: `${priceRange[0]}-${priceRange[1]}` 
+      });
+    }
+
+    // Note: inStockOnly is not included in chips as it's a default filter
+    // Users can still see it in the filter panel
+
+    return filters;
+  }, [selectedCategories, selectedBrands, priceRange, priceBounds, categories, brands, productsData.brands]);
+
+  // Remove a specific filter
+  const removeFilter = (type: 'category' | 'brand' | 'price' | 'stock', value: string | number) => {
+    if (type === 'category') {
+      setSelectedCategories(prev => prev.filter(c => c !== value));
+    } else if (type === 'brand') {
+      setSelectedBrands(prev => prev.filter(b => b !== value));
+    } else if (type === 'price') {
+      setPriceRange([priceBounds.min, priceBounds.max]);
+    } else if (type === 'stock') {
+      setInStockOnly(false);
+    }
+  };
 
   // Helper function to check if product matches search query (handles multiple words)
   const matchesSearch = (product: Product, query: string): boolean => {
@@ -186,22 +265,19 @@ function ShopContent({ productsData, categories, brands }: ShopPageClientProps) 
         return;
       }
 
-      // 2. Category Filter (Immediate if possible)
+      // 2. Category/Subcategory Filter (Immediate if possible)
       if (selectedCategories.length > 0) {
         setCurrentBrand(null);
         setIsSearching(true); // Show loader briefly
         try {
           const categoryParam = selectedCategories[0];
 
-          // Try purely client-side first if possible?
-          // The issue is categories might load additional products not in initial payload if pagination exists.
-          // Assuming `productsData.products` has EVERYTHING (based on getAllProducts usage):
+          // Try purely client-side first if possible
           const allProducts = productsData.products || [];
-
-          // Normalize helpers
           const pParam = normalizeString(categoryParam);
 
-          const filtered = allProducts.filter(p =>
+          // Try to match as subcategory first (most common case from dropdown)
+          const filteredBySubCategory = allProducts.filter(p =>
             p.sous_categorie && (
               normalizeString(p.sous_categorie.designation_fr) === pParam ||
               p.sous_categorie.slug === categoryParam ||
@@ -209,54 +285,78 @@ function ShopContent({ productsData, categories, brands }: ShopPageClientProps) 
             )
           );
 
+          // Also try to match as category
+          const filteredByCategory = allProducts.filter(p => {
+            // Check if product belongs to a category that matches
+            if (p.sous_categorie?.categorie) {
+              const cat = p.sous_categorie.categorie;
+              return (
+                normalizeString(cat.designation_fr) === pParam ||
+                cat.slug === categoryParam ||
+                cat.slug === nameToSlug(categoryParam)
+              );
+            }
+            return false;
+          });
+
+          // Prefer subcategory match if found
+          const filtered = filteredBySubCategory.length > 0 ? filteredBySubCategory : filteredByCategory;
+
           if (filtered.length > 0) {
             setProducts(filtered);
             setIsSearching(false);
             return;
           }
 
-          // If client side fail, try API (as in original code)
-          // ... (Existing API fallback logic can remain or be simplified)
-          // For now, let's keep the effective API calls but remove debounce for this path if possible
-          // But since we are inside a reusable effect, we need to handle it.
-
-          // Let's stick to the previous robust logic but move it here without debounce delay if called directly.
-          // ... [Re-implementing the API logic from before but instant]
-
-          // First: Try as category slug
+          // If client side fails, try API
+          // IMPORTANT: Try subcategory API first (most clicks are subcategories)
           let productsFound = false;
+          
+          // First: Try as subcategory slug (most common)
           try {
-            const result = await getProductsByCategory(categoryParam);
-            if (result.products && result.products.length > 0) {
-              setProducts(result.products);
+            const subResult = await getProductsBySubCategory(categoryParam);
+            if (subResult.products && subResult.products.length > 0) {
+              setProducts(subResult.products);
               productsFound = true;
-            } else if (result.products && result.products.length === 0) {
-              setProducts([]); // Category exists but empty
+            } else if (subResult.products && subResult.products.length === 0) {
+              // Subcategory exists but empty
+              setProducts([]);
               productsFound = true;
             }
-          } catch (e) { }
-
-          // ... (rest of fallbacks)
-          if (!productsFound) {
-            // ... Subcategory fetch
-            try {
-              const result = await getProductsBySubCategory(categoryParam);
-              if (result.products && result.products.length > 0) {
-                setProducts(result.products);
-                productsFound = true;
-              }
-            } catch (e) { }
+          } catch (e: any) {
+            // Subcategory API failed, continue to try category
+            console.log(`Subcategory API failed for "${categoryParam}":`, e?.response?.status || e?.message);
           }
 
-          // Fallback to client side if API failed or returned nothing but we suspect it matches
-          if (!productsFound && filtered.length > 0) {
-            setProducts(filtered);
-          } else if (!productsFound) {
-            setProducts([]);
+          // Second: Try as category slug (if subcategory didn't work)
+          if (!productsFound) {
+            try {
+              const catResult = await getProductsByCategory(categoryParam);
+              if (catResult.products && catResult.products.length > 0) {
+                setProducts(catResult.products);
+                productsFound = true;
+              } else if (catResult.products && catResult.products.length === 0) {
+                // Category exists but empty
+                setProducts([]);
+                productsFound = true;
+              }
+            } catch (e: any) {
+              // Category API also failed
+              console.log(`Category API failed for "${categoryParam}":`, e?.response?.status || e?.message);
+            }
+          }
+
+          // Final fallback: use client-side filtered results if any
+          if (!productsFound) {
+            if (filtered.length > 0) {
+              setProducts(filtered);
+            } else {
+              setProducts([]);
+            }
           }
 
         } catch (error) {
-          console.error(error);
+          console.error('Error filtering by category:', error);
           setProducts([]);
         } finally {
           setIsSearching(false);
@@ -269,24 +369,47 @@ function ShopContent({ productsData, categories, brands }: ShopPageClientProps) 
         setIsSearching(true);
         const brandId = selectedBrands[0];
 
-        // Find brand info from props
+        // Find brand info from props (temporary, will be replaced by API data)
         const brandInfo = brands.find(b => b.id === brandId) || productsData.brands.find(b => b.id === brandId);
         setCurrentBrand(brandInfo || null);
 
-        // Filter client-side
+        // Filter client-side first for fast display
         const allProducts = productsData.products || [];
         const filtered = allProducts.filter(p => p.brand_id === brandId);
 
-        // If we found products client-side, use them!
+        // Always fetch brand data from API to get full info including description
+        // This runs in parallel with client-side filtering
+        const fetchBrandData = async () => {
+          try {
+            const result = await getProductsByBrand(brandId);
+            // Update brand with full data from API (includes description_fr)
+            if (result.brand) {
+              setCurrentBrand(result.brand);
+            }
+            // If no client-side products found, use API products
+            if (filtered.length === 0) {
+              setProducts(result.products || []);
+            }
+          } catch (error) {
+            console.error('Error fetching brand data:', error);
+            // Keep the brand from props if API fails
+          }
+        };
+
+        // If we found products client-side, use them immediately
         if (filtered.length > 0) {
           setProducts(filtered);
           setIsSearching(false);
+          // Still fetch brand data in background for description
+          fetchBrandData();
         } else {
-          // Only fetch if client-side result is empty (maybe products not fully loaded?)
+          // No client-side products, fetch everything from API
           try {
             const result = await getProductsByBrand(brandId);
             setProducts(result.products || []);
-            if (result.brand) setCurrentBrand(result.brand);
+            if (result.brand) {
+              setCurrentBrand(result.brand);
+            }
           } catch (error) {
             setProducts([]);
           } finally {
@@ -315,10 +438,10 @@ function ShopContent({ productsData, categories, brands }: ShopPageClientProps) 
   const filteredProducts = useMemo(() => {
     let filtered = products;
 
-    // Price filter (effective price: promo if valid, else prix)
+    // Price filter (effective price: promo if valid, else prix) - use debounced value
     filtered = filtered.filter(product => {
       const price = getEffectivePrice(product);
-      return price >= priceRange[0] && price <= priceRange[1];
+      return price >= debouncedPriceRange[0] && price <= debouncedPriceRange[1];
     });
 
     // Brand filter (if not already filtered by API)
@@ -348,10 +471,10 @@ function ShopContent({ productsData, categories, brands }: ShopPageClientProps) 
     return filteredProducts.slice(startIndex, endIndex);
   }, [filteredProducts, currentPage]);
 
-  // Reset to page 1 when filters change
+    // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, selectedCategories, selectedBrands, priceRange, inStockOnly]);
+  }, [searchQuery, selectedCategories, selectedBrands, debouncedPriceRange, inStockOnly]);
 
   const toggleCategory = (categorySlug: string) => {
     setSelectedCategories(prev =>
@@ -394,29 +517,44 @@ function ShopContent({ productsData, categories, brands }: ShopPageClientProps) 
         {/* Brand description – shown when filtering by brand (e.g. /shop?brand=1) */}
         {currentBrand && (
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-8 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/80 p-6 md:p-8 shadow-sm"
+            transition={{ duration: 0.4, ease: 'easeOut' }}
+            className="mb-6 sm:mb-8 lg:mb-10 rounded-2xl sm:rounded-3xl border border-gray-200 dark:border-gray-800 bg-gradient-to-br from-white via-white to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800/50 p-4 sm:p-6 md:p-8 lg:p-10 shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden relative"
           >
-            <div className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-6">
+            {/* Decorative background element */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-red-50/30 to-transparent dark:from-red-900/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+            
+            <div className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-6 lg:gap-8 relative z-10">
               {currentBrand.logo && (
-                <div className="relative w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800">
+                <div className="relative w-20 h-20 sm:w-28 sm:h-28 md:w-32 md:h-32 lg:w-36 lg:h-36 flex-shrink-0 rounded-xl sm:rounded-2xl overflow-hidden bg-white dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-700 shadow-md p-2 sm:p-3 md:p-4">
                   <Image
                     src={getStorageUrl(currentBrand.logo)}
                     alt={currentBrand.designation_fr}
                     fill
-                    className="object-contain p-2"
-                    sizes="112px"
+                    className="object-contain"
+                    sizes="(max-width: 640px) 80px, (max-width: 1024px) 112px, 144px"
+                    priority
                   />
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-3">
+                <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 leading-tight">
                   {currentBrand.designation_fr}
                 </h2>
                 {currentBrand.description_fr && (
                   <div
-                    className="prose prose-sm md:prose dark:prose-invert max-w-none text-gray-600 dark:text-gray-400 prose-headings:text-gray-900 dark:prose-headings:text-white prose-p:leading-relaxed"
+                    className="prose prose-sm sm:prose-base md:prose-lg dark:prose-invert max-w-none 
+                      text-gray-600 dark:text-gray-300 
+                      prose-headings:text-gray-900 dark:prose-headings:text-white 
+                      prose-p:leading-relaxed prose-p:mb-3 sm:prose-p:mb-4
+                      prose-a:text-red-600 dark:prose-a:text-red-500 prose-a:no-underline hover:prose-a:underline
+                      prose-strong:text-gray-900 dark:prose-strong:text-white
+                      prose-ul:list-disc prose-ul:ml-4 sm:prose-ul:ml-6
+                      prose-ol:list-decimal prose-ol:ml-4 sm:prose-ol:ml-6
+                      prose-li:mb-2
+                      prose-img:rounded-lg prose-img:shadow-md
+                      prose-blockquote:border-l-4 prose-blockquote:border-red-500 prose-blockquote:pl-4 prose-blockquote:italic"
                     dangerouslySetInnerHTML={{ __html: currentBrand.description_fr }}
                   />
                 )}
@@ -445,233 +583,416 @@ function ShopContent({ productsData, categories, brands }: ShopPageClientProps) 
           </p>
         </motion.div>
 
-        {/* Search + Sticky Filter (mobile: bottom sheet) */}
-        <div className="flex flex-col md:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6">
+        {/* Search + Filter Button */}
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6">
           <div className="flex-1 relative min-w-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400 pointer-events-none" aria-hidden="true" />
             <Input
               type="search"
-              placeholder="Rechercher..."
+              placeholder="Rechercher un produit..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 sm:pl-10 min-h-[44px]"
+              className="w-full pl-9 sm:pl-10 min-h-[44px] border-gray-200 dark:border-gray-700 focus:border-red-500 dark:focus:border-red-500"
             />
           </div>
-          {/* Mobile: Filter/Sort opens bottom sheet */}
-          <Sheet open={showFilters} onOpenChange={setShowFilters}>
-            <SheetTrigger asChild>
-              <Button
-                variant="outline"
-                className="md:hidden min-h-[44px] min-w-[44px] flex-shrink-0"
-                aria-label="Ouvrir les filtres"
-              >
-                <Filter className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Filtres</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="bottom" className="rounded-t-2xl max-h-[85vh] overflow-y-auto bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
-              <SheetHeader className="sr-only">
-                <SheetTitle>Filtres et tri</SheetTitle>
-              </SheetHeader>
-              <div className="p-4 pb-8 space-y-5">
-                <div className="flex items-center justify-between">
-                  <h2 className="font-semibold text-lg">Filtres</h2>
-                  <Button variant="ghost" size="sm" onClick={clearFilters} className="text-sm">
-                    Réinitialiser
+          {/* Filter Button - Desktop & Mobile */}
+          <div className="flex gap-2">
+            {/* Desktop Filter Button */}
+            <Button
+              variant="outline"
+              onClick={() => setShowFiltersDesktop(!showFiltersDesktop)}
+              className="hidden md:flex items-center gap-2 min-h-[44px] border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+            >
+              <Filter className="h-4 w-4" />
+              <span>Filtres</span>
+              {appliedFilters.length > 0 && (
+                <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1.5 text-xs">
+                  {appliedFilters.length}
+                </Badge>
+              )}
+            </Button>
+            {/* Mobile Filter Button */}
+            <Sheet open={showFilters} onOpenChange={setShowFilters}>
+              <SheetTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="md:hidden min-h-[44px] min-w-[44px] flex-shrink-0 border-gray-200 dark:border-gray-700"
+                  aria-label="Ouvrir les filtres"
+                >
+                  <Filter className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Filtres</span>
+                  {(appliedFilters.length > 0 || inStockOnly) && (
+                    <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1.5 text-xs">
+                      {appliedFilters.length + (inStockOnly ? 1 : 0)}
+                    </Badge>
+                  )}
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="rounded-t-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
+                <SheetHeader className="sticky top-0 bg-white dark:bg-gray-900 z-10 pb-4 border-b border-gray-200 dark:border-gray-800 -mx-6 px-6 pt-6">
+                  <div className="flex items-center justify-between">
+                    <SheetTitle className="text-xl font-semibold">Filtres</SheetTitle>
+                    <div className="flex items-center gap-2">
+                      {appliedFilters.length > 0 && (
+                        <Button variant="ghost" size="sm" onClick={clearFilters} className="text-sm text-red-600 hover:text-red-700">
+                          Tout effacer
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowFilters(false)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </SheetHeader>
+                <div className="pt-6 pb-8">
+                  <Accordion type="multiple" defaultValue={['availability', 'categories']} className="space-y-1">
+                    {/* Availability */}
+                    <AccordionItem value="availability" className="border border-gray-200 dark:border-gray-800 rounded-lg px-4">
+                      <AccordionTrigger className="py-4 text-sm font-medium hover:no-underline">
+                        Disponibilité
+                      </AccordionTrigger>
+                      <AccordionContent className="pb-4">
+                        <div className="flex items-center space-x-3">
+                          <Checkbox
+                            id="mobile-in-stock"
+                            checked={inStockOnly}
+                            onCheckedChange={(checked) => setInStockOnly(checked === true)}
+                            className="h-4 w-4"
+                          />
+                          <label htmlFor="mobile-in-stock" className="text-sm cursor-pointer flex-1 font-normal">
+                            En stock uniquement
+                          </label>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+
+                    {/* Categories */}
+                    {categories.length > 0 && (
+                      <AccordionItem value="categories" className="border border-gray-200 dark:border-gray-800 rounded-lg px-4">
+                        <AccordionTrigger className="py-4 text-sm font-medium hover:no-underline">
+                          Catégories
+                        </AccordionTrigger>
+                        <AccordionContent className="pb-4">
+                          <div className="space-y-3 max-h-64 overflow-y-auto">
+                            {categories.map(category => {
+                              const count = filterCounts.categoryCounts.get(category.slug) || 0;
+                              const isSelected = selectedCategories.includes(category.slug);
+                              return (
+                                <div key={category.id} className="flex items-center justify-between space-x-3 group">
+                                  <div className="flex items-center space-x-3 flex-1 min-w-0">
+                                    <Checkbox
+                                      id={`mobile-cat-${category.id}`}
+                                      checked={isSelected}
+                                      onCheckedChange={() => toggleCategory(category.slug)}
+                                      className="h-4 w-4"
+                                    />
+                                    <label
+                                      htmlFor={`mobile-cat-${category.id}`}
+                                      className={`text-sm cursor-pointer flex-1 font-normal truncate ${isSelected ? 'font-medium text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}
+                                    >
+                                      {category.designation_fr}
+                                    </label>
+                                  </div>
+                                  <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">
+                                    {count}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    )}
+
+                    {/* Brands */}
+                    {brands.length > 0 && (
+                      <AccordionItem value="brands" className="border border-gray-200 dark:border-gray-800 rounded-lg px-4">
+                        <AccordionTrigger className="py-4 text-sm font-medium hover:no-underline">
+                          Marques
+                        </AccordionTrigger>
+                        <AccordionContent className="pb-4">
+                          <div className="space-y-3 max-h-64 overflow-y-auto">
+                            {brands.map(brand => {
+                              const count = filterCounts.brandCounts.get(brand.id) || 0;
+                              const isSelected = selectedBrands.includes(brand.id);
+                              return (
+                                <div key={brand.id} className="flex items-center justify-between space-x-3 group">
+                                  <div className="flex items-center space-x-3 flex-1 min-w-0">
+                                    <Checkbox
+                                      id={`mobile-brand-${brand.id}`}
+                                      checked={isSelected}
+                                      onCheckedChange={() => toggleBrand(brand.id)}
+                                      className="h-4 w-4"
+                                    />
+                                    <label
+                                      htmlFor={`mobile-brand-${brand.id}`}
+                                      className={`text-sm cursor-pointer flex-1 font-normal truncate ${isSelected ? 'font-medium text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}
+                                    >
+                                      {brand.designation_fr}
+                                    </label>
+                                  </div>
+                                  <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">
+                                    {count}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    )}
+
+                    {/* Price Range */}
+                    <AccordionItem value="price" className="border border-gray-200 dark:border-gray-800 rounded-lg px-4">
+                      <AccordionTrigger className="py-4 text-sm font-medium hover:no-underline">
+                        Prix
+                      </AccordionTrigger>
+                      <AccordionContent className="pb-4">
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="font-medium text-gray-900 dark:text-white">
+                              {priceRange[0]} DT - {priceRange[1]} DT
+                            </span>
+                          </div>
+                          <Slider
+                            value={priceRange}
+                            onValueChange={(value) => setPriceRange(value as [number, number])}
+                            min={priceBounds.min}
+                            max={priceBounds.max}
+                            step={10}
+                            className="w-full"
+                          />
+                          <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
+                            <span>{priceBounds.min} DT</span>
+                            <span>{priceBounds.max} DT</span>
+                          </div>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                </div>
+                <div className="sticky bottom-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 -mx-6 px-6 py-4 mt-4">
+                  <Button className="w-full min-h-[44px]" onClick={() => setShowFilters(false)}>
+                    Voir {filteredProducts.length} produit{filteredProducts.length > 1 ? 's' : ''}
                   </Button>
                 </div>
-
-                {/* In Stock */}
-                <div>
-                  <h3 className="font-medium mb-2 text-sm">Disponibilité</h3>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="mobile-in-stock"
-                      checked={inStockOnly}
-                      onCheckedChange={(checked) => setInStockOnly(checked === true)}
-                    />
-                    <label htmlFor="mobile-in-stock" className="text-sm cursor-pointer flex-1">
-                      En stock uniquement
-                    </label>
-                  </div>
-                </div>
-
-                {/* Categories */}
-                {categories.length > 0 && (
-                  <div>
-                    <h3 className="font-medium mb-2 text-sm">Catégories</h3>
-                    <div className="space-y-2 max-h-40 overflow-y-auto">
-                      {categories.map(category => (
-                        <div key={category.id} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`mobile-cat-${category.id}`}
-                            checked={selectedCategories.includes(category.slug)}
-                            onCheckedChange={() => toggleCategory(category.slug)}
-                          />
-                          <label htmlFor={`mobile-cat-${category.id}`} className="text-sm cursor-pointer flex-1">
-                            {category.designation_fr}
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Brands */}
-                {brands.length > 0 && (
-                  <div>
-                    <h3 className="font-medium mb-2 text-sm">Marques</h3>
-                    <div className="space-y-2 max-h-40 overflow-y-auto">
-                      {brands.map(brand => (
-                        <div key={brand.id} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`mobile-brand-${brand.id}`}
-                            checked={selectedBrands.includes(brand.id)}
-                            onCheckedChange={() => toggleBrand(brand.id)}
-                          />
-                          <label htmlFor={`mobile-brand-${brand.id}`} className="text-sm cursor-pointer flex-1">
-                            {brand.designation_fr}
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Price Range */}
-                <div>
-                  <h3 className="font-medium mb-2 text-sm">Prix: {priceRange[0]} – {priceRange[1]} DT</h3>
-                  <Slider
-                    value={priceRange}
-                    onValueChange={(value) => setPriceRange(value as [number, number])}
-                    min={priceBounds.min}
-                    max={priceBounds.max}
-                    step={10}
-                    className="w-full"
-                  />
-                  <div className="flex justify-between text-xs text-gray-500 mt-2">
-                    <span>{priceBounds.min} DT</span>
-                    <span>{priceBounds.max} DT</span>
-                  </div>
-                </div>
-
-                <Button className="w-full min-h-[44px]" onClick={() => setShowFilters(false)}>
-                  Voir les produits
-                </Button>
-              </div>
-            </SheetContent>
-          </Sheet>
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-6">
-          {/* Desktop Sidebar Filters */}
-          <aside className="hidden md:block w-64 flex-shrink-0 space-y-6">
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 p-6 space-y-6 sticky top-4"
-            >
-              <div className="flex items-center justify-between">
-                <h2 className="font-semibold text-lg">Filtres</h2>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearFilters}
-                  className="text-sm"
+        {/* Applied Filters Chips */}
+        {appliedFilters.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-wrap items-center gap-2 mb-4 sm:mb-6"
+          >
+            <span className="text-sm text-gray-600 dark:text-gray-400 mr-1">Filtres actifs:</span>
+            {appliedFilters.map((filter, index) => (
+              <Badge
+                key={`${filter.type}-${filter.value}-${index}`}
+                variant="outline"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                <span>{filter.label}</span>
+                <button
+                  onClick={() => removeFilter(filter.type, filter.value)}
+                  className="ml-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full p-0.5 transition-colors"
+                  aria-label={`Retirer le filtre ${filter.label}`}
                 >
-                  Réinitialiser
-                </Button>
-              </div>
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            ))}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearFilters}
+              className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+            >
+              Tout effacer
+            </Button>
+          </motion.div>
+        )}
 
-              {/* In Stock Filter - Moved to top for visibility */}
-              <div>
-                <h3 className="font-medium mb-3">Disponibilité</h3>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="desktop-in-stock"
-                    checked={inStockOnly}
-                    onCheckedChange={(checked) => setInStockOnly(checked === true)}
-                  />
-                  <label
-                    htmlFor="desktop-in-stock"
-                    className="text-sm cursor-pointer flex-1"
-                  >
-                    En stock uniquement
-                  </label>
-                </div>
-              </div>
-
-              {/* Categories */}
-              {categories.length > 0 && (
-                <div>
-                  <h3 className="font-medium mb-3">Catégories</h3>
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {categories.map(category => (
-                      <div key={category.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`desktop-cat-${category.id}`}
-                          checked={selectedCategories.includes(category.slug)}
-                          onCheckedChange={() => toggleCategory(category.slug)}
-                        />
-                        <label
-                          htmlFor={`desktop-cat-${category.id}`}
-                          className="text-sm cursor-pointer flex-1"
+        {/* Main Content Area - Filters + Products */}
+        <div className="flex flex-col md:flex-row gap-6">
+          {/* Desktop Filter Panel - Collapsible */}
+          <AnimatePresence>
+            {showFiltersDesktop && (
+              <motion.aside
+                initial={{ opacity: 0, x: -20, width: 0 }}
+                animate={{ opacity: 1, x: 0, width: 'auto' }}
+                exit={{ opacity: 0, x: -20, width: 0 }}
+                transition={{ duration: 0.2 }}
+                className="hidden md:block w-72 flex-shrink-0"
+              >
+                <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 space-y-1 sticky top-4 shadow-sm">
+                  <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200 dark:border-gray-800">
+                    <h2 className="font-semibold text-base">Filtres</h2>
+                    <div className="flex items-center gap-2">
+                      {appliedFilters.length > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={clearFilters}
+                          className="text-xs text-red-600 hover:text-red-700 h-7 px-2"
                         >
-                          {category.designation_fr}
-                        </label>
-                      </div>
-                    ))}
+                          Tout effacer
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowFiltersDesktop(false)}
+                        className="h-7 w-7 p-0"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              )}
 
-              {/* Brands */}
-              {brands.length > 0 && (
-                <div>
-                  <h3 className="font-medium mb-3">Marques</h3>
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {brands.map(brand => (
-                      <div key={brand.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`desktop-brand-${brand.id}`}
-                          checked={selectedBrands.includes(brand.id)}
-                          onCheckedChange={() => toggleBrand(brand.id)}
-                        />
-                        <label
-                          htmlFor={`desktop-brand-${brand.id}`}
-                          className="text-sm cursor-pointer flex-1"
-                        >
-                          {brand.designation_fr}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                  <Accordion type="multiple" defaultValue={['availability', 'categories']} className="space-y-1">
+                    {/* Availability */}
+                    <AccordionItem value="availability" className="border border-gray-200 dark:border-gray-800 rounded-lg px-4">
+                      <AccordionTrigger className="py-3 text-sm font-medium hover:no-underline">
+                        Disponibilité
+                      </AccordionTrigger>
+                      <AccordionContent className="pb-3">
+                        <div className="flex items-center space-x-3">
+                          <Checkbox
+                            id="desktop-in-stock"
+                            checked={inStockOnly}
+                            onCheckedChange={(checked) => setInStockOnly(checked === true)}
+                            className="h-4 w-4"
+                          />
+                          <label
+                            htmlFor="desktop-in-stock"
+                            className="text-sm cursor-pointer flex-1 font-normal"
+                          >
+                            En stock uniquement
+                          </label>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
 
-              {/* Price Range */}
-              <div>
-                <h3 className="font-medium mb-3">
-                  Prix: {priceRange[0]} DT - {priceRange[1]} DT
-                </h3>
-                <Slider
-                  value={priceRange}
-                  onValueChange={(value) => setPriceRange(value as [number, number])}
-                  min={priceBounds.min}
-                  max={priceBounds.max}
-                  step={10}
-                  className="w-full"
-                />
-                <div className="flex justify-between text-xs text-gray-500 mt-2">
-                  <span>{priceBounds.min} DT</span>
-                  <span>{priceBounds.max} DT</span>
-                </div>
-              </div>
-            </motion.div>
-          </aside>
+                    {/* Categories */}
+                    {categories.length > 0 && (
+                      <AccordionItem value="categories" className="border border-gray-200 dark:border-gray-800 rounded-lg px-4">
+                        <AccordionTrigger className="py-3 text-sm font-medium hover:no-underline">
+                          Catégories
+                        </AccordionTrigger>
+                        <AccordionContent className="pb-3">
+                          <div className="space-y-2 max-h-64 overflow-y-auto">
+                            {categories.map(category => {
+                              const count = filterCounts.categoryCounts.get(category.slug) || 0;
+                              const isSelected = selectedCategories.includes(category.slug);
+                              return (
+                                <div key={category.id} className="flex items-center justify-between space-x-3 group">
+                                  <div className="flex items-center space-x-3 flex-1 min-w-0">
+                                    <Checkbox
+                                      id={`desktop-cat-${category.id}`}
+                                      checked={isSelected}
+                                      onCheckedChange={() => toggleCategory(category.slug)}
+                                      className="h-4 w-4"
+                                    />
+                                    <label
+                                      htmlFor={`desktop-cat-${category.id}`}
+                                      className={`text-sm cursor-pointer flex-1 font-normal truncate ${isSelected ? 'font-medium text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}
+                                    >
+                                      {category.designation_fr}
+                                    </label>
+                                  </div>
+                                  <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">
+                                    {count}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    )}
 
-          {/* Products Grid */}
-          <div className="flex-1">
+                    {/* Brands */}
+                    {brands.length > 0 && (
+                      <AccordionItem value="brands" className="border border-gray-200 dark:border-gray-800 rounded-lg px-4">
+                        <AccordionTrigger className="py-3 text-sm font-medium hover:no-underline">
+                          Marques
+                        </AccordionTrigger>
+                        <AccordionContent className="pb-3">
+                          <div className="space-y-2 max-h-64 overflow-y-auto">
+                            {brands.map(brand => {
+                              const count = filterCounts.brandCounts.get(brand.id) || 0;
+                              const isSelected = selectedBrands.includes(brand.id);
+                              return (
+                                <div key={brand.id} className="flex items-center justify-between space-x-3 group">
+                                  <div className="flex items-center space-x-3 flex-1 min-w-0">
+                                    <Checkbox
+                                      id={`desktop-brand-${brand.id}`}
+                                      checked={isSelected}
+                                      onCheckedChange={() => toggleBrand(brand.id)}
+                                      className="h-4 w-4"
+                                    />
+                                    <label
+                                      htmlFor={`desktop-brand-${brand.id}`}
+                                      className={`text-sm cursor-pointer flex-1 font-normal truncate ${isSelected ? 'font-medium text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}
+                                    >
+                                      {brand.designation_fr}
+                                    </label>
+                                  </div>
+                                  <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">
+                                    {count}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    )}
+
+                    {/* Price Range */}
+                    <AccordionItem value="price" className="border border-gray-200 dark:border-gray-800 rounded-lg px-4">
+                      <AccordionTrigger className="py-3 text-sm font-medium hover:no-underline">
+                        Prix
+                      </AccordionTrigger>
+                      <AccordionContent className="pb-3">
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="font-medium text-gray-900 dark:text-white">
+                              {priceRange[0]} DT - {priceRange[1]} DT
+                            </span>
+                          </div>
+                          <Slider
+                            value={priceRange}
+                            onValueChange={(value) => setPriceRange(value as [number, number])}
+                            min={priceBounds.min}
+                            max={priceBounds.max}
+                            step={10}
+                            className="w-full"
+                          />
+                          <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
+                            <span>{priceBounds.min} DT</span>
+                            <span>{priceBounds.max} DT</span>
+                          </div>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                </div>
+              </motion.aside>
+            )}
+          </AnimatePresence>
+
+          {/* Products Grid - Takes full width when filters closed */}
+          <div className="flex-1 min-w-0">
             {isSearching ? (
               <div className="text-center py-12">
                 <p className="text-gray-500 dark:text-gray-400 text-lg">

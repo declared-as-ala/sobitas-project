@@ -96,7 +96,7 @@ export function HomePageClient({ accueil, slides }: HomePageClientProps) {
       const exp = new Date(p.promo_expiration_date);
       return !isNaN(exp.getTime()) && exp.getTime() > now.getTime();
     });
-    return valid.slice(0, 4).map(transformProduct);
+    return valid.map(transformProduct);
   }, [accueil.ventes_flash, transformProduct]);
 
   return (

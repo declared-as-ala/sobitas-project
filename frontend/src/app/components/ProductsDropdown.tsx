@@ -186,7 +186,7 @@ export function ProductsDropdown() {
               {/* Category title - link to category page using slug */}
               <Link
                 href={`/shop?category=${encodeURIComponent(categorySlug)}`}
-                className="font-semibold text-xs text-red-600 dark:text-red-500 mb-2 leading-tight hover:underline block"
+                className="font-semibold text-sm sm:text-base text-red-600 dark:text-red-500 mb-3 leading-tight hover:underline block"
                 onMouseDown={(e) => {
                   e.preventDefault();
                 }}
@@ -196,7 +196,7 @@ export function ProductsDropdown() {
               >
                 {category.title}
               </Link>
-              <ul className="space-y-1">
+              <ul className="space-y-1.5">
                 {category.items.map((item, itemIndex) => {
                   // Try to find subcategory by name first
                   const subCategory = findSubCategoryByName(item, categories);
@@ -207,7 +207,7 @@ export function ProductsDropdown() {
                     <li key={itemIndex}>
                       <Link
                         href={`/shop?category=${encodeURIComponent(itemSlug)}`}
-                        className="text-xs text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-500 transition-colors block py-0.5 break-words"
+                        className="text-sm text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-500 transition-colors block py-1 break-words"
                         onMouseDown={(e) => {
                           // Prevent blur from closing menu when clicking
                           e.preventDefault();
@@ -230,7 +230,7 @@ export function ProductsDropdown() {
       <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-800">
         <Link
           href="/shop"
-          className="text-sm font-semibold text-red-600 dark:text-red-500 hover:underline"
+          className="text-base font-semibold text-red-600 dark:text-red-500 hover:underline"
           onMouseDown={(e) => {
             e.preventDefault();
           }}
@@ -277,7 +277,7 @@ export function ProductsDropdown() {
     >
       <Link
         href="/shop"
-        className="text-base font-semibold text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-500 transition-colors flex items-center gap-1 whitespace-nowrap"
+        className="text-sm font-semibold text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-400 transition-colors flex items-center gap-1 whitespace-nowrap py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
       >
         NOS PRODUITS
         <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />

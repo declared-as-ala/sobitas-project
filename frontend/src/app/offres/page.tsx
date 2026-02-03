@@ -14,7 +14,15 @@ export default async function OffresPage() {
   try {
     const { products } = await getAllProducts();
     if (Array.isArray(products)) {
-      promoProducts = products.filter((p: Product) => hasValidPromo(p));
+      promoProducts = products.filter((p: Product) => {
+        // Filter: must have valid promo AND be in stock
+        const hasPromo = hasValidPromo(p);
+        // rupture === 1 means in stock, rupture === 0 or undefined might mean out of stock
+        // Based on ProductCard logic: isInStock = rupture === 1 || rupture === undefined
+        // So we exclude products where rupture === 0 (explicitly out of stock)
+        const isInStock = (p as any).rupture !== 0;
+        return hasPromo && isInStock;
+      });
     }
   } catch (e) {
     console.error('Error fetching products for offres:', e);

@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'motion/react';
-import { ShoppingCart, Star } from 'lucide-react';
+import { ShoppingCart, Star, Clock } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
 import type { Product as ApiProduct } from '@/types';
@@ -11,7 +11,7 @@ import { useCart } from '@/app/contexts/CartContext';
 import { getStorageUrl } from '@/services/api';
 import { toast } from 'sonner';
 import { hasValidPromo } from '@/util/productPrice';
-import { useState, useMemo, memo, useCallback } from 'react';
+import { useState, useMemo, memo, useCallback, useEffect } from 'react';
 
 type Product = ApiProduct | {
   id: number;
@@ -39,20 +39,67 @@ interface ProductCardProps {
   showDescription?: boolean;
 }
 
+function useProductCountdown(expirationDate: string | null | undefined): { days: number; hours: number; minutes: number; seconds: number; isExpired: boolean; isClient: boolean } {
+  const [isClient, setIsClient] = useState(false);
+  const [now, setNow] = useState<Date | null>(null);
+
+  useEffect(() => {
+    setIsClient(true);
+    setNow(new Date());
+  }, []);
+
+  useEffect(() => {
+    if (!isClient || !expirationDate) return;
+    const endDate = new Date(expirationDate);
+    if (endDate.getTime() <= Date.now()) return;
+    
+    setNow(new Date());
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
+  }, [isClient, expirationDate]);
+
+  if (!isClient || now === null) {
+    return { days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: false, isClient: false };
+  }
+
+  if (!expirationDate) {
+    return { days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true, isClient: true };
+  }
+
+  const endDate = new Date(expirationDate);
+  if (endDate.getTime() <= now.getTime()) {
+    return { days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true, isClient: true };
+  }
+
+  const diff = Math.max(0, endDate.getTime() - now.getTime());
+  const days = Math.floor(diff / (24 * 60 * 60 * 1000));
+  const hours = Math.floor((diff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+  const minutes = Math.floor((diff % (60 * 60 * 1000)) / (60 * 1000));
+  const seconds = Math.floor((diff % (60 * 1000)) / 1000);
+  return { days, hours, minutes, seconds, isExpired: false, isClient: true };
+}
+
 export const ProductCard = memo(function ProductCard({ product, showBadge, badgeText, variant = 'default', showDescription = false }: ProductCardProps) {
   const { addToCart } = useCart();
   const [isAdding, setIsAdding] = useState(false);
+  
+  // Countdown timer for promo expiration
+  const { days, hours, minutes, seconds, isExpired, isClient } = useProductCountdown(product.promo_expiration_date);
 
   const productData = useMemo(() => {
     const name = (product as any).name || product.designation_fr || '';
     const slug = product.slug || '';
     const image = (product as any).image || (product.cover ? getStorageUrl(product.cover) : '');
     const description = (product as any).description_cover || (product as any).description_fr || '';
-    const oldPrice = product.prix ?? (product as any).price ?? 0;
+    // Get old price - ensure it's a number
+    const rawOldPrice = product.prix ?? (product as any).price ?? null;
+    const oldPrice = rawOldPrice != null && !isNaN(Number(rawOldPrice)) ? Number(rawOldPrice) : 0;
     const validPromo = hasValidPromo(product as any);
-    const promoPrice = validPromo && product.promo != null ? product.promo : null;
+    // Show promo price only if valid, but always show old price if promo exists
+    const promoPrice = validPromo && product.promo != null ? Number(product.promo) : null;
+    const hasPromoValue = product.promo != null && product.promo !== undefined;
     const newPrice = promoPrice ?? oldPrice;
-    const discount = promoPrice != null && oldPrice > 0 ? Math.round(((oldPrice - promoPrice) / oldPrice) * 100) : 0;
+    const discount = promoPrice != null && oldPrice > 0 && oldPrice > promoPrice ? Math.round(((oldPrice - promoPrice) / oldPrice) * 100) : 0;
     const isNew = product.new_product === 1;
     const isBestSeller = product.best_seller === 1;
     const rating = product.note || 0;
@@ -68,6 +115,7 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
       promoPrice,
       newPrice,
       discount,
+      hasPromoValue,
       isNew,
       isBestSeller,
       rating,
@@ -110,6 +158,33 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
     >
       {/* Image + badges */}
       <div className="relative aspect-square w-full flex-shrink-0 overflow-hidden bg-gray-100 dark:bg-gray-700 rounded-t-[14px] sm:rounded-t-xl lg:rounded-t-2xl">
+        {/* Countdown Timer - Top of product card */}
+        {product.promo_expiration_date && productData.promoPrice != null && !isExpired && (
+          <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 z-20 bg-red-600/95 dark:bg-red-700/95 backdrop-blur-sm rounded-lg px-1.5 py-1 sm:px-2 sm:py-1.5 md:px-3 md:py-2 shadow-lg border border-red-500/30">
+            <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2">
+              <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-4 md:w-4 text-white shrink-0" aria-hidden="true" />
+              <div className="flex items-center gap-0.5 sm:gap-1 md:gap-1.5 text-white">
+                {days > 0 && (
+                  <span className="text-[9px] sm:text-[10px] md:text-xs font-bold tabular-nums whitespace-nowrap">
+                    {isClient ? String(days).padStart(2, '0') : '00'}j
+                  </span>
+                )}
+                <span className="text-[9px] sm:text-[10px] md:text-xs font-bold tabular-nums whitespace-nowrap">
+                  {isClient ? String(hours).padStart(2, '0') : '00'}h
+                </span>
+                <span className="text-[9px] sm:text-[10px] md:text-xs font-bold tabular-nums whitespace-nowrap">
+                  {isClient ? String(minutes).padStart(2, '0') : '00'}m
+                </span>
+                {days === 0 && (
+                  <span className="text-[9px] sm:text-[10px] md:text-xs font-bold tabular-nums whitespace-nowrap">
+                    {isClient ? String(seconds).padStart(2, '0') : '00'}s
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         <Link href={`/products/${productData.slug || product.id}`} className="block size-full" aria-label={`Voir ${productData.name}`}>
           {productData.image ? (
             <Image
@@ -228,43 +303,72 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
         )}
 
         {/* Price */}
-        <div className={`flex flex-wrap items-baseline gap-1.5 sm:gap-2 mt-auto ${isCompact ? 'mb-0' : 'mb-0'}`}>
-          {productData.promoPrice != null && productData.oldPrice !== productData.newPrice ? (
-            <>
-              <span className={`font-bold text-red-600 dark:text-red-400 tabular-nums ${isCompact ? 'text-sm' : 'text-base sm:text-lg'}`}>
-                {productData.newPrice} DT
+        <div className={`flex flex-wrap items-baseline gap-1 sm:gap-1.5 md:gap-2 mt-auto ${isCompact ? 'mb-0' : 'mb-0'}`}>
+          {(() => {
+            // Always check if there's a promo value, regardless of expiration
+            const promoValue = product.promo != null && !isNaN(Number(product.promo)) ? Number(product.promo) : null;
+            const oldPrice = productData.oldPrice;
+            const hasValidPromoPrice = productData.promoPrice != null;
+            
+            // Show old price crossed out if there's a promo value AND old price > 0 AND promo < old price
+            // This works for both valid and expired promos - we always show the old price when a promo exists
+            const shouldShowOldPrice = promoValue != null && oldPrice > 0 && promoValue < oldPrice;
+            
+            if (shouldShowOldPrice) {
+              // Use valid promo price if available, otherwise use the promo value (even if expired)
+              const displayPromoPrice = hasValidPromoPrice ? productData.promoPrice! : promoValue;
+              const displayDiscount = productData.discount > 0 
+                ? productData.discount 
+                : Math.round(((oldPrice - displayPromoPrice) / oldPrice) * 100);
+              
+              return (
+                <>
+                  <span className={`font-bold text-red-600 dark:text-red-400 tabular-nums ${isCompact ? 'text-sm' : 'text-base sm:text-lg'}`}>
+                    {displayPromoPrice} DT
+                  </span>
+                  <span
+                    className="text-gray-500 dark:text-gray-400 line-through tabular-nums text-[10px] sm:text-[11px] md:text-xs"
+                    style={{ textDecorationThickness: '1.5px' }}
+                    aria-label={`Prix barré: ${oldPrice} DT`}
+                  >
+                    {oldPrice} DT
+                  </span>
+                  {!isCompact && displayDiscount > 0 && (
+                    <span className="rounded bg-red-100 dark:bg-red-950/50 px-1 sm:px-1.5 py-0.5 text-[9px] sm:text-[10px] md:text-xs font-semibold text-red-700 dark:text-red-400 ml-0.5 sm:ml-0">
+                      -{displayDiscount}%
+                    </span>
+                  )}
+                </>
+              );
+            }
+            
+            return (
+              <span className={`font-bold text-gray-900 dark:text-white tabular-nums ${isCompact ? 'text-sm' : 'text-base sm:text-lg'}`}>
+                {productData.newPrice || productData.oldPrice} DT
               </span>
-              <span
-                className="text-gray-500 dark:text-gray-400 line-through tabular-nums text-[11px] sm:text-xs"
-                style={{ textDecorationThickness: '1.5px' }}
-                aria-label={`Prix barré: ${productData.oldPrice} DT`}
-              >
-                {productData.oldPrice} DT
-              </span>
-              {!isCompact && productData.discount > 0 && (
-                <span className="rounded bg-red-100 dark:bg-red-950/50 px-1.5 py-0.5 text-[10px] sm:text-xs font-semibold text-red-700 dark:text-red-400">
-                  -{productData.discount}%
-                </span>
-              )}
-            </>
-          ) : (
-            <span className={`font-bold text-gray-900 dark:text-white tabular-nums ${isCompact ? 'text-sm' : 'text-base sm:text-lg'}`}>
-              {productData.newPrice || productData.oldPrice} DT
-            </span>
-          )}
+            );
+          })()}
         </div>
 
         {/* CTA – always visible on mobile, overlay on desktop hover */}
         <div className="flex-shrink-0 pt-3 mt-2 border-t border-gray-100 dark:border-gray-700/60 lg:hidden block">
           <Button
             size="sm"
-            className={`w-full min-h-[44px] rounded-xl font-semibold text-[11px] sm:text-sm active:scale-[0.98] transition-transform duration-150 select-none px-2 ${productData.isInStock ? 'bg-red-600 hover:bg-red-700 text-white shadow-[0_2px_8px_rgba(220,38,38,0.35)]' : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed text-white'}`}
+            className={`w-full min-h-[44px] rounded-xl font-semibold text-[10px] xs:text-[11px] sm:text-sm active:scale-[0.98] transition-transform duration-150 select-none px-1.5 sm:px-2 ${productData.isInStock ? 'bg-red-600 hover:bg-red-700 text-white shadow-[0_2px_8px_rgba(220,38,38,0.35)]' : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed text-white'}`}
             onClick={handleAddToCart}
             disabled={isAdding || !productData.isInStock}
             aria-label={`Ajouter ${productData.name} au panier`}
           >
-            <ShoppingCart className={`size-3.5 sm:size-4 shrink-0 mr-1.5 sm:mr-2 ${isCompact ? 'sm:mr-1.5' : ''}`} aria-hidden="true" />
-            {!productData.isInStock ? 'Rupture de stock' : isAdding ? 'Ajouté !' : 'Ajouter au panier'}
+            <ShoppingCart className={`size-3.5 sm:size-4 shrink-0 mr-1 sm:mr-1.5 md:mr-2 ${isCompact ? 'sm:mr-1.5' : ''}`} aria-hidden="true" />
+            <span className="truncate max-w-full">
+              {!productData.isInStock ? (
+                <><span className="hidden min-[360px]:inline">Rupture de stock</span><span className="min-[360px]:hidden">Rupture</span></>
+              ) : isAdding ? (
+                'Ajouté !'
+              ) : (
+                <><span className="hidden min-[360px]:inline">Ajouter au panier</span><span className="min-[360px]:hidden">Panier</span></>
+              )}
+            </span>
           </Button>
         </div>
       </div>

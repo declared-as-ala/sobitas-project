@@ -33,6 +33,9 @@ export interface Product {
   brand?: Brand;
   reviews?: Review[];
   qte?: number;
+  nutrition_values?: string | null;
+  questions?: string | null;
+  code_product?: string | null;
 }
 
 export interface Category {

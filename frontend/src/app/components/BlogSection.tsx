@@ -26,15 +26,15 @@ export function BlogSection({ articles }: BlogSectionProps) {
   const displayArticles = articles;
 
   return (
-    <section className="py-12 bg-gray-50 dark:bg-gray-900 overflow-hidden">
+    <section className="py-8 sm:py-10 bg-gray-50 dark:bg-gray-900 overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 sm:mb-8 gap-4">
           <div className="text-center md:text-left">
             <motion.h2
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2 sm:mb-3"
+              className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2"
             >
               Nos Derniers Articles
             </motion.h2>
@@ -43,7 +43,7 @@ export function BlogSection({ articles }: BlogSectionProps) {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.1 }}
-              className="text-base sm:text-lg text-gray-600 dark:text-gray-400 max-w-2xl"
+              className="text-sm sm:text-base text-gray-600 dark:text-gray-400 max-w-2xl"
             >
               Découvrez nos conseils d'experts en nutrition, entraînement et santé pour optimiser vos performances.
             </motion.p>
@@ -70,14 +70,15 @@ export function BlogSection({ articles }: BlogSectionProps) {
             opts={{
               align: 'start',
               loop: false,
+              slidesToScroll: 1,
             }}
             className="w-full"
           >
-            <CarouselContent className="-ml-1.5 md:-ml-3">
+            <CarouselContent className="-ml-2 md:-ml-4">
               {displayArticles.map((article, index) => (
                 <CarouselItem
                   key={article.id}
-                  className="pl-1.5 md:pl-3 basis-full md:basis-1/2"
+                  className="pl-2 md:pl-4 basis-full md:basis-[40%] lg:basis-[38%]"
                 >
                   <motion.article
                     initial={{ opacity: 0, y: 30 }}
@@ -132,12 +133,16 @@ export function BlogSection({ articles }: BlogSectionProps) {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            <CarouselPrevious className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-10 h-10 w-10 bg-white dark:bg-gray-800 shadow-lg hover:bg-red-600 hover:text-white dark:hover:bg-red-600 border-2 border-gray-200 dark:border-gray-700 hover:border-red-600 dark:hover:border-red-600 transition-all" />
-            <CarouselNext className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-10 h-10 w-10 bg-white dark:bg-gray-800 shadow-lg hover:bg-red-600 hover:text-white dark:hover:bg-red-600 border-2 border-gray-200 dark:border-gray-700 hover:border-red-600 dark:hover:border-red-600 transition-all" />
+            {displayArticles.length > 1 && (
+              <>
+                <CarouselPrevious className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-10 h-8 w-8 md:h-10 md:w-10 bg-white dark:bg-gray-800 shadow-lg hover:bg-red-600 hover:text-white dark:hover:bg-red-600 border-2 border-gray-200 dark:border-gray-700 hover:border-red-600 dark:hover:border-red-600 transition-all" />
+                <CarouselNext className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-10 h-8 w-8 md:h-10 md:w-10 bg-white dark:bg-gray-800 shadow-lg hover:bg-red-600 hover:text-white dark:hover:bg-red-600 border-2 border-gray-200 dark:border-gray-700 hover:border-red-600 dark:hover:border-red-600 transition-all" />
+              </>
+            )}
           </Carousel>
         </div>
 
-        <div className="mt-6 text-center md:hidden">
+        <div className="mt-4 sm:mt-6 text-center md:hidden">
           <Button asChild variant="outline" className="w-full rounded-full border-red-600 text-red-600 hover:bg-red-600 hover:text-white group">
             <Link href="/blog" className="flex items-center justify-center gap-2">
               Voir tous les articles

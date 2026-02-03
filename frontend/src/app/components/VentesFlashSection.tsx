@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect, useMemo, memo } from 'react';
+import { memo, useMemo, useEffect } from 'react';
 import Link from 'next/link';
+import { motion } from 'motion/react';
 import { ProductCard } from './ProductCard';
 import { Button } from '@/app/components/ui/button';
-import { ArrowRight, Clock } from 'lucide-react';
+import { ArrowRight, Zap, Flame } from 'lucide-react';
+
 interface FlashProduct {
   id: number;
   slug?: string;
@@ -20,112 +22,166 @@ interface VentesFlashSectionProps {
   products: FlashProduct[];
 }
 
-function useCountdown(endDate: Date | null): { days: number; hours: number; minutes: number; seconds: number; isExpired: boolean; isClient: boolean } {
-  const [isClient, setIsClient] = useState(false);
-  const [now, setNow] = useState<Date | null>(null);
-
-  useEffect(() => {
-    setIsClient(true);
-    setNow(new Date());
-  }, []);
-
-  useEffect(() => {
-    if (!isClient || !endDate || endDate.getTime() <= Date.now()) return;
-    setNow(new Date());
-    const t = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(t);
-  }, [isClient, endDate]);
-
-  if (!isClient || now === null) {
-    return { days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: false, isClient: false };
-  }
-  if (!endDate || endDate.getTime() <= now.getTime()) {
-    return { days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true, isClient: true };
-  }
-  const diff = Math.max(0, endDate.getTime() - now.getTime());
-  const days = Math.floor(diff / (24 * 60 * 60 * 1000));
-  const hours = Math.floor((diff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
-  const minutes = Math.floor((diff % (60 * 60 * 1000)) / (60 * 1000));
-  const seconds = Math.floor((diff % (60 * 1000)) / 1000);
-  return { days, hours, minutes, seconds, isExpired: false, isClient: true };
-}
-
 export const VentesFlashSection = memo(function VentesFlashSection({ products }: VentesFlashSectionProps) {
-  const endDate = useMemo(() => {
-    const dates = products
-      .map((p) => (p.promo_expiration_date ? new Date(p.promo_expiration_date) : null))
-      .filter((d): d is Date => d != null && !isNaN(d.getTime()));
-    if (dates.length === 0) return null;
-    return new Date(Math.min(...dates.map((d) => d.getTime())));
-  }, [products]);
-
-  const { days, hours, minutes, seconds, isExpired, isClient } = useCountdown(endDate);
-
   if (products.length === 0) return null;
 
-  const countdownUnits = [
-    { value: days, label: 'j' },
-    { value: hours, label: 'h' },
-    { value: minutes, label: 'min' },
-    { value: seconds, label: 's' },
-  ] as const;
+  // Smart grid logic: 4 or fewer = one row, more than 4 = 4 per row
+  const isFourOrLess = products.length <= 4;
+  const firstRowProducts = products.slice(0, 4);
+  const remainingProducts = products.slice(4);
+
+  // Add dynamic CSS for grid columns on large screens
+  useEffect(() => {
+    if (isFourOrLess && typeof document !== 'undefined') {
+      const styleId = 'ventes-flash-grid-style';
+      let styleElement = document.getElementById(styleId);
+      
+      if (!styleElement) {
+        styleElement = document.createElement('style');
+        styleElement.id = styleId;
+        document.head.appendChild(styleElement);
+      }
+      
+      styleElement.textContent = `
+        @media (min-width: 1024px) {
+          .ventes-flash-first-row {
+            grid-template-columns: repeat(${products.length}, minmax(0, 1fr)) !important;
+          }
+        }
+      `;
+    }
+  }, [isFourOrLess, products.length]);
 
   return (
     <section
       id="ventes-flash"
-      className="py-8 sm:py-12 md:py-20 bg-gradient-to-b from-orange-50/80 via-white to-white dark:from-orange-950/20 dark:via-gray-950 dark:to-gray-950"
+      className="relative py-10 sm:py-12 md:py-16 lg:py-20 overflow-hidden bg-gradient-to-br from-red-50 via-orange-50/50 to-white dark:from-red-950/10 dark:via-orange-950/10 dark:to-gray-950"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between mb-10 md:mb-14">
-          <div className="mb-4 md:mb-0">
-            <h2 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white mb-2 sm:mb-3 bg-gradient-to-r from-orange-600 to-orange-500 dark:from-orange-500 dark:to-orange-400 bg-clip-text text-transparent">
-              Ventes Flash
-            </h2>
-            <p className="text-sm sm:text-lg md:text-xl text-gray-600 dark:text-gray-400 mb-3">
-              Offres limitées – Ne manquez pas ces promotions
-            </p>
-            {!isExpired && endDate && (
-              <div className="flex items-center gap-2 flex-wrap">
-                <Clock className="h-5 w-5 text-orange-500 dark:text-orange-400 shrink-0" aria-hidden />
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Se termine dans :</span>
-                <div className="flex items-center gap-2 sm:gap-3" role="timer" aria-live="polite" suppressHydrationWarning>
-                  {countdownUnits.map(({ value, label }) => (
-                    <span
-                      key={label}
-                      className="inline-flex flex-col items-center min-w-[2.5rem] sm:min-w-[3rem] py-1.5 px-2 rounded-lg bg-orange-500/15 dark:bg-orange-500/20 border border-orange-300/50 dark:border-orange-500/30"
-                    >
-                      <span className="text-lg sm:text-xl font-bold tabular-nums text-orange-600 dark:text-orange-400">
-                        {isClient ? String(value).padStart(2, '0') : '00'}
-                      </span>
-                      <span className="text-[10px] sm:text-xs font-medium text-gray-600 dark:text-gray-400 uppercase">
-                        {label}
-                      </span>
-                    </span>
-                  ))}
-                </div>
+      {/* Decorative background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-red-200/20 dark:bg-red-900/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-orange-200/20 dark:bg-orange-900/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+      </div>
+
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header Section - Enhanced */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 sm:mb-10 md:mb-12 gap-4 sm:gap-6">
+          <div className="flex-1">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+              className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4"
+            >
+              <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-red-500 to-orange-500 shadow-lg">
+                <Flame className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
               </div>
-            )}
+              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-red-600 via-orange-600 to-red-600 dark:from-red-400 dark:via-orange-400 dark:to-red-400 bg-clip-text text-transparent animate-gradient">
+                Ventes Flash
+              </h2>
+            </motion.div>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="text-sm sm:text-base md:text-lg text-gray-600 dark:text-gray-400 max-w-2xl leading-relaxed"
+            >
+              Offres limitées – Ne manquez pas ces promotions exclusives avec des réductions exceptionnelles
+            </motion.p>
           </div>
-          <div className="hidden sm:block">
-            <Button variant="outline" className="group min-h-[44px] border-orange-300 dark:border-orange-600 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/30" asChild>
+
+          {/* CTA Button */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="flex-shrink-0"
+          >
+            <Button
+              variant="outline"
+              className="group min-h-[44px] sm:min-h-[48px] border-2 border-red-500 dark:border-red-400 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white dark:hover:bg-red-500 dark:hover:text-white transition-all duration-300 shadow-md hover:shadow-lg rounded-xl px-4 sm:px-6"
+              asChild
+            >
               <Link href="/offres" aria-label="Voir toutes les offres et promos">
-                Voir toutes les offres
+                <span className="hidden sm:inline">Voir toutes les offres</span>
+                <span className="sm:hidden">Toutes les offres</span>
                 <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
               </Link>
             </Button>
-          </div>
+          </motion.div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-          {products.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product as any}
-              showBadge
-              badgeText="Promo"
-            />
-          ))}
+        {/* Products Grid - Smart responsive layout */}
+        <div className="space-y-4 sm:space-y-5 md:space-y-6">
+          {/* First Row: 4 or fewer = all in one row, more than 4 = first 4 */}
+          <div 
+            className={`grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 ${isFourOrLess ? 'ventes-flash-first-row' : 'lg:grid-cols-4 xl:grid-cols-4'} gap-3 sm:gap-4 md:gap-5 lg:gap-4 xl:gap-6`}
+          >
+            {firstRowProducts.map((product, index) => (
+              <motion.div
+                key={product.id}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-50px' }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+                className="w-full min-w-0"
+              >
+                <ProductCard
+                  product={product as any}
+                  showBadge
+                  badgeText="Promo"
+                />
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Remaining Products: Only show if more than 4 */}
+          {remainingProducts.length > 0 && (
+            <div 
+              className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-5 lg:gap-4 xl:gap-6"
+            >
+              {remainingProducts.map((product, index) => (
+                <motion.div
+                  key={product.id}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: '-50px' }}
+                  transition={{ duration: 0.5, delay: (index + 4) * 0.1 }}
+                  className="w-full min-w-0"
+                >
+                  <ProductCard
+                    product={product as any}
+                    showBadge
+                    badgeText="Promo"
+                  />
+                </motion.div>
+              ))}
+            </div>
+          )}
         </div>
+
+        {/* Mobile CTA */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className="mt-8 sm:mt-10 text-center md:hidden"
+        >
+          <Button
+            variant="outline"
+            className="w-full min-h-[48px] border-2 border-red-500 dark:border-red-400 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white dark:hover:bg-red-500 dark:hover:text-white transition-all duration-300 shadow-md hover:shadow-lg rounded-xl"
+            asChild
+          >
+            <Link href="/offres" aria-label="Voir toutes les offres et promos">
+              Voir toutes les offres
+              <ArrowRight className="h-4 w-4 ml-2" aria-hidden="true" />
+            </Link>
+          </Button>
+        </motion.div>
       </div>
     </section>
   );

@@ -195,18 +195,18 @@ export function Footer() {
         <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
           {/* Contact Info & Social */}
           <div className="space-y-6">
-            <div className="relative h-12 w-auto mb-10 shrink-0">
+            <div className="relative h-8 w-auto mb-6 shrink-0 flex items-center">
               <Image
                 src={getStorageUrl('coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp')}
                 alt="Protein.tn"
                 width={150}
                 height={48}
-                className="h-12 w-auto object-contain"
+                className="h-8 w-auto object-contain"
                 style={{ width: 'auto', height: 'auto' }}
                 priority
               />
             </div>
-            <p className="text-sm text-gray-400 leading-relaxed mt-6 pt-2">
+            <p className="text-sm text-gray-400 leading-relaxed">
               PROTEINE TUNISIE - SOBITAS votre distributeur officiel d'articles de sport et de compléments alimentaires en Tunisie.
             </p>
 
@@ -378,10 +378,10 @@ export function Footer() {
                     'S\'abonner'
                   )}
                 </Button>
+                <p className="text-xs text-gray-500 mt-4">
+                  En vous abonnant, vous acceptez de recevoir nos offres par email
+                </p>
               </form>
-              <p className="text-xs text-gray-500">
-                En vous abonnant, vous acceptez de recevoir nos offres par email
-              </p>
             </div>
           </div>
         </div>

@@ -51,8 +51,10 @@ export function PromoBanner() {
                   <ArrowRight className="h-5 w-5 ml-2 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </Button>
-              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-black px-8 h-14 text-lg">
-                En Savoir Plus
+              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-black px-8 h-14 text-lg" asChild>
+                <Link href="/shop">
+                  En Savoir Plus
+                </Link>
               </Button>
             </div>
           </motion.div>
