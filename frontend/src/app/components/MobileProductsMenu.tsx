@@ -203,9 +203,6 @@ export function MobileProductsMenu({ open, onOpenChange }: MobileProductsMenuPro
                 >
                   <div className="space-y-1 px-2">
                     {menuCategories.map((category, index) => {
-                      const categoryData = findCategoryByName(category.title, categories);
-                      const categorySlug = categoryData?.slug || nameToSlug(category.title);
-                      
                       return (
                         <motion.button
                           key={index}

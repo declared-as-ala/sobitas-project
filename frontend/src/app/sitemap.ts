@@ -1,6 +1,6 @@
 import { MetadataRoute } from 'next';
 import { getAllProducts, getAllArticles, getCategories, getAllBrands } from '@/services/api';
-import type { Product, Article, Category, Brand } from '@/types';
+import type { Product, Article, Category, Brand, SubCategory } from '@/types';
 
 const BASE_URL = 'https://protein.tn';
 
@@ -73,6 +73,12 @@ const getLastModified = (item: { updated_at?: string; created_at?: string }): Da
   return new Date();
 };
 
+// Type for items with date fields
+interface ItemWithDates {
+  updated_at?: string;
+  created_at?: string;
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const sitemapEntries: MetadataRoute.Sitemap = [...staticPages];
 
@@ -84,7 +90,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         .filter((p: Product) => p.slug && p.publier === 1) // Only published products
         .map((p: Product) => ({
           url: `${BASE_URL}/products/${p.slug}`,
-          lastModified: getLastModified(p as any),
+          lastModified: getLastModified(p as ItemWithDates),
           changeFrequency: 'weekly' as const,
           priority: 0.7,
         }));
@@ -111,11 +117,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
           // Add subcategory pages
           if (category.sous_categories && Array.isArray(category.sous_categories)) {
-            category.sous_categories.forEach((subCategory: any) => {
+            category.sous_categories.forEach((subCategory: SubCategory) => {
               if (subCategory.slug) {
                 sitemapEntries.push({
                   url: `${BASE_URL}/shop?category=${encodeURIComponent(subCategory.slug)}`,
-                  lastModified: getLastModified(subCategory),
+                  lastModified: getLastModified(subCategory as ItemWithDates),
                   changeFrequency: 'weekly' as const,
                   priority: 0.75,
                 });
@@ -158,7 +164,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         .filter((a: Article) => a.slug) // Only articles with slugs
         .map((a: Article) => ({
           url: `${BASE_URL}/blog/${a.slug}`,
-          lastModified: getLastModified(a as any),
+          lastModified: getLastModified(a as ItemWithDates),
           changeFrequency: 'monthly' as const,
           priority: 0.6,
         }));

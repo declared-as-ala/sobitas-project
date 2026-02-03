@@ -23,14 +23,13 @@ interface VentesFlashSectionProps {
 }
 
 export const VentesFlashSection = memo(function VentesFlashSection({ products }: VentesFlashSectionProps) {
-  if (products.length === 0) return null;
-
   // Smart grid logic: 4 or fewer = one row, more than 4 = 4 per row
   const isFourOrLess = products.length <= 4;
   const firstRowProducts = products.slice(0, 4);
   const remainingProducts = products.slice(4);
 
   // Add dynamic CSS for grid columns on large screens
+  // Must be called before any early returns (React hooks rules)
   useEffect(() => {
     if (isFourOrLess && typeof document !== 'undefined') {
       const styleId = 'ventes-flash-grid-style';
@@ -51,6 +50,9 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
       `;
     }
   }, [isFourOrLess, products.length]);
+
+  // Early return after hooks
+  if (products.length === 0) return null;
 
   return (
     <section
