@@ -418,11 +418,6 @@ export function Footer() {
             <div className="text-center md:text-left text-sm text-gray-400">
               © {new Date().getFullYear()} <span className="text-red-500 font-bold">PROTEINE TUNISIE</span>. Tous droits réservés.
             </div>
-            <div className="flex items-center gap-6 text-sm text-gray-400">
-              <a href="#" className="hover:text-red-500 transition-colors">Mentions légales</a>
-              <a href="#" className="hover:text-red-500 transition-colors">CGV</a>
-              <a href="#" className="hover:text-red-500 transition-colors">Confidentialité</a>
-            </div>
           </div>
         </div>
       </div>
