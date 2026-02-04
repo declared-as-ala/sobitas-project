@@ -67,6 +67,7 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
   const [inStockOnly, setInStockOnly] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [currentBrand, setCurrentBrand] = useState<Brand | null>(null);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
   const PRODUCTS_PER_PAGE = 12;
 
@@ -484,6 +485,11 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
     }
   }, [searchQuery, selectedCategories, selectedBrands, safeProductsData.products, brands, initialCategory]);
 
+  // Reset description expanded state when brand changes
+  useEffect(() => {
+    setIsDescriptionExpanded(false);
+  }, [currentBrand?.id]);
+
   // Filter products locally (for price and additional filters)
   const filteredProducts = useMemo(() => {
     let filtered = products;
@@ -630,20 +636,29 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
                   {currentBrand.designation_fr}
                 </h2>
                 {currentBrand.description_fr && (
-                  <div
-                    className="prose prose-sm sm:prose-base md:prose-lg dark:prose-invert max-w-none 
-                      text-gray-600 dark:text-gray-300 
-                      prose-headings:text-gray-900 dark:prose-headings:text-white 
-                      prose-p:leading-relaxed prose-p:mb-3 sm:prose-p:mb-4
-                      prose-a:text-red-600 dark:prose-a:text-red-500 prose-a:no-underline hover:prose-a:underline
-                      prose-strong:text-gray-900 dark:prose-strong:text-white
-                      prose-ul:list-disc prose-ul:ml-4 sm:prose-ul:ml-6
-                      prose-ol:list-decimal prose-ol:ml-4 sm:prose-ol:ml-6
-                      prose-li:mb-2
-                      prose-img:rounded-lg prose-img:shadow-md
-                      prose-blockquote:border-l-4 prose-blockquote:border-red-500 prose-blockquote:pl-4 prose-blockquote:italic"
-                    dangerouslySetInnerHTML={{ __html: currentBrand.description_fr }}
-                  />
+                  <div className="space-y-2">
+                    <div
+                      className={`prose prose-sm sm:prose-base md:prose-lg dark:prose-invert max-w-none 
+                        text-gray-600 dark:text-gray-300 
+                        prose-headings:text-gray-900 dark:prose-headings:text-white 
+                        prose-p:leading-relaxed prose-p:mb-3 sm:prose-p:mb-4
+                        prose-a:text-red-600 dark:prose-a:text-red-500 prose-a:no-underline hover:prose-a:underline
+                        prose-strong:text-gray-900 dark:prose-strong:text-white
+                        prose-ul:list-disc prose-ul:ml-4 sm:prose-ul:ml-6
+                        prose-ol:list-decimal prose-ol:ml-4 sm:prose-ol:ml-6
+                        prose-li:mb-2
+                        prose-img:rounded-lg prose-img:shadow-md
+                        prose-blockquote:border-l-4 prose-blockquote:border-red-500 prose-blockquote:pl-4 prose-blockquote:italic
+                        ${!isDescriptionExpanded ? 'line-clamp-2' : ''}`}
+                      dangerouslySetInnerHTML={{ __html: currentBrand.description_fr }}
+                    />
+                    <button
+                      onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                      className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium text-sm sm:text-base transition-colors"
+                    >
+                      {isDescriptionExpanded ? 'Lire moins' : 'Lire plus'}
+                    </button>
+                  </div>
                 )}
               </div>
             </div>

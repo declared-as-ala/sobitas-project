@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { motion } from 'motion/react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { getAllBrands, getStorageUrl } from '@/services/api';
 import type { Brand } from '@/types';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 // Helper to generate slug from name
 function nameToSlug(name: string): string {
@@ -21,9 +21,17 @@ function nameToSlug(name: string): string {
 }
 
 // Brand Card Component
-function BrandCard({ brand, index }: { brand: Brand; index: number }) {
+function BrandCard({ brand, index, onNavigate }: { brand: Brand; index: number; onNavigate: (slug: string) => void }) {
   const [imageError, setImageError] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
   const logoUrl = brand.logo ? getStorageUrl(brand.logo) : null;
+  const brandSlug = nameToSlug(brand.designation_fr);
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsNavigating(true);
+    onNavigate(brandSlug);
+  };
 
   return (
     <motion.div
@@ -31,33 +39,43 @@ function BrandCard({ brand, index }: { brand: Brand; index: number }) {
       whileInView={{ opacity: 1, scale: 1 }}
       viewport={{ once: true }}
       transition={{ delay: index * 0.05 }}
-      className="flex-shrink-0 group"
+      className="flex-shrink-0 group relative"
     >
-      <Link
-        href={`/brand/${nameToSlug(brand.designation_fr)}`}
-        className="block bg-white dark:bg-gray-800 rounded-xl p-6 h-36 w-56 md:w-64 flex items-center justify-center border border-gray-200 dark:border-gray-700 hover:border-red-500 dark:hover:border-red-500 hover:shadow-xl transition-all duration-300"
+      <button
+        onClick={handleClick}
+        disabled={isNavigating}
+        className="block bg-white dark:bg-gray-800 rounded-xl p-6 h-36 w-56 md:w-64 flex items-center justify-center border border-gray-200 dark:border-gray-700 hover:border-red-500 dark:hover:border-red-500 hover:shadow-xl transition-all duration-300 w-full cursor-pointer disabled:opacity-75 disabled:cursor-wait"
       >
-        {logoUrl && !imageError ? (
-          <div className="relative w-full h-full">
-            <Image
-              src={logoUrl}
-              alt={brand.designation_fr || brand.alt_cover || 'Brand logo'}
-              fill
-              className="object-contain p-2 group-hover:scale-110 transition-transform duration-300"
-              sizes="(max-width: 768px) 224px, 256px"
-              loading="lazy"
-              unoptimized
-              onError={() => setImageError(true)}
-            />
+        {isNavigating ? (
+          <div className="flex flex-col items-center justify-center gap-2">
+            <Loader2 className="h-6 w-6 text-red-600 dark:text-red-400 animate-spin" />
+            <span className="text-xs text-gray-600 dark:text-gray-400">Chargement...</span>
           </div>
         ) : (
-          <div className="text-center w-full">
-            <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
-              {brand.designation_fr}
-            </p>
-          </div>
+          <>
+            {logoUrl && !imageError ? (
+              <div className="relative w-full h-full">
+                <Image
+                  src={logoUrl}
+                  alt={brand.designation_fr || brand.alt_cover || 'Brand logo'}
+                  fill
+                  className="object-contain p-2 group-hover:scale-110 transition-transform duration-300"
+                  sizes="(max-width: 768px) 224px, 256px"
+                  loading="lazy"
+                  unoptimized
+                  onError={() => setImageError(true)}
+                />
+              </div>
+            ) : (
+              <div className="text-center w-full">
+                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
+                  {brand.designation_fr}
+                </p>
+              </div>
+            )}
+          </>
         )}
-      </Link>
+      </button>
     </motion.div>
   );
 }
@@ -69,7 +87,9 @@ export function BrandsSection() {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchBrands = async () => {
@@ -123,6 +143,19 @@ export function BrandsSection() {
     }
   };
 
+  const handleBrandNavigate = async (slug: string) => {
+    setIsNavigating(true);
+    // Prefetch the page for faster navigation
+    router.prefetch(`/brand/${slug}`);
+    // Navigate immediately - the loading state will persist until page loads
+    try {
+      await router.push(`/brand/${slug}`);
+    } catch (error) {
+      console.error('Navigation error:', error);
+      setIsNavigating(false);
+    }
+  };
+
   if (isLoading) {
     return null; // Don't show anything while loading
   }
@@ -132,8 +165,34 @@ export function BrandsSection() {
   }
 
   return (
-    <section className="py-16 bg-gradient-to-b from-white to-gray-50 dark:from-gray-950 dark:to-gray-900">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <>
+      {/* Global Loading Overlay */}
+      <AnimatePresence>
+        {isNavigating && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50 flex items-center justify-center"
+            onClick={() => setIsNavigating(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-2xl flex flex-col items-center gap-4"
+            >
+              <Loader2 className="h-12 w-12 text-red-600 dark:text-red-400 animate-spin" />
+              <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                Chargement de la marque...
+              </p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <section className="py-16 bg-gradient-to-b from-white to-gray-50 dark:from-gray-950 dark:to-gray-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -169,7 +228,12 @@ export function BrandsSection() {
             className="flex gap-6 overflow-x-auto scroll-smooth pb-4 px-2 scrollbar-hide"
           >
             {brandsForScroll.map((brand, index) => (
-              <BrandCard key={`${brand.id}-${index}`} brand={brand} index={index} />
+              <BrandCard 
+                key={`${brand.id}-${index}`} 
+                brand={brand} 
+                index={index} 
+                onNavigate={handleBrandNavigate}
+              />
             ))}
           </div>
 
@@ -193,5 +257,6 @@ export function BrandsSection() {
         </div>
       </div>
     </section>
+    </>
   );
 }

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Facebook, Instagram, Twitter, Mail, Phone, MapPin, Sparkles, Loader2, MessageCircle } from 'lucide-react';
+import { Facebook, Instagram, Linkedin, Mail, Phone, MapPin, Sparkles, Loader2, MessageCircle } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { motion } from 'motion/react';
@@ -96,14 +96,19 @@ export function Footer() {
               Nous facilitons la communication et le suivi sur nos réseaux sociaux.
             </p>
             <div className="flex flex-wrap gap-2 sm:gap-3">
-              <a href="https://www.facebook.com/sobitass/" target="_blank" rel="noopener noreferrer" className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-gray-800 hover:bg-[#1877F2] flex items-center justify-center transition-colors shrink-0" aria-label="Facebook">
+              <a href="https://facebook.com/proteinetunisie" target="_blank" rel="noopener noreferrer" className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-gray-800 hover:bg-[#1877F2] flex items-center justify-center transition-colors shrink-0" aria-label="Facebook">
                 <Facebook className="h-5 w-5" />
               </a>
-              <a href="https://www.instagram.com/sobitass/" target="_blank" rel="noopener noreferrer" className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-gray-800 hover:bg-gradient-to-r hover:from-purple-600 hover:via-pink-600 hover:to-orange-500 flex items-center justify-center transition-colors shrink-0" aria-label="Instagram">
+              <a href="https://www.instagram.com/sobitas.proteine.tunisie/" target="_blank" rel="noopener noreferrer" className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-gray-800 hover:bg-gradient-to-r hover:from-purple-600 hover:via-pink-600 hover:to-orange-500 flex items-center justify-center transition-colors shrink-0" aria-label="Instagram">
                 <Instagram className="h-5 w-5" />
               </a>
-              <a href="https://twitter.com/TunisieProteine" target="_blank" rel="noopener noreferrer" className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-gray-800 hover:bg-[#1DA1F2] flex items-center justify-center transition-colors shrink-0" aria-label="Twitter">
-                <Twitter className="h-5 w-5" />
+              <a href="https://www.linkedin.com/in/sobitas-proteine-tunisie-b63b671a8/" target="_blank" rel="noopener noreferrer" className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-gray-800 hover:bg-[#0077B5] flex items-center justify-center transition-colors shrink-0" aria-label="LinkedIn">
+                <Linkedin className="h-5 w-5" />
+              </a>
+              <a href="https://www.tiktok.com/@sobitas.proteine.tunisie" target="_blank" rel="noopener noreferrer" className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-gray-800 hover:bg-black flex items-center justify-center transition-colors shrink-0 group" aria-label="TikTok">
+                <svg className="h-5 w-5 text-white group-hover:text-[#FF0050]" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
+                </svg>
               </a>
               <a href="https://wa.me/21627612500" target="_blank" rel="noopener noreferrer" className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-gray-800 hover:bg-[#25D366] flex items-center justify-center transition-colors shrink-0" aria-label="WhatsApp">
                 <MessageCircle className="h-5 w-5" />
@@ -231,7 +236,7 @@ export function Footer() {
               <h3 className="font-semibold text-white mb-4">Suivez-nous</h3>
               <div className="flex flex-wrap gap-3">
                 <a
-                  href="https://www.facebook.com/sobitass/"
+                  href="https://facebook.com/proteinetunisie"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="h-10 w-10 rounded-full bg-gray-800 hover:bg-[#1877F2] flex items-center justify-center transition-colors"
@@ -240,7 +245,7 @@ export function Footer() {
                   <Facebook className="h-5 w-5" />
                 </a>
                 <a
-                  href="https://www.instagram.com/sobitass/"
+                  href="https://www.instagram.com/sobitas.proteine.tunisie/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="h-10 w-10 rounded-full bg-gray-800 hover:bg-gradient-to-r hover:from-purple-600 hover:via-pink-600 hover:to-orange-500 flex items-center justify-center transition-colors"
@@ -249,13 +254,24 @@ export function Footer() {
                   <Instagram className="h-5 w-5" />
                 </a>
                 <a
-                  href="https://twitter.com/TunisieProteine"
+                  href="https://www.linkedin.com/in/sobitas-proteine-tunisie-b63b671a8/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="h-10 w-10 rounded-full bg-gray-800 hover:bg-[#1DA1F2] flex items-center justify-center transition-colors"
-                  aria-label="Twitter"
+                  className="h-10 w-10 rounded-full bg-gray-800 hover:bg-[#0077B5] flex items-center justify-center transition-colors"
+                  aria-label="LinkedIn"
                 >
-                  <Twitter className="h-5 w-5" />
+                  <Linkedin className="h-5 w-5" />
+                </a>
+                <a
+                  href="https://www.tiktok.com/@sobitas.proteine.tunisie"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="h-10 w-10 rounded-full bg-gray-800 hover:bg-black flex items-center justify-center transition-colors group"
+                  aria-label="TikTok"
+                >
+                  <svg className="h-5 w-5 text-white group-hover:text-[#FF0050]" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
+                  </svg>
                 </a>
                 <a
                   href="https://wa.me/21627612500"
@@ -265,17 +281,6 @@ export function Footer() {
                   aria-label="WhatsApp"
                 >
                   <MessageCircle className="h-5 w-5" />
-                </a>
-                <a
-                  href="https://www.tiktok.com/@sobitassousse?_t=8fxdJ9IKeur&_r=1"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="h-10 w-10 rounded-full bg-gray-800 hover:bg-black flex items-center justify-center transition-colors group"
-                  aria-label="TikTok"
-                >
-                  <svg className="h-5 w-5 text-white group-hover:text-[#FF0050]" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
-                  </svg>
                 </a>
               </div>
             </div>
@@ -334,7 +339,7 @@ export function Footer() {
               </li>
               <li>
                 <Link href="/page/proteine-tunisie" className="text-sm hover:text-red-500 transition-colors">
-                  Tunisie Protein
+                  Tunisie Proteine
                 </Link>
               </li>
             </ul>
