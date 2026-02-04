@@ -4,7 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { motion } from 'motion/react';
-import { ShoppingCart, Star, Clock } from 'lucide-react';
+import { ShoppingCart, Star } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
 import type { Product as ApiProduct } from '@/types';
@@ -12,7 +12,7 @@ import { useCart } from '@/app/contexts/CartContext';
 import { getStorageUrl } from '@/services/api';
 import { toast } from 'sonner';
 import { hasValidPromo } from '@/util/productPrice';
-import { useState, useMemo, memo, useCallback, useEffect } from 'react';
+import { useState, useMemo, memo, useCallback } from 'react';
 
 type Product = ApiProduct | {
   id: number;
@@ -41,52 +41,9 @@ interface ProductCardProps {
   hideCountdown?: boolean;
 }
 
-function useProductCountdown(expirationDate: string | null | undefined): { days: number; hours: number; minutes: number; seconds: number; isExpired: boolean; isClient: boolean } {
-  const [isClient, setIsClient] = useState(false);
-  const [now, setNow] = useState<Date | null>(null);
-
-  useEffect(() => {
-    setIsClient(true);
-    setNow(new Date());
-  }, []);
-
-  useEffect(() => {
-    if (!isClient || !expirationDate) return;
-    const endDate = new Date(expirationDate);
-    if (endDate.getTime() <= Date.now()) return;
-    
-    setNow(new Date());
-    const t = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(t);
-  }, [isClient, expirationDate]);
-
-  if (!isClient || now === null) {
-    return { days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: false, isClient: false };
-  }
-
-  if (!expirationDate) {
-    return { days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true, isClient: true };
-  }
-
-  const endDate = new Date(expirationDate);
-  if (endDate.getTime() <= now.getTime()) {
-    return { days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true, isClient: true };
-  }
-
-  const diff = Math.max(0, endDate.getTime() - now.getTime());
-  const days = Math.floor(diff / (24 * 60 * 60 * 1000));
-  const hours = Math.floor((diff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
-  const minutes = Math.floor((diff % (60 * 60 * 1000)) / (60 * 1000));
-  const seconds = Math.floor((diff % (60 * 1000)) / 1000);
-  return { days, hours, minutes, seconds, isExpired: false, isClient: true };
-}
-
 export const ProductCard = memo(function ProductCard({ product, showBadge, badgeText, variant = 'default', showDescription = false, hideCountdown = false }: ProductCardProps) {
   const { addToCart } = useCart();
   const [isAdding, setIsAdding] = useState(false);
-  
-  // Countdown timer for promo expiration
-  const { days, hours, minutes, seconds, isExpired, isClient } = useProductCountdown(product.promo_expiration_date);
 
   const productData = useMemo(() => {
     const name = (product as any).name || product.designation_fr || '';
@@ -105,8 +62,17 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
     const isNew = product.new_product === 1;
     const isBestSeller = product.best_seller === 1;
     const rating = product.note || 0;
-    const reviews = (product as any).reviews?.filter((r: any) => r.publier === 1) || [];
-    const reviewCount = reviews.length;
+    // Try to get review count from reviews_count (from withCount) or from reviews array
+    // Ensure it's a number and handle null/undefined/0
+    const reviewsCountValue = (product as any).reviews_count;
+    const reviewsArrayCount = ((product as any).reviews?.filter((r: any) => r.publier === 1) || []).length;
+    // Convert to number, default to 0 if null/undefined, otherwise use array count as fallback
+    let reviewCount = 0;
+    if (reviewsCountValue != null && reviewsCountValue !== undefined) {
+      reviewCount = Number(reviewsCountValue) || 0;
+    } else if (reviewsArrayCount > 0) {
+      reviewCount = reviewsArrayCount;
+    }
     const isInStock = (product as any).rupture === 1 || (product as any).rupture === undefined;
     return {
       name,
@@ -160,32 +126,6 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
     >
       {/* Image + badges - Larger on desktop */}
       <div className="relative aspect-square w-full flex-shrink-0 overflow-hidden bg-gray-100 dark:bg-gray-700 rounded-t-[14px] sm:rounded-t-xl lg:rounded-t-2xl min-h-[200px] sm:min-h-[240px] md:min-h-[280px] lg:min-h-[320px]">
-        {/* Countdown Timer - Top of product card (hidden in flash sales section) */}
-        {!hideCountdown && product.promo_expiration_date && productData.promoPrice != null && !isExpired && isClient && (
-          <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 z-20 bg-red-600/95 dark:bg-red-700/95 backdrop-blur-sm rounded-lg px-1.5 py-1 sm:px-2 sm:py-1.5 md:px-3 md:py-2 shadow-lg border border-red-500/30">
-            <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2">
-              <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-4 md:w-4 text-white shrink-0" aria-hidden="true" />
-              <div className="flex items-center gap-0.5 sm:gap-1 md:gap-1.5 text-white">
-                {days > 0 && (
-                  <span className="text-[9px] sm:text-[10px] md:text-xs font-bold tabular-nums whitespace-nowrap">
-                    {isClient ? String(days).padStart(2, '0') : '00'}j
-                  </span>
-                )}
-                <span className="text-[9px] sm:text-[10px] md:text-xs font-bold tabular-nums whitespace-nowrap">
-                  {isClient ? String(hours).padStart(2, '0') : '00'}h
-                </span>
-                <span className="text-[9px] sm:text-[10px] md:text-xs font-bold tabular-nums whitespace-nowrap">
-                  {isClient ? String(minutes).padStart(2, '0') : '00'}m
-                </span>
-                {days === 0 && (
-                  <span className="text-[9px] sm:text-[10px] md:text-xs font-bold tabular-nums whitespace-nowrap">
-                    {isClient ? String(seconds).padStart(2, '0') : '00'}s
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
 
         <LinkWithLoading 
           href={`/products/${productData.slug || product.id}`} 
@@ -293,23 +233,35 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
           </p>
         )}
 
-        {!isCompact && productData.rating > 0 && (
-          <div className="flex items-center gap-1 sm:gap-1.5 mb-2" aria-label={`Note: ${productData.rating.toFixed(1)} sur 5`}>
-            <div className="flex gap-0.5">
-              {[...Array(5)].map((_, i) => (
-                <Star
-                  key={i}
-                  className={`size-3.5 sm:size-4 ${i < Math.floor(productData.rating) ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 text-gray-200 dark:fill-gray-600 dark:text-gray-600'}`}
-                  aria-hidden="true"
-                />
-              ))}
-            </div>
-            <span className="text-[11px] sm:text-xs font-medium text-gray-700 dark:text-gray-300 tabular-nums">
-              {productData.rating.toFixed(1)}
-              {productData.reviewCount > 0 && (
-                <span className="text-gray-500 dark:text-gray-400 ml-0.5">({productData.reviewCount})</span>
-              )}
-            </span>
+        {!isCompact && (productData.rating > 0 || productData.reviewCount > 0) && (
+          <div className="flex items-center gap-2 mb-2">
+            {productData.rating > 0 && (
+              <div className="flex gap-0.5" aria-label={`Note: ${productData.rating.toFixed(1)} sur 5`}>
+                {[...Array(5)].map((_, i) => {
+                  // Fill star if rating is >= (i+1) - for 5-star rating, all 5 stars will be filled
+                  const isFilled = productData.rating >= (i + 1);
+                  return (
+                    <Star
+                      key={i}
+                      className={`size-3.5 sm:size-4 ${isFilled ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 text-gray-200 dark:fill-gray-600 dark:text-gray-600'}`}
+                      aria-hidden="true"
+                    />
+                  );
+                })}
+              </div>
+            )}
+            {productData.reviewCount > 0 ? (
+              <LinkWithLoading
+                href={`/products/${productData.slug || product.id}#reviews`}
+                className="text-[11px] sm:text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline transition-colors"
+              >
+                ({productData.reviewCount} avis client{productData.reviewCount > 1 ? 's' : ''})
+              </LinkWithLoading>
+            ) : productData.rating > 0 ? (
+              <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400">
+                (Aucun avis)
+              </span>
+            ) : null}
           </div>
         )}
 

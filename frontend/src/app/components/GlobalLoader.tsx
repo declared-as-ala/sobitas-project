@@ -1,11 +1,12 @@
 'use client';
 
 import { motion, AnimatePresence } from 'motion/react';
-import { Loader2 } from 'lucide-react';
+import Image from 'next/image';
 import { useLoading } from '@/contexts/LoadingContext';
+import { getStorageUrl } from '@/services/api';
 
 export function GlobalLoader() {
-  const { isLoading, loadingMessage } = useLoading();
+  const { isLoading } = useLoading();
 
   return (
     <AnimatePresence>
@@ -14,31 +15,40 @@ export function GlobalLoader() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className="fixed inset-0 bg-black/50 dark:bg-black/70 z-[9999] flex items-center justify-center"
+          transition={{ duration: 0.15 }}
+          className="fixed inset-0 bg-black/40 dark:bg-black/60 z-[9999] flex items-center justify-center"
           aria-busy="true"
           aria-live="polite"
           role="status"
         >
           <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
+            initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="bg-white dark:bg-gray-800 rounded-2xl p-6 sm:p-8 shadow-2xl flex flex-col items-center gap-4 min-w-[200px] sm:min-w-[250px]"
+            exit={{ scale: 0.95, opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="bg-white dark:bg-gray-800 rounded-xl px-4 py-3 shadow-lg flex items-center gap-3"
           >
-            <Loader2 className="h-10 w-10 sm:h-12 sm:w-12 text-red-600 dark:text-red-400 animate-spin" />
-            <p className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white text-center">
-              {loadingMessage}
-            </p>
-            <div className="w-full h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-              <motion.div
-                className="h-full bg-red-600 dark:bg-red-400 rounded-full"
-                initial={{ width: '0%' }}
-                animate={{ width: '100%' }}
-                transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                ease: 'linear',
+              }}
+              className="h-5 w-5 shrink-0"
+            >
+              <Image
+                src={getStorageUrl('coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp')}
+                alt="Loading"
+                width={20}
+                height={20}
+                className="h-5 w-5 object-contain"
+                priority
               />
-            </div>
+            </motion.div>
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
+              Chargement
+            </p>
           </motion.div>
         </motion.div>
       )}

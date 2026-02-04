@@ -49,26 +49,42 @@ class ApisController extends Controller
 
     public function accueil(){
         
-        $new_product =  Product::where('new_product', 1)->where('publier', 1)->select('id','slug','designation_fr','cover','new_product','best_seller','note', 'alt_cover' , 'description_cover' , 'prix','pack' , 'promo' , 'promo_expiration_date')->latest('created_at')->limit(8)->get();
-        $packs = Product::where('pack', 1)->where('publier', 1)->select('id','slug','designation_fr','cover','new_product','best_seller','note', 'alt_cover' , 'description_cover' , 'prix','pack' , 'promo' , 'promo_expiration_date')->latest('created_at')->limit(4)->get();
+        $new_product =  Product::where('new_product', 1)->where('publier', 1)->select('id','slug','designation_fr','cover','new_product','best_seller','note', 'alt_cover' , 'description_cover' , 'prix','pack' , 'promo' , 'promo_expiration_date')->withCount(['reviews' => function ($query) {
+            $query->where('publier', 1);
+        }])->latest('created_at')->limit(8)->get();
+        $packs = Product::where('pack', 1)->where('publier', 1)->select('id','slug','designation_fr','cover','new_product','best_seller','note', 'alt_cover' , 'description_cover' , 'prix','pack' , 'promo' , 'promo_expiration_date')->withCount(['reviews' => function ($query) {
+            $query->where('publier', 1);
+        }])->latest('created_at')->limit(4)->get();
         $last_articles = Article::where('publier', 1)->latest('created_at')->select('id', 'slug' , 'designation_fr' , 'cover' , 'created_at')->limit(4)->get();
-        $ventes_flash = Product::whereNotNull('promo')->where('publier', 1)->whereDate('promo_expiration_date', '>', Carbon::now())->select('id','slug','designation_fr','cover','new_product','best_seller','note', 'alt_cover' , 'description_cover' , 'prix','pack' , 'promo' , 'promo_expiration_date')->get();
+        $ventes_flash = Product::whereNotNull('promo')->where('publier', 1)->whereDate('promo_expiration_date', '>', Carbon::now())->select('id','slug','designation_fr','cover','new_product','best_seller','note', 'alt_cover' , 'description_cover' , 'prix','pack' , 'promo' , 'promo_expiration_date')->withCount(['reviews' => function ($query) {
+            $query->where('publier', 1);
+        }])->get();
         $categories = Categ::select('id','cover', 'slug' , 'designation_fr')->with(['sous_categories' => function ($query) {
             $query->select('id','slug' , 'designation_fr' , 'categorie_id');
         }])->get();
-        $best_sellers = Product::where('best_seller', 1)->where('publier', 1)->select('id','slug','designation_fr','cover','new_product','best_seller','note', 'alt_cover' , 'description_cover' , 'prix','pack' , 'promo' , 'promo_expiration_date')->latest('created_at')->limit(4)->get();
+        $best_sellers = Product::where('best_seller', 1)->where('publier', 1)->select('id','slug','designation_fr','cover','new_product','best_seller','note', 'alt_cover' , 'description_cover' , 'prix','pack' , 'promo' , 'promo_expiration_date')->withCount(['reviews' => function ($query) {
+            $query->where('publier', 1);
+        }])->latest('created_at')->limit(4)->get();
         return [ 'categories' =>  $categories,'last_articles'=> $last_articles , 'ventes_flash'=> $ventes_flash ,'new_product' => $new_product, 'packs' => $packs, 'best_sellers' => $best_sellers];
 
     }
 
     public function home(){
         
-        $new_product =  Product::where('new_product', 1)->where('publier', 1)->select('id','slug','designation_fr','cover','new_product','best_seller','note', 'alt_cover' , 'description_cover' , 'prix','pack' , 'promo' , 'promo_expiration_date')->latest('created_at')->limit(8)->get();
-        $packs = Product::where('pack', 1)->where('publier', 1)->select('id','slug','designation_fr','cover','new_product','best_seller','note', 'alt_cover' , 'description_cover' , 'prix','pack' , 'promo' , 'promo_expiration_date')->latest('created_at')->limit(4)->get();
+        $new_product =  Product::where('new_product', 1)->where('publier', 1)->select('id','slug','designation_fr','cover','new_product','best_seller','note', 'alt_cover' , 'description_cover' , 'prix','pack' , 'promo' , 'promo_expiration_date')->withCount(['reviews' => function ($query) {
+            $query->where('publier', 1);
+        }])->latest('created_at')->limit(8)->get();
+        $packs = Product::where('pack', 1)->where('publier', 1)->select('id','slug','designation_fr','cover','new_product','best_seller','note', 'alt_cover' , 'description_cover' , 'prix','pack' , 'promo' , 'promo_expiration_date')->withCount(['reviews' => function ($query) {
+            $query->where('publier', 1);
+        }])->latest('created_at')->limit(4)->get();
         $last_articles = Article::where('publier', 1)->latest('created_at')->select('id', 'slug' , 'designation_fr' , 'cover' , 'created_at')->limit(4)->get();
-        $ventes_flash = Product::whereNotNull('promo')->where('publier', 1)->whereDate('promo_expiration_date', '>', Carbon::now())->select('id','slug','designation_fr','cover','new_product','best_seller','note', 'alt_cover' , 'description_cover' , 'prix','pack' , 'promo' , 'promo_expiration_date')->get();
+        $ventes_flash = Product::whereNotNull('promo')->where('publier', 1)->whereDate('promo_expiration_date', '>', Carbon::now())->select('id','slug','designation_fr','cover','new_product','best_seller','note', 'alt_cover' , 'description_cover' , 'prix','pack' , 'promo' , 'promo_expiration_date')->withCount(['reviews' => function ($query) {
+            $query->where('publier', 1);
+        }])->get();
         
-        $best_sellers = Product::where('best_seller', 1)->where('publier', 1)->select('id','slug','designation_fr','cover','new_product','best_seller','note', 'alt_cover' , 'description_cover' , 'prix','pack' , 'promo' , 'promo_expiration_date')->latest('created_at')->limit(4)->get();
+        $best_sellers = Product::where('best_seller', 1)->where('publier', 1)->select('id','slug','designation_fr','cover','new_product','best_seller','note', 'alt_cover' , 'description_cover' , 'prix','pack' , 'promo' , 'promo_expiration_date')->withCount(['reviews' => function ($query) {
+            $query->where('publier', 1);
+        }])->latest('created_at')->limit(4)->get();
         return [ 'last_articles'=> $last_articles , 'ventes_flash'=> $ventes_flash ,'new_product' => $new_product, 'packs' => $packs, 'best_sellers' => $best_sellers];
 
     }
@@ -94,15 +110,23 @@ class ApisController extends Controller
 
     public function latestProducts()
     {
-        $new_product =  Product::where('new_product', 1)->where('publier', 1)->select('id','slug','designation_fr','cover','new_product','best_seller','note', 'alt_cover' , 'description_cover' , 'prix','pack' , 'promo' , 'promo_expiration_date')->latest('created_at')->limit(8)->get();
-        $packs = Product::where('pack', 1)->where('publier', 1)->select('id','slug','designation_fr','cover','new_product','best_seller','note', 'alt_cover' , 'description_cover' , 'prix','pack' , 'promo' , 'promo_expiration_date')->latest('created_at')->limit(4)->get();
-        $best_sellers = Product::where('best_seller', 1)->where('publier', 1)->select('id','slug','designation_fr','cover','new_product','best_seller','note', 'alt_cover' , 'description_cover' , 'prix','pack' , 'promo' , 'promo_expiration_date')->latest('created_at')->limit(4)->get();
+        $new_product =  Product::where('new_product', 1)->where('publier', 1)->select('id','slug','designation_fr','cover','new_product','best_seller','note', 'alt_cover' , 'description_cover' , 'prix','pack' , 'promo' , 'promo_expiration_date')->withCount(['reviews' => function ($query) {
+            $query->where('publier', 1);
+        }])->latest('created_at')->limit(8)->get();
+        $packs = Product::where('pack', 1)->where('publier', 1)->select('id','slug','designation_fr','cover','new_product','best_seller','note', 'alt_cover' , 'description_cover' , 'prix','pack' , 'promo' , 'promo_expiration_date')->withCount(['reviews' => function ($query) {
+            $query->where('publier', 1);
+        }])->latest('created_at')->limit(4)->get();
+        $best_sellers = Product::where('best_seller', 1)->where('publier', 1)->select('id','slug','designation_fr','cover','new_product','best_seller','note', 'alt_cover' , 'description_cover' , 'prix','pack' , 'promo' , 'promo_expiration_date')->withCount(['reviews' => function ($query) {
+            $query->where('publier', 1);
+        }])->latest('created_at')->limit(4)->get();
         return ['new_product' => $new_product, 'packs' => $packs, 'best_sellers' => $best_sellers];
     }
 
     public function latestPacks()
     {
-        return Product::where('pack', 1)->where('publier', 1)->select('id','slug','designation_fr','cover','new_product','best_seller','note', 'alt_cover' , 'description_cover' , 'prix','pack' , 'promo' , 'promo_expiration_date')->latest('created_at')->limit(4)->get();
+        return Product::where('pack', 1)->where('publier', 1)->select('id','slug','designation_fr','cover','new_product','best_seller','note', 'alt_cover' , 'description_cover' , 'prix','pack' , 'promo' , 'promo_expiration_date')->withCount(['reviews' => function ($query) {
+            $query->where('publier', 1);
+        }])->latest('created_at')->limit(4)->get();
     }
 
     public function productDetails($slug)
@@ -117,7 +141,9 @@ class ApisController extends Controller
 
     public function allProducts()
     {
-        $products =  Product::where('publier', 1)->with('aromes')->with('tags')->get();
+        $products =  Product::where('publier', 1)->with('aromes')->with('tags')->withCount(['reviews' => function ($query) {
+            $query->where('publier', 1);
+        }])->get();
         $brands = Brand::whereIn('id', $products->pluck('brand_id'))->get();
         $categories = Categ::all();
         return ['products' => $products, 'brands' => $brands, 'categories' => $categories];
@@ -140,6 +166,9 @@ class ApisController extends Controller
             ->whereIn('sous_categorie_id', $sous_categories->pluck('id'))
             ->with('aromes')
             ->with('tags')
+            ->withCount(['reviews' => function ($query) {
+                $query->where('publier', 1);
+            }])
             ->get();
 
         $brands = Brand::whereIn('id', $products->pluck('brand_id'))->get();
@@ -158,7 +187,9 @@ class ApisController extends Controller
         $brand = Brand::find($brand_id);
         $categories = Categ::all();
         $products = Product::where('brand_id', $brand_id)->where('publier', 1)
-            ->with('aromes')->with('tags')->get();
+            ->with('aromes')->with('tags')->withCount(['reviews' => function ($query) {
+                $query->where('publier', 1);
+            }])->get();
         $brands = Brand::all();
         return ['categories' => $categories, 'products' => $products, 'brands' => $brands, 'brand' => $brand];
     }
@@ -167,7 +198,9 @@ class ApisController extends Controller
     {
         $sous_category = SousCategory::where('slug' ,$slug)->first();
         $products = Product::where('sous_categorie_id', @$sous_category->id)->where('publier', 1)
-            ->with('aromes')->with('tags')->get();
+            ->with('aromes')->with('tags')->withCount(['reviews' => function ($query) {
+                $query->where('publier', 1);
+            }])->get();
         $brands = Brand::whereIn('id', $products->pluck('brand_id'))->get();
 
         $sous_categories = SousCategory::where('categorie_id', @$sous_category->categorie_id)->get();
@@ -178,7 +211,9 @@ class ApisController extends Controller
     public function searchProduct($text)
     {
         $products = Product::where('designation_fr', 'LIKE', '%' . $text . '%')->where('publier', 1)
-            ->with('aromes')->with('tags')->get();
+            ->with('aromes')->with('tags')->withCount(['reviews' => function ($query) {
+                $query->where('publier', 1);
+            }])->get();
         $brands = Brand::whereIn('id', $products->pluck('brand_id'))->get();
 
         return ['products' => $products, 'brands' => $brands];
@@ -192,11 +227,17 @@ class ApisController extends Controller
             $products = Product::where('sous_categorie_id', @$sous_category->id)->where('publier', 1)
             ->where('designation_fr', 'LIKE', '%' . $text . '%')
             ->with('aromes')->with('tags')
+            ->withCount(['reviews' => function ($query) {
+                $query->where('publier', 1);
+            }])
             ->get();
         }else{
             $products = Product::where('publier', 1)
             ->where('designation_fr', 'LIKE', '%' . $text . '%')
             ->with('aromes')->with('tags')
+            ->withCount(['reviews' => function ($query) {
+                $query->where('publier', 1);
+            }])
             ->get();
         }
        
@@ -240,13 +281,17 @@ class ApisController extends Controller
     }
     public function packs()
     {
-        return Product::where('pack', 1)->where('publier', 1)->latest('created_at')->select('id','slug','designation_fr','cover','new_product','best_seller','note', 'alt_cover' , 'description_cover' , 'prix','pack' , 'promo' , 'promo_expiration_date')->get();
+        return Product::where('pack', 1)->where('publier', 1)->latest('created_at')->select('id','slug','designation_fr','cover','new_product','best_seller','note', 'alt_cover' , 'description_cover' , 'prix','pack' , 'promo' , 'promo_expiration_date')->withCount(['reviews' => function ($query) {
+            $query->where('publier', 1);
+        }])->get();
     }
 
 
     public function flash()
     {
-        return  Product::whereNotNull('promo')->where('publier', 1)->whereDate('promo_expiration_date', '>', Carbon::now())->select('id','slug','designation_fr','cover','new_product','best_seller','note', 'alt_cover' , 'description_cover' , 'prix','pack' , 'promo' , 'promo_expiration_date')->get();
+        return  Product::whereNotNull('promo')->where('publier', 1)->whereDate('promo_expiration_date', '>', Carbon::now())->select('id','slug','designation_fr','cover','new_product','best_seller','note', 'alt_cover' , 'description_cover' , 'prix','pack' , 'promo' , 'promo_expiration_date')->withCount(['reviews' => function ($query) {
+            $query->where('publier', 1);
+        }])->get();
     }
 
     public function media()
@@ -314,7 +359,17 @@ class ApisController extends Controller
             'details'=>$details
         ];
 
-        Mail::to('wissemdebech@gmail.com')->send(new SoumissionMail($data));
+        // Try to send email, but don't fail the request if it fails
+        try {
+            Mail::to('wissemdebech@gmail.com')->send(new SoumissionMail($data));
+        } catch (\Exception $e) {
+            // Log the error but don't fail the request
+            \Illuminate\Support\Facades\Log::error('Failed to send order confirmation email', [
+                'commande_id' => $commande->id ?? 'unknown',
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
 
 
 
@@ -323,7 +378,9 @@ class ApisController extends Controller
     public function similar_products($sous_categorie_id)
     {
         $sous_category = SousCategory::find($sous_categorie_id);
-        $products = Product::where('sous_categorie_id', $sous_category->id)->where('publier', 1)->where('rupture', 1)->select('slug','designation_fr','cover','new_product','best_seller','note', 'alt_cover' , 'description_cover' , 'prix','pack' , 'promo' , 'promo_expiration_date')->limit(4)->get();
+        $products = Product::where('sous_categorie_id', $sous_category->id)->where('publier', 1)->where('rupture', 1)->select('slug','designation_fr','cover','new_product','best_seller','note', 'alt_cover' , 'description_cover' , 'prix','pack' , 'promo' , 'promo_expiration_date')->withCount(['reviews' => function ($query) {
+            $query->where('publier', 1);
+        }])->limit(4)->get();
 
 
 
@@ -335,7 +392,9 @@ class ApisController extends Controller
                 $products2 = Product::where('publier', 1)->where('rupture', 1)->limit(4 - $products->count())
                     ->whereHas('sous_categorie', function ($query) use ($categ_id) {
                         $query->where('categorie_id', $categ_id);
-                    })->get();
+                    })->withCount(['reviews' => function ($query) {
+                        $query->where('publier', 1);
+                    }])->get();
 
 
                 $products = $products->merge($products2);

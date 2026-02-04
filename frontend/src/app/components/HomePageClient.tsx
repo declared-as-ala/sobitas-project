@@ -83,6 +83,7 @@ export function HomePageClient({ accueil, slides }: HomePageClientProps) {
     new_product: product.new_product,
     best_seller: product.best_seller,
     note: product.note,
+    reviews_count: (product as any).reviews_count ?? null,
   }), []);
 
   const newProducts = useMemo(() =>

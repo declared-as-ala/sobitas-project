@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Flame, Zap, TrendingUp, ArrowRight } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
+import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 
 const entryPaths = [
   {
@@ -62,7 +63,7 @@ export function SmartEntryPaths() {
               const Icon = path.icon;
               return (
                 <article key={path.id} className="group relative flex-shrink-0 w-[85vw] snap-start">
-                  <Link href={path.link} aria-label={`Découvrir les produits pour ${path.title}`}>
+                  <LinkWithLoading href={path.link} aria-label={`Découvrir les produits pour ${path.title}`} loadingMessage={`Chargement de ${path.title}...`}>
                     <div className={`relative h-full bg-gradient-to-br ${path.bgGradient} rounded-xl overflow-hidden shadow-lg border border-gray-200 dark:border-gray-800 min-h-[280px]`}>
                       <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900" />
                       <div className="relative p-4 h-full flex flex-col">
@@ -84,7 +85,7 @@ export function SmartEntryPaths() {
                         </Button>
                       </div>
                     </div>
-                  </Link>
+                  </LinkWithLoading>
                 </article>
               );
             })}
@@ -96,7 +97,7 @@ export function SmartEntryPaths() {
               const Icon = path.icon;
               return (
                 <article key={path.id} className="group relative">
-                  <Link href={path.link} aria-label={`Découvrir les produits pour ${path.title}`}>
+                  <LinkWithLoading href={path.link} aria-label={`Découvrir les produits pour ${path.title}`} loadingMessage={`Chargement de ${path.title}...`}>
                     <div className={`relative h-full bg-gradient-to-br ${path.bgGradient} rounded-xl lg:rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 border border-gray-200 dark:border-gray-800 hover:-translate-y-1`}>
                       <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900" />
                       <div className="relative p-5 lg:p-6 h-full flex flex-col">
@@ -127,7 +128,7 @@ export function SmartEntryPaths() {
                         </div>
                       </div>
                     </div>
-                  </Link>
+                  </LinkWithLoading>
                 </article>
               );
             })}
