@@ -9,6 +9,10 @@ export const metadata: Metadata = {
   description: 'Guides, conseils prise de masse, choix whey et créatine. Tout pour la nutrition sportive en Tunisie.',
 };
 
+// Force dynamic rendering to ensure fresh data on every request
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 async function getBlogData() {
   try {
     const articles = await getAllArticles();

@@ -9,6 +9,10 @@ export const metadata: Metadata = {
   description: 'Découvrez tous nos produits en promotion. Protéines, créatine, compléments à prix réduits. Livraison en Tunisie.',
 };
 
+// Force dynamic rendering to ensure fresh data on every request
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function OffresPage() {
   let promoProducts: Product[] = [];
   try {

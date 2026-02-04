@@ -9,6 +9,10 @@ interface ProductPageProps {
   params: Promise<{ id: string }>;
 }
 
+// Force dynamic rendering to ensure fresh data on every request
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const { id } = await params;
   try {

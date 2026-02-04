@@ -8,6 +8,10 @@ interface ArticlePageProps {
   params: Promise<{ slug: string }>;
 }
 
+// Force dynamic rendering to ensure fresh data on every request
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 // Helper to strip HTML and get plain text
 function stripHtml(html: string): string {
   if (!html) return '';

@@ -7,6 +7,10 @@ export const metadata: Metadata = {
   description: 'Découvrez nos protéines, créatine, gainer et BCAA en Tunisie. Large choix, livraison rapide. Filtrez par marque et catégorie.',
 };
 
+// Force dynamic rendering to ensure fresh data on every request
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 async function getShopData() {
   try {
     const [productsData, categories, brands] = await Promise.all([
