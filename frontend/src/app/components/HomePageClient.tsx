@@ -51,11 +51,21 @@ const ScrollToTop = dynamic(() => import('@/app/components/ScrollToTop').then(mo
 });
 
 interface HomePageClientProps {
-  accueil: AccueilData;
+  accueil: AccueilData | null | undefined;
   slides: any[];
 }
 
 export function HomePageClient({ accueil, slides }: HomePageClientProps) {
+  // Provide default empty structure if accueil is undefined/null
+  const safeAccueil: AccueilData = accueil || {
+    categories: [],
+    last_articles: [],
+    ventes_flash: [],
+    new_product: [],
+    packs: [],
+    best_sellers: [],
+  };
+
   // Memoize product transformations to prevent unnecessary recalculations
   const transformProduct = useMemo(() => (product: Product) => ({
     id: product.id,
@@ -76,28 +86,28 @@ export function HomePageClient({ accueil, slides }: HomePageClientProps) {
   }), []);
 
   const newProducts = useMemo(() =>
-    (accueil.new_product || []).slice(0, 8).map(transformProduct),
-    [accueil.new_product, transformProduct]
+    (safeAccueil.new_product || []).slice(0, 8).map(transformProduct),
+    [safeAccueil.new_product, transformProduct]
   );
   const bestSellers = useMemo(() =>
-    (accueil.best_sellers || []).slice(0, 4).map(transformProduct),
-    [accueil.best_sellers, transformProduct]
+    (safeAccueil.best_sellers || []).slice(0, 4).map(transformProduct),
+    [safeAccueil.best_sellers, transformProduct]
   );
   const packs = useMemo(() =>
-    (accueil.packs || []).slice(0, 4).map(transformProduct),
-    [accueil.packs, transformProduct]
+    (safeAccueil.packs || []).slice(0, 4).map(transformProduct),
+    [safeAccueil.packs, transformProduct]
   );
   // Ventes flash: only products with promo + future promo_expiration_date (match backend logic)
   const flashSales = useMemo(() => {
     const now = new Date();
-    const valid = (accueil.ventes_flash || []).filter((p) => {
+    const valid = (safeAccueil.ventes_flash || []).filter((p) => {
       if (p.promo == null || p.promo === undefined) return false;
       if (!p.promo_expiration_date) return false;
       const exp = new Date(p.promo_expiration_date);
       return !isNaN(exp.getTime()) && exp.getTime() > now.getTime();
     });
     return valid.map(transformProduct);
-  }, [accueil.ventes_flash, transformProduct]);
+  }, [safeAccueil.ventes_flash, transformProduct]);
 
   return (
     <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-white dark:bg-gray-950">
@@ -110,10 +120,10 @@ export function HomePageClient({ accueil, slides }: HomePageClientProps) {
         <div style={{ minHeight: '200px' }}>
           <FeaturesSection />
         </div>
-        <CategoryGrid categories={accueil.categories || []} />
+        <CategoryGrid categories={safeAccueil.categories || []} />
 
         {/* Product sections – order: Nouveaux Produits → Meilleurs Ventes → Ventes Flash */}
-        {(accueil.new_product?.length ?? 0) > 0 && (
+        {(safeAccueil.new_product?.length ?? 0) > 0 && (
           <ProductSection
             id="products"
             title="Nouveaux Produits"
@@ -124,7 +134,7 @@ export function HomePageClient({ accueil, slides }: HomePageClientProps) {
           />
         )}
 
-        {(accueil.best_sellers?.length ?? 0) > 0 && (
+        {(safeAccueil.best_sellers?.length ?? 0) > 0 && (
           <ProductSection
             title="Meilleurs Ventes"
             subtitle="Les produits les plus populaires"
@@ -138,7 +148,7 @@ export function HomePageClient({ accueil, slides }: HomePageClientProps) {
           <VentesFlashSection products={flashSales as any} />
         )}
 
-        {(accueil.packs?.length ?? 0) > 0 && (
+        {(safeAccueil.packs?.length ?? 0) > 0 && (
           <ProductSection
             id="packs"
             title="Nos Packs"
@@ -155,7 +165,7 @@ export function HomePageClient({ accueil, slides }: HomePageClientProps) {
         </Suspense>
 
         <Suspense fallback={null}>
-          <BlogSection articles={accueil.last_articles || []} />
+          <BlogSection articles={safeAccueil.last_articles || []} />
         </Suspense>
 
         <Suspense fallback={null}>

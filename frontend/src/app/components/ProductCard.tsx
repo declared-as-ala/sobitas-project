@@ -37,6 +37,7 @@ interface ProductCardProps {
   badgeText?: string;
   variant?: 'default' | 'compact';
   showDescription?: boolean;
+  hideCountdown?: boolean;
 }
 
 function useProductCountdown(expirationDate: string | null | undefined): { days: number; hours: number; minutes: number; seconds: number; isExpired: boolean; isClient: boolean } {
@@ -79,7 +80,7 @@ function useProductCountdown(expirationDate: string | null | undefined): { days:
   return { days, hours, minutes, seconds, isExpired: false, isClient: true };
 }
 
-export const ProductCard = memo(function ProductCard({ product, showBadge, badgeText, variant = 'default', showDescription = false }: ProductCardProps) {
+export const ProductCard = memo(function ProductCard({ product, showBadge, badgeText, variant = 'default', showDescription = false, hideCountdown = false }: ProductCardProps) {
   const { addToCart } = useCart();
   const [isAdding, setIsAdding] = useState(false);
   
@@ -152,14 +153,14 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
         'border border-gray-200/90 dark:border-gray-700/80',
         'shadow-[0_2px_12px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_12px_rgba(0,0,0,0.2)]',
         'sm:shadow-md lg:shadow-lg',
-        'transition-[box-shadow,border-color] duration-200',
-        '[@media(hover:hover)]:lg:hover:shadow-xl [@media(hover:hover)]:lg:hover:border-red-500/30 [@media(hover:hover)]:lg:dark:hover:border-red-500/30',
+        'transition-[box-shadow,border-color,transform] duration-300',
+        '[@media(hover:hover)]:lg:hover:shadow-2xl [@media(hover:hover)]:lg:hover:border-red-500/40 [@media(hover:hover)]:lg:dark:hover:border-red-500/40 [@media(hover:hover)]:lg:hover:-translate-y-1',
       ].join(' ')}
     >
-      {/* Image + badges */}
-      <div className="relative aspect-square w-full flex-shrink-0 overflow-hidden bg-gray-100 dark:bg-gray-700 rounded-t-[14px] sm:rounded-t-xl lg:rounded-t-2xl">
-        {/* Countdown Timer - Top of product card */}
-        {product.promo_expiration_date && productData.promoPrice != null && !isExpired && (
+      {/* Image + badges - Larger on desktop */}
+      <div className="relative aspect-square w-full flex-shrink-0 overflow-hidden bg-gray-100 dark:bg-gray-700 rounded-t-[14px] sm:rounded-t-xl lg:rounded-t-2xl min-h-[200px] sm:min-h-[240px] md:min-h-[280px] lg:min-h-[320px]">
+        {/* Countdown Timer - Top of product card (hidden in flash sales section) */}
+        {!hideCountdown && product.promo_expiration_date && productData.promoPrice != null && !isExpired && isClient && (
           <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 z-20 bg-red-600/95 dark:bg-red-700/95 backdrop-blur-sm rounded-lg px-1.5 py-1 sm:px-2 sm:py-1.5 md:px-3 md:py-2 shadow-lg border border-red-500/30">
             <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2">
               <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-4 md:w-4 text-white shrink-0" aria-hidden="true" />
@@ -192,9 +193,9 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
               alt={productData.name}
               width={400}
               height={400}
-              className={`size-full object-contain transition-transform duration-300 ${isCompact ? 'p-1.5 sm:p-2' : 'p-2 sm:p-4'} [@media(hover:hover)]:lg:group-hover:scale-105`}
+              className={`size-full object-contain transition-transform duration-300 ${isCompact ? 'p-1.5 sm:p-2' : 'p-2 sm:p-4 md:p-5 lg:p-6'} [@media(hover:hover)]:lg:group-hover:scale-110 [@media(hover:hover)]:lg:transition-transform [@media(hover:hover)]:lg:duration-500`}
               loading="lazy"
-              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, (max-width: 1600px) 20vw, 20vw"
               quality={70}
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
@@ -268,9 +269,9 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
 
       {/* Content – flex-1 so CTA stays at bottom */}
       <div className="flex flex-col flex-1 min-h-0 p-3 sm:p-3 lg:p-4">
-        <Link href={`/products/${productData.slug || product.id}`} className="block mb-1">
+        <Link href={`/product/${productData.slug || product.id}`} className="block mb-1">
           <h3
-            className={`font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug ${isCompact ? 'text-[13px] sm:text-xs min-h-[2.25rem]' : 'text-sm sm:text-base min-h-[2.5rem] sm:min-h-0'}`}
+            className={`font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug transition-colors group-hover:text-red-600 dark:group-hover:text-red-400 ${isCompact ? 'text-[13px] sm:text-xs min-h-[2.25rem]' : 'text-sm sm:text-base md:text-lg min-h-[2.5rem] sm:min-h-0'}`}
           >
             {productData.name}
           </h3>
@@ -323,7 +324,7 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
               
               return (
                 <>
-                  <span className={`font-bold text-red-600 dark:text-red-400 tabular-nums ${isCompact ? 'text-sm' : 'text-base sm:text-lg'}`}>
+                  <span className={`font-bold text-red-600 dark:text-red-400 tabular-nums ${isCompact ? 'text-sm' : 'text-base sm:text-lg md:text-xl'}`}>
                     {displayPromoPrice} DT
                   </span>
                   <span
@@ -343,7 +344,7 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
             }
             
             return (
-              <span className={`font-bold text-gray-900 dark:text-white tabular-nums ${isCompact ? 'text-sm' : 'text-base sm:text-lg'}`}>
+              <span className={`font-bold text-gray-900 dark:text-white tabular-nums ${isCompact ? 'text-sm' : 'text-base sm:text-lg md:text-xl'}`}>
                 {productData.newPrice || productData.oldPrice} DT
               </span>
             );

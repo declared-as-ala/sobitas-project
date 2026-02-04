@@ -104,8 +104,41 @@ export const getStorageUrl = (path?: string): string => {
 
 // Homepage & Accueil
 export const getAccueil = async (): Promise<AccueilData> => {
-  const response = await api.get<AccueilData>('/accueil');
-  return response.data;
+  try {
+    const response = await api.get<AccueilData>('/accueil');
+    // Ensure response.data exists and has the expected structure
+    if (!response.data) {
+      console.warn('[getAccueil] API returned empty data, using defaults');
+      return {
+        categories: [],
+        last_articles: [],
+        ventes_flash: [],
+        new_product: [],
+        packs: [],
+        best_sellers: [],
+      };
+    }
+    // Ensure all required fields exist with defaults
+    return {
+      categories: response.data.categories || [],
+      last_articles: response.data.last_articles || [],
+      ventes_flash: response.data.ventes_flash || [],
+      new_product: response.data.new_product || [],
+      packs: response.data.packs || [],
+      best_sellers: response.data.best_sellers || [],
+    };
+  } catch (error) {
+    console.error('[getAccueil] API error:', error);
+    // Return empty structure on error
+    return {
+      categories: [],
+      last_articles: [],
+      ventes_flash: [],
+      new_product: [],
+      packs: [],
+      best_sellers: [],
+    };
+  }
 };
 
 export const getHome = async (): Promise<HomeData> => {
@@ -133,8 +166,32 @@ export const getCoordinates = async (): Promise<Coordinate> => {
 
 // Products
 export const getAllProducts = async (): Promise<{ products: Product[]; brands: Brand[]; categories: Category[] }> => {
-  const response = await api.get('/all_products');
-  return response.data;
+  try {
+    const response = await api.get('/all_products');
+    // Ensure response.data exists and has the expected structure
+    if (!response.data) {
+      console.warn('[getAllProducts] API returned empty data, using defaults');
+      return {
+        products: [],
+        brands: [],
+        categories: [],
+      };
+    }
+    // Ensure all required fields exist with defaults
+    return {
+      products: response.data.products || [],
+      brands: response.data.brands || [],
+      categories: response.data.categories || [],
+    };
+  } catch (error) {
+    console.error('[getAllProducts] API error:', error);
+    // Return empty structure on error
+    return {
+      products: [],
+      brands: [],
+      categories: [],
+    };
+  }
 };
 
 export const getProductDetails = async (slug: string, cacheBust?: boolean): Promise<Product> => {
@@ -143,8 +200,22 @@ export const getProductDetails = async (slug: string, cacheBust?: boolean): Prom
   const url = cacheBust
     ? `/product_details/${cleanSlug}?t=${Date.now()}`
     : `/product_details/${cleanSlug}`;
-  const response = await api.get<Product>(url);
-  return response.data;
+  try {
+    const response = await api.get<Product>(url);
+    if (!response.data || !response.data.id) {
+      console.warn(`Product "${cleanSlug}" not found in API response`);
+      throw new Error('Product not found');
+    }
+    return response.data;
+  } catch (error: any) {
+    // If 404, throw error so page can handle it with notFound()
+    if (error.response?.status === 404) {
+      console.warn(`Product "${cleanSlug}" not found (404)`);
+      throw error;
+    }
+    // Re-throw other errors
+    throw error;
+  }
 };
 
 export const getProductsByCategory = async (slug: string): Promise<{
@@ -155,18 +226,19 @@ export const getProductsByCategory = async (slug: string): Promise<{
 }> => {
   try {
     const response = await api.get(`/productsByCategoryId/${slug}`);
+    // Check if category exists in response
+    if (!response.data || !response.data.category || !response.data.category.id) {
+      console.warn(`Category "${slug}" not found in API response`);
+      throw new Error('Category not found');
+    }
     return response.data;
   } catch (error: any) {
-    // If 404, return empty data instead of throwing
+    // If 404, throw error so page can handle it with notFound()
     if (error.response?.status === 404) {
-      console.warn(`Category "${slug}" not found, returning empty results`);
-      return {
-        category: {} as Category,
-        sous_categories: [],
-        products: [],
-        brands: [],
-      };
+      console.warn(`Category "${slug}" not found (404)`);
+      throw error;
     }
+    // Re-throw other errors
     throw error;
   }
 };
@@ -179,18 +251,19 @@ export const getProductsBySubCategory = async (slug: string): Promise<{
 }> => {
   try {
     const response = await api.get(`/productsBySubCategoryId/${slug}`);
+    // Check if subcategory exists in response
+    if (!response.data || !response.data.sous_category || !response.data.sous_category.id) {
+      console.warn(`Subcategory "${slug}" not found in API response`);
+      throw new Error('Subcategory not found');
+    }
     return response.data;
   } catch (error: any) {
-    // If 404, return empty data instead of throwing
+    // If 404, throw error so page can handle it with notFound()
     if (error.response?.status === 404) {
-      console.warn(`Subcategory "${slug}" not found, returning empty results`);
-      return {
-        sous_category: null,
-        products: [],
-        brands: [],
-        sous_categories: [],
-      };
+      console.warn(`Subcategory "${slug}" not found (404)`);
+      throw error;
     }
+    // Re-throw other errors
     throw error;
   }
 };

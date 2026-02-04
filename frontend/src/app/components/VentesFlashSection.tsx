@@ -1,11 +1,11 @@
 'use client';
 
-import { memo, useMemo, useEffect } from 'react';
+import { memo, useMemo, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'motion/react';
 import { ProductCard } from './ProductCard';
 import { Button } from '@/app/components/ui/button';
-import { ArrowRight, Zap, Flame } from 'lucide-react';
+import { ArrowRight, Zap, Flame, Clock } from 'lucide-react';
 
 interface FlashProduct {
   id: number;
@@ -23,6 +23,53 @@ interface VentesFlashSectionProps {
 }
 
 export const VentesFlashSection = memo(function VentesFlashSection({ products }: VentesFlashSectionProps) {
+  // Find the earliest expiration date for the main countdown timer
+  const earliestExpiration = useMemo(() => {
+    const validDates = products
+      .map(p => p.promo_expiration_date)
+      .filter((date): date is string => !!date && new Date(date).getTime() > Date.now())
+      .map(date => new Date(date).getTime());
+    
+    if (validDates.length === 0) return null;
+    return new Date(Math.min(...validDates));
+  }, [products]);
+
+  // Real-time countdown timer state
+  const [now, setNow] = useState(() => new Date());
+  const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: false });
+
+  // Update countdown every second
+  useEffect(() => {
+    if (!earliestExpiration) {
+      setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true });
+      return;
+    }
+
+    const updateCountdown = () => {
+      const currentTime = new Date();
+      setNow(currentTime);
+      const diff = Math.max(0, earliestExpiration.getTime() - currentTime.getTime());
+      
+      if (diff <= 0) {
+        setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true });
+        return;
+      }
+
+      const days = Math.floor(diff / (24 * 60 * 60 * 1000));
+      const hours = Math.floor((diff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+      const minutes = Math.floor((diff % (60 * 60 * 1000)) / (60 * 1000));
+      const seconds = Math.floor((diff % (60 * 1000)) / 1000);
+
+      setCountdown({ days, hours, minutes, seconds, isExpired: false });
+    };
+
+    // Update immediately
+    updateCountdown();
+    // Then update every second
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, [earliestExpiration]);
+
   // Smart grid logic: 4 or fewer = one row, more than 4 = 4 per row
   const isFourOrLess = products.length <= 4;
   const firstRowProducts = products.slice(0, 4);
@@ -74,14 +121,39 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5 }}
-              className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4"
+              className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4 flex-wrap"
             >
-              <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-red-500 to-orange-500 shadow-lg">
-                <Flame className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-red-500 to-orange-500 shadow-lg">
+                  <Flame className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                </div>
+                <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-red-600 via-orange-600 to-red-600 dark:from-red-400 dark:via-orange-400 dark:to-red-400 bg-clip-text text-transparent animate-gradient">
+                  Ventes Flash
+                </h2>
               </div>
-              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-red-600 via-orange-600 to-red-600 dark:from-red-400 dark:via-orange-400 dark:to-red-400 bg-clip-text text-transparent animate-gradient">
-                Ventes Flash
-              </h2>
+              
+              {/* Single countdown timer next to title */}
+              {!countdown.isExpired && earliestExpiration && (
+                <div className="flex items-center gap-2 bg-red-600/95 dark:bg-red-700/95 backdrop-blur-sm rounded-lg px-3 py-2 sm:px-4 sm:py-2.5 md:px-5 md:py-3 shadow-lg border border-red-500/30">
+                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-white shrink-0" aria-hidden="true" />
+                  <div className="flex items-center gap-1.5 sm:gap-2 md:gap-2.5 text-white">
+                    {countdown.days > 0 && (
+                      <span className="text-xs sm:text-sm md:text-base font-bold tabular-nums whitespace-nowrap">
+                        {String(countdown.days).padStart(2, '0')}j
+                      </span>
+                    )}
+                    <span className="text-xs sm:text-sm md:text-base font-bold tabular-nums whitespace-nowrap">
+                      {String(countdown.hours).padStart(2, '0')}h
+                    </span>
+                    <span className="text-xs sm:text-sm md:text-base font-bold tabular-nums whitespace-nowrap">
+                      {String(countdown.minutes).padStart(2, '0')}m
+                    </span>
+                    <span className="text-xs sm:text-sm md:text-base font-bold tabular-nums whitespace-nowrap">
+                      {String(countdown.seconds).padStart(2, '0')}s
+                    </span>
+                  </div>
+                </div>
+              )}
             </motion.div>
             <motion.p
               initial={{ opacity: 0, y: 20 }}
@@ -135,6 +207,7 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
                   product={product as any}
                   showBadge
                   badgeText="Promo"
+                  hideCountdown={true}
                 />
               </motion.div>
             ))}
@@ -158,6 +231,7 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
                     product={product as any}
                     showBadge
                     badgeText="Promo"
+                    hideCountdown={true}
                   />
                 </motion.div>
               ))}

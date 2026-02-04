@@ -47,7 +47,22 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
   const [debouncedPriceRange, setDebouncedPriceRange] = useState<[number, number]>([0, 1000]);
   const [showFilters, setShowFilters] = useState(false);
   const [showFiltersDesktop, setShowFiltersDesktop] = useState(true);
-  const [products, setProducts] = useState<Product[]>(productsData.products || []);
+  
+  // Provide safe defaults if productsData is undefined
+  const safeProductsData = productsData || {
+    products: [],
+    brands: [],
+    categories: [],
+  };
+  
+  // Initialize products from props - if initialCategory is provided, products are already filtered from server
+  const [products, setProducts] = useState<Product[]>(() => {
+    // If we have initialCategory, products are already filtered from server, use them directly
+    if (initialCategory) {
+      return safeProductsData.products || [];
+    }
+    return safeProductsData.products || [];
+  });
   const [isSearching, setIsSearching] = useState(false);
   const [inStockOnly, setInStockOnly] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -95,12 +110,12 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
     } else {
       setSearchQuery('');
     }
-  }, [searchParams]);
+  }, [searchParams, initialCategory, initialBrand]);
 
   // Get unique subcategories from ALL products (not just filtered) for proper mapping
   const subCategories = useMemo(() => {
     const subs = new Map<string, { id: number; name: string; slug: string; categoryId?: number }>();
-    const allProducts = productsData.products || [];
+    const allProducts = safeProductsData.products || [];
     allProducts.forEach(p => {
       if (p.sous_categorie) {
         const key = p.sous_categorie.id.toString();
@@ -115,7 +130,7 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
       }
     });
     return Array.from(subs.values());
-  }, [productsData.products]);
+  }, [safeProductsData.products]);
 
   // Helper to normalize strings for comparison (remove accents, lowercase, remove extra spaces)
   const normalizeString = (str: string): string => {
@@ -186,7 +201,7 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
 
   // Calculate filter counts
   const filterCounts = useMemo(() => {
-    const allProducts = productsData.products || [];
+    const allProducts = safeProductsData.products || [];
     const categoryCounts = new Map<string, number>();
     const brandCounts = new Map<number, number>();
 
@@ -203,7 +218,7 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
     });
 
     return { categoryCounts, brandCounts };
-  }, [productsData.products]);
+  }, [safeProductsData.products]);
 
   // Get applied filters as chips
   const appliedFilters = useMemo(() => {
@@ -217,7 +232,7 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
     });
 
     selectedBrands.forEach(id => {
-      const brand = brands.find(b => b.id === id) || productsData.brands.find(b => b.id === id);
+      const brand = brands.find(b => b.id === id) || safeProductsData.brands.find(b => b.id === id);
       if (brand) {
         filters.push({ type: 'brand', label: brand.designation_fr, value: id });
       }
@@ -235,7 +250,7 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
     // Users can still see it in the filter panel
 
     return filters;
-  }, [selectedCategories, selectedBrands, priceRange, priceBounds, categories, brands, productsData.brands]);
+  }, [selectedCategories, selectedBrands, priceRange, priceBounds, categories, brands, safeProductsData.brands]);
 
   // Remove a specific filter
   const removeFilter = (type: 'category' | 'brand' | 'price' | 'stock', value: string | number) => {
@@ -270,6 +285,25 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
 
   // Handle filtering (search, category, brand)
   useEffect(() => {
+    // If initialCategory is provided and matches selected category, products are already filtered from server
+    // Only re-filter if user manually changes filters (not from initialCategory)
+    const isInitialCategoryLoad = initialCategory && 
+                                   selectedCategories.length > 0 && 
+                                   selectedCategories[0] === initialCategory &&
+                                   !searchQuery.trim() && 
+                                   selectedBrands.length === 0;
+
+    // If this is the initial load with a category from server, use products from props
+    if (isInitialCategoryLoad) {
+      // Products are already filtered from server, just ensure they're set
+      if (safeProductsData.products) {
+        setProducts(safeProductsData.products);
+      }
+      setIsSearching(false);
+      setCurrentBrand(null);
+      return;
+    }
+
     // If we have a simple brand/category filter, apply it immediately without debounce
     // If we have a text search, use debounce
 
@@ -279,12 +313,9 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
         setCurrentBrand(null);
         setIsSearching(true);
         try {
-          // Client-side search on all products first (fast)
-          const allProducts = productsData.products || [];
-          const foundProducts = allProducts.filter(product => matchesSearch(product, searchQuery));
-
-          // Optional: You could still fetch from backend if needed, but client-side is often enough if data is preloaded
-          // For now, we stick to client-side + fallback strategy from before if desired, or simpler:
+          // When searching, search within current filtered products or all products
+          const baseProducts = products.length > 0 ? products : (safeProductsData.products || []);
+          const foundProducts = baseProducts.filter(product => matchesSearch(product, searchQuery));
           setProducts(foundProducts);
         } catch (error) {
           console.error('Search error:', error);
@@ -303,54 +334,48 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
           const categoryParam = selectedCategories[0];
           let productsFound = false;
           
-          // IMPORTANT: Always try API first for accurate filtering
-          // Try as subcategory slug first (most common case from dropdown)
+          // IMPORTANT: Try category API first (since categories from home page are main categories)
+          // This is more efficient and matches the expected behavior
           try {
-            const subResult = await getProductsBySubCategory(categoryParam);
-            if (subResult.products !== undefined) {
-              // API returned a response (even if empty array)
-              setProducts(subResult.products);
+            const catResult = await getProductsByCategory(categoryParam);
+            if (catResult.products !== undefined && catResult.category) {
+              // API returned a valid response with category data
+              setProducts(catResult.products);
               productsFound = true;
+              console.log(`[ShopPageClient] Found ${catResult.products.length} products for category "${categoryParam}"`);
             }
           } catch (e: any) {
-            // Subcategory API failed (404 or other error), continue to try category
+            // Category API failed, try as subcategory
             if (e?.response?.status !== 404) {
-              console.log(`Subcategory API error for "${categoryParam}":`, e?.response?.status || e?.message);
+              console.log(`Category API error for "${categoryParam}":`, e?.response?.status || e?.message);
             }
           }
 
-          // Try as category slug (if subcategory didn't work)
+          // Try as subcategory slug (if category didn't work)
           if (!productsFound) {
             try {
-              const catResult = await getProductsByCategory(categoryParam);
-              if (catResult.products !== undefined) {
-                // API returned a response (even if empty array)
-                setProducts(catResult.products);
+              const subResult = await getProductsBySubCategory(categoryParam);
+              if (subResult.products !== undefined && subResult.sous_category) {
+                // API returned a valid response with subcategory data
+                setProducts(subResult.products);
                 productsFound = true;
+                console.log(`[ShopPageClient] Found ${subResult.products.length} products for subcategory "${categoryParam}"`);
               }
             } catch (e: any) {
-              // Category API also failed
+              // Subcategory API also failed
               if (e?.response?.status !== 404) {
-                console.log(`Category API error for "${categoryParam}":`, e?.response?.status || e?.message);
+                console.log(`Subcategory API error for "${categoryParam}":`, e?.response?.status || e?.message);
               }
             }
           }
 
           // Final fallback: try client-side filtering only if API completely failed
           if (!productsFound) {
-            const allProducts = productsData.products || [];
+            console.warn(`[ShopPageClient] API failed for "${categoryParam}", trying client-side fallback`);
+            const allProducts = safeProductsData.products || [];
             const pParam = normalizeString(categoryParam);
 
-            // Try to match as subcategory
-            const filteredBySubCategory = allProducts.filter(p =>
-              p.sous_categorie && (
-                normalizeString(p.sous_categorie.designation_fr) === pParam ||
-                p.sous_categorie.slug === categoryParam ||
-                p.sous_categorie.slug === nameToSlug(categoryParam)
-              )
-            );
-
-            // Try to match as category
+            // Try to match as category first (more common from home page)
             const filteredByCategory = allProducts.filter(p => {
               if (p.sous_categorie?.categorie) {
                 const cat = p.sous_categorie.categorie;
@@ -363,8 +388,18 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
               return false;
             });
 
+            // Try to match as subcategory
+            const filteredBySubCategory = allProducts.filter(p =>
+              p.sous_categorie && (
+                normalizeString(p.sous_categorie.designation_fr) === pParam ||
+                p.sous_categorie.slug === categoryParam ||
+                p.sous_categorie.slug === nameToSlug(categoryParam)
+              )
+            );
+
             // Use whichever has results
-            const filtered = filteredBySubCategory.length > 0 ? filteredBySubCategory : filteredByCategory;
+            const filtered = filteredByCategory.length > 0 ? filteredByCategory : filteredBySubCategory;
+            console.log(`[ShopPageClient] Client-side fallback found ${filtered.length} products`);
             setProducts(filtered);
           }
 
@@ -383,11 +418,11 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
         const brandId = selectedBrands[0];
 
         // Find brand info from props (temporary, will be replaced by API data)
-        const brandInfo = brands.find(b => b.id === brandId) || productsData.brands.find(b => b.id === brandId);
+        const brandInfo = brands.find(b => b.id === brandId) || safeProductsData.brands.find(b => b.id === brandId);
         setCurrentBrand(brandInfo || null);
 
         // Filter client-side first for fast display
-        const allProducts = productsData.products || [];
+        const allProducts = safeProductsData.products || [];
         const filtered = allProducts.filter(p => p.brand_id === brandId);
 
         // Always fetch brand data from API to get full info including description
@@ -432,9 +467,11 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
         return;
       }
 
-      // 4. No Filters
-      setProducts(productsData.products || []);
-      setCurrentBrand(null);
+      // 4. No Filters - only reset if not coming from a category page
+      if (!initialCategory) {
+        setProducts(safeProductsData.products || []);
+        setCurrentBrand(null);
+      }
     };
 
     if (searchQuery.trim()) {
@@ -445,7 +482,7 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
       // Immediate for others
       applyFilters();
     }
-  }, [searchQuery, selectedCategories, selectedBrands, productsData.products, brands]);
+  }, [searchQuery, selectedCategories, selectedBrands, safeProductsData.products, brands, initialCategory]);
 
   // Filter products locally (for price and additional filters)
   const filteredProducts = useMemo(() => {
@@ -512,7 +549,7 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
     setPriceRange([priceBounds.min, priceBounds.max]);
     setInStockOnly(false);
     setCurrentPage(1);
-    setProducts(productsData.products || []);
+    setProducts(safeProductsData.products || []);
     router.push('/shop');
   };
 
@@ -526,14 +563,14 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
     <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
       <Header />
 
-      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 lg:py-12">
+      <main className="w-full mx-auto px-4 sm:px-6 max-w-[1024px] md:max-w-[1280px] lg:max-w-[1400px] xl:max-w-[1600px] py-4 sm:py-8 lg:py-12">
         {/* Breadcrumbs */}
         {(() => {
           const breadcrumbItems = [];
           breadcrumbItems.push({ label: 'Boutique', href: '/shop' });
           
           if (initialBrand) {
-            const brand = brands.find(b => b.id === initialBrand) || productsData.brands.find(b => b.id === initialBrand);
+            const brand = brands.find(b => b.id === initialBrand) || safeProductsData.brands.find(b => b.id === initialBrand);
             if (brand) {
               breadcrumbItems.push({ label: brand.designation_fr });
             }
@@ -623,13 +660,11 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
             {currentBrand ? `Produits ${currentBrand.designation_fr}` : 'Tous nos produits'}
           </h1>
           <p className="text-sm sm:text-lg text-gray-600 dark:text-gray-400">
-            {isSearching ? (
-              'Recherche en cours...'
-            ) : totalPages > 1 ? (
+            {!isSearching && (totalPages > 1 ? (
               `Affichage ${(currentPage - 1) * PRODUCTS_PER_PAGE + 1}-${Math.min(currentPage * PRODUCTS_PER_PAGE, filteredProducts.length)} sur ${filteredProducts.length} produit${filteredProducts.length > 1 ? 's' : ''}`
             ) : (
               `${filteredProducts.length} produit${filteredProducts.length > 1 ? 's' : ''} trouvé${filteredProducts.length > 1 ? 's' : ''}`
-            )}
+            ))}
           </p>
         </motion.div>
 
@@ -1045,9 +1080,16 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
           <div className="flex-1 min-w-0">
             {isSearching ? (
               <div className="text-center py-12">
-                <p className="text-gray-500 dark:text-gray-400 text-lg">
-                  Recherche en cours...
-                </p>
+                <div className="flex items-center justify-center">
+                  <Image
+                    src={getStorageUrl('coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp')}
+                    alt="SOBITAS Logo"
+                    width={60}
+                    height={60}
+                    className="h-12 w-12 md:h-16 md:w-16 animate-spin object-contain"
+                    unoptimized
+                  />
+                </div>
               </div>
             ) : filteredProducts.length === 0 ? (
               <div className="text-center py-12">
@@ -1064,7 +1106,7 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-4 lg:gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-5 lg:gap-6 xl:gap-7">
                   {paginatedProducts.map(product => (
                     <ProductCard
                       key={product.id}
