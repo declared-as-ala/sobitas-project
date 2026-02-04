@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import { getCategories, getProductsByCategory, getProductsBySubCategory, getAllBrands } from '@/services/api';
 import { ShopPageClient } from '../ShopPageClient';
 import type { Category } from '@/types';
@@ -82,6 +82,8 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
   const { category: categorySlug } = await params;
   const { page } = await searchParams;
 
+  console.log(`[CategoryPage] Resolving slug: "${categorySlug}"`);
+
   try {
     // Try as category first
     let categoryData;
@@ -91,26 +93,49 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
     let isSubcategory = false;
 
     try {
+      console.log(`[CategoryPage] Trying as category: "${categorySlug}"`);
       const result = await getProductsByCategory(categorySlug);
+      if (!result || !result.category || !result.category.designation_fr) {
+        console.warn(`[CategoryPage] Category "${categorySlug}" returned empty data`);
+        notFound();
+      }
       categoryData = result.category;
       productsData = { products: result.products, brands: result.brands, categories: [] };
       categories = await getCategories();
       brands = result.brands;
-    } catch {
-      // Try as subcategory
-      try {
-        const result = await getProductsBySubCategory(categorySlug);
-        categoryData = result.sous_category;
-        productsData = { products: result.products, brands: result.brands, categories: [] };
-        categories = await getCategories();
-        brands = result.brands;
-        isSubcategory = true;
-      } catch {
-        notFound();
+      console.log(`[CategoryPage] Found category: "${categoryData.designation_fr}"`);
+    } catch (categoryError: any) {
+      // If it's a 404, try as subcategory
+      if (categoryError?.response?.status === 404 || categoryError?.message === 'Category not found') {
+        console.log(`[CategoryPage] Category "${categorySlug}" not found, trying as subcategory...`);
+        try {
+          const result = await getProductsBySubCategory(categorySlug);
+          if (!result || !result.sous_category || !result.sous_category.designation_fr) {
+            console.warn(`[CategoryPage] Subcategory "${categorySlug}" returned empty data`);
+            notFound();
+          }
+          categoryData = result.sous_category;
+          productsData = { products: result.products, brands: result.brands, categories: [] };
+          categories = await getCategories();
+          brands = result.brands;
+          isSubcategory = true;
+          console.log(`[CategoryPage] Found subcategory: "${categoryData.designation_fr}"`);
+        } catch (subcategoryError: any) {
+          console.error(`[CategoryPage] Both category and subcategory lookup failed for "${categorySlug}":`, {
+            categoryError: categoryError?.response?.status || categoryError?.message,
+            subcategoryError: subcategoryError?.response?.status || subcategoryError?.message,
+          });
+          notFound();
+        }
+      } else {
+        // Other error, re-throw
+        console.error(`[CategoryPage] Error fetching category "${categorySlug}":`, categoryError);
+        throw categoryError;
       }
     }
 
     if (!categoryData || !categoryData.designation_fr) {
+      console.warn(`[CategoryPage] Category data is invalid for "${categorySlug}"`);
       notFound();
     }
 
@@ -157,7 +182,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
       </>
     );
   } catch (error) {
-    console.error('Error fetching category data:', error);
+    console.error(`[CategoryPage] Error fetching category data for "${categorySlug}":`, error);
     notFound();
   }
 }

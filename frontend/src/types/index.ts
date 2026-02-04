@@ -254,9 +254,17 @@ export interface FAQ {
 // Page Types
 export interface Page {
   id: number;
+  author_id?: number;
   title: string;
   slug: string;
-  body?: string;
+  body?: string | null;
+  excerpt?: string | null;
+  image?: string | null;
+  meta_description?: string | null;
+  meta_keywords?: string | null;
+  status?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 // SEO Types

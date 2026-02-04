@@ -75,17 +75,22 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
   const { slug } = await params;
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
 
-  try {
-    const [product, similarData] = await Promise.all([
-      getProductDetails(slug),
-      getProductDetails(slug).then(p =>
-        p.sous_categorie_id ? getSimilarProducts(p.sous_categorie_id) : Promise.resolve({ products: [] })
-      ).catch(() => ({ products: [] })),
-    ]);
+  console.log(`[ProductPage] Resolving slug: "${slug}"`);
 
-    if (!product) {
+  try {
+    const product = await getProductDetails(slug);
+    
+    if (!product || !product.id) {
+      console.warn(`[ProductPage] Product "${slug}" returned empty data`);
       notFound();
     }
+
+    console.log(`[ProductPage] Found product: "${product.designation_fr}"`);
+
+    // Fetch similar products
+    const similarData = product.sous_categorie_id 
+      ? await getSimilarProducts(product.sous_categorie_id).catch(() => ({ products: [] }))
+      : { products: [] };
 
     const productSchema = buildProductJsonLd(product, baseUrl);
 

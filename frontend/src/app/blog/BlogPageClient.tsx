@@ -166,7 +166,7 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
     <div className="min-h-screen bg-white dark:bg-gray-950">
       <Header />
 
-      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-10 lg:py-14">
+      <main className="w-full mx-auto px-4 sm:px-6 max-w-[1024px] md:max-w-[1280px] lg:max-w-[1400px] xl:max-w-[1600px] py-6 sm:py-10 lg:py-14">
         {/* Hero title – centered, GreenFacts-style */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
@@ -204,8 +204,8 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
           </div>
         ) : (
           <>
-            {/* 2 cols on mobile/tablet, 3 on desktop – responsive cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 lg:gap-8 mb-8 sm:mb-12">
+            {/* 1 col on mobile, 2 on tablet, 3 on desktop – responsive cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-7 lg:gap-8 xl:gap-9 mb-8 sm:mb-12">
               {paginatedArticles.map((article, index) => {
                 const articleDate = article.created_at ? new Date(article.created_at) : new Date();
                 const excerpt = getExcerpt(article);
@@ -219,37 +219,37 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
                     className="group"
                   >
                     <Link href={`/blog/${article.slug}`} className="block h-full">
-                      <div className="bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm hover:shadow-lg hover:border-red-500/30 dark:hover:border-red-500/30 transition-all duration-300 h-full flex flex-col">
-                        <div className="relative aspect-[4/3] overflow-hidden bg-gray-100 dark:bg-gray-800">
+                      <div className="bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm hover:shadow-2xl hover:border-red-500/40 dark:hover:border-red-500/40 transition-all duration-300 h-full flex flex-col group-hover:-translate-y-1">
+                        <div className="relative aspect-[4/3] overflow-hidden bg-gray-100 dark:bg-gray-800 min-h-[200px] sm:min-h-[240px] md:min-h-[280px] lg:min-h-[320px]">
                           {article.cover ? (
                             <Image
                               src={getStorageUrl(article.cover)}
                               alt={article.designation_fr}
                               fill
-                              className="object-cover group-hover:scale-105 transition-transform duration-400"
-                              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 33vw"
+                              className="object-cover group-hover:scale-110 transition-transform duration-500"
+                              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                               loading="lazy"
                             />
                           ) : (
                             <div className="w-full h-full bg-gradient-to-br from-red-600 to-red-800" />
                           )}
                         </div>
-                        <div className="p-3 sm:p-5 md:p-6 flex flex-col flex-1 min-w-0">
-                          <h2 className="text-sm sm:text-base lg:text-lg font-bold text-gray-900 dark:text-white mb-1.5 sm:mb-3 line-clamp-2 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
+                        <div className="p-4 sm:p-5 md:p-6 lg:p-7 flex flex-col flex-1 min-w-0">
+                          <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white mb-2 sm:mb-3 md:mb-4 line-clamp-2 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors leading-tight">
                             {article.designation_fr}
                           </h2>
                           {excerpt && (
-                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-2 sm:line-clamp-3 mb-2 sm:mb-4 flex-1">
+                            <p className="text-sm sm:text-base md:text-lg text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-2 sm:line-clamp-3 mb-3 sm:mb-4 md:mb-5 flex-1">
                               {excerpt}
                             </p>
                           )}
-                          <div className="flex items-center gap-2 sm:gap-4 text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-auto flex-wrap">
-                            <span className="flex items-center gap-1 sm:gap-1.5">
-                              <Calendar className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                          <div className="flex items-center gap-3 sm:gap-4 md:gap-5 text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-auto flex-wrap">
+                            <span className="flex items-center gap-1.5 sm:gap-2">
+                              <Calendar className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
                               {format(articleDate, 'd MMM yyyy', { locale: fr })}
                             </span>
-                            <span className="flex items-center gap-1 sm:gap-1.5">
-                              <Clock className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                            <span className="flex items-center gap-1.5 sm:gap-2">
+                              <Clock className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
                               {readingMin} min
                             </span>
                           </div>

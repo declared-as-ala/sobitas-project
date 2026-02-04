@@ -228,20 +228,12 @@ export const HeroSlider = memo(function HeroSlider({ slides }: HeroSliderProps) 
             <div className="flex flex-wrap gap-2 sm:gap-3 md:gap-4">
               <Button 
                 size="lg" 
-                className="bg-red-600 hover:bg-red-700 text-white px-4 sm:px-6 md:px-8 h-10 sm:h-12 text-xs sm:text-sm md:text-base min-h-[44px] sm:min-h-[48px] min-w-[100px] sm:min-w-[120px] shadow-lg hover:shadow-xl transition-colors"
+                className="bg-red-600 hover:bg-red-700 text-white px-6 sm:px-8 md:px-10 lg:px-12 h-12 sm:h-14 md:h-16 text-sm sm:text-base md:text-lg lg:text-xl min-h-[56px] sm:min-h-[64px] md:min-h-[72px] min-w-[140px] sm:min-w-[160px] md:min-w-[180px] shadow-lg hover:shadow-xl transition-colors font-semibold"
                 asChild
               >
                 <Link href={currentSlideData.lien} aria-label="Découvrir nos produits">
                   Découvrir
                 </Link>
-              </Button>
-              <Button 
-                size="lg" 
-                variant="outline" 
-                className="border-2 border-white text-white hover:bg-white hover:text-gray-900 px-4 sm:px-6 md:px-8 h-10 sm:h-12 text-xs sm:text-sm md:text-base min-h-[44px] sm:min-h-[48px] min-w-[140px] sm:min-w-[160px] backdrop-blur-sm shadow-lg hover:shadow-xl transition-colors"
-                asChild
-              >
-                <Link href="/shop" aria-label="Voir toutes les catégories de produits">Voir Catégories</Link>
               </Button>
             </div>
           </div>

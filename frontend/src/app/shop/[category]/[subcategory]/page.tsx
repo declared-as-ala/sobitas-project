@@ -57,19 +57,25 @@ export default async function SubCategoryPage({ params, searchParams }: SubCateg
   const { category: categorySlug, subcategory: subcategorySlug } = await params;
   const { page } = await searchParams;
 
+  console.log(`[SubCategoryPage] Resolving category: "${categorySlug}", subcategory: "${subcategorySlug}"`);
+
   try {
     const result = await getProductsBySubCategory(subcategorySlug);
     const subcategoryData = result.sous_category;
 
     if (!subcategoryData || !subcategoryData.designation_fr) {
+      console.warn(`[SubCategoryPage] Subcategory "${subcategorySlug}" returned empty data`);
       notFound();
     }
 
     // Verify that the category slug matches
     if (subcategoryData.categorie?.slug !== categorySlug) {
+      console.warn(`[SubCategoryPage] Category slug mismatch: expected "${categorySlug}", got "${subcategoryData.categorie?.slug}"`);
       // Redirect to correct URL if category doesn't match
       notFound();
     }
+
+    console.log(`[SubCategoryPage] Found subcategory: "${subcategoryData.designation_fr}"`);
 
     const productsData = {
       products: result.products,

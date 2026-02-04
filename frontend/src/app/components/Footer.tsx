@@ -172,7 +172,7 @@ export function Footer() {
               <li><Link href="/page/politique-de-remboursement" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Politique de remboursement</Link></li>
               <li><Link href="/page/mentions-legales" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Mentions légales</Link></li>
               <li><Link href="/page/cookies" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Politique des cookies</Link></li>
-              <li><Link href="/about" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Qui sommes nous ?</Link></li>
+              <li><Link href="/page/proteine-tunisie" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Tunisie Protéine </Link></li>
             </ul>
           </div>
 
@@ -333,13 +333,8 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/about" className="text-sm hover:text-red-500 transition-colors">
-                  À propos
-                </Link>
-              </li>
-              <li>
-                <Link href="/about" className="text-sm hover:text-red-500 transition-colors">
-                  Qui sommes nous
+                <Link href="/page/proteine-tunisie" className="text-sm hover:text-red-500 transition-colors">
+                  Tunisie Protein
                 </Link>
               </li>
             </ul>
@@ -419,7 +414,7 @@ export function Footer() {
               className="text-center md:text-left text-sm text-gray-400 cursor-pointer hover:text-red-500 transition-colors"
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             >
-              © {new Date().getFullYear()} <span className="text-red-500 font-bold">Sobitas PROTEINE TUNISIE</span>. Tous droits réservés.
+              © {new Date().getFullYear()} <span className="text-red-500 font-bold">SOBITAS PROTEINE TUNISIE</span>. Tous droits réservés.
             </div>
           </div>
         </div>
