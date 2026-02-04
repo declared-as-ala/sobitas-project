@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { Suspense } from 'react';
 import AboutPageClient from './AboutPageClient';
 
 export const metadata: Metadata = {
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function AboutPage() {
-  return <AboutPageClient />;
+  return (
+    <Suspense fallback={<div>Chargement...</div>}>
+      <AboutPageClient />
+    </Suspense>
+  );
 }

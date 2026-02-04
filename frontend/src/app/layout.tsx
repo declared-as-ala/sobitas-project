@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { Suspense } from "react";
 import "./globals.css";
 import { ThemeProvider } from "@/app/components/ThemeProvider";
 import { CartProvider } from "@/app/contexts/CartContext";
@@ -180,7 +181,9 @@ export default function RootLayout({
           <LoadingProvider>
             <AuthProvider>
               <CartProvider>
-                <NavigationHandler />
+                <Suspense fallback={null}>
+                  <NavigationHandler />
+                </Suspense>
                 {children}
                 <GlobalLoader />
                 <Toaster position="top-center" richColors className="sonner-toaster" />
