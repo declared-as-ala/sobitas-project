@@ -9,6 +9,17 @@ import { getAllBrands, getStorageUrl } from '@/services/api';
 import type { Brand } from '@/types';
 import Link from 'next/link';
 
+// Helper to generate slug from name
+function nameToSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove accents
+    .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric with hyphens
+    .replace(/^-+|-+$/g, '') // Remove leading/trailing hyphens
+    .trim();
+}
+
 // Brand Card Component
 function BrandCard({ brand, index }: { brand: Brand; index: number }) {
   const [imageError, setImageError] = useState(false);
@@ -23,7 +34,7 @@ function BrandCard({ brand, index }: { brand: Brand; index: number }) {
       className="flex-shrink-0 group"
     >
       <Link
-        href={`/shop?brand=${brand.id}`}
+        href={`/brand/${nameToSlug(brand.designation_fr)}`}
         className="block bg-white dark:bg-gray-800 rounded-xl p-6 h-36 w-56 md:w-64 flex items-center justify-center border border-gray-200 dark:border-gray-700 hover:border-red-500 dark:hover:border-red-500 hover:shadow-xl transition-all duration-300"
       >
         {logoUrl && !imageError ? (

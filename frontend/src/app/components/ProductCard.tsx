@@ -185,7 +185,7 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
           </div>
         )}
 
-        <Link href={`/products/${productData.slug || product.id}`} className="block size-full" aria-label={`Voir ${productData.name}`}>
+        <Link href={`/product/${productData.slug || product.id}`} className="block size-full" aria-label={`Voir ${productData.name}`}>
           {productData.image ? (
             <Image
               src={productData.image}

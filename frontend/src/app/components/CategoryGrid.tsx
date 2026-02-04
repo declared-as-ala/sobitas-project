@@ -34,7 +34,7 @@ export function CategoryGrid({ categories = [] }: CategoryGridProps) {
                 className="group relative h-40 sm:h-48 md:h-64 rounded-xl sm:rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300"
                 style={{ minHeight: '160px' }} // Fixed min height for CLS
               >
-                <Link href={`/shop?category=${category.slug}`} aria-label={`Voir les produits de ${category.designation_fr}`}>
+                <Link href={`/shop/${category.slug}`} aria-label={`Voir les produits de ${category.designation_fr}`}>
                   {/* Background Image Container */}
                   <div className="absolute inset-0">
                     {category.cover ? (

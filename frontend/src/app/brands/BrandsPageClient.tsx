@@ -14,6 +14,17 @@ import { getAllBrands, getStorageUrl } from '@/services/api';
 import type { Brand } from '@/types';
 import { LoadingSpinner } from '@/app/components/LoadingSpinner';
 
+// Helper to generate slug from name
+function nameToSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove accents
+    .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric with hyphens
+    .replace(/^-+|-+$/g, '') // Remove leading/trailing hyphens
+    .trim();
+}
+
 export default function BrandsPageClient() {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [filteredBrands, setFilteredBrands] = useState<Brand[]>([]);
@@ -186,7 +197,7 @@ function BrandCard({ brand, index }: { brand: Brand; index: number }) {
       className="group"
     >
       <Link
-        href={`/shop?brand=${brand.id}`}
+        href={`/brand/${nameToSlug(brand.designation_fr)}`}
         className="block bg-white dark:bg-gray-800 rounded-2xl p-6 h-48 flex flex-col items-center justify-center border border-gray-200 dark:border-gray-700 hover:border-red-500 dark:hover:border-red-500 hover:shadow-xl transition-all duration-300"
       >
         {logoUrl && !imageError ? (
@@ -232,7 +243,7 @@ function BrandListItem({ brand, index }: { brand: Brand; index: number }) {
       transition={{ delay: index * 0.05 }}
     >
       <Link
-        href={`/shop?brand=${brand.id}`}
+        href={`/brand/${nameToSlug(brand.designation_fr)}`}
         className="block bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 hover:border-red-500 dark:hover:border-red-500 hover:shadow-lg transition-all duration-300 group"
       >
         <div className="flex items-center gap-6">

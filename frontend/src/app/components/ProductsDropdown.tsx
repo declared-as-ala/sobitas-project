@@ -185,7 +185,7 @@ export function ProductsDropdown() {
             <div key={index} className="space-y-2 min-w-0">
               {/* Category title - link to category page using slug */}
               <Link
-                href={`/shop?category=${encodeURIComponent(categorySlug)}`}
+                href={`/shop/${categorySlug}`}
                 className="font-semibold text-sm sm:text-base text-red-600 dark:text-red-500 mb-3 leading-tight hover:underline block"
                 onMouseDown={(e) => {
                   e.preventDefault();
@@ -206,7 +206,7 @@ export function ProductsDropdown() {
                   return (
                     <li key={itemIndex}>
                       <Link
-                        href={`/shop?category=${encodeURIComponent(itemSlug)}`}
+                        href={`/shop/${itemSlug}`}
                         className="text-sm text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-500 transition-colors block py-1 break-words"
                         onMouseDown={(e) => {
                           // Prevent blur from closing menu when clicking

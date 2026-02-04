@@ -73,6 +73,17 @@ const getLastModified = (item: { updated_at?: string; created_at?: string }): Da
   return new Date();
 };
 
+// Helper to generate slug from name
+function nameToSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove accents
+    .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric with hyphens
+    .replace(/^-+|-+$/g, '') // Remove leading/trailing hyphens
+    .trim();
+}
+
 // Type for items with date fields
 interface ItemWithDates {
   updated_at?: string;
@@ -89,7 +100,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       const productUrls = products
         .filter((p: Product) => p.slug && p.publier === 1) // Only published products
         .map((p: Product) => ({
-          url: `${BASE_URL}/products/${p.slug}`,
+          url: `${BASE_URL}/product/${p.slug}`,
           lastModified: getLastModified(p as ItemWithDates),
           changeFrequency: 'weekly' as const,
           priority: 0.7,
@@ -107,20 +118,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     if (Array.isArray(categories) && categories.length > 0) {
       categories.forEach((category: Category) => {
         if (category.slug) {
-          // Add main category page (via shop filter)
+          // Add main category page with clean URL
           sitemapEntries.push({
-            url: `${BASE_URL}/shop?category=${encodeURIComponent(category.slug)}`,
+            url: `${BASE_URL}/shop/${category.slug}`,
             lastModified: new Date(),
             changeFrequency: 'weekly' as const,
             priority: 0.8,
           });
 
-          // Add subcategory pages
+          // Add subcategory pages with parent category in URL
           if (category.sous_categories && Array.isArray(category.sous_categories)) {
             category.sous_categories.forEach((subCategory: SubCategory) => {
               if (subCategory.slug) {
                 sitemapEntries.push({
-                  url: `${BASE_URL}/shop?category=${encodeURIComponent(subCategory.slug)}`,
+                  url: `${BASE_URL}/shop/${category.slug}/${subCategory.slug}`,
                   lastModified: getLastModified(subCategory as ItemWithDates),
                   changeFrequency: 'weekly' as const,
                   priority: 0.75,
@@ -141,9 +152,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const brands = await getAllBrands();
     if (Array.isArray(brands) && brands.length > 0) {
       brands.forEach((brand: Brand) => {
-        if (brand.id) {
+        if (brand.id && brand.designation_fr) {
+          const brandSlug = nameToSlug(brand.designation_fr);
           sitemapEntries.push({
-            url: `${BASE_URL}/shop?brand=${brand.id}`,
+            url: `${BASE_URL}/brand/${brandSlug}`,
             lastModified: new Date(),
             changeFrequency: 'weekly' as const,
             priority: 0.75,
