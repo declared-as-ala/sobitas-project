@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -76,10 +76,16 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [currentPage, setCurrentPage] = useState(() => {
-    const page = searchParams.get('page');
-    return page ? parseInt(page, 10) : 1;
+    // Read from URL on initial mount
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const page = urlParams.get('page');
+      return page ? parseInt(page, 10) : 1;
+    }
+    return 1;
   });
   const [activeCategory, setActiveCategory] = useState('all');
+  const isUserAction = useRef(false);
 
   // Filter by category (keyword-based)
   const filteredArticles = useMemo(() => {
@@ -103,17 +109,46 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
     [sortedArticles, startIndex, endIndex]
   );
 
+  // Sync currentPage from URL params (on refresh or URL change)
+  useEffect(() => {
+    const pageParam = searchParams.get('page');
+    const urlPage = pageParam ? parseInt(pageParam, 10) : 1;
+    
+    // Only sync from URL if it's a valid page
+    // Skip if this was triggered by a user action
+    if (!isUserAction.current && !isNaN(urlPage) && urlPage >= 1 && urlPage <= totalPages) {
+      setCurrentPage(prevPage => {
+        // Only update if different to avoid unnecessary re-renders
+        return urlPage !== prevPage ? urlPage : prevPage;
+      });
+    }
+    // Reset the flag after processing
+    isUserAction.current = false;
+  }, [searchParams, totalPages]);
+
   // Reset to page 1 when category changes
   useEffect(() => {
     setCurrentPage(1);
+    isUserAction.current = true; // Mark as user action to prevent URL sync effect from interfering
   }, [activeCategory]);
 
+  // Update URL when currentPage changes from user interaction
   useEffect(() => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (currentPage === 1) params.delete('page');
-    else params.set('page', currentPage.toString());
-    const newUrl = params.toString() ? `?${params.toString()}` : '/blog';
-    router.replace(newUrl, { scroll: false });
+    const pageParam = searchParams.get('page');
+    const urlPage = pageParam ? parseInt(pageParam, 10) : 1;
+    
+    // Only update URL if it doesn't match currentPage
+    if (currentPage !== urlPage) {
+      isUserAction.current = true;
+      const params = new URLSearchParams(searchParams.toString());
+      if (currentPage === 1) {
+        params.delete('page');
+      } else {
+        params.set('page', currentPage.toString());
+      }
+      const newUrl = params.toString() ? `/blog?${params.toString()}` : '/blog';
+      router.replace(newUrl, { scroll: false });
+    }
   }, [currentPage, router, searchParams]);
 
   useEffect(() => {
@@ -121,7 +156,10 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
   }, [currentPage]);
 
   const handlePageChange = (page: number) => {
-    if (page >= 1 && page <= totalPages) setCurrentPage(page);
+    if (page >= 1 && page <= totalPages) {
+      isUserAction.current = true;
+      setCurrentPage(page);
+    }
   };
 
   return (

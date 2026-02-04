@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { Header } from '@/app/components/Header';
 import { Footer } from '@/app/components/Footer';
 import { ProductCard } from '@/app/components/ProductCard';
+import { ShopBreadcrumbs } from '@/app/components/ShopBreadcrumbs';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Slider } from '@/app/components/ui/slider';
@@ -30,9 +31,13 @@ interface ShopPageClientProps {
   };
   categories: Category[];
   brands: Brand[];
+  initialCategory?: string;
+  isSubcategory?: boolean;
+  parentCategory?: string;
+  initialBrand?: number;
 }
 
-function ShopContent({ productsData, categories, brands }: ShopPageClientProps) {
+function ShopContent({ productsData, categories, brands, initialCategory, isSubcategory, parentCategory, initialBrand }: ShopPageClientProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
@@ -50,20 +55,45 @@ function ShopContent({ productsData, categories, brands }: ShopPageClientProps) 
 
   const PRODUCTS_PER_PAGE = 12;
 
-  // Initialize from URL params
+  // Initialize from URL params or props
   useEffect(() => {
     const category = searchParams.get('category');
     const brand = searchParams.get('brand');
     const search = searchParams.get('search');
 
-    if (category) {
-      setSelectedCategories([decodeURIComponent(category)]);
+    // Use initialCategory from props if available (new route structure), otherwise use query param
+    const categoryToUse = initialCategory || category;
+
+    // Update categories - clear if not in URL, set if present
+    if (categoryToUse) {
+      const decodedCategory = decodeURIComponent(categoryToUse);
+      setSelectedCategories(prev => {
+        // Only update if different to avoid unnecessary re-renders
+        return prev.length === 1 && prev[0] === decodedCategory ? prev : [decodedCategory];
+      });
+    } else {
+      setSelectedCategories([]);
     }
-    if (brand) {
-      setSelectedBrands([parseInt(brand)]);
+
+    // Use initialBrand from props if available (new route structure), otherwise use query param
+    const brandToUse = initialBrand ? initialBrand.toString() : brand;
+
+    // Update brands - clear if not in URL, set if present
+    if (brandToUse) {
+      const brandId = parseInt(brandToUse);
+      setSelectedBrands(prev => {
+        // Only update if different to avoid unnecessary re-renders
+        return prev.length === 1 && prev[0] === brandId ? prev : [brandId];
+      });
+    } else {
+      setSelectedBrands([]);
     }
+
+    // Update search query
     if (search) {
       setSearchQuery(decodeURIComponent(search));
+    } else {
+      setSearchQuery('');
     }
   }, [searchParams]);
 
@@ -265,94 +295,77 @@ function ShopContent({ productsData, categories, brands }: ShopPageClientProps) 
         return;
       }
 
-      // 2. Category/Subcategory Filter (Immediate if possible)
+      // 2. Category/Subcategory Filter (Always use API for accurate results)
       if (selectedCategories.length > 0) {
         setCurrentBrand(null);
-        setIsSearching(true); // Show loader briefly
+        setIsSearching(true);
         try {
           const categoryParam = selectedCategories[0];
-
-          // Try purely client-side first if possible
-          const allProducts = productsData.products || [];
-          const pParam = normalizeString(categoryParam);
-
-          // Try to match as subcategory first (most common case from dropdown)
-          const filteredBySubCategory = allProducts.filter(p =>
-            p.sous_categorie && (
-              normalizeString(p.sous_categorie.designation_fr) === pParam ||
-              p.sous_categorie.slug === categoryParam ||
-              p.sous_categorie.slug === nameToSlug(categoryParam)
-            )
-          );
-
-          // Also try to match as category
-          const filteredByCategory = allProducts.filter(p => {
-            // Check if product belongs to a category that matches
-            if (p.sous_categorie?.categorie) {
-              const cat = p.sous_categorie.categorie;
-              return (
-                normalizeString(cat.designation_fr) === pParam ||
-                cat.slug === categoryParam ||
-                cat.slug === nameToSlug(categoryParam)
-              );
-            }
-            return false;
-          });
-
-          // Prefer subcategory match if found
-          const filtered = filteredBySubCategory.length > 0 ? filteredBySubCategory : filteredByCategory;
-
-          if (filtered.length > 0) {
-            setProducts(filtered);
-            setIsSearching(false);
-            return;
-          }
-
-          // If client side fails, try API
-          // IMPORTANT: Try subcategory API first (most clicks are subcategories)
           let productsFound = false;
           
-          // First: Try as subcategory slug (most common)
+          // IMPORTANT: Always try API first for accurate filtering
+          // Try as subcategory slug first (most common case from dropdown)
           try {
             const subResult = await getProductsBySubCategory(categoryParam);
-            if (subResult.products && subResult.products.length > 0) {
+            if (subResult.products !== undefined) {
+              // API returned a response (even if empty array)
               setProducts(subResult.products);
-              productsFound = true;
-            } else if (subResult.products && subResult.products.length === 0) {
-              // Subcategory exists but empty
-              setProducts([]);
               productsFound = true;
             }
           } catch (e: any) {
-            // Subcategory API failed, continue to try category
-            console.log(`Subcategory API failed for "${categoryParam}":`, e?.response?.status || e?.message);
+            // Subcategory API failed (404 or other error), continue to try category
+            if (e?.response?.status !== 404) {
+              console.log(`Subcategory API error for "${categoryParam}":`, e?.response?.status || e?.message);
+            }
           }
 
-          // Second: Try as category slug (if subcategory didn't work)
+          // Try as category slug (if subcategory didn't work)
           if (!productsFound) {
             try {
               const catResult = await getProductsByCategory(categoryParam);
-              if (catResult.products && catResult.products.length > 0) {
+              if (catResult.products !== undefined) {
+                // API returned a response (even if empty array)
                 setProducts(catResult.products);
-                productsFound = true;
-              } else if (catResult.products && catResult.products.length === 0) {
-                // Category exists but empty
-                setProducts([]);
                 productsFound = true;
               }
             } catch (e: any) {
               // Category API also failed
-              console.log(`Category API failed for "${categoryParam}":`, e?.response?.status || e?.message);
+              if (e?.response?.status !== 404) {
+                console.log(`Category API error for "${categoryParam}":`, e?.response?.status || e?.message);
+              }
             }
           }
 
-          // Final fallback: use client-side filtered results if any
+          // Final fallback: try client-side filtering only if API completely failed
           if (!productsFound) {
-            if (filtered.length > 0) {
-              setProducts(filtered);
-            } else {
-              setProducts([]);
-            }
+            const allProducts = productsData.products || [];
+            const pParam = normalizeString(categoryParam);
+
+            // Try to match as subcategory
+            const filteredBySubCategory = allProducts.filter(p =>
+              p.sous_categorie && (
+                normalizeString(p.sous_categorie.designation_fr) === pParam ||
+                p.sous_categorie.slug === categoryParam ||
+                p.sous_categorie.slug === nameToSlug(categoryParam)
+              )
+            );
+
+            // Try to match as category
+            const filteredByCategory = allProducts.filter(p => {
+              if (p.sous_categorie?.categorie) {
+                const cat = p.sous_categorie.categorie;
+                return (
+                  normalizeString(cat.designation_fr) === pParam ||
+                  cat.slug === categoryParam ||
+                  cat.slug === nameToSlug(categoryParam)
+                );
+              }
+              return false;
+            });
+
+            // Use whichever has results
+            const filtered = filteredBySubCategory.length > 0 ? filteredBySubCategory : filteredByCategory;
+            setProducts(filtered);
           }
 
         } catch (error) {
@@ -514,6 +527,43 @@ function ShopContent({ productsData, categories, brands }: ShopPageClientProps) 
       <Header />
 
       <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 lg:py-12">
+        {/* Breadcrumbs */}
+        {(() => {
+          const breadcrumbItems = [];
+          breadcrumbItems.push({ label: 'Boutique', href: '/shop' });
+          
+          if (initialBrand) {
+            const brand = brands.find(b => b.id === initialBrand) || productsData.brands.find(b => b.id === initialBrand);
+            if (brand) {
+              breadcrumbItems.push({ label: brand.designation_fr });
+            }
+          } else if (initialCategory) {
+            // Try to find category or subcategory
+            const category = categories.find(c => c.slug === initialCategory);
+            if (category) {
+              breadcrumbItems.push({ label: category.designation_fr });
+            } else {
+              // Try to find subcategory
+              const subcategory = categories
+                .flatMap(c => c.sous_categories || [])
+                .find(s => s.slug === initialCategory);
+              if (subcategory) {
+                if (parentCategory) {
+                  const parentCat = categories.find(c => c.slug === parentCategory);
+                  if (parentCat) {
+                    breadcrumbItems.push({ label: parentCat.designation_fr, href: `/shop/${parentCategory}` });
+                  }
+                }
+                breadcrumbItems.push({ label: subcategory.designation_fr });
+              } else {
+                breadcrumbItems.push({ label: initialCategory });
+              }
+            }
+          }
+          
+          return breadcrumbItems.length > 1 ? <ShopBreadcrumbs items={breadcrumbItems} /> : null;
+        })()}
+
         {/* Brand description – shown when filtering by brand (e.g. /shop?brand=1) */}
         {currentBrand && (
           <motion.div
