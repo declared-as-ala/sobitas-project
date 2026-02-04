@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
+import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { ChevronDown } from 'lucide-react';
 import { getCategories } from '@/services/api';
 import { Category } from '@/types';
@@ -184,10 +185,11 @@ export function ProductsDropdown() {
           return (
             <div key={index} className="space-y-2 min-w-0">
               {/* Category title - link to category page using slug */}
-              <Link
+              <LinkWithLoading
                 href={`/shop/${categorySlug}`}
                 className="font-semibold text-sm sm:text-base text-red-600 dark:text-red-500 mb-3 leading-tight hover:underline block"
-                onMouseDown={(e) => {
+                loadingMessage={`Chargement de ${category.title}...`}
+                onMouseDown={(e: React.MouseEvent<HTMLAnchorElement>) => {
                   e.preventDefault();
                 }}
                 onClick={() => {
@@ -195,7 +197,7 @@ export function ProductsDropdown() {
                 }}
               >
                 {category.title}
-              </Link>
+              </LinkWithLoading>
               <ul className="space-y-1.5">
                 {category.items.map((item, itemIndex) => {
                   // Try to find subcategory by name first
@@ -205,10 +207,11 @@ export function ProductsDropdown() {
                   
                   return (
                     <li key={itemIndex}>
-                      <Link
+                      <LinkWithLoading
                         href={`/shop/${itemSlug}`}
                         className="text-sm text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-500 transition-colors block py-1 break-words"
-                        onMouseDown={(e) => {
+                        loadingMessage={`Chargement de ${item}...`}
+                        onMouseDown={(e: React.MouseEvent<HTMLAnchorElement>) => {
                           // Prevent blur from closing menu when clicking
                           e.preventDefault();
                         }}
@@ -218,7 +221,7 @@ export function ProductsDropdown() {
                         }}
                       >
                         {item}
-                      </Link>
+                      </LinkWithLoading>
                     </li>
                   );
                 })}
@@ -228,10 +231,11 @@ export function ProductsDropdown() {
         })}
       </div>
       <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-800">
-        <Link
+        <LinkWithLoading
           href="/shop"
           className="text-base font-semibold text-red-600 dark:text-red-500 hover:underline"
-          onMouseDown={(e) => {
+          loadingMessage="Chargement de la boutique..."
+          onMouseDown={(e: React.MouseEvent<HTMLAnchorElement>) => {
             e.preventDefault();
           }}
           onClick={() => {
@@ -239,7 +243,7 @@ export function ProductsDropdown() {
           }}
         >
           Voir tous les produits →
-        </Link>
+        </LinkWithLoading>
       </div>
       </div>
     </div>
@@ -275,13 +279,14 @@ export function ProductsDropdown() {
         }
       }}
     >
-      <Link
+      <LinkWithLoading
         href="/shop"
         className="text-sm font-semibold text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-400 transition-colors flex items-center gap-1 whitespace-nowrap py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+        loadingMessage="Chargement de la boutique..."
       >
         NOS PRODUITS
         <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-      </Link>
+      </LinkWithLoading>
 
       {mounted && typeof window !== 'undefined' && dropdownContent && createPortal(dropdownContent, document.body)}
     </div>

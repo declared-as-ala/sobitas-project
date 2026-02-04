@@ -8,6 +8,7 @@ import { Button } from '@/app/components/ui/button';
 import { getAllBrands, getStorageUrl } from '@/services/api';
 import type { Brand } from '@/types';
 import { useRouter } from 'next/navigation';
+import { useLoading } from '@/contexts/LoadingContext';
 
 // Helper to generate slug from name
 function nameToSlug(name: string): string {
@@ -44,7 +45,7 @@ function BrandCard({ brand, index, onNavigate }: { brand: Brand; index: number; 
       <button
         onClick={handleClick}
         disabled={isNavigating}
-        className="block bg-white dark:bg-gray-800 rounded-xl p-6 h-36 w-56 md:w-64 flex items-center justify-center border border-gray-200 dark:border-gray-700 hover:border-red-500 dark:hover:border-red-500 hover:shadow-xl transition-all duration-300 w-full cursor-pointer disabled:opacity-75 disabled:cursor-wait"
+        className="block bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 h-32 sm:h-36 w-48 sm:w-56 md:w-64 flex items-center justify-center border border-gray-200 dark:border-gray-700 hover:border-red-500 dark:hover:border-red-500 hover:shadow-xl transition-all duration-300 cursor-pointer disabled:opacity-75 disabled:cursor-wait flex-shrink-0"
       >
         {isNavigating ? (
           <div className="flex flex-col items-center justify-center gap-2">
@@ -54,21 +55,28 @@ function BrandCard({ brand, index, onNavigate }: { brand: Brand; index: number; 
         ) : (
           <>
             {logoUrl && !imageError ? (
-              <div className="relative w-full h-full">
+              <div className="relative w-full h-full min-h-[80px] flex items-center justify-center">
                 <Image
                   src={logoUrl}
                   alt={brand.designation_fr || brand.alt_cover || 'Brand logo'}
-                  fill
-                  className="object-contain p-2 group-hover:scale-110 transition-transform duration-300"
-                  sizes="(max-width: 768px) 224px, 256px"
-                  loading="lazy"
+                  width={200}
+                  height={100}
+                  className="object-contain max-w-full max-h-full p-1 sm:p-2 group-hover:scale-110 transition-transform duration-300"
+                  sizes="(max-width: 640px) 192px, (max-width: 768px) 224px, 256px"
+                  loading={index < 5 ? "eager" : "lazy"}
                   unoptimized
-                  onError={() => setImageError(true)}
+                  onError={() => {
+                    console.error('Brand image failed to load:', logoUrl);
+                    setImageError(true);
+                  }}
+                  onLoad={() => {
+                    // Image loaded successfully
+                  }}
                 />
               </div>
             ) : (
-              <div className="text-center w-full">
-                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
+              <div className="text-center w-full px-2">
+                <p className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors line-clamp-2">
                   {brand.designation_fr}
                 </p>
               </div>
@@ -90,6 +98,7 @@ export function BrandsSection() {
   const [isNavigating, setIsNavigating] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const { setLoading, setLoadingMessage } = useLoading();
 
   useEffect(() => {
     const fetchBrands = async () => {
@@ -145,6 +154,9 @@ export function BrandsSection() {
 
   const handleBrandNavigate = async (slug: string) => {
     setIsNavigating(true);
+    setLoadingMessage(`Chargement de ${brands.find(b => nameToSlug(b.designation_fr) === slug)?.designation_fr || 'la marque'}...`);
+    setLoading(true);
+    
     // Prefetch the page for faster navigation
     router.prefetch(`/brand/${slug}`);
     // Navigate immediately - the loading state will persist until page loads
@@ -153,6 +165,7 @@ export function BrandsSection() {
     } catch (error) {
       console.error('Navigation error:', error);
       setIsNavigating(false);
+      setLoading(false);
     }
   };
 
@@ -165,33 +178,7 @@ export function BrandsSection() {
   }
 
   return (
-    <>
-      {/* Global Loading Overlay */}
-      <AnimatePresence>
-        {isNavigating && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50 flex items-center justify-center"
-            onClick={() => setIsNavigating(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-2xl flex flex-col items-center gap-4"
-            >
-              <Loader2 className="h-12 w-12 text-red-600 dark:text-red-400 animate-spin" />
-              <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                Chargement de la marque...
-              </p>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <section className="py-16 bg-gradient-to-b from-white to-gray-50 dark:from-gray-950 dark:to-gray-900">
+    <section className="py-16 bg-gradient-to-b from-white to-gray-50 dark:from-gray-950 dark:to-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -257,6 +244,5 @@ export function BrandsSection() {
         </div>
       </div>
     </section>
-    </>
   );
 }

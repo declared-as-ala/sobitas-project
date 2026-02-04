@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import Image from 'next/image';
 import { motion } from 'motion/react';
 import { Calendar, ArrowRight } from 'lucide-react';
@@ -87,7 +88,11 @@ export function BlogSection({ articles }: BlogSectionProps) {
                     transition={{ delay: index * 0.1 }}
                     className="group bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm hover:shadow-xl dark:shadow-none dark:hover:shadow-red-900/10 transition-all duration-300 overflow-hidden flex flex-col h-full border border-gray-100 dark:border-gray-700/50"
                   >
-                    <Link href={`/blog/${article.slug}`} className="relative block aspect-[4/3] overflow-hidden">
+                    <LinkWithLoading 
+                      href={`/blog/${article.slug}`} 
+                      className="relative block aspect-[4/3] overflow-hidden"
+                      loadingMessage={`Chargement de ${article.designation_fr}...`}
+                    >
                       <Image
                         src={article.cover ? getStorageUrl(article.cover) : '/assets/img/placeholder.webp'}
                         alt={article.designation_fr}
@@ -96,7 +101,7 @@ export function BlogSection({ articles }: BlogSectionProps) {
                         sizes="(max-width: 768px) 100vw, 50vw"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    </Link>
+                    </LinkWithLoading>
 
                     <div className="p-2 sm:p-3 flex flex-col flex-grow">
                       <div className="flex items-center gap-1.5 text-[9px] sm:text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-1.5 sm:mb-2">
@@ -109,9 +114,12 @@ export function BlogSection({ articles }: BlogSectionProps) {
                       </div>
 
                       <h3 className="text-xs sm:text-base font-bold text-gray-900 dark:text-white mb-1.5 sm:mb-2 line-clamp-2 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
-                        <Link href={`/blog/${article.slug}`}>
+                        <LinkWithLoading 
+                          href={`/blog/${article.slug}`}
+                          loadingMessage={`Chargement de ${article.designation_fr}...`}
+                        >
                           {article.designation_fr}
-                        </Link>
+                        </LinkWithLoading>
                       </h3>
 
                       <div
@@ -121,13 +129,14 @@ export function BlogSection({ articles }: BlogSectionProps) {
                         }}
                       />
 
-                      <Link
+                      <LinkWithLoading
                         href={`/blog/${article.slug}`}
                         className="inline-flex items-center text-[11px] sm:text-xs font-semibold text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors mt-auto group/link"
+                        loadingMessage={`Chargement de ${article.designation_fr}...`}
                       >
                         Lire la suite
                         <ArrowRight className="h-3 w-3 sm:h-3.5 sm:w-3.5 ml-1 transform group-hover/link:translate-x-1 transition-transform" />
-                      </Link>
+                      </LinkWithLoading>
                     </div>
                   </motion.article>
                 </CarouselItem>

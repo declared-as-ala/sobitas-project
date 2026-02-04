@@ -4,6 +4,9 @@ import "./globals.css";
 import { ThemeProvider } from "@/app/components/ThemeProvider";
 import { CartProvider } from "@/app/contexts/CartContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { LoadingProvider } from "@/contexts/LoadingContext";
+import { GlobalLoader } from "@/app/components/GlobalLoader";
+import { NavigationHandler } from "@/app/components/NavigationHandler";
 import { Toaster } from "sonner";
 
 const inter = Inter({
@@ -174,12 +177,16 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-          <AuthProvider>
-            <CartProvider>
-              {children}
-              <Toaster position="top-center" richColors className="sonner-toaster" />
-            </CartProvider>
-          </AuthProvider>
+          <LoadingProvider>
+            <AuthProvider>
+              <CartProvider>
+                <NavigationHandler />
+                {children}
+                <GlobalLoader />
+                <Toaster position="top-center" richColors className="sonner-toaster" />
+              </CartProvider>
+            </AuthProvider>
+          </LoadingProvider>
         </ThemeProvider>
       </body>
     </html>

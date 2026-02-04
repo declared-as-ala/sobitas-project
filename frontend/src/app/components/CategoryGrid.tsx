@@ -2,7 +2,7 @@
 
 import { motion } from 'motion/react';
 import { ArrowRight } from 'lucide-react';
-import Link from 'next/link';
+import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import Image from 'next/image';
 import type { Category } from '@/types';
 import { getStorageUrl } from '@/services/api';
@@ -34,7 +34,12 @@ export function CategoryGrid({ categories = [] }: CategoryGridProps) {
                 className="group relative h-40 sm:h-48 md:h-64 rounded-xl sm:rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300"
                 style={{ minHeight: '160px' }} // Fixed min height for CLS
               >
-                <Link href={`/shop/${category.slug}`} aria-label={`Voir les produits de ${category.designation_fr}`}>
+                <LinkWithLoading 
+                  href={`/shop/${category.slug}`} 
+                  aria-label={`Voir les produits de ${category.designation_fr}`}
+                  loadingMessage={`Chargement de ${category.designation_fr}...`}
+                  className="absolute inset-0"
+                >
                   {/* Background Image Container */}
                   <div className="absolute inset-0">
                     {category.cover ? (
@@ -72,7 +77,7 @@ export function CategoryGrid({ categories = [] }: CategoryGridProps) {
 
                   {/* Hover Effect */}
                   <div className="absolute inset-0 ring-2 ring-transparent group-hover:ring-red-500 rounded-2xl transition-all pointer-events-none" aria-hidden="true" />
-                </Link>
+                </LinkWithLoading>
               </article>
             ))}
           </div>

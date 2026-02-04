@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { motion } from 'motion/react';
 import { ShoppingCart, Star, Clock } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
@@ -186,7 +187,12 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
           </div>
         )}
 
-        <Link href={`/product/${productData.slug || product.id}`} className="block size-full" aria-label={`Voir ${productData.name}`}>
+        <LinkWithLoading 
+          href={`/products/${productData.slug || product.id}`} 
+          className="block size-full" 
+          aria-label={`Voir ${productData.name}`}
+          loadingMessage={`Chargement de ${productData.name}...`}
+        >
           {productData.image ? (
             <Image
               src={productData.image}
@@ -214,7 +220,7 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
               <ShoppingCart className="h-12 w-12 text-gray-400" />
             </div>
           )}
-        </Link>
+        </LinkWithLoading>
 
         {/* Badges – top-left, small and clean */}
         <div className={`absolute top-2 left-2 z-10 flex flex-col gap-1 ${isCompact ? 'gap-0.5' : 'gap-1'}`}>
@@ -269,13 +275,17 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
 
       {/* Content – flex-1 so CTA stays at bottom */}
       <div className="flex flex-col flex-1 min-h-0 p-3 sm:p-3 lg:p-4">
-        <Link href={`/product/${productData.slug || product.id}`} className="block mb-1">
+        <LinkWithLoading 
+          href={`/products/${productData.slug || product.id}`} 
+          className="block mb-1"
+          loadingMessage={`Chargement de ${productData.name}...`}
+        >
           <h3
             className={`font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug transition-colors group-hover:text-red-600 dark:group-hover:text-red-400 ${isCompact ? 'text-[13px] sm:text-xs min-h-[2.25rem]' : 'text-sm sm:text-base md:text-lg min-h-[2.5rem] sm:min-h-0'}`}
           >
             {productData.name}
           </h3>
-        </Link>
+        </LinkWithLoading>
 
         {showDescription && productData.description && (
           <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mt-1 mb-2">

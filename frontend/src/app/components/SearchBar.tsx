@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import Image from 'next/image';
 import { Search, X, Loader2, ArrowRight } from 'lucide-react';
 import { Input } from '@/app/components/ui/input';
@@ -66,11 +67,12 @@ function SearchResults({
   return (
     <div className="space-y-1">
       {products.slice(0, MAX_SUGGESTIONS).map((product) => (
-        <Link
+        <LinkWithLoading
           key={product.id}
           href={`/products/${product.slug}`}
           onClick={onProductClick}
           className="flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800 focus:bg-gray-100 dark:focus:bg-gray-800 focus:outline-none"
+          loadingMessage={`Chargement de ${product.designation_fr}...`}
         >
           <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-md bg-muted">
             {product.cover ? (
@@ -99,7 +101,7 @@ function SearchResults({
             </p>
           </div>
           <ArrowRight className="h-4 w-4 flex-shrink-0 text-muted-foreground" aria-hidden />
-        </Link>
+        </LinkWithLoading>
       ))}
       <Button
         variant="ghost"
@@ -107,10 +109,14 @@ function SearchResults({
         onClick={onViewAll}
         asChild
       >
-        <Link href={`/shop?search=${encodeURIComponent(query.trim())}`} onClick={onProductClick}>
+        <LinkWithLoading 
+          href={`/shop?search=${encodeURIComponent(query.trim())}`} 
+          onClick={onProductClick}
+          loadingMessage="Chargement des résultats..."
+        >
           Voir tous les résultats ({products.length})
           <ArrowRight className="h-4 w-4" />
-        </Link>
+        </LinkWithLoading>
       </Button>
     </div>
   );
