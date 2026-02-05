@@ -6,7 +6,7 @@
 
 export type ProductLike = {
   prix?: number;
-  price?: number;
+  price?: number | null;
   promo?: number | null;
   promo_expiration_date?: string | null;
 };
