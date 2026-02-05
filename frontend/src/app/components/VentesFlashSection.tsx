@@ -68,11 +68,9 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
     return () => clearInterval(interval);
   }, [earliestExpiration]);
 
-  // Early return after hooks
-  if (products.length === 0) return null;
-
-  // Calculate average discount for stats
+  // Calculate average discount for stats (must be before early return)
   const averageDiscount = useMemo(() => {
+    if (products.length === 0) return 0;
     const discounts = products
       .map(p => {
         const prix = p.prix ?? 0;
@@ -87,6 +85,9 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
       ? Math.round(discounts.reduce((a, b) => a + b, 0) / discounts.length)
       : 0;
   }, [products]);
+
+  // Early return after all hooks
+  if (products.length === 0) return null;
 
   return (
     <section
