@@ -203,7 +203,7 @@ export function ProductReviewsPageClient({ product }: ProductReviewsPageClientPr
         {/* Breadcrumb */}
         <nav className="mb-3 sm:mb-4 lg:mb-6 text-sm min-w-0">
           <Link
-            href={`/products/${product.slug}`}
+            href={`/product/${product.slug}`}
             className="inline-flex items-center gap-1 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 min-h-[44px] items-center break-words"
           >
             <ChevronLeft className="h-4 w-4 shrink-0" />
@@ -285,42 +285,7 @@ export function ProductReviewsPageClient({ product }: ProductReviewsPageClientPr
               )}
             </div>
 
-            {/* What customers say */}
-            <div className="p-4 sm:p-5 lg:p-6 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
-              <h3 className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white mb-2 sm:mb-3">Ce que disent les clients</h3>
-              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                Les clients apprécient la qualité élevée et les ingrédients détaillés de ce produit. 
-                Beaucoup soulignent son efficacité et sa facilité d'utilisation. 
-                La qualité du produit et son rapport qualité-prix sont également salués.
-              </p>
-            </div>
-
-            {/* Review Highlights */}
-            <div className="p-4 sm:p-5 lg:p-6 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
-              <h3 className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white mb-2 sm:mb-3">Points forts des avis</h3>
-              <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                {['Qualité élevée', 'Efficace', 'Bon rapport qualité-prix', 'Facile à utiliser', 'Livraison rapide'].map((tag) => (
-                  <span key={tag} className="inline-flex items-center gap-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium">
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </div>
-            {/* Search Reviews */}
-            <div className="p-4 sm:p-5 lg:p-6 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
-              <h3 className="font-semibold text-xs sm:text-sm lg:text-base text-gray-900 dark:text-white mb-2 sm:mb-3">Rechercher dans les avis</h3>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                <Input
-                  value={reviewSearch}
-                  onChange={(e) => setReviewSearch(e.target.value)}
-                  placeholder="Rechercher..."
-                  className="pl-9 min-h-[44px] text-sm sm:text-base"
-                />
-              </div>
-            </div>
-
-            {/* Write review form */}
+            {/* Write review form - appears directly after the button */}
             {showReviewForm && isAuthenticated && (
               <div className="p-4 sm:p-5 lg:p-6 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 min-w-0">
                 <h3 className="font-bold text-sm sm:text-base lg:text-lg text-gray-900 dark:text-white mb-2 sm:mb-3">Votre avis</h3>
@@ -369,6 +334,41 @@ export function ProductReviewsPageClient({ product }: ProductReviewsPageClientPr
                 </div>
               </div>
             )}
+
+            {/* What customers say */}
+            <div className="p-4 sm:p-5 lg:p-6 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
+              <h3 className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white mb-2 sm:mb-3">Ce que disent les clients</h3>
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                Les clients apprécient la qualité élevée et les ingrédients détaillés de ce produit. 
+                Beaucoup soulignent son efficacité et sa facilité d'utilisation. 
+                La qualité du produit et son rapport qualité-prix sont également salués.
+              </p>
+            </div>
+
+            {/* Review Highlights */}
+            <div className="p-4 sm:p-5 lg:p-6 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
+              <h3 className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white mb-2 sm:mb-3">Points forts des avis</h3>
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                {['Qualité élevée', 'Efficace', 'Bon rapport qualité-prix', 'Facile à utiliser', 'Livraison rapide'].map((tag) => (
+                  <span key={tag} className="inline-flex items-center gap-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+            {/* Search Reviews */}
+            <div className="p-4 sm:p-5 lg:p-6 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
+              <h3 className="font-semibold text-xs sm:text-sm lg:text-base text-gray-900 dark:text-white mb-2 sm:mb-3">Rechercher dans les avis</h3>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                <Input
+                  value={reviewSearch}
+                  onChange={(e) => setReviewSearch(e.target.value)}
+                  placeholder="Rechercher..."
+                  className="pl-9 min-h-[44px] text-sm sm:text-base"
+                />
+              </div>
+            </div>
 
             {/* Star filter checkboxes */}
             <div className="p-4 sm:p-5 lg:p-6 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 min-w-0">
