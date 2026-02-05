@@ -178,6 +178,7 @@ export function Footer() {
               <li><Link href="/page/mentions-legales" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Mentions légales</Link></li>
               <li><Link href="/page/cookies" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Politique des cookies</Link></li>
               <li><Link href="/page/proteine-tunisie" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Tunisie Protéine </Link></li>
+              <li><Link href="/page/a-propos" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">A propos</Link></li>
             </ul>
           </div>
 
@@ -340,6 +341,11 @@ export function Footer() {
               <li>
                 <Link href="/page/proteine-tunisie" className="text-sm hover:text-red-500 transition-colors">
                   Tunisie Proteine
+                </Link>
+              </li>
+              <li>
+                <Link href="/page/a-propos" className="text-sm hover:text-red-500 transition-colors">
+                  A propos
                 </Link>
               </li>
             </ul>
