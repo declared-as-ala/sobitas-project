@@ -22,6 +22,7 @@ import { RadioGroup, RadioGroupItem } from '@/app/components/ui/radio-group';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/app/components/ui/sheet';
 import { ChevronDown, ChevronUp, Phone, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/app/components/ui/dialog';
 
 const FREE_SHIPPING_THRESHOLD = 300;
 
@@ -37,6 +38,7 @@ export default function CheckoutPage() {
   const printRef = useRef<HTMLDivElement>(null);
   const [showOptionalFields, setShowOptionalFields] = useState(false);
   const [mobileSummaryOpen, setMobileSummaryOpen] = useState(false);
+  const [showCardPaymentModal, setShowCardPaymentModal] = useState(false);
   
   // Single address (livraison) selector state
   const [gouvernorat, setGouvernorat] = useState('');
@@ -144,6 +146,12 @@ export default function CheckoutPage() {
     e.preventDefault();
     
     if (!validateForm()) {
+      return;
+    }
+
+    // Check if card payment is selected
+    if (paymentMethod === 'card') {
+      setShowCardPaymentModal(true);
       return;
     }
 
@@ -1164,6 +1172,50 @@ export default function CheckoutPage() {
 
       <Footer />
       <ScrollToTop />
+
+      {/* Card Payment Modal */}
+      <Dialog open={showCardPaymentModal} onOpenChange={setShowCardPaymentModal}>
+        <DialogContent className="sm:max-w-lg bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 shadow-xl">
+          <DialogHeader className="space-y-3">
+            <DialogTitle className="flex items-center gap-3 text-2xl font-bold text-gray-900 dark:text-white">
+              <div className="p-2 rounded-xl bg-blue-100 dark:bg-blue-900/30">
+                <CreditCard className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              </div>
+              Paiement par carte
+            </DialogTitle>
+            <DialogDescription className="text-base text-gray-700 dark:text-gray-300 leading-relaxed pt-2">
+              Cette méthode de paiement n'est pas encore intégrée. Nous travaillons actuellement sur son implémentation et elle sera bientôt disponible.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-3">
+            <div className="flex items-start gap-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
+              <Wallet className="h-5 w-5 text-orange-600 dark:text-orange-400 mt-0.5 shrink-0" />
+              <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                En attendant, vous pouvez utiliser le <strong className="font-semibold text-gray-900 dark:text-white">paiement à la livraison</strong> pour finaliser votre commande.
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="sm:flex-col gap-2">
+            <Button
+              onClick={() => {
+                setShowCardPaymentModal(false);
+                setPaymentMethod('cod');
+              }}
+              className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-6 text-base rounded-xl shadow-md hover:shadow-lg transition-all"
+              size="lg"
+            >
+              Utiliser le paiement à la livraison
+            </Button>
+            <Button
+              onClick={() => setShowCardPaymentModal(false)}
+              variant="outline"
+              className="w-full border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+            >
+              Fermer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
