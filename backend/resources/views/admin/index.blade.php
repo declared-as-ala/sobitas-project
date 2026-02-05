@@ -10,7 +10,7 @@
                     <a class="btn btn-success form-control" href="{{ route('voyager.ticket') }}">+ Ajouter Ticket</a>
                 </div>
                 <div class="col-md-2">
-                    <a class="btn btn-primary form-control" href="{{ route('voyager.facture') }}">+ Ajouter BC</a>
+                    <a class="btn btn-primary form-control" href="{{ route('voyager.facture') }}">+ Ajouter BL</a>
                 </div>
 
 

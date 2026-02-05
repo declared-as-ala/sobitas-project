@@ -23,7 +23,7 @@ use TCG\Voyager\Http\Controllers\Traits\BreadRelationshipParser;
 use App\Services\SmsService;
 use App\Message;
 use Illuminate\Support\Facades\Mail;
-
+use Illuminate\Support\Facades\Log;
 use App\Mail\SoumissionMail;
 
 class AdminCommandeController extends Controller
@@ -147,16 +147,18 @@ class AdminCommandeController extends Controller
 
         //add_facture
         $new_facture = new Commande();
-        $new_facture->nom = @$request->commande['nom'];
-        $new_facture->prenom = @$request->commande['prenom'];
-        $new_facture->email = @$request->commande['email'];
-        $new_facture->phone = @$request->commande['phone'];
-        $new_facture->pays = @$request->commande['pays'];
-        $new_facture->region = @$request->commande['region'];
-        $new_facture->ville = @$request->commande['ville'];
-        $new_facture->code_postale = @$request->commande['code_postale'];
-        $new_facture->adresse1 = @$request->commande['adresse1'];
-        $new_facture->adresse2 = @$request->commande['adresse2'];
+        
+        // Use livraison fields as primary source, fallback to billing fields if provided (for backward compatibility)
+        $new_facture->nom = @$request->commande['livraison_nom'] ?: @$request->commande['nom'];
+        $new_facture->prenom = @$request->commande['livraison_prenom'] ?: @$request->commande['prenom'];
+        $new_facture->email = @$request->commande['livraison_email'] ?: @$request->commande['email'];
+        $new_facture->phone = @$request->commande['livraison_phone'] ?: @$request->commande['phone'];
+        $new_facture->pays = @$request->commande['pays'] ?: 'Tunisie';
+        $new_facture->region = @$request->commande['livraison_region'] ?: @$request->commande['region'];
+        $new_facture->ville = @$request->commande['livraison_ville'] ?: @$request->commande['ville'];
+        $new_facture->code_postale = @$request->commande['livraison_code_postale'] ?: @$request->commande['code_postale'];
+        $new_facture->adresse1 = @$request->commande['livraison_adresse1'] ?: @$request->commande['adresse1'];
+        $new_facture->adresse2 = @$request->commande['livraison_adresse2'] ?: @$request->commande['adresse2'];
         $new_facture->livraison = @$request->commande['livraison'];
         $new_facture->frais_livraison = @$request->commande['frais_livraison'];
         $new_facture->note = @$request->commande['note'];
@@ -249,13 +251,20 @@ class AdminCommandeController extends Controller
         $new_facture->save();
 
         //************sms********************* */
-        
-        $msg  = Message::first();
-        $text = $msg->msg_passez_commande ;
-        $sms = str_replace("[nom]" , $new_facture->nom , $text);
-        $sms = str_replace("[prenom]" , $new_facture->prenom , $sms);
-        $sms = str_replace("[num_commande]" , $new_facture->numero , $sms);
-        (new SmsService())->send_sms($new_facture->phone , $sms);
+
+        // Only send SMS if we have valid phone and name data
+        if ($new_facture->phone && ($new_facture->nom || $new_facture->livraison_nom)) {
+            $msg  = Message::first();
+            if ($msg && $msg->msg_passez_commande) {
+                $text = $msg->msg_passez_commande;
+                $nom = $new_facture->nom ?: $new_facture->livraison_nom ?: '';
+                $prenom = $new_facture->prenom ?: $new_facture->livraison_prenom ?: '';
+                $sms = str_replace("[nom]" , $nom , $text);
+                $sms = str_replace("[prenom]" , $prenom , $sms);
+                $sms = str_replace("[num_commande]" , $new_facture->numero , $sms);
+                (new SmsService())->send_sms($new_facture->phone , $sms);
+            }
+        }
 
         $details = CommandeDetail::where('commande_id' , $new_facture->id)->get();
          $dataa = [
@@ -263,9 +272,57 @@ class AdminCommandeController extends Controller
             'commande' => $new_facture,
             'details'=>  $details
         ];
-        
-        Mail::to('bitoutawalid@gmail.com')->send(new SoumissionMail($dataa));
-        //Mail::to('wajihsayes@gmail.com')->send(new SoumissionMail($dataa));
+
+        // Get client email (use main email or delivery email as fallback)
+        $clientEmail = $new_facture->email ?? $new_facture->livraison_email ?? null;
+
+        // Try to send email to admin and client, but don't fail the request if it fails
+        try {
+            // Send email to admin (from bitoutawalid@gmail.com)
+            Log::info('Attempting to send order email to admin', [
+                'commande_id' => $new_facture->id,
+                'admin_email' => 'bitoutawalid@gmail.com'
+            ]);
+            
+            Mail::to('bitoutawalid@gmail.com')->send(new SoumissionMail($dataa, 'bitoutawalid@gmail.com'));
+            
+            Log::info('Order email sent successfully to admin', [
+                'commande_id' => $new_facture->id
+            ]);
+            
+            // Send email to client if email is provided and valid (from contact@protein.tn)
+            if ($clientEmail && filter_var($clientEmail, FILTER_VALIDATE_EMAIL)) {
+                Log::info('Attempting to send order email to client', [
+                    'commande_id' => $new_facture->id,
+                    'client_email' => $clientEmail
+                ]);
+                
+                Mail::to($clientEmail)->send(new SoumissionMail($dataa, 'contact@protein.tn'));
+                
+                Log::info('Order email sent successfully to client', [
+                    'commande_id' => $new_facture->id,
+                    'client_email' => $clientEmail
+                ]);
+            } else {
+                Log::warning('Client email not provided or invalid, skipping client email', [
+                    'commande_id' => $new_facture->id,
+                    'client_email' => $clientEmail ?? 'not provided',
+                    'email_field' => $new_facture->email ?? 'null',
+                    'livraison_email_field' => $new_facture->livraison_email ?? 'null'
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to send order confirmation email', [
+                'commande_id' => $new_facture->id,
+                'admin_email' => 'bitoutawalid@gmail.com',
+                'client_email' => $clientEmail ?? 'not provided',
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
+
         return [
             'id'=> $new_facture->id,
             'message'    => "Merci pour votre commande",

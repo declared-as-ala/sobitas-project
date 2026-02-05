@@ -11,14 +11,17 @@ class SoumissionMail extends Mailable
     use Queueable, SerializesModels;
 
     public $data;
+    public $fromAddress;
+    
     /**
      * Create a new message instance.
      *
      * @return void
      */
-    public function __construct($data)
+    public function __construct($data, $fromAddress = null)
     {
         $this->data = $data;
+        $this->fromAddress = $fromAddress;
     }
 
     /**
@@ -28,6 +31,7 @@ class SoumissionMail extends Mailable
      */
     public function build()
     {
-        return $this->from('contact@sobitas.tn')->subject('Protein.TN | Suivi de commande')->view('emails.SoumissionMail');
+        $from = $this->fromAddress ?? 'contact@protein.tn';
+        return $this->from($from)->subject('Protein.TN | Suivi de commande')->view('emails.SoumissionMail');
     }
 }

@@ -30,15 +30,12 @@ Route::get('/', function () {
     return redirect()->route('voyager.dashboard');
 });
 
-// Our statistics dashboard (Voyager registers GET /admin first, so we use /admin/dashboard and redirect /admin here)
-Route::group(['prefix' => 'admin', 'as' => 'voyager.', 'middleware' => ['auth']], function () {
-        // Redirect admin home to our statistics dashboard so "home" shows the full stats
-        Route::get('/', function () {
-            return redirect('/admin/dashboard');
-        });
-        // Statistics dashboard (KPIs, charts, top products)
-        Route::get('/dashboard', [DashboardController::class, 'index'])
-            ->name('voyager.dashboard');
+
+Route::group(['prefix' => 'admin'], function () {
+    Voyager::routes();
+
+});
+Route::group(['prefix' => 'admin' , 'as' => 'voyager.'], function () {
 
         Route::get('statistic', [AdminChartController::class , 'statistic'])->name('statistic');
         Route::POST('statistic', [ AdminChartController::class , 'chart' ])->name('chart');
@@ -115,11 +112,14 @@ Route::group(['prefix' => 'admin', 'as' => 'voyager.', 'middleware' => ['auth']]
         Route::get('/imprimer_commande/{id}' , [AdminCommandeController::class, 'imprimerFacture'])->name('imprimer_commande');
         // $namespacePrefix = '\\'.config('voyager.controllers.namespace').'\\';
 
+        //dashboard
+         // Dashboard routes
+        Route::get('/admin/dashboard', [DashboardController::class, 'index'])
+            ->name('voyager.dashboard');
+
         Route::post('/dashboard/statistics', [DashboardController::class, 'getStatistics'])
             ->name('dashboard.statistics');
-});
 
-// Voyager BREAD, users, etc. (registered after so our /admin and /admin/dashboard take precedence)
-Route::group(['prefix' => 'admin'], function () {
-    Voyager::routes();
+
+
 });

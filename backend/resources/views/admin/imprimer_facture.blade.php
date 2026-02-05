@@ -8,7 +8,7 @@
     <link href="//maxcdn.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
     <script src="//maxcdn.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js"></script>
     <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-    <title>Bon de commande {{ @$facture->numero }}</title>
+    <title>Bon de livraison {{ @$facture->numero }}</title>
 </head>
 
 <body>
@@ -311,7 +311,7 @@
                                 @endif
                             </div>
                             <div class="col company-details">
-                                <h1 class="invoice-id">Bon de commande </h1>
+                                <h1 class="invoice-id">Bon de livraison </h1>
                                 <div class="date"><b>Date :</b> {{ $facture->created_at->format('d-m-Y') }}
                                 </div>
                                 <div class="date"> <b>Numéro:</b> {{ $facture->numero }}

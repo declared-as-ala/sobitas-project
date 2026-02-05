@@ -141,9 +141,7 @@ class ApisController extends Controller
 
     public function allProducts()
     {
-        $products =  Product::where('publier', 1)->with('aromes')->with('tags')->withCount(['reviews' => function ($query) {
-            $query->where('publier', 1);
-        }])->get();
+        $products =  Product::where('publier', 1)->with('aromes')->with('tags')->get();
         $brands = Brand::whereIn('id', $products->pluck('brand_id'))->get();
         $categories = Categ::all();
         return ['products' => $products, 'brands' => $brands, 'categories' => $categories];
@@ -166,9 +164,6 @@ class ApisController extends Controller
             ->whereIn('sous_categorie_id', $sous_categories->pluck('id'))
             ->with('aromes')
             ->with('tags')
-            ->withCount(['reviews' => function ($query) {
-                $query->where('publier', 1);
-            }])
             ->get();
 
         $brands = Brand::whereIn('id', $products->pluck('brand_id'))->get();
@@ -187,9 +182,7 @@ class ApisController extends Controller
         $brand = Brand::find($brand_id);
         $categories = Categ::all();
         $products = Product::where('brand_id', $brand_id)->where('publier', 1)
-            ->with('aromes')->with('tags')->withCount(['reviews' => function ($query) {
-                $query->where('publier', 1);
-            }])->get();
+            ->with('aromes')->with('tags')->get();
         $brands = Brand::all();
         return ['categories' => $categories, 'products' => $products, 'brands' => $brands, 'brand' => $brand];
     }
@@ -198,9 +191,7 @@ class ApisController extends Controller
     {
         $sous_category = SousCategory::where('slug' ,$slug)->first();
         $products = Product::where('sous_categorie_id', @$sous_category->id)->where('publier', 1)
-            ->with('aromes')->with('tags')->withCount(['reviews' => function ($query) {
-                $query->where('publier', 1);
-            }])->get();
+            ->with('aromes')->with('tags')->get();
         $brands = Brand::whereIn('id', $products->pluck('brand_id'))->get();
 
         $sous_categories = SousCategory::where('categorie_id', @$sous_category->categorie_id)->get();
@@ -211,9 +202,7 @@ class ApisController extends Controller
     public function searchProduct($text)
     {
         $products = Product::where('designation_fr', 'LIKE', '%' . $text . '%')->where('publier', 1)
-            ->with('aromes')->with('tags')->withCount(['reviews' => function ($query) {
-                $query->where('publier', 1);
-            }])->get();
+            ->with('aromes')->with('tags')->get();
         $brands = Brand::whereIn('id', $products->pluck('brand_id'))->get();
 
         return ['products' => $products, 'brands' => $brands];
@@ -227,17 +216,11 @@ class ApisController extends Controller
             $products = Product::where('sous_categorie_id', @$sous_category->id)->where('publier', 1)
             ->where('designation_fr', 'LIKE', '%' . $text . '%')
             ->with('aromes')->with('tags')
-            ->withCount(['reviews' => function ($query) {
-                $query->where('publier', 1);
-            }])
             ->get();
         }else{
             $products = Product::where('publier', 1)
             ->where('designation_fr', 'LIKE', '%' . $text . '%')
             ->with('aromes')->with('tags')
-            ->withCount(['reviews' => function ($query) {
-                $query->where('publier', 1);
-            }])
             ->get();
         }
        
@@ -361,7 +344,8 @@ class ApisController extends Controller
 
         // Try to send email, but don't fail the request if it fails
         try {
-            Mail::to('wissemdebech@gmail.com')->send(new SoumissionMail($data));
+            // Send email to admin (from bitoutawalid@gmail.com)
+            Mail::to('bitoutawalid@gmail.com')->send(new SoumissionMail($data, 'bitoutawalid@gmail.com'));
         } catch (\Exception $e) {
             // Log the error but don't fail the request
             \Illuminate\Support\Facades\Log::error('Failed to send order confirmation email', [

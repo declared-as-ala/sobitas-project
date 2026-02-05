@@ -340,7 +340,7 @@ export function Footer() {
               </li>
               <li>
                 <Link href="/page/proteine-tunisie" className="text-sm hover:text-red-500 transition-colors">
-                  Tunisie Proteine
+                Proteine Tunisie
                 </Link>
               </li>
               <li>

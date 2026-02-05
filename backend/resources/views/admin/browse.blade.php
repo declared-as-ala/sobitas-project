@@ -486,9 +486,9 @@
                                                             class="hidden-xs hidden-sm">Editer</span>
                                                     </a>
                                                     <a href="{{ route('voyager.imprimer_commande', $data->id) }}"
-                                                        title="Editer" class="btn btn-primary">
+                                                        title="Bon Livraison" class="btn btn-primary">
                                                         <i class="voyager-receipt"></i> <span
-                                                            class="hidden-xs hidden-sm">Afficher</span>
+                                                            class="hidden-xs hidden-sm">Bon Livraison</span>
                                                     </a>
                                                 @else
                                                     @foreach ($actions as $action)

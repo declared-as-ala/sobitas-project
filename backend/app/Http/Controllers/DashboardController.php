@@ -23,7 +23,7 @@ class DashboardController extends Controller
      */
     public function index()
     {
-        return view('dashboard.index');
+        return view('voyager::dashboard.index');
     }
 
     /**
@@ -55,7 +55,7 @@ class DashboardController extends Controller
             'monthly_comparison' => $this->getMonthlyComparison(),
         ];
 
-        return response()->json($statistics);
+        return $statistics;
     }
 
     /**
@@ -376,7 +376,7 @@ class DashboardController extends Controller
 
         return [
             [
-                'source' => 'Bon de commande',
+                'source' => 'Bon de livraison',
                 'revenue' => round(Facture::whereBetween('created_at', [$start, $end])->sum('prix_ttc'), 2),
             ],
             [

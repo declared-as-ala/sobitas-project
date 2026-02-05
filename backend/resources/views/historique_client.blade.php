@@ -68,7 +68,7 @@
                         @else
 
                         <div class="table-responsive">
-                            <h1 class="page-title">Liste des commandes </h1>
+                            <h1 class="page-title">Liste des bons de livraison </h1>
                             <table id="dataTable" class="table table-hover">
 
                                 <thead>

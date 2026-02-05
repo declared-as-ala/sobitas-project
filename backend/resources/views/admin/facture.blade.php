@@ -110,8 +110,7 @@
                         </div>
                         <!--Rows Start-->
                         <label>Scanner code à barre </label>
-                        <input type="number" placeholder="barcode" id="barcode" class="form-control" autofocus
-                            onchange="scanner({{ $produits }})">
+                        <input type="text" placeholder="barcode" id="barcode" class="form-control" autofocus>
                         <br>
                         <!--Rows Start-->
                         <table class="table" class="row">
@@ -541,16 +540,33 @@
         }
 
 
+        // Debounce timer for barcode scanner
+        var barcodeTimeout = null;
+        var lastBarcodeValue = '';
+
         function scanner(produits) {
 
             var barcode_input = document.getElementById('barcode');
 
-            console.log(barcode_input)
-            var barcode = (+barcode_input.value + 1) + ''
+            // Normalize barcode: trim whitespace, remove line breaks and carriage returns
+            var barcode = barcode_input.value
+                .replace(/\r\n/g, '')
+                .replace(/\n/g, '')
+                .replace(/\r/g, '')
+                .trim();
 
-            console.log('barcode', barcode)
-            if (barcode && produits.length > 0) {
-                var search = produits.find((prod) => prod.code_product == barcode || prod.code_product == '0' + barcode)
+            console.log('Raw barcode value:', barcode_input.value);
+            console.log('Normalized barcode:', barcode);
+
+            // Only process if barcode has minimum length (typically barcodes are at least 3-4 characters)
+            // and if the value has changed (to avoid processing the same barcode twice)
+            if (barcode && barcode.length >= 3 && barcode !== lastBarcodeValue && produits.length > 0) {
+                lastBarcodeValue = barcode; // Store to prevent duplicate processing
+                // Try exact match first, then with leading zero
+                var search = produits.find((prod) => {
+                    var prodCode = String(prod.code_product || '').trim();
+                    return prodCode === barcode || prodCode === '0' + barcode || '0' + prodCode === barcode;
+                })
 
                 if (search) {
                     //alert(search.designation_fr)
@@ -586,19 +602,53 @@
 
                     selectProduit(i)
 
-                    barcode_input.value = null
+                    barcode_input.value = ''
+                    lastBarcodeValue = ''; // Reset to allow rescanning
                     barcode_input.focus()
                 } else {
                     // alert('notfound')
                     Swal.fire('Aucun produit trouvé', '', 'info')
-                    barcode_input.value = null
+                    barcode_input.value = ''
+                    lastBarcodeValue = ''; // Reset to allow rescanning
                     barcode_input.focus()
                 }
-            } else {
+            } else if(barcode && barcode.length < 3){
+                // Barcode too short, wait for more input
+                console.log('Barcode too short, waiting for more input...');
+            } else if(!produits || produits.length === 0){
                 Swal.fire('Liste des produits est vide', '', 'info')
             }
 
         }
+
+        // Setup barcode input with debounced scanner
+        document.addEventListener('DOMContentLoaded', function() {
+            var barcode_input = document.getElementById('barcode');
+            if(barcode_input) {
+                barcode_input.addEventListener('input', function(e) {
+                    // Clear previous timeout
+                    if(barcodeTimeout) {
+                        clearTimeout(barcodeTimeout);
+                    }
+                    
+                    // Wait 150ms after last input (barcode scanners send data very quickly)
+                    barcodeTimeout = setTimeout(function() {
+                        scanner({{ $produits }});
+                    }, 150);
+                });
+                
+                // Also handle Enter key for manual entry
+                barcode_input.addEventListener('keypress', function(e) {
+                    if(e.key === 'Enter') {
+                        e.preventDefault();
+                        if(barcodeTimeout) {
+                            clearTimeout(barcodeTimeout);
+                        }
+                        scanner({{ $produits }});
+                    }
+                });
+            }
+        });
 
 
         const form = document.getElementById('myform')
