@@ -155,28 +155,31 @@ export interface OrderDetail {
 
 export interface OrderRequest {
   commande: {
-    nom: string;
-    prenom: string;
-    email: string;
-    phone: string;
+    // Billing fields removed - only shipping/livraison data is sent
+    // Optional for backward compatibility, but should not be sent
+    nom?: string;
+    prenom?: string;
+    email?: string;
+    phone?: string;
     pays?: string;
     region?: string;
     ville?: string;
     code_postale?: string | number | null;
-    adresse1: string;
+    adresse1?: string;
     adresse2?: string;
+    // Shipping/Livraison fields (required)
     livraison?: number; // 1 = livraison activée, 0 = pas de livraison
     frais_livraison?: number;
     note?: string;
     user_id?: number;
-    livraison_nom?: string;
-    livraison_prenom?: string;
-    livraison_email?: string;
-    livraison_phone?: string;
-    livraison_region?: string;
-    livraison_ville?: string;
+    livraison_nom: string;
+    livraison_prenom: string;
+    livraison_email: string;
+    livraison_phone: string;
+    livraison_region: string;
+    livraison_ville: string;
     livraison_code_postale?: string | null;
-    livraison_adresse1?: string;
+    livraison_adresse1: string;
     livraison_adresse2?: string;
   };
   panier: Array<{

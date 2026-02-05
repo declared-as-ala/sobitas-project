@@ -158,21 +158,10 @@ export default function CheckoutPage() {
     setIsSubmitting(true);
 
     try {
-      // One address: send same values for billing and livraison (API expects both)
+      // Send only livraison (shipping/delivery) data - no billing information
       const orderPayload: OrderRequest = {
         commande: {
-          nom: formData.livraison_nom,
-          prenom: formData.livraison_prenom,
-          email: formData.livraison_email,
-          phone: formData.livraison_phone,
-          pays: formData.pays,
-          region: formData.livraison_region,
-          ville: formData.livraison_ville,
-          code_postale: formData.livraison_code_postale
-            ? (isNaN(Number(formData.livraison_code_postale)) ? null : Number(formData.livraison_code_postale))
-            : null,
-          adresse1: formData.livraison_adresse1,
-          adresse2: formData.livraison_adresse2 || undefined,
+          // Only shipping/livraison fields - no billing data
           livraison_nom: formData.livraison_nom,
           livraison_prenom: formData.livraison_prenom,
           livraison_email: formData.livraison_email,
@@ -435,7 +424,7 @@ export default function CheckoutPage() {
                     Merci pour votre commande #{order?.numero || ''}
                   </p>
                   <p className="text-sm text-gray-500 dark:text-gray-500">
-                    Un email de confirmation a été envoyé à {order?.email || user?.email}
+                    Un email de confirmation a été envoyé à {order?.livraison_email || order?.email || user?.email}
                   </p>
                 </div>
               </CardContent>
@@ -568,20 +557,20 @@ export default function CheckoutPage() {
                     </p>
                   </div>
 
-                  {/* Delivery Address (single address) */}
+                  {/* Delivery Address (livraison only) */}
                   <div className="border-t pt-4">
                     <h3 className="text-lg font-semibold mb-2">Adresse de livraison</h3>
                     <div className="text-gray-600 dark:text-gray-400">
-                      <p>{order?.nom || ''} {order?.prenom || ''}</p>
-                      <p>{order?.adresse1 || ''}</p>
-                      {order?.adresse2 && <p>{order.adresse2}</p>}
-                      <p>{order?.ville || ''}, {order?.region || ''}</p>
-                      <p>{order?.code_postale || ''}</p>
+                      <p>{(order?.livraison_nom || order?.nom || '')} {(order?.livraison_prenom || order?.prenom || '')}</p>
+                      <p>{order?.livraison_adresse1 || order?.adresse1 || ''}</p>
+                      {(order?.livraison_adresse2 || order?.adresse2) && <p>{order?.livraison_adresse2 || order?.adresse2}</p>}
+                      <p>{(order?.livraison_ville || order?.ville || '')}, {(order?.livraison_region || order?.region || '')}</p>
+                      {(order?.livraison_code_postale || order?.code_postale) && <p>{order?.livraison_code_postale || order?.code_postale || ''}</p>}
                       <p className="mt-2">
-                        <strong>Téléphone:</strong> {order?.phone || ''}
+                        <strong>Téléphone:</strong> {order?.livraison_phone || order?.phone || ''}
                       </p>
                       <p>
-                        <strong>Email:</strong> {order?.email || ''}
+                        <strong>Email:</strong> {order?.livraison_email || order?.email || ''}
                       </p>
                     </div>
                   </div>
