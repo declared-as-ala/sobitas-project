@@ -27,16 +27,18 @@ use TCG\Voyager\Facades\Voyager;
 */
 
 Route::get('/', function () {
-    return redirect()->route('voyager.dashboard');
+    return redirect()->route('dashboard');
 });
 
 
-Route::group(['prefix' => 'admin', 'middleware' => ['web']], function () {
-    // Override Voyager's default dashboard route BEFORE Voyager::routes()
+Route::group(['prefix' => 'admin', 'middleware' => ['web', 'admin.user']], function () {
+    // CRITICAL: Override Voyager's default dashboard route BEFORE Voyager::routes()
     // This ensures /admin uses our modern dashboard
-    Route::get('/', [DashboardController::class, 'index'])->name('voyager.dashboard');
+    // Voyager uses 'dashboard' as the route name (not 'voyager.dashboard')
+    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     
     // Register Voyager routes AFTER our custom dashboard route
+    // Our route will take precedence because it's registered first
     Voyager::routes();
 });
 Route::group(['prefix' => 'admin' , 'as' => 'voyager.'], function () {
