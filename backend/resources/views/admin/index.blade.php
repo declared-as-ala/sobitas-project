@@ -5,122 +5,258 @@
         @include('voyager::alerts')
 
         @if (Auth::user()->role_id == 1 || Auth::user()->role_id == 3)
-            <div class="row">
-                <div class="col-md-2">
-                    <a class="btn btn-success form-control" href="{{ route('voyager.ticket') }}">+ Ajouter Ticket</a>
-                </div>
-                <div class="col-md-2">
-                    <a class="btn btn-primary form-control" href="{{ route('voyager.facture') }}">+ Ajouter BL</a>
-                </div>
-
-
-
-                <div class="col-md-2">
-                    <a class="btn btn-danger form-control" href="{{ route('voyager.facture_tva') }}">+ Ajouter Facture ( TVA
-                        )</a>
-                </div>
-                <div class="col-md-2">
-                    <a class="btn btn-warning form-control" href="{{ route('voyager.clients.create') }}">+ Ajouter
-                        Client</a>
-                </div>
-                <div class="col-md-2">
-                    <a class="btn btn-primary form-control" style="background-color: rgb(168, 110, 35)"
-                        href="{{ route('voyager.produits.create') }}">+ Ajouter Produit</a>
-                </div>
-                <div class="col-md-2">
-                    <a class="btn btn-primary form-control" href="{{ route('voyager.articles.create') }}"
-                        style="background-color: rgb(34, 181, 132)">+ Ajouter Blog</a>
-                </div>
-            </div>
-            <form method="POST" action="{{ route('voyager.historique') }}">
-                @csrf
-            <div class="row card " style="padding: 30px ; margin : 15px ; padding-bottom : 0">
-                
-                <div class="col-md-4">
-                  <label style="font-weight: 600 ; color : black">  Chercher l'historique de votre Client</label>
-                </div>
-                <div class="col-md-5">
-                   
-                   
-                    <input class="form-control" type="number" min="20000001" max="99999999" name="tel" style="border-color : #444;" placeholder="Numéro de téléphone" required>
-                    
-                </div>
-                <div class="col-md-3">
-                    <button class="btn btn-success form-control" style="margin:0 ; background-color : #ff5000" > <i class="voyager-search"></i> &nbsp;Chercher </button>
-                </div>
-           
-            </div>
-        </form>
-            <div class=" row">
-                @php
-
-                    $new_commandes = App\Commande::where('etat', 'nouvelle_commande')
-                        ->get()
-                        ->count();
-                    $liv_commandes = App\Commande::where('etat', 'en_cours_de_livraison')
-                        ->get()
-                        ->count();
-                    $prep_commandes = App\Commande::where('etat', 'en_cours_de_preparation')
-                        ->get()
-                        ->count();
-                    $prep_commandes = App\Commande::where('etat', 'prete')
-                        ->get()
-                        ->count();
-
+            @php
+                $new_commandes = App\Commande::where('etat', 'nouvelle_commande')->get()->count();
+                $liv_commandes = App\Commande::where('etat', 'en_cours_de_livraison')->get()->count();
+                $prep_commandes = App\Commande::where('etat', 'en_cours_de_preparation')->get()->count();
+                $prete_commandes = App\Commande::where('etat', 'prete')->get()->count();
                     $clients = App\Client::all();
                     $produits = App\Product::all();
-
                 @endphp
 
-
                 <style>
-                    .dimmer h4 {
-                        font-size: 22px !important;
-                        font-weight: 900 !important
+                .modern-dashboard {
+                    padding: 20px;
+                    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+                    min-height: 100vh;
+                }
+                .quick-actions {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                    gap: 15px;
+                    margin-bottom: 30px;
+                }
+                .quick-action-btn {
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    padding: 18px 20px;
+                    border-radius: 12px;
+                    text-decoration: none;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 10px;
+                    font-weight: 600;
+                    font-size: 14px;
+                    transition: all 0.3s ease;
+                    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+                    border: none;
+                }
+                .quick-action-btn:hover {
+                    transform: translateY(-3px);
+                    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+                    color: white;
+                    text-decoration: none;
+                }
+                .quick-action-btn.ticket { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+                .quick-action-btn.facture { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+                .quick-action-btn.facture-tva { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+                .quick-action-btn.client { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+                .quick-action-btn.produit { background: linear-gradient(135deg, #ff9a56 0%, #ff6a88 100%); }
+                .quick-action-btn.blog { background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); }
+                .stats-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                    gap: 25px;
+                    margin-bottom: 30px;
+                }
+                .stat-card {
+                    background: white;
+                    border-radius: 16px;
+                    padding: 30px;
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+                    transition: all 0.3s ease;
+                    position: relative;
+                    overflow: hidden;
+                }
+                .stat-card::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    height: 4px;
+                    background: linear-gradient(90deg, #667eea, #764ba2);
+                }
+                .stat-card:hover {
+                    transform: translateY(-5px);
+                    box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+                }
+                .stat-card.orders::before { background: linear-gradient(90deg, #11998e, #38ef7d); }
+                .stat-card.clients::before { background: linear-gradient(90deg, #667eea, #764ba2); }
+                .stat-card.products::before { background: linear-gradient(90deg, #fa709a, #fee140); }
+                .stat-icon {
+                    width: 60px;
+                    height: 60px;
+                    border-radius: 12px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 28px;
+                    margin-bottom: 20px;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                }
+                .stat-card.orders .stat-icon { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+                .stat-card.clients .stat-icon { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+                .stat-card.products .stat-icon { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+                .stat-value {
+                    font-size: 42px;
+                    font-weight: 700;
+                    color: #2d3748;
+                    margin: 10px 0;
+                    line-height: 1;
+                }
+                .stat-label {
+                    font-size: 16px;
+                    color: #718096;
+                    font-weight: 500;
+                    margin-bottom: 15px;
+                }
+                .stat-link {
+                    color: #667eea;
+                    text-decoration: none;
+                    font-weight: 600;
+                    font-size: 14px;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 5px;
+                    transition: all 0.2s;
+                }
+                .stat-link:hover {
+                    color: #764ba2;
+                    gap: 8px;
+                }
+                .search-card {
+                    background: white;
+                    border-radius: 16px;
+                    padding: 30px;
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+                    margin-bottom: 30px;
+                }
+                .search-form {
+                    display: flex;
+                    gap: 15px;
+                    align-items: flex-end;
+                }
+                .search-label {
+                    font-size: 18px;
+                    font-weight: 600;
+                    color: #2d3748;
+                    margin-bottom: 10px;
+                }
+                .search-input {
+                    flex: 1;
+                    padding: 14px 18px;
+                    border: 2px solid #e2e8f0;
+                    border-radius: 10px;
+                    font-size: 15px;
+                    transition: all 0.3s;
+                }
+                .search-input:focus {
+                    outline: none;
+                    border-color: #667eea;
+                    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                }
+                .search-btn {
+                    padding: 14px 30px;
+                    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+                    color: white;
+                    border: none;
+                    border-radius: 10px;
+                    font-weight: 600;
+                    font-size: 15px;
+                    cursor: pointer;
+                    transition: all 0.3s;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+                .search-btn:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 5px 15px rgba(238, 90, 111, 0.4);
                     }
                 </style>
 
-                <div class="col-md-4 col-4 col-lg-4">
-                    <div class="panel widget center bgimage"
-                        style="margin-bottom:0;overflow:hidden; background-image: url(https://admin.protein.tn/public/admin/voyager-assets?path=images%2Fwidget-backgrounds%2F02.jpg);">
-                        <div class="dimmer"></div>
-                        <div class="panel-content">
+            <div class="modern-dashboard">
+                <!-- Quick Actions -->
+                <div class="quick-actions">
+                    <a href="{{ route('voyager.ticket') }}" class="quick-action-btn ticket">
+                        <i class="voyager-ticket"></i>
+                        <span>Ajouter Ticket</span>
+                    </a>
+                    <a href="{{ route('voyager.facture') }}" class="quick-action-btn facture">
                             <i class="voyager-file-text"></i>
-                            <h4>{{ $new_commandes }}</h4>
-                            <p>Nouvelle Commandes</p>
-                            <a href="{{ route('voyager.commandes.index') }}" class="btn btn-primary">Consulter la liste des
-                                commandes</a>
+                        <span>Ajouter BL</span>
+                    </a>
+                    <a href="{{ route('voyager.facture_tva') }}" class="quick-action-btn facture-tva">
+                        <i class="voyager-receipt"></i>
+                        <span>Ajouter Facture TVA</span>
+                    </a>
+                    <a href="{{ route('voyager.clients.create') }}" class="quick-action-btn client">
+                        <i class="voyager-person"></i>
+                        <span>Ajouter Client</span>
+                    </a>
+                    <a href="{{ route('voyager.produits.create') }}" class="quick-action-btn produit">
+                        <i class="voyager-bag"></i>
+                        <span>Ajouter Produit</span>
+                    </a>
+                    <a href="{{ route('voyager.articles.create') }}" class="quick-action-btn blog">
+                        <i class="voyager-news"></i>
+                        <span>Ajouter Blog</span>
+                    </a>
                         </div>
-                    </div>
-                </div>
 
-                <div class="col-md-4  col-4 col-lg-4">
-                    <div class="panel widget center bgimage"
-                        style="margin-bottom:0;overflow:hidden; background-image: url(https://admin.protein.tn/public/admin/voyager-assets?path=images%2Fwidget-backgrounds%2F01.jpg);">
-                        <div class="dimmer"></div>
-                        <div class="panel-content">
+                <!-- Client Search -->
+                <form method="POST" action="{{ route('voyager.historique') }}" class="search-card">
+                    @csrf
+                    <div class="search-label">🔍 Chercher l'historique de votre Client</div>
+                    <div class="search-form">
+                        <div style="flex: 1;">
+                            <input class="search-input" type="number" min="20000001" max="99999999" name="tel" 
+                                   placeholder="Numéro de téléphone" required>
+                    </div>
+                        <button type="submit" class="search-btn">
+                            <i class="voyager-search"></i>
+                            <span>Chercher</span>
+                        </button>
+                </div>
+                </form>
+
+                <!-- Statistics Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card orders">
+                        <div class="stat-icon">
+                            <i class="voyager-file-text"></i>
+                        </div>
+                        <div class="stat-value">{{ $new_commandes }}</div>
+                        <div class="stat-label">Nouvelles Commandes</div>
+                        <a href="{{ route('voyager.commandes.index') }}" class="stat-link">
+                            Voir toutes les commandes <i class="voyager-arrow-right"></i>
+                        </a>
+                    </div>
+
+                    <div class="stat-card clients">
+                        <div class="stat-icon">
                             <i class="voyager-group"></i>
-                            <h4>{{ $clients->count() }}</h4>
-                            <p>Clients</p>
-                            <a href="{{ route('voyager.clients.index') }}" class="btn btn-primary">Consulter la liste des
-                                clients</a>
-                        </div>
-                    </div>
                 </div>
-                <div class="col-md-4  col-4 col-lg-4">
-                    <div class="panel widget center bgimage"
-                        style="margin-bottom:0;overflow:hidden;background-image: url(https://admin.protein.tn/public/admin/voyager-assets?path=images%2Fwidget-backgrounds%2F03.jpg);">
-                        <div class="dimmer"></div>
-                        <div class="panel-content">
-                            <i class="voyager-archive"></i>
-                            <h4>{{ $produits->count() }}</h4>
-                            <p><b>Produits</b></p>
-                            <a href="{{ route('voyager.produits.index') }}" class="btn btn-primary">Consulter la liste des
-                                produits</a>
-                        </div>
+                        <div class="stat-value">{{ $clients->count() }}</div>
+                        <div class="stat-label">Total Clients</div>
+                        <a href="{{ route('voyager.clients.index') }}" class="stat-link">
+                            Voir tous les clients <i class="voyager-arrow-right"></i>
+                        </a>
                     </div>
-                </div>
 
+                    <div class="stat-card products">
+                        <div class="stat-icon">
+                            <i class="voyager-archive"></i>
+                        </div>
+                        <div class="stat-value">{{ $produits->count() }}</div>
+                        <div class="stat-label">Total Produits</div>
+                        <a href="{{ route('voyager.produits.index') }}" class="stat-link">
+                            Voir tous les produits <i class="voyager-arrow-right"></i>
+                        </a>
+                    </div>
             </div>
 
             <div class="analytics-container">
