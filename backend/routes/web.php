@@ -32,18 +32,13 @@ Route::get('/', function () {
     return redirect('/admin');
 });
 
-// Register Voyager routes FIRST (this includes login route without admin.user middleware)
+// Register Voyager routes (this includes login route without admin.user middleware)
 // Voyager handles its own middleware grouping internally
 Voyager::routes();
 
-// CRITICAL: Override Voyager's dashboard route AFTER Voyager::routes()
-// We need to match Voyager's exact route structure to override it
-Route::group(['prefix' => 'admin', 'middleware' => ['web', 'admin.user'], 'as' => 'voyager.'], function () {
-    // Override Voyager's default dashboard route
-    // This MUST be registered after Voyager::routes() to take precedence
-    // Using the same route name 'dashboard' that Voyager uses
-    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
-});
+// NOTE: We override Voyager's dashboard VIEW instead of the route
+// This avoids route name conflicts when caching routes
+// The view override is in: resources/views/vendor/voyager/index.blade.php
 Route::group(['prefix' => 'admin' , 'as' => 'voyager.'], function () {
 
         Route::get('statistic', [AdminChartController::class , 'statistic'])->name('statistic');
