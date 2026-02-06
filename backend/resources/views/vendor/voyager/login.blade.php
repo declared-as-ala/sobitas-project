@@ -101,6 +101,7 @@
     
     .form-input-wrapper {
         position: relative;
+        cursor: text;
     }
     
     .form-input-modern {
@@ -114,6 +115,9 @@
         color: #1f2937;
         font-family: inherit;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        cursor: text;
+        position: relative;
+        z-index: 1;
     }
     
     .form-input-modern::placeholder {
@@ -127,9 +131,9 @@
         transform: translateY(-1px);
     }
     
-    .form-input-modern:focus + .input-icon {
+    .form-input-modern:focus ~ .input-icon {
         color: #667eea;
-        transform: scale(1.1);
+        transform: translateY(-50%) scale(1.1);
     }
     
     .input-icon {
@@ -141,6 +145,7 @@
         font-size: 1.125rem;
         pointer-events: none;
         transition: all 0.3s ease;
+        z-index: 2;
     }
     
     .password-toggle {
@@ -158,11 +163,19 @@
         display: flex;
         align-items: center;
         justify-content: center;
+        z-index: 3;
     }
     
     .password-toggle:hover {
         color: #667eea;
         transform: translateY(-50%) scale(1.1);
+    }
+    
+    /* Make wrapper clickable to focus input */
+    .form-input-wrapper:active .form-input-modern,
+    .form-input-wrapper:focus-within .form-input-modern {
+        border-color: #667eea;
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1), 0 4px 12px rgba(0, 0, 0, 0.1);
     }
     
     .remember-me-modern {
@@ -371,7 +384,7 @@
             <label for="email" class="form-label-modern">
                 <i class="voyager-mail"></i> {{ __('voyager::generic.email') }}
             </label>
-            <div class="form-input-wrapper">
+            <div class="form-input-wrapper" onclick="document.getElementById('email').focus()">
                 <i class="voyager-mail input-icon"></i>
                 <input 
                     type="email" 
@@ -384,6 +397,7 @@
                     autofocus
                     autocomplete="email"
                     aria-label="{{ __('voyager::generic.email') }}"
+                    tabindex="1"
                 >
             </div>
         </div>
@@ -392,7 +406,7 @@
             <label for="password" class="form-label-modern">
                 <i class="voyager-lock"></i> {{ __('voyager::generic.password') }}
             </label>
-            <div class="form-input-wrapper">
+            <div class="form-input-wrapper" onclick="document.getElementById('password').focus()">
                 <i class="voyager-lock input-icon"></i>
                 <input 
                     type="password" 
@@ -402,9 +416,10 @@
                     class="form-input-modern" 
                     required
                     autocomplete="current-password"
-                    aria-label="{{ __('voyager::generic.password') }}
+                    aria-label="{{ __('voyager::generic.password') }}"
+                    tabindex="2"
                 >
-                <button type="button" class="password-toggle" id="passwordToggle" aria-label="Toggle password visibility">
+                <button type="button" class="password-toggle" id="passwordToggle" aria-label="Toggle password visibility" tabindex="3">
                     <i class="voyager-eye" id="passwordToggleIcon"></i>
                 </button>
             </div>
@@ -493,6 +508,29 @@
         });
     }
     
+    // Make wrapper clickable to focus input
+    document.querySelectorAll('.form-input-wrapper').forEach(function(wrapper) {
+        if (wrapper) {
+            wrapper.addEventListener('click', function(e) {
+                // Don't focus if clicking on password toggle button
+                if (e.target.closest('.password-toggle')) {
+                    return;
+                }
+                const input = wrapper.querySelector('input');
+                if (input) {
+                    input.focus();
+                    input.click();
+                }
+            });
+            
+            // Also make label clickable
+            const label = wrapper.closest('.form-group-modern')?.querySelector('label');
+            if (label) {
+                label.style.cursor = 'pointer';
+            }
+        }
+    });
+    
     // Enhanced input focus effects
     [email, password].forEach(function(input) {
         if (input) {
@@ -530,6 +568,10 @@
                     }
                 }
             });
+            
+            // Ensure input is clickable
+            input.style.pointerEvents = 'auto';
+            input.style.cursor = 'text';
         }
     });
     
