@@ -20,6 +20,59 @@ interface BlogSectionProps {
   articles: Article[];
 }
 
+// Decode HTML entities properly
+function decodeHtmlEntities(text: string): string {
+  if (!text) return '';
+  // Use browser's built-in decoder
+  if (typeof window !== 'undefined') {
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = text;
+    return textarea.value;
+  }
+  // Fallback for server-side: decode common entities
+  return text
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&rsquo;/g, "'")
+    .replace(/&lsquo;/g, "'")
+    .replace(/&rdquo;/g, '"')
+    .replace(/&ldquo;/g, '"')
+    .replace(/&eacute;/g, 'é')
+    .replace(/&Eacute;/g, 'É')
+    .replace(/&egrave;/g, 'è')
+    .replace(/&Egrave;/g, 'È')
+    .replace(/&ecirc;/g, 'ê')
+    .replace(/&Ecirc;/g, 'Ê')
+    .replace(/&euml;/g, 'ë')
+    .replace(/&Euml;/g, 'Ë')
+    .replace(/&agrave;/g, 'à')
+    .replace(/&Agrave;/g, 'À')
+    .replace(/&acirc;/g, 'â')
+    .replace(/&Acirc;/g, 'Â')
+    .replace(/&auml;/g, 'ä')
+    .replace(/&Auml;/g, 'Ä')
+    .replace(/&ocirc;/g, 'ô')
+    .replace(/&Ocirc;/g, 'Ô')
+    .replace(/&ouml;/g, 'ö')
+    .replace(/&Ouml;/g, 'Ö')
+    .replace(/&ugrave;/g, 'ù')
+    .replace(/&Ugrave;/g, 'Ù')
+    .replace(/&ucirc;/g, 'û')
+    .replace(/&Ucirc;/g, 'Û')
+    .replace(/&uuml;/g, 'ü')
+    .replace(/&Uuml;/g, 'Ü')
+    .replace(/&ccedil;/g, 'ç')
+    .replace(/&Ccedil;/g, 'Ç')
+    .replace(/&iacute;/g, 'í')
+    .replace(/&Iacute;/g, 'Í')
+    .replace(/&iuml;/g, 'ï')
+    .replace(/&Iuml;/g, 'Ï');
+}
+
 export function BlogSection({ articles }: BlogSectionProps) {
   if (!articles || articles.length === 0) return null;
 
@@ -118,14 +171,14 @@ export function BlogSection({ articles }: BlogSectionProps) {
                           href={`/blog/${article.slug}`}
                           loadingMessage={`Chargement de ${article.designation_fr}...`}
                         >
-                          {article.designation_fr}
+                          {decodeHtmlEntities(article.designation_fr || '')}
                         </LinkWithLoading>
                       </h3>
 
                       <div
                         className="text-gray-600 dark:text-gray-300 text-[11px] sm:text-xs line-clamp-2 sm:line-clamp-3 mb-2 sm:mb-3 flex-grow prose dark:prose-invert max-w-none"
                         dangerouslySetInnerHTML={{
-                          __html: article.description_fr || article.description || 'Découvrez cet article intéressant sur la nutrition et le sport.'
+                          __html: decodeHtmlEntities(article.description_fr || article.description || 'Découvrez cet article intéressant sur la nutrition et le sport.')
                         }}
                       />
 

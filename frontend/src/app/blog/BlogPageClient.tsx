@@ -31,18 +31,66 @@ const BLOG_CATEGORIES = [
   { id: 'sport', label: 'Sport', keywords: ['sport', 'musculation', 'performance', 'athlète', 'bodybuilding'] },
 ];
 
-function stripHtml(html: string): string {
-  if (!html) return '';
-  return html
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/\s+/g, ' ')
+// Decode HTML entities properly
+function decodeHtmlEntities(text: string): string {
+  if (!text) return '';
+  // Use browser's built-in decoder
+  if (typeof window !== 'undefined') {
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = text;
+    return textarea.value;
+  }
+  // Fallback for server-side: decode common entities
+  return text
     .replace(/&nbsp;/g, ' ')
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
+    .replace(/&rsquo;/g, "'")
+    .replace(/&lsquo;/g, "'")
+    .replace(/&rdquo;/g, '"')
+    .replace(/&ldquo;/g, '"')
+    .replace(/&eacute;/g, 'é')
+    .replace(/&Eacute;/g, 'É')
+    .replace(/&egrave;/g, 'è')
+    .replace(/&Egrave;/g, 'È')
+    .replace(/&ecirc;/g, 'ê')
+    .replace(/&Ecirc;/g, 'Ê')
+    .replace(/&euml;/g, 'ë')
+    .replace(/&Euml;/g, 'Ë')
+    .replace(/&agrave;/g, 'à')
+    .replace(/&Agrave;/g, 'À')
+    .replace(/&acirc;/g, 'â')
+    .replace(/&Acirc;/g, 'Â')
+    .replace(/&auml;/g, 'ä')
+    .replace(/&Auml;/g, 'Ä')
+    .replace(/&ocirc;/g, 'ô')
+    .replace(/&Ocirc;/g, 'Ô')
+    .replace(/&ouml;/g, 'ö')
+    .replace(/&Ouml;/g, 'Ö')
+    .replace(/&ugrave;/g, 'ù')
+    .replace(/&Ugrave;/g, 'Ù')
+    .replace(/&ucirc;/g, 'û')
+    .replace(/&Ucirc;/g, 'Û')
+    .replace(/&uuml;/g, 'ü')
+    .replace(/&Uuml;/g, 'Ü')
+    .replace(/&ccedil;/g, 'ç')
+    .replace(/&Ccedil;/g, 'Ç')
+    .replace(/&iacute;/g, 'í')
+    .replace(/&Iacute;/g, 'Í')
+    .replace(/&iuml;/g, 'ï')
+    .replace(/&Iuml;/g, 'Ï');
+}
+
+function stripHtml(html: string): string {
+  if (!html) return '';
+  const text = html
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim();
+  return decodeHtmlEntities(text);
 }
 
 function getExcerpt(article: Article, maxLength: number = 140): string {
@@ -236,7 +284,7 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
                         </div>
                         <div className="p-4 sm:p-5 md:p-6 lg:p-7 flex flex-col flex-1 min-w-0">
                           <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white mb-2 sm:mb-3 md:mb-4 line-clamp-2 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors leading-tight">
-                            {article.designation_fr}
+                            {decodeHtmlEntities(article.designation_fr || '')}
                           </h2>
                           {excerpt && (
                             <p className="text-sm sm:text-base md:text-lg text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-2 sm:line-clamp-3 mb-3 sm:mb-4 md:mb-5 flex-1">

@@ -20,6 +20,59 @@ interface ArticleDetailClientProps {
   relatedArticles: Article[];
 }
 
+// Decode HTML entities properly
+function decodeHtmlEntities(text: string): string {
+  if (!text) return '';
+  // Use browser's built-in decoder
+  if (typeof window !== 'undefined') {
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = text;
+    return textarea.value;
+  }
+  // Fallback for server-side: decode common entities
+  return text
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&rsquo;/g, "'")
+    .replace(/&lsquo;/g, "'")
+    .replace(/&rdquo;/g, '"')
+    .replace(/&ldquo;/g, '"')
+    .replace(/&eacute;/g, 'é')
+    .replace(/&Eacute;/g, 'É')
+    .replace(/&egrave;/g, 'è')
+    .replace(/&Egrave;/g, 'È')
+    .replace(/&ecirc;/g, 'ê')
+    .replace(/&Ecirc;/g, 'Ê')
+    .replace(/&euml;/g, 'ë')
+    .replace(/&Euml;/g, 'Ë')
+    .replace(/&agrave;/g, 'à')
+    .replace(/&Agrave;/g, 'À')
+    .replace(/&acirc;/g, 'â')
+    .replace(/&Acirc;/g, 'Â')
+    .replace(/&auml;/g, 'ä')
+    .replace(/&Auml;/g, 'Ä')
+    .replace(/&ocirc;/g, 'ô')
+    .replace(/&Ocirc;/g, 'Ô')
+    .replace(/&ouml;/g, 'ö')
+    .replace(/&Ouml;/g, 'Ö')
+    .replace(/&ugrave;/g, 'ù')
+    .replace(/&Ugrave;/g, 'Ù')
+    .replace(/&ucirc;/g, 'û')
+    .replace(/&Ucirc;/g, 'Û')
+    .replace(/&uuml;/g, 'ü')
+    .replace(/&Uuml;/g, 'Ü')
+    .replace(/&ccedil;/g, 'ç')
+    .replace(/&Ccedil;/g, 'Ç')
+    .replace(/&iacute;/g, 'í')
+    .replace(/&Iacute;/g, 'Í')
+    .replace(/&iuml;/g, 'ï')
+    .replace(/&Iuml;/g, 'Ï');
+}
+
 // Calculate reading time based on content
 function calculateReadingTime(content: string): number {
   if (!content) return 1;
@@ -72,7 +125,7 @@ export function ArticleDetailClient({ article, relatedArticles }: ArticleDetailC
             {/* Article Header */}
             <header className="px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-4 sm:pb-6">
               <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6 leading-tight">
-                {article.designation_fr}
+                {decodeHtmlEntities(article.designation_fr || '')}
               </h1>
               
               {/* Meta Information */}
@@ -127,7 +180,7 @@ export function ArticleDetailClient({ article, relatedArticles }: ArticleDetailC
                   prose-blockquote:text-gray-600 dark:prose-blockquote:text-gray-400
                   prose-code:text-red-600 dark:prose-code:text-red-400
                   prose-pre:bg-gray-100 dark:prose-pre:bg-gray-800"
-                dangerouslySetInnerHTML={{ __html: content }}
+                dangerouslySetInnerHTML={{ __html: decodeHtmlEntities(content) }}
               />
             </div>
           </article>
@@ -167,7 +220,7 @@ export function ArticleDetailClient({ article, relatedArticles }: ArticleDetailC
                           {related.created_at ? format(new Date(related.created_at), 'd MMM yyyy', { locale: fr }) : 'Récent'}
                         </div>
                         <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-2 sm:mb-3 line-clamp-2 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors flex-grow">
-                          {related.designation_fr}
+                          {decodeHtmlEntities(related.designation_fr || '')}
                         </h3>
                         <Button 
                           variant="ghost" 
