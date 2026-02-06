@@ -110,27 +110,63 @@ jobs:
               exit 1
             fi
             
-            # Compile assets (Tailwind CSS + Alpine.js) - AUTOMATIC
-            echo "Compiling assets (npm install + npm run production)..."
-            docker compose exec -T backend-v2 bash -c "cd /var/www/html && npm install --silent" || {
-              echo "⚠️ npm install failed, trying to continue..."
-            }
-            docker compose exec -T backend-v2 bash -c "cd /var/www/html && npm run production" || {
-              echo "⚠️ npm run production failed, but continuing deployment..."
-            }
-            echo "✓ Assets compiled successfully"
+            # Compile assets on HOST (not in container) since backend is volume-mounted
+            # Files compiled on host will be available in container via volume mount
+            echo "Compiling assets on host server (will be available in container via volume mount)..."
+            cd backend || { echo "Backend directory not found!"; exit 1; }
             
-            # Verify compiled assets exist
-            echo "Verifying compiled assets..."
-            if docker compose exec -T backend-v2 test -f /var/www/html/public/css/app.css; then
-              echo "✓ CSS file exists"
-            else
-              echo "⚠️ CSS file not found, but continuing..."
+            # Check if npm is available on host
+            if ! command -v npm &> /dev/null; then
+              echo "⚠️ npm not found on host. Installing Node.js..."
+              # Install Node.js 20.x
+              curl -fsSL https://deb.nodesource.com/setup_20.x | bash - || {
+                echo "❌ Failed to setup Node.js repository"
+                exit 1
+              }
+              apt-get install -y nodejs || {
+                echo "❌ Failed to install Node.js"
+                exit 1
+              }
+              echo "✓ Node.js installed"
             fi
-            if docker compose exec -T backend-v2 test -f /var/www/html/public/js/app.js; then
-              echo "✓ JS file exists"
+            
+            # Verify npm is now available
+            if ! command -v npm &> /dev/null; then
+              echo "❌ npm still not found after installation attempt!"
+              exit 1
+            fi
+            
+            echo "✓ npm found: $(npm --version)"
+            echo "✓ node found: $(node --version)"
+            
+            # Install npm dependencies
+            echo "Installing npm dependencies..."
+            npm install --silent || {
+              echo "⚠️ npm install had issues, but continuing..."
+            }
+            
+            # Compile assets
+            echo "Compiling assets (Tailwind CSS + Alpine.js)..."
+            npm run production || {
+              echo "❌ Asset compilation failed!"
+              exit 1
+            }
+            
+            echo "✓ Assets compiled successfully on host"
+            
+            # Verify files exist (on host, will be available in container via volume)
+            if [ -f "public/css/app.css" ]; then
+              echo "✓ CSS file: public/css/app.css exists ($(du -h public/css/app.css | cut -f1))"
             else
-              echo "⚠️ JS file not found, but continuing..."
+              echo "❌ CSS file not found!"
+              exit 1
+            fi
+            
+            if [ -f "public/js/app.js" ]; then
+              echo "✓ JS file: public/js/app.js exists ($(du -h public/js/app.js | cut -f1))"
+            else
+              echo "❌ JS file not found!"
+              exit 1
             fi
             
             # Run Laravel optimizations
