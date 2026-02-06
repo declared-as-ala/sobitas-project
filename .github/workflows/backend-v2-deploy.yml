@@ -54,6 +54,18 @@ jobs:
             echo "Checking Docker Compose..."
             docker compose version || docker-compose version
             
+            # Verify docker-compose can see the service
+            echo "Verifying docker-compose can see backend-v2 service..."
+            if ! docker compose config --services 2>/dev/null | grep -q "backend-v2"; then
+              echo "ERROR: docker-compose cannot find backend-v2 service!"
+              echo "Available services:"
+              docker compose config --services 2>/dev/null || echo "Cannot list services"
+              echo "Checking docker-compose.yml syntax..."
+              docker compose config 2>&1 | head -20 || true
+              exit 1
+            fi
+            echo "✓ docker-compose can see backend-v2 service"
+            
             # Stop only backend-v2 containers (zero-downtime: new container starts before old stops)
             echo "Stopping old Backend V2 containers..."
             docker compose stop backend-v2 laravel-nginx-v2 2>/dev/null || true
