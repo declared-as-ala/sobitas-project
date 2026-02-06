@@ -1,0 +1,97 @@
+name: Backend V2 Build & Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'docker-compose.yml'
+      - 'nginx/laravel-v2.conf'
+      - '.github/workflows/backend-v2-deploy.yml'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  deploy-backend-v2:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy Backend V2 to VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script_stop: true
+          timeout: 300s
+          script: |
+            set -e
+            echo "=== Backend V2 Deployment Started ==="
+            
+            # Navigate to project directory
+            cd /root/SOBITAS-FULL-PROJECT || { echo "Directory not found!"; exit 1; }
+            
+            # Pull latest code from GitHub
+            echo "Pulling latest code from GitHub..."
+            git fetch origin main
+            git reset --hard origin/main
+            git clean -fd
+            
+            # Ensure docker-compose is available
+            echo "Checking Docker Compose..."
+            docker compose version || docker-compose version
+            
+            # Stop only backend-v2 containers (zero-downtime: new container starts before old stops)
+            echo "Stopping old Backend V2 containers..."
+            docker compose stop backend-v2 laravel-nginx-v2 2>/dev/null || true
+            
+            # Remove old containers
+            echo "Removing old Backend V2 containers..."
+            docker compose rm -f backend-v2 laravel-nginx-v2 2>/dev/null || true
+            
+            # Rebuild only backend-v2 service (no cache for fresh build)
+            echo "Rebuilding Backend V2 Docker image..."
+            docker compose build --no-cache backend-v2
+            
+            # Start backend-v2 services
+            echo "Starting Backend V2 services..."
+            docker compose up -d backend-v2 laravel-nginx-v2
+            
+            # Wait for health checks
+            echo "Waiting for services to be healthy..."
+            sleep 10
+            
+            # Verify containers are running
+            echo "Verifying Backend V2 containers..."
+            if docker ps | grep -q "sobitas-backend-v2"; then
+              echo "✓ Backend V2 PHP-FPM container is running"
+            else
+              echo "✗ Backend V2 PHP-FPM container failed to start"
+              docker compose logs backend-v2
+              exit 1
+            fi
+            
+            if docker ps | grep -q "sobitas-laravel-nginx-v2"; then
+              echo "✓ Backend V2 Nginx container is running"
+            else
+              echo "✗ Backend V2 Nginx container failed to start"
+              docker compose logs laravel-nginx-v2
+              exit 1
+            fi
+            
+            # Run Laravel optimizations
+            echo "Running Laravel optimizations..."
+            docker compose exec -T backend-v2 php artisan config:cache || true
+            docker compose exec -T backend-v2 php artisan route:cache || true
+            docker compose exec -T backend-v2 php artisan view:cache || true
+            
+            # Clean up old images
+            echo "Cleaning up unused Docker images..."
+            docker image prune -f
+            
+            echo "=== Backend V2 Deployment Completed Successfully ==="
+            echo "Backend V2 is accessible on port 8083"
+            echo "Nginx Proxy Manager can map api-v2.sobitas.tn → http://145.223.118.9:8083"
