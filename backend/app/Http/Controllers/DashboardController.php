@@ -24,10 +24,10 @@ class DashboardController extends Controller
     public function index()
     {
         // Get recent activity data for enhanced dashboard
-        $recentCommandes = Commande::latest('created_at')->limit(5)->get();
-        $recentFactures = Facture::latest('created_at')->limit(5)->get();
-        $recentTickets = Ticket::latest('created_at')->limit(5)->get();
-        $recentClients = Client::latest('created_at')->limit(5)->get();
+        $recentCommandes = Commande::with('client')->latest('created_at')->limit(10)->get();
+        $recentFactures = Facture::with('client')->latest('created_at')->limit(10)->get();
+        $recentTickets = Ticket::with('client')->latest('created_at')->limit(10)->get();
+        $recentClients = Client::latest('created_at')->limit(10)->get();
         
         // Today's stats
         $todayRevenue = Facture::whereDate('created_at', today())
@@ -51,8 +51,72 @@ class DashboardController extends Controller
             Ticket::where('created_at', '>=', $weekStart)
             ->sum('prix_ttc');
         
+        // This month stats
+        $monthStart = Carbon::now()->startOfMonth();
+        $monthRevenue = Facture::where('created_at', '>=', $monthStart)
+            ->sum('prix_ttc') + 
+            FactureTva::where('created_at', '>=', $monthStart)
+            ->sum('prix_ttc') +
+            Ticket::where('created_at', '>=', $monthStart)
+            ->sum('prix_ttc');
+        
+        // Last month for comparison
+        $lastMonthStart = Carbon::now()->subMonth()->startOfMonth();
+        $lastMonthEnd = Carbon::now()->subMonth()->endOfMonth();
+        $lastMonthRevenue = Facture::whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])
+            ->sum('prix_ttc') + 
+            FactureTva::whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])
+            ->sum('prix_ttc') +
+            Ticket::whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])
+            ->sum('prix_ttc');
+        
+        // Revenue growth percentage
+        $revenueGrowth = $lastMonthRevenue > 0 
+            ? round((($monthRevenue - $lastMonthRevenue) / $lastMonthRevenue) * 100, 1)
+            : 0;
+        
         // Pending orders
         $pendingCommandes = Commande::whereIn('etat', ['nouvelle_commande', 'en_cours_de_preparation'])->count();
+        
+        // Order status breakdown
+        $orderStatuses = [
+            'nouvelle' => Commande::where('etat', 'nouvelle_commande')->count(),
+            'preparation' => Commande::where('etat', 'en_cours_de_preparation')->count(),
+            'prete' => Commande::where('etat', 'prete')->count(),
+            'livraison' => Commande::where('etat', 'en_cours_de_livraison')->count(),
+            'expidee' => Commande::where('etat', 'expidee')->count(),
+        ];
+        
+        // Top products (last 30 days)
+        $topProducts = $this->getTopProductsLast30Days();
+        
+        // Revenue by source (this month)
+        $revenueBySource = [
+            'factures' => Facture::where('created_at', '>=', $monthStart)->sum('prix_ttc'),
+            'factures_tva' => FactureTva::where('created_at', '>=', $monthStart)->sum('prix_ttc'),
+            'tickets' => Ticket::where('created_at', '>=', $monthStart)->sum('prix_ttc'),
+            'commandes' => Commande::where('etat', 'expidee')->where('created_at', '>=', $monthStart)->sum('prix_ttc'),
+        ];
+        
+        // Daily revenue for last 7 days (for mini chart)
+        $dailyRevenue = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $date = Carbon::now()->subDays($i);
+            $dayRevenue = Facture::whereDate('created_at', $date)->sum('prix_ttc') +
+                         FactureTva::whereDate('created_at', $date)->sum('prix_ttc') +
+                         Ticket::whereDate('created_at', $date)->sum('prix_ttc');
+            $dailyRevenue[] = [
+                'date' => $date->format('d M'),
+                'revenue' => $dayRevenue
+            ];
+        }
+        
+        // Total stats
+        $totalClients = Client::count();
+        $totalProducts = Product::count();
+        $totalFactures = Facture::count();
+        $totalTickets = Ticket::count();
+        $totalCommandes = Commande::count();
         
         return view('admin.index', compact(
             'recentCommandes',
@@ -62,8 +126,58 @@ class DashboardController extends Controller
             'todayRevenue',
             'todayOrders',
             'weekRevenue',
-            'pendingCommandes'
+            'monthRevenue',
+            'lastMonthRevenue',
+            'revenueGrowth',
+            'pendingCommandes',
+            'orderStatuses',
+            'topProducts',
+            'revenueBySource',
+            'dailyRevenue',
+            'totalClients',
+            'totalProducts',
+            'totalFactures',
+            'totalTickets',
+            'totalCommandes'
         ));
+    }
+    
+    /**
+     * Get top products for last 30 days
+     */
+    private function getTopProductsLast30Days()
+    {
+        $start = Carbon::now()->subDays(30);
+        
+        $productSales = [];
+        
+        // From factures
+        $factureProducts = DB::table('details_factures')
+            ->join('factures', 'details_factures.facture_id', '=', 'factures.id')
+            ->join('produits', 'details_factures.produit_id', '=', 'produits.id')
+            ->where('factures.created_at', '>=', $start)
+            ->select('produits.id', 'produits.designation_fr', DB::raw('SUM(details_factures.qte) as total_quantity'), DB::raw('SUM(details_factures.prix_ttc) as total_revenue'))
+            ->groupBy('produits.id', 'produits.designation_fr')
+            ->get();
+        
+        foreach ($factureProducts as $item) {
+            if (!isset($productSales[$item->id])) {
+                $productSales[$item->id] = [
+                    'name' => $item->designation_fr,
+                    'quantity' => 0,
+                    'revenue' => 0
+                ];
+            }
+            $productSales[$item->id]['quantity'] += $item->total_quantity;
+            $productSales[$item->id]['revenue'] += $item->total_revenue;
+        }
+        
+        // Sort by revenue and get top 5
+        usort($productSales, function($a, $b) {
+            return $b['revenue'] <=> $a['revenue'];
+        });
+        
+        return array_slice($productSales, 0, 5);
     }
 
     /**
