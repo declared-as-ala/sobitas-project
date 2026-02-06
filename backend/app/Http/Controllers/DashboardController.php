@@ -23,12 +23,7 @@ class DashboardController extends Controller
      */
     public function index()
     {
-        // Always use modern dashboard (assets will be compiled)
-        // Fallback to default only if modern view doesn't exist
-        if (view()->exists('admin.index-modern')) {
-            return view('admin.index-modern');
-        }
-        // If modern view doesn't exist, use default
+        // Use admin.index (now replaced with modern version)
         return view('admin.index');
     }
 

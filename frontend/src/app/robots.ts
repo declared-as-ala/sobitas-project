@@ -1,7 +1,12 @@
 import { MetadataRoute } from 'next';
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://sobitas.tn';
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
 
+/**
+ * Generates a standards-compliant robots.txt file.
+ * Only uses standard directives: User-agent, Allow, Disallow, Sitemap, Host
+ * Does not include non-standard directives like Content-Signal
+ */
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
