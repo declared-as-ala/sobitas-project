@@ -43,19 +43,27 @@ jobs:
             git reset --hard origin/main
             git clean -fd
             
-            # Check if we're using Docker
-            # Container name is "sobitas-backend" but service name is "backend"
-            if docker ps | grep -q "sobitas-backend"; then
-              echo "✓ Using Docker - compiling assets inside container (sobitas-backend)..."
+            # Check which backend container is running
+            BACKEND_SERVICE=""
+            if docker ps | grep -q "sobitas-backend-v2"; then
+              BACKEND_SERVICE="backend-v2"
+              echo "✓ Found Backend V2 container (sobitas-backend-v2)"
+            elif docker ps | grep -q "sobitas-backend"; then
+              BACKEND_SERVICE="backend"
+              echo "✓ Found Backend #1 container (sobitas-backend)"
+            fi
+            
+            if [ -n "$BACKEND_SERVICE" ]; then
+              echo "✓ Using Docker - compiling assets inside container via service: $BACKEND_SERVICE"
               
-              # Use docker compose with service name "backend" (container name is sobitas-backend)
+              # Use docker compose with service name
               echo "Installing npm dependencies..."
-              docker compose exec -T backend bash -c "cd /var/www/html && npm install --silent" || {
+              docker compose exec -T "$BACKEND_SERVICE" bash -c "cd /var/www/html && npm install --silent" || {
                 echo "⚠️ npm install had issues, but continuing..."
               }
               
               echo "Compiling assets (Tailwind CSS + Alpine.js)..."
-              docker compose exec -T backend bash -c "cd /var/www/html && npm run production" || {
+              docker compose exec -T "$BACKEND_SERVICE" bash -c "cd /var/www/html && npm run production" || {
                 echo "❌ Asset compilation failed!"
                 exit 1
               }
@@ -63,13 +71,13 @@ jobs:
               echo "✓ Assets compiled successfully inside container"
               
               # Verify files exist
-              if docker compose exec -T backend test -f /var/www/html/public/css/app.css; then
+              if docker compose exec -T "$BACKEND_SERVICE" test -f /var/www/html/public/css/app.css; then
                 echo "✓ CSS file: public/css/app.css exists"
               else
                 echo "⚠️ CSS file not found, but continuing..."
               fi
               
-              if docker compose exec -T backend test -f /var/www/html/public/js/app.js; then
+              if docker compose exec -T "$BACKEND_SERVICE" test -f /var/www/html/public/js/app.js; then
                 echo "✓ JS file: public/js/app.js exists"
               else
                 echo "⚠️ JS file not found, but continuing..."
@@ -77,9 +85,9 @@ jobs:
               
               # Clear Laravel cache
               echo "Clearing Laravel cache..."
-              docker compose exec -T backend php artisan view:clear || true
-              docker compose exec -T backend php artisan cache:clear || true
-              docker compose exec -T backend php artisan config:clear || true
+              docker compose exec -T "$BACKEND_SERVICE" php artisan view:clear || true
+              docker compose exec -T "$BACKEND_SERVICE" php artisan cache:clear || true
+              docker compose exec -T "$BACKEND_SERVICE" php artisan config:clear || true
               
             else
               echo "⚠️ Docker container not found, trying direct npm..."
