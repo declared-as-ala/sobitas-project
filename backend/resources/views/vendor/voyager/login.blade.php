@@ -7,349 +7,121 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
     body.login {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         background-attachment: fixed;
-        background-size: 400% 400%;
-        animation: gradientShift 15s ease infinite;
-        font-family: 'Inter', system-ui, -apple-system, sans-serif;
     }
-    
-    @keyframes gradientShift {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-    }
-    
     .login-sidebar {
         background: rgba(255, 255, 255, 0.98);
-        backdrop-filter: blur(20px);
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-        border-radius: 0;
-        overflow: hidden;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
     }
-    
     .modern-login-container {
-        padding: 3rem 2.5rem;
-        max-width: 420px;
-        margin: 0 auto;
+        padding: 3rem 2rem;
     }
-    
     .login-logo {
         text-align: center;
-        margin-bottom: 2.5rem;
-        animation: fadeInDown 0.6s ease-out;
+        margin-bottom: 2rem;
     }
-    
-    @keyframes fadeInDown {
-        from {
-            opacity: 0;
-            transform: translateY(-20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-    
     .login-logo img {
-        width: 90px;
-        height: 90px;
-        margin-bottom: 1.25rem;
-        border-radius: 20px;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-        background: white;
-        padding: 12px;
-        transition: transform 0.3s ease;
+        width: 80px;
+        height: 80px;
+        margin-bottom: 1rem;
     }
-    
-    .login-logo img:hover {
-        transform: scale(1.05) rotate(5deg);
-    }
-    
     .login-title {
-        font-size: 2rem;
+        font-size: 1.875rem;
         font-weight: 700;
         color: #1f2937;
         margin-bottom: 0.5rem;
-        letter-spacing: -0.5px;
     }
-    
     .login-subtitle {
         color: #6b7280;
-        font-size: 0.9375rem;
-        font-weight: 400;
+        font-size: 0.875rem;
     }
-    
     .form-group-modern {
         margin-bottom: 1.5rem;
-        position: relative;
     }
-    
     .form-label-modern {
         display: block;
         font-size: 0.875rem;
         font-weight: 600;
         color: #374151;
         margin-bottom: 0.5rem;
-        letter-spacing: 0.025em;
     }
-    
-    .form-label-modern i {
-        margin-right: 0.5rem;
-        color: #667eea;
-    }
-    
-    .form-input-wrapper {
-        position: relative;
-        cursor: text;
-    }
-    
     .form-input-modern {
         width: 100%;
-        padding: 0.875rem 1rem 0.875rem 2.75rem;
+        padding: 0.75rem 1rem;
         border: 2px solid #e5e7eb;
-        border-radius: 10px;
+        border-radius: 0.5rem;
         font-size: 1rem;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all 0.2s;
         background: #fff;
-        color: #1f2937;
-        font-family: inherit;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-        cursor: text;
-        position: relative;
-        z-index: 1;
     }
-    
-    .form-input-modern::placeholder {
-        color: #9ca3af;
-    }
-    
     .form-input-modern:focus {
         outline: none;
         border-color: #667eea;
-        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1), 0 4px 12px rgba(0, 0, 0, 0.1);
-        transform: translateY(-1px);
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
     }
-    
-    .form-input-modern:focus ~ .input-icon {
-        color: #667eea;
-        transform: translateY(-50%) scale(1.1);
-    }
-    
-    .input-icon {
-        position: absolute;
-        left: 1rem;
-        top: 50%;
-        transform: translateY(-50%);
-        color: #9ca3af;
-        font-size: 1.125rem;
-        pointer-events: none;
-        transition: all 0.3s ease;
-        z-index: 2;
-    }
-    
-    .password-toggle {
-        position: absolute;
-        right: 1rem;
-        top: 50%;
-        transform: translateY(-50%);
-        background: none;
-        border: none;
-        color: #9ca3af;
-        cursor: pointer;
-        font-size: 1.125rem;
-        padding: 0.25rem;
-        transition: all 0.2s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 3;
-    }
-    
-    .password-toggle:hover {
-        color: #667eea;
-        transform: translateY(-50%) scale(1.1);
-    }
-    
-    /* Make wrapper clickable to focus input */
-    .form-input-wrapper:active .form-input-modern,
-    .form-input-wrapper:focus-within .form-input-modern {
-        border-color: #667eea;
-        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1), 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-    
     .remember-me-modern {
         display: flex;
         align-items: center;
-        gap: 0.625rem;
-        margin-bottom: 1.75rem;
-        cursor: pointer;
-        user-select: none;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
     }
-    
     .remember-me-modern input[type="checkbox"] {
-        width: 1.125rem;
-        height: 1.125rem;
+        width: 1rem;
+        height: 1rem;
         accent-color: #667eea;
-        cursor: pointer;
-        border-radius: 4px;
     }
-    
-    .remember-me-modern label {
-        cursor: pointer;
-        color: #4b5563;
-        font-size: 0.875rem;
-        font-weight: 500;
-        transition: color 0.2s;
-    }
-    
-    .remember-me-modern:hover label {
-        color: #667eea;
-    }
-    
     .btn-login-modern {
         width: 100%;
-        padding: 1rem 1.5rem;
+        padding: 0.875rem 1.5rem;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
         font-weight: 600;
-        font-size: 1rem;
         border: none;
-        border-radius: 10px;
+        border-radius: 0.5rem;
+        font-size: 1rem;
         cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 0 4px 14px rgba(102, 126, 234, 0.4);
-        font-family: inherit;
-        letter-spacing: 0.025em;
-        position: relative;
-        overflow: hidden;
+        transition: all 0.2s;
+        box-shadow: 0 4px 6px rgba(102, 126, 234, 0.3);
     }
-    
-    .btn-login-modern::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-        transition: left 0.5s;
-    }
-    
-    .btn-login-modern:hover::before {
-        left: 100%;
-    }
-    
     .btn-login-modern:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.5);
+        box-shadow: 0 6px 12px rgba(102, 126, 234, 0.4);
     }
-    
     .btn-login-modern:active {
         transform: translateY(0);
-        box-shadow: 0 4px 14px rgba(102, 126, 234, 0.4);
     }
-    
-    .btn-login-modern:disabled {
-        opacity: 0.7;
-        cursor: not-allowed;
-        transform: none;
-    }
-    
-    .btn-login-modern .signingin {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-    }
-    
-    .btn-login-modern .signingin .voyager-refresh {
-        animation: spin 1s linear infinite;
-    }
-    
-    @keyframes spin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-    }
-    
     .alert-modern {
-        padding: 1rem 1.25rem;
-        border-radius: 10px;
-        margin-bottom: 1.5rem;
-        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-        border: 2px solid #fca5a5;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+        background: #fee2e2;
+        border: 1px solid #fecaca;
         color: #991b1b;
-        animation: shake 0.5s ease;
-        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
     }
-    
-    @keyframes shake {
-        0%, 100% { transform: translateX(0); }
-        25% { transform: translateX(-5px); }
-        75% { transform: translateX(5px); }
+    .input-icon {
+        position: relative;
     }
-    
-    .alert-modern ul {
-        list-style: none;
-        padding: 0;
-        margin: 0;
+    .input-icon input {
+        padding-left: 2.5rem;
     }
-    
-    .alert-modern li {
-        margin-bottom: 0.5rem;
-        font-size: 0.875rem;
-        font-weight: 500;
+    .input-icon::before {
+        content: '';
+        position: absolute;
+        left: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 1.25rem;
+        height: 1.25rem;
+        opacity: 0.5;
     }
-    
-    .alert-modern li:last-child {
-        margin-bottom: 0;
-    }
-    
-    .forgot-password-link {
-        text-align: center;
-        margin-top: 1.5rem;
-    }
-    
-    .forgot-password-link a {
-        color: #667eea;
-        text-decoration: none;
-        font-size: 0.875rem;
-        font-weight: 500;
-        transition: all 0.2s;
-    }
-    
-    .forgot-password-link a:hover {
-        color: #764ba2;
-        text-decoration: underline;
-    }
-    
     .fade-in {
-        animation: fadeIn 0.6s ease-out;
+        animation: fadeIn 0.5s ease-in;
     }
-    
     @keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(10px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-    
-    /* Focus visible for accessibility */
-    .form-input-modern:focus-visible,
-    .btn-login-modern:focus-visible,
-    .password-toggle:focus-visible {
-        outline: 2px solid #667eea;
-        outline-offset: 2px;
-    }
-    
-    /* Loading state */
-    .form-group-modern.loading .form-input-modern {
-        opacity: 0.6;
-        pointer-events: none;
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
     }
 </style>
 @endsection
@@ -359,91 +131,69 @@
     <div class="login-logo">
         <?php $admin_logo_img = Voyager::setting('admin.icon_image', ''); ?>
         @if($admin_logo_img == '')
-            <img src="{{ voyager_asset('images/logo-icon-light.png') }}" alt="Logo">
+            <img src="{{ voyager_asset('images/logo-icon-light.png') }}" alt="Logo" class="fade-in">
         @else
-            <img src="{{ Voyager::image($admin_logo_img) }}" alt="Logo">
+            <img src="{{ Voyager::image($admin_logo_img) }}" alt="Logo" class="fade-in">
         @endif
         <h1 class="login-title">{{ Voyager::setting('admin.title', 'SOBITAS') }}</h1>
-        <p class="login-subtitle">{{ __('voyager::login.welcome') }}</p>
+        <p class="login-subtitle">{{ __('voyager::login.signin_below') }}</p>
     </div>
 
-    @if(!$errors->isEmpty())
-        <div class="alert-modern fade-in">
-            <ul>
-                @foreach($errors->all() as $err)
-                    <li>{{ $err }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
-
-    <form action="{{ route('voyager.login') }}" method="POST" id="loginForm" novalidate>
+    <form action="{{ route('voyager.login') }}" method="POST" id="loginForm">
         {{ csrf_field() }}
         
         <div class="form-group-modern">
             <label for="email" class="form-label-modern">
                 <i class="voyager-mail"></i> {{ __('voyager::generic.email') }}
             </label>
-            <div class="form-input-wrapper" onclick="document.getElementById('email').focus()">
-                <i class="voyager-mail input-icon"></i>
-                <input 
-                    type="email" 
-                    name="email" 
-                    id="email" 
-                    value="{{ old('email') }}" 
-                    placeholder="votre@email.com" 
-                    class="form-input-modern" 
-                    required
-                    autofocus
-                    autocomplete="email"
-                    aria-label="{{ __('voyager::generic.email') }}"
-                    tabindex="1"
-                >
-            </div>
+            <input 
+                type="email" 
+                name="email" 
+                id="email" 
+                value="{{ old('email') }}" 
+                placeholder="{{ __('voyager::generic.email') }}" 
+                class="form-input-modern" 
+                required
+                autofocus
+            >
         </div>
 
         <div class="form-group-modern">
             <label for="password" class="form-label-modern">
                 <i class="voyager-lock"></i> {{ __('voyager::generic.password') }}
             </label>
-            <div class="form-input-wrapper" onclick="document.getElementById('password').focus()">
-                <i class="voyager-lock input-icon"></i>
-                <input 
-                    type="password" 
-                    name="password" 
-                    id="password" 
-                    placeholder="••••••••" 
-                    class="form-input-modern" 
-                    required
-                    autocomplete="current-password"
-                    aria-label="{{ __('voyager::generic.password') }}"
-                    tabindex="2"
-                >
-                <button type="button" class="password-toggle" id="passwordToggle" aria-label="Toggle password visibility" tabindex="3">
-                    <i class="voyager-eye" id="passwordToggleIcon"></i>
-                </button>
-            </div>
+            <input 
+                type="password" 
+                name="password" 
+                id="password" 
+                placeholder="{{ __('voyager::generic.password') }}" 
+                class="form-input-modern" 
+                required
+            >
         </div>
 
         <div class="remember-me-modern">
             <input type="checkbox" name="remember" id="remember" value="1">
-            <label for="remember">{{ __('voyager::generic.remember_me') }}</label>
+            <label for="remember" style="cursor: pointer; color: #6b7280; font-size: 0.875rem;">
+                {{ __('voyager::generic.remember_me') }}
+            </label>
         </div>
 
         <button type="submit" class="btn-login-modern" id="loginButton">
             <span class="signingin hidden">
-                <i class="voyager-refresh"></i>
-                <span>{{ __('voyager::login.loggingin') }}...</span>
+                <span class="voyager-refresh"></span> {{ __('voyager::login.loggingin') }}...
             </span>
             <span class="signin">{{ __('voyager::generic.login') }}</span>
         </button>
     </form>
 
-    @if (Route::has('voyager.password.request'))
-        <div class="forgot-password-link">
-            <a href="{{ route('voyager.password.request') }}">
-                {{ __('voyager::login.forgot_password') }}
-            </a>
+    @if(!$errors->isEmpty())
+        <div class="alert-modern fade-in">
+            <ul style="list-style: none; padding: 0; margin: 0;">
+                @foreach($errors->all() as $err)
+                    <li style="margin-bottom: 0.25rem;">{{ $err }}</li>
+                @endforeach
+            </ul>
         </div>
     @endif
 </div>
@@ -451,147 +201,40 @@
 
 @section('post_js')
 <script>
-(function() {
-    'use strict';
-    
-    const form = document.getElementById('loginForm');
-    const btn = document.getElementById('loginButton');
-    const email = document.getElementById('email');
-    const password = document.getElementById('password');
-    const passwordToggle = document.getElementById('passwordToggle');
-    const passwordToggleIcon = document.getElementById('passwordToggleIcon');
-    
-    // Password toggle functionality
-    if (passwordToggle && password) {
-        passwordToggle.addEventListener('click', function(e) {
-            e.preventDefault();
-            const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
-            password.setAttribute('type', type);
-            
-            // Toggle icon
-            if (type === 'text') {
-                passwordToggleIcon.classList.remove('voyager-eye');
-                passwordToggleIcon.classList.add('voyager-eye-off');
-            } else {
-                passwordToggleIcon.classList.remove('voyager-eye-off');
-                passwordToggleIcon.classList.add('voyager-eye');
-            }
-        });
-    }
-    
-    // Form submission
-    if (form && btn) {
-        form.addEventListener('submit', function(e) {
-            if (form.checkValidity()) {
-                const signingIn = btn.querySelector('.signingin');
-                const signIn = btn.querySelector('.signin');
-                
-                if (signingIn && signIn) {
-                    signingIn.classList.remove('hidden');
-                    signIn.classList.add('hidden');
+    (function() {
+        var btn = document.getElementById('loginButton');
+        var form = document.getElementById('loginForm');
+        var email = document.getElementById('email');
+        var password = document.getElementById('password');
+        
+        if (form) {
+            form.addEventListener('submit', function(ev) {
+                if (form.checkValidity()) {
+                    btn.querySelector('.signingin').classList.remove('hidden');
+                    btn.querySelector('.signin').classList.add('hidden');
                     btn.disabled = true;
-                    btn.style.cursor = 'wait';
-                }
-            } else {
-                e.preventDefault();
-                e.stopPropagation();
-                
-                // Focus first invalid field
-                const firstInvalid = form.querySelector(':invalid');
-                if (firstInvalid) {
-                    firstInvalid.focus();
-                    firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
-            }
-            
-            form.classList.add('was-validated');
-        });
-    }
-    
-    // Make wrapper clickable to focus input
-    document.querySelectorAll('.form-input-wrapper').forEach(function(wrapper) {
-        if (wrapper) {
-            wrapper.addEventListener('click', function(e) {
-                // Don't focus if clicking on password toggle button
-                if (e.target.closest('.password-toggle')) {
-                    return;
-                }
-                const input = wrapper.querySelector('input');
-                if (input) {
-                    input.focus();
-                    input.click();
-                }
-            });
-            
-            // Also make label clickable
-            const label = wrapper.closest('.form-group-modern')?.querySelector('label');
-            if (label) {
-                label.style.cursor = 'pointer';
-            }
-        }
-    });
-    
-    // Enhanced input focus effects
-    [email, password].forEach(function(input) {
-        if (input) {
-            const wrapper = input.closest('.form-input-wrapper');
-            const group = input.closest('.form-group-modern');
-            
-            input.addEventListener('focus', function() {
-                if (wrapper) wrapper.classList.add('focused');
-                if (group) group.classList.add('focused');
-            });
-            
-            input.addEventListener('blur', function() {
-                if (wrapper) wrapper.classList.remove('focused');
-                if (group) group.classList.remove('focused');
-                
-                // Validate on blur
-                if (this.checkValidity()) {
-                    this.classList.add('valid');
-                    this.classList.remove('invalid');
                 } else {
-                    this.classList.add('invalid');
-                    this.classList.remove('valid');
+                    ev.preventDefault();
                 }
             });
-            
-            // Real-time validation
-            input.addEventListener('input', function() {
-                if (this.value.length > 0) {
-                    if (this.checkValidity()) {
-                        this.classList.remove('invalid');
-                        this.classList.add('valid');
-                    } else {
-                        this.classList.remove('valid');
-                        this.classList.add('invalid');
-                    }
-                }
-            });
-            
-            // Ensure input is clickable
-            input.style.pointerEvents = 'auto';
-            input.style.cursor = 'text';
         }
-    });
-    
-    // Auto-focus email on load
-    if (email && !email.value) {
-        setTimeout(function() {
+        
+        // Add focus effects
+        [email, password].forEach(function(input) {
+            if (input) {
+                input.addEventListener('focus', function() {
+                    this.parentElement.classList.add('focused');
+                });
+                input.addEventListener('blur', function() {
+                    this.parentElement.classList.remove('focused');
+                });
+            }
+        });
+        
+        // Auto-focus email
+        if (email) {
             email.focus();
-        }, 100);
-    }
-    
-    // Enter key to submit
-    [email, password].forEach(function(input) {
-        if (input) {
-            input.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter' && form.checkValidity()) {
-                    form.dispatchEvent(new Event('submit'));
-                }
-            });
         }
-    });
-})();
+    })();
 </script>
 @endsection

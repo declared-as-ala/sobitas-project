@@ -54,7 +54,7 @@ return [
     |
     */
 
-    'url' => env('APP_URL', 'https://admin.sobitas.tn'),
+    'url' => env('APP_URL', 'https://admin.protein.tn'),
 
     'asset_url' => env('ASSET_URL', null),
 
