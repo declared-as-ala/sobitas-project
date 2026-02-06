@@ -26,7 +26,10 @@ jobs:
           password: ${{ secrets.VPS_PASSWORD }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script_stop: true
-          timeout: 300s
+          timeout: 600s
+          retry: 3
+          retry_interval: 10s
+          command_timeout: 300s
           script: |
             set -e
             echo "=== Backend V2 Deployment Started ==="

@@ -29,6 +29,9 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script_stop: true
           timeout: 600s
+          retry: 3
+          retry_interval: 10s
+          command_timeout: 300s
           script: |
             set -e
             echo "=== Backend Assets Compilation Started ==="
