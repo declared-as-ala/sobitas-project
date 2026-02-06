@@ -27,7 +27,9 @@ use TCG\Voyager\Facades\Voyager;
 */
 
 Route::get('/', function () {
-    return redirect()->route('dashboard');
+    // Redirect to admin dashboard
+    // Use full URL to avoid route name issues
+    return redirect('/admin');
 });
 
 
