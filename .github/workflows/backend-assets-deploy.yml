@@ -43,69 +43,78 @@ jobs:
             git reset --hard origin/main
             git clean -fd
             
-            # Check which backend container is running
-            BACKEND_SERVICE=""
-            if docker ps | grep -q "sobitas-backend-v2"; then
-              BACKEND_SERVICE="backend-v2"
-              echo "✓ Found Backend V2 container (sobitas-backend-v2)"
-            elif docker ps | grep -q "sobitas-backend"; then
-              BACKEND_SERVICE="backend"
-              echo "✓ Found Backend #1 container (sobitas-backend)"
+            # Compile assets on HOST (not in container) since backend is volume-mounted
+            # Files compiled on host will be available in container via volume mount
+            echo "Compiling assets on host server (will be available in container via volume mount)..."
+            cd backend || { echo "Backend directory not found!"; exit 1; }
+            
+            # Check if npm is available on host
+            if ! command -v npm &> /dev/null; then
+              echo "⚠️ npm not found on host. Installing Node.js..."
+              # Install Node.js 20.x
+              curl -fsSL https://deb.nodesource.com/setup_20.x | bash - || {
+                echo "❌ Failed to setup Node.js repository"
+                exit 1
+              }
+              apt-get install -y nodejs || {
+                echo "❌ Failed to install Node.js"
+                exit 1
+              }
+              echo "✓ Node.js installed"
             fi
             
-            if [ -n "$BACKEND_SERVICE" ]; then
-              echo "✓ Using Docker - compiling assets inside container via service: $BACKEND_SERVICE"
-              
-              # Use docker compose with service name
-              echo "Installing npm dependencies..."
-              docker compose exec -T "$BACKEND_SERVICE" bash -c "cd /var/www/html && npm install --silent" || {
-                echo "⚠️ npm install had issues, but continuing..."
-              }
-              
-              echo "Compiling assets (Tailwind CSS + Alpine.js)..."
-              docker compose exec -T "$BACKEND_SERVICE" bash -c "cd /var/www/html && npm run production" || {
-                echo "❌ Asset compilation failed!"
-                exit 1
-              }
-              
-              echo "✓ Assets compiled successfully inside container"
-              
-              # Verify files exist
-              if docker compose exec -T "$BACKEND_SERVICE" test -f /var/www/html/public/css/app.css; then
-                echo "✓ CSS file: public/css/app.css exists"
-              else
-                echo "⚠️ CSS file not found, but continuing..."
-              fi
-              
-              if docker compose exec -T "$BACKEND_SERVICE" test -f /var/www/html/public/js/app.js; then
-                echo "✓ JS file: public/js/app.js exists"
-              else
-                echo "⚠️ JS file not found, but continuing..."
-              fi
-              
-              # Clear Laravel cache
-              echo "Clearing Laravel cache..."
-              docker compose exec -T "$BACKEND_SERVICE" php artisan view:clear || true
-              docker compose exec -T "$BACKEND_SERVICE" php artisan cache:clear || true
-              docker compose exec -T "$BACKEND_SERVICE" php artisan config:clear || true
-              
+            # Verify npm is now available
+            if ! command -v npm &> /dev/null; then
+              echo "❌ npm still not found after installation attempt!"
+              exit 1
+            fi
+            
+            echo "✓ npm found: $(npm --version)"
+            echo "✓ node found: $(node --version)"
+            
+            # Install npm dependencies
+            echo "Installing npm dependencies..."
+            npm install --silent || {
+              echo "⚠️ npm install had issues, but continuing..."
+            }
+            
+            # Compile assets
+            echo "Compiling assets (Tailwind CSS + Alpine.js)..."
+            npm run production || {
+              echo "❌ Asset compilation failed!"
+              exit 1
+            }
+            
+            echo "✓ Assets compiled successfully on host"
+            
+            # Verify files exist (on host, will be available in container via volume)
+            if [ -f "public/css/app.css" ]; then
+              echo "✓ CSS file: public/css/app.css exists ($(du -h public/css/app.css | cut -f1))"
             else
-              echo "⚠️ Docker container not found, trying direct npm..."
-              cd backend || { echo "Backend directory not found!"; exit 1; }
-              
-              # Check if npm is available
-              if command -v npm &> /dev/null; then
-                echo "Installing npm dependencies..."
-                npm install --silent
-                
-                echo "Compiling assets..."
-                npm run production
-                
-                echo "✓ Assets compiled successfully"
-              else
-                echo "❌ npm not found! Please install Node.js or use Docker."
-                exit 1
-              fi
+              echo "❌ CSS file not found!"
+              exit 1
+            fi
+            
+            if [ -f "public/js/app.js" ]; then
+              echo "✓ JS file: public/js/app.js exists ($(du -h public/js/app.js | cut -f1))"
+            else
+              echo "❌ JS file not found!"
+              exit 1
+            fi
+            
+            # Clear Laravel cache (in container if available, or skip)
+            echo "Clearing Laravel cache..."
+            # Try to find which backend container is running
+            if docker ps | grep -q "sobitas-backend-v2"; then
+              docker compose exec -T backend-v2 php artisan view:clear 2>/dev/null || true
+              docker compose exec -T backend-v2 php artisan cache:clear 2>/dev/null || true
+              docker compose exec -T backend-v2 php artisan config:clear 2>/dev/null || true
+            elif docker ps | grep -q "sobitas-backend"; then
+              docker compose exec -T backend php artisan view:clear 2>/dev/null || true
+              docker compose exec -T backend php artisan cache:clear 2>/dev/null || true
+              docker compose exec -T backend php artisan config:clear 2>/dev/null || true
+            else
+              echo "⚠️ No backend container running, skipping cache clear (will be cleared on next request)"
             fi
             
             echo "=== Backend Assets Compilation Completed Successfully ==="
