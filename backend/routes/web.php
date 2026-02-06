@@ -36,11 +36,12 @@ Route::get('/', function () {
 // Voyager handles its own middleware grouping internally
 Voyager::routes();
 
-// Then override the dashboard route AFTER Voyager routes are registered
-// This ensures our custom dashboard takes precedence
-Route::group(['prefix' => 'admin', 'middleware' => ['web', 'admin.user']], function () {
+// CRITICAL: Override Voyager's dashboard route AFTER Voyager::routes()
+// We need to match Voyager's exact route structure to override it
+Route::group(['prefix' => 'admin', 'middleware' => ['web', 'admin.user'], 'as' => 'voyager.'], function () {
     // Override Voyager's default dashboard route
-    // Voyager uses 'dashboard' as the route name
+    // This MUST be registered after Voyager::routes() to take precedence
+    // Using the same route name 'dashboard' that Voyager uses
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 });
 Route::group(['prefix' => 'admin' , 'as' => 'voyager.'], function () {
