@@ -34,7 +34,7 @@ Route::get('/', function () {
 
 // Register Voyager routes (this includes login route without admin.user middleware)
 // Voyager handles its own middleware grouping internally
-Voyager::routes();
+    Voyager::routes();
 
 // NOTE: We override Voyager's dashboard VIEW instead of the route
 // This avoids route name conflicts when caching routes

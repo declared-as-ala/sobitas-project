@@ -97,6 +97,28 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
   const images = product.cover ? [product.cover] : [];
   const productImage = images[0] ? getStorageUrl(images[0]) : '';
 
+  // Helper function to strip HTML tags and get plain text for meta description
+  const stripHtml = (html: string | null | undefined): string => {
+    if (!html) return '';
+    return html
+      .replace(/<[^>]*>/g, '') // Remove HTML tags
+      .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
+      .replace(/&amp;/g, '&') // Replace &amp; with &
+      .replace(/&lt;/g, '<') // Replace &lt; with <
+      .replace(/&gt;/g, '>') // Replace &gt; with >
+      .replace(/&quot;/g, '"') // Replace &quot; with "
+      .replace(/&#39;/g, "'") // Replace &#39; with '
+      .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+      .trim();
+  };
+
+  // Get meta description for display (strip HTML if needed)
+  const metaDescription = product.meta_description_fr 
+    ? stripHtml(product.meta_description_fr)
+    : product.description_cover 
+    ? stripHtml(product.description_cover)
+    : null;
+
   const handleAddToCart = () => {
     // Check if product is out of stock
     if (product.rupture !== 1) {
@@ -253,22 +275,79 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-10 mb-6 sm:mb-10 lg:mb-16">
           {/* LEFT: Product (images + info + description tabs) */}
           <div className="lg:col-span-2 space-y-4 sm:space-y-6 lg:space-y-8">
+            {/* Title and Meta Description - Above image on mobile, beside on desktop */}
+            <div className="lg:hidden space-y-3">
+              {/* Badges */}
+              <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                {discount > 0 && (
+                  <Badge className="bg-red-600 text-white text-sm px-3 py-1">
+                    -{discount}% OFF
+                  </Badge>
+                )}
+                {product.new_product === 1 && (
+                  <Badge className="bg-blue-600 text-white text-sm px-3 py-1">
+                    Nouveau
+                  </Badge>
+                )}
+                {product.best_seller === 1 && (
+                  <Badge className="bg-yellow-600 text-white text-sm px-3 py-1">
+                    Top Vendu
+                  </Badge>
+                )}
+                <Badge variant="outline" className="bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800">
+                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                  {product.rupture === 1 ? 'En Stock' : 'Rupture de stock'}
+                </Badge>
+              </div>
+
+              {/* Product Name */}
+              <div className="min-w-0">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2 sm:mb-3 leading-tight break-words">
+                  {product.designation_fr}
+                </h1>
+                {product.brand && (
+                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-1">
+                    {product.brand.designation_fr}
+                  </p>
+                )}
+                {product.sous_categorie && (
+                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-2">
+                    {product.sous_categorie.designation_fr}
+                  </p>
+                )}
+                {product.code_product && (
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-500 mb-2">
+                    Code produit: {product.code_product}
+                  </p>
+                )}
+              </div>
+
+              {/* Meta Description - Mobile */}
+              {metaDescription && (
+                <div className="pt-2 pb-3 border-b border-gray-200 dark:border-gray-800">
+                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed">
+                    {metaDescription}
+                  </p>
+                </div>
+              )}
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6 lg:gap-8">
-              {/* Product Images - Now takes 3/5 of the space (60%) */}
+              {/* Product Images - Left side, takes 3/5 (60%) on desktop, full width on mobile */}
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 className="lg:col-span-3 space-y-3 sm:space-y-4"
               >
-                {/* Main Image - Bigger */}
-                <div className="relative aspect-square bg-white dark:bg-gray-900 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border-2 border-gray-200 dark:border-gray-800 group min-h-0">
+                {/* Main Image - Increased height on web, taller aspect ratio */}
+                <div className="relative bg-white dark:bg-gray-900 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border-2 border-gray-200 dark:border-gray-800 group min-h-0" style={{ aspectRatio: '1 / 1.4' }}>
                   {productImage ? (
                     <Image
                       src={productImage}
                       alt={product.designation_fr}
                       fill
-                      className="object-contain p-6 sm:p-8 lg:p-12 group-hover:scale-110 transition-transform duration-500"
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 60vw, 60vw"
+                      className="object-contain p-4 sm:p-6 lg:p-6 xl:p-10 group-hover:scale-110 transition-transform duration-500"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 60vw"
                       priority
                       onError={(e) => {
                         // Fallback to placeholder if image fails
@@ -293,54 +372,66 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
                 </div>
               </motion.div>
 
-              {/* Product Info - Now takes 2/5 of the space (40%) */}
+              {/* Product Info - Right side, takes 2/5 (40%) on desktop */}
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 className="lg:col-span-2 space-y-4 sm:space-y-6 min-w-0"
               >
-                {/* Badges */}
-                <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                  {discount > 0 && (
-                    <Badge className="bg-red-600 text-white text-sm px-3 py-1">
-                      -{discount}% OFF
+                {/* Title and Meta Description - Desktop only (hidden on mobile) */}
+                <div className="hidden lg:block space-y-3">
+                  {/* Badges */}
+                  <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                    {discount > 0 && (
+                      <Badge className="bg-red-600 text-white text-sm px-3 py-1">
+                        -{discount}% OFF
+                      </Badge>
+                    )}
+                    {product.new_product === 1 && (
+                      <Badge className="bg-blue-600 text-white text-sm px-3 py-1">
+                        Nouveau
+                      </Badge>
+                    )}
+                    {product.best_seller === 1 && (
+                      <Badge className="bg-yellow-600 text-white text-sm px-3 py-1">
+                        Top Vendu
+                      </Badge>
+                    )}
+                    <Badge variant="outline" className="bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800">
+                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                      {product.rupture === 1 ? 'En Stock' : 'Rupture de stock'}
                     </Badge>
-                  )}
-                  {product.new_product === 1 && (
-                    <Badge className="bg-blue-600 text-white text-sm px-3 py-1">
-                      Nouveau
-                    </Badge>
-                  )}
-                  {product.best_seller === 1 && (
-                    <Badge className="bg-yellow-600 text-white text-sm px-3 py-1">
-                      Top Vendu
-                    </Badge>
-                  )}
-                  <Badge variant="outline" className="bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800">
-                    <CheckCircle2 className="h-3 w-3 mr-1" />
-                    {product.rupture === 1 ? 'En Stock' : 'Rupture de stock'}
-                  </Badge>
-                </div>
+                  </div>
 
-                {/* Product Name */}
-                <div className="min-w-0">
-                  <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-2 sm:mb-4 leading-tight break-words">
-                    {product.designation_fr}
-                  </h1>
-                  {product.brand && (
-                    <p className="text-sm sm:text-base lg:text-lg text-gray-600 dark:text-gray-400 mb-1">
-                      {product.brand.designation_fr}
-                    </p>
-                  )}
-                  {product.sous_categorie && (
-                    <p className="text-sm sm:text-base lg:text-lg text-gray-600 dark:text-gray-400 mb-2">
-                      {product.sous_categorie.designation_fr}
-                    </p>
-                  )}
-                  {product.code_product && (
-                    <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-500 mb-2">
-                      Code produit: {product.code_product}
-                    </p>
+                  {/* Product Name */}
+                  <div className="min-w-0">
+                    <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-2 sm:mb-3 leading-tight break-words">
+                      {product.designation_fr}
+                    </h1>
+                    {product.brand && (
+                      <p className="text-sm sm:text-base lg:text-lg text-gray-600 dark:text-gray-400 mb-1">
+                        {product.brand.designation_fr}
+                      </p>
+                    )}
+                    {product.sous_categorie && (
+                      <p className="text-sm sm:text-base lg:text-lg text-gray-600 dark:text-gray-400 mb-2">
+                        {product.sous_categorie.designation_fr}
+                      </p>
+                    )}
+                    {product.code_product && (
+                      <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-500 mb-2">
+                        Code produit: {product.code_product}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Meta Description - Desktop */}
+                  {metaDescription && (
+                    <div className="pt-2 pb-3 border-b border-gray-200 dark:border-gray-800">
+                      <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed">
+                        {metaDescription}
+                      </p>
+                    </div>
                   )}
                 </div>
 

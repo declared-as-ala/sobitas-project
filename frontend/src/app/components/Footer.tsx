@@ -424,7 +424,7 @@ export function Footer() {
               <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-black/70 text-white px-4 py-2 rounded-lg text-sm font-semibold">
                 Cliquez pour ouvrir sur Google Maps
               </div>
-            </div>
+          </div>
           </a>
         </div>
       </div>
