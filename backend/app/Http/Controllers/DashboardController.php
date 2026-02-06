@@ -23,7 +23,11 @@ class DashboardController extends Controller
      */
     public function index()
     {
-        return view('voyager::dashboard.index');
+        // Use modern dashboard if it exists, otherwise fallback to default
+        if (view()->exists('admin.index-modern')) {
+            return view('admin.index-modern');
+        }
+        return view('admin.index');
     }
 
     /**
