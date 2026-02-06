@@ -23,8 +23,47 @@ class DashboardController extends Controller
      */
     public function index()
     {
-        // Use admin.index (now replaced with modern version)
-        return view('admin.index');
+        // Get recent activity data for enhanced dashboard
+        $recentCommandes = Commande::latest('created_at')->limit(5)->get();
+        $recentFactures = Facture::latest('created_at')->limit(5)->get();
+        $recentTickets = Ticket::latest('created_at')->limit(5)->get();
+        $recentClients = Client::latest('created_at')->limit(5)->get();
+        
+        // Today's stats
+        $todayRevenue = Facture::whereDate('created_at', today())
+            ->sum('prix_ttc') + 
+            FactureTva::whereDate('created_at', today())
+            ->sum('prix_ttc') +
+            Ticket::whereDate('created_at', today())
+            ->sum('prix_ttc');
+        
+        $todayOrders = Commande::whereDate('created_at', today())->count() +
+                      Facture::whereDate('created_at', today())->count() +
+                      FactureTva::whereDate('created_at', today())->count() +
+                      Ticket::whereDate('created_at', today())->count();
+        
+        // This week stats
+        $weekStart = Carbon::now()->startOfWeek();
+        $weekRevenue = Facture::where('created_at', '>=', $weekStart)
+            ->sum('prix_ttc') + 
+            FactureTva::where('created_at', '>=', $weekStart)
+            ->sum('prix_ttc') +
+            Ticket::where('created_at', '>=', $weekStart)
+            ->sum('prix_ttc');
+        
+        // Pending orders
+        $pendingCommandes = Commande::whereIn('etat', ['nouvelle_commande', 'en_cours_de_preparation'])->count();
+        
+        return view('admin.index', compact(
+            'recentCommandes',
+            'recentFactures',
+            'recentTickets',
+            'recentClients',
+            'todayRevenue',
+            'todayOrders',
+            'weekRevenue',
+            'pendingCommandes'
+        ));
     }
 
     /**
