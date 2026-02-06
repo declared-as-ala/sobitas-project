@@ -31,14 +31,20 @@ jobs:
             set -e
             echo "=== Backend V2 Deployment Started ==="
             
-            # Navigate to project directory
-            cd /root/SOBITAS-FULL-PROJECT || { echo "Directory not found!"; exit 1; }
+            # Navigate to the repository directory (sobitas-project)
+            echo "Navigating to sobitas-project repository..."
+            cd /root/sobitas-project || { echo "Directory /root/sobitas-project not found!"; exit 1; }
             
             # Pull latest code from GitHub
             echo "Pulling latest code from GitHub..."
             git fetch origin main
             git reset --hard origin/main
             git clean -fd
+            
+            # Copy/sync backend files to SOBITAS-FULL-PROJECT if needed
+            # (Backend #1 runs from SOBITAS-FULL-PROJECT, but we'll deploy V2 from sobitas-project)
+            echo "Current directory: $(pwd)"
+            echo "Repository: $(git remote get-url origin 2>/dev/null || echo 'no remote')"
             
             # Verify docker-compose.yml was updated
             echo "Verifying docker-compose.yml contains backend-v2..."
