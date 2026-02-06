@@ -491,10 +491,10 @@
                                                 </td>
                                                 <td class="py-3 px-4">
                                                     <p class="text-sm text-gray-900">
-                                                        {{ $commande->client->nom ?? 'N/A' }}
+                                                        {{ ($commande->nom ?? '') . ' ' . ($commande->prenom ?? '') ?: 'N/A' }}
                                                     </p>
-                                                    @if($commande->client && $commande->client->tel)
-                                                        <p class="text-xs text-gray-500">{{ $commande->client->tel }}</p>
+                                                    @if($commande->phone)
+                                                        <p class="text-xs text-gray-500">{{ $commande->phone }}</p>
                                                     @endif
                                                 </td>
                                                 <td class="py-3 px-4">

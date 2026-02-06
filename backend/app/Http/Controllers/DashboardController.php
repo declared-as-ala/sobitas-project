@@ -24,9 +24,16 @@ class DashboardController extends Controller
     public function index()
     {
         // Get recent activity data for enhanced dashboard
-        $recentCommandes = Commande::with('client')->latest('created_at')->limit(10)->get();
+        // Note: Commande doesn't have client relationship, it stores client data directly
+        $recentCommandes = Commande::latest('created_at')->limit(10)->get();
         $recentFactures = Facture::with('client')->latest('created_at')->limit(10)->get();
-        $recentTickets = Ticket::with('client')->latest('created_at')->limit(10)->get();
+        // Check if Ticket has client relationship
+        try {
+            $recentTickets = Ticket::with('client')->latest('created_at')->limit(10)->get();
+        } catch (\Exception $e) {
+            // If Ticket doesn't have client relationship, load without it
+            $recentTickets = Ticket::latest('created_at')->limit(10)->get();
+        }
         $recentClients = Client::latest('created_at')->limit(10)->get();
         
         // Today's stats
