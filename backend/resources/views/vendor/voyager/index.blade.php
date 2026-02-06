@@ -154,36 +154,60 @@
         'expidee' => Commande::where('etat', 'expidee')->count(),
     ];
     
-    // Top products (last 30 days)
+    // Top products (last 30 days) - with error handling
     $start = Carbon::now()->subDays(30);
     $productSales = [];
+    $topProducts = [];
     
-    // From factures
-    $factureProducts = DB::table('details_factures')
-        ->join('factures', 'details_factures.facture_id', '=', 'factures.id')
-        ->join('produits', 'details_factures.produit_id', '=', 'produits.id')
-        ->where('factures.created_at', '>=', $start)
-        ->select('produits.id', 'produits.designation_fr', DB::raw('SUM(details_factures.qte) as total_quantity'), DB::raw('SUM(details_factures.prix_ttc) as total_revenue'))
-        ->groupBy('produits.id', 'produits.designation_fr')
-        ->get();
-    
-    foreach ($factureProducts as $item) {
-        if (!isset($productSales[$item->id])) {
-            $productSales[$item->id] = [
-                'name' => $item->designation_fr,
-                'quantity' => 0,
-                'revenue' => 0
-            ];
+    try {
+        // Try to get products from factures - check if table exists first
+        $tableExists = DB::select("SHOW TABLES LIKE 'produits'");
+        if (count($tableExists) > 0) {
+            // Table is 'produits' (French)
+            $factureProducts = DB::table('details_factures')
+                ->join('factures', 'details_factures.facture_id', '=', 'factures.id')
+                ->join('produits', 'details_factures.produit_id', '=', 'produits.id')
+                ->where('factures.created_at', '>=', $start)
+                ->select('produits.id', 'produits.designation_fr', DB::raw('SUM(details_factures.qte) as total_quantity'), DB::raw('SUM(details_factures.prix_ttc) as total_revenue'))
+                ->groupBy('produits.id', 'produits.designation_fr')
+                ->get();
+        } else {
+            // Try 'products' table (English)
+            $tableExists = DB::select("SHOW TABLES LIKE 'products'");
+            if (count($tableExists) > 0) {
+                $factureProducts = DB::table('details_factures')
+                    ->join('factures', 'details_factures.facture_id', '=', 'factures.id')
+                    ->join('products', 'details_factures.produit_id', '=', 'products.id')
+                    ->where('factures.created_at', '>=', $start)
+                    ->select('products.id', 'products.designation_fr', DB::raw('SUM(details_factures.qte) as total_quantity'), DB::raw('SUM(details_factures.prix_ttc) as total_revenue'))
+                    ->groupBy('products.id', 'products.designation_fr')
+                    ->get();
+            } else {
+                $factureProducts = collect([]);
+            }
         }
-        $productSales[$item->id]['quantity'] += $item->total_quantity;
-        $productSales[$item->id]['revenue'] += $item->total_revenue;
+        
+        foreach ($factureProducts as $item) {
+            if (!isset($productSales[$item->id])) {
+                $productSales[$item->id] = [
+                    'name' => $item->designation_fr ?? 'Produit #' . $item->id,
+                    'quantity' => 0,
+                    'revenue' => 0
+                ];
+            }
+            $productSales[$item->id]['quantity'] += $item->total_quantity ?? 0;
+            $productSales[$item->id]['revenue'] += $item->total_revenue ?? 0;
+        }
+        
+        // Sort by revenue and get top 5
+        usort($productSales, function($a, $b) {
+            return $b['revenue'] <=> $a['revenue'];
+        });
+        $topProducts = array_slice($productSales, 0, 5);
+    } catch (\Exception $e) {
+        // If query fails, just set empty array
+        $topProducts = [];
     }
-    
-    // Sort by revenue and get top 5
-    usort($productSales, function($a, $b) {
-        return $b['revenue'] <=> $a['revenue'];
-    });
-    $topProducts = array_slice($productSales, 0, 5);
     
     // Revenue by source (this month)
     $revenueBySource = [
@@ -206,24 +230,67 @@
         ];
     }
     
-    // Total stats
-    $totalClients = Client::count();
-    $totalProducts = Product::count();
-    $totalFactures = Facture::count();
-    $totalTickets = Ticket::count();
-    $totalCommandes = Commande::count();
+    // Total stats - with error handling
+    try {
+        $totalClients = Client::count();
+    } catch (\Exception $e) {
+        $totalClients = 0;
+    }
     
-    $new_commandes = Commande::where('etat', 'nouvelle_commande')->count();
-    $prep_commandes = Commande::where('etat', 'prete')->count();
-    $clients = Client::all();
-    $produits = Product::all();
+    try {
+        $totalProducts = Product::count();
+    } catch (\Exception $e) {
+        $totalProducts = 0;
+    }
+    
+    try {
+        $totalFactures = Facture::count();
+    } catch (\Exception $e) {
+        $totalFactures = 0;
+    }
+    
+    try {
+        $totalTickets = Ticket::count();
+    } catch (\Exception $e) {
+        $totalTickets = 0;
+    }
+    
+    try {
+        $totalCommandes = Commande::count();
+    } catch (\Exception $e) {
+        $totalCommandes = 0;
+    }
+    
+    try {
+        $new_commandes = Commande::where('etat', 'nouvelle_commande')->count();
+    } catch (\Exception $e) {
+        $new_commandes = 0;
+    }
+    
+    try {
+        $prep_commandes = Commande::where('etat', 'prete')->count();
+    } catch (\Exception $e) {
+        $prep_commandes = 0;
+    }
+    
+    try {
+        $clients = Client::all();
+    } catch (\Exception $e) {
+        $clients = collect([]);
+    }
+    
+    try {
+        $produits = Product::all();
+    } catch (\Exception $e) {
+        $produits = collect([]);
+    }
 @endphp
 
 <div class="voyager-modern">
     <div class="page-content">
         @include('voyager::alerts')
 
-        @if (Auth::user()->role_id == 1 || Auth::user()->role_id == 3)
+    @if (Auth::user()->role_id == 1 || Auth::user()->role_id == 3)
             @php
                 $hour = (int)date('H');
                 $greeting = $hour < 12 ? 'Bonjour' : ($hour < 18 ? 'Bon après-midi' : 'Bonsoir');
@@ -296,7 +363,7 @@
                             </span>
                         @else
                             <span class="text-sm text-gray-500">Stable</span>
-                        @endif
+            @endif
                         <span class="text-xs text-gray-500">vs mois dernier</span>
                     </div>
                 </div>
@@ -422,36 +489,36 @@
                                 </div>
                                 <i class="voyager-arrow-right text-gray-400 group-hover:text-emerald-600 transition-colors"></i>
                             </a>
-                        </div>
-                    </div>
+        </div>
+    </div>
 
                     <!-- Search Form -->
                     <form method="POST" action="{{ route('voyager.historique') }}" class="fade-in-up">
-                        @csrf
+            @csrf
                         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
                             <label class="block text-sm font-semibold text-gray-700 mb-3">
                                 <i class="voyager-search"></i> Chercher l'historique de votre Client
                             </label>
                             <div class="flex flex-col md:flex-row gap-3">
-                                <input 
-                                    type="number" 
-                                    min="20000001" 
-                                    max="99999999" 
-                                    name="tel" 
-                                    placeholder="Numéro de téléphone (ex: 20123456)" 
-                                    required
+                    <input
+                        type="number"
+                        min="20000001"
+                        max="99999999"
+                        name="tel"
+                        placeholder="Numéro de téléphone (ex: 20123456)"
+                        required
                                     class="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200"
                                 >
                                 <button 
                                     type="submit" 
                                     class="w-full md:w-auto px-6 py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-all duration-200 flex items-center justify-center gap-2"
-                                >
-                                    <i class="voyager-search"></i>
+                    >
+                        <i class="voyager-search"></i>
                                     <span>Chercher</span>
-                                </button>
-                            </div>
-                        </div>
-                    </form>
+                    </button>
+                </div>
+            </div>
+        </form>
 
                     <!-- Main Statistics Cards -->
                     <div class="fade-in-up">
@@ -477,7 +544,7 @@
                                     <span class="text-xs text-gray-500 group-hover:text-primary-600 transition-colors">
                                         Voir toutes les commandes <i class="voyager-arrow-right"></i>
                                     </span>
-                                </div>
+    </div>
                             </a>
 
                             <a href="{{ route('voyager.clients.index') }}" 
@@ -490,7 +557,7 @@
                                             <span class="text-xs text-gray-500">
                                                 {{ $recentClients->where('created_at', '>=', now()->startOfDay())->count() }} nouveaux aujourd'hui
                                             </span>
-                                        @endif
+    @endif
                                     </div>
                                     <div class="w-16 h-16 bg-green-100 rounded-xl flex items-center justify-center group-hover:bg-green-200 transition-colors">
                                         <i class="voyager-group text-green-600 text-3xl"></i>
@@ -514,12 +581,12 @@
                                     <div class="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center group-hover:bg-blue-200 transition-colors">
                                         <i class="voyager-archive text-blue-600 text-3xl"></i>
                                     </div>
-                                </div>
+                    </div>
                                 <div class="mt-4 pt-4 border-t border-gray-100">
                                     <span class="text-xs text-gray-500 group-hover:text-blue-600 transition-colors">
                                         Voir tous les produits <i class="voyager-arrow-right"></i>
                                     </span>
-                                </div>
+                    </div>
                             </a>
 
                             <div class="stat-card stat-card-warning">
@@ -528,14 +595,14 @@
                                         <p class="text-sm font-medium text-gray-600 mb-1">En Préparation</p>
                                         <h3 class="text-3xl font-bold text-gray-900 mb-2">{{ $prep_commandes }}</h3>
                                         <span class="text-xs text-gray-500">Commandes prêtes</span>
-                                    </div>
+                    </div>
                                     <div class="w-16 h-16 bg-yellow-100 rounded-xl flex items-center justify-center">
                                         <i class="voyager-clock text-yellow-600 text-3xl"></i>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
                     <!-- Order Status Breakdown -->
                     @if(isset($orderStatuses))
@@ -557,13 +624,13 @@
                             <div class="text-center p-4 bg-purple-50 rounded-lg">
                                 <div class="text-2xl font-bold text-purple-600 mb-1">{{ $orderStatuses['livraison'] ?? 0 }}</div>
                                 <div class="text-xs text-purple-700 font-medium">Livraison</div>
-                            </div>
+    </div>
                             <div class="text-center p-4 bg-gray-50 rounded-lg">
                                 <div class="text-2xl font-bold text-gray-600 mb-1">{{ $orderStatuses['expidee'] ?? 0 }}</div>
                                 <div class="text-xs text-gray-700 font-medium">Expédiée</div>
-                            </div>
-                        </div>
-                    </div>
+                </div>
+                </div>
+            </div>
                     @endif
 
                     <!-- Top Products Widget -->
@@ -581,20 +648,20 @@
                                     <div class="flex items-center gap-3 flex-1">
                                         <div class="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center font-bold text-primary-600">
                                             {{ $index + 1 }}
-                                        </div>
+                </div>
                                         <div class="flex-1 min-w-0">
                                             <p class="text-sm font-medium text-gray-900 truncate">{{ $product['name'] ?? 'Produit' }}</p>
                                             <p class="text-xs text-gray-500">{{ number_format($product['quantity'] ?? 0, 0) }} unités vendues</p>
-                                        </div>
-                                    </div>
+                </div>
+            </div>
                                     <div class="text-right">
                                         <p class="text-sm font-bold text-gray-900">{{ number_format($product['revenue'] ?? 0, 2) }} TND</p>
                                         <p class="text-xs text-gray-500">Revenus</p>
                                     </div>
-                                </div>
+                </div>
                             @endforeach
-                        </div>
-                    </div>
+                </div>
+            </div>
                     @endif
 
                     <!-- Recent Orders Table -->
@@ -604,7 +671,7 @@
                             <a href="{{ route('voyager.commandes.index') }}" class="text-sm text-primary-600 hover:text-primary-700">
                                 Voir toutes <i class="voyager-arrow-right"></i>
                             </a>
-                        </div>
+                </div>
                         <div class="overflow-x-auto">
                             <table class="w-full">
                                 <thead>
@@ -667,9 +734,9 @@
                                     @endif
                                 </tbody>
                             </table>
-                        </div>
-                    </div>
                 </div>
+            </div>
+        </div>
 
                 <!-- Right Sidebar -->
                 <div class="space-y-6">
@@ -711,12 +778,12 @@
                                         <div class="activity-item">
                                             <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
                                                 <i class="voyager-person text-purple-600"></i>
-                                            </div>
+                </div>
                                             <div class="flex-1 min-w-0">
                                                 <p class="text-sm font-medium text-gray-900 truncate">{{ $client->nom ?? 'Nouveau Client' }}</p>
                                                 <p class="text-xs text-gray-500">{{ $client->created_at->diffForHumans() }}</p>
-                                            </div>
-                                        </div>
+                </div>
+            </div>
                                     @endforeach
                                 @endif
                                 
@@ -726,11 +793,11 @@
                                     <div class="text-center py-8 text-gray-500">
                                         <i class="voyager-info-circled text-4xl mb-2"></i>
                                         <p class="text-sm">Aucune activité récente</p>
-                                    </div>
+                </div>
                                 @endif
-                            </div>
-                        </div>
-                    </div>
+                </div>
+            </div>
+        </div>
 
                     <!-- Revenue by Source -->
                     @if(isset($revenueBySource))
@@ -763,11 +830,11 @@
                                 <div class="flex items-center justify-between mb-1">
                                     <span class="text-sm font-medium text-gray-700">Tickets</span>
                                     <span class="text-sm font-bold text-gray-900">{{ number_format($revenueBySource['tickets'] ?? 0, 2) }} TND</span>
-                                </div>
+            </div>
                                 <div class="w-full bg-gray-200 rounded-full h-2">
                                     <div class="bg-green-600 h-2 rounded-full" style="width: {{ (($revenueBySource['tickets'] ?? 0) / $totalSource) * 100 }}%"></div>
-                                </div>
-                            </div>
+            </div>
+        </div>
                             <div>
                                 <div class="flex items-center justify-between mb-1">
                                     <span class="text-sm font-medium text-gray-700">Commandes</span>
@@ -776,10 +843,10 @@
                                 <div class="w-full bg-gray-200 rounded-full h-2">
                                     <div class="bg-purple-600 h-2 rounded-full" style="width: {{ (($revenueBySource['commandes'] ?? 0) / $totalSource) * 100 }}%"></div>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                    @endif
+                </div>
+                </div>
+            </div>
+            @endif
 
                     <!-- Quick Stats Summary -->
                     <div class="bg-gradient-to-br from-primary-50 to-purple-50 rounded-xl border border-primary-100 p-5 fade-in-up">
@@ -801,14 +868,14 @@
                                 <div class="flex items-center justify-between">
                                     <span class="text-sm font-semibold text-gray-900">Revenus Total (Mois)</span>
                                     <span class="text-lg font-bold text-primary-600">{{ number_format($monthRevenue ?? 0, 2) }} TND</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                </div>
                 </div>
             </div>
-        @endif
-    </div>
+                </div>
+                </div>
+            </div>
+            @endif
+        </div>
 </div>
 @endsection
 
