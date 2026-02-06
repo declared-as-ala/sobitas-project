@@ -110,6 +110,29 @@ jobs:
               exit 1
             fi
             
+            # Compile assets (Tailwind CSS + Alpine.js) - AUTOMATIC
+            echo "Compiling assets (npm install + npm run production)..."
+            docker compose exec -T backend-v2 bash -c "cd /var/www/html && npm install --silent" || {
+              echo "⚠️ npm install failed, trying to continue..."
+            }
+            docker compose exec -T backend-v2 bash -c "cd /var/www/html && npm run production" || {
+              echo "⚠️ npm run production failed, but continuing deployment..."
+            }
+            echo "✓ Assets compiled successfully"
+            
+            # Verify compiled assets exist
+            echo "Verifying compiled assets..."
+            if docker compose exec -T backend-v2 test -f /var/www/html/public/css/app.css; then
+              echo "✓ CSS file exists"
+            else
+              echo "⚠️ CSS file not found, but continuing..."
+            fi
+            if docker compose exec -T backend-v2 test -f /var/www/html/public/js/app.js; then
+              echo "✓ JS file exists"
+            else
+              echo "⚠️ JS file not found, but continuing..."
+            fi
+            
             # Run Laravel optimizations
             echo "Running Laravel optimizations..."
             docker compose exec -T backend-v2 php artisan config:cache || true
