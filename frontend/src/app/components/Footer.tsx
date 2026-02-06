@@ -177,8 +177,8 @@ export function Footer() {
               <li><Link href="/page/politique-de-remboursement" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Politique de remboursement</Link></li>
               <li><Link href="/page/mentions-legales" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Mentions légales</Link></li>
               <li><Link href="/page/cookies" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Politique des cookies</Link></li>
-              <li><Link href="/page/proteine-tunisie" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Tunisie Protéine </Link></li>
               <li><Link href="/page/a-propos" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">A propos</Link></li>
+              <li><Link href="/page/proteine-tunisie" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Proteine Tunisie</Link></li>
             </ul>
           </div>
 
@@ -197,7 +197,7 @@ export function Footer() {
           </div>
         </div>
 
-        {/* Desktop: Original 4-column layout */}
+        {/* Desktop: 4-column layout */}
         <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
           {/* Contact Info & Social */}
           <div className="space-y-6">
@@ -339,13 +339,13 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/page/proteine-tunisie" className="text-sm hover:text-red-500 transition-colors">
-                Proteine Tunisie
+                <Link href="/page/a-propos" className="text-sm hover:text-red-500 transition-colors">
+                  A propos
                 </Link>
               </li>
               <li>
-                <Link href="/page/a-propos" className="text-sm hover:text-red-500 transition-colors">
-                  A propos
+                <Link href="/page/proteine-tunisie" className="text-sm hover:text-red-500 transition-colors">
+                  Proteine Tunisie
                 </Link>
               </li>
             </ul>
@@ -395,25 +395,37 @@ export function Footer() {
         {/* Map Section - Deferred loading, reduced height on mobile */}
         <div className="mt-8 md:mt-12" ref={mapRef}>
           <h3 className="font-bold md:font-semibold text-white text-base md:text-inherit mb-3 md:mb-4">Géolocalisation</h3>
-          <div className="rounded-2xl md:rounded-xl overflow-hidden h-48 md:h-64 bg-gray-800">
+          <a 
+            href="https://maps.app.goo.gl/w2ytnYAKSZDmjznh6" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="block rounded-2xl md:rounded-xl overflow-hidden h-48 md:h-64 bg-gray-800 hover:opacity-90 transition-opacity cursor-pointer group relative"
+            aria-label="Ouvrir la localisation sur Google Maps"
+          >
             {shouldLoadMap ? (
               <iframe
                 src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3234.515082636619!2d10.630613400000001!3d35.8363715!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x1302131b30e891b1%3A0x51dae0f25849b20c!2sPROT%C3%89INE%20TUNISIE%20%E2%80%93%20SOBITAS%20%7C%20Whey%20%26%20Mat%C3%A9riel%20Musculation%20Sousse!5e0!3m2!1sen!2stn!4v1769445253876!5m2!1sen!2stn"
                 width="100%"
                 height="100%"
-                style={{ border: 0 }}
+                style={{ border: 0, pointerEvents: 'none' }}
                 allowFullScreen
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
                 title="PROTÉINE TUNISIE – SOBITAS | Whey & Matériel Musculation Sousse"
               ></iframe>
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-400">
+              <div className="w-full h-full flex items-center justify-center text-gray-400 group-hover:text-red-500 transition-colors">
                 <MapPin className="h-12 w-12" aria-hidden="true" />
                 <span className="sr-only">Carte de localisation</span>
               </div>
             )}
-          </div>
+            {/* Overlay to indicate clickability */}
+            <div className="absolute inset-0 bg-transparent group-hover:bg-black/5 transition-colors flex items-center justify-center">
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-black/70 text-white px-4 py-2 rounded-lg text-sm font-semibold">
+                Cliquez pour ouvrir sur Google Maps
+              </div>
+            </div>
+          </a>
         </div>
       </div>
 

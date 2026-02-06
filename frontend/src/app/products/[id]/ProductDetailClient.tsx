@@ -58,6 +58,12 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
     const productReviews = initialProduct.reviews || [];
     setReviews(productReviews);
 
+    // Debug: Log nutrition_values to check if it's being returned
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Product nutrition_values:', initialProduct.nutrition_values);
+      console.log('Product questions:', initialProduct.questions);
+    }
+
     // Fetch FAQs
     getFAQs().then(data => {
       setFaqs(data);
@@ -247,22 +253,22 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-10 mb-6 sm:mb-10 lg:mb-16">
           {/* LEFT: Product (images + info + description tabs) */}
           <div className="lg:col-span-2 space-y-4 sm:space-y-6 lg:space-y-8">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-12">
-              {/* Product Images */}
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6 lg:gap-8">
+              {/* Product Images - Now takes 3/5 of the space (60%) */}
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="space-y-3 sm:space-y-4"
+                className="lg:col-span-3 space-y-3 sm:space-y-4"
               >
-                {/* Main Image */}
-                <div className="relative aspect-square bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl overflow-hidden shadow-lg sm:shadow-xl border border-gray-200 dark:border-gray-800 group min-h-0">
+                {/* Main Image - Bigger */}
+                <div className="relative aspect-square bg-white dark:bg-gray-900 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border-2 border-gray-200 dark:border-gray-800 group min-h-0">
                   {productImage ? (
                     <Image
                       src={productImage}
                       alt={product.designation_fr}
                       fill
-                      className="object-contain p-4 sm:p-6 lg:p-8 group-hover:scale-110 transition-transform duration-500"
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 50vw"
+                      className="object-contain p-6 sm:p-8 lg:p-12 group-hover:scale-110 transition-transform duration-500"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 60vw, 60vw"
                       priority
                       onError={(e) => {
                         // Fallback to placeholder if image fails
@@ -287,11 +293,11 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
                 </div>
               </motion.div>
 
-              {/* Product Info */}
+              {/* Product Info - Now takes 2/5 of the space (40%) */}
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="space-y-4 sm:space-y-6 min-w-0"
+                className="lg:col-span-2 space-y-4 sm:space-y-6 min-w-0"
               >
                 {/* Badges */}
                 <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
@@ -463,19 +469,65 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
                   </Button>
                 </div>
 
-                {/* Trust Badges */}
-                <div className="grid grid-cols-3 gap-2 sm:gap-4 pt-4 sm:pt-6 border-t border-gray-200 dark:border-gray-800">
-                  <div className="flex flex-col items-center gap-1 sm:gap-2 p-3 sm:p-4 bg-gray-50 dark:bg-gray-900 rounded-lg sm:rounded-xl min-w-0">
-                    <Shield className="h-5 w-5 sm:h-6 sm:w-6 text-green-600 dark:text-green-400 shrink-0" />
-                    <span className="text-[10px] sm:text-xs font-semibold text-center leading-tight">Paiement Sécurisé</span>
+                {/* Trust Badges - Redesigned */}
+                <div className="pt-6 sm:pt-8 border-t border-gray-200 dark:border-gray-800">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                    {/* Paiement Sécurisé */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1 }}
+                      className="group relative flex flex-col items-center justify-center gap-3 p-5 sm:p-6 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 rounded-2xl border-2 border-green-200/50 dark:border-green-800/50 hover:border-green-300 dark:hover:border-green-700 hover:shadow-lg transition-all duration-300 min-w-0"
+                    >
+                      <div className="relative">
+                        <div className="absolute inset-0 bg-green-400/20 rounded-full blur-xl group-hover:bg-green-400/30 transition-colors"></div>
+                        <div className="relative bg-gradient-to-br from-green-500 to-emerald-600 p-4 rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                          <Shield className="h-8 w-8 sm:h-10 sm:w-10 text-white" strokeWidth={2.5} />
+                        </div>
+                      </div>
+                      <div className="text-center space-y-1">
+                        <p className="text-sm sm:text-base font-bold text-gray-900 dark:text-white">Paiement</p>
+                        <p className="text-sm sm:text-base font-bold text-green-700 dark:text-green-400">Sécurisé</p>
+                      </div>
+                    </motion.div>
+
+                    {/* Livraison 2-3 j */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 }}
+                      className="group relative flex flex-col items-center justify-center gap-3 p-5 sm:p-6 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 rounded-2xl border-2 border-blue-200/50 dark:border-blue-800/50 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-lg transition-all duration-300 min-w-0"
+                    >
+                      <div className="relative">
+                        <div className="absolute inset-0 bg-blue-400/20 rounded-full blur-xl group-hover:bg-blue-400/30 transition-colors"></div>
+                        <div className="relative bg-gradient-to-br from-blue-500 to-cyan-600 p-4 rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                          <Truck className="h-8 w-8 sm:h-10 sm:w-10 text-white" strokeWidth={2.5} />
+                        </div>
+                      </div>
+                      <div className="text-center space-y-1">
+                        <p className="text-sm sm:text-base font-bold text-gray-900 dark:text-white">Livraison</p>
+                        <p className="text-sm sm:text-base font-bold text-blue-700 dark:text-blue-400">2-3 jours</p>
+                      </div>
+                    </motion.div>
+
+                    {/* Garantie Qualité */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.3 }}
+                      className="group relative flex flex-col items-center justify-center gap-3 p-5 sm:p-6 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 rounded-2xl border-2 border-amber-200/50 dark:border-amber-800/50 hover:border-amber-300 dark:hover:border-amber-700 hover:shadow-lg transition-all duration-300 min-w-0"
+                    >
+                      <div className="relative">
+                        <div className="absolute inset-0 bg-amber-400/20 rounded-full blur-xl group-hover:bg-amber-400/30 transition-colors"></div>
+                        <div className="relative bg-gradient-to-br from-amber-500 to-orange-600 p-4 rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                          <Award className="h-8 w-8 sm:h-10 sm:w-10 text-white" strokeWidth={2.5} />
+                        </div>
                   </div>
-                  <div className="flex flex-col items-center gap-1 sm:gap-2 p-3 sm:p-4 bg-gray-50 dark:bg-gray-900 rounded-lg sm:rounded-xl min-w-0">
-                    <Truck className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 dark:text-blue-400 shrink-0" />
-                    <span className="text-[10px] sm:text-xs font-semibold text-center leading-tight">Livraison 2-3 j</span>
+                      <div className="text-center space-y-1">
+                        <p className="text-sm sm:text-base font-bold text-gray-900 dark:text-white">Garantie</p>
+                        <p className="text-sm sm:text-base font-bold text-amber-700 dark:text-amber-400">Qualité</p>
                   </div>
-                  <div className="flex flex-col items-center gap-1 sm:gap-2 p-3 sm:p-4 bg-gray-50 dark:bg-gray-900 rounded-lg sm:rounded-xl min-w-0">
-                    <Award className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-600 dark:text-yellow-400 shrink-0" />
-                    <span className="text-[10px] sm:text-xs font-semibold text-center leading-tight">Garantie Qualité</span>
+                    </motion.div>
                   </div>
                 </div>
               </motion.div>
@@ -483,38 +535,66 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
 
             {/* Product Details Tabs */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="w-full min-w-0">
+              {(() => {
+                // Check if nutrition_values exists and has content (handle null, undefined, empty string)
+                const hasNutrition = product.nutrition_values != null && 
+                  String(product.nutrition_values).trim() !== '' && 
+                  String(product.nutrition_values).trim() !== '<p></p>' &&
+                  String(product.nutrition_values).trim() !== '<p><br></p>';
+                // Check if questions exists and has content
+                const hasQuestions = product.questions != null && 
+                  String(product.questions).trim() !== '' && 
+                  String(product.questions).trim() !== '<p></p>' &&
+                  String(product.questions).trim() !== '<p><br></p>';
+                const tabCount = [hasNutrition, hasQuestions].filter(Boolean).length + 1;
+                
+                return (
               <Tabs defaultValue="description" className="w-full">
-                <TabsList className={`grid w-full mb-4 sm:mb-6 bg-gray-100 dark:bg-gray-900 rounded-lg sm:rounded-xl p-1 gap-1 ${product.nutrition_values ? 'grid-cols-3' : 'grid-cols-2'}`}>
-                  <TabsTrigger value="description" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2">Description</TabsTrigger>
-                  {product.nutrition_values && (
-                  <TabsTrigger value="nutrition" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2">Nutrition</TabsTrigger>
-                  )}
-                  <TabsTrigger value="questions" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2">Questions</TabsTrigger>
+                    <TabsList className={`grid w-full mb-4 sm:mb-6 bg-gray-100 dark:bg-gray-900 rounded-lg sm:rounded-xl p-1 gap-1 ${tabCount === 3 ? 'grid-cols-3' : tabCount === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                      <TabsTrigger value="description" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2">
+                        {product.zone1 || 'Description'}
+                      </TabsTrigger>
+                      {hasNutrition && (
+                        <TabsTrigger value="nutrition" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2">
+                          {product.zone3 || 'Valeurs Nutritionnelles'}
+                        </TabsTrigger>
+                      )}
+                      {hasQuestions && (
+                        <TabsTrigger value="questions" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2">
+                          {product.zone4 || 'Questions'}
+                        </TabsTrigger>
+                      )}
                 </TabsList>
 
                 <TabsContent value="description" className="bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 shadow-lg border border-gray-200 dark:border-gray-800 mt-0">
-                  <h3 className="text-lg sm:text-xl md:text-2xl font-bold mb-3 sm:mb-4">Description du produit</h3>
+                  <h3 className="text-lg sm:text-xl md:text-2xl font-bold mb-3 sm:mb-4">
+                    {product.zone1 || 'Description du produit'}
+                  </h3>
                   <div
-                    className="text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-sm max-w-none"
+                    className="text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-sm max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-p:text-gray-600 prose-p:dark:text-gray-400 prose-strong:text-gray-900 prose-strong:dark:text-white prose-img:rounded-lg prose-img:shadow-md"
                     dangerouslySetInnerHTML={{ __html: product.description_fr || product.description_cover || 'Aucune description disponible.' }}
                   />
                 </TabsContent>
 
-                {product.nutrition_values && (
+                {hasNutrition && (
                 <TabsContent value="nutrition" className="bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 shadow-lg border border-gray-200 dark:border-gray-800 mt-0">
-                  <h3 className="text-lg sm:text-xl md:text-2xl font-bold mb-4 sm:mb-6">Valeurs Nutritionnelles</h3>
+                  <h3 className="text-lg sm:text-xl md:text-2xl font-bold mb-4 sm:mb-6">
+                    {product.zone3 || 'Valeurs Nutritionnelles'}
+                  </h3>
                     <div
-                      className="text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-sm max-w-none"
-                      dangerouslySetInnerHTML={{ __html: product.nutrition_values }}
+                    className="text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-sm max-w-none prose-img:rounded-lg prose-img:shadow-md prose-img:w-full prose-img:h-auto"
+                    dangerouslySetInnerHTML={{ __html: product.nutrition_values || '' }}
                     />
                 </TabsContent>
                 )}
 
                 <TabsContent value="questions" className="bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 shadow-lg border border-gray-200 dark:border-gray-800 mt-0">
-                  <h3 className="text-lg sm:text-xl md:text-2xl font-bold mb-3 sm:mb-4">Questions Fréquentes</h3>
-                  {product.questions ? (
+                  <h3 className="text-lg sm:text-xl md:text-2xl font-bold mb-3 sm:mb-4">
+                    {product.zone4 || 'Questions Fréquentes'}
+                  </h3>
+                  {product.questions && product.questions.trim() !== '' ? (
                     <div
-                      className="text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-sm max-w-none"
+                      className="text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-sm max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-headings:mb-2 prose-headings:mt-4 prose-p:text-gray-600 prose-p:dark:text-gray-400 prose-p:my-2 prose-strong:text-gray-900 prose-strong:dark:text-white"
                       dangerouslySetInnerHTML={{ __html: product.questions }}
                     />
                   ) : faqs.length > 0 ? (
@@ -538,6 +618,8 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
                   )}
                 </TabsContent>
               </Tabs>
+                );
+              })()}
             </motion.div>
           </div>
 

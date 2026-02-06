@@ -25,6 +25,8 @@ export interface Product {
   publier?: number;
   rupture?: number;
   meta?: string;
+  meta_description_fr?: string;
+  content_seo?: string;
   brand_id?: number;
   sous_categorie_id?: number;
   aromes?: Aroma[];
@@ -36,6 +38,12 @@ export interface Product {
   nutrition_values?: string | null;
   questions?: string | null;
   code_product?: string | null;
+  zone1?: string;
+  zone2?: string;
+  zone3?: string;
+  zone4?: string;
+  review?: string | null;
+  aggregateRating?: string | null;
 }
 
 export interface Category {

@@ -31,7 +31,7 @@ import type { Product } from '@/types';
 const SCROLL_THRESHOLD = 24;
 const PHONE = '+216 27 612 500';
 const PHONE_FIXE = '+216 73 200 169';
-const MAPS_URL = 'https://www.google.com/maps/search/?api=1&query=35.836372,10.630613';
+const MAPS_URL = 'https://maps.app.goo.gl/w2ytnYAKSZDmjznh6';
 const DELIVERY_MSG = 'Livraison gratuite à partir de 300 DT';
 
 export function Header() {
@@ -496,6 +496,7 @@ export function Header() {
           <Link href="/contact" className="text-sm font-semibold text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-400 transition-colors whitespace-nowrap py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
               CONTACT
             </Link>
+         
           <Link href="/about" className="text-sm font-semibold text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-400 transition-colors whitespace-nowrap py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
               QUI SOMMES NOUS
             </Link>
