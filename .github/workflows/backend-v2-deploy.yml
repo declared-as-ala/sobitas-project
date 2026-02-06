@@ -40,6 +40,16 @@ jobs:
             git reset --hard origin/main
             git clean -fd
             
+            # Verify docker-compose.yml was updated
+            echo "Verifying docker-compose.yml contains backend-v2..."
+            if ! grep -q "backend-v2:" docker-compose.yml; then
+              echo "ERROR: docker-compose.yml does not contain backend-v2 service!"
+              echo "Current directory: $(pwd)"
+              echo "docker-compose.yml exists: $(test -f docker-compose.yml && echo 'yes' || echo 'no')"
+              exit 1
+            fi
+            echo "✓ docker-compose.yml contains backend-v2 service"
+            
             # Ensure docker-compose is available
             echo "Checking Docker Compose..."
             docker compose version || docker-compose version
