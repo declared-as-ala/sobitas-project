@@ -1,0 +1,106 @@
+name: Backend Assets Compilation & Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/package.json'
+      - 'backend/tailwind.config.js'
+      - 'backend/webpack.mix.js'
+      - 'backend/resources/css/**'
+      - 'backend/resources/js/**'
+      - '.github/workflows/backend-assets-deploy.yml'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  compile-and-deploy-assets:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy and Compile Assets to VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script_stop: true
+          timeout: 600s
+          script: |
+            set -e
+            echo "=== Backend Assets Compilation Started ==="
+            
+            # Navigate to project directory
+            echo "Navigating to sobitas-project..."
+            cd /root/sobitas-project || { echo "Directory not found!"; exit 1; }
+            
+            # Pull latest code
+            echo "Pulling latest code from GitHub..."
+            git fetch origin main
+            git reset --hard origin/main
+            git clean -fd
+            
+            # Check if we're using Docker
+            if docker ps | grep -q "sobitas-backend"; then
+              echo "✓ Using Docker - compiling assets inside container..."
+              
+              # Compile assets inside backend container
+              echo "Installing npm dependencies..."
+              docker compose exec -T backend bash -c "cd /var/www/html && npm install --silent" || {
+                echo "⚠️ npm install had issues, but continuing..."
+              }
+              
+              echo "Compiling assets (Tailwind CSS + Alpine.js)..."
+              docker compose exec -T backend bash -c "cd /var/www/html && npm run production" || {
+                echo "❌ Asset compilation failed!"
+                exit 1
+              }
+              
+              echo "✓ Assets compiled successfully inside container"
+              
+              # Verify files exist
+              if docker compose exec -T backend test -f /var/www/html/public/css/app.css; then
+                echo "✓ CSS file: public/css/app.css exists"
+              else
+                echo "❌ CSS file not found!"
+                exit 1
+              fi
+              
+              if docker compose exec -T backend test -f /var/www/html/public/js/app.js; then
+                echo "✓ JS file: public/js/app.js exists"
+              else
+                echo "❌ JS file not found!"
+                exit 1
+              fi
+              
+              # Clear Laravel cache
+              echo "Clearing Laravel cache..."
+              docker compose exec -T backend php artisan view:clear || true
+              docker compose exec -T backend php artisan cache:clear || true
+              docker compose exec -T backend php artisan config:clear || true
+              
+            else
+              echo "⚠️ Docker container not found, trying direct npm..."
+              cd backend || { echo "Backend directory not found!"; exit 1; }
+              
+              # Check if npm is available
+              if command -v npm &> /dev/null; then
+                echo "Installing npm dependencies..."
+                npm install --silent
+                
+                echo "Compiling assets..."
+                npm run production
+                
+                echo "✓ Assets compiled successfully"
+              else
+                echo "❌ npm not found! Please install Node.js or use Docker."
+                exit 1
+              fi
+            fi
+            
+            echo "=== Backend Assets Compilation Completed Successfully ==="
+            echo "Modern dashboard assets are now available!"
+            echo "Visit: https://admin.sobitas.tn/admin to see the modern dashboard"
