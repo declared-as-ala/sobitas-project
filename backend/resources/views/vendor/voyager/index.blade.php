@@ -72,10 +72,28 @@
     /* Revenue trend indicator */
     .trend-up { @apply text-green-600; }
     .trend-down { @apply text-red-600; }
+    
+    /* Dashboard Wrapper - Adjust for hover sidebar */
+    .dashboard-wrapper {
+        margin-left: 4px;
+        transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        min-height: 100vh;
+    }
+    
+    /* Smooth transitions for all cards */
+    .voyager-modern .page-content > * {
+        animation: fadeInUp 0.6s ease-out backwards;
+    }
+    
+    .voyager-modern .page-content > *:nth-child(1) { animation-delay: 0.1s; }
+    .voyager-modern .page-content > *:nth-child(2) { animation-delay: 0.2s; }
+    .voyager-modern .page-content > *:nth-child(3) { animation-delay: 0.3s; }
+    .voyager-modern .page-content > *:nth-child(4) { animation-delay: 0.4s; }
 </style>
 @endsection
 
 @section('content')
+<div class="dashboard-wrapper">
 @php
     // Get dashboard data (same as DashboardController)
     use App\Commande;
