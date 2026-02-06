@@ -97,18 +97,73 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
   const images = product.cover ? [product.cover] : [];
   const productImage = images[0] ? getStorageUrl(images[0]) : '';
 
-  // Helper function to strip HTML tags and get plain text for meta description
+  // Helper function to strip HTML tags and decode HTML entities for meta description
   const stripHtml = (html: string | null | undefined): string => {
     if (!html) return '';
-    return html
-      .replace(/<[^>]*>/g, '') // Remove HTML tags
-      .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
-      .replace(/&amp;/g, '&') // Replace &amp; with &
-      .replace(/&lt;/g, '<') // Replace &lt; with <
-      .replace(/&gt;/g, '>') // Replace &gt; with >
-      .replace(/&quot;/g, '"') // Replace &quot; with "
-      .replace(/&#39;/g, "'") // Replace &#39; with '
-      .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+    
+    // Decode HTML entities (including French characters)
+    let decoded = html
+      // French characters
+      .replace(/&eacute;/g, 'é')
+      .replace(/&Eacute;/g, 'É')
+      .replace(/&egrave;/g, 'è')
+      .replace(/&Egrave;/g, 'È')
+      .replace(/&ecirc;/g, 'ê')
+      .replace(/&Ecirc;/g, 'Ê')
+      .replace(/&agrave;/g, 'à')
+      .replace(/&Agrave;/g, 'À')
+      .replace(/&acirc;/g, 'â')
+      .replace(/&Acirc;/g, 'Â')
+      .replace(/&icirc;/g, 'î')
+      .replace(/&Icirc;/g, 'Î')
+      .replace(/&ocirc;/g, 'ô')
+      .replace(/&Ocirc;/g, 'Ô')
+      .replace(/&ucirc;/g, 'û')
+      .replace(/&Ucirc;/g, 'Û')
+      .replace(/&uuml;/g, 'ü')
+      .replace(/&Uuml;/g, 'Ü')
+      .replace(/&ccedil;/g, 'ç')
+      .replace(/&Ccedil;/g, 'Ç')
+    // Quotes and apostrophes
+    .replace(/&rsquo;/g, '\u2019')
+    .replace(/&lsquo;/g, '\u2018')
+    .replace(/&rdquo;/g, '\u201D')
+    .replace(/&ldquo;/g, '\u201C')
+      // Common entities
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      // Numeric entities (common ones)
+      .replace(/&#233;/g, 'é')
+      .replace(/&#232;/g, 'è')
+      .replace(/&#234;/g, 'ê')
+      .replace(/&#224;/g, 'à')
+      .replace(/&#226;/g, 'â')
+      .replace(/&#238;/g, 'î')
+      .replace(/&#244;/g, 'ô')
+      .replace(/&#251;/g, 'û')
+      .replace(/&#231;/g, 'ç');
+    
+    // Decode numeric entities using browser API if available (client-side only)
+    if (typeof document !== 'undefined') {
+      try {
+        const textarea = document.createElement('textarea');
+        textarea.innerHTML = decoded;
+        decoded = textarea.value;
+      } catch (e) {
+        // Keep the manually decoded version if browser API fails
+      }
+    }
+    
+    // Remove HTML tags
+    const withoutTags = decoded.replace(/<[^>]*>/g, '');
+    
+    // Clean up whitespace
+    return withoutTags
+      .replace(/\s+/g, ' ')
       .trim();
   };
 
@@ -628,7 +683,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="w-full min-w-0">
               {(() => {
                 // Check if nutrition_values exists and has content (handle null, undefined, empty string)
-                const hasNutrition = product.nutrition_values != null && 
+                const hasNutritionContent = product.nutrition_values != null && 
                   String(product.nutrition_values).trim() !== '' && 
                   String(product.nutrition_values).trim() !== '<p></p>' &&
                   String(product.nutrition_values).trim() !== '<p><br></p>';
@@ -637,7 +692,8 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
                   String(product.questions).trim() !== '' && 
                   String(product.questions).trim() !== '<p></p>' &&
                   String(product.questions).trim() !== '<p><br></p>';
-                const tabCount = [hasNutrition, hasQuestions].filter(Boolean).length + 1;
+                // Always show nutrition tab, so count is: description (1) + nutrition (1) + questions (if exists)
+                const tabCount = hasQuestions ? 3 : 2;
                 
                 return (
               <Tabs defaultValue="description" className="w-full">
@@ -645,11 +701,9 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
                       <TabsTrigger value="description" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2">
                         {product.zone1 || 'Description'}
                       </TabsTrigger>
-                      {hasNutrition && (
-                        <TabsTrigger value="nutrition" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2">
-                          {product.zone3 || 'Valeurs Nutritionnelles'}
-                        </TabsTrigger>
-                      )}
+                      <TabsTrigger value="nutrition" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2">
+                        {product.zone3 || 'Valeurs Nutritionnelles'}
+                      </TabsTrigger>
                       {hasQuestions && (
                         <TabsTrigger value="questions" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2">
                           {product.zone4 || 'Questions'}
@@ -667,17 +721,23 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
                   />
                 </TabsContent>
 
-                {hasNutrition && (
                 <TabsContent value="nutrition" className="bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 shadow-lg border border-gray-200 dark:border-gray-800 mt-0">
                   <h3 className="text-lg sm:text-xl md:text-2xl font-bold mb-4 sm:mb-6">
                     {product.zone3 || 'Valeurs Nutritionnelles'}
                   </h3>
+                  {hasNutritionContent ? (
                     <div
-                    className="text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-sm max-w-none prose-img:rounded-lg prose-img:shadow-md prose-img:w-full prose-img:h-auto"
-                    dangerouslySetInnerHTML={{ __html: product.nutrition_values || '' }}
+                      className="text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-sm max-w-none prose-img:rounded-lg prose-img:shadow-md prose-img:w-full prose-img:h-auto"
+                      dangerouslySetInnerHTML={{ __html: product.nutrition_values || '' }}
                     />
+                  ) : (
+                    <div className="text-center py-8 sm:py-12">
+                      <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base">
+                        Les valeurs nutritionnelles ne sont pas disponibles pour ce produit.
+                      </p>
+                    </div>
+                  )}
                 </TabsContent>
-                )}
 
                 <TabsContent value="questions" className="bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 shadow-lg border border-gray-200 dark:border-gray-800 mt-0">
                   <h3 className="text-lg sm:text-xl md:text-2xl font-bold mb-3 sm:mb-4">

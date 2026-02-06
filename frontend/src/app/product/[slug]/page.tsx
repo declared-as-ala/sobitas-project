@@ -9,6 +9,68 @@ interface ProductPageProps {
   params: Promise<{ slug: string }>;
 }
 
+// Helper function to decode HTML entities
+function decodeHtmlEntities(text: string): string {
+  // Decode HTML entities (including French characters)
+  let decoded = text
+    // French characters
+    .replace(/&eacute;/g, 'é')
+    .replace(/&Eacute;/g, 'É')
+    .replace(/&egrave;/g, 'è')
+    .replace(/&Egrave;/g, 'È')
+    .replace(/&ecirc;/g, 'ê')
+    .replace(/&Ecirc;/g, 'Ê')
+    .replace(/&agrave;/g, 'à')
+    .replace(/&Agrave;/g, 'À')
+    .replace(/&acirc;/g, 'â')
+    .replace(/&Acirc;/g, 'Â')
+    .replace(/&icirc;/g, 'î')
+    .replace(/&Icirc;/g, 'Î')
+    .replace(/&ocirc;/g, 'ô')
+    .replace(/&Ocirc;/g, 'Ô')
+    .replace(/&ucirc;/g, 'û')
+    .replace(/&Ucirc;/g, 'Û')
+    .replace(/&uuml;/g, 'ü')
+    .replace(/&Uuml;/g, 'Ü')
+    .replace(/&ccedil;/g, 'ç')
+    .replace(/&Ccedil;/g, 'Ç')
+    // Quotes and apostrophes
+    .replace(/&rsquo;/g, '\u2019')
+    .replace(/&lsquo;/g, '\u2018')
+    .replace(/&rdquo;/g, '\u201D')
+    .replace(/&ldquo;/g, '\u201C')
+    // Common entities
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    // Numeric entities (common ones)
+    .replace(/&#233;/g, 'é')
+    .replace(/&#232;/g, 'è')
+    .replace(/&#234;/g, 'ê')
+    .replace(/&#224;/g, 'à')
+    .replace(/&#226;/g, 'â')
+    .replace(/&#238;/g, 'î')
+    .replace(/&#244;/g, 'ô')
+    .replace(/&#251;/g, 'û')
+    .replace(/&#231;/g, 'ç');
+  
+  // Decode numeric entities using browser API if available (client-side only)
+  if (typeof document !== 'undefined') {
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.innerHTML = decoded;
+      decoded = textarea.value;
+    } catch (e) {
+      // Keep the manually decoded version if browser API fails
+    }
+  }
+  
+  return decoded;
+}
+
 // Helper function to extract meta tags from HTML string or custom format
 function extractMetaFromHtml(metaHtml: string | undefined): {
   title?: string;
@@ -30,20 +92,20 @@ function extractMetaFromHtml(metaHtml: string | undefined): {
     // Custom format: "title; ... | description; ..."
     const titleMatch = metaHtml.match(/title;\s*([^|]+)/i);
     if (titleMatch) {
-      result.title = titleMatch[1].trim();
+      result.title = decodeHtmlEntities(titleMatch[1].trim());
     }
     
     const descMatch = metaHtml.match(/description;\s*([^|]+)/i);
     if (descMatch) {
-      result.description = descMatch[1].trim();
+      result.description = decodeHtmlEntities(descMatch[1].trim());
     }
     
     // Also check for other fields in custom format if they exist
     const ogTitleMatch = metaHtml.match(/og:title;\s*([^|]+)/i);
-    if (ogTitleMatch) result.ogTitle = ogTitleMatch[1].trim();
+    if (ogTitleMatch) result.ogTitle = decodeHtmlEntities(ogTitleMatch[1].trim());
     
     const ogDescMatch = metaHtml.match(/og:description;\s*([^|]+)/i);
-    if (ogDescMatch) result.ogDescription = ogDescMatch[1].trim();
+    if (ogDescMatch) result.ogDescription = decodeHtmlEntities(ogDescMatch[1].trim());
     
     return result;
   }
@@ -51,12 +113,12 @@ function extractMetaFromHtml(metaHtml: string | undefined): {
   // Otherwise, treat it as HTML format
   // Extract title
   const titleMatch = metaHtml.match(/<title[^>]*>([^<]+)<\/title>/i);
-  if (titleMatch) result.title = titleMatch[1];
+  if (titleMatch) result.title = decodeHtmlEntities(titleMatch[1]);
   
   // Extract description - handle both single and double quotes, and escaped quotes
   const descMatch = metaHtml.match(/<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i) ||
                     metaHtml.match(/<meta\s+name=["']description["']\s+content=[""]([^""]+)[""]/i);
-  if (descMatch) result.description = descMatch[1];
+  if (descMatch) result.description = decodeHtmlEntities(descMatch[1]);
   
   // Extract canonical
   const canonicalMatch = metaHtml.match(/<link\s+rel=["']canonical["']\s+href=["']([^"']+)["']/i);
@@ -68,11 +130,11 @@ function extractMetaFromHtml(metaHtml: string | undefined): {
   
   // Extract OG title
   const ogTitleMatch = metaHtml.match(/<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i);
-  if (ogTitleMatch) result.ogTitle = ogTitleMatch[1];
+  if (ogTitleMatch) result.ogTitle = decodeHtmlEntities(ogTitleMatch[1]);
   
   // Extract OG description
   const ogDescMatch = metaHtml.match(/<meta\s+property=["']og:description["']\s+content=["']([^"']+)["']/i);
-  if (ogDescMatch) result.ogDescription = ogDescMatch[1];
+  if (ogDescMatch) result.ogDescription = decodeHtmlEntities(ogDescMatch[1]);
   
   // Extract OG URL
   const ogUrlMatch = metaHtml.match(/<meta\s+property=["']og:url["']\s+content=["']([^"']+)["']/i);
@@ -80,27 +142,82 @@ function extractMetaFromHtml(metaHtml: string | undefined): {
   
   // Extract Twitter title
   const twitterTitleMatch = metaHtml.match(/<meta\s+name=["']twitter:title["']\s+content=["']([^"']+)["']/i);
-  if (twitterTitleMatch) result.twitterTitle = twitterTitleMatch[1];
+  if (twitterTitleMatch) result.twitterTitle = decodeHtmlEntities(twitterTitleMatch[1]);
   
   // Extract Twitter description
   const twitterDescMatch = metaHtml.match(/<meta\s+name=["']twitter:description["']\s+content=["']([^"']+)["']/i);
-  if (twitterDescMatch) result.twitterDescription = twitterDescMatch[1];
+  if (twitterDescMatch) result.twitterDescription = decodeHtmlEntities(twitterDescMatch[1]);
   
   return result;
 }
 
-// Helper function to strip HTML tags and get plain text
+// Helper function to strip HTML tags and decode HTML entities
 function stripHtml(html: string | null | undefined): string {
   if (!html) return '';
-  return html
-    .replace(/<[^>]*>/g, '') // Remove HTML tags
-    .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
-    .replace(/&amp;/g, '&') // Replace &amp; with &
-    .replace(/&lt;/g, '<') // Replace &lt; with <
-    .replace(/&gt;/g, '>') // Replace &gt; with >
-    .replace(/&quot;/g, '"') // Replace &quot; with "
-    .replace(/&#39;/g, "'") // Replace &#39; with '
-    .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+  
+  // Decode HTML entities (including French characters)
+  let decoded = html
+    // French characters
+    .replace(/&eacute;/g, 'é')
+    .replace(/&Eacute;/g, 'É')
+    .replace(/&egrave;/g, 'è')
+    .replace(/&Egrave;/g, 'È')
+    .replace(/&ecirc;/g, 'ê')
+    .replace(/&Ecirc;/g, 'Ê')
+    .replace(/&agrave;/g, 'à')
+    .replace(/&Agrave;/g, 'À')
+    .replace(/&acirc;/g, 'â')
+    .replace(/&Acirc;/g, 'Â')
+    .replace(/&icirc;/g, 'î')
+    .replace(/&Icirc;/g, 'Î')
+    .replace(/&ocirc;/g, 'ô')
+    .replace(/&Ocirc;/g, 'Ô')
+    .replace(/&ucirc;/g, 'û')
+    .replace(/&Ucirc;/g, 'Û')
+    .replace(/&uuml;/g, 'ü')
+    .replace(/&Uuml;/g, 'Ü')
+    .replace(/&ccedil;/g, 'ç')
+    .replace(/&Ccedil;/g, 'Ç')
+    // Quotes and apostrophes
+    .replace(/&rsquo;/g, '\u2019')
+    .replace(/&lsquo;/g, '\u2018')
+    .replace(/&rdquo;/g, '\u201D')
+    .replace(/&ldquo;/g, '\u201C')
+    // Common entities
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    // Numeric entities (common ones)
+    .replace(/&#233;/g, 'é')
+    .replace(/&#232;/g, 'è')
+    .replace(/&#234;/g, 'ê')
+    .replace(/&#224;/g, 'à')
+    .replace(/&#226;/g, 'â')
+    .replace(/&#238;/g, 'î')
+    .replace(/&#244;/g, 'ô')
+    .replace(/&#251;/g, 'û')
+    .replace(/&#231;/g, 'ç');
+  
+  // Decode numeric entities using browser API if available (client-side only)
+  if (typeof document !== 'undefined') {
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.innerHTML = decoded;
+      decoded = textarea.value;
+    } catch (e) {
+      // Keep the manually decoded version if browser API fails
+    }
+  }
+  
+  // Remove HTML tags
+  const withoutTags = decoded.replace(/<[^>]*>/g, '');
+  
+  // Clean up whitespace and limit length
+  return withoutTags
+    .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 160); // Limit to 160 characters for meta description
 }
