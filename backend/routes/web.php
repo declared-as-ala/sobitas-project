@@ -32,6 +32,10 @@ Route::get('/', function () {
 
 
 Route::group(['prefix' => 'admin'], function () {
+    // Override Voyager's default dashboard route BEFORE Voyager::routes()
+    // This ensures /admin uses our modern dashboard
+    Route::get('/', [DashboardController::class, 'index'])->name('voyager.dashboard');
+    
     Voyager::routes();
 
 });
@@ -113,9 +117,9 @@ Route::group(['prefix' => 'admin' , 'as' => 'voyager.'], function () {
         // $namespacePrefix = '\\'.config('voyager.controllers.namespace').'\\';
 
         //dashboard
-         // Dashboard routes
-        Route::get('/admin/dashboard', [DashboardController::class, 'index'])
-            ->name('voyager.dashboard');
+         // Dashboard routes (backup route, main one is above)
+        Route::get('/dashboard', [DashboardController::class, 'index'])
+            ->name('voyager.dashboard.backup');
 
         Route::post('/dashboard/statistics', [DashboardController::class, 'getStatistics'])
             ->name('dashboard.statistics');
