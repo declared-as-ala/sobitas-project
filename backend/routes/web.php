@@ -31,13 +31,13 @@ Route::get('/', function () {
 });
 
 
-Route::group(['prefix' => 'admin'], function () {
+Route::group(['prefix' => 'admin', 'middleware' => ['web']], function () {
     // Override Voyager's default dashboard route BEFORE Voyager::routes()
     // This ensures /admin uses our modern dashboard
     Route::get('/', [DashboardController::class, 'index'])->name('voyager.dashboard');
     
+    // Register Voyager routes AFTER our custom dashboard route
     Voyager::routes();
-
 });
 Route::group(['prefix' => 'admin' , 'as' => 'voyager.'], function () {
 
