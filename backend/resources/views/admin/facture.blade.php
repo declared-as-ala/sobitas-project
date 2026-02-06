@@ -6,10 +6,11 @@
         //$produits = App\Product::all();
 
         $clients = App\Client::all();
-        $max = 100;
+        $max = 100; // Maximum number of rows allowed
     @endphp
     <script>
-        var max = 100;
+        var max = 100; // Maximum number of rows allowed
+        var produits = @json($produits); // Store products for dynamic row creation
     </script>
 
 
@@ -109,9 +110,26 @@
                             <!--Client info End-->
                         </div>
                         <!--Rows Start-->
-                        <label>Scanner code à barre </label>
-                        <input type="text" placeholder="barcode" id="barcode" class="form-control" autofocus>
-                        <br>
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label for="barcode" style="font-weight: bold; margin-bottom: 5px;">
+                                <i class="voyager-scan"></i> Scanner code à barre
+                            </label>
+                            <div style="position: relative;">
+                                <input type="text" 
+                                       placeholder="Scannez ou entrez le code à barre..." 
+                                       id="barcode" 
+                                       class="form-control" 
+                                       autofocus
+                                       style="font-size: 16px; padding: 12px; border: 2px solid #3498db; border-radius: 4px;"
+                                       autocomplete="off">
+                                <span id="barcode-status" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); display: none;">
+                                    <i class="voyager-check" style="color: #27ae60;"></i>
+                                </span>
+                            </div>
+                            <small class="text-muted" style="display: block; margin-top: 5px;">
+                                Appuyez sur Entrée ou attendez après le scan
+                            </small>
+                        </div>
                         <!--Rows Start-->
                         <table class="table" class="row">
                             <thead>
@@ -125,15 +143,13 @@
                                     <th scope="col">#</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="product-rows">
                                 @php
                                     $start = 1;
                                 @endphp
                                 @if (@$edit && @$details_facture)
-
-
                                     @foreach ($details_facture as $details)
-                                        <tr id="achat{{ $start }}">
+                                        <tr id="achat{{ $start }}" data-row-index="{{ $start }}">
                                             <td style="min-width:300px">
                                                 <select name="produit_id_{{ $start }}" class="form-control select2"
                                                     id="select_produit{{ $start }}"
@@ -194,13 +210,13 @@
                                             $start++;
                                         @endphp
                                     @endforeach
-                                @endif
-                                @for ($i = $start; $i < $max; $i++)
-                                    <tr id="achat{{ $i }}">
+                                @else
+                                    {{-- Only render 1 row initially for new invoices --}}
+                                    <tr id="achat1" data-row-index="1">
                                         <td style="min-width:300px">
-                                            <select name="produit_id_{{ $i }}" class="form-control select2"
-                                                id="select_produit{{ $i }}"
-                                                onchange="selectProduit({{ $i }})">
+                                            <select name="produit_id_1" class="form-control select2"
+                                                id="select_produit1"
+                                                onchange="selectProduit(1)">
                                                 <option value="" selected disabled> Choisir..</option>
                                                 @foreach ($produits as $produit)
                                                     <option value="{{ $produit->id }}"
@@ -211,38 +227,28 @@
                                             </select>
                                         </td>
                                         <td>
-                                            <input type="number" id="qte{{ $i }}"
-                                                name="qte{{ $i }}" class="form-control" step="1"
+                                            <input type="number" id="qte1"
+                                                name="qte1" class="form-control" step="1"
                                                 value="1" min="1" onkeyup="calculate()"
                                                 onchange="calculate()">
                                         </td>
                                         <td>
                                             <input type="number" step="0.001" min="0" value="0"
-                                                name="prix_unitaire{{ $i }}" class="form-control"
-                                                id="p_unitaire{{ $i }}" onkeyup="calculate()"
+                                                name="prix_unitaire1" class="form-control"
+                                                id="p_unitaire1" onkeyup="calculate()"
                                                 onchange="calculate()">
                                         </td>
                                         <td>
                                             <input type="number" step="0.001" min="0" value="0"
-                                                name="p_t_ht{{ $i }}" class="form-control"
-                                                id="p_t_ht{{ $i }}" disabled>
-                                        </td>
-                                        {{--     <td>
-                                            <input type="number" step="1" min="0" value="0"
-                                                name="tva{{ $i }}" class="form-control"
-                                                id="tva{{ $i }}" disabled>
+                                                name="p_t_ht1" class="form-control"
+                                                id="p_t_ht1" disabled>
                                         </td>
                                         <td>
-                                            <input type="number" step="1" min="0" value="0"
-                                                name="val_tva{{ $i }}" class="form-control"
-                                                id="val_tva{{ $i }}" disabled>
-                                        </td> --}}
-                                        <td>
-                                            <a class="btn btn-danger" onclick="remove(<?php echo $i; ?>)"> <i
+                                            <a class="btn btn-danger" onclick="remove(1)"> <i
                                                     class="voyager-trash"></i></a>
                                         </td>
                                     </tr>
-                                @endfor
+                                @endif
                             </tbody>
                         </table>
                         <!--Rows End-->
@@ -329,53 +335,124 @@
     <script>
         var editt = {{ @$edit ? 1 : 0 }}
         var edit_length = {{ @$edit_length ? $edit_length : 0 }}
-        var j = 1;
-        var hide = 2;
+        var j = 1; // Current highest row index
+        var nextRowId = 2; // Next available row ID for new rows
+        
+        // Initialize based on edit mode
         if (editt == 1) {
-            hide = edit_length + 1
-
-            j = edit_length
+            j = edit_length;
+            nextRowId = edit_length + 1;
+            
+            // Set up existing rows for editing
             for (let index = 1; index <= edit_length; index++) {
-                console.log(index)
-
-                var select = document.getElementById('select_produit' + index)
-                select.required = true;
-                var option = select.options[select.selectedIndex]
-                var v_qte = option.getAttribute('data-qte')
-
-                console.log(v_qte)
-                document.getElementById('qte' + index).max = v_qte
-
+                var select = document.getElementById('select_produit' + index);
+                if (select) {
+                    select.required = true;
+                    var option = select.options[select.selectedIndex];
+                    if (option) {
+                        var v_qte = option.getAttribute('data-qte');
+                        var qteInput = document.getElementById('qte' + index);
+                        if (qteInput && v_qte) {
+                            qteInput.max = v_qte;
+                        }
+                    }
+                }
             }
-
+        } else {
+            // For new invoice, start with 1 row
+            j = 1;
+            nextRowId = 2;
         }
-        for (let i = hide; i < max; i++) {
-            var element = document.getElementById('achat' + i)
-            element.style.display = "none";
+
+        // Function to create a new product row dynamically
+        function createProductRow(rowIndex) {
+            var tbody = document.getElementById('product-rows');
+            var row = document.createElement('tr');
+            row.id = 'achat' + rowIndex;
+            row.setAttribute('data-row-index', rowIndex);
+            
+            // Build products options HTML
+            var productsOptions = '<option value="" selected disabled> Choisir..</option>';
+            if (produits && produits.length > 0) {
+                produits.forEach(function(produit) {
+                    productsOptions += '<option value="' + produit.id + '" data-prix="' + (produit.prix || 0) + '" data-qte="' + (produit.qte || 0) + '">' + 
+                        produit.designation_fr + ' ( ' + (produit.qte || 0) + ' )</option>';
+                });
+            }
+            
+            row.innerHTML = 
+                '<td style="min-width:300px">' +
+                    '<select name="produit_id_' + rowIndex + '" class="form-control select2" id="select_produit' + rowIndex + '" onchange="selectProduit(' + rowIndex + ')">' +
+                        productsOptions +
+                    '</select>' +
+                '</td>' +
+                '<td>' +
+                    '<input type="number" id="qte' + rowIndex + '" name="qte' + rowIndex + '" class="form-control" step="1" value="1" min="1" onkeyup="calculate()" onchange="calculate()">' +
+                '</td>' +
+                '<td>' +
+                    '<input type="number" step="0.001" min="0" value="0" name="prix_unitaire' + rowIndex + '" class="form-control" id="p_unitaire' + rowIndex + '" onkeyup="calculate()" onchange="calculate()">' +
+                '</td>' +
+                '<td>' +
+                    '<input type="number" step="0.001" min="0" value="0" name="p_t_ht' + rowIndex + '" class="form-control" id="p_t_ht' + rowIndex + '" disabled>' +
+                '</td>' +
+                '<td>' +
+                    '<a class="btn btn-danger" onclick="remove(' + rowIndex + ')"> <i class="voyager-trash"></i></a>' +
+                '</td>';
+            
+            tbody.appendChild(row);
+            
+            // Initialize Select2 for the new select element
+            if (typeof $ !== 'undefined' && $.fn.select2) {
+                $(row).find('.select2').select2();
+            }
         }
 
         function add() {
+            // Check if we've reached the maximum
+            if (j >= max) {
+                Swal.fire('Limite atteinte', 'Vous ne pouvez pas ajouter plus de ' + max + ' produits', 'warning');
+                return;
+            }
+            
             var nb_achat = parseInt(document.getElementById('nb_achat').value);
             document.getElementById('nb_achat').value = nb_achat + 1;
-            j = j + 1;
-            var element = document.getElementById('achat' + j)
-            element.style.display = "revert";
+            
+            j = nextRowId;
+            createProductRow(j);
+            nextRowId = j + 1;
         }
 
         function remove(i) {
-            var select = document.getElementById('select_produit' + i)
-            select.required = false;
-            var nb_achat = parseInt(document.getElementById('nb_achat').value);
-            document.getElementById('nb_achat').value = nb_achat - 1;
-            var nb_delete = parseInt(document.getElementById('nb_delete').value);
-
-            document.getElementById('nb_delete').value = nb_delete + 1
-            var qte = document.getElementById('qte' + i)
-            qte.value = null
-            var element = document.getElementById('achat' + i)
-            element.style.display = "none";
-
-            calculate()
+            var row = document.getElementById('achat' + i);
+            if (!row) {
+                return;
+            }
+            
+            // Check if this is the last row and we're not in edit mode
+            var totalVisibleRows = document.querySelectorAll('#product-rows tr[id^="achat"]').length;
+            if (totalVisibleRows <= 1 && editt == 0) {
+                Swal.fire('Attention', 'Vous devez avoir au moins un produit. Si vous souhaitez le vider, sélectionnez "Choisir.." dans la liste.', 'warning');
+                return;
+            }
+            
+            var select = document.getElementById('select_produit' + i);
+            if (select) {
+                select.required = false;
+            }
+            
+            var nb_achat = parseInt(document.getElementById('nb_achat').value) || 0;
+            if (nb_achat > 0) {
+                document.getElementById('nb_achat').value = nb_achat - 1;
+            }
+            
+            var nb_delete = parseInt(document.getElementById('nb_delete').value) || 0;
+            document.getElementById('nb_delete').value = nb_delete + 1;
+            
+            // Remove the row from DOM (no need to clear values since we're removing it)
+            row.remove();
+            
+            // Recalculate totals
+            calculate();
         }
 
 
@@ -430,33 +507,32 @@
         }
 
         function calculate(type_remise) {
-            document.getElementById('ligne_apres_remise').style.display = "revert"
-            /*var qte = document.getElementById('qte' + i).value;
-            var p_t_ht = document.getElementById('p_t_ht' + i);
-            var p_t_ht_valeur = v_prix * qte;
-            p_t_ht.value = p_t_ht_valeur;*/
-            //console.log('calculate with parametre : ' + type_remise);
-            var m_totale_ht = 0
-            /*             var m_totale_tva = 0
-             */
-            var totale_remise = 0;
-            for (let i = 1; i <= j; i++) {
-                var qte = document.getElementById('qte' + i).value;
-                var prix = document.getElementById('p_unitaire' + i).value;
-                /**MAJ PTTHT_for_service Start***/
-                var p_t_ht = document.getElementById('p_t_ht' + i);
-                var p_t_ht_valeur = prix * qte;
-                p_t_ht.value = p_t_ht_valeur;
-                /**MAJ PTTHT_for_service End***/
-                // var tva = document.getElementById('tva' + i).value;
-                /**MAJ TVA_for_service Start***/
-                // var val_tva = document.getElementById('val_tva' + i);
-                /*  var montant_tva_for_service = (p_t_ht_valeur * tva) / 100;
-                 val_tva.value = montant_tva_for_service; */
-                /**MAJ TVA_for_service End***/
-                m_totale_ht += (prix * qte)
-                /*  m_totale_tva += (p_t_ht_valeur * tva / 100); */
+            var ligneApresRemise = document.getElementById('ligne_apres_remise');
+            if (ligneApresRemise) {
+                ligneApresRemise.style.display = "revert";
             }
+            
+            var m_totale_ht = 0;
+            var totale_remise = 0;
+            
+            // Get all visible rows
+            var rows = document.querySelectorAll('#product-rows tr[id^="achat"]');
+            
+            rows.forEach(function(row) {
+                var rowId = row.id.replace('achat', '');
+                var qteInput = document.getElementById('qte' + rowId);
+                var prixInput = document.getElementById('p_unitaire' + rowId);
+                var p_t_htInput = document.getElementById('p_t_ht' + rowId);
+                
+                if (qteInput && prixInput && p_t_htInput) {
+                    var qte = parseFloat(qteInput.value) || 0;
+                    var prix = parseFloat(prixInput.value) || 0;
+                    var p_t_ht_valeur = prix * qte;
+                    
+                    p_t_htInput.value = p_t_ht_valeur.toFixed(3);
+                    m_totale_ht += p_t_ht_valeur;
+                }
+            });
             var m_remise = document.getElementById('m_remise')
             var pourcentage_remise = document.getElementById('pourcen_remise')
             if (type_remise == 'mt_remise') {
@@ -545,8 +621,8 @@
         var lastBarcodeValue = '';
 
         function scanner(produits) {
-
             var barcode_input = document.getElementById('barcode');
+            var statusIcon = document.getElementById('barcode-status');
 
             // Normalize barcode: trim whitespace, remove line breaks and carriage returns
             var barcode = barcode_input.value
@@ -555,86 +631,206 @@
                 .replace(/\r/g, '')
                 .trim();
 
-            console.log('Raw barcode value:', barcode_input.value);
-            console.log('Normalized barcode:', barcode);
-
             // Only process if barcode has minimum length (typically barcodes are at least 3-4 characters)
             // and if the value has changed (to avoid processing the same barcode twice)
-            if (barcode && barcode.length >= 3 && barcode !== lastBarcodeValue && produits.length > 0) {
+            if (barcode && barcode.length >= 3 && barcode !== lastBarcodeValue && produits && produits.length > 0) {
                 lastBarcodeValue = barcode; // Store to prevent duplicate processing
-                // Try exact match first, then with leading zero
+                
+                // Show processing state
+                if (statusIcon) {
+                    statusIcon.innerHTML = '<i class="voyager-refresh" style="color: #3498db; animation: spin 1s linear infinite;"></i>';
+                    statusIcon.style.display = 'block';
+                }
+                
+                // Try exact match first, then with leading zero variations
                 var search = produits.find((prod) => {
                     var prodCode = String(prod.code_product || '').trim();
-                    return prodCode === barcode || prodCode === '0' + barcode || '0' + prodCode === barcode;
-                })
+                    var normalizedBarcode = barcode;
+                    // Try multiple matching strategies
+                    return prodCode === normalizedBarcode || 
+                           prodCode === '0' + normalizedBarcode || 
+                           '0' + prodCode === normalizedBarcode ||
+                           prodCode === normalizedBarcode.replace(/^0+/, '') ||
+                           prodCode.replace(/^0+/, '') === normalizedBarcode;
+                });
 
                 if (search) {
-                    //alert(search.designation_fr)
-
-
-                    var i = parseInt(document.getElementById('nb_achat').value) - parseInt(document.getElementById(
-                        'nb_delete').value)
-
-                    if (i == 1) {
-                        var ii = `select_produit${i}`
-
-                        console.log(ii)
-                        var test_product = document.getElementById(ii)
-
-                        console.log(test_product)
-                        if (test_product.value == null || test_product.value == '') {
-
+                    // Check if product is already in the list - if so, increment quantity instead
+                    var rows = document.querySelectorAll('#product-rows tr[id^="achat"]');
+                    var existingRowId = null;
+                    
+                    for (var idx = 0; idx < rows.length; idx++) {
+                        var rowId = rows[idx].id.replace('achat', '');
+                        var select = document.getElementById('select_produit' + rowId);
+                        if (select && select.value == search.id) {
+                            existingRowId = rowId;
+                            break;
+                        }
+                    }
+                    
+                    var targetRowId = null;
+                    
+                    if (existingRowId) {
+                        // Product already exists - increment quantity
+                        var qteInput = document.getElementById('qte' + existingRowId);
+                        var currentQte = parseInt(qteInput.value) || 0;
+                        var maxQte = parseInt(qteInput.max) || 999999;
+                        
+                        if (currentQte < maxQte) {
+                            qteInput.value = currentQte + 1;
+                            targetRowId = existingRowId;
+                            
+                            // Highlight the row briefly
+                            var row = document.getElementById('achat' + existingRowId);
+                            if (row) {
+                                row.style.backgroundColor = '#d4edda';
+                                setTimeout(function() {
+                                    row.style.backgroundColor = '';
+                                }, 1000);
+                            }
+                            
+                            // Show success message
+                            if (statusIcon) {
+                                statusIcon.innerHTML = '<i class="voyager-check" style="color: #27ae60;"></i>';
+                                setTimeout(function() {
+                                    statusIcon.style.display = 'none';
+                                }, 2000);
+                            }
+                            
+                            // Scroll to the row
+                            if (row) {
+                                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+                            
+                            // Trigger calculation
+                            calculate();
                         } else {
-
-                            add()
+                            Swal.fire('Stock insuffisant', 'La quantité disponible est de ' + maxQte, 'warning');
+                            if (statusIcon) {
+                                statusIcon.style.display = 'none';
+                            }
                         }
                     } else {
-                        add()
-
+                        // Product not in list - add it
+                        var foundEmptyRow = false;
+                        
+                        // Check if there's an empty row we can use
+                        for (var idx = 0; idx < rows.length; idx++) {
+                            var rowId = rows[idx].id.replace('achat', '');
+                            var select = document.getElementById('select_produit' + rowId);
+                            if (select && (!select.value || select.value === '')) {
+                                targetRowId = rowId;
+                                foundEmptyRow = true;
+                                break;
+                            }
+                        }
+                        
+                        // If no empty row found, add a new one
+                        if (!foundEmptyRow) {
+                            add();
+                            // Get the newly added row
+                            rows = document.querySelectorAll('#product-rows tr[id^="achat"]');
+                            if (rows.length > 0) {
+                                var lastRow = rows[rows.length - 1];
+                                targetRowId = lastRow.id.replace('achat', '');
+                            }
+                        }
+                        
+                        if (targetRowId) {
+                            var psid = '#select_produit' + targetRowId;
+                            var select_product = document.getElementById('select_produit' + targetRowId);
+                            
+                            if (select_product && typeof $ !== 'undefined' && $.fn.select2) {
+                                $(psid).val(search.id + '').trigger('change');
+                            } else if (select_product) {
+                                select_product.value = search.id;
+                                selectProduit(targetRowId);
+                            }
+                            
+                            // Highlight the newly added row
+                            var row = document.getElementById('achat' + targetRowId);
+                            if (row) {
+                                row.style.backgroundColor = '#d4edda';
+                                setTimeout(function() {
+                                    row.style.backgroundColor = '';
+                                }, 1000);
+                                
+                                // Scroll to the row
+                                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+                            
+                            // Show success
+                            if (statusIcon) {
+                                statusIcon.innerHTML = '<i class="voyager-check" style="color: #27ae60;"></i>';
+                                setTimeout(function() {
+                                    statusIcon.style.display = 'none';
+                                }, 2000);
+                            }
+                        }
                     }
-                    i = parseInt(document.getElementById('nb_achat').value) - parseInt(document.getElementById('nb_delete')
-                        .value)
 
-                    var psid = `#select_produit${i}`
-                    console.log(psid)
-                    var select_product = document.getElementById(psid)
-                    $(psid).val(search.id + '').change();
-
-                    selectProduit(i)
-
-                    barcode_input.value = ''
+                    barcode_input.value = '';
                     lastBarcodeValue = ''; // Reset to allow rescanning
-                    barcode_input.focus()
+                    barcode_input.focus();
+                    
                 } else {
-                    // alert('notfound')
-                    Swal.fire('Aucun produit trouvé', '', 'info')
-                    barcode_input.value = ''
+                    // Product not found
+                    Swal.fire({
+                        title: 'Produit non trouvé',
+                        text: 'Le code à barre "' + barcode + '" n\'existe pas dans la base de données',
+                        icon: 'info',
+                        confirmButtonText: 'OK'
+                    });
+                    
+                    if (statusIcon) {
+                        statusIcon.innerHTML = '<i class="voyager-x" style="color: #e74c3c;"></i>';
+                        setTimeout(function() {
+                            statusIcon.style.display = 'none';
+                        }, 2000);
+                    }
+                    
+                    barcode_input.value = '';
                     lastBarcodeValue = ''; // Reset to allow rescanning
-                    barcode_input.focus()
+                    barcode_input.focus();
                 }
             } else if(barcode && barcode.length < 3){
                 // Barcode too short, wait for more input
-                console.log('Barcode too short, waiting for more input...');
+                // Don't show error for short codes as user might still be typing
             } else if(!produits || produits.length === 0){
-                Swal.fire('Liste des produits est vide', '', 'info')
+                Swal.fire('Erreur', 'La liste des produits est vide. Veuillez recharger la page.', 'error');
+                if (statusIcon) {
+                    statusIcon.style.display = 'none';
+                }
             }
-
         }
 
         // Setup barcode input with debounced scanner
         document.addEventListener('DOMContentLoaded', function() {
             var barcode_input = document.getElementById('barcode');
             if(barcode_input) {
+                // Keep focus on barcode input for better UX
+                barcode_input.addEventListener('blur', function() {
+                    // Refocus after a short delay to allow for clicks on other elements
+                    setTimeout(function() {
+                        if (document.activeElement !== barcode_input && 
+                            document.activeElement.tagName !== 'BUTTON' &&
+                            document.activeElement.tagName !== 'A') {
+                            barcode_input.focus();
+                        }
+                    }, 100);
+                });
+                
                 barcode_input.addEventListener('input', function(e) {
                     // Clear previous timeout
                     if(barcodeTimeout) {
                         clearTimeout(barcodeTimeout);
                     }
                     
-                    // Wait 150ms after last input (barcode scanners send data very quickly)
+                    // Wait 200ms after last input (barcode scanners send data very quickly)
+                    // Increased to 200ms for better reliability with different scanners
                     barcodeTimeout = setTimeout(function() {
-                        scanner({{ $produits }});
-                    }, 150);
+                        scanner(produits);
+                    }, 200);
                 });
                 
                 // Also handle Enter key for manual entry
@@ -644,11 +840,35 @@
                         if(barcodeTimeout) {
                             clearTimeout(barcodeTimeout);
                         }
-                        scanner({{ $produits }});
+                        scanner(produits);
+                    }
+                });
+                
+                // Prevent form submission on Enter in barcode field
+                barcode_input.addEventListener('keydown', function(e) {
+                    if(e.key === 'Enter') {
+                        e.preventDefault();
                     }
                 });
             }
         });
+        
+        // Add CSS for spinner animation
+        if (!document.getElementById('barcode-scanner-styles')) {
+            var style = document.createElement('style');
+            style.id = 'barcode-scanner-styles';
+            style.textContent = `
+                @keyframes spin {
+                    from { transform: translateY(-50%) rotate(0deg); }
+                    to { transform: translateY(-50%) rotate(360deg); }
+                }
+                #barcode:focus {
+                    border-color: #2980b9 !important;
+                    box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+                }
+            `;
+            document.head.appendChild(style);
+        }
 
 
         const form = document.getElementById('myform')
