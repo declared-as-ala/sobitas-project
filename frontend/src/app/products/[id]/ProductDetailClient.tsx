@@ -330,82 +330,301 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-10 mb-6 sm:mb-10 lg:mb-16">
           {/* LEFT: Product (images + info + description tabs) */}
           <div className="lg:col-span-2 space-y-4 sm:space-y-6 lg:space-y-8">
-            {/* Title and Meta Description - Above image on mobile, beside on desktop */}
-            <div className="lg:hidden space-y-3">
-              {/* Badges */}
-              <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                {discount > 0 && (
-                  <Badge className="bg-red-600 text-white text-sm px-3 py-1">
-                    -{discount}% OFF
-                  </Badge>
-                )}
-                {product.new_product === 1 && (
-                  <Badge className="bg-blue-600 text-white text-sm px-3 py-1">
-                    Nouveau
-                  </Badge>
-                )}
-                {product.best_seller === 1 && (
-                  <Badge className="bg-yellow-600 text-white text-sm px-3 py-1">
-                    Top Vendu
-                  </Badge>
-                )}
-                <Badge variant="outline" className="bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800">
-                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                  {product.rupture === 1 ? 'En Stock' : 'Rupture de stock'}
-                </Badge>
-              </div>
-
-              {/* Product Name */}
-              <div className="min-w-0">
-                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2 sm:mb-3 leading-tight break-words">
-                  {product.designation_fr}
-                </h1>
-                {product.brand && (
-                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-1">
-                    {product.brand.designation_fr}
-                  </p>
-                )}
-                {product.sous_categorie && (
-                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-2">
-                    {product.sous_categorie.designation_fr}
-                  </p>
-                )}
-                {product.code_product && (
-                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-500 mb-2">
-                    Code produit: {product.code_product}
-                  </p>
-                )}
-              </div>
-
-              {/* Meta Description - Mobile */}
-              {metaDescription && (
-                <div className="pt-2 pb-3 border-b border-gray-200 dark:border-gray-800">
-                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed">
-                    {metaDescription}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6 lg:gap-8">
-              {/* Product Images - Left side, takes 3/5 (60%) on desktop, full width on mobile */}
+            {/* Mobile Layout: Image First (Hero Image) */}
+            <div className="lg:hidden space-y-4 sm:space-y-5">
+              {/* Product Image - Hero position on mobile */}
               <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="lg:col-span-3 space-y-3 sm:space-y-4"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="w-full"
               >
-                {/* Main Image - Increased height on web, taller aspect ratio */}
-                <div className="relative bg-white dark:bg-gray-900 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border-2 border-gray-200 dark:border-gray-800 group min-h-0" style={{ aspectRatio: '1 / 1.4' }}>
+                <div className="relative bg-white dark:bg-gray-900 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border-2 border-gray-200 dark:border-gray-800 group min-h-0 mx-auto max-w-full" style={{ aspectRatio: '1 / 1' }}>
                   {productImage ? (
                     <Image
                       src={productImage}
                       alt={product.designation_fr}
                       fill
-                      className="object-contain p-4 sm:p-6 lg:p-6 xl:p-10 group-hover:scale-110 transition-transform duration-500"
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 60vw"
+                      className="object-contain p-4 sm:p-6 group-hover:scale-110 transition-transform duration-500"
+                      sizes="(max-width: 1024px) 100vw, 60vw"
                       priority
                       onError={(e) => {
-                        // Fallback to placeholder if image fails
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const parent = target.parentElement;
+                        if (parent && !parent.querySelector('.error-placeholder')) {
+                          const placeholder = document.createElement('div');
+                          placeholder.className = 'error-placeholder absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800';
+                          placeholder.innerHTML = '<svg class="h-24 w-24 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>';
+                          parent.appendChild(placeholder);
+                        }
+                      }}
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+                      <svg className="h-24 w-24 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+
+              {/* Product Title - Directly below image */}
+              <div className="min-w-0 px-1">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 leading-tight break-words">
+                  {product.designation_fr}
+                </h1>
+              </div>
+
+              {/* Meta Information Section - Category, Code, Stock Status, Discount Badge */}
+              <div className="space-y-2.5 sm:space-y-3 px-1">
+                {/* Category */}
+                {product.sous_categorie && (
+                  <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400">
+                    {product.sous_categorie.designation_fr}
+                  </p>
+                )}
+                
+                {/* Product Code */}
+                {product.code_product && (
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-500">
+                    Code produit: {product.code_product}
+                  </p>
+                )}
+
+                {/* Stock Status and Discount Badge - Compact */}
+                <div className="flex items-center gap-2 sm:gap-3 flex-wrap pt-1">
+                  <Badge variant="outline" className="bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800 text-xs sm:text-sm px-2.5 py-1">
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    {product.rupture === 1 ? 'En Stock' : 'Rupture de stock'}
+                  </Badge>
+                  {discount > 0 && (
+                    <Badge className="bg-red-600 text-white text-xs sm:text-sm px-2.5 py-1">
+                      -{discount}% OFF
+                    </Badge>
+                  )}
+                  {product.new_product === 1 && (
+                    <Badge className="bg-blue-600 text-white text-xs sm:text-sm px-2.5 py-1">
+                      Nouveau
+                    </Badge>
+                  )}
+                  {product.best_seller === 1 && (
+                    <Badge className="bg-yellow-600 text-white text-xs sm:text-sm px-2.5 py-1">
+                      Top Vendu
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              {/* Description - Below meta section */}
+              {metaDescription && (
+                <div className="pt-3 sm:pt-4 pb-4 sm:pb-5 border-b border-gray-200 dark:border-gray-800 px-1">
+                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed max-w-full">
+                    {metaDescription}
+                  </p>
+                </div>
+              )}
+
+              {/* Rating - Mobile */}
+              {rating > 0 && (
+                <div className="flex items-center gap-2 px-1">
+                  <div className="flex items-center gap-1">
+                    {[...Array(5)].map((_, i) => (
+                      <Star
+                        key={i}
+                        className={`h-4 w-4 sm:h-5 sm:w-5 ${i < Math.floor(rating)
+                          ? 'fill-yellow-400 text-yellow-400'
+                          : 'fill-gray-200 text-gray-200 dark:fill-gray-700 dark:text-gray-700'
+                          }`}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
+                    ({rating.toFixed(1)}) • {reviewCount} avis
+                  </span>
+                </div>
+              )}
+
+              {/* Price - Mobile */}
+              <div className="py-4 sm:py-5 border-y border-gray-200 dark:border-gray-800 px-1">
+                <div className="flex flex-wrap items-baseline gap-2 sm:gap-3">
+                  <span className="text-3xl sm:text-4xl font-bold text-red-600 dark:text-red-400">
+                    {displayPrice} DT
+                  </span>
+                  {oldPrice && (
+                    <span className="text-xl sm:text-2xl text-gray-400 line-through">
+                      {oldPrice} DT
+                    </span>
+                  )}
+                </div>
+                {oldPrice && (
+                  <p className="text-sm sm:text-base text-green-600 dark:text-green-400 mt-2">
+                    Vous économisez {oldPrice - displayPrice} DT
+                  </p>
+                )}
+              </div>
+
+              {/* Aromes (Flavors) - Mobile */}
+              {product.aromes && product.aromes.length > 0 && (
+                <div className="space-y-2 px-1">
+                  <label className="text-sm font-semibold text-gray-900 dark:text-white">
+                    Arômes disponibles
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {product.aromes.map((arome) => (
+                      <Badge key={arome.id} variant="outline" className="bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700">
+                        {arome.designation_fr}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Quantity Selector - Mobile */}
+              <div className="space-y-3 px-1">
+                <label className="text-sm font-semibold text-gray-900 dark:text-white">
+                  Quantité
+                </label>
+                <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+                  <div className="flex items-center gap-2 border border-gray-200 dark:border-gray-800 rounded-xl p-2 min-h-[44px]">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 min-h-[44px] min-w-[44px]"
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <span className="w-12 text-center font-bold text-lg">{quantity}</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 min-h-[44px] min-w-[44px]"
+                      onClick={() => setQuantity(quantity + 1)}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400 min-w-0">
+                    Total: <span className="font-bold text-lg text-gray-900 dark:text-white">
+                      {(displayPrice * quantity).toFixed(0)} DT
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons - Mobile (hidden, using sticky bottom bar instead) */}
+              <div className="lg:hidden space-y-3 px-1 pt-2">
+                <div className="flex gap-3">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="min-h-[48px] px-4 shrink-0"
+                    onClick={() => setIsFavorite(!isFavorite)}
+                  >
+                    <Heart className={`h-5 w-5 ${isFavorite ? 'fill-red-600 text-red-600' : ''}`} />
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="min-h-[48px] px-4 shrink-0"
+                    onClick={() => {
+                      if (navigator.share) {
+                        navigator.share({
+                          title: product.designation_fr,
+                          text: product.description_fr || '',
+                          url: window.location.href,
+                        });
+                      }
+                    }}
+                  >
+                    <Share2 className="h-5 w-5" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Trust Badges - Mobile */}
+              <div className="pt-4 sm:pt-6 border-t border-gray-200 dark:border-gray-800 px-1">
+                <div className="grid grid-cols-3 gap-3 sm:gap-4">
+                  {/* Paiement Sécurisé */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className="group relative flex flex-col items-center justify-center gap-2 p-4 sm:p-5 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 rounded-xl border-2 border-green-200/50 dark:border-green-800/50 min-w-0"
+                  >
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-green-400/20 rounded-full blur-xl"></div>
+                      <div className="relative bg-gradient-to-br from-green-500 to-emerald-600 p-3 rounded-xl shadow-lg">
+                        <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-white" strokeWidth={2.5} />
+                      </div>
+                    </div>
+                    <div className="text-center space-y-0.5">
+                      <p className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">Paiement</p>
+                      <p className="text-xs sm:text-sm font-bold text-green-700 dark:text-green-400">Sécurisé</p>
+                    </div>
+                  </motion.div>
+
+                  {/* Livraison 2-3 j */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="group relative flex flex-col items-center justify-center gap-2 p-4 sm:p-5 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 rounded-xl border-2 border-blue-200/50 dark:border-blue-800/50 min-w-0"
+                  >
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-blue-400/20 rounded-full blur-xl"></div>
+                      <div className="relative bg-gradient-to-br from-blue-500 to-cyan-600 p-3 rounded-xl shadow-lg">
+                        <Truck className="h-6 w-6 sm:h-8 sm:w-8 text-white" strokeWidth={2.5} />
+                      </div>
+                    </div>
+                    <div className="text-center space-y-0.5">
+                      <p className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">Livraison</p>
+                      <p className="text-xs sm:text-sm font-bold text-blue-700 dark:text-blue-400">2-3 jours</p>
+                    </div>
+                  </motion.div>
+
+                  {/* Garantie Qualité */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="group relative flex flex-col items-center justify-center gap-2 p-4 sm:p-5 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 rounded-xl border-2 border-amber-200/50 dark:border-amber-800/50 min-w-0"
+                  >
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-amber-400/20 rounded-full blur-xl"></div>
+                      <div className="relative bg-gradient-to-br from-amber-500 to-orange-600 p-3 rounded-xl shadow-lg">
+                        <Award className="h-6 w-6 sm:h-8 sm:w-8 text-white" strokeWidth={2.5} />
+                      </div>
+                    </div>
+                    <div className="text-center space-y-0.5">
+                      <p className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">Garantie</p>
+                      <p className="text-xs sm:text-sm font-bold text-amber-700 dark:text-amber-400">Qualité</p>
+                    </div>
+                  </motion.div>
+                </div>
+              </div>
+            </div>
+
+            {/* Desktop Layout: Grid with image and info side by side */}
+            <div className="hidden lg:grid grid-cols-5 gap-8">
+              {/* Product Images - Left side, takes 3/5 (60%) on desktop */}
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="col-span-3 space-y-4"
+              >
+                {/* Main Image - Increased height on web, taller aspect ratio */}
+                <div className="relative bg-white dark:bg-gray-900 rounded-3xl overflow-hidden shadow-2xl border-2 border-gray-200 dark:border-gray-800 group min-h-0" style={{ aspectRatio: '1 / 1.4' }}>
+                  {productImage ? (
+                    <Image
+                      src={productImage}
+                      alt={product.designation_fr}
+                      fill
+                      className="object-contain p-6 xl:p-10 group-hover:scale-110 transition-transform duration-500"
+                      sizes="60vw"
+                      priority
+                      onError={(e) => {
                         const target = e.target as HTMLImageElement;
                         target.style.display = 'none';
                         const parent = target.parentElement;
@@ -431,10 +650,10 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="lg:col-span-2 space-y-4 sm:space-y-6 min-w-0"
+                className="col-span-2 space-y-6 min-w-0"
               >
-                {/* Title and Meta Description - Desktop only (hidden on mobile) */}
-                <div className="hidden lg:block space-y-3">
+                {/* Title and Meta Description - Desktop only */}
+                <div className="space-y-3">
                   {/* Badges */}
                   <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
                     {discount > 0 && (

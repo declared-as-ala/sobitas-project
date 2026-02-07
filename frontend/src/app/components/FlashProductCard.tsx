@@ -130,7 +130,7 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
         />
       )}
       {/* Image Container - Fixed height to prevent layout shift */}
-      <div className="relative aspect-square w-full flex-shrink-0 overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-t-3xl min-h-[200px] sm:min-h-[240px] md:min-h-[280px] lg:min-h-[320px]">
+      <div className="relative aspect-square w-full flex-shrink-0 overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-t-3xl">
         <LinkWithLoading 
           href={`/products/${productData.slug || product.id}`} 
           className="block size-full" 
@@ -171,23 +171,23 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="absolute top-4 left-4 z-10"
+            className="absolute top-2 sm:top-3 left-2 sm:left-3 z-10"
           >
-            <span className="inline-flex items-center justify-center rounded-lg bg-gray-900 text-white border-0 font-bold text-[10px] sm:text-xs px-2.5 sm:px-3 py-1 sm:py-1.5 shadow-xl backdrop-blur-sm">
+            <span className="inline-flex items-center justify-center rounded-lg bg-gray-900 text-white border-0 font-bold text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1 shadow-xl backdrop-blur-sm">
               Rupture
             </span>
           </motion.div>
         )}
         
         {productData.isInStock && badges.length > 0 && (
-          <div className="absolute top-2 sm:top-3 left-2 sm:left-3 z-10 flex flex-col gap-1.5 sm:gap-2">
+          <div className="absolute top-2 sm:top-3 left-2 sm:left-3 z-10 flex flex-col gap-1 sm:gap-1.5 max-w-[calc(100%-1rem)] sm:max-w-[calc(100%-1.5rem)]">
             {badges.map((badge, index) => (
               <motion.span
                 key={index}
                 initial={{ opacity: 0, x: -20, scale: 0.8 }}
                 animate={{ opacity: 1, x: 0, scale: 1 }}
                 transition={{ delay: index * 0.1, type: 'spring', stiffness: 200 }}
-                className={`inline-flex items-center justify-center rounded-lg text-white border-0 font-black text-[10px] sm:text-xs px-2.5 sm:px-3 py-1 sm:py-1.5 shadow-2xl backdrop-blur-sm ${
+                className={`inline-flex items-center justify-center rounded-lg text-white border-0 font-black text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1 shadow-2xl backdrop-blur-sm whitespace-nowrap ${
                   badge.color === 'red' 
                     ? 'bg-gradient-to-r from-red-600 to-red-700 border-2 border-red-400/50' 
                     : 'bg-gradient-to-r from-green-600 to-green-700 border-2 border-green-400/50'
@@ -197,12 +197,12 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
                   <motion.span
                     animate={{ rotate: [0, 10, -10, 0] }}
                     transition={{ duration: 2, repeat: Infinity, delay: index * 0.3 }}
-                    className="mr-1"
+                    className="mr-0.5 sm:mr-1 flex-shrink-0"
                   >
                     ⚡
                   </motion.span>
                 )}
-                {badge.text}
+                <span className="truncate">{badge.text}</span>
               </motion.span>
             ))}
           </div>
@@ -210,39 +210,39 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
       </div>
 
       {/* Content Section */}
-      <div className="relative flex flex-col flex-1 min-h-0 p-3 sm:p-4 md:p-5 bg-gradient-to-b from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-900/50">
+      <div className="relative flex flex-col flex-1 min-h-0 p-3 sm:p-4 md:p-5 bg-gradient-to-b from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-900/50 overflow-hidden">
         {/* Product Name */}
         <LinkWithLoading 
           href={`/products/${productData.slug || product.id}`} 
-          className="block mb-2"
+          className="block mb-2 sm:mb-2.5"
           loadingMessage={`Chargement de ${productData.name}...`}
         >
-          <h3 className="font-bold text-gray-900 dark:text-white line-clamp-2 leading-snug transition-colors group-hover:text-red-600 dark:group-hover:text-red-400 text-sm sm:text-base md:text-lg min-h-[2.5rem]">
+          <h3 className="font-bold text-gray-900 dark:text-white line-clamp-2 leading-snug transition-colors group-hover:text-red-600 dark:group-hover:text-red-400 text-sm sm:text-base md:text-lg min-h-[2.5rem] sm:min-h-[2.75rem]">
             {productData.name}
           </h3>
         </LinkWithLoading>
 
         {/* Ratings & Reviews */}
-        <div className="flex items-center gap-1.5 mb-2 sm:mb-3">
+        <div className="flex items-center gap-1.5 sm:gap-2 mb-2.5 sm:mb-3 flex-wrap">
           {productData.rating > 0 ? (
-            <div className="flex gap-0.5" aria-label={`Note: ${productData.rating.toFixed(1)} sur 5`}>
+            <div className="flex gap-0.5 items-center" aria-label={`Note: ${productData.rating.toFixed(1)} sur 5`}>
               {[...Array(5)].map((_, i) => {
                 const isFilled = productData.rating >= (i + 1);
                 return (
                   <Star
                     key={i}
-                    className={`size-3.5 sm:size-4 ${isFilled ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 text-gray-200 dark:fill-gray-600 dark:text-gray-600'}`}
+                    className={`size-3.5 sm:size-4 flex-shrink-0 ${isFilled ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 text-gray-200 dark:fill-gray-600 dark:text-gray-600'}`}
                     aria-hidden="true"
                   />
                 );
               })}
             </div>
           ) : (
-            <div className="flex gap-0.5" aria-label="Aucune note">
+            <div className="flex gap-0.5 items-center flex-shrink-0" aria-label="Aucune note">
               {[...Array(5)].map((_, i) => (
                 <Star
                   key={i}
-                  className="size-4 sm:size-5 fill-gray-200 text-gray-200 dark:fill-gray-600 dark:text-gray-600"
+                  className="size-3.5 sm:size-4 fill-gray-200 text-gray-200 dark:fill-gray-600 dark:text-gray-600"
                   aria-hidden="true"
                 />
               ))}
@@ -252,13 +252,20 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
           {productData.reviewCount > 0 ? (
             <LinkWithLoading
               href={`/products/${productData.slug || product.id}#reviews`}
-              className="text-[10px] sm:text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline transition-colors"
+              className="text-[10px] sm:text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline transition-colors whitespace-nowrap"
             >
               ({productData.reviewCount} avis{productData.reviewCount > 1 ? 's' : ''})
             </LinkWithLoading>
           ) : (
-            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
-              {productData.rating > 0 ? 'Soyez le premier à noter ⭐' : 'Nouveau produit'}
+            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 leading-tight">
+              {productData.rating > 0 ? (
+                <span className="inline-flex items-center gap-1">
+                  <span className="whitespace-nowrap">Soyez le premier à noter</span>
+                  <span className="text-amber-400">⭐</span>
+                </span>
+              ) : (
+                'Nouveau produit'
+              )}
             </span>
           )}
         </div>
@@ -275,8 +282,8 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
               const displayPromoPrice = hasValidPromoPrice ? productData.promoPrice! : promoValue;
               
               return (
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-baseline gap-3 flex-wrap">
+                <div className="flex flex-col gap-1 w-full">
+                  <div className="flex items-baseline gap-2 sm:gap-3 flex-wrap">
                     <motion.span
                       initial={{ scale: 0.9 }}
                       animate={{ scale: 1 }}
@@ -288,7 +295,7 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
                       <motion.span
                         initial={{ opacity: 0, scale: 0.8 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="inline-flex items-center px-2 py-0.5 rounded-lg bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 font-bold text-[10px] sm:text-xs"
+                        className="inline-flex items-center px-2 py-0.5 rounded-lg bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 font-bold text-[10px] sm:text-xs whitespace-nowrap"
                       >
                         -{productData.discount}%
                       </motion.span>
@@ -313,33 +320,36 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
           })()}
         </div>
 
-        {/* CTA Button - Always visible with enhanced design */}
-        <motion.div
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-        >
-          <Button
-            size="lg"
-            className="w-full min-h-[44px] sm:min-h-[48px] rounded-xl font-black text-xs sm:text-sm bg-gradient-to-r from-red-600 via-red-600 to-orange-600 hover:from-red-700 hover:via-red-700 hover:to-orange-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300 relative overflow-hidden group/btn"
-            onClick={handleAddToCart}
-            disabled={isAdding || !productData.isInStock}
-            aria-label={`${productData.isInStock ? 'Acheter' : 'Rupture de stock'} ${productData.name}`}
+        {/* CTA Button - Always visible with enhanced design, constrained to card */}
+        <div className="mt-auto pt-2 sm:pt-2.5">
+          <motion.div
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="w-full"
           >
-            {/* Shine effect on hover */}
-            <motion.div
-              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:translate-x-full"
-              transition={{ duration: 0.6 }}
-            />
-            <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2 relative z-10" aria-hidden="true" />
-            <span className="relative z-10">
-              {!productData.isInStock 
-                ? 'Rupture de stock' 
-                : isAdding 
-                ? 'Ajouté ! ✓' 
-                : 'Acheter maintenant'}
-            </span>
-          </Button>
-        </motion.div>
+            <Button
+              size="lg"
+              className="w-full min-h-[44px] sm:min-h-[48px] rounded-xl font-black text-xs sm:text-sm bg-gradient-to-r from-red-600 via-red-600 to-orange-600 hover:from-red-700 hover:via-red-700 hover:to-orange-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300 relative overflow-hidden group/btn"
+              onClick={handleAddToCart}
+              disabled={isAdding || !productData.isInStock}
+              aria-label={`${productData.isInStock ? 'Acheter' : 'Rupture de stock'} ${productData.name}`}
+            >
+              {/* Shine effect on hover */}
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:translate-x-full"
+                transition={{ duration: 0.6 }}
+              />
+              <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2 relative z-10 flex-shrink-0" aria-hidden="true" />
+              <span className="relative z-10 truncate">
+                {!productData.isInStock 
+                  ? 'Rupture de stock' 
+                  : isAdding 
+                  ? 'Ajouté ! ✓' 
+                  : 'Acheter maintenant'}
+              </span>
+            </Button>
+          </motion.div>
+        </div>
       </div>
     </motion.article>
   );
