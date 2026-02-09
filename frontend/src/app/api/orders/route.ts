@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // Server-side: use internal Docker URL so Next.js container can reach Laravel
-const base = process.env.API_BACKEND_URL?.replace(/\/$/, '');
-const API_URL = base ? `${base}/api` : (process.env.NEXT_PUBLIC_API_URL || 'https://admin.sobitas.tn/api');
+// API_BACKEND_URL can be either the base URL (https://admin.protein.tn) or full API URL (https://admin.protein.tn/api)
+const API_BACKEND_URL = process.env.API_BACKEND_URL?.replace(/\/$/, '');
+const API_URL = API_BACKEND_URL 
+  ? (API_BACKEND_URL.includes('/api') ? API_BACKEND_URL : `${API_BACKEND_URL}/api`)
+  : (process.env.NEXT_PUBLIC_API_URL || 'https://admin.protein.tn/api');
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,7 +15,10 @@ export async function POST(request: NextRequest) {
     const authHeader = request.headers.get('Authorization');
     
     // Forward the request to the backend API
-    const response = await fetch(`${API_URL}/add_commande`, {
+    const backendUrl = `${API_URL}/add_commande`;
+    console.log('[API Route] Calling backend:', backendUrl);
+    
+    const response = await fetch(backendUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -22,18 +28,36 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(body),
     });
 
-    const data = await response.json();
+    // Try to parse JSON response, but handle non-JSON errors
+    let data;
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      const text = await response.text();
+      console.error('[API Route] Non-JSON response:', text);
+      return NextResponse.json(
+        { error: `Backend error: ${response.status} ${response.statusText}` },
+        { status: response.status || 500 }
+      );
+    }
 
     if (!response.ok) {
+      console.error('[API Route] Backend error response:', data);
       return NextResponse.json(
-        { error: data.message || 'Erreur lors de la création de la commande' },
+        { error: data.message || data.error || 'Erreur lors de la création de la commande' },
         { status: response.status }
       );
     }
 
     return NextResponse.json(data);
   } catch (error: any) {
-    console.error('Order API error:', error);
+    console.error('[API Route] Fetch error:', error);
+    console.error('[API Route] Error details:', {
+      message: error.message,
+      stack: error.stack,
+      cause: error.cause,
+    });
     return NextResponse.json(
       { error: error.message || 'Erreur lors de la création de la commande' },
       { status: 500 }
