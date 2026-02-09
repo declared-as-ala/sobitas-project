@@ -26,6 +26,8 @@ export async function POST(request: NextRequest) {
         ...(authHeader && { Authorization: authHeader }),
       },
       body: JSON.stringify(body),
+      // Add timeout and signal for better error handling
+      signal: AbortSignal.timeout(30000), // 30 second timeout
     });
 
     // Try to parse JSON response, but handle non-JSON errors
@@ -57,9 +59,21 @@ export async function POST(request: NextRequest) {
       message: error.message,
       stack: error.stack,
       cause: error.cause,
+      name: error.name,
     });
+    
+    // Handle specific error types
+    let errorMessage = 'Erreur lors de la création de la commande';
+    if (error.name === 'AbortError' || error.message?.includes('timeout')) {
+      errorMessage = 'Timeout: Le serveur met trop de temps à répondre. Veuillez réessayer.';
+    } else if (error.message?.includes('fetch failed') || error.message?.includes('ECONNREFUSED')) {
+      errorMessage = 'Impossible de se connecter au serveur. Vérifiez votre connexion.';
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
     return NextResponse.json(
-      { error: error.message || 'Erreur lors de la création de la commande' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
