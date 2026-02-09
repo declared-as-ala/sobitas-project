@@ -1,28 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Server-side: use internal Docker URL so Next.js container can reach Laravel
-// IMPORTANT: Always use admin.protein.tn for backend API calls (not protein.tn)
-// API_BACKEND_URL can be either the base URL (https://admin.protein.tn) or full API URL (https://admin.protein.tn/api)
-const API_BACKEND_URL = process.env.API_BACKEND_URL?.replace(/\/$/, '');
-let API_URL: string;
-
-if (API_BACKEND_URL) {
-  // Use API_BACKEND_URL if provided
-  API_URL = API_BACKEND_URL.includes('/api') ? API_BACKEND_URL : `${API_BACKEND_URL}/api`;
-} else {
-  // Fallback: Always use admin.protein.tn (never protein.tn)
-  // This ensures the backend API is always called correctly
-  API_URL = 'https://admin.protein.tn/api';
-}
-
-// Debug: Log the API URL being used (only in development or if explicitly enabled)
-if (process.env.NODE_ENV !== 'production' || process.env.DEBUG_API === 'true') {
-  console.log('[API Route] Environment check:', {
-    API_BACKEND_URL: process.env.API_BACKEND_URL,
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
-    resolved_API_URL: API_URL,
-  });
-}
+// Server-side: Always use admin.protein.tn for backend API calls (hardcoded, not from env)
+// IMPORTANT: Always use https://admin.protein.tn/api (never read from environment variables)
+const API_URL = 'https://admin.protein.tn/api';
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,17 +12,8 @@ export async function POST(request: NextRequest) {
     const authHeader = request.headers.get('Authorization');
     
     // Forward the request to the backend API
-    // Ensure we're calling admin.protein.tn, not protein.tn
+    // Always uses https://admin.protein.tn/api (hardcoded)
     const backendUrl = `${API_URL}/add_commande`;
-    
-    // Verify we're calling the correct backend
-    if (!backendUrl.includes('admin.protein.tn')) {
-      console.error('[API Route] ERROR: Backend URL does not point to admin.protein.tn!', backendUrl);
-      return NextResponse.json(
-        { error: 'Configuration error: Backend URL is incorrect' },
-        { status: 500 }
-      );
-    }
     
     console.log('[API Route] Calling backend:', backendUrl);
     console.log('[API Route] Request body keys:', Object.keys(body));
