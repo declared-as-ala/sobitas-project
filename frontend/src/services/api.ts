@@ -426,33 +426,25 @@ export const createOrder = async (orderData: OrderRequest): Promise<{
   message: string;
   'alert-type': string;
 }> => {
-  // Use Next.js API route as proxy in development to avoid CORS issues
-  const isDevelopment = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+  // Always use Next.js API route proxy to avoid CORS issues
+  // This works in both development and production
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  const response = await fetch('/api/orders', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
+    body: JSON.stringify(orderData),
+  });
 
-  if (isDevelopment) {
-    // Use Next.js API route proxy
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const response = await fetch('/api/orders', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        ...(token && { Authorization: `Bearer ${token}` }),
-      },
-      body: JSON.stringify(orderData),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Erreur lors de la création de la commande');
-    }
-
-    return response.json();
-  } else {
-    // Use direct API call in production
-    const response = await api.post('/add_commande', orderData);
-    return response.data;
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors de la création de la commande');
   }
+
+  return response.json();
 };
 
 // ==================== AUTHENTICATED API ENDPOINTS ====================
