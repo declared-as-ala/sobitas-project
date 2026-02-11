@@ -53,10 +53,19 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # QUICK NETWORK DEBUG (optional but useful)
+      - name: Debug - check if SSH port reachable
+        run: |
+          echo "Testing TCP connectivity to ${{ secrets.VPS_HOST }}:${{ secrets.VPS_PORT }}"
+          timeout 10 bash -lc 'cat < /dev/null > /dev/tcp/${{ secrets.VPS_HOST }}/${{ secrets.VPS_PORT }}' \
+            && echo "✅ Port reachable" \
+            || (echo "❌ Port NOT reachable from GitHub runner" && exit 1)
+
       - name: Deploy to VPS (create/update sobitas-backend-v2 only)
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
+          port: ${{ secrets.VPS_PORT }}
           username: ${{ secrets.VPS_USER }}
           password: ${{ secrets.VPS_PASSWORD }}
           script_stop: true
@@ -76,7 +85,6 @@ jobs:
             echo "Env source container (read-only): $SRC"
             echo "Nginx v2 container: $NGINX_V2"
 
-            # Optional GHCR login
             if [ -n "${{ secrets.GHCR_PAT }}" ]; then
               echo "Login to GHCR..."
               echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
@@ -99,13 +107,12 @@ jobs:
             fi
             echo "Using network: $NET"
 
-            echo "Read env vars from ${SRC} (without touching it)..."
+            echo "Read env vars from ${SRC}..."
             if ! docker ps -a --format '{{.Names}}' | grep -q "^${SRC}$"; then
               echo "❌ ${SRC} not found (needed to copy env vars)."
               exit 1
             fi
 
-            # Export env as --env-file style
             TMP_ENV="/tmp/${V2}.env"
             docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$SRC" > "$TMP_ENV"
             echo "Env file created: $TMP_ENV (lines: $(wc -l < $TMP_ENV))"
@@ -115,7 +122,6 @@ jobs:
             docker rm "$V2" 2>/dev/null || true
 
             echo "Create new v2 container..."
-            # NOTE: no ports exposed, php-fpm should be reached internally by nginx-v2 on the docker network
             docker run -d \
               --name "$V2" \
               --restart unless-stopped \
@@ -123,7 +129,6 @@ jobs:
               --env-file "$TMP_ENV" \
               "$IMAGE"
 
-            echo "Wait 5s..."
             sleep 5
 
             echo "=== Health check ==="
@@ -131,15 +136,10 @@ jobs:
 
             if ! docker ps --format '{{.Names}}' | grep -q "^${V2}$"; then
               echo "❌ $V2 is not running"
-              echo "Logs:"
               docker logs --tail 120 "$V2" || true
               exit 1
             fi
 
-            echo "Logs (last 80 lines):"
             docker logs --tail 80 "$V2" || true
-
-            echo "Cleanup images..."
             docker image prune -f || true
-
             echo "✅ Backend v2 deployed successfully"
