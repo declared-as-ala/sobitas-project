@@ -144,6 +144,14 @@ jobs:
             echo "=== Logs (last 80 lines) ==="
             docker logs --tail 80 "$V2" || true
 
+            echo "=== Clear Laravel caches ==="
+            docker exec "$V2" php artisan config:clear || true
+            docker exec "$V2" php artisan cache:clear || true
+            docker exec "$V2" php artisan view:clear || true
+            docker exec "$V2" php artisan route:clear || true
+            docker exec "$V2" php artisan optimize || true
+            echo "✓ Caches cleared"
+
             echo "Cleanup old images..."
             docker image prune -f || true
 

@@ -3,7 +3,7 @@
 # ----------------------------------------
 FROM php:8.3-fpm
 
-# Install system dependencies
+# Install system dependencies (including Node.js for asset building)
 RUN apt-get update && apt-get install -y \
     git \
     curl \
@@ -21,6 +21,11 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-install pdo_mysql gd zip opcache exif bcmath intl \
     && pecl install redis \
     && docker-php-ext-enable redis \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js 20.x for asset building
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # PHP OPcache settings (Production optimized)
@@ -68,6 +73,24 @@ RUN composer install --no-scripts --no-interaction --prefer-dist --optimize-auto
 # Copy application code (excludes files in .dockerignore, including public/storage symlink)
 # The public/storage symlink will be created at runtime by docker-entrypoint.sh
 COPY . .
+
+# Build frontend assets (Vite or Laravel Mix)
+# Detect build system and build assets
+RUN if [ -f "vite.config.js" ]; then \
+        echo "Building assets with Vite..." && \
+        npm ci && \
+        npm run build && \
+        npm cache clean --force && \
+        rm -rf node_modules; \
+    elif [ -f "webpack.mix.js" ]; then \
+        echo "Building assets with Laravel Mix..." && \
+        npm ci && \
+        npm run production && \
+        npm cache clean --force && \
+        rm -rf node_modules; \
+    else \
+        echo "No build system detected (vite.config.js or webpack.mix.js), skipping asset build"; \
+    fi
 
 # Generate optimized autoloader without running artisan scripts
 # (artisan scripts run at container startup via entrypoint instead)
