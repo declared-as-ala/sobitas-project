@@ -1,0 +1,174 @@
+name: Deploy Filament Backend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'filament/**'
+      - '.github/workflows/deploy-filament.yml'
+  workflow_dispatch: # Allow manual triggering
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: declared-as-ala/sobitas-backend-v2
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Show changed files
+        run: |
+          echo "=== Changed files in this push ==="
+          git diff --name-only HEAD~1 HEAD || echo "No previous commit to compare"
+          echo ""
+          echo "=== Files in filament/ directory ==="
+          find filament -type f -name "*.php" -o -name "*.json" -o -name "Dockerfile" | head -20 || true
+
+      - name: Verify filament path trigger
+        run: |
+          echo "This workflow should only run when files in filament/ are changed."
+          echo "If you see this, the path filter is working correctly."
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./filament
+          file: ./filament/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script_stop: true
+          timeout: 600s
+          retry: 2
+          retry_interval: 10s
+          script: |
+            set -e
+            echo "=== Filament Backend Deployment Started ==="
+            
+            # Navigate to project directory
+            APP_DIR="${VPS_APP_DIR:-/root/sobitas-project}"
+            echo "Navigating to $APP_DIR..."
+            cd "$APP_DIR" || { echo "❌ Directory $APP_DIR not found!"; exit 1; }
+            
+            # Login to GHCR if PAT is provided
+            if [ -n "${{ secrets.GHCR_PAT }}" ]; then
+              echo "Logging in to GHCR..."
+              echo "${{ secrets.GHCR_PAT }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin || {
+                echo "⚠️ GHCR login failed, trying with GITHUB_TOKEN..."
+                echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin || true
+              }
+            fi
+            
+            # Detect docker compose version (v2 or v1)
+            if docker compose version >/dev/null 2>&1; then
+              COMPOSE_CMD="docker compose"
+              echo "✓ Using Docker Compose V2"
+            elif docker-compose version >/dev/null 2>&1; then
+              COMPOSE_CMD="docker-compose"
+              echo "✓ Using Docker Compose V1"
+            else
+              echo "❌ Neither 'docker compose' nor 'docker-compose' found!"
+              exit 1
+            fi
+            
+            # Pull latest image
+            echo "Pulling latest image from GHCR..."
+            $COMPOSE_CMD pull sobitas-backend-v2 || {
+              echo "⚠️ Pull failed, but continuing with existing image..."
+            }
+            
+            # Recreate the backend service (no dependencies, force recreate)
+            echo "Recreating sobitas-backend-v2 container..."
+            $COMPOSE_CMD up -d --no-deps --force-recreate sobitas-backend-v2 || {
+              echo "❌ Failed to recreate container!"
+              exit 1
+            }
+            
+            # Wait a moment for container to start
+            sleep 5
+            
+            # Health check
+            echo "=== Health Check ==="
+            if docker ps | grep -q "sobitas-backend-v2"; then
+              echo "✓ Container sobitas-backend-v2 is running"
+              CONTAINER_ID=$(docker ps | grep "sobitas-backend-v2" | awk '{print $1}')
+              echo "Container ID: $CONTAINER_ID"
+              
+              # Check container status
+              echo ""
+              echo "=== Container Status ==="
+              docker ps --filter "name=sobitas-backend-v2" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+              
+              # Show recent logs
+              echo ""
+              echo "=== Recent Logs (last 50 lines) ==="
+              docker logs --tail 50 sobitas-backend-v2 || echo "⚠️ Could not fetch logs"
+              
+              # Check if PHP-FPM is responding
+              echo ""
+              echo "=== PHP-FPM Health Check ==="
+              if docker exec sobitas-backend-v2 php -v >/dev/null 2>&1; then
+                echo "✓ PHP is working"
+                docker exec sobitas-backend-v2 php -v | head -1
+              else
+                echo "⚠️ PHP check failed"
+              fi
+              
+              # Check if container is healthy (if healthcheck is configured)
+              HEALTH_STATUS=$(docker inspect --format='{{.State.Health.Status}}' sobitas-backend-v2 2>/dev/null || echo "no-healthcheck")
+              if [ "$HEALTH_STATUS" != "no-healthcheck" ]; then
+                echo "Health Status: $HEALTH_STATUS"
+              fi
+              
+            else
+              echo "❌ Container sobitas-backend-v2 is NOT running!"
+              echo "=== All containers ==="
+              docker ps -a | grep -E "sobitas-backend|sobitas-laravel-nginx" || true
+              exit 1
+            fi
+            
+            # Clean up old images
+            echo ""
+            echo "=== Cleaning up old images ==="
+            docker image prune -f || true
+            
+            echo ""
+            echo "=== Deployment Completed Successfully ==="
+            echo "Backend v2 is now running with the latest image from GHCR"

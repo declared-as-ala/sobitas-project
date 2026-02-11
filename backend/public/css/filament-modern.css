@@ -1,0 +1,624 @@
+/* Modern Filament Admin Dashboard - Enhanced UI with Dark Mode Support */
+
+/* ========================================
+   Modern Base Styles & Variables
+   ======================================== */
+
+:root {
+    --sidebar-width: 17rem;
+    --topbar-height: 4rem;
+    --border-radius-sm: 0.5rem;
+    --border-radius-md: 0.75rem;
+    --border-radius-lg: 1rem;
+    --border-radius-xl: 1.5rem;
+    --transition-fast: 150ms;
+    --transition-base: 200ms;
+    --transition-slow: 300ms;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* ========================================
+   Light Mode Colors
+   ======================================== */
+
+.filament-body {
+    background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%) !important;
+    min-height: 100vh;
+}
+
+/* ========================================
+   Dark Mode Colors
+   ======================================== */
+
+.dark .filament-body {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+}
+
+/* ========================================
+   Modern Sidebar Styling
+   ======================================== */
+
+.filament-sidebar {
+    background: white !important;
+    border-right: 1px solid #e5e7eb !important;
+    box-shadow: 2px 0 20px rgba(0, 0, 0, 0.05) !important;
+    width: var(--sidebar-width) !important;
+}
+
+.dark .filament-sidebar {
+    background: #1e293b !important;
+    border-right: 1px solid #334155 !important;
+    box-shadow: 2px 0 20px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Sidebar Brand/Logo */
+.filament-sidebar-brand {
+    padding: 1.5rem 1rem !important;
+    border-bottom: 1px solid #e5e7eb !important;
+    margin-bottom: 0.5rem !important;
+}
+
+.dark .filament-sidebar-brand {
+    border-bottom: 1px solid #334155 !important;
+}
+
+/* Sidebar Navigation Items */
+.filament-sidebar-nav-item {
+    border-radius: var(--border-radius-md) !important;
+    margin: 0.25rem 0.75rem !important;
+    padding: 0.75rem 1rem !important;
+    transition: all var(--transition-base) ease !important;
+    font-weight: 500 !important;
+}
+
+.filament-sidebar-nav-item:hover {
+    background-color: #eff6ff !important;
+    color: #1d4ed8 !important;
+    transform: translateX(4px) !important;
+}
+
+.dark .filament-sidebar-nav-item:hover {
+    background-color: #1e3a8a !important;
+    color: #93c5fd !important;
+}
+
+.filament-sidebar-nav-item-active {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+    color: white !important;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3) !important;
+}
+
+.dark .filament-sidebar-nav-item-active {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4) !important;
+}
+
+.filament-sidebar-nav-item-active:hover {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+    transform: translateX(4px) !important;
+}
+
+/* Sidebar Icons */
+.filament-sidebar-nav-item svg {
+    width: 1.25rem !important;
+    height: 1.25rem !important;
+}
+
+/* Sidebar Groups */
+.filament-sidebar-group-label {
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    color: #6b7280 !important;
+    padding: 0.5rem 1rem !important;
+    margin-top: 1rem !important;
+}
+
+.dark .filament-sidebar-group-label {
+    color: #94a3b8 !important;
+}
+
+/* ========================================
+   Modern Topbar/Header Styling
+   ======================================== */
+
+.filament-topbar {
+    background: rgba(255, 255, 255, 0.95) !important;
+    backdrop-filter: blur(10px) !important;
+    border-bottom: 1px solid #e5e7eb !important;
+    box-shadow: var(--shadow-sm) !important;
+    height: var(--topbar-height) !important;
+}
+
+.dark .filament-topbar {
+    background: rgba(30, 41, 59, 0.95) !important;
+    border-bottom: 1px solid #334155 !important;
+}
+
+/* ========================================
+   Modern Main Content Area
+   ======================================== */
+
+.filament-main {
+    background: transparent !important;
+}
+
+.filament-main-content {
+    padding: 2rem !important;
+}
+
+/* ========================================
+   Modern Widgets & Cards
+   ======================================== */
+
+.filament-widget {
+    border-radius: var(--border-radius-xl) !important;
+    box-shadow: var(--shadow-md) !important;
+    border: 1px solid #e5e7eb !important;
+    background: white !important;
+    padding: 1.5rem !important;
+    transition: all var(--transition-slow) ease !important;
+    overflow: hidden !important;
+}
+
+.dark .filament-widget {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3) !important;
+}
+
+.filament-widget:hover {
+    box-shadow: var(--shadow-lg) !important;
+    border-color: #bfdbfe !important;
+    transform: translateY(-2px) !important;
+}
+
+.dark .filament-widget:hover {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* ========================================
+   Modern Stats Cards
+   ======================================== */
+
+.filament-stats-overview-widget .filament-widget {
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+}
+
+.filament-stats {
+    gap: 1.5rem !important;
+}
+
+.filament-stats-card {
+    border-radius: var(--border-radius-xl) !important;
+    box-shadow: var(--shadow-md) !important;
+    border: 1px solid #e5e7eb !important;
+    background: white !important;
+    padding: 1.5rem !important;
+    transition: all var(--transition-slow) ease !important;
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+.dark .filament-stats-card {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3) !important;
+}
+
+.filament-stats-card::before {
+    content: '' !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 4px !important;
+    height: 100% !important;
+    background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%) !important;
+    z-index: 1 !important;
+}
+
+.filament-stats-card:hover {
+    box-shadow: var(--shadow-xl) !important;
+    transform: translateY(-4px) scale(1.02) !important;
+    border-color: #bfdbfe !important;
+}
+
+.dark .filament-stats-card:hover {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 20px 25px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Stats Card Values */
+.filament-stats-card .text-3xl {
+    font-size: 2.25rem !important;
+    font-weight: 700 !important;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.dark .filament-stats-card .text-3xl {
+    background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* ========================================
+   Modern Chart Widgets
+   ======================================== */
+
+.filament-widgets-chart-widget .filament-widget {
+    border-radius: var(--border-radius-xl) !important;
+    box-shadow: var(--shadow-md) !important;
+    border: 1px solid #e5e7eb !important;
+    background: white !important;
+    padding: 1.5rem !important;
+}
+
+.dark .filament-widgets-chart-widget .filament-widget {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+}
+
+/* ========================================
+   Modern Tables
+   ======================================== */
+
+.filament-tables-table {
+    border-radius: var(--border-radius-lg) !important;
+    overflow: hidden !important;
+    border: 1px solid #e5e7eb !important;
+}
+
+.dark .filament-tables-table {
+    border-color: #334155 !important;
+}
+
+.filament-tables-header-cell {
+    background: #f9fafb !important;
+    font-weight: 600 !important;
+    color: #374151 !important;
+    text-transform: uppercase !important;
+    font-size: 0.75rem !important;
+    letter-spacing: 0.05em !important;
+    padding: 1rem !important;
+}
+
+.dark .filament-tables-header-cell {
+    background: #0f172a !important;
+    color: #cbd5e1 !important;
+}
+
+.filament-tables-row {
+    transition: all var(--transition-fast) ease !important;
+}
+
+.filament-tables-row:hover {
+    background-color: #eff6ff !important;
+}
+
+.dark .filament-tables-row:hover {
+    background-color: #1e3a8a !important;
+}
+
+/* ========================================
+   Modern Forms
+   ======================================== */
+
+.filament-forms-input,
+.filament-forms-select,
+.filament-forms-textarea {
+    border-radius: var(--border-radius-md) !important;
+    border: 1px solid #d1d5db !important;
+    transition: all var(--transition-base) ease !important;
+}
+
+.dark .filament-forms-input,
+.dark .filament-forms-select,
+.dark .filament-forms-textarea {
+    background: #0f172a !important;
+    border-color: #334155 !important;
+    color: #e2e8f0 !important;
+}
+
+.filament-forms-input:focus,
+.filament-forms-select:focus,
+.filament-forms-textarea:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+    outline: none !important;
+}
+
+.dark .filament-forms-input:focus,
+.dark .filament-forms-select:focus,
+.dark .filament-forms-textarea:focus {
+    border-color: #60a5fa !important;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2) !important;
+}
+
+/* ========================================
+   Modern Buttons
+   ======================================== */
+
+.filament-button {
+    border-radius: var(--border-radius-md) !important;
+    font-weight: 500 !important;
+    transition: all var(--transition-base) ease !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+.filament-button:hover {
+    box-shadow: var(--shadow-md) !important;
+    transform: translateY(-1px) !important;
+}
+
+.filament-button-primary {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+}
+
+.filament-button-primary:hover {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+}
+
+/* ========================================
+   Modern Modals
+   ======================================== */
+
+.filament-modal {
+    border-radius: var(--border-radius-xl) !important;
+    box-shadow: var(--shadow-xl) !important;
+    border: 1px solid #e5e7eb !important;
+    overflow: hidden !important;
+}
+
+.dark .filament-modal {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+}
+
+.filament-modal-header {
+    border-bottom: 1px solid #e5e7eb !important;
+    background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%) !important;
+    padding: 1.5rem !important;
+}
+
+.dark .filament-modal-header {
+    border-bottom-color: #334155 !important;
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important;
+}
+
+/* ========================================
+   Modern Badges
+   ======================================== */
+
+.filament-badge {
+    border-radius: 9999px !important;
+    padding: 0.375rem 0.75rem !important;
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+}
+
+.filament-badge-success {
+    background-color: #d1fae5 !important;
+    color: #065f46 !important;
+}
+
+.dark .filament-badge-success {
+    background-color: #064e3b !important;
+    color: #6ee7b7 !important;
+}
+
+/* ========================================
+   Custom Scrollbar
+   ======================================== */
+
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f3f4f6;
+    border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-track {
+    background: #1e293b;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+    background: #475569;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+}
+
+/* ========================================
+   Animations
+   ======================================== */
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.filament-widget,
+.filament-stats-card {
+    animation: fadeIn var(--transition-slow) ease-out;
+}
+
+.filament-sidebar-nav-item {
+    animation: slideIn var(--transition-base) ease-out;
+}
+
+/* ========================================
+   Page Header Styling
+   ======================================== */
+
+.filament-header {
+    background: white !important;
+    border-bottom: 1px solid #e5e7eb !important;
+    box-shadow: var(--shadow-sm) !important;
+    border-radius: var(--border-radius-xl) var(--border-radius-xl) 0 0 !important;
+    margin-bottom: 1.5rem !important;
+    padding: 1.5rem !important;
+}
+
+.dark .filament-header {
+    background: #1e293b !important;
+    border-bottom-color: #334155 !important;
+}
+
+.filament-header h1 {
+    font-size: 1.875rem !important;
+    font-weight: 700 !important;
+    background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.dark .filament-header h1 {
+    background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* ========================================
+   Responsive Design
+   ======================================== */
+
+@media (max-width: 768px) {
+    .filament-sidebar {
+        box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15) !important;
+    }
+    
+    .filament-widget,
+    .filament-stats-card {
+        padding: 1rem !important;
+    }
+    
+    .filament-main-content {
+        padding: 1rem !important;
+    }
+}
+
+/* ========================================
+   Dark Mode Toggle Button
+   ======================================== */
+
+.filament-dark-mode-toggle {
+    position: fixed !important;
+    bottom: 2rem !important;
+    right: 2rem !important;
+    z-index: 50 !important;
+    background: white !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 9999px !important;
+    padding: 0.75rem !important;
+    box-shadow: var(--shadow-lg) !important;
+    transition: all var(--transition-base) ease !important;
+}
+
+.dark .filament-dark-mode-toggle {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+}
+
+.filament-dark-mode-toggle:hover {
+    transform: scale(1.1) !important;
+    box-shadow: var(--shadow-xl) !important;
+}
+
+/* ========================================
+   Loading States
+   ======================================== */
+
+.filament-loading {
+    display: inline-block;
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ========================================
+   Notification Styling
+   ======================================== */
+
+.filament-notification {
+    border-radius: var(--border-radius-lg) !important;
+    box-shadow: var(--shadow-lg) !important;
+    border: 1px solid #e5e7eb !important;
+    backdrop-filter: blur(10px) !important;
+}
+
+.dark .filament-notification {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+}
+
+/* ========================================
+   Empty States
+   ======================================== */
+
+.filament-empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #6b7280;
+}
+
+.dark .filament-empty-state {
+    color: #94a3b8;
+}
+
+.filament-empty-state svg {
+    width: 4rem;
+    height: 4rem;
+    margin: 0 auto 1rem;
+    opacity: 0.5;
+}
