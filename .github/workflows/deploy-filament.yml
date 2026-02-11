@@ -1,4 +1,4 @@
-name: Deploy Filament Backend
+name: Deploy Filament Backend (V2)
 
 on:
   push:
@@ -11,6 +11,9 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: declared-as-ala/sobitas-backend-v2
+  V2_CONTAINER: sobitas-backend-v2
+  ENV_SOURCE_CONTAINER: sobitas-backend
+  NGINX_V2_CONTAINER: sobitas-laravel-nginx-v2
 
 jobs:
   build-and-deploy:
@@ -22,8 +25,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Verify Dockerfile exists
         run: |
@@ -40,27 +41,19 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Extract metadata (tags, labels)
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=raw,value=latest
-            type=sha,format=short
-
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v6
         with:
           context: ./filament
           file: ./filament/Dockerfile
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Deploy to VPS (recreate existing sobitas-backend-v2 safely)
+      - name: Deploy to VPS (create/update sobitas-backend-v2 only)
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -71,112 +64,82 @@ jobs:
           command_timeout: 300s
           script: |
             set -e
-            echo "=== Deploy: sobitas-backend-v2 ==="
 
             IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
-            CONTAINER="sobitas-backend-v2"
+            V2="${{ env.V2_CONTAINER }}"
+            SRC="${{ env.ENV_SOURCE_CONTAINER }}"
+            NGINX_V2="${{ env.NGINX_V2_CONTAINER }}"
 
-            # Optional GHCR login (only needed if VPS can't pull public packages)
+            echo "=== Deploy backend v2 ==="
+            echo "Image: $IMAGE"
+            echo "Target container: $V2"
+            echo "Env source container (read-only): $SRC"
+            echo "Nginx v2 container: $NGINX_V2"
+
+            # Optional GHCR login
             if [ -n "${{ secrets.GHCR_PAT }}" ]; then
               echo "Login to GHCR..."
-              echo "${{ secrets.GHCR_PAT }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+              echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             fi
 
-            echo "Pull latest image: $IMAGE"
+            echo "Pull latest image..."
             docker pull "$IMAGE"
 
-            echo "Check current container exists..."
-            if ! docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER}$"; then
-              echo "❌ Container ${CONTAINER} not found on VPS."
-              echo "Existing containers:"
-              docker ps -a --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}' | head -30
+            echo "Detect network from nginx v2..."
+            if ! docker ps -a --format '{{.Names}}' | grep -q "^${NGINX_V2}$"; then
+              echo "❌ ${NGINX_V2} not found. Existing containers:"
+              docker ps -a --format "table {{.Names}}\t{{.Image}}\t{{.Status}}" | head -40
               exit 1
             fi
 
-            echo "Extract current container config..."
-            # Save important info
-            OLD_IMAGE=$(docker inspect -f '{{.Config.Image}}' "$CONTAINER")
-            RESTART_POLICY=$(docker inspect -f '{{.HostConfig.RestartPolicy.Name}}' "$CONTAINER")
-            NETWORKS=$(docker inspect -f '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}' "$CONTAINER")
-            ENV_VARS=$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$CONTAINER")
-            WORKDIR=$(docker inspect -f '{{.Config.WorkingDir}}' "$CONTAINER")
-            ENTRYPOINT=$(docker inspect -f '{{json .Config.Entrypoint}}' "$CONTAINER")
-            CMD=$(docker inspect -f '{{json .Config.Cmd}}' "$CONTAINER")
+            NET=$(docker inspect -f '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{end}}' "$NGINX_V2" | awk '{print $1}')
+            if [ -z "$NET" ]; then
+              echo "❌ Could not detect network from ${NGINX_V2}"
+              exit 1
+            fi
+            echo "Using network: $NET"
 
-            # Mounts (volumes/binds)
-            MOUNTS=$(docker inspect -f '{{range .Mounts}}{{println .Type " " .Source " " .Destination " " .RW}}{{end}}' "$CONTAINER")
-
-            echo "Old image: $OLD_IMAGE"
-            echo "Networks: $NETWORKS"
-            echo "Restart: $RESTART_POLICY"
-
-            echo "Stop & remove old container..."
-            docker stop "$CONTAINER" || true
-            docker rm "$CONTAINER" || true
-
-            echo "Recreate container with same settings but new image..."
-            # Build docker run command dynamically
-            RUN_CMD="docker run -d --name $CONTAINER"
-
-            if [ "$RESTART_POLICY" != "<no value>" ] && [ -n "$RESTART_POLICY" ]; then
-              RUN_CMD="$RUN_CMD --restart $RESTART_POLICY"
-            else
-              RUN_CMD="$RUN_CMD --restart unless-stopped"
+            echo "Read env vars from ${SRC} (without touching it)..."
+            if ! docker ps -a --format '{{.Names}}' | grep -q "^${SRC}$"; then
+              echo "❌ ${SRC} not found (needed to copy env vars)."
+              exit 1
             fi
 
-            # Re-attach to all previous networks (first with --network, rest with docker network connect)
-            FIRST_NET=$(echo "$NETWORKS" | awk '{print $1}')
-            if [ -n "$FIRST_NET" ]; then
-              RUN_CMD="$RUN_CMD --network $FIRST_NET"
-            fi
+            # Export env as --env-file style
+            TMP_ENV="/tmp/${V2}.env"
+            docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$SRC" > "$TMP_ENV"
+            echo "Env file created: $TMP_ENV (lines: $(wc -l < $TMP_ENV))"
 
-            # Add mounts
-            # Format: Type Source Dest RW
-            while read -r TYPE SRC DEST RW; do
-              [ -z "$TYPE" ] && continue
-              if [ "$TYPE" = "volume" ]; then
-                RUN_CMD="$RUN_CMD -v ${SRC}:${DEST}"
-              elif [ "$TYPE" = "bind" ]; then
-                RUN_CMD="$RUN_CMD -v ${SRC}:${DEST}"
-              fi
-            done <<< "$MOUNTS"
+            echo "Stop/remove old v2 container if exists (ONLY v2)..."
+            docker stop "$V2" 2>/dev/null || true
+            docker rm "$V2" 2>/dev/null || true
 
-            # Add env vars
-            while read -r ENV; do
-              [ -z "$ENV" ] && continue
-              RUN_CMD="$RUN_CMD -e \"$ENV\""
-            done <<< "$ENV_VARS"
-
-            # Workdir
-            if [ -n "$WORKDIR" ] && [ "$WORKDIR" != "<no value>" ]; then
-              RUN_CMD="$RUN_CMD -w $WORKDIR"
-            fi
-
-            # Entrypoint/CMD: keep defaults from image unless explicitly needed
-            # (Most of the time we can skip these; leaving commented for safety)
-            # RUN_CMD="$RUN_CMD --entrypoint $(echo $ENTRYPOINT)"
-
-            RUN_CMD="$RUN_CMD $IMAGE"
-
-            echo "Running: $RUN_CMD"
-            # Execute
-            eval $RUN_CMD
-
-            # Connect to additional networks (if any)
-            for NET in $NETWORKS; do
-              if [ "$NET" != "$FIRST_NET" ]; then
-                docker network connect "$NET" "$CONTAINER" || true
-              fi
-            done
+            echo "Create new v2 container..."
+            # NOTE: no ports exposed, php-fpm should be reached internally by nginx-v2 on the docker network
+            docker run -d \
+              --name "$V2" \
+              --restart unless-stopped \
+              --network "$NET" \
+              --env-file "$TMP_ENV" \
+              "$IMAGE"
 
             echo "Wait 5s..."
             sleep 5
 
             echo "=== Health check ==="
-            docker ps --filter "name=$CONTAINER" --format "table {{.Names}}\t{{.Status}}\t{{.Image}}"
-            docker logs --tail 80 "$CONTAINER" || true
+            docker ps --filter "name=$V2" --format "table {{.Names}}\t{{.Status}}\t{{.Image}}"
 
-            echo "Prune images..."
+            if ! docker ps --format '{{.Names}}' | grep -q "^${V2}$"; then
+              echo "❌ $V2 is not running"
+              echo "Logs:"
+              docker logs --tail 120 "$V2" || true
+              exit 1
+            fi
+
+            echo "Logs (last 80 lines):"
+            docker logs --tail 80 "$V2" || true
+
+            echo "Cleanup images..."
             docker image prune -f || true
 
-            echo "✅ Deploy completed."
+            echo "✅ Backend v2 deployed successfully"
