@@ -1,0 +1,105 @@
+# ==========================================================
+# BACKEND V2 (Filament) - Add to existing docker-compose.yml
+# ==========================================================
+# This snippet adds backend-v2 services WITHOUT modifying existing services
+# Network: Uses external network sobitas-project_sobitas-net
+# ==========================================================
+
+services:
+  # -------------------------
+  # Backend V2 (PHP-FPM) - Filament
+  # -------------------------
+  backend-v2:
+    image: ghcr.io/declared-as-ala/sobitas-backend-v2:latest
+    container_name: sobitas-backend-v2
+    restart: unless-stopped
+    env_file:
+      - docker/env/backend-v2.env
+    networks:
+      - sobitas-net
+    expose:
+      - "9000"
+    # Note: mysql and redis services should exist in main docker-compose.yml
+    # If they don't, remove depends_on or adjust service names
+    depends_on:
+      - mysql
+      - redis
+    volumes:
+      - backend-v2-vendor:/var/www/html/vendor
+      - backend-v2-bootstrap-cache:/var/www/html/bootstrap/cache
+      - backend-v2-storage:/var/www/html/storage
+    # Use production-safe entrypoint (no auto migrations, no key:generate)
+    # Entrypoint is overridden to avoid running dangerous commands at boot
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      cd /var/www/html &&
+      if [ ! -f vendor/autoload.php ]; then
+        composer install --no-interaction --optimize-autoloader --no-scripts || true;
+      fi &&
+      mkdir -p storage/framework/{cache,sessions,testing,views} storage/logs bootstrap/cache &&
+      chown -R www-data:www-data storage bootstrap/cache 2>/dev/null || true &&
+      chmod -R 775 storage bootstrap/cache 2>/dev/null || true &&
+      php artisan storage:link 2>/dev/null || true &&
+      exec php-fpm
+    healthcheck:
+      test: ["CMD-SHELL", "php -v >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # -------------------------
+  # Public Assets Init Job (one-shot)
+  # -------------------------
+  backend-v2-public-init:
+    image: ghcr.io/declared-as-ala/sobitas-backend-v2:latest
+    container_name: backend-v2-public-init
+    restart: "no"
+    networks:
+      - sobitas-net
+    volumes:
+      - backend-v2-public:/public
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      rm -rf /public/* /public/.[!.]* 2>/dev/null || true &&
+      cp -a /var/www/html/public/. /public/ &&
+      chown -R www-data:www-data /public 2>/dev/null || true &&
+      echo "✓ Public assets copied to volume" &&
+      ls -lah /public | head -20
+
+  # -------------------------
+  # Nginx V2 (serves backend-v2 on port 8083)
+  # -------------------------
+  backend-nginx-v2:
+    image: nginx:stable
+    container_name: sobitas-laravel-nginx-v2
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8083:80"  # Only bind to localhost (NPM will proxy)
+    networks:
+      - sobitas-net
+    depends_on:
+      - backend-v2
+      - backend-v2-public-init
+    volumes:
+      - backend-v2-public:/var/www/html/public:ro
+      - backend-v2-storage:/var/www/html/storage:ro
+      - ./nginx/laravel-v2.conf:/etc/nginx/conf.d/default.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "nginx -t >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  backend-v2-vendor:
+  backend-v2-bootstrap-cache:
+  backend-v2-storage:
+  # Public volume must be created externally first: docker volume create sobitas-project_backend-v2-public
+  backend-v2-public:
+    external: true
+    name: sobitas-project_backend-v2-public
+
+networks:
+  sobitas-net:
+    external: true
+    name: sobitas-project_sobitas-net
