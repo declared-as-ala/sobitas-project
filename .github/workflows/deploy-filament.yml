@@ -54,25 +54,37 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Deploy to VPS
+      - name: Deploy to VPS (like old workflow style)
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           password: ${{ secrets.VPS_PASSWORD }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
           script_stop: true
           timeout: 600s
+          retry: 3
+          retry_interval: 10s
           command_timeout: 300s
           script: |
             set -e
             echo "=== Filament Backend V2 Deploy Started ==="
 
             IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
-            APP_DIR="/root/sobitas-project"
+            V2="${{ env.V2_CONTAINER }}"
+            SRC="${{ env.ENV_SOURCE_CONTAINER }}"
+            NGINX_V2="${{ env.NGINX_V2_CONTAINER }}"
 
-            cd "$APP_DIR" || { echo "❌ Directory $APP_DIR not found!"; exit 1; }
+            echo "Image: $IMAGE"
+            echo "Target container: $V2"
+            echo "Source env container (read-only): $SRC"
+            echo "Nginx v2 container: $NGINX_V2"
 
-            # Login to GHCR if PAT provided
+            # OPTIONAL: if you want also to refresh code on VPS (not needed when deploying by image)
+            # cd /root/sobitas-project && git fetch origin main && git reset --hard origin/main && git clean -fd
+
+            # Login to GHCR on VPS if PAT provided (recommended)
             if [ -n "${{ secrets.GHCR_PAT }}" ]; then
               echo "Login to GHCR..."
               echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
@@ -81,63 +93,64 @@ jobs:
             echo "Pull latest image..."
             docker pull "$IMAGE"
 
-            # Detect docker compose version
-            if docker compose version >/dev/null 2>&1; then
-              COMPOSE_CMD="docker compose"
-              echo "✓ Using Docker Compose V2"
-            elif docker-compose version >/dev/null 2>&1; then
-              COMPOSE_CMD="docker-compose"
-              echo "✓ Using Docker Compose V1"
-            else
-              echo "❌ docker compose not found"
+            echo "Detect docker network from nginx v2..."
+            if ! docker ps -a --format '{{.Names}}' | grep -q "^${NGINX_V2}$"; then
+              echo "❌ ${NGINX_V2} not found. Existing containers:"
+              docker ps -a --format "table {{.Names}}\t{{.Image}}\t{{.Status}}" | head -40
               exit 1
             fi
 
-            echo "=== Stop old containers ==="
-            $COMPOSE_CMD stop backend-v2 backend-nginx-v2 2>/dev/null || true
-            $COMPOSE_CMD rm -f backend-v2-public-init 2>/dev/null || true
+            NET=$(docker inspect -f '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}' "$NGINX_V2" | awk '{print $1}')
+            if [ -z "$NET" ]; then
+              echo "❌ Could not detect network from ${NGINX_V2}"
+              exit 1
+            fi
+            echo "Using network: $NET"
 
-            echo "=== Copy public assets ==="
-            $COMPOSE_CMD run --rm backend-v2-public-init || {
-              echo "⚠️ Public init failed, but continuing..."
-            }
+            echo "Copy env vars from ${SRC} (read-only)..."
+            if ! docker ps -a --format '{{.Names}}' | grep -q "^${SRC}$"; then
+              echo "❌ ${SRC} not found (needed to copy env vars)."
+              exit 1
+            fi
 
-            echo "=== Start backend-v2 ==="
-            $COMPOSE_CMD up -d --force-recreate backend-v2
+            TMP_ENV="/tmp/${V2}.env"
+            docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$SRC" > "$TMP_ENV"
+            echo "Env file created: $TMP_ENV (lines: $(wc -l < $TMP_ENV))"
+
+            echo "Stop/remove old v2 container if exists (ONLY v2)..."
+            docker stop "$V2" 2>/dev/null || true
+            docker rm "$V2" 2>/dev/null || true
+
+            echo "Start new v2 container..."
+            docker run -d \
+              --name "$V2" \
+              --restart unless-stopped \
+              --network "$NET" \
+              --env-file "$TMP_ENV" \
+              "$IMAGE"
+
+            echo "Wait 5s..."
             sleep 5
 
-            echo "=== Start nginx-v2 ==="
-            $COMPOSE_CMD up -d --force-recreate backend-nginx-v2
-            sleep 2
-
             echo "=== Health check ==="
-            if ! docker ps --format '{{.Names}}' | grep -q "^sobitas-backend-v2$"; then
-              echo "❌ sobitas-backend-v2 is not running"
-              docker logs --tail 100 sobitas-backend-v2 || true
+            docker ps --filter "name=$V2" --format "table {{.Names}}\t{{.Status}}\t{{.Image}}"
+
+            if ! docker ps --format '{{.Names}}' | grep -q "^${V2}$"; then
+              echo "❌ $V2 is not running"
+              docker logs --tail 150 "$V2" || true
               exit 1
             fi
 
-            if ! docker ps --format '{{.Names}}' | grep -q "^sobitas-laravel-nginx-v2$"; then
-              echo "❌ sobitas-laravel-nginx-v2 is not running"
-              docker logs --tail 50 sobitas-laravel-nginx-v2 || true
-              exit 1
-            fi
-
-            echo "=== Container status ==="
-            docker ps --filter "name=sobitas-backend-v2" --format "table {{.Names}}\t{{.Status}}\t{{.Image}}"
-            docker ps --filter "name=sobitas-laravel-nginx-v2" --format "table {{.Names}}\t{{.Status}}\t{{.Image}}"
-
-            echo "=== Smoke test ==="
-            curl -I http://127.0.0.1:8083 || echo "⚠️ Nginx not responding (may need more time)"
+            echo "=== Logs (last 80 lines) ==="
+            docker logs --tail 80 "$V2" || true
 
             echo "=== Clear Laravel caches ==="
-            docker exec sobitas-backend-v2 php artisan optimize:clear || true
-            docker exec sobitas-backend-v2 rm -f bootstrap/cache/*.php || true
-            docker exec sobitas-backend-v2 php artisan storage:link || true
+            docker exec "$V2" php artisan config:clear || true
+            docker exec "$V2" php artisan cache:clear || true
+            docker exec "$V2" php artisan view:clear || true
+            docker exec "$V2" php artisan route:clear || true
+            docker exec "$V2" php artisan optimize || true
             echo "✓ Caches cleared"
-
-            echo "=== Logs (last 50 lines) ===ss"
-            docker logs --tail 50 sobitas-backend-v2 || true
 
             echo "Cleanup old images..."
             docker image prune -f || true
