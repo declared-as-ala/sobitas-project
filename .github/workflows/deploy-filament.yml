@@ -136,30 +136,97 @@ jobs:
               }
             fi
             
-            # Detect docker compose version (v2 or v1)
-            if docker compose version >/dev/null 2>&1; then
-              COMPOSE_CMD="docker compose"
-              echo "✓ Using Docker Compose V2"
-            elif docker-compose version >/dev/null 2>&1; then
-              COMPOSE_CMD="docker-compose"
-              echo "✓ Using Docker Compose V1"
-            else
-              echo "❌ Neither 'docker compose' nor 'docker-compose' found!"
-              exit 1
-            fi
-            
             # Pull latest image
             echo "Pulling latest image from GHCR..."
-            $COMPOSE_CMD pull sobitas-backend-v2 || {
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest || {
               echo "⚠️ Pull failed, but continuing with existing image..."
             }
             
-            # Recreate the backend service (no dependencies, force recreate)
-            echo "Recreating sobitas-backend-v2 container..."
-            $COMPOSE_CMD up -d --no-deps --force-recreate sobitas-backend-v2 || {
-              echo "❌ Failed to recreate container!"
-              exit 1
-            }
+            # Stop and remove old container if it exists
+            echo "Stopping old container if it exists..."
+            docker stop sobitas-backend-v2 2>/dev/null || true
+            docker rm sobitas-backend-v2 2>/dev/null || true
+            
+            # Ensure Docker network exists
+            echo "Ensuring Docker network exists..."
+            docker network inspect sobitas-net >/dev/null 2>&1 || docker network create sobitas-net
+            
+            # Try to use docker-compose if service exists, otherwise use docker run
+            SERVICE_NAME=""
+            USE_COMPOSE=false
+            
+            if [ -f "docker-compose.yml" ]; then
+              # Detect docker compose version (v2 or v1)
+              if docker compose version >/dev/null 2>&1; then
+                COMPOSE_CMD="docker compose"
+                echo "✓ Docker Compose V2 available"
+                USE_COMPOSE=true
+              elif docker-compose version >/dev/null 2>&1; then
+                COMPOSE_CMD="docker-compose"
+                echo "✓ Docker Compose V1 available"
+                USE_COMPOSE=true
+              fi
+              
+              if [ "$USE_COMPOSE" = true ]; then
+                # Check which service name exists
+                if grep -q "^[[:space:]]*sobitas-backend-v2:" docker-compose.yml; then
+                  SERVICE_NAME="sobitas-backend-v2"
+                  echo "Found service: sobitas-backend-v2 in docker-compose.yml"
+                elif grep -q "^[[:space:]]*backend:" docker-compose.yml; then
+                  SERVICE_NAME="backend"
+                  echo "Found service: backend in docker-compose.yml (will update image manually)"
+                fi
+                
+                if [ -n "$SERVICE_NAME" ]; then
+                  if [ "$SERVICE_NAME" = "sobitas-backend-v2" ]; then
+                    echo "Using docker-compose to recreate service..."
+                    $COMPOSE_CMD pull $SERVICE_NAME || true
+                    $COMPOSE_CMD up -d --no-deps --force-recreate $SERVICE_NAME && {
+                      echo "✓ Container recreated with docker-compose"
+                      USE_COMPOSE=false  # Success, skip docker run
+                    } || {
+                      echo "⚠️ docker-compose failed, will try docker run..."
+                      USE_COMPOSE=false
+                    }
+                  else
+                    # Service is named "backend" but we need "sobitas-backend-v2" container
+                    echo "Service is named 'backend', updating image and recreating container manually..."
+                    # Update the image in docker-compose.yml temporarily or use docker run
+                    USE_COMPOSE=false
+                  fi
+                else
+                  echo "No matching service found in docker-compose.yml, using docker run..."
+                  USE_COMPOSE=false
+                fi
+              fi
+            else
+              echo "docker-compose.yml not found, using docker run..."
+              USE_COMPOSE=false
+            fi
+            
+            # If docker-compose didn't work or service doesn't match, use docker run directly
+            if [ "$USE_COMPOSE" = false ] || ! docker ps | grep -q "sobitas-backend-v2"; then
+              echo "Running container with docker run (standalone mode)..."
+              docker run -d \
+                --name sobitas-backend-v2 \
+                --restart unless-stopped \
+                --network sobitas-net \
+                --env-file .env \
+                -e DB_CONNECTION=mysql \
+                -e DB_HOST=mysql \
+                -e DB_PORT=3306 \
+                -e REDIS_HOST=redis \
+                -e REDIS_PORT=6379 \
+                -e CACHE_DRIVER=redis \
+                -e SESSION_DRIVER=redis \
+                -e QUEUE_CONNECTION=redis \
+                -e LOG_CHANNEL=stderr \
+                ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest || {
+                  echo "❌ Failed to start container!"
+                  exit 1
+                }
+              echo "✓ Container started with docker run"
+            fi
             
             # Wait a moment for container to start
             sleep 5
