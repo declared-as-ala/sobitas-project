@@ -1,12 +1,13 @@
 services:
   # -------------------------
-  # MySQL
+  # MySQL Database
   # -------------------------
   mysql:
     image: mysql:8.0
     container_name: sobitas-mysql
     restart: unless-stopped
-    env_file: [.env]
+    env_file:
+      - .env
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
@@ -44,7 +45,7 @@ services:
       retries: 10
 
   # ==========================================================
-  # OLD BACKEND (Voyager)  -> admin.protein.tn
+  # OLD BACKEND (Voyager) - keep as-is
   # ==========================================================
   backend:
     build:
@@ -52,7 +53,8 @@ services:
       dockerfile: Dockerfile
     container_name: sobitas-backend
     restart: unless-stopped
-    env_file: [.env]
+    env_file:
+      - .env
     environment:
       DB_CONNECTION: mysql
       DB_HOST: mysql
@@ -69,9 +71,10 @@ services:
       REDIS_HOST: redis
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       REDIS_PORT: 6379
+      REDIS_DB: 0
+      REDIS_CACHE_DB: 1
     networks:
       - sobitas-net
-      - npm_network
     expose:
       - "9000"
     depends_on:
@@ -89,26 +92,26 @@ services:
     image: nginx:stable
     container_name: sobitas-laravel-nginx
     restart: unless-stopped
+    ports:
+      - "8080:80"
     volumes:
       - ./filament:/var/www/html:delegated
       - backend-storage:/var/www/html/storage
       - ./nginx/laravel.conf:/etc/nginx/conf.d/default.conf:ro
     networks:
       - sobitas-net
-      - npm_network
     depends_on:
       - backend
-    expose:
-      - "80"
 
   # ==========================================================
-  # V2 BACKEND (Filament) -> admin.sobitas.tn
+  # V2 BACKEND (Filament) from GHCR image
   # ==========================================================
   backend-v2:
     image: ghcr.io/declared-as-ala/sobitas-backend-v2:latest
     container_name: sobitas-backend-v2
     restart: unless-stopped
-    env_file: [.env]
+    env_file:
+      - .env
     environment:
       DB_CONNECTION: mysql
       DB_HOST: mysql
@@ -130,12 +133,10 @@ services:
       REDIS_HOST: redis
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       REDIS_PORT: 6379
-
-      # helps behind reverse proxy (NPM)
-      TRUSTED_PROXIES: "*"
+      REDIS_DB: 0
+      REDIS_CACHE_DB: 1
     networks:
       - sobitas-net
-      - npm_network
     expose:
       - "9000"
     depends_on:
@@ -144,47 +145,42 @@ services:
       redis:
         condition: service_healthy
     volumes:
-      # keep storage fast
-      - backend-v2-storage:/var/www/html/storage
+      - backend-v2-vendor:/var/www/html/vendor
       - backend-v2-bootstrap-cache:/var/www/html/bootstrap/cache
+      - backend-v2-storage:/var/www/html/storage
 
-  # ----------------------------------------------------------
-  # INIT JOB: copy /public from backend-v2 image -> public volume
-  # (no entrypoint, no artisan, only copy assets)
-  # ----------------------------------------------------------
+  # ---- public assets copier (creates /public for nginx v2) ----
   backend-v2-public-init:
     image: ghcr.io/declared-as-ala/sobitas-backend-v2:latest
     container_name: sobitas-backend-v2-public-init
     restart: "no"
-    entrypoint: ["sh","-lc"]
+    networks:
+      - sobitas-net
+    volumes:
+      - backend-v2-public:/public
+    entrypoint: ["sh", "-lc"]
     command: >
       rm -rf /public/* &&
       cp -a /var/www/html/public/. /public/ &&
-      ls -lah /public | head -50
-    volumes:
-      - backend-v2-public:/public
+      ls -lah /public | head -30
 
   backend-nginx-v2:
     image: nginx:stable
     container_name: sobitas-laravel-nginx-v2
     restart: unless-stopped
-    depends_on:
-      - backend-v2
-      - backend-v2-public-init
+    ports:
+      - "8083:80"
     networks:
       - sobitas-net
-      - npm_network
-    expose:
-      - "80"
+    depends_on:
+      - backend-v2
     volumes:
-      # nginx must see public assets:
       - backend-v2-public:/var/www/html/public:ro
-      # storage for /storage route:
-      - backend-v2-storage:/var/www/html/storage:ro
+      - backend-v2-storage:/var/www/html/storage:rw
       - ./nginx/laravel-v2.conf:/etc/nginx/conf.d/default.conf:ro
 
   # -------------------------
-  # Frontend (protein.tn)
+  # Frontend
   # -------------------------
   frontend:
     image: ghcr.io/declared-as-ala/sobitas-frontend:latest
@@ -194,11 +190,12 @@ services:
       NODE_ENV: production
       NEXT_PUBLIC_API_URL: https://admin.protein.tn/api
       NEXT_PUBLIC_STORAGE_URL: https://admin.protein.tn/storage
+    ports:
+      - "3001:3000"
     networks:
       - sobitas-net
-      - npm_network
-    expose:
-      - "3000"
+    depends_on:
+      - backend-nginx
 
 volumes:
   mysql-data:
@@ -208,15 +205,15 @@ volumes:
   backend-bootstrap-cache:
   backend-storage:
 
-  backend-v2-storage:
+  backend-v2-vendor:
   backend-v2-bootstrap-cache:
+  backend-v2-storage:
+
+  # external volume already created manually
   backend-v2-public:
+    external: true
+    name: sobitas-project_backend-v2-public
 
 networks:
   sobitas-net:
     driver: bridge
-
-  # IMPORTANT: replace name with your real NPM network
-  npm_network:
-    external: true
-    name: npm_network
