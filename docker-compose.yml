@@ -139,10 +139,7 @@ services:
     volumes:
       - backend-v2-public:/public
     entrypoint: ["sh", "-c"]
-    command: >
-      rm -rf /public/* &&
-      cp -a /var/www/html/public/. /public/ &&
-      ls -lah /public | head -30
+    command: "rm -rf /public/* && cp -a /var/www/html/public/. /public/ && ls -lah /public | head -30"
 
   backend-nginx-v2:
     image: nginx:stable
