@@ -133,7 +133,7 @@ services:
   backend-v2-public-init:
     image: ghcr.io/declared-as-ala/sobitas-backend-v2:latest
     container_name: sobitas-backend-v2-public-init
-    restart: "no"
+    restart: "never"
     networks:
       - sobitas-net
     volumes:
