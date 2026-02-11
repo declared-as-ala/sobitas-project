@@ -53,11 +53,17 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # QUICK NETWORK DEBUG (optional but useful)
       - name: Debug - check if SSH port reachable
         run: |
-          echo "Testing TCP connectivity to ${{ secrets.VPS_HOST }}:${{ secrets.VPS_PORT }}"
-          timeout 10 bash -lc 'cat < /dev/null > /dev/tcp/${{ secrets.VPS_HOST }}/${{ secrets.VPS_PORT }}' \
+          HOST="${{ secrets.VPS_HOST }}"
+          PORT="${{ secrets.VPS_PORT }}"
+          if [ -z "$PORT" ]; then
+            PORT="22"
+            echo "VPS_PORT secret not set, defaulting to 22"
+          fi
+
+          echo "Testing TCP connectivity to ${HOST}:${PORT}"
+          timeout 10 bash -lc "cat < /dev/null > /dev/tcp/${HOST}/${PORT}" \
             && echo "✅ Port reachable" \
             || (echo "❌ Port NOT reachable from GitHub runner" && exit 1)
 
@@ -65,9 +71,11 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
-          port: ${{ secrets.VPS_PORT }}
           username: ${{ secrets.VPS_USER }}
           password: ${{ secrets.VPS_PASSWORD }}
+          # If VPS_PORT is empty, appleboy may fail. So we set it by passing env and using default in runner debug.
+          # Best is to set VPS_PORT secret. If you still want default here, set VPS_PORT=22 in secrets.
+          port: ${{ secrets.VPS_PORT }}
           script_stop: true
           timeout: 600s
           command_timeout: 300s
@@ -85,6 +93,7 @@ jobs:
             echo "Env source container (read-only): $SRC"
             echo "Nginx v2 container: $NGINX_V2"
 
+            # Optional GHCR login on VPS (only needed if pull fails without it)
             if [ -n "${{ secrets.GHCR_PAT }}" ]; then
               echo "Login to GHCR..."
               echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
@@ -100,14 +109,14 @@ jobs:
               exit 1
             fi
 
-            NET=$(docker inspect -f '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{end}}' "$NGINX_V2" | awk '{print $1}')
+            NET=$(docker inspect -f '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}' "$NGINX_V2" | awk '{print $1}')
             if [ -z "$NET" ]; then
               echo "❌ Could not detect network from ${NGINX_V2}"
               exit 1
             fi
             echo "Using network: $NET"
 
-            echo "Read env vars from ${SRC}..."
+            echo "Read env vars from ${SRC} (without touching it)..."
             if ! docker ps -a --format '{{.Names}}' | grep -q "^${SRC}$"; then
               echo "❌ ${SRC} not found (needed to copy env vars)."
               exit 1
@@ -129,6 +138,7 @@ jobs:
               --env-file "$TMP_ENV" \
               "$IMAGE"
 
+            echo "Wait 5s..."
             sleep 5
 
             echo "=== Health check ==="
@@ -136,10 +146,15 @@ jobs:
 
             if ! docker ps --format '{{.Names}}' | grep -q "^${V2}$"; then
               echo "❌ $V2 is not running"
-              docker logs --tail 120 "$V2" || true
+              echo "Logs:"
+              docker logs --tail 150 "$V2" || true
               exit 1
             fi
 
+            echo "Logs (last 80 lines):"
             docker logs --tail 80 "$V2" || true
+
+            echo "Cleanup images..."
             docker image prune -f || true
+
             echo "✅ Backend v2 deployed successfully"
