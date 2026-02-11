@@ -1,69 +1,58 @@
-# Frontend CI/CD (Build → Test → Deploy to VPS)
+# GitHub Actions Workflows
 
-Push to `main` (with changes under `frontend/`) triggers: **build**, **lint**, **Docker image push**, then **deploy to your VPS** — similar to Vercel.
+## Workflows disponibles
 
-## One-time setup
+### 1. `deploy-filament.yml` ✅ ACTIF
+**Déploiement automatique du backend Filament**
 
-### 1. GitHub repository secrets
+- **Déclenchement** : Push sur `main` avec changements dans `filament/**`
+- **Actions** :
+  1. Build de l'image Docker depuis `filament/Dockerfile`
+  2. Push vers GHCR : `ghcr.io/declared-as-ala/sobitas-backend-v2:latest`
+  3. Déploiement sur le VPS via SSH
+  4. Redémarrage du container `sobitas-backend-v2`
 
-In the repo: **Settings → Secrets and variables → Actions** → **New repository secret**. Add:
+### 2. `frontend-deploy.yml` ⚠️ DÉSACTIVÉ (manuel uniquement)
+**Déploiement du frontend Next.js**
 
-| Secret         | Description |
-|----------------|-------------|
-| `VPS_HOST`     | VPS IP or hostname (e.g. `145.223.118.9`) |
-| `VPS_USER`     | SSH user (e.g. `root`) |
-| `VPS_PASSWORD` | SSH password (use this **or** `VPS_SSH_KEY`, not both) |
-| `VPS_SSH_KEY`  | Alternative: full private key content for SSH. Use this **or** `VPS_PASSWORD`. |
-| `GHCR_PAT`     | (Optional) GitHub PAT with **read:packages** so the VPS can pull the image. For public repos, try without first; add if pull fails. |
+- **Déclenchement** : **UNIQUEMENT manuel** via `workflow_dispatch`
+- **Actions** : Build et déploiement du frontend (désactivé automatiquement)
 
-### 2. (Optional) Build-time variables
+### 3. `backend-assets-deploy.yml` ✅ ACTIF
+**Compilation des assets du backend legacy**
 
-If you need custom env at build time, in **Settings → Secrets and variables → Actions → Variables** add:
+- **Déclenchement** : Push sur `main` avec changements dans `backend/resources/**`
+- **Actions** : Compilation des assets CSS/JS sur le VPS
 
-- `NEXT_PUBLIC_API_URL` (e.g. `https://api.sobitas.tn` or `/api`)
-- `NEXT_PUBLIC_STORAGE_URL` (e.g. `/storage`)
+## Configuration requise
 
-### 3. VPS setup
+Voir [DEPLOYMENT_SETUP.md](./DEPLOYMENT_SETUP.md) pour les instructions complètes.
 
-On the VPS (one time):
+### Secrets GitHub Actions (obligatoires)
 
-1. **Install Docker** (if not already):
-   - Ubuntu/Debian: `curl -fsSL https://get.docker.com | sh`
-   - Then: `sudo usermod -aG docker $USER` and log out/in (or use root).
+| Secret | Description |
+|--------|-------------|
+| `VPS_HOST` | Adresse IP ou hostname du VPS |
+| `VPS_USER` | Utilisateur SSH (ex: `root`) |
+| `VPS_SSH_KEY` | Clé privée SSH complète |
 
-2. **Open port 3000** (or the port you use for the frontend):
-   - Firewall: `ufw allow 3000` (or your port) and `ufw enable` if you use UFW.
-   - If you use Nginx as reverse proxy, point it to `http://127.0.0.1:3000`.
+### Secrets GitHub Actions (optionnels)
 
-3. **Optional – GHCR login** (for private repos or if pull fails):
-   - `echo YOUR_GHCR_PAT | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin`
-   - You can also rely on the workflow to log in using the `GHCR_PAT` secret (see above).
+| Secret | Description | Défaut |
+|--------|-------------|--------|
+| `VPS_PORT` | Port SSH | `22` |
+| `VPS_APP_DIR` | Chemin du projet sur VPS | `/root/sobitas-project` |
+| `GHCR_PAT` | Personal Access Token GitHub | Utilise `GITHUB_TOKEN` |
 
-## Flow
+## Fichiers modifiés/créés
 
-1. You push to `main` and change something under `frontend/` (or under `.github/workflows/frontend-deploy.yml`).
-2. GitHub Actions runs:
-   - Install deps, **lint**, **build** in `frontend/`.
-   - Build Docker image and push to `ghcr.io/<your-org>/<repo>/frontend:latest`.
-   - SSH into the VPS, pull the new image, stop/remove the old container, run the new one as `sobitas-frontend` on port 3000.
-3. Frontend is live at `http://VPS_IP:3000` (or via your Nginx domain).
+- ✅ `.github/workflows/deploy-filament.yml` (nouveau)
+- ✅ `.github/workflows/frontend-deploy.yml` (modifié - trigger désactivé)
+- ✅ `.github/workflows/DEPLOYMENT_SETUP.md` (documentation)
+- ✅ `.github/workflows/docker-compose.vps.example.yml` (exemple de config)
 
-## Manual run
+## Prochaines étapes
 
-In the repo: **Actions** → **Frontend Build & Deploy** → **Run workflow**.
-
-## Branch
-
-The workflow runs on pushes to **main**. To use another branch (e.g. `master`), edit in `.github/workflows/frontend-deploy.yml`:
-
-```yaml
-on:
-  push:
-    branches: [main]   # change to [master] if needed
-```
-
-## Troubleshooting
-
-- **SSH fails**: Check `VPS_HOST`, `VPS_USER`, and either `VPS_PASSWORD` or `VPS_SSH_KEY`. Test with `ssh user@host` (password) or `ssh -i keyfile user@host` (key) locally.
-- **Docker pull unauthorized**: Add `GHCR_PAT` with **read:packages** and, if needed, make the package public (repo Settings → Packages).
-- **Port in use**: Change the `-p 3000:3000` in the workflow to another host port, or stop the existing container on the VPS first.
+1. **Ajouter les secrets** dans GitHub (Settings → Secrets → Actions)
+2. **Modifier le docker-compose.yml sur le VPS** pour utiliser l'image GHCR (voir `docker-compose.vps.example.yml`)
+3. **Tester le déploiement** en faisant un push dans `filament/`
