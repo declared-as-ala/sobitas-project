@@ -22,6 +22,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Show changed files
         run: |
@@ -35,6 +38,26 @@ jobs:
         run: |
           echo "This workflow should only run when files in filament/ are changed."
           echo "If you see this, the path filter is working correctly."
+
+      - name: Verify Dockerfile exists
+        run: |
+          echo "=== Checking Dockerfile location ==="
+          echo "Current directory: $(pwd)"
+          echo "Listing filament directory:"
+          ls -la filament/ | head -20
+          echo ""
+          echo "Checking for Dockerfile:"
+          if [ -f "filament/Dockerfile" ]; then
+            echo "✓ Dockerfile found at filament/Dockerfile"
+            echo "File size: $(wc -l < filament/Dockerfile) lines"
+            echo "First 5 lines:"
+            head -5 filament/Dockerfile
+          else
+            echo "❌ Dockerfile NOT found at filament/Dockerfile"
+            echo "Searching for Dockerfile in repository:"
+            find . -name "Dockerfile" -type f 2>/dev/null || echo "No Dockerfile found"
+            exit 1
+          fi
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
