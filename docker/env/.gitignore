@@ -1,3 +1,0 @@
-# Ignore all .env files in this directory
-*.env
-!*.env.template

@@ -111,30 +111,7 @@ services:
     container_name: sobitas-backend-v2
     restart: unless-stopped
     env_file:
-      - .env
-    environment:
-      DB_CONNECTION: mysql
-      DB_HOST: mysql
-      DB_PORT: 3306
-      DB_DATABASE: ${MYSQL_DATABASE:-protein_db}
-      DB_USERNAME: ${MYSQL_USER:-laravel}
-      DB_PASSWORD: ${MYSQL_PASSWORD:-secret}
-
-      APP_ENV: production
-      APP_DEBUG: "false"
-      APP_URL: https://admin.sobitas.tn
-      ASSET_URL: https://admin.sobitas.tn
-
-      CACHE_DRIVER: redis
-      SESSION_DRIVER: redis
-      QUEUE_CONNECTION: redis
-      LOG_CHANNEL: stderr
-
-      REDIS_HOST: redis
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
-      REDIS_PORT: 6379
-      REDIS_DB: 0
-      REDIS_CACHE_DB: 1
+      - ./env/backend-v2.env
     networks:
       - sobitas-net
     expose:
@@ -148,6 +125,9 @@ services:
       - backend-v2-vendor:/var/www/html/vendor
       - backend-v2-bootstrap-cache:/var/www/html/bootstrap/cache
       - backend-v2-storage:/var/www/html/storage
+    # Disable entrypoint dangerous commands - use manual artisan commands instead
+    entrypoint: ["php-fpm"]
+    command: ["php-fpm"]
 
   # ---- public assets copier (creates /public for nginx v2) ----
   backend-v2-public-init:
@@ -158,7 +138,7 @@ services:
       - sobitas-net
     volumes:
       - backend-v2-public:/public
-    entrypoint: ["sh", "-lc"]
+    entrypoint: ["sh", "-c"]
     command: >
       rm -rf /public/* &&
       cp -a /var/www/html/public/. /public/ &&
@@ -176,8 +156,8 @@ services:
       - backend-v2
     volumes:
       - backend-v2-public:/var/www/html/public:ro
-      - backend-v2-storage:/var/www/html/storage:rw
-      - ./nginx/laravel-v2.conf:/etc/nginx/conf.d/default.conf:ro
+      - backend-v2-storage:/var/www/html/storage:ro
+      - ./nginx/admin.sobitas.tn.conf:/etc/nginx/conf.d/default.conf:ro
 
   # -------------------------
   # Frontend
@@ -209,11 +189,9 @@ volumes:
   backend-v2-bootstrap-cache:
   backend-v2-storage:
 
-  # external volume already created manually
   backend-v2-public:
-    external: true
-    name: sobitas-project_backend-v2-public
 
 networks:
   sobitas-net:
-    driver: bridge
+    external: true
+    name: sobitas-project_sobitas-net

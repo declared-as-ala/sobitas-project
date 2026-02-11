@@ -75,7 +75,7 @@ jobs:
             # Login to GHCR if PAT provided
             if [ -n "${{ secrets.GHCR_PAT }}" ]; then
               echo "Login to GHCR..."
-              echo "${{ secrets.GHCR_PAT }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+              echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             fi
 
             echo "Pull latest image..."
@@ -84,8 +84,10 @@ jobs:
             # Detect docker compose version
             if docker compose version >/dev/null 2>&1; then
               COMPOSE_CMD="docker compose"
+              echo "✓ Using Docker Compose V2"
             elif docker-compose version >/dev/null 2>&1; then
               COMPOSE_CMD="docker-compose"
+              echo "✓ Using Docker Compose V1"
             else
               echo "❌ docker compose not found"
               exit 1
@@ -101,11 +103,11 @@ jobs:
             }
 
             echo "=== Start backend-v2 ==="
-            $COMPOSE_CMD up -d backend-v2
+            $COMPOSE_CMD up -d --force-recreate backend-v2
             sleep 5
 
             echo "=== Start nginx-v2 ==="
-            $COMPOSE_CMD up -d backend-nginx-v2
+            $COMPOSE_CMD up -d --force-recreate backend-nginx-v2
             sleep 2
 
             echo "=== Health check ==="
@@ -129,10 +131,8 @@ jobs:
             curl -I http://127.0.0.1:8083 || echo "⚠️ Nginx not responding (may need more time)"
 
             echo "=== Clear Laravel caches ==="
-            docker exec sobitas-backend-v2 php artisan config:clear || true
-            docker exec sobitas-backend-v2 php artisan cache:clear || true
-            docker exec sobitas-backend-v2 php artisan view:clear || true
-            docker exec sobitas-backend-v2 php artisan route:clear || true
+            docker exec sobitas-backend-v2 php artisan optimize:clear || true
+            docker exec sobitas-backend-v2 rm -f bootstrap/cache/*.php || true
             docker exec sobitas-backend-v2 php artisan storage:link || true
             echo "✓ Caches cleared"
 
