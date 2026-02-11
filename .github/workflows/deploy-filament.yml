@@ -4,9 +4,9 @@ on:
   push:
     branches: [main]
     paths:
-      - 'filament/**'
-      - '.github/workflows/deploy-filament.yml'
-  workflow_dispatch: # Allow manual triggering
+      - "filament/**"
+      - ".github/workflows/deploy-filament.yml"
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
@@ -25,58 +25,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Show changed files
-        run: |
-          echo "=== Changed files in this push ==="
-          git diff --name-only HEAD~1 HEAD || echo "No previous commit to compare"
-          echo ""
-          echo "=== Files in filament/ directory ==="
-          find filament -type f -name "*.php" -o -name "*.json" -o -name "Dockerfile" | head -20 || true
-
-      - name: Verify filament path trigger
-        run: |
-          echo "This workflow should only run when files in filament/ are changed."
-          echo "If you see this, the path filter is working correctly."
-
       - name: Verify Dockerfile exists
         run: |
-          echo "=== Checking Dockerfile location ==="
-          echo "Current directory: $(pwd)"
-          echo "Listing filament directory:"
-          ls -la filament/ | head -20
-          echo ""
-          echo "Checking for Dockerfile:"
-          if [ -f "filament/Dockerfile" ]; then
-            echo "✓ Dockerfile found at filament/Dockerfile"
-            echo "File size: $(wc -l < filament/Dockerfile) lines"
-            echo "First 5 lines:"
-            head -5 filament/Dockerfile
-            echo ""
-            echo "File permissions:"
-            ls -la filament/Dockerfile
-          else
-            echo "❌ Dockerfile NOT found at filament/Dockerfile"
-            echo "Searching for Dockerfile in repository:"
-            find . -name "Dockerfile" -type f 2>/dev/null || echo "No Dockerfile found"
-            echo ""
-            echo "Checking if filament directory exists:"
-            ls -la | grep filament || echo "filament directory not found"
-            exit 1
-          fi
-          
-      - name: Verify build context
-        run: |
-          echo "=== Verifying build context ==="
-          echo "Checking if we can access Dockerfile from context:"
-          cd filament
-          if [ -f "Dockerfile" ]; then
-            echo "✓ Dockerfile accessible from filament/ directory"
-            echo "Dockerfile path: $(pwd)/Dockerfile"
-            ls -la Dockerfile
-          else
-            echo "❌ Dockerfile NOT accessible from filament/ directory"
-            exit 1
-          fi
+          test -f filament/Dockerfile || (echo "❌ filament/Dockerfile not found" && exit 1)
+          echo "✓ filament/Dockerfile found"
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -94,114 +46,137 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=ref,event=branch
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest
+            type=sha,format=short
 
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v6
         with:
           context: ./filament
+          file: ./filament/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Deploy to VPS
-        env:
-          VPS_APP_DIR: ${{ secrets.VPS_APP_DIR }}
+      - name: Deploy to VPS (recreate existing sobitas-backend-v2 safely)
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           password: ${{ secrets.VPS_PASSWORD }}
-          envs: VPS_APP_DIR
+          script_stop: true
+          timeout: 600s
+          command_timeout: 300s
           script: |
             set -e
-            echo "=== Filament Backend Deployment Started ==="
-            
-            # Navigate to project directory
-            APP_DIR="${VPS_APP_DIR:-/root/sobitas-project}"
-            echo "Navigating to $APP_DIR..."
-            cd "$APP_DIR" || { echo "❌ Directory $APP_DIR not found!"; exit 1; }
-            
-            # Login to GHCR if PAT is provided
+            echo "=== Deploy: sobitas-backend-v2 ==="
+
+            IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+            CONTAINER="sobitas-backend-v2"
+
+            # Optional GHCR login (only needed if VPS can't pull public packages)
             if [ -n "${{ secrets.GHCR_PAT }}" ]; then
               echo "Login to GHCR..."
               echo "${{ secrets.GHCR_PAT }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
             fi
-            
-            # Detect docker compose version (v2 or v1)
-            if docker compose version >/dev/null 2>&1; then
-              COMPOSE_CMD="docker compose"
-              echo "✓ Using Docker Compose V2"
-            elif docker-compose version >/dev/null 2>&1; then
-              COMPOSE_CMD="docker-compose"
-              echo "✓ Using Docker Compose V1"
+
+            echo "Pull latest image: $IMAGE"
+            docker pull "$IMAGE"
+
+            echo "Check current container exists..."
+            if ! docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER}$"; then
+              echo "❌ Container ${CONTAINER} not found on VPS."
+              echo "Existing containers:"
+              docker ps -a --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}' | head -30
+              exit 1
+            fi
+
+            echo "Extract current container config..."
+            # Save important info
+            OLD_IMAGE=$(docker inspect -f '{{.Config.Image}}' "$CONTAINER")
+            RESTART_POLICY=$(docker inspect -f '{{.HostConfig.RestartPolicy.Name}}' "$CONTAINER")
+            NETWORKS=$(docker inspect -f '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}' "$CONTAINER")
+            ENV_VARS=$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$CONTAINER")
+            WORKDIR=$(docker inspect -f '{{.Config.WorkingDir}}' "$CONTAINER")
+            ENTRYPOINT=$(docker inspect -f '{{json .Config.Entrypoint}}' "$CONTAINER")
+            CMD=$(docker inspect -f '{{json .Config.Cmd}}' "$CONTAINER")
+
+            # Mounts (volumes/binds)
+            MOUNTS=$(docker inspect -f '{{range .Mounts}}{{println .Type " " .Source " " .Destination " " .RW}}{{end}}' "$CONTAINER")
+
+            echo "Old image: $OLD_IMAGE"
+            echo "Networks: $NETWORKS"
+            echo "Restart: $RESTART_POLICY"
+
+            echo "Stop & remove old container..."
+            docker stop "$CONTAINER" || true
+            docker rm "$CONTAINER" || true
+
+            echo "Recreate container with same settings but new image..."
+            # Build docker run command dynamically
+            RUN_CMD="docker run -d --name $CONTAINER"
+
+            if [ "$RESTART_POLICY" != "<no value>" ] && [ -n "$RESTART_POLICY" ]; then
+              RUN_CMD="$RUN_CMD --restart $RESTART_POLICY"
             else
-              echo "❌ Neither 'docker compose' nor 'docker-compose' found!"
-              exit 1
+              RUN_CMD="$RUN_CMD --restart unless-stopped"
             fi
-            
-            # Determine service name from docker-compose.yml
-            if [ ! -f "docker-compose.yml" ]; then
-              echo "❌ docker-compose.yml not found in $APP_DIR"
-              exit 1
+
+            # Re-attach to all previous networks (first with --network, rest with docker network connect)
+            FIRST_NET=$(echo "$NETWORKS" | awk '{print $1}')
+            if [ -n "$FIRST_NET" ]; then
+              RUN_CMD="$RUN_CMD --network $FIRST_NET"
             fi
-            
-            SERVICE_NAME=""
-            if grep -q "^[[:space:]]*sobitas-backend-v2:" docker-compose.yml; then
-              SERVICE_NAME="sobitas-backend-v2"
-              echo "✓ Found service: sobitas-backend-v2"
-            elif grep -q "^[[:space:]]*backend:" docker-compose.yml; then
-              SERVICE_NAME="backend"
-              echo "✓ Found service: backend"
-            else
-              echo "❌ No service 'sobitas-backend-v2' or 'backend' found in docker-compose.yml"
-              echo "Available services:"
-              grep -E "^[[:space:]]*[a-zA-Z0-9_-]+:" docker-compose.yml | sed 's/://' | sed 's/^[[:space:]]*//' || true
-              exit 1
+
+            # Add mounts
+            # Format: Type Source Dest RW
+            while read -r TYPE SRC DEST RW; do
+              [ -z "$TYPE" ] && continue
+              if [ "$TYPE" = "volume" ]; then
+                RUN_CMD="$RUN_CMD -v ${SRC}:${DEST}"
+              elif [ "$TYPE" = "bind" ]; then
+                RUN_CMD="$RUN_CMD -v ${SRC}:${DEST}"
+              fi
+            done <<< "$MOUNTS"
+
+            # Add env vars
+            while read -r ENV; do
+              [ -z "$ENV" ] && continue
+              RUN_CMD="$RUN_CMD -e \"$ENV\""
+            done <<< "$ENV_VARS"
+
+            # Workdir
+            if [ -n "$WORKDIR" ] && [ "$WORKDIR" != "<no value>" ]; then
+              RUN_CMD="$RUN_CMD -w $WORKDIR"
             fi
-            
-            # Pull latest image and recreate service
-            echo "Pulling latest image for service $SERVICE_NAME..."
-            $COMPOSE_CMD pull $SERVICE_NAME || {
-              echo "⚠️ Pull failed, but continuing with existing image..."
-            }
-            
-            echo "Recreating service $SERVICE_NAME..."
-            $COMPOSE_CMD up -d --no-deps --force-recreate $SERVICE_NAME || {
-              echo "❌ Failed to recreate service!"
-              exit 1
-            }
-            
-            # Wait for container to start
-            echo "Waiting for container to start..."
+
+            # Entrypoint/CMD: keep defaults from image unless explicitly needed
+            # (Most of the time we can skip these; leaving commented for safety)
+            # RUN_CMD="$RUN_CMD --entrypoint $(echo $ENTRYPOINT)"
+
+            RUN_CMD="$RUN_CMD $IMAGE"
+
+            echo "Running: $RUN_CMD"
+            # Execute
+            eval $RUN_CMD
+
+            # Connect to additional networks (if any)
+            for NET in $NETWORKS; do
+              if [ "$NET" != "$FIRST_NET" ]; then
+                docker network connect "$NET" "$CONTAINER" || true
+              fi
+            done
+
+            echo "Wait 5s..."
             sleep 5
-            
-            # Health check
-            echo "=== Health Check ==="
-            if docker ps | grep -q "sobitas-backend-v2"; then
-              echo "✓ Container sobitas-backend-v2 is running"
-              docker ps --filter "name=sobitas-backend-v2" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-            else
-              echo "❌ Container sobitas-backend-v2 is NOT running!"
-              echo "All containers:"
-              docker ps -a | grep -E "sobitas-backend|backend" || true
-              exit 1
-            fi
-            
-            # Show recent logs
-            echo ""
-            echo "=== Recent Logs (last 80 lines) ==="
-            docker logs --tail 80 sobitas-backend-v2 || true
-            
-            # Clean up old images
-            echo ""
-            echo "=== Cleaning up old images ==="
+
+            echo "=== Health check ==="
+            docker ps --filter "name=$CONTAINER" --format "table {{.Names}}\t{{.Status}}\t{{.Image}}"
+            docker logs --tail 80 "$CONTAINER" || true
+
+            echo "Prune images..."
             docker image prune -f || true
-            
-            echo ""
-            echo "=== Deployment Completed Successfully ==="
-            echo "Backend v2 is now running with the latest image from GHCR"
+
+            echo "✅ Deploy completed."
