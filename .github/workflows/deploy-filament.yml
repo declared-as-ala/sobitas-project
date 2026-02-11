@@ -1,4 +1,4 @@
-name: Deploy Filament Backend (V2)
+name: Deploy Filament Backend (Docker Image) - V2
 
 on:
   push:
@@ -28,6 +28,7 @@ jobs:
 
       - name: Verify Dockerfile exists
         run: |
+          set -e
           test -f filament/Dockerfile || (echo "❌ filament/Dockerfile not found" && exit 1)
           echo "✓ filament/Dockerfile found"
 
@@ -53,47 +54,37 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Debug - check if SSH port reachable
-        run: |
-          HOST="${{ secrets.VPS_HOST }}"
-          PORT="${{ secrets.VPS_PORT }}"
-          if [ -z "$PORT" ]; then
-            PORT="22"
-            echo "VPS_PORT secret not set, defaulting to 22"
-          fi
-
-          echo "Testing TCP connectivity to ${HOST}:${PORT}"
-          timeout 10 bash -lc "cat < /dev/null > /dev/tcp/${HOST}/${PORT}" \
-            && echo "✅ Port reachable" \
-            || (echo "❌ Port NOT reachable from GitHub runner" && exit 1)
-
-      - name: Deploy to VPS (create/update sobitas-backend-v2 only)
+      - name: Deploy to VPS (like old workflow style)
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           password: ${{ secrets.VPS_PASSWORD }}
-          # If VPS_PORT is empty, appleboy may fail. So we set it by passing env and using default in runner debug.
-          # Best is to set VPS_PORT secret. If you still want default here, set VPS_PORT=22 in secrets.
+          key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
           script_stop: true
           timeout: 600s
+          retry: 3
+          retry_interval: 10s
           command_timeout: 300s
           script: |
             set -e
+            echo "=== Filament Backend V2 Deploy Started ==="
 
             IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
             V2="${{ env.V2_CONTAINER }}"
             SRC="${{ env.ENV_SOURCE_CONTAINER }}"
             NGINX_V2="${{ env.NGINX_V2_CONTAINER }}"
 
-            echo "=== Deploy backend v2 ==="
             echo "Image: $IMAGE"
             echo "Target container: $V2"
-            echo "Env source container (read-only): $SRC"
+            echo "Source env container (read-only): $SRC"
             echo "Nginx v2 container: $NGINX_V2"
 
-            # Optional GHCR login on VPS (only needed if pull fails without it)
+            # OPTIONAL: if you want also to refresh code on VPS (not needed when deploying by image)
+            # cd /root/sobitas-project && git fetch origin main && git reset --hard origin/main && git clean -fd
+
+            # Login to GHCR on VPS if PAT provided (recommended)
             if [ -n "${{ secrets.GHCR_PAT }}" ]; then
               echo "Login to GHCR..."
               echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
@@ -102,7 +93,7 @@ jobs:
             echo "Pull latest image..."
             docker pull "$IMAGE"
 
-            echo "Detect network from nginx v2..."
+            echo "Detect docker network from nginx v2..."
             if ! docker ps -a --format '{{.Names}}' | grep -q "^${NGINX_V2}$"; then
               echo "❌ ${NGINX_V2} not found. Existing containers:"
               docker ps -a --format "table {{.Names}}\t{{.Image}}\t{{.Status}}" | head -40
@@ -116,7 +107,7 @@ jobs:
             fi
             echo "Using network: $NET"
 
-            echo "Read env vars from ${SRC} (without touching it)..."
+            echo "Copy env vars from ${SRC} (read-only)..."
             if ! docker ps -a --format '{{.Names}}' | grep -q "^${SRC}$"; then
               echo "❌ ${SRC} not found (needed to copy env vars)."
               exit 1
@@ -130,7 +121,7 @@ jobs:
             docker stop "$V2" 2>/dev/null || true
             docker rm "$V2" 2>/dev/null || true
 
-            echo "Create new v2 container..."
+            echo "Start new v2 container..."
             docker run -d \
               --name "$V2" \
               --restart unless-stopped \
@@ -146,15 +137,14 @@ jobs:
 
             if ! docker ps --format '{{.Names}}' | grep -q "^${V2}$"; then
               echo "❌ $V2 is not running"
-              echo "Logs:"
               docker logs --tail 150 "$V2" || true
               exit 1
             fi
 
-            echo "Logs (last 80 lines):"
+            echo "=== Logs (last 80 lines) ==="
             docker logs --tail 80 "$V2" || true
 
-            echo "Cleanup images..."
+            echo "Cleanup old images..."
             docker image prune -f || true
 
-            echo "✅ Backend v2 deployed successfully"
+            echo "=== Filament Backend V2 Deploy Completed Successfully ==="
