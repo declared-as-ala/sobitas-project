@@ -22,6 +22,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Show changed files
         run: |
@@ -49,10 +51,30 @@ jobs:
             echo "File size: $(wc -l < filament/Dockerfile) lines"
             echo "First 5 lines:"
             head -5 filament/Dockerfile
+            echo ""
+            echo "File permissions:"
+            ls -la filament/Dockerfile
           else
             echo "❌ Dockerfile NOT found at filament/Dockerfile"
             echo "Searching for Dockerfile in repository:"
             find . -name "Dockerfile" -type f 2>/dev/null || echo "No Dockerfile found"
+            echo ""
+            echo "Checking if filament directory exists:"
+            ls -la | grep filament || echo "filament directory not found"
+            exit 1
+          fi
+          
+      - name: Verify build context
+        run: |
+          echo "=== Verifying build context ==="
+          echo "Checking if we can access Dockerfile from context:"
+          cd filament
+          if [ -f "Dockerfile" ]; then
+            echo "✓ Dockerfile accessible from filament/ directory"
+            echo "Dockerfile path: $(pwd)/Dockerfile"
+            ls -la Dockerfile
+          else
+            echo "❌ Dockerfile NOT accessible from filament/ directory"
             exit 1
           fi
 
