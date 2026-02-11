@@ -1,0 +1,218 @@
+﻿services:
+  # -------------------------
+  # MySQL Database
+  # -------------------------
+  mysql:
+    image: mysql:8.0
+    container_name: sobitas-mysql
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./newest.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - sobitas-net
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # -------------------------
+  # Redis (internal only)
+  # -------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: sobitas-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
+    volumes:
+      - redis-data:/data
+    networks:
+      - sobitas-net
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a ${REDIS_PASSWORD:-} ping | grep PONG >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  # ==========================================================
+  # OLD BACKEND (Voyager) - keep as-is
+  # ==========================================================
+  backend:
+    build:
+      context: ./filament
+      dockerfile: Dockerfile
+    container_name: sobitas-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: ${MYSQL_DATABASE:-protein_db}
+      DB_USERNAME: ${MYSQL_USER:-laravel}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-secret}
+
+      CACHE_DRIVER: redis
+      SESSION_DRIVER: redis
+      QUEUE_CONNECTION: redis
+      LOG_CHANNEL: stderr
+
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      REDIS_CACHE_DB: 1
+    networks:
+      - sobitas-net
+    expose:
+      - "9000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./filament:/var/www/html:delegated
+      - backend-vendor:/var/www/html/vendor
+      - backend-bootstrap-cache:/var/www/html/bootstrap/cache
+      - backend-storage:/var/www/html/storage
+
+  backend-nginx:
+    image: nginx:stable
+    container_name: sobitas-laravel-nginx
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./filament:/var/www/html:delegated
+      - backend-storage:/var/www/html/storage
+      - ./nginx/configuration.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - sobitas-net
+    depends_on:
+      - backend
+
+  # ==========================================================
+  # V2 BACKEND (Filament) from GHCR image
+  # ==========================================================
+  backend-v2:
+    image: ghcr.io/declared-as-ala/sobitas-backend-v2:latest
+    container_name: sobitas-backend-v2
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: ${MYSQL_DATABASE:-protein_db}
+      DB_USERNAME: ${MYSQL_USER:-laravel}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-secret}
+
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_URL: https://admin.sobitas.tn
+      ASSET_URL: https://admin.sobitas.tn
+
+      CACHE_DRIVER: redis
+      SESSION_DRIVER: redis
+      QUEUE_CONNECTION: redis
+      LOG_CHANNEL: stderr
+
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      REDIS_CACHE_DB: 1
+    networks:
+      - sobitas-net
+    expose:
+      - "9000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - backend-v2-vendor:/var/www/html/vendor
+      - backend-v2-bootstrap-cache:/var/www/html/bootstrap/cache
+      - backend-v2-storage:/var/www/html/storage
+
+  # ---- public assets copier (creates /public for nginx v2) ----
+  backend-v2-public-init:
+    image: ghcr.io/declared-as-ala/sobitas-backend-v2:latest
+    container_name: sobitas-backend-v2-public-init
+    restart: "no"
+    networks:
+      - sobitas-net
+    volumes:
+      - backend-v2-public:/public
+    entrypoint: ["sh", "-lc"]
+    command: >
+      rm -rf /public/* &&
+      cp -a /var/www/html/public/. /public/ &&
+      ls -lah /public | head -30
+
+  backend-nginx-v2:
+    image: nginx:stable
+    container_name: sobitas-laravel-nginx-v2
+    restart: unless-stopped
+    ports:
+      - "8083:80"
+    networks:
+      - sobitas-net
+    depends_on:
+      - backend-v2
+    volumes:
+      - backend-v2-public:/var/www/html/public:ro
+      - backend-v2-storage:/var/www/html/storage:rw
+      - ./nginx/configuration.conf:/etc/nginx/conf.d/default.conf:ro
+
+  # -------------------------
+  # Frontend
+  # -------------------------
+  frontend:
+    image: ghcr.io/declared-as-ala/sobitas-frontend:latest
+    container_name: sobitas-frontend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: https://admin.protein.tn/api
+      NEXT_PUBLIC_STORAGE_URL: https://admin.protein.tn/storage
+    ports:
+      - "3001:3000"
+    networks:
+      - sobitas-net
+    depends_on:
+      - backend-nginx
+
+volumes:
+  mysql-data:
+  redis-data:
+
+  backend-vendor:
+  backend-bootstrap-cache:
+  backend-storage:
+
+  backend-v2-vendor:
+  backend-v2-bootstrap-cache:
+  backend-v2-storage:
+
+  backend-v2-public:
+    external: true
+    name: sobitas-project_backend-v2-public
+
+networks:
+  sobitas-net:
+    driver: bridge
