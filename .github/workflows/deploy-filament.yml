@@ -177,25 +177,20 @@ jobs:
                   echo "Found service: backend in docker-compose.yml (will update image manually)"
                 fi
                 
-                if [ -n "$SERVICE_NAME" ]; then
-                  if [ "$SERVICE_NAME" = "sobitas-backend-v2" ]; then
-                    echo "Using docker-compose to recreate service..."
-                    $COMPOSE_CMD pull $SERVICE_NAME || true
-                    $COMPOSE_CMD up -d --no-deps --force-recreate $SERVICE_NAME && {
-                      echo "✓ Container recreated with docker-compose"
-                      USE_COMPOSE=false  # Success, skip docker run
-                    } || {
-                      echo "⚠️ docker-compose failed, will try docker run..."
-                      USE_COMPOSE=false
-                    }
-                  else
-                    # Service is named "backend" but we need "sobitas-backend-v2" container
-                    echo "Service is named 'backend', updating image and recreating container manually..."
-                    # Update the image in docker-compose.yml temporarily or use docker run
+                if [ -n "$SERVICE_NAME" ] && [ "$SERVICE_NAME" = "sobitas-backend-v2" ]; then
+                  echo "Using docker-compose to recreate service..."
+                  $COMPOSE_CMD pull $SERVICE_NAME || true
+                  $COMPOSE_CMD up -d --no-deps --force-recreate $SERVICE_NAME && {
+                    echo "✓ Container recreated with docker-compose"
+                    USE_COMPOSE=false  # Success, skip docker run
+                  } || {
+                    echo "⚠️ docker-compose failed, will try docker run..."
                     USE_COMPOSE=false
-                  fi
+                  }
                 else
-                  echo "No matching service found in docker-compose.yml, using docker run..."
+                  # Service doesn't exist or is named differently (e.g., "backend")
+                  # Use docker run directly to create sobitas-backend-v2 container
+                  echo "Service '$SERVICE_NAME' found but not 'sobitas-backend-v2', using docker run for standalone container..."
                   USE_COMPOSE=false
                 fi
               fi
@@ -207,6 +202,14 @@ jobs:
             # If docker-compose didn't work or service doesn't match, use docker run directly
             if [ "$USE_COMPOSE" = false ] || ! docker ps | grep -q "sobitas-backend-v2"; then
               echo "Running container with docker run (standalone mode)..."
+              
+              # Check if container already exists (stopped)
+              if docker ps -a | grep -q "sobitas-backend-v2"; then
+                echo "Container sobitas-backend-v2 exists but is stopped, removing it..."
+                docker rm -f sobitas-backend-v2 2>/dev/null || true
+              fi
+              
+              # Start the container
               docker run -d \
                 --name sobitas-backend-v2 \
                 --restart unless-stopped \
@@ -221,11 +224,17 @@ jobs:
                 -e SESSION_DRIVER=redis \
                 -e QUEUE_CONNECTION=redis \
                 -e LOG_CHANNEL=stderr \
-                ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest || {
-                  echo "❌ Failed to start container!"
-                  exit 1
-                }
-              echo "✓ Container started with docker run"
+                ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+              
+              # Check if container started successfully
+              if [ $? -eq 0 ]; then
+                echo "✓ Container started with docker run"
+              else
+                echo "❌ Failed to start container!"
+                echo "Checking for errors..."
+                docker logs sobitas-backend-v2 2>&1 | tail -20 || true
+                exit 1
+              fi
             fi
             
             # Wait a moment for container to start
