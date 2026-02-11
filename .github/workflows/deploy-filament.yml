@@ -1,48 +1,134 @@
-name: Deploy Backend V2 (Filament)
+name: Deploy Filament Backend (Docker Image) - V2
 
 on:
   push:
     branches: [main]
     paths:
-      - ".github/workflows/deploy-backend-v2.yml"
-      # add paths that affect the docker image build if you want
+      - "filament/**"
+      - "docker-compose.yml"
+      - "nginx/**"
+      - ".github/workflows/deploy-filament.yml"
   workflow_dispatch:
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: declared-as-ala/sobitas-backend-v2
+  IMAGE: ghcr.io/declared-as-ala/sobitas-backend-v2:latest
+  VPS_DIR: /root/sobitas-project
+
+  # Compose service names (must match docker-compose.yml)
+  SVC_MYSQL: mysql
+  SVC_REDIS: redis
+  SVC_BACKEND_V2: backend-v2
+  SVC_NGINX_V2: backend-nginx-v2
+  SVC_PUBLIC_INIT: backend-v2-public-init
+
+  # Container names (must match docker-compose.yml container_name)
+  CTR_BACKEND_V2: sobitas-backend-v2
+  CTR_NGINX_V2: sobitas-laravel-nginx-v2
+
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     steps:
-      - name: Deploy on VPS via SSH
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Verify Dockerfile exists
+        run: |
+          set -e
+          test -f filament/Dockerfile || (echo "❌ filament/Dockerfile not found" && exit 1)
+          echo "✓ filament/Dockerfile found"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./filament
+          file: ./filament/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy to VPS (Docker Compose)
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           password: ${{ secrets.VPS_PASSWORD }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
           script_stop: true
           timeout: 600s
           command_timeout: 600s
+          retry: 3
+          retry_interval: 10s
           script: |
-            set -e
+            set -euo pipefail
 
-            cd /root/sobitas-project
+            echo "=== Backend V2 Deploy Started ==="
+            cd "${{ env.VPS_DIR }}"
 
-            echo "== Pull latest v2 image =="
-            docker pull ghcr.io/declared-as-ala/sobitas-backend-v2:latest
+            echo "=== GHCR login (recommended) ==="
+            if [ -n "${{ secrets.GHCR_PAT }}" ]; then
+              echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            else
+              echo "⚠ GHCR_PAT not set (ok if VPS can pull public images)"
+            fi
 
-            echo "== Recreate backend-v2 & init public assets =="
-            docker compose up -d --force-recreate backend-v2 backend-v2-public-init
+            echo "=== Pull latest image ==="
+            docker pull "${{ env.IMAGE }}"
 
-            echo "== Recreate nginx v2 (serve public) =="
-            docker compose up -d --force-recreate backend-nginx-v2
+            echo "=== Start dependencies ==="
+            docker compose up -d ${{ env.SVC_MYSQL }} ${{ env.SVC_REDIS }}
 
-            echo "== Run Laravel maintenance =="
-            docker exec -t sobitas-backend-v2 sh -lc "php artisan migrate --force || true"
-            docker exec -t sobitas-backend-v2 sh -lc "php artisan optimize:clear || true"
-            docker exec -t sobitas-backend-v2 sh -lc "php artisan config:cache || true"
-            docker exec -t sobitas-backend-v2 sh -lc "php artisan route:cache || true"
-            docker exec -t sobitas-backend-v2 sh -lc "php artisan view:cache || true"
+            echo "=== Recreate backend-v2 (keeps volumes/network correct) ==="
+            docker compose up -d --force-recreate ${{ env.SVC_BACKEND_V2 }}
 
-            echo "== Done ✅ =="
-            docker ps --format 'table {{.Names}}\t{{.Status}}' | grep -E 'sobitas-backend-v2|sobitas-laravel-nginx-v2' || true
+            echo "=== Init/refresh public assets volume (copy /public from image) ==="
+            # This service should ONLY copy /var/www/html/public -> named volume
+            docker compose up -d --force-recreate ${{ env.SVC_PUBLIC_INIT }}
+
+            echo "=== Recreate nginx v2 ==="
+            docker compose up -d --force-recreate ${{ env.SVC_NGINX_V2 }}
+
+            echo "=== Wait a bit ==="
+            sleep 5
+
+            echo "=== Status ==="
+            docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Image}}" | grep -E "sobitas-(mysql|redis|backend-v2|laravel-nginx-v2)" || true
+
+            echo "=== Verify nginx sees /public ==="
+            docker exec -t "${{ env.CTR_NGINX_V2 }}" sh -lc "ls -lah /var/www/html/public | head -30"
+
+            echo "=== Laravel maintenance ==="
+            docker exec -t "${{ env.CTR_BACKEND_V2 }}" sh -lc "php artisan migrate --force || true"
+            docker exec -t "${{ env.CTR_BACKEND_V2 }}" sh -lc "php artisan optimize:clear || true"
+            docker exec -t "${{ env.CTR_BACKEND_V2 }}" sh -lc "php artisan config:cache || true"
+            docker exec -t "${{ env.CTR_BACKEND_V2 }}" sh -lc "php artisan route:cache || true"
+            docker exec -t "${{ env.CTR_BACKEND_V2 }}" sh -lc "php artisan view:cache || true"
+
+            echo "=== Quick HTTP test inside nginx container ==="
+            docker exec -t "${{ env.CTR_NGINX_V2 }}" sh -lc "wget -qSO- http://127.0.0.1/ -O /dev/null || true"
+            docker exec -t "${{ env.CTR_NGINX_V2 }}" sh -lc "wget -qSO- http://127.0.0.1/admin -O /dev/null || true"
+
+            echo "=== Cleanup ==="
+            docker image prune -f || true
+
+            echo "=== Backend V2 Deploy Completed ✅ ==="
