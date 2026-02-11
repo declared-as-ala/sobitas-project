@@ -1,158 +1,48 @@
-name: Deploy Filament Backend (Docker Image) - V2
+name: Deploy Backend V2 (Filament)
 
 on:
   push:
     branches: [main]
     paths:
-      - "filament/**"
-      - ".github/workflows/deploy-filament.yml"
+      - ".github/workflows/deploy-backend-v2.yml"
+      # add paths that affect the docker image build if you want
   workflow_dispatch:
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: declared-as-ala/sobitas-backend-v2
-  V2_CONTAINER: sobitas-backend-v2
-  ENV_SOURCE_CONTAINER: sobitas-backend
-  NGINX_V2_CONTAINER: sobitas-laravel-nginx-v2
-
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Verify Dockerfile exists
-        run: |
-          set -e
-          test -f filament/Dockerfile || (echo "❌ filament/Dockerfile not found" && exit 1)
-          echo "✓ filament/Dockerfile found"
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and Push Docker Image
-        uses: docker/build-push-action@v6
-        with:
-          context: ./filament
-          file: ./filament/Dockerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Deploy to VPS (like old workflow style)
+      - name: Deploy on VPS via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           password: ${{ secrets.VPS_PASSWORD }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_PORT }}
           script_stop: true
           timeout: 600s
-          retry: 3
-          retry_interval: 10s
-          command_timeout: 300s
+          command_timeout: 600s
           script: |
             set -e
-            echo "=== Filament Backend V2 Deploy Started ==="
 
-            IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
-            V2="${{ env.V2_CONTAINER }}"
-            SRC="${{ env.ENV_SOURCE_CONTAINER }}"
-            NGINX_V2="${{ env.NGINX_V2_CONTAINER }}"
+            cd /root/sobitas-project
 
-            echo "Image: $IMAGE"
-            echo "Target container: $V2"
-            echo "Source env container (read-only): $SRC"
-            echo "Nginx v2 container: $NGINX_V2"
+            echo "== Pull latest v2 image =="
+            docker pull ghcr.io/declared-as-ala/sobitas-backend-v2:latest
 
-            # OPTIONAL: if you want also to refresh code on VPS (not needed when deploying by image)
-            # cd /root/sobitas-project && git fetch origin main && git reset --hard origin/main && git clean -fd
+            echo "== Recreate backend-v2 & init public assets =="
+            docker compose up -d --force-recreate backend-v2 backend-v2-public-init
 
-            # Login to GHCR on VPS if PAT provided (recommended)
-            if [ -n "${{ secrets.GHCR_PAT }}" ]; then
-              echo "Login to GHCR..."
-              echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            fi
+            echo "== Recreate nginx v2 (serve public) =="
+            docker compose up -d --force-recreate backend-nginx-v2
 
-            echo "Pull latest image..."
-            docker pull "$IMAGE"
+            echo "== Run Laravel maintenance =="
+            docker exec -t sobitas-backend-v2 sh -lc "php artisan migrate --force || true"
+            docker exec -t sobitas-backend-v2 sh -lc "php artisan optimize:clear || true"
+            docker exec -t sobitas-backend-v2 sh -lc "php artisan config:cache || true"
+            docker exec -t sobitas-backend-v2 sh -lc "php artisan route:cache || true"
+            docker exec -t sobitas-backend-v2 sh -lc "php artisan view:cache || true"
 
-            echo "Detect docker network from nginx v2..."
-            if ! docker ps -a --format '{{.Names}}' | grep -q "^${NGINX_V2}$"; then
-              echo "❌ ${NGINX_V2} not found. Existing containers:"
-              docker ps -a --format "table {{.Names}}\t{{.Image}}\t{{.Status}}" | head -40
-              exit 1
-            fi
-
-            NET=$(docker inspect -f '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}' "$NGINX_V2" | awk '{print $1}')
-            if [ -z "$NET" ]; then
-              echo "❌ Could not detect network from ${NGINX_V2}"
-              exit 1
-            fi
-            echo "Using network: $NET"
-
-            echo "Copy env vars from ${SRC} (read-only)..."
-            if ! docker ps -a --format '{{.Names}}' | grep -q "^${SRC}$"; then
-              echo "❌ ${SRC} not found (needed to copy env vars)."
-              exit 1
-            fi
-
-            TMP_ENV="/tmp/${V2}.env"
-            docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$SRC" > "$TMP_ENV"
-            echo "Env file created: $TMP_ENV (lines: $(wc -l < $TMP_ENV))"
-
-            echo "Stop/remove old v2 container if exists (ONLY v2)..."
-            docker stop "$V2" 2>/dev/null || true
-            docker rm "$V2" 2>/dev/null || true
-
-            echo "Start new v2 container..."
-            docker run -d \
-              --name "$V2" \
-              --restart unless-stopped \
-              --network "$NET" \
-              --env-file "$TMP_ENV" \
-              "$IMAGE"
-
-            echo "Wait 5s..."
-            sleep 5
-
-            echo "=== Health check ==="
-            docker ps --filter "name=$V2" --format "table {{.Names}}\t{{.Status}}\t{{.Image}}"
-
-            if ! docker ps --format '{{.Names}}' | grep -q "^${V2}$"; then
-              echo "❌ $V2 is not running"
-              docker logs --tail 150 "$V2" || true
-              exit 1
-            fi
-
-            echo "=== Logs (last 80 lines) ==="
-            docker logs --tail 80 "$V2" || true
-
-            echo "=== Clear Laravel caches ==="
-            docker exec "$V2" php artisan config:clear || true
-            docker exec "$V2" php artisan cache:clear || true
-            docker exec "$V2" php artisan view:clear || true
-            docker exec "$V2" php artisan route:clear || true
-            docker exec "$V2" php artisan optimize || true
-            echo "✓ Caches cleared"
-
-            echo "Cleanup old images..."
-            docker image prune -f || true
-
-            echo "=== Filament Backend V2 Deploy Completed Successfully ==="
+            echo "== Done ✅ =="
+            docker ps --format 'table {{.Names}}\t{{.Status}}' | grep -E 'sobitas-backend-v2|sobitas-laravel-nginx-v2' || true
