@@ -136,7 +136,7 @@ jobs:
             docker exec sobitas-backend-v2 php artisan storage:link || true
             echo "✓ Caches cleared"
 
-            echo "=== Logs (last 50 lines) ==="
+            echo "=== Logs (last 50 lines) ===ss"
             docker logs --tail 50 sobitas-backend-v2 || true
 
             echo "Cleanup old images..."
