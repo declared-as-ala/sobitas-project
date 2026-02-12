@@ -1,12 +1,14 @@
 # ==============================================================
 # sobitas-project - Filament v2 + MySQL + Redis + Frontend
 # ==============================================================
-# Self-contained project. No dependency on SOBITAS-FULL-PROJECT.
+# Self-contained. MySQL is shared with SOBITAS-FULL-PROJECT
+# via the sobitas-full-net external network.
 # ==============================================================
 
 services:
   # -------------------------
   # MySQL 8 (reuses existing sobitas-project_mysql-data volume)
+  # Shared with SOBITAS-FULL-PROJECT (Voyager backend)
   # -------------------------
   mysql:
     image: mysql:8.0
@@ -23,6 +25,7 @@ services:
       - mysql-data:/var/lib/mysql
     networks:
       - sobitas-net
+      - sobitas-full-net
     command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-rootsecret}"]
@@ -50,7 +53,7 @@ services:
       retries: 10
 
   # ==========================================================
-  # Filament Backend V2 (from GHCR image)
+  # Filament Backend V2 (from GHCR image) - admin.sobitas.tn
   # ==========================================================
   backend-v2:
     image: ghcr.io/declared-as-ala/sobitas-backend-v2:latest
@@ -145,7 +148,11 @@ volumes:
   backend-v2-storage:
   backend-v2-public:
 
-# Local bridge network - fully self-contained
 networks:
+  # Local network for sobitas-project services
   sobitas-net:
     driver: bridge
+  # External network to share MySQL with SOBITAS-FULL-PROJECT (Voyager)
+  sobitas-full-net:
+    external: true
+    name: sobitas-full-project_sobitas-net
