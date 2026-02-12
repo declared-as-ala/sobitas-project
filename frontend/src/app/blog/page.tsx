@@ -9,9 +9,10 @@ export const metadata: Metadata = {
   description: 'Guides, conseils prise de masse, choix whey et créatine. Tout pour la nutrition sportive en Tunisie.',
 };
 
-// Force dynamic rendering to ensure fresh data on every request
+// force-dynamic: page always server-renders (no stale HTML from Full Route Cache)
+// Data fetching uses ISR via next: { tags: ['blog'], revalidate: 60 }
+// Admin CRUD → POST /api/revalidate → revalidateTag('blog') → instant freshness
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 async function getBlogData() {
   try {

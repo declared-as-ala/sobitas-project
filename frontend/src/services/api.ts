@@ -368,76 +368,75 @@ export const getTags = async (): Promise<any[]> => {
   return response.data;
 };
 
-// Articles/Blog
-// Force no-cache for blog endpoints to ensure fresh data
+// ==================== ARTICLES / BLOG ====================
+// Strategy: ISR with tag-based on-demand revalidation
+// - Data Cache: responses cached for 60s (fast, no API hit on every request)
+// - Tags: revalidateTag('blog') instantly purges ALL blog caches
+// - Pages keep force-dynamic: always server-render, but data comes from cache
+// - Admin CRUD → POST /api/revalidate → revalidateTag('blog') → instant freshness
+
 export const getAllArticles = async (): Promise<Article[]> => {
-  // Use fetch with cache: 'no-store' to bypass Next.js and browser cache
   const response = await fetch(`${API_URL}/all_articles`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0',
     },
-    cache: 'no-store', // Next.js App Router: force fresh fetch
-    next: { revalidate: 0 }, // Additional Next.js cache control
+    next: {
+      tags: ['blog'],      // revalidateTag('blog') purges this
+      revalidate: 60,       // auto-refresh every 60s as fallback
+    },
   });
-  
+
   if (!response.ok) {
     throw new Error(`Failed to fetch articles: ${response.statusText}`);
   }
-  
+
   const data = await response.json();
   return Array.isArray(data) ? data : (data.articles || []);
 };
 
 export const getArticleDetails = async (slug: string): Promise<Article> => {
-  // Use fetch with cache: 'no-store' to bypass Next.js and browser cache
   const response = await fetch(`${API_URL}/article_details/${slug}`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0',
     },
-    cache: 'no-store', // Next.js App Router: force fresh fetch
-    next: { revalidate: 0 }, // Additional Next.js cache control
+    next: {
+      tags: ['blog', `blog-${slug}`],  // purge specific slug or all blog
+      revalidate: 60,
+    },
   });
-  
+
   if (!response.ok) {
     if (response.status === 404) {
       throw new Error('Article not found');
     }
     throw new Error(`Failed to fetch article: ${response.statusText}`);
   }
-  
+
   const data = await response.json();
   return data;
 };
 
 export const getLatestArticles = async (): Promise<Article[]> => {
-  // Use fetch with cache: 'no-store' to bypass Next.js and browser cache
   const response = await fetch(`${API_URL}/latest_articles`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0',
     },
-    cache: 'no-store', // Next.js App Router: force fresh fetch
-    next: { revalidate: 0 }, // Additional Next.js cache control
+    next: {
+      tags: ['blog'],
+      revalidate: 60,
+    },
   });
-  
+
   if (!response.ok) {
     throw new Error(`Failed to fetch latest articles: ${response.statusText}`);
   }
-  
+
   const data = await response.json();
   return Array.isArray(data) ? data : (data.articles || []);
 };

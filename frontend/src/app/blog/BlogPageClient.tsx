@@ -203,9 +203,8 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
       }
       const newUrl = params.toString() ? `/blog?${params.toString()}` : '/blog';
       
-      // Force refresh to get fresh data when paginating
+      // Update URL only (pagination is client-side; data is already in props)
       router.replace(newUrl, { scroll: false });
-      router.refresh();
       
       // Reset loading state after a short delay
       setTimeout(() => {

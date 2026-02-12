@@ -8,9 +8,10 @@ interface ArticlePageProps {
   params: Promise<{ slug: string }>;
 }
 
-// Force dynamic rendering to ensure fresh data on every request
+// force-dynamic: page always server-renders (no stale HTML from Full Route Cache)
+// Data fetching uses ISR via next: { tags: ['blog', 'blog-{slug}'], revalidate: 60 }
+// Admin CRUD → POST /api/revalidate → revalidateTag('blog') → instant freshness
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 // Helper to strip HTML and get plain text
 function stripHtml(html: string): string {
