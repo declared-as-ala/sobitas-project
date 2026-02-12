@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - "filament/**"
+      - "docker-compose.yml"
+      - "nginx/**"
       - ".github/workflows/deploy-filament.yml"
   workflow_dispatch:
 
@@ -66,18 +68,28 @@ jobs:
             APP_DIR="/root/sobitas-project"
             cd "$APP_DIR" || { echo "❌ $APP_DIR not found"; exit 1; }
 
+            # Pull latest compose file from repo
+            echo "Pulling latest code..."
+            git pull origin main || true
+
             # Login to GHCR
             if [ -n "${{ secrets.GHCR_PAT }}" ]; then
               echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             fi
 
-            # Pull latest image
+            # Pull latest backend image
             echo "Pulling latest image..."
             docker pull ghcr.io/declared-as-ala/sobitas-backend-v2:latest
 
+            # Ensure MySQL + Redis are up first, then recreate backend-v2
+            echo "Starting MySQL + Redis..."
+            docker compose up -d mysql redis
+            echo "Waiting for MySQL to be healthy..."
+            sleep 15
+
             # Recreate backend-v2 container with new image
             echo "Recreating backend-v2..."
-            docker compose up -d --no-deps --force-recreate backend-v2
+            docker compose up -d --force-recreate backend-v2
 
             # Re-copy public assets to shared volume
             echo "Copying public assets..."
@@ -85,7 +97,7 @@ jobs:
 
             # Restart nginx to pick up new assets
             echo "Restarting nginx-v2..."
-            docker compose restart backend-nginx-v2
+            docker compose up -d backend-nginx-v2
 
             # Wait for startup
             sleep 5
@@ -101,7 +113,7 @@ jobs:
 
             # Health check
             echo "=== Health Check ==="
-            docker compose ps backend-v2 backend-nginx-v2
+            docker compose ps mysql redis backend-v2 backend-nginx-v2
             echo ""
             echo "=== Recent Logs ==="
             docker compose logs --tail 20 backend-v2
