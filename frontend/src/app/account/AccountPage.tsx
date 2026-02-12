@@ -15,7 +15,7 @@ import { LoadingSpinner } from '@/app/components/LoadingSpinner';
 export default function AccountPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading, user, fetchOrders } = useAuth();
-//ssssssss
+
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       router.push('/login?redirect=/account');
