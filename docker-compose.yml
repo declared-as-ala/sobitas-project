@@ -78,7 +78,7 @@ services:
     volumes:
       - backend-v2-public:/public
     entrypoint: ["/bin/sh", "-c"]
-    command: "rm -rf /public/* 2>/dev/null; cp -a /var/www/html/public/. /public/ && echo 'Assets copied:' && ls -la /public | head -20"
+    command: "find /public -mindepth 1 -delete 2>/dev/null || true; cp -a /var/www/html/public/. /public/ && echo 'Assets copied:' && ls -la /public | head -20"
 
   # ---- Nginx for Filament v2 (port 8083) ----
   backend-nginx-v2:
@@ -116,6 +116,8 @@ volumes:
   backend-v2-bootstrap-cache:
   backend-v2-storage:
   backend-v2-public:
+    external: true
+    name: sobitas-project_backend-v2-public
 
 # Join the network created by SOBITAS-FULL-PROJECT
 # so backend-v2 can reach sobitas-mysql
