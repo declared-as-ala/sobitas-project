@@ -1,14 +1,20 @@
-name: Deploy Filament Backend (Docker Image) - V2
+name: Deploy Filament Backend (Docker Image) - V2 [DISABLED TEMPORARILY]
 
+# TEMPORARILY DISABLED - Only frontend workflow is active
 on:
-  push:
-    branches: [main]
-    paths:
-      - "filament/**"
-      - "docker-compose.yml"
-      - "nginx/**"
-      - ".github/workflows/deploy-filament.yml"
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - "filament/**"
+  #     - "docker-compose.yml"
+  #     - "nginx/**"
+  #     - ".github/workflows/deploy-filament.yml"
   workflow_dispatch:
+    inputs:
+      enabled:
+        description: 'Force enable this workflow (set to "true" to run)'
+        required: false
+        default: 'false'
 
 env:
   REGISTRY: ghcr.io
@@ -17,6 +23,8 @@ env:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    # TEMPORARILY DISABLED - Uncomment to re-enable
+    if: github.event.inputs.enabled == 'true'
     permissions:
       contents: read
       packages: write
