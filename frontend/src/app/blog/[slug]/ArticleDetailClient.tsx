@@ -154,12 +154,13 @@ export function ArticleDetailClient({ article, relatedArticles }: ArticleDetailC
             {article.cover && (
               <div className="relative w-full h-48 sm:h-64 md:h-80 lg:h-96 mb-6 sm:mb-8 overflow-hidden">
                 <Image
-                  src={getStorageUrl(article.cover)}
+                  src={getStorageUrl(article.cover, article.updated_at || article.created_at)}
                   alt={article.designation_fr}
                   fill
                   className="object-cover"
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 896px"
                   priority
+                  unoptimized
                 />
               </div>
             )}
@@ -205,11 +206,12 @@ export function ArticleDetailClient({ article, relatedArticles }: ArticleDetailC
                       {related.cover && (
                         <div className="relative h-40 sm:h-48 overflow-hidden">
                           <Image
-                            src={getStorageUrl(related.cover)}
+                            src={getStorageUrl(related.cover, related.updated_at || related.created_at)}
                             alt={related.designation_fr}
                             fill
                             className="object-cover transition-transform duration-500 group-hover:scale-110"
                             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                            unoptimized
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                         </div>

@@ -113,6 +113,7 @@ export interface Article {
   description_fr?: string;
   cover?: string;
   created_at?: string;
+  updated_at?: string; // Added for cache busting
   publier?: number;
 }
 

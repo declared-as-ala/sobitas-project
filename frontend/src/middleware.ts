@@ -15,6 +15,17 @@ function nameToSlug(name: string): string {
 export function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
 
+  // Add no-cache headers for blog pages to ensure fresh content
+  const response = NextResponse.next();
+  
+  if (pathname.startsWith('/blog')) {
+    // Force no-cache for blog pages (HTML and API responses)
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+    response.headers.set('Surrogate-Control', 'no-store');
+  }
+
   // Redirect old query-based category URLs to new clean URLs
   if (pathname === '/shop') {
     const category = searchParams.get('category');
@@ -51,7 +62,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(newUrl, 301);
   }
 
-  return NextResponse.next();
+  return response;
 }
 
 export const config = {

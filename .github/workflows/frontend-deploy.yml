@@ -1,12 +1,13 @@
 name: Frontend Build & Deploy
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'frontend/**'
-      - '.github/workflows/frontend-deploy.yml'
-  workflow_dispatch: # Manual trigger also available
+  # DISABLED: Frontend auto-deploy disabled - only manual trigger available
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - 'frontend/**'
+  #     - '.github/workflows/frontend-deploy.yml'
+  workflow_dispatch: # Manual trigger only
 
 env:
   REGISTRY: ghcr.io

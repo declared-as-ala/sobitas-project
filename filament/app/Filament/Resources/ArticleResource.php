@@ -36,9 +36,22 @@ class ArticleResource extends Resource
                 ->required()
                 ->maxLength(255)
                 ->unique(ignoreRecord: true),
-            Forms\Components\TextInput::make('cover')
-                ->label('Image')
-                ->maxLength(500),
+            Forms\Components\FileUpload::make('cover')
+                ->label('Image de couverture')
+                ->disk('cloudinary')
+                ->directory('articles')
+                ->image()
+                ->imageEditor()
+                ->imageEditorAspectRatios([
+                    null,
+                    '16:9',
+                    '4:3',
+                    '1:1',
+                ])
+                ->maxSize(5120) // 5MB
+                ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+                ->helperText('Formats acceptés: JPEG, PNG, WebP. Taille max: 5MB')
+                ->columnSpanFull(),
             Forms\Components\RichEditor::make('description_fr')
                 ->label('Contenu')
                 ->columnSpanFull(),
@@ -58,7 +71,27 @@ class ArticleResource extends Resource
             ->columns([
                 Tables\Columns\ImageColumn::make('cover')
                     ->label('Image')
-                    ->circular(),
+                    ->circular()
+                    ->defaultImageUrl(function ($record) {
+                        // Handle Cloudinary URLs
+                        if (!$record->cover) {
+                            return null;
+                        }
+                        
+                        // If already full URL, return as-is
+                        if (str_starts_with($record->cover, 'http://') || str_starts_with($record->cover, 'https://')) {
+                            return $record->cover;
+                        }
+                        
+                        // If Cloudinary public_id, construct URL
+                        $cloudName = config('cloudinary.cloud_name');
+                        if ($cloudName && !str_contains($record->cover, '/')) {
+                            return "https://res.cloudinary.com/{$cloudName}/image/upload/w_100,h_100,c_fill/{$record->cover}";
+                        }
+                        
+                        // Fallback: local storage
+                        return asset('storage/' . ltrim($record->cover, '/'));
+                    }),
                 Tables\Columns\TextColumn::make('designation_fr')
                     ->label('Titre')
                     ->searchable()

@@ -100,8 +100,8 @@
                         class="qa-tile-icon"
                     />
                     <span class="qa-tile-label">{{ $action['label'] }}</span>
-                </a>
+        </a>
             @endforeach
-        </div>
+    </div>
     </x-filament::section>
 </x-filament-widgets::widget>

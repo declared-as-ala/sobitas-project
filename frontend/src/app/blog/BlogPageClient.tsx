@@ -195,7 +195,10 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
         params.set('page', currentPage.toString());
       }
       const newUrl = params.toString() ? `/blog?${params.toString()}` : '/blog';
+      // Force refresh to get fresh data when paginating
       router.replace(newUrl, { scroll: false });
+      // Refresh router cache to ensure fresh data
+      router.refresh();
     }
   }, [currentPage, router, searchParams]);
 
@@ -271,12 +274,13 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
                         <div className="relative aspect-[4/3] overflow-hidden bg-gray-100 dark:bg-gray-800 min-h-[200px] sm:min-h-[240px] md:min-h-[280px] lg:min-h-[320px]">
                           {article.cover ? (
                             <Image
-                              src={getStorageUrl(article.cover)}
+                              src={getStorageUrl(article.cover, article.updated_at || article.created_at)}
                               alt={article.designation_fr}
                               fill
                               className="object-cover group-hover:scale-110 transition-transform duration-500"
                               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                               loading="lazy"
+                              unoptimized
                             />
                           ) : (
                             <div className="w-full h-full bg-gradient-to-br from-red-600 to-red-800" />

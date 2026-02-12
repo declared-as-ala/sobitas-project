@@ -81,8 +81,8 @@ api.interceptors.response.use(
 
 // Helper to get storage URL - always use NEXT_PUBLIC_STORAGE_URL (admin.sobitas.tn)
 // Rewrites localhost URLs from backend so images load from deployed backend
-// Adds cache-busting query param to ensure images update instantly when modified
-export const getStorageUrl = (path?: string): string => {
+// For blog images, adds cache busting parameter based on updated_at or created_at
+export const getStorageUrl = (path?: string, cacheBust?: string | number): string => {
   if (!path) return '';
   const base = STORAGE_URL.replace(/\/$/, '');
   let finalUrl = '';
@@ -97,7 +97,6 @@ export const getStorageUrl = (path?: string): string => {
         finalUrl = path;
       }
     } catch {
-      /* ignore parse errors */
       finalUrl = path;
     }
   } else {
@@ -105,11 +104,18 @@ export const getStorageUrl = (path?: string): string => {
     finalUrl = clean ? `${base}/${clean}` : base;
   }
   
-  // Add cache-busting query param (timestamp changes every minute to balance freshness vs cache hits)
-  // This ensures images update instantly when modified from admin dashboard
-  const cacheBuster = Math.floor(Date.now() / 60000); // Changes every minute
-  const separator = finalUrl.includes('?') ? '&' : '?';
-  return `${finalUrl}${separator}_t=${cacheBuster}`;
+  // Add cache busting for blog images
+  if (cacheBust) {
+    const separator = finalUrl.includes('?') ? '&' : '?';
+    const timestamp = typeof cacheBust === 'number' 
+      ? cacheBust 
+      : typeof cacheBust === 'string' 
+        ? new Date(cacheBust).getTime() 
+        : Date.now();
+    finalUrl = `${finalUrl}${separator}v=${timestamp}`;
+  }
+  
+  return finalUrl;
 };
 
 // ==================== PUBLIC API ENDPOINTS ====================
@@ -363,19 +369,77 @@ export const getTags = async (): Promise<any[]> => {
 };
 
 // Articles/Blog
+// Force no-cache for blog endpoints to ensure fresh data
 export const getAllArticles = async (): Promise<Article[]> => {
-  const response = await api.get('/all_articles');
-  return response.data;
+  // Use fetch with cache: 'no-store' to bypass Next.js and browser cache
+  const response = await fetch(`${API_URL}/all_articles`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+    },
+    cache: 'no-store', // Next.js App Router: force fresh fetch
+    next: { revalidate: 0 }, // Additional Next.js cache control
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch articles: ${response.statusText}`);
+  }
+  
+  const data = await response.json();
+  return Array.isArray(data) ? data : (data.articles || []);
 };
 
 export const getArticleDetails = async (slug: string): Promise<Article> => {
-  const response = await api.get<Article>(`/article_details/${slug}`);
-  return response.data;
+  // Use fetch with cache: 'no-store' to bypass Next.js and browser cache
+  const response = await fetch(`${API_URL}/article_details/${slug}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+    },
+    cache: 'no-store', // Next.js App Router: force fresh fetch
+    next: { revalidate: 0 }, // Additional Next.js cache control
+  });
+  
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error('Article not found');
+    }
+    throw new Error(`Failed to fetch article: ${response.statusText}`);
+  }
+  
+  const data = await response.json();
+  return data;
 };
 
 export const getLatestArticles = async (): Promise<Article[]> => {
-  const response = await api.get<Article[]>('/latest_articles');
-  return response.data;
+  // Use fetch with cache: 'no-store' to bypass Next.js and browser cache
+  const response = await fetch(`${API_URL}/latest_articles`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+    },
+    cache: 'no-store', // Next.js App Router: force fresh fetch
+    next: { revalidate: 0 }, // Additional Next.js cache control
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch latest articles: ${response.statusText}`);
+  }
+  
+  const data = await response.json();
+  return Array.isArray(data) ? data : (data.articles || []);
 };
 
 // Media

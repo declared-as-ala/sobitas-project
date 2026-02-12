@@ -119,7 +119,7 @@
                         <div class="alert-head">
                             <h3 class="alert-title">{{ $alert['title'] }}</h3>
                             <span class="alert-badge {{ $prefix }}-badge">{{ $alert['badge_label'] }}</span>
-                        </div>
+                </div>
 
                         <p class="alert-desc">{{ $alert['description'] }}</p>
 
@@ -127,11 +127,11 @@
                             <span class="alert-metric">{{ $alert['metric'] }}</span>
                             <a href="{{ $alert['button_url'] }}" class="alert-btn {{ $prefix }}-btn">
                                 {{ $alert['button_label'] }}
-                            </a>
-                        </div>
+                        </a>
+                    </div>
                     </div>
                 </div>
             @endforeach
-        </div>
+            </div>
     </x-filament::section>
 </x-filament-widgets::widget>
