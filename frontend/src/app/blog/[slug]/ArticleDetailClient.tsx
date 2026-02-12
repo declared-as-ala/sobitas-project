@@ -1,8 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import Link from 'next/link';
+import { SafeImage } from '@/app/components/SafeImage';
 import { Header } from '@/app/components/Header';
 import { Footer } from '@/app/components/Footer';
 import { Button } from '@/app/components/ui/button';
@@ -13,23 +13,17 @@ import type { Article } from '@/types';
 import { getStorageUrl } from '@/services/api';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 
 interface ArticleDetailClientProps {
   article: Article;
   relatedArticles: Article[];
 }
 
-// Decode HTML entities properly
+// Decode HTML entities properly (server-safe, no window/document)
 function decodeHtmlEntities(text: string): string {
   if (!text) return '';
-  // Use browser's built-in decoder
-  if (typeof window !== 'undefined') {
-    const textarea = document.createElement('textarea');
-    textarea.innerHTML = text;
-    return textarea.value;
-  }
-  // Fallback for server-side: decode common entities
+  // Server-safe decoding (no window/document to avoid hydration mismatch)
   return text
     .replace(/&nbsp;/g, ' ')
     .replace(/&amp;/g, '&')
@@ -84,11 +78,18 @@ function calculateReadingTime(content: string): number {
 
 export function ArticleDetailClient({ article, relatedArticles }: ArticleDetailClientProps) {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
   const articleDate = article.created_at ? new Date(article.created_at) : new Date();
   const content = article.description_fr || article.description || '';
   const readingTime = useMemo(() => calculateReadingTime(content), [content]);
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const handleShare = () => {
+    if (!mounted || typeof window === 'undefined') return;
+    
     if (navigator.share) {
       navigator.share({
         title: article.designation_fr,
@@ -153,14 +154,13 @@ export function ArticleDetailClient({ article, relatedArticles }: ArticleDetailC
             {/* Cover Image */}
             {article.cover && (
               <div className="relative w-full h-48 sm:h-64 md:h-80 lg:h-96 mb-6 sm:mb-8 overflow-hidden">
-                <Image
+                <SafeImage
                   src={getStorageUrl(article.cover, article.updated_at || article.created_at)}
-                  alt={article.designation_fr}
+                  alt={article.designation_fr || 'Article cover'}
                   fill
                   className="object-cover"
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 896px"
                   priority
-                  unoptimized
                 />
               </div>
             )}
@@ -205,13 +205,12 @@ export function ArticleDetailClient({ article, relatedArticles }: ArticleDetailC
                     >
                       {related.cover && (
                         <div className="relative h-40 sm:h-48 overflow-hidden">
-                          <Image
+                          <SafeImage
                             src={getStorageUrl(related.cover, related.updated_at || related.created_at)}
-                            alt={related.designation_fr}
+                            alt={related.designation_fr || 'Related article'}
                             fill
                             className="object-cover transition-transform duration-500 group-hover:scale-110"
                             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                            unoptimized
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                         </div>
