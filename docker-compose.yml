@@ -158,11 +158,8 @@ services:
       - sobitas-net
     volumes:
       - backend-v2-public:/public
-    entrypoint: ["sh", "-lc"]
-    command: >
-      rm -rf /public/* &&
-      cp -a /var/www/html/public/. /public/ &&
-      ls -lah /public | head -30
+    entrypoint: ["/bin/sh", "-c"]
+    command: "rm -rf /public/* 2>/dev/null; cp -a /var/www/html/public/. /public/ && echo 'Assets copied:' && ls -la /public | head -20"
 
   backend-nginx-v2:
     image: nginx:stable
