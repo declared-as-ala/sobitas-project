@@ -42,10 +42,10 @@ class DashboardHeaderWidget extends Widget
         
         try {
             // Dispatch event to refresh all widgets listening to dashboardFilterUpdated
-            $this->dispatch('dashboardFilterUpdated', preset: $this->preset);
+        $this->dispatch('dashboardFilterUpdated', preset: $this->preset);
             
             // Refresh all widgets on the dashboard
-            $this->dispatch('$refresh');
+        $this->dispatch('$refresh');
             
             // Show success notification
             \Filament\Notifications\Notification::make()

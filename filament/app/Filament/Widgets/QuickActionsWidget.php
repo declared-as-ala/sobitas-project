@@ -19,7 +19,7 @@ class QuickActionsWidget extends Widget
     protected static ?int $sort = -99;
 
     protected int | string | array $columnSpan = 1;
-
+    
     protected static bool $isLazy = false;
 
     public function getActions(): array

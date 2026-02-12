@@ -81,23 +81,35 @@ api.interceptors.response.use(
 
 // Helper to get storage URL - always use NEXT_PUBLIC_STORAGE_URL (admin.sobitas.tn)
 // Rewrites localhost URLs from backend so images load from deployed backend
+// Adds cache-busting query param to ensure images update instantly when modified
 export const getStorageUrl = (path?: string): string => {
   if (!path) return '';
   const base = STORAGE_URL.replace(/\/$/, '');
+  let finalUrl = '';
+  
   if (path.startsWith('http://') || path.startsWith('https://')) {
     try {
       const u = new URL(path);
       if (u.hostname === 'localhost' || u.hostname === '127.0.0.1') {
         const pathPart = u.pathname.replace(/^\/storage\/?/, '');
-        return pathPart ? `${base}/${pathPart}` : base;
+        finalUrl = pathPart ? `${base}/${pathPart}` : base;
+      } else {
+        finalUrl = path;
       }
     } catch {
       /* ignore parse errors */
+      finalUrl = path;
     }
-    return path;
+  } else {
+    const clean = path.replace(/^\/+/, '');
+    finalUrl = clean ? `${base}/${clean}` : base;
   }
-  const clean = path.replace(/^\/+/, '');
-  return clean ? `${base}/${clean}` : base;
+  
+  // Add cache-busting query param (timestamp changes every minute to balance freshness vs cache hits)
+  // This ensures images update instantly when modified from admin dashboard
+  const cacheBuster = Math.floor(Date.now() / 60000); // Changes every minute
+  const separator = finalUrl.includes('?') ? '&' : '?';
+  return `${finalUrl}${separator}_t=${cacheBuster}`;
 };
 
 // ==================== PUBLIC API ENDPOINTS ====================
