@@ -51,6 +51,14 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
   const [reviews, setReviews] = useState<Review[]>(initialProduct.reviews || []);
   const [faqs, setFaqs] = useState<FAQ[]>([]);
 
+  // Scroll to avis section when URL has #reviews (e.g. after opening shared link)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.hash === '#reviews') {
+      const el = document.getElementById('reviews');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, []);
+
   // Update product and reviews when initialProduct changes
   useEffect(() => {
     setProduct(initialProduct);
@@ -306,6 +314,24 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
     }
   };
 
+  const handleShare = () => {
+    const base = typeof window !== 'undefined' ? window.location.origin + window.location.pathname + window.location.search : '';
+    const shareUrl = base.replace(/#.*$/, '') + '#reviews';
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      navigator.share({
+        title: product.designation_fr,
+        text: product.description_fr || '',
+        url: shareUrl,
+      }).catch(() => {});
+    } else {
+      navigator.clipboard?.writeText(shareUrl).then(() => {
+        toast.success('Lien copié (vers la section Avis)');
+      }).catch(() => {
+        toast.error('Impossible de copier le lien');
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
       <Header />
@@ -528,40 +554,33 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
                     size="lg"
                     variant="outline"
                     className="min-h-[48px] px-4 shrink-0"
-                    onClick={() => {
-                      if (navigator.share) {
-                        navigator.share({
-                          title: product.designation_fr,
-                          text: product.description_fr || '',
-                          url: window.location.href,
-                        });
-                      }
-                    }}
+                    onClick={handleShare}
+                    aria-label="Partager (lien vers les avis)"
                   >
                     <Share2 className="h-5 w-5" />
                   </Button>
                 </div>
               </div>
 
-              {/* Trust Badges - Mobile */}
-              <div className="pt-4 sm:pt-6 border-t border-gray-200 dark:border-gray-800 px-1">
-                <div className="grid grid-cols-3 gap-3 sm:gap-4">
+              {/* Trust Badges - Mobile (larger on lg) */}
+              <div className="pt-4 sm:pt-6 lg:pt-8 border-t border-gray-200 dark:border-gray-800 px-1">
+                <div className="grid grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
                   {/* Paiement Sécurisé */}
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
-                    className="group relative flex flex-col items-center justify-center gap-2 p-4 sm:p-5 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 rounded-xl border-2 border-green-200/50 dark:border-green-800/50 min-w-0"
+                    className="group relative flex flex-col items-center justify-center gap-2 lg:gap-3 p-4 sm:p-5 lg:p-6 xl:p-8 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 rounded-xl lg:rounded-2xl border-2 border-green-200/50 dark:border-green-800/50 min-w-0"
                   >
                     <div className="relative">
                       <div className="absolute inset-0 bg-green-400/20 rounded-full blur-xl"></div>
-                      <div className="relative bg-gradient-to-br from-green-500 to-emerald-600 p-3 rounded-xl shadow-lg">
-                        <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-white" strokeWidth={2.5} />
+                      <div className="relative bg-gradient-to-br from-green-500 to-emerald-600 p-3 lg:p-4 xl:p-5 rounded-xl lg:rounded-2xl shadow-lg">
+                        <Shield className="h-6 w-6 sm:h-8 sm:w-8 lg:h-10 lg:w-10 xl:h-12 xl:w-12 text-white" strokeWidth={2.5} />
                       </div>
                     </div>
-                    <div className="text-center space-y-0.5">
-                      <p className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">Paiement</p>
-                      <p className="text-xs sm:text-sm font-bold text-green-700 dark:text-green-400">Sécurisé</p>
+                    <div className="text-center space-y-0.5 lg:space-y-1">
+                      <p className="text-xs sm:text-sm lg:text-base xl:text-lg font-bold text-gray-900 dark:text-white">Paiement</p>
+                      <p className="text-xs sm:text-sm lg:text-base xl:text-lg font-bold text-green-700 dark:text-green-400">Sécurisé</p>
                     </div>
                   </motion.div>
 
@@ -570,17 +589,17 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
-                    className="group relative flex flex-col items-center justify-center gap-2 p-4 sm:p-5 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 rounded-xl border-2 border-blue-200/50 dark:border-blue-800/50 min-w-0"
+                    className="group relative flex flex-col items-center justify-center gap-2 lg:gap-3 p-4 sm:p-5 lg:p-6 xl:p-8 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 rounded-xl lg:rounded-2xl border-2 border-blue-200/50 dark:border-blue-800/50 min-w-0"
                   >
                     <div className="relative">
                       <div className="absolute inset-0 bg-blue-400/20 rounded-full blur-xl"></div>
-                      <div className="relative bg-gradient-to-br from-blue-500 to-cyan-600 p-3 rounded-xl shadow-lg">
-                        <Truck className="h-6 w-6 sm:h-8 sm:w-8 text-white" strokeWidth={2.5} />
+                      <div className="relative bg-gradient-to-br from-blue-500 to-cyan-600 p-3 lg:p-4 xl:p-5 rounded-xl lg:rounded-2xl shadow-lg">
+                        <Truck className="h-6 w-6 sm:h-8 sm:w-8 lg:h-10 lg:w-10 xl:h-12 xl:w-12 text-white" strokeWidth={2.5} />
                       </div>
                     </div>
-                    <div className="text-center space-y-0.5">
-                      <p className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">Livraison</p>
-                      <p className="text-xs sm:text-sm font-bold text-blue-700 dark:text-blue-400">2-3 jours</p>
+                    <div className="text-center space-y-0.5 lg:space-y-1">
+                      <p className="text-xs sm:text-sm lg:text-base xl:text-lg font-bold text-gray-900 dark:text-white">Livraison</p>
+                      <p className="text-xs sm:text-sm lg:text-base xl:text-lg font-bold text-blue-700 dark:text-blue-400">2-3 jours</p>
                     </div>
                   </motion.div>
 
@@ -589,17 +608,17 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}
-                    className="group relative flex flex-col items-center justify-center gap-2 p-4 sm:p-5 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 rounded-xl border-2 border-amber-200/50 dark:border-amber-800/50 min-w-0"
+                    className="group relative flex flex-col items-center justify-center gap-2 lg:gap-3 p-4 sm:p-5 lg:p-6 xl:p-8 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 rounded-xl lg:rounded-2xl border-2 border-amber-200/50 dark:border-amber-800/50 min-w-0"
                   >
                     <div className="relative">
                       <div className="absolute inset-0 bg-amber-400/20 rounded-full blur-xl"></div>
-                      <div className="relative bg-gradient-to-br from-amber-500 to-orange-600 p-3 rounded-xl shadow-lg">
-                        <Award className="h-6 w-6 sm:h-8 sm:w-8 text-white" strokeWidth={2.5} />
+                      <div className="relative bg-gradient-to-br from-amber-500 to-orange-600 p-3 lg:p-4 xl:p-5 rounded-xl lg:rounded-2xl shadow-lg">
+                        <Award className="h-6 w-6 sm:h-8 sm:w-8 lg:h-10 lg:w-10 xl:h-12 xl:w-12 text-white" strokeWidth={2.5} />
                       </div>
                     </div>
-                    <div className="text-center space-y-0.5">
-                      <p className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">Garantie</p>
-                      <p className="text-xs sm:text-sm font-bold text-amber-700 dark:text-amber-400">Qualité</p>
+                    <div className="text-center space-y-0.5 lg:space-y-1">
+                      <p className="text-xs sm:text-sm lg:text-base xl:text-lg font-bold text-gray-900 dark:text-white">Garantie</p>
+                      <p className="text-xs sm:text-sm lg:text-base xl:text-lg font-bold text-amber-700 dark:text-amber-400">Qualité</p>
                     </div>
                   </motion.div>
                 </div>
@@ -820,39 +839,32 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
                     size="lg"
                     variant="outline"
                     className="min-h-[48px] sm:min-h-[56px] px-4 sm:px-6 shrink-0"
-                    onClick={() => {
-                      if (navigator.share) {
-                        navigator.share({
-                          title: product.designation_fr,
-                          text: product.description_fr || '',
-                          url: window.location.href,
-                        });
-                      }
-                    }}
+                    onClick={handleShare}
+                    aria-label="Partager (lien vers les avis)"
                   >
                     <Share2 className="h-5 w-5" />
                   </Button>
                 </div>
 
-                {/* Trust Badges - Redesigned */}
-                <div className="pt-6 sm:pt-8 border-t border-gray-200 dark:border-gray-800">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                {/* Trust Badges - Redesigned (larger on lg/xl) */}
+                <div className="pt-6 sm:pt-8 lg:pt-10 border-t border-gray-200 dark:border-gray-800">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 xl:gap-8">
                     {/* Paiement Sécurisé */}
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.1 }}
-                      className="group relative flex flex-col items-center justify-center gap-3 p-5 sm:p-6 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 rounded-2xl border-2 border-green-200/50 dark:border-green-800/50 hover:border-green-300 dark:hover:border-green-700 hover:shadow-lg transition-all duration-300 min-w-0"
+                      className="group relative flex flex-col items-center justify-center gap-3 lg:gap-4 p-5 sm:p-6 lg:p-8 xl:p-10 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 rounded-2xl border-2 border-green-200/50 dark:border-green-800/50 hover:border-green-300 dark:hover:border-green-700 hover:shadow-lg transition-all duration-300 min-w-0"
                     >
                       <div className="relative">
                         <div className="absolute inset-0 bg-green-400/20 rounded-full blur-xl group-hover:bg-green-400/30 transition-colors"></div>
-                        <div className="relative bg-gradient-to-br from-green-500 to-emerald-600 p-4 rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
-                          <Shield className="h-8 w-8 sm:h-10 sm:w-10 text-white" strokeWidth={2.5} />
+                        <div className="relative bg-gradient-to-br from-green-500 to-emerald-600 p-4 lg:p-5 xl:p-6 rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                          <Shield className="h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 xl:h-14 xl:w-14 text-white" strokeWidth={2.5} />
                         </div>
                       </div>
-                      <div className="text-center space-y-1">
-                        <p className="text-sm sm:text-base font-bold text-gray-900 dark:text-white">Paiement</p>
-                        <p className="text-sm sm:text-base font-bold text-green-700 dark:text-green-400">Sécurisé</p>
+                      <div className="text-center space-y-1 lg:space-y-1.5">
+                        <p className="text-sm sm:text-base lg:text-lg xl:text-xl font-bold text-gray-900 dark:text-white">Paiement</p>
+                        <p className="text-sm sm:text-base lg:text-lg xl:text-xl font-bold text-green-700 dark:text-green-400">Sécurisé</p>
                       </div>
                     </motion.div>
 
@@ -861,17 +873,17 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.2 }}
-                      className="group relative flex flex-col items-center justify-center gap-3 p-5 sm:p-6 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 rounded-2xl border-2 border-blue-200/50 dark:border-blue-800/50 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-lg transition-all duration-300 min-w-0"
+                      className="group relative flex flex-col items-center justify-center gap-3 lg:gap-4 p-5 sm:p-6 lg:p-8 xl:p-10 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 rounded-2xl border-2 border-blue-200/50 dark:border-blue-800/50 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-lg transition-all duration-300 min-w-0"
                     >
                       <div className="relative">
                         <div className="absolute inset-0 bg-blue-400/20 rounded-full blur-xl group-hover:bg-blue-400/30 transition-colors"></div>
-                        <div className="relative bg-gradient-to-br from-blue-500 to-cyan-600 p-4 rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
-                          <Truck className="h-8 w-8 sm:h-10 sm:w-10 text-white" strokeWidth={2.5} />
+                        <div className="relative bg-gradient-to-br from-blue-500 to-cyan-600 p-4 lg:p-5 xl:p-6 rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                          <Truck className="h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 xl:h-14 xl:w-14 text-white" strokeWidth={2.5} />
                         </div>
                       </div>
-                      <div className="text-center space-y-1">
-                        <p className="text-sm sm:text-base font-bold text-gray-900 dark:text-white">Livraison</p>
-                        <p className="text-sm sm:text-base font-bold text-blue-700 dark:text-blue-400">2-3 jours</p>
+                      <div className="text-center space-y-1 lg:space-y-1.5">
+                        <p className="text-sm sm:text-base lg:text-lg xl:text-xl font-bold text-gray-900 dark:text-white">Livraison</p>
+                        <p className="text-sm sm:text-base lg:text-lg xl:text-xl font-bold text-blue-700 dark:text-blue-400">2-3 jours</p>
                       </div>
                     </motion.div>
 
@@ -880,18 +892,18 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.3 }}
-                      className="group relative flex flex-col items-center justify-center gap-3 p-5 sm:p-6 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 rounded-2xl border-2 border-amber-200/50 dark:border-amber-800/50 hover:border-amber-300 dark:hover:border-amber-700 hover:shadow-lg transition-all duration-300 min-w-0"
+                      className="group relative flex flex-col items-center justify-center gap-3 lg:gap-4 p-5 sm:p-6 lg:p-8 xl:p-10 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 rounded-2xl border-2 border-amber-200/50 dark:border-amber-800/50 hover:border-amber-300 dark:hover:border-amber-700 hover:shadow-lg transition-all duration-300 min-w-0"
                     >
                       <div className="relative">
                         <div className="absolute inset-0 bg-amber-400/20 rounded-full blur-xl group-hover:bg-amber-400/30 transition-colors"></div>
-                        <div className="relative bg-gradient-to-br from-amber-500 to-orange-600 p-4 rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
-                          <Award className="h-8 w-8 sm:h-10 sm:w-10 text-white" strokeWidth={2.5} />
+                        <div className="relative bg-gradient-to-br from-amber-500 to-orange-600 p-4 lg:p-5 xl:p-6 rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                          <Award className="h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 xl:h-14 xl:w-14 text-white" strokeWidth={2.5} />
                         </div>
-                  </div>
-                      <div className="text-center space-y-1">
-                        <p className="text-sm sm:text-base font-bold text-gray-900 dark:text-white">Garantie</p>
-                        <p className="text-sm sm:text-base font-bold text-amber-700 dark:text-amber-400">Qualité</p>
-                  </div>
+                      </div>
+                      <div className="text-center space-y-1 lg:space-y-1.5">
+                        <p className="text-sm sm:text-base lg:text-lg xl:text-xl font-bold text-gray-900 dark:text-white">Garantie</p>
+                        <p className="text-sm sm:text-base lg:text-lg xl:text-xl font-bold text-amber-700 dark:text-amber-400">Qualité</p>
+                      </div>
                     </motion.div>
                   </div>
                 </div>
@@ -993,8 +1005,9 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
             </motion.div>
           </div>
 
-          {/* RIGHT: Comprehensive Reviews Section (Sidebar) */}
+          {/* RIGHT: Comprehensive Reviews Section (Sidebar) – id for share link #reviews */}
           <motion.div
+            id="reviews"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.15 }}
