@@ -70,8 +70,8 @@ fi
 
 # ── Warm API cache on startup ────────────────────────────
 echo "Warming API cache..."
-php artisan api:warm /api/all_products_fast --count=1 2>/dev/null || true
-php artisan api:warm /api/all_products --count=1 2>/dev/null || true
+php artisan api:warm --endpoint=all_products_fast 2>/dev/null || true
+php artisan api:warm --endpoint=all_products 2>/dev/null || true
 
 # ── Warm OPcache by loading critical classes ─────────────
 echo "Warming OPcache..."

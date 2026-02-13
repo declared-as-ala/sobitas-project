@@ -190,13 +190,20 @@ class ApisController extends Controller
     {
         $perPage = $this->resolvePerPage($request);
 
-        $slides = Slide::select('id', 'image', 'titre', 'lien', 'type')
-            ->orderBy('id')
-            ->paginate($perPage);
+        // Query all columns to avoid column name mismatches
+        // Handle both possible column names: titre/title, lien/link
+        $slides = Slide::orderBy('id')->paginate($perPage);
 
         // Map response for backward compatibility with frontend
-        // Frontend expects: cover, title, link (not image, titre, lien)
+        // Frontend expects: cover, title, link
+        // Database may have: image, titre/title, lien/link, type
         $slides->getCollection()->transform(function ($slide) {
+            // Get title - handle both 'titre' and 'title' column names
+            $title = $slide->titre ?? $slide->title ?? null;
+            
+            // Get link - handle both 'lien' and 'link' column names
+            $link = $slide->lien ?? $slide->link ?? null;
+            
             // Generate image URL - handle both relative paths and full URLs
             $imageUrl = null;
             if ($slide->image) {
@@ -210,8 +217,8 @@ class ApisController extends Controller
             return [
                 'id' => $slide->id,
                 'cover' => $imageUrl,
-                'title' => $slide->titre,
-                'link' => $slide->lien,
+                'title' => $title,
+                'link' => $link,
                 'type' => $slide->type ?? 'web',
             ];
         });

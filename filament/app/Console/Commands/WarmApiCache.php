@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Http;
  */
 class WarmApiCache extends Command
 {
-    protected $signature = 'api:warm {--endpoint=all_products : Endpoint to warm}';
+    protected $signature = 'api:warm {--endpoint=all_products : Endpoint name to warm (all_products, all_products_fast, etc.)}';
     protected $description = 'Warm API cache and OPcache by hitting endpoints';
 
     public function handle(): int
@@ -51,8 +51,19 @@ class WarmApiCache extends Command
         $this->info('💾 Warming Redis cache...');
         $endpoint = $this->option('endpoint');
         
-        if ($endpoint === 'all_products' || $endpoint === 'all') {
-            $this->warmEndpoint('/api/all_products');
+        // Map endpoint names to actual API paths
+        $endpointMap = [
+            'all_products' => '/api/all_products',
+            'all_products_fast' => '/api/all_products_fast',
+            'all' => '/api/all_products', // Default
+        ];
+        
+        $path = $endpointMap[$endpoint] ?? null;
+        
+        if ($path) {
+            $this->warmEndpoint($path);
+        } else {
+            $this->warn("  ⚠ Unknown endpoint: {$endpoint}. Supported: all_products, all_products_fast");
         }
 
         $this->info('✅ Cache warming complete!');
