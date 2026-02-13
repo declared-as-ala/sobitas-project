@@ -2,7 +2,6 @@
 
 namespace App\Providers\Filament;
 
-use App\Filament\Pages\Auth\Login;
 use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\Profile;
 use App\Filament\Pages\SendSms;
@@ -70,7 +69,7 @@ class AdminPanelProvider extends PanelProvider
         return $panel
             ->default()
             ->id('admin')
-            ->login(Login::class)
+            ->login()
             ->passwordReset()
             ->renderHook(
                 'panels::head.end',
