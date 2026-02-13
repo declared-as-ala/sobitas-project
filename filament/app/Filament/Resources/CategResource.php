@@ -11,6 +11,7 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Tables;
 use Filament\Actions;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Storage;
 
 class CategResource extends Resource
 {
@@ -47,7 +48,34 @@ class CategResource extends Resource
                 ->directory('categories')
                 ->image()
                 ->imageEditor()
-                ->maxSize(4096),
+                ->imagePreviewHeight('250')
+                ->imageEditorAspectRatios([
+                    null,
+                    '16:9',
+                    '4:3',
+                    '1:1',
+                ])
+                ->visibility('public')
+                ->preserveFilenames(false)
+                ->maxSize(4096)
+                ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+                ->helperText('Formats acceptés: JPEG, PNG, WebP, GIF. Taille max: 4MB')
+                ->deletable(true)
+                ->downloadable(true)
+                ->openable(true)
+                ->loadingIndicatorPosition('left')
+                ->removeUploadedFileButtonPosition('right')
+                ->uploadButtonPosition('left')
+                ->uploadProgressIndicatorPosition('left')
+                ->afterStateUpdated(function ($state, $record, $set) {
+                    // Delete old file when a new one is uploaded
+                    if ($record && $record->cover && $state && $state !== $record->cover) {
+                        $oldPath = $record->cover;
+                        if (Storage::disk('public')->exists($oldPath)) {
+                            Storage::disk('public')->delete($oldPath);
+                        }
+                    }
+                }),
             Forms\Components\TextInput::make('meta_title')
                 ->label('Meta Title')
                 ->maxLength(255),
@@ -64,23 +92,48 @@ class CategResource extends Resource
                 Tables\Columns\ImageColumn::make('cover')
                     ->label('Image')
                     ->disk('public')
-                    ->circular(),
+                    ->size(80)
+                    ->height(60)
+                    ->width(80)
+                    ->circular(false)
+                    ->square()
+                    ->defaultImageUrl(asset('placeholder.svg'))
+                    ->fallbackUrl(asset('placeholder.svg'))
+                    ->extraAttributes([
+                        'class' => 'rounded-lg object-cover',
+                    ]),
                 Tables\Columns\TextColumn::make('designation_fr')
                     ->label('Désignation')
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('slug')
-                    ->searchable(),
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('sousCategories_count')
                     ->counts('sousCategories')
-                    ->label('Sous-catégories'),
+                    ->label('Sous-catégories')
+                    ->sortable(),
             ])
             ->actions([
                 Actions\EditAction::make(),
-                Actions\DeleteAction::make(),
+                Actions\DeleteAction::make()
+                    ->before(function (Categ $record) {
+                        // Delete image file when deleting the record
+                        if ($record->cover && Storage::disk('public')->exists($record->cover)) {
+                            Storage::disk('public')->delete($record->cover);
+                        }
+                    }),
             ])
             ->bulkActions([
-                Actions\DeleteBulkAction::make(),
+                Actions\DeleteBulkAction::make()
+                    ->before(function ($records) {
+                        // Delete image files when bulk deleting
+                        foreach ($records as $record) {
+                            if ($record->cover && Storage::disk('public')->exists($record->cover)) {
+                                Storage::disk('public')->delete($record->cover);
+                            }
+                        }
+                    }),
             ]);
     }
 
