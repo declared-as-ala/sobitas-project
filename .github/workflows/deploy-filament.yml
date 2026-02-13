@@ -22,10 +22,11 @@ env:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    # Run on push (paths already filtered in on: section) or manual dispatch with enabled=true
+    # For workflow_dispatch, only run if enabled=true
+    # For push events, paths filter in on: section already handles filtering
     if: |
       github.event_name == 'push' ||
-      (github.event_name == 'workflow_dispatch' && (github.event.inputs.enabled == 'true' || !github.event.inputs.enabled))
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.enabled == 'true')
     permissions:
       contents: read
       packages: write
