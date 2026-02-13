@@ -15,8 +15,8 @@
 
 
     @php
-        $coordonnee = App\Coordinate::first();
-        //$produits = App\Product::all();
+        $coordonnee = App\Models\Coordinate::first();
+        //$produits = App\Models\Product::all();
     @endphp
 
     <style>
@@ -279,7 +279,7 @@
                 <div class="text-right">
                     <button id="printInvoice" class="btn btn-info" onclick="print()"><i class="fa fa-print"></i>
                         Imprimer</button>
-                    <a class="btn btn-info" href="{{ route('voyager.commandes.index') }}"><i
+                    <a class="btn btn-info" href="{{ route('admin.commandes.index') }}"><i
                             class="fa fa-file-pdf-o"></i> Retour</a>
                 </div>
                 <hr>
@@ -290,7 +290,7 @@
                         <div class="row">
                             <div class="col">
 
-                                <img src="{{ Voyager::image($coordonnee->logo_facture) }}" data-holder-rendered="true"
+                                <img src="{{ asset('storage/' . $coordonnee->logo_facture) }}" data-holder-rendered="true"
                                     style="width : 220px" />
                                 <h4 class="name">
 

@@ -1,147 +1,175 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
-
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
+use App\Http\Requests\LoginRequest;
+use App\Http\Requests\RegisterRequest;
+use App\Models\Client;
+use App\Models\Commande;
+use App\Models\CommandeDetail;
+use App\Models\Facture;
+use App\Models\FactureTva;
+use App\Models\Ticket;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Auth;
-use Validator;
-use App\Ticket;
-use App\Commande;
-use App\Facture;
-use App\FactureTva;
-use App\CommandeDetail;
+
 class ClientController extends Controller
 {
-
-
-    public function login(Request $request){
-        $credentials = $request->validate([
-            'email' => ['required', 'email'],
-            //'phone' => ['required'],
-            'password' => ['required'],
-        ]);
-        // if (Auth::attempt($credentials)) {
-
-        if (Auth::attempt(['email' => $request->input('email'), 'password' => $request->input('password')])){
-            $accessToken = Auth::user()->createToken('authToken')->plainTextToken;
-            $user = Auth::user();
-            return ['token' => $accessToken , 'name'=>$user->name , 'id'=>$user->id];
-        } else {
-            return response()->json(['message' => 'Données invalides , verifier votre email et password'],403);
-        }
-    }
-    public function register(Request $request)
+    /**
+     * Login user and return token.
+     */
+    public function login(LoginRequest $request): JsonResponse|array
     {
-        $validator = Validator::make($request->all(), [
-            'name' => 'required',
-            'role_id' => 'required',
-            'phone' => 'required',
-            'email' => 'required|email|unique:users',
-            'password' => 'required'
-        ]);
-        if ($validator->fails()) {
-            return response()->json(['message' => 'Vous avez déjà un compte veuillez se connecter'] , 404);
+        if (Auth::attempt($request->only('email', 'password'))) {
+            /** @var User $user */
+            $user = Auth::user();
+            $accessToken = $user->createToken('authToken')->plainTextToken;
+
+            return ['token' => $accessToken, 'name' => $user->name, 'id' => $user->id];
         }
-     /*    $input = $request->all();
-        $input['password'] = Hash::make($request->password); */
+
+        return response()->json(['message' => 'Données invalides, vérifiez votre email et mot de passe'], 403);
+    }
+
+    /**
+     * Register a new user.
+     */
+    public function register(RegisterRequest $request): JsonResponse|array
+    {
+        $validated = $request->validated();
+
         $user = User::create([
-            'name' =>$request->name,
-            'role_id' =>$request->role_id,
-            'phone' =>$request->phone,
-            'email' =>$request->email,
-            'password' =>Hash::make($request->password)
+            'name' => $validated['name'],
+            'role_id' => $validated['role_id'],
+            'phone' => $validated['phone'],
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
         ]);
 
         $token = $user->createToken('authToken')->plainTextToken;
-        $name = $user->name;
-        return ['token'=>$token , 'name'=>$name , 'id'=>$user->id];
+
+        return ['token' => $token, 'name' => $user->name, 'id' => $user->id];
     }
-    public function update_profile(Request $request){
-        $the_user = User::find(Auth::user()->id);
-        $the_user->name = $request->input('name');
 
-        $the_user->phone = $request->input('phone');
+    /**
+     * Update user profile.
+     */
+    public function update_profile(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'phone' => 'required|string',
+            'email' => 'required|email',
+            'password' => 'required|string|min:6',
+        ]);
 
-        $the_user->email = $request->input('email');
-        $the_user->password = Hash::make($request->input('password'));
+        /** @var User $user */
+        $user = User::findOrFail(Auth::id());
+        $user->update([
+            'name' => $request->input('name'),
+            'phone' => $request->input('phone'),
+            'email' => $request->input('email'),
+            'password' => Hash::make($request->input('password')),
+        ]);
 
-        $the_user->save();
-        return $the_user;
+        return $user;
     }
-    public function profil(){
+
+    /**
+     * Get current user profile.
+     */
+    public function profil()
+    {
         return Auth::user();
     }
 
-
-
-    public function client_commandes(){
-
-        $commandes = Commande::where('user_id' , Auth::user()->id)->get();
-
-        return $commandes;
-
+    /**
+     * Get client's commandes.
+     */
+    public function client_commandes()
+    {
+        return Commande::where('user_id', Auth::id())->get();
     }
 
-    public function detail_commande($id){
+    /**
+     * Get commande details.
+     */
+    public function detail_commande(int $id): array
+    {
+        $commande = Commande::findOrFail($id);
+        $details = CommandeDetail::where('commande_id', $commande->id)->get();
 
-        $commande = Commande::find($id);
-        $details = CommandeDetail::where('commande_id' , $commande->id)->get();
-        return ['commande'=>$commande , 'details'=>$details];
-
+        return ['commande' => $commande, 'details' => $details];
     }
 
-    public function forgotpassword(Request $request){
+    /**
+     * Client purchase history by phone number (admin view).
+     */
+    public function historique(Request $request)
+    {
+        $request->validate(['tel' => 'required|string']);
 
-    }
+        $tel = $this->normalizePhone($request->tel);
 
-    public function checkVerificationCode(Request $request){
+        $commandes = Commande::where('phone', 'LIKE', '%' . $tel . '%')->get();
 
-    }
+        $tickets = Ticket::join('clients', 'tickets.client_id', '=', 'clients.id')
+            ->where(function ($q) use ($tel) {
+                $q->where('clients.phone_1', 'LIKE', '%' . $tel . '%')
+                    ->orWhere('clients.phone_2', 'LIKE', '%' . $tel . '%');
+            })
+            ->select('tickets.*')
+            ->get();
 
-    public function updatePassword(Request $request){
+        $factures = Facture::join('clients', 'factures.client_id', '=', 'clients.id')
+            ->where(function ($q) use ($tel) {
+                $q->where('clients.phone_1', 'LIKE', '%' . $tel . '%')
+                    ->orWhere('clients.phone_2', 'LIKE', '%' . $tel . '%');
+            })
+            ->select('factures.*')
+            ->get();
 
-    }
+        $factureTvas = FactureTva::join('clients', 'facture_tvas.client_id', '=', 'clients.id')
+            ->where(function ($q) use ($tel) {
+                $q->where('clients.phone_1', 'LIKE', '%' . $tel . '%')
+                    ->orWhere('clients.phone_2', 'LIKE', '%' . $tel . '%');
+            })
+            ->select('facture_tvas.*')
+            ->get();
 
-    public function historique(Request $request){
-        $tel = $request->tel;
-        if($tel[0] == '+' && $tel[1] == '2' && $tel[2]=='1'  && $tel[3] == '6'){
-            $tel = substr($tel,4, strlen($tel -4));
-        }else if($tel[0] == '2' && $tel[1] == '1' && $tel[2]=='6' ){
-            $tel = substr($tel,3, strlen($tel -3));
-        } 
-
-        $commandes = Commande::where('phone' , 'LIKE' , '%'.$tel.'%')->get();
-        $tickets = Ticket::join('clients' ,'tickets.client_id' , 'clients.id')
-        ->where('clients.phone_1' , 'LIKE' , '%'.$tel.'%')
-        ->orWhere('clients.phone_2' , 'LIKE' , '%'.$tel.'%')
-        ->select('tickets.*')
-        ->get();
-
-
-        $factures = Facture::join('clients' ,'factures.client_id' , 'clients.id')
-        ->where('clients.phone_1' , 'LIKE' , '%'.$tel.'%')
-        ->orWhere('clients.phone_2' , 'LIKE' , '%'.$tel.'%')
-        ->select('factures.*')
-        ->get();
-
-        $facture_tvas = FactureTva::join('clients' ,'facture_tvas.client_id' , 'clients.id')
-        ->where('clients.phone_1' , 'LIKE' , '%'.$tel.'%')
-        ->orWhere('clients.phone_2' , 'LIKE' , '%'.$tel.'%')
-        ->select('facture_tvas.*')
-        ->get();
-
-        $user = \App\Models\User::where('phone' , 'LIKE' , '%'.$tel.'%' )->first();
-        if(!$user){
-            $user = \App\Client::where('phone_1' , 'LIKE' , '%'.$tel.'%')
-            ->orWhere('phone_2' , 'LIKE' , '%'.$tel.'%')
-            ->first();
+        $user = User::where('phone', 'LIKE', '%' . $tel . '%')->first();
+        if (!$user) {
+            $user = Client::where('phone_1', 'LIKE', '%' . $tel . '%')
+                ->orWhere('phone_2', 'LIKE', '%' . $tel . '%')
+                ->first();
         }
-        return view('historique_client' , ['commandes'=>$commandes , 'tickets'=>$tickets , 'factures'=>$factures , 'facture_tvas'=>$facture_tvas , 'user'=>$user , 'tel'=>$tel]);
+
+        return view('historique_client', [
+            'commandes' => $commandes,
+            'tickets' => $tickets,
+            'factures' => $factures,
+            'facture_tvas' => $factureTvas,
+            'user' => $user,
+            'tel' => $tel,
+        ]);
     }
 
+    /**
+     * Strip country code prefix from phone number.
+     */
+    private function normalizePhone(string $tel): string
+    {
+        if (str_starts_with($tel, '+216')) {
+            $tel = substr($tel, 4);
+        } elseif (str_starts_with($tel, '216')) {
+            $tel = substr($tel, 3);
+        }
 
+        return $tel;
+    }
 }

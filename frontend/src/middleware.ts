@@ -15,17 +15,14 @@ function nameToSlug(name: string): string {
 export function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
 
-  // Blog pages: prevent CDN/proxy from caching HTML independently.
-  // Next.js ISR (Data Cache + tags) handles caching internally;
-  // we only need to stop external layers (Cloudflare, NPM, Varnish) from
-  // keeping a stale copy that survives revalidateTag('blog').
+  // Add no-cache headers for blog pages to ensure fresh content
   const response = NextResponse.next();
-
+  
   if (pathname.startsWith('/blog')) {
-    // private → excludes shared caches (CDN); no-cache → browser must revalidate
-    response.headers.set('Cache-Control', 'private, no-cache, must-revalidate');
-    // Extra safety for Cloudflare and Varnish/Fastly
-    response.headers.set('CDN-Cache-Control', 'no-store');
+    // Force no-cache for blog pages (HTML and API responses)
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
     response.headers.set('Surrogate-Control', 'no-store');
   }
 

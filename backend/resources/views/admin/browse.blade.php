@@ -1,4 +1,4 @@
-@extends('voyager::master')
+@extends('layouts.admin')
 
 @section('page_title', __('voyager::generic.viewing') . ' ' . $dataType->getTranslatedAttribute('display_name_plural'))
 
@@ -9,23 +9,23 @@
         </h1>
         @can('add', app($dataType->model_name))
             @if ($dataType->slug == 'factures')
-                <a href="{{ route('voyager.facture') }}" class="btn btn-success btn-add-new">
+                <a href="{{ route('admin.facture') }}" class="btn btn-success btn-add-new">
                     <i class="voyager-plus"></i> <span>{{ __('voyager::generic.add_new') }}</span>
                 </a>
             @elseif ($dataType->slug == 'tickets')
-                <a href="{{ route('voyager.ticket') }}" class="btn btn-success btn-add-new">
+                <a href="{{ route('admin.ticket') }}" class="btn btn-success btn-add-new">
                     <i class="voyager-plus"></i> <span>{{ __('voyager::generic.add_new') }}</span>
                 </a>
             @elseif ($dataType->slug == 'facture-tvas')
-                <a href="{{ route('voyager.facture_tva') }}" class="btn btn-success btn-add-new">
+                <a href="{{ route('admin.facture_tva') }}" class="btn btn-success btn-add-new">
                     <i class="voyager-plus"></i> <span>{{ __('voyager::generic.add_new') }}</span>
                 </a>
                 @elseif ($dataType->slug == 'commandes')
-                <a href="{{ route('voyager.commande') }}" class="btn btn-success btn-add-new">
+                <a href="{{ route('admin.commande') }}" class="btn btn-success btn-add-new">
                     <i class="voyager-plus"></i> <span>{{ __('voyager::generic.add_new') }}</span>
                 </a>
             @else
-                <a href="{{ route('voyager.' . $dataType->slug . '.create') }}" class="btn btn-success btn-add-new">
+                <a href="{{ route('admin.' . $dataType->slug . '.create') }}" class="btn btn-success btn-add-new">
                     <i class="voyager-plus"></i> <span>{{ __('voyager::generic.add_new') }}</span>
                 </a>
             @endif
@@ -36,7 +36,7 @@
         @endcan
         @can('edit', app($dataType->model_name))
             @if (!empty($dataType->order_column) && !empty($dataType->order_display_column))
-                <a href="{{ route('voyager.' . $dataType->slug . '.order') }}" class="btn btn-primary btn-add-new">
+                <a href="{{ route('admin.' . $dataType->slug . '.order') }}" class="btn btn-primary btn-add-new">
                     <i class="voyager-list"></i> <span>{{ __('voyager::bread.order') }}</span>
                 </a>
             @endif
@@ -81,7 +81,7 @@
                                 <div class="timeline-steps aos-init aos-animate" data-aos="fade-up"
                                     style="margin-top:23px; flex-direction:row-reverse;">
                                     <div style="margin: 4%">
-                                        <form action=" {{ route('voyager.import', ['slug' => $dataType->slug]) }} " method="POST"
+                                        <form action=" {{ route('admin.import', ['slug' => $dataType->slug]) }} " method="POST"
                                             enctype="multipart/form-data">
                                             @csrf
                                             <div class="form-group">
@@ -119,7 +119,7 @@
                                 <div class="timeline-steps aos-init aos-animate" data-aos="fade-up"
                                     style="margin-top:23px; flex-direction:row-reverse;">
                                     <div style="margin: 4%">
-                                        <form action=" {{ route('voyager.send_sms') }} " method="POST"
+                                        <form action=" {{ route('admin.send_sms') }} " method="POST"
                                             enctype="multipart/form-data">
                                             @csrf
                                             <div class="form-group">
@@ -158,13 +158,13 @@
                                 <div class="timeline-steps aos-init aos-animate" data-aos="fade-up"
                                     style="margin-top:23px; flex-direction:row-reverse;">
                                     <div style="margin: 4%">
-                                        <form action=" {{ route('voyager.specific_sms') }} " method="POST"
+                                        <form action=" {{ route('admin.specific_sms') }} " method="POST"
                                             enctype="multipart/form-data">
                                             @csrf
                                             <div class="form-group">
                                                 <label for="file">Clients</label>
                                                 @php
-                                                    $clients = App\Client::all();
+                                                    $clients = App\Models\Client::all();
                                                 @endphp
                                                 <select name="clients[]"  class="form-control select2" required multiple>
                                                     @foreach ($clients as $client)
@@ -194,8 +194,7 @@
 
 @section('content')
     <div class="page-content browse container-fluid">
-        @include('voyager::alerts')
-        <div class="row">
+<div class="row">
             <div class="col-md-12">
                 <div class="panel panel-bordered">
                     <div class="panel-body">
@@ -374,14 +373,14 @@
                                                         @include('voyager::multilingual.input-hidden-bread-browse')
                                                         @if (json_decode($data->{$row->field}) !== null)
                                                             @foreach (json_decode($data->{$row->field}) as $file)
-                                                                <a href="{{ Storage::disk(config('voyager.storage.disk'))->url($file->download_link) ?: '' }}"
+                                                                <a href="{{ Storage::disk(config('admin.storage.disk'))->url($file->download_link) ?: '' }}"
                                                                     target="_blank">
                                                                     {{ $file->original_name ?: '' }}
                                                                 </a>
                                                                 <br />
                                                             @endforeach
                                                         @else
-                                                            <a href="{{ Storage::disk(config('voyager.storage.disk'))->url($data->{$row->field}) }}"
+                                                            <a href="{{ Storage::disk(config('admin.storage.disk'))->url($data->{$row->field}) }}"
                                                                 target="_blank">
                                                                 {{ __('voyager::generic.download') }}
                                                             </a>
@@ -447,45 +446,45 @@
 
                                             <td class="no-sort no-click bread-actions">
                                                 @if ($dataType->slug == 'factures')
-                                                    <a href="{{ route('voyager.edit_facture', $data->id) }}"
+                                                    <a href="{{ route('admin.edit_facture', $data->id) }}"
                                                         title="Editer" class="btn btn-warning">
                                                         <i class="voyager-edit"></i> <span
                                                             class="hidden-xs hidden-sm">Editer</span>
                                                     </a>
-                                                    <a href="{{ route('voyager.imprimer_facture', $data->id) }}"
+                                                    <a href="{{ route('admin.imprimer_facture', $data->id) }}"
                                                         title="Editer" class="btn btn-primary">
                                                         <i class="voyager-receipt"></i> <span
                                                             class="hidden-xs hidden-sm">Imprimer</span>
                                                     </a>
                                                 @elseif ($dataType->slug == 'tickets')
-                                                    <a href="{{ route('voyager.edit_ticket', $data->id) }}"
+                                                    <a href="{{ route('admin.edit_ticket', $data->id) }}"
                                                         title="Editer" class="btn btn-warning">
                                                         <i class="voyager-edit"></i> <span
                                                             class="hidden-xs hidden-sm">Editer</span>
                                                     </a>
-                                                    <a href="{{ route('voyager.imprimer_ticket', $data->id) }}"
+                                                    <a href="{{ route('admin.imprimer_ticket', $data->id) }}"
                                                         title="Editer" class="btn btn-primary">
                                                         <i class="voyager-receipt"></i> <span
                                                             class="hidden-xs hidden-sm">Imprimer</span>
                                                     </a>
                                                 @elseif ($dataType->slug == 'facture-tvas')
-                                                    <a href="{{ route('voyager.edit_facture_tva', $data->id) }}"
+                                                    <a href="{{ route('admin.edit_facture_tva', $data->id) }}"
                                                         title="Editer" class="btn btn-warning">
                                                         <i class="voyager-edit"></i> <span
                                                             class="hidden-xs hidden-sm">Editer</span>
                                                     </a>
-                                                    <a href="{{ route('voyager.imprimer_facture_tva', $data->id) }}"
+                                                    <a href="{{ route('admin.imprimer_facture_tva', $data->id) }}"
                                                         title="Editer" class="btn btn-primary">
                                                         <i class="voyager-receipt"></i> <span
                                                             class="hidden-xs hidden-sm">Imprimer</span>
                                                     </a>
                                                     @elseif ($dataType->slug == 'commandes')
-                                                    <a href="{{ route('voyager.edit_commande', $data->id) }}"
+                                                    <a href="{{ route('admin.edit_commande', $data->id) }}"
                                                         title="Editer" class="btn btn-warning">
                                                         <i class="voyager-edit"></i> <span
                                                             class="hidden-xs hidden-sm">Editer</span>
                                                     </a>
-                                                    <a href="{{ route('voyager.imprimer_commande', $data->id) }}"
+                                                    <a href="{{ route('admin.imprimer_commande', $data->id) }}"
                                                         title="Bon Livraison" class="btn btn-primary">
                                                         <i class="voyager-receipt"></i> <span
                                                             class="hidden-xs hidden-sm">Bon Livraison</span>
@@ -559,14 +558,14 @@
 
 @section('css')
     @if (!$dataType->server_side && config('dashboard.data_tables.responsive'))
-        <link rel="stylesheet" href="{{ voyager_asset('lib/css/responsive.dataTables.min.css') }}">
+        <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
     @endif
 @stop
 
 @section('javascript')
     <!-- DataTables -->
     @if (!$dataType->server_side && config('dashboard.data_tables.responsive'))
-        <script src="{{ voyager_asset('lib/js/dataTables.responsive.min.js') }}"></script>
+        <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
     @endif
     <script>
         $(document).ready(function() {
@@ -578,7 +577,7 @@
                             'language' => __('voyager::datatable'),
                             'columnDefs' => [['targets' => 'dt-not-orderable', 'searchable' => false, 'orderable' => false]],
                         ],
-                        config('voyager.dashboard.data_tables', []),
+                        config('admin.dashboard.data_tables', []),
                     ),
                     true,
                 ) !!});
@@ -603,7 +602,7 @@
 
         var deleteFormAction;
         $('td').on('click', '.delete', function(e) {
-            $('#delete_form')[0].action = '{{ route('voyager.' . $dataType->slug . '.destroy', '__id') }}'.replace(
+            $('#delete_form')[0].action = '{{ route('admin.' . $dataType->slug . '.destroy', '__id') }}'.replace(
                 '__id', $(this).data('id'));
             $('#delete_modal').modal('show');
         });
@@ -622,11 +621,11 @@
                 $('#show_soft_deletes').change(function() {
                     if ($(this).prop('checked')) {
                         $('#dataTable').before(
-                            '<a id="redir" href="{{ route('voyager.' . $dataType->slug . '.index', array_merge($params, ['showSoftDeleted' => 1]), true) }}"></a>'
+                            '<a id="redir" href="{{ route('admin.' . $dataType->slug . '.index', array_merge($params, ['showSoftDeleted' => 1]), true) }}"></a>'
                         );
                     } else {
                         $('#dataTable').before(
-                            '<a id="redir" href="{{ route('voyager.' . $dataType->slug . '.index', array_merge($params, ['showSoftDeleted' => 0]), true) }}"></a>'
+                            '<a id="redir" href="{{ route('admin.' . $dataType->slug . '.index', array_merge($params, ['showSoftDeleted' => 0]), true) }}"></a>'
                         );
                     }
 

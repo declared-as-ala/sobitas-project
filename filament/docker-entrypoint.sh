@@ -31,12 +31,24 @@ if [ -z "$APP_KEY" ] || [ "$APP_KEY" = "" ]; then
     fi
 fi
 
+# ── Create storage symlink (CRITICAL for file serving) ─────
+# This creates public/storage -> storage/app/public
+# Must be done every startup because public/ might be on a separate volume
+if [ ! -L public/storage ] || [ ! -e public/storage ]; then
+    echo "Creating storage symlink..."
+    php artisan storage:link 2>/dev/null || {
+        # Fallback: create symlink manually if artisan fails
+        rm -f public/storage
+        ln -s ../storage/app/public public/storage
+        echo "✓ Storage symlink created manually"
+    }
+else
+    echo "✓ Storage symlink already exists"
+fi
+
 # ── Run migrations (non-destructive) ──────────────────────
 echo "Running migrations..."
 php artisan migrate --force 2>/dev/null || echo "⚠ Migration skipped (DB may not be ready yet)"
-
-# ── Create storage link if not exists ──────────────────────
-php artisan storage:link 2>/dev/null || true
 
 # ── Publish Filament assets ────────────────────────────────
 echo "Publishing Filament assets..."
@@ -44,8 +56,7 @@ php artisan filament:assets 2>/dev/null || true
 
 # ── Build caches for FAST boot ─────────────────────────────
 # These caches prevent PHP from scanning filesystem on every request
-# On Windows Docker, this reduces boot time from ~8s to ~1s
-# CRITICAL: These write to bootstrap/cache (now on named volume, fast)
+# CRITICAL: These write to bootstrap/cache (on named volume, fast)
 echo "Building performance caches..."
 php artisan config:cache 2>/dev/null || true
 php artisan route:cache 2>/dev/null || true
@@ -53,22 +64,29 @@ php artisan view:cache 2>/dev/null || true
 php artisan event:cache 2>/dev/null || true
 
 # ── Verify storage is on named volume (not bind mount) ─────
-# This ensures fast file writes (37s -> 0.3s improvement)
 if [ -d "/var/www/html/storage" ]; then
     echo "Storage directory: $(realpath /var/www/html/storage)"
 fi
 
 # ── Warm API cache on startup ────────────────────────────
-# CRITICAL: Pre-populate cache so first user request is fast (< 700ms target)
-# This ensures users never hit cold cache, eliminating 1.5s first request delay
 echo "Warming API cache..."
 php artisan api:warm /api/all_products_fast --count=1 2>/dev/null || true
 php artisan api:warm /api/all_products --count=1 2>/dev/null || true
 
 # ── Warm OPcache by loading critical classes ─────────────
-# Pre-load Laravel core classes to eliminate autoload overhead on first request
 echo "Warming OPcache..."
 php -r "require 'vendor/autoload.php'; new Illuminate\Foundation\Application(__DIR__);" 2>/dev/null || true
+
+# ── Reset OPcache if RESET_OPCACHE env var is set ─────────
+# This is used during deployments to clear cached code when validate_timestamps=0
+if [ "$RESET_OPCACHE" = "1" ] || [ "$RESET_OPCACHE" = "true" ]; then
+    echo "========================================"
+    echo " 🔄 Resetting OPcache (deployment mode)..."
+    echo "========================================"
+    php -r "if (function_exists('opcache_reset')) { opcache_reset(); echo 'OPcache reset successful\n'; } else { echo 'OPcache not available\n'; }" || true
+    # Also reload PHP-FPM to ensure clean state
+    killall -USR2 php-fpm 2>/dev/null || true
+fi
 
 echo "========================================"
 echo " ✅ Laravel Filament backend ready!"

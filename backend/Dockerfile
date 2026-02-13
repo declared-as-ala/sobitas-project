@@ -33,11 +33,6 @@ RUN composer install --no-dev --no-scripts --no-interaction --prefer-dist --opti
 # Copy application code
 COPY . .
 
-# Optimize Laravel before final stage
-RUN php artisan config:clear \
-    && php artisan cache:clear \
-    && php artisan view:clear
-
 # ----------------------------------------
 # Stage 2: Final Runtime Image
 # ----------------------------------------
@@ -62,15 +57,15 @@ COPY --from=builder /var/www/html /var/www/html
 COPY --from=builder /usr/local/bin/composer /usr/local/bin/composer
 COPY --from=builder /usr/local/etc/php/conf.d /usr/local/etc/php/conf.d
 
+# Copy entrypoint script from build context
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 # Permissions
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
     && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Final Laravel optimization (cached)
-RUN php artisan config:cache \
-    && php artisan route:cache \
-    && php artisan view:cache
-
 EXPOSE 9000
 
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["php-fpm"]

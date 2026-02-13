@@ -1,11 +1,11 @@
-@extends('voyager::master')
+@extends('layouts.admin')
 
 @section('content')
     @php
-        $coordonnee = App\Coordinate::first();
-        //$produits = App\Product::all();
+        $coordonnee = App\Models\Coordinate::first();
+        //$produits = App\Models\Product::all();
 
-        $clients = App\Client::all();
+        $clients = App\Models\Client::all();
         $max = 100;
     @endphp
     <script>
@@ -17,7 +17,7 @@
         <div class="analytics-container">
             <div class="Dashboard Dashboard--full">
                 <form role="form" class="form-edit-add" id="myform"
-                    @if (@$edit) action="{{ route('voyager.update_quotation', @$facture->id) }}"  @else action="{{ route('voyager.store_quotation') }}" @endif
+                    @if (@$edit) action="{{ route('admin.update_quotation', @$facture->id) }}"  @else action="{{ route('admin.store_quotation') }}" @endif
                     method="POST">
                     <!-- PUT Method if we are editing -->
                     @if (@$edit)
@@ -42,7 +42,7 @@
                         <div class="row" style="margin-left: 3px;margin-bottom: 3%;">
                             <!--Vendeur info Start-->
                             <div class="col-md-5" style="min-height: 150px;">
-                                <img src="{{ Voyager::image($coordonnee->logo_facture) }}" alt=""
+                                <img src="{{ asset('storage/' . $coordonnee->logo_facture) }}" alt=""
                                     style="height: 100px;">
                                 <h4>{{ $coordonnee->abbreviation }}</h4>
                                 <p> <span></span> {{ $coordonnee->phone_1 }} @if ($coordonnee->phone_2)

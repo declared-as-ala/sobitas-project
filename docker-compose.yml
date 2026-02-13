@@ -73,6 +73,8 @@ services:
       APP_DEBUG: "false"
       APP_URL: https://admin.sobitas.tn
       ASSET_URL: https://admin.sobitas.tn
+      FILESYSTEM_DISK: public
+      FILESYSTEM_DRIVER: public
 
       CACHE_DRIVER: redis
       SESSION_DRIVER: redis
@@ -99,6 +101,8 @@ services:
       - backend-v2-storage:/var/www/html/storage
 
   # ---- Copies public assets from image to shared volume ----
+  # CRITICAL: This service copies public/ from image to backend-v2-public volume
+  # and creates the storage symlink pointing to backend-v2-storage
   backend-v2-public-init:
     image: ghcr.io/declared-as-ala/sobitas-backend-v2:latest
     container_name: sobitas-backend-v2-public-init
@@ -107,8 +111,22 @@ services:
       - sobitas-net
     volumes:
       - backend-v2-public:/public
+      - backend-v2-storage:/var/www/html/storage:ro  # Read-only access to storage for symlink
     entrypoint: ["/bin/sh", "-c"]
-    command: "find /public -mindepth 1 -delete 2>/dev/null || true; cp -a /var/www/html/public/. /public/ && echo Assets_copied && ls -la /public | head -20"
+    command: |
+      set -e
+      echo "=== Copying public assets and creating storage symlink ==="
+      # Clear existing public volume contents
+      find /public -mindepth 1 -delete 2>/dev/null || true
+      # Copy all public assets from image
+      cp -a /var/www/html/public/. /public/
+      # CRITICAL: Create storage symlink in public volume
+      # The symlink must point to the storage volume mounted in nginx
+      rm -f /public/storage
+      ln -s /var/www/html/storage/app/public /public/storage
+      echo "✓ Public assets copied"
+      echo "✓ Storage symlink created: /public/storage -> /var/www/html/storage/app/public"
+      ls -la /public | grep storage || echo "⚠ Warning: symlink verification failed"
 
   # ---- Nginx for Filament v2 (port 8083) ----
   backend-nginx-v2:

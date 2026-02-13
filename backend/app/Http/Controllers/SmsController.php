@@ -1,60 +1,62 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
-
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
-use App\Client;
+use App\Models\Client;
 use App\Services\SmsService;
+use Illuminate\Http\Request;
 
 class SmsController extends Controller
 {
+    public function __construct(
+        private readonly SmsService $smsService,
+    ) {}
 
-    public function sendSms(Request $request){
+    /**
+     * Send SMS to all opted-in clients.
+     */
+    public function sendSms(Request $request)
+    {
+        $request->validate(['sms' => 'required|string']);
 
-
-
-        $clients = Client::where('sms' , 1)->get();
-        // $clients = Client::where('etat' , 1)->get();
-        $send_number = 0;
+        $clients = Client::where('sms', true)->get();
 
         foreach ($clients as $client) {
-
-          $tel = $client->phone_1;
-          (new SmsService())->send_sms( $tel , $request->sms);
-
+            if ($client->phone_1) {
+                $this->smsService->send($client->phone_1, $request->sms);
+            }
         }
 
-
         return back()->with([
-            'message'    => "SMS ont été envoyer avec success !",
-            'alert-type' => 'success', ]);
-
+            'message' => 'SMS ont été envoyés avec succès !',
+            'alert-type' => 'success',
+        ]);
     }
 
+    /**
+     * Send SMS to specific clients.
+     */
+    public function sendSmsSpecific(Request $request)
+    {
+        $request->validate([
+            'sms' => 'required|string',
+            'clients' => 'required|array',
+            'clients.*' => 'integer|exists:clients,id',
+        ]);
 
-    public function sendSmsSpecific(Request $request){
+        foreach ($request->clients as $clientId) {
+            $client = Client::find($clientId);
 
-
-
-
-
-        foreach ($request->clients as $client_id) {
-        $client = Client::find($client_id);
-
-          $tel = $client->phone_1;
-
-
-          (new SmsService())->send_sms( $tel , $request->sms);
+            if ($client?->phone_1) {
+                $this->smsService->send($client->phone_1, $request->sms);
+            }
         }
 
-
         return back()->with([
-            'message'    => "SMS ont été envoyer avec success !",
-            'alert-type' => 'success', ]);
-
+            'message' => 'SMS ont été envoyés avec succès !',
+            'alert-type' => 'success',
+        ]);
     }
-
-
 }

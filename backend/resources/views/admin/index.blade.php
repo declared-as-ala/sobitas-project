@@ -1,789 +1,713 @@
-@extends('voyager::master')
+@extends('layouts.admin')
+
+@section('page_title', 'Dashboard')
+@section('page_subtitle', 'Vue d\'ensemble de votre activité')
 
 @section('css')
-@if(file_exists(public_path('css/app.css')))
-<link rel="stylesheet" href="{{ asset('css/app.css') }}">
-@endif
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-    /* Override Voyager styles for modern look */
-    .voyager-modern .page-content {
-        background: #f9fafb;
-        padding: 1.5rem;
-    }
-    
-    .voyager-modern {
-        font-family: 'Inter', system-ui, sans-serif;
-    }
-    
-    /* Stat card styles */
-    .stat-card {
-        @apply bg-white rounded-xl shadow-sm border border-gray-100 p-6 transition-all duration-200;
-    }
-    .stat-card:hover {
-        @apply shadow-md border-primary-200;
-        transform: translateY(-2px);
-    }
-    .stat-card-primary { @apply border-l-4 border-l-primary-500; }
-    .stat-card-success { @apply border-l-4 border-l-green-500; }
-    .stat-card-info { @apply border-l-4 border-l-blue-500; }
-    .stat-card-warning { @apply border-l-4 border-l-yellow-500; }
-    .stat-card-danger { @apply border-l-4 border-l-red-500; }
-    .stat-card-purple { @apply border-l-4 border-l-purple-500; }
-    
-    /* Activity item */
-    .activity-item {
-        @apply flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer;
-    }
-    
-    /* Fade in animation */
+    /* ── Animations ─────────────────────────────────────── */
     @keyframes fadeInUp {
-        from { opacity: 0; transform: translateY(20px); }
+        from { opacity: 0; transform: translateY(16px); }
         to { opacity: 1; transform: translateY(0); }
     }
-    .fade-in-up {
-        animation: fadeInUp 0.5s ease-out;
+    .fade-in { animation: fadeInUp 0.45s ease-out both; }
+    .fade-in-d1 { animation-delay: 0.05s; }
+    .fade-in-d2 { animation-delay: 0.10s; }
+    .fade-in-d3 { animation-delay: 0.15s; }
+    .fade-in-d4 { animation-delay: 0.20s; }
+
+    /* ── KPI Card ───────────────────────────────────────── */
+    .kpi-card {
+        transition: all 0.2s ease;
     }
-    
-    /* Mini chart bar */
-    .mini-chart-bar {
-        @apply bg-primary-200 rounded-t transition-all duration-300;
-        min-height: 4px;
+    .kpi-card:hover {
+        box-shadow: 0 8px 25px -5px rgb(0 0 0 / 0.08);
+        transform: translateY(-2px);
     }
-    .mini-chart-bar:hover {
-        @apply bg-primary-400;
+
+    /* ── Status Pipeline ────────────────────────────────── */
+    .pipeline-step {
+        position: relative;
+        transition: all 0.2s ease;
     }
-    
-    /* Status badge */
-    .status-badge {
-        @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+    .pipeline-step:hover { transform: scale(1.04); }
+    .pipeline-connector {
+        position: absolute;
+        top: 50%;
+        right: -14px;
+        transform: translateY(-50%);
+        color: #d1d5db;
     }
-    .status-nouvelle { @apply bg-blue-100 text-blue-800; }
-    .status-preparation { @apply bg-yellow-100 text-yellow-800; }
-    .status-prete { @apply bg-green-100 text-green-800; }
-    .status-livraison { @apply bg-purple-100 text-purple-800; }
-    .status-expidee { @apply bg-gray-100 text-gray-800; }
-    
-    /* Table row hover */
-    .table-row-modern {
-        @apply border-b border-gray-100 hover:bg-gray-50 transition-colors;
-    }
-    
-    /* Revenue trend indicator */
-    .trend-up { @apply text-green-600; }
-    .trend-down { @apply text-red-600; }
+
+    /* ── Product Row ────────────────────────────────────── */
+    .product-row { transition: all 0.15s ease; }
+    .product-row:hover { background: #f8fafc; transform: translateX(4px); }
+
+    /* ── Scrollbar in activity feed ──────────────────────── */
+    .activity-scroll::-webkit-scrollbar { width: 3px; }
+    .activity-scroll::-webkit-scrollbar-track { background: transparent; }
+    .activity-scroll::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 3px; }
+
+    /* ── Chart canvas responsive ─────────────────────────── */
+    .chart-container { position: relative; width: 100%; }
 </style>
 @endsection
 
 @section('content')
-<div class="voyager-modern">
-    <div class="page-content">
-        @include('voyager::alerts')
+@if (Auth::user()->role_id == 1 || Auth::user()->role_id == 3)
+@php
+    $hour = (int)date('H');
+    $greeting = $hour < 12 ? 'Bonjour' : ($hour < 18 ? 'Bon après-midi' : 'Bonsoir');
+@endphp
 
-        @if (Auth::user()->role_id == 1 || Auth::user()->role_id == 3)
-            @php
-                $hour = (int)date('H');
-                $greeting = $hour < 12 ? 'Bonjour' : ($hour < 18 ? 'Bon après-midi' : 'Bonsoir');
-            @endphp
-
-            <!-- Enhanced Welcome Header -->
-            <div class="mb-6 fade-in-up">
-                <div class="bg-gradient-to-r from-primary-600 via-purple-600 to-pink-600 rounded-xl shadow-lg p-6 text-white relative overflow-hidden">
-                    <div class="relative z-10">
-                        <h1 class="text-3xl font-bold mb-2">{{ $greeting }}, {{ Auth::user()->name }}! 👋</h1>
-                        <p class="text-primary-100 text-lg mb-4">Voici un aperçu complet de votre activité</p>
-                        <div class="flex flex-wrap gap-4 text-sm">
-                            <div class="flex items-center gap-2">
-                                <i class="voyager-calendar"></i>
-                                <span>{{ now()->translatedFormat('l, d F Y') }}</span>
-                </div>
-                            <div class="flex items-center gap-2">
-                                <i class="voyager-clock"></i>
-                                <span>{{ now()->format('H:i') }}</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full -mr-32 -mt-32"></div>
-                </div>
-                </div>
-
-            <!-- Enhanced Quick Stats Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 fade-in-up">
-                <!-- Today Revenue -->
-                <div class="stat-card stat-card-success group">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center group-hover:bg-green-200 transition-colors">
-                            <i class="voyager-dollar text-green-600 text-2xl"></i>
-                        </div>
-                        <span class="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded">Aujourd'hui</span>
-                    </div>
-                    <h3 class="text-3xl font-bold text-gray-900 mb-1">{{ number_format($todayRevenue ?? 0, 2) }} TND</h3>
-                    <p class="text-sm text-gray-600">Revenus du jour</p>
-                </div>
-
-                <!-- Week Revenue -->
-                <div class="stat-card stat-card-info group">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center group-hover:bg-blue-200 transition-colors">
-                            <i class="voyager-treasure text-blue-600 text-2xl"></i>
-                        </div>
-                        <span class="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded">Cette Semaine</span>
-                    </div>
-                    <h3 class="text-3xl font-bold text-gray-900 mb-1">{{ number_format($weekRevenue ?? 0, 2) }} TND</h3>
-                    <p class="text-sm text-gray-600">Revenus hebdomadaires</p>
-                </div>
-
-                <!-- Month Revenue with Growth -->
-                <div class="stat-card stat-card-primary group">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center group-hover:bg-primary-200 transition-colors">
-                            <i class="voyager-bar-chart text-primary-600 text-2xl"></i>
-                </div>
-                        <span class="text-xs font-medium text-primary-600 bg-primary-50 px-2 py-1 rounded">Ce Mois</span>
-                </div>
-                    <h3 class="text-3xl font-bold text-gray-900 mb-1">{{ number_format($monthRevenue ?? 0, 2) }} TND</h3>
-                    <div class="flex items-center gap-2 mt-2">
-                        @if(($revenueGrowth ?? 0) > 0)
-                            <span class="text-sm font-medium trend-up">
-                                <i class="voyager-arrow-up"></i> {{ abs($revenueGrowth) }}%
-                            </span>
-                        @elseif(($revenueGrowth ?? 0) < 0)
-                            <span class="text-sm font-medium trend-down">
-                                <i class="voyager-arrow-down"></i> {{ abs($revenueGrowth) }}%
-                            </span>
-                        @else
-                            <span class="text-sm text-gray-500">Stable</span>
-                        @endif
-                        <span class="text-xs text-gray-500">vs mois dernier</span>
-                </div>
-                </div>
-
-                <!-- Today Orders -->
-                <div class="stat-card stat-card-purple group">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center group-hover:bg-purple-200 transition-colors">
-                            <i class="voyager-file-text text-purple-600 text-2xl"></i>
+{{-- ════════════════════════════════════════════════════════
+     SECTION 1 — WELCOME HEADER
+     ════════════════════════════════════════════════════════ --}}
+<div class="mb-6 fade-in">
+    <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900 p-6 lg:p-8">
+        {{-- Decorative elements --}}
+        <div class="absolute inset-0 opacity-10">
+            <div class="absolute top-0 right-0 w-96 h-96 bg-blue-400 rounded-full blur-3xl -mr-48 -mt-48"></div>
+            <div class="absolute bottom-0 left-0 w-64 h-64 bg-indigo-400 rounded-full blur-3xl -ml-32 -mb-32"></div>
+        </div>
+        <div class="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div>
+                <h1 class="text-2xl lg:text-3xl font-bold text-white mb-1">{{ $greeting }}, {{ Auth::user()->name }}!</h1>
+                <p class="text-blue-200 text-sm lg:text-base">Voici un aperçu complet de votre activité commerciale</p>
             </div>
-                        <span class="text-xs font-medium text-purple-600 bg-purple-50 px-2 py-1 rounded">Aujourd'hui</span>
-                    </div>
-                    <h3 class="text-3xl font-bold text-gray-900 mb-1">{{ $todayOrders ?? 0 }}</h3>
-                    <p class="text-sm text-gray-600">Commandes du jour</p>
-                </div>
+            <div class="flex items-center gap-3">
+                <span class="inline-flex items-center gap-1.5 text-xs font-medium text-blue-200 bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-full">
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg>
+                    {{ now()->translatedFormat('l, d F Y') }}
+                </span>
+                <span class="inline-flex items-center gap-1.5 text-xs font-medium text-blue-200 bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-full">
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    {{ now()->format('H:i') }}
+                </span>
             </div>
+        </div>
+    </div>
+</div>
 
-            <!-- Daily Revenue Mini Chart -->
-            @if(isset($dailyRevenue) && count($dailyRevenue) > 0)
-            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6 fade-in-up">
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-lg font-semibold text-gray-900">Revenus des 7 Derniers Jours</h2>
-                    <span class="text-sm text-gray-500">Tendance hebdomadaire</span>
-                </div>
-                <div class="flex items-end justify-between gap-2 h-32">
-                    @php
-                        $maxRevenue = max(array_column($dailyRevenue, 'revenue'));
-                        $maxRevenue = $maxRevenue > 0 ? $maxRevenue : 1;
-                    @endphp
-                    @foreach($dailyRevenue as $day)
-                        <div class="flex-1 flex flex-col items-center gap-2 group">
-                            <div class="w-full flex items-end justify-center" style="height: 100px;">
-                                <div 
-                                    class="mini-chart-bar w-full rounded-t group-hover:opacity-80 transition-opacity"
-                                    style="height: {{ ($day['revenue'] / $maxRevenue) * 100 }}%"
-                                    title="{{ number_format($day['revenue'], 2) }} TND"
-                                ></div>
-                            </div>
-                            <span class="text-xs font-medium text-gray-600">{{ $day['date'] }}</span>
-                            <span class="text-xs text-gray-500">{{ number_format($day['revenue'], 0) }} TND</span>
-                        </div>
-                    @endforeach
-                </div>
+{{-- ════════════════════════════════════════════════════════
+     SECTION 2 — KPI CARDS
+     ════════════════════════════════════════════════════════ --}}
+<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+    {{-- Today Revenue --}}
+    <div class="kpi-card bg-white rounded-xl border border-gray-100 p-5 fade-in fade-in-d1">
+        <div class="flex items-center justify-between mb-3">
+            <div class="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center">
+                <svg class="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             </div>
+            <span class="text-[10px] font-semibold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Aujourd'hui</span>
+        </div>
+        <p class="text-2xl font-bold text-gray-900 mb-0.5">{{ number_format($todayRevenue ?? 0, 2) }} <span class="text-sm font-medium text-gray-400">TND</span></p>
+        <p class="text-xs text-gray-500">Revenus du jour</p>
+    </div>
+
+    {{-- Week Revenue --}}
+    <div class="kpi-card bg-white rounded-xl border border-gray-100 p-5 fade-in fade-in-d2">
+        <div class="flex items-center justify-between mb-3">
+            <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
+                <svg class="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z"/></svg>
+            </div>
+            <span class="text-[10px] font-semibold uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">Semaine</span>
+        </div>
+        <p class="text-2xl font-bold text-gray-900 mb-0.5">{{ number_format($weekRevenue ?? 0, 2) }} <span class="text-sm font-medium text-gray-400">TND</span></p>
+        <p class="text-xs text-gray-500">Revenus hebdomadaires</p>
+    </div>
+
+    {{-- Month Revenue with Growth --}}
+    <div class="kpi-card bg-white rounded-xl border border-gray-100 p-5 fade-in fade-in-d3">
+        <div class="flex items-center justify-between mb-3">
+            <div class="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center">
+                <svg class="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/></svg>
+            </div>
+            @if(($revenueGrowth ?? 0) > 0)
+                <span class="inline-flex items-center gap-0.5 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25"/></svg>
+                    +{{ abs($revenueGrowth) }}%
+                </span>
+            @elseif(($revenueGrowth ?? 0) < 0)
+                <span class="inline-flex items-center gap-0.5 text-[10px] font-semibold text-red-700 bg-red-50 px-2 py-0.5 rounded-full">
+                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 4.5l15 15m0 0V8.25m0 11.25H8.25"/></svg>
+                    {{ $revenueGrowth }}%
+                </span>
+            @else
+                <span class="text-[10px] font-semibold text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full">Stable</span>
             @endif
+        </div>
+        <p class="text-2xl font-bold text-gray-900 mb-0.5">{{ number_format($monthRevenue ?? 0, 2) }} <span class="text-sm font-medium text-gray-400">TND</span></p>
+        <p class="text-xs text-gray-500">Ce mois vs {{ number_format($lastMonthRevenue ?? 0, 0) }} TND dernier</p>
+    </div>
 
-            <!-- Main Content Grid -->
-            <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
-                <!-- Left Column: Stats & Actions -->
-                <div class="xl:col-span-2 space-y-6">
-                    <!-- Action Buttons Grid -->
-                    <div class="fade-in-up">
-                        <h2 class="text-lg font-semibold text-gray-900 mb-4">Actions Rapides</h2>
-                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                            <a href="{{ route('voyager.ticket') }}" 
-                               class="flex items-center gap-3 p-4 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-green-200 transition-all duration-200 group">
-                                <div class="flex-shrink-0 w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center group-hover:bg-green-200 transition-colors">
-                                    <i class="voyager-file-text text-green-600 text-xl"></i>
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <p class="text-sm font-medium text-gray-900">Ajouter Ticket</p>
-                                    <p class="text-xs text-gray-500">Créer un nouveau ticket</p>
-                                </div>
-                                <i class="voyager-arrow-right text-gray-400 group-hover:text-green-600 transition-colors"></i>
-                            </a>
-
-                            <a href="{{ route('voyager.facture') }}" 
-                               class="flex items-center gap-3 p-4 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-blue-200 transition-all duration-200 group">
-                                <div class="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
-                                    <i class="voyager-receipt text-blue-600 text-xl"></i>
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <p class="text-sm font-medium text-gray-900">Ajouter BL</p>
-                                    <p class="text-xs text-gray-500">Bon de livraison</p>
-                                </div>
-                                <i class="voyager-arrow-right text-gray-400 group-hover:text-blue-600 transition-colors"></i>
-                            </a>
-
-                            <a href="{{ route('voyager.facture_tva') }}" 
-                               class="flex items-center gap-3 p-4 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-red-200 transition-all duration-200 group">
-                                <div class="flex-shrink-0 w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center group-hover:bg-red-200 transition-colors">
-                                    <i class="voyager-dollar text-red-600 text-xl"></i>
-                </div>
-                                <div class="flex-1 min-w-0">
-                                    <p class="text-sm font-medium text-gray-900">Facture TVA</p>
-                                    <p class="text-xs text-gray-500">Facture avec TVA</p>
-                </div>
-                                <i class="voyager-arrow-right text-gray-400 group-hover:text-red-600 transition-colors"></i>
-                            </a>
-           
-                            <a href="{{ route('voyager.clients.create') }}" 
-                               class="flex items-center gap-3 p-4 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-yellow-200 transition-all duration-200 group">
-                                <div class="flex-shrink-0 w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center group-hover:bg-yellow-200 transition-colors">
-                                    <i class="voyager-person text-yellow-600 text-xl"></i>
+    {{-- Today Orders --}}
+    <div class="kpi-card bg-white rounded-xl border border-gray-100 p-5 fade-in fade-in-d4">
+        <div class="flex items-center justify-between mb-3">
+            <div class="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center">
+                <svg class="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/></svg>
             </div>
-                                <div class="flex-1 min-w-0">
-                                    <p class="text-sm font-medium text-gray-900">Ajouter Client</p>
-                                    <p class="text-xs text-gray-500">Nouveau client</p>
-                                </div>
-                                <i class="voyager-arrow-right text-gray-400 group-hover:text-yellow-600 transition-colors"></i>
-                            </a>
+            @if(($pendingCommandes ?? 0) > 0)
+                <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-red-700 bg-red-50 px-2 py-0.5 rounded-full">
+                    <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+                    {{ $pendingCommandes }} en attente
+                </span>
+            @else
+                <span class="text-[10px] font-semibold uppercase tracking-wider text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Aujourd'hui</span>
+            @endif
+        </div>
+        <p class="text-2xl font-bold text-gray-900 mb-0.5">{{ $todayOrders ?? 0 }}</p>
+        <p class="text-xs text-gray-500">Commandes du jour</p>
+    </div>
+</div>
 
-                            <a href="{{ route('voyager.produits.create') }}" 
-                               class="flex items-center gap-3 p-4 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-amber-200 transition-all duration-200 group">
-                                <div class="flex-shrink-0 w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center group-hover:bg-amber-200 transition-colors">
-                                    <i class="voyager-bag text-amber-600 text-xl"></i>
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <p class="text-sm font-medium text-gray-900">Ajouter Produit</p>
-                                    <p class="text-xs text-gray-500">Nouveau produit</p>
-                                </div>
-                                <i class="voyager-arrow-right text-gray-400 group-hover:text-amber-600 transition-colors"></i>
-                            </a>
+{{-- ════════════════════════════════════════════════════════
+     SECTION 3 — QUICK ACTIONS BAR
+     ════════════════════════════════════════════════════════ --}}
+<div class="mb-6 fade-in fade-in-d2">
+    <div class="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+        <a href="{{ route('admin.ticket') }}" class="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700 transition-all whitespace-nowrap group">
+            <svg class="w-4 h-4 text-gray-400 group-hover:text-emerald-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z"/></svg>
+            Ticket
+        </a>
+        <a href="{{ route('admin.facture') }}" class="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-all whitespace-nowrap group">
+            <svg class="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+            Bon de Livraison
+        </a>
+        <a href="{{ route('admin.facture_tva') }}" class="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-red-50 hover:border-red-200 hover:text-red-700 transition-all whitespace-nowrap group">
+            <svg class="w-4 h-4 text-gray-400 group-hover:text-red-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z"/></svg>
+            Facture TVA
+        </a>
+        <a href="{{ route('admin.quotations') }}" class="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-violet-50 hover:border-violet-200 hover:text-violet-700 transition-all whitespace-nowrap group">
+            <svg class="w-4 h-4 text-gray-400 group-hover:text-violet-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z"/></svg>
+            Devis
+        </a>
+        <a href="{{ route('admin.commande') }}" class="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-amber-50 hover:border-amber-200 hover:text-amber-700 transition-all whitespace-nowrap group">
+            <svg class="w-4 h-4 text-gray-400 group-hover:text-amber-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/></svg>
+            Commandes
+        </a>
+        <a href="{{ route('admin.pricelists.create') }}" class="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-teal-50 hover:border-teal-200 hover:text-teal-700 transition-all whitespace-nowrap group">
+            <svg class="w-4 h-4 text-gray-400 group-hover:text-teal-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z"/></svg>
+            Price List
+        </a>
+        <a href="{{ route('admin.statistic') }}" class="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700 transition-all whitespace-nowrap group">
+            <svg class="w-4 h-4 text-gray-400 group-hover:text-indigo-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/></svg>
+            Statistiques
+        </a>
+    </div>
+</div>
 
-                            <a href="{{ route('voyager.articles.create') }}" 
-                               class="flex items-center gap-3 p-4 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-emerald-200 transition-all duration-200 group">
-                                <div class="flex-shrink-0 w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center group-hover:bg-emerald-200 transition-colors">
-                                    <i class="voyager-news text-emerald-600 text-xl"></i>
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <p class="text-sm font-medium text-gray-900">Ajouter Blog</p>
-                                    <p class="text-xs text-gray-500">Nouvel article</p>
-                                </div>
-                                <i class="voyager-arrow-right text-gray-400 group-hover:text-emerald-600 transition-colors"></i>
-                            </a>
-                        </div>
-                    </div>
-
-                    <!-- Search Form -->
-                    <form method="POST" action="{{ route('voyager.historique') }}" class="fade-in-up">
-                        @csrf
-                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                            <label class="block text-sm font-semibold text-gray-700 mb-3">
-                                <i class="voyager-search"></i> Chercher l'historique de votre Client
-                            </label>
-                            <div class="flex flex-col md:flex-row gap-3">
-                                <input 
-                                    type="number" 
-                                    min="20000001" 
-                                    max="99999999" 
-                                    name="tel" 
-                                    placeholder="Numéro de téléphone (ex: 20123456)" 
-                                    required
-                                    class="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200"
-                                >
-                                <button 
-                                    type="submit" 
-                                    class="w-full md:w-auto px-6 py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-all duration-200 flex items-center justify-center gap-2"
-                                >
-                                    <i class="voyager-search"></i>
-                                    <span>Chercher</span>
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-
-                    <!-- Main Statistics Cards -->
-                    <div class="fade-in-up">
-                        <h2 class="text-lg font-semibold text-gray-900 mb-4">Statistiques Principales</h2>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            @php
-                                $new_commandes = App\Commande::where('etat', 'nouvelle_commande')->count();
-                                $prep_commandes = App\Commande::where('etat', 'prete')->count();
-                    $clients = App\Client::all();
-                    $produits = App\Product::all();
-                @endphp
-
-                            <a href="{{ route('voyager.commandes.index') }}" 
-                               class="stat-card stat-card-primary group">
-                                <div class="flex items-center justify-between">
-                                    <div class="flex-1">
-                                        <p class="text-sm font-medium text-gray-600 mb-1">Nouvelle Commandes</p>
-                                        <h3 class="text-3xl font-bold text-gray-900 mb-2">{{ $new_commandes }}</h3>
-                                        @if(($pendingCommandes ?? 0) > 0)
-                                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                                {{ $pendingCommandes }} en attente
-                                            </span>
-                                        @endif
-                                    </div>
-                                    <div class="w-16 h-16 bg-primary-100 rounded-xl flex items-center justify-center group-hover:bg-primary-200 transition-colors">
-                                        <i class="voyager-file-text text-primary-600 text-3xl"></i>
-                                    </div>
-                                </div>
-                                <div class="mt-4 pt-4 border-t border-gray-100">
-                                    <span class="text-xs text-gray-500 group-hover:text-primary-600 transition-colors">
-                                        Voir toutes les commandes <i class="voyager-arrow-right"></i>
-                                    </span>
-                                </div>
-                            </a>
-
-                            <a href="{{ route('voyager.clients.index') }}" 
-                               class="stat-card stat-card-success group">
-                                <div class="flex items-center justify-between">
-                                    <div class="flex-1">
-                                        <p class="text-sm font-medium text-gray-600 mb-1">Total Clients</p>
-                                        <h3 class="text-3xl font-bold text-gray-900 mb-2">{{ $totalClients ?? $clients->count() }}</h3>
-                                        @if(isset($recentClients) && $recentClients->count() > 0)
-                                            <span class="text-xs text-gray-500">
-                                                {{ $recentClients->where('created_at', '>=', now()->startOfDay())->count() }} nouveaux aujourd'hui
-                                            </span>
-                                        @endif
-                                    </div>
-                                    <div class="w-16 h-16 bg-green-100 rounded-xl flex items-center justify-center group-hover:bg-green-200 transition-colors">
-                                        <i class="voyager-group text-green-600 text-3xl"></i>
-                                    </div>
-                                </div>
-                                <div class="mt-4 pt-4 border-t border-gray-100">
-                                    <span class="text-xs text-gray-500 group-hover:text-green-600 transition-colors">
-                                        Voir tous les clients <i class="voyager-arrow-right"></i>
-                                    </span>
-                                </div>
-                            </a>
-
-                            <a href="{{ route('voyager.produits.index') }}" 
-                               class="stat-card stat-card-info group">
-                                <div class="flex items-center justify-between">
-                                    <div class="flex-1">
-                                        <p class="text-sm font-medium text-gray-600 mb-1">Total Produits</p>
-                                        <h3 class="text-3xl font-bold text-gray-900 mb-2">{{ $totalProducts ?? $produits->count() }}</h3>
-                                        <span class="text-xs text-gray-500">En catalogue</span>
-                        </div>
-                                    <div class="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center group-hover:bg-blue-200 transition-colors">
-                                        <i class="voyager-archive text-blue-600 text-3xl"></i>
-                    </div>
+{{-- ════════════════════════════════════════════════════════
+     SECTION 4 — ORDER STATUS PIPELINE
+     ════════════════════════════════════════════════════════ --}}
+@if(isset($orderStatuses))
+<div class="mb-6 fade-in fade-in-d3">
+    <div class="bg-white rounded-xl border border-gray-100 p-5">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-sm font-semibold text-gray-900">Pipeline des Commandes</h2>
+            <a href="{{ route('admin.commande') }}" class="text-xs font-medium text-primary-600 hover:text-primary-700 transition-colors">
+                Voir tout →
+            </a>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            @php
+                $statuses = [
+                    ['key' => 'nouvelle', 'label' => 'Nouvelle', 'color' => 'blue', 'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/>'],
+                    ['key' => 'preparation', 'label' => 'Préparation', 'color' => 'amber', 'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182"/>'],
+                    ['key' => 'prete', 'label' => 'Prête', 'color' => 'green', 'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>'],
+                    ['key' => 'livraison', 'label' => 'Livraison', 'color' => 'violet', 'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.122-.504 1.089-1.124a25.85 25.85 0 00-4.573-12.627 1.125 1.125 0 00-.924-.492H14.25M8.25 18.75V6.375c0-.621.504-1.125 1.125-1.125h3.5"/>'],
+                    ['key' => 'expediee', 'label' => 'Expédiée', 'color' => 'slate', 'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3l3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/>'],
+                    ['key' => 'annulee', 'label' => 'Annulée', 'color' => 'red', 'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>'],
+                ];
+            @endphp
+            @foreach($statuses as $s)
+                <div class="pipeline-step text-center p-3 bg-{{ $s['color'] }}-50/60 rounded-lg border border-{{ $s['color'] }}-100/50">
+                    <svg class="w-5 h-5 text-{{ $s['color'] }}-500 mx-auto mb-1.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">{!! $s['icon'] !!}</svg>
+                    <div class="text-xl font-bold text-{{ $s['color'] }}-700">{{ $orderStatuses[$s['key']] ?? 0 }}</div>
+                    <div class="text-[10px] font-medium text-{{ $s['color'] }}-600 mt-0.5">{{ $s['label'] }}</div>
                 </div>
-                                <div class="mt-4 pt-4 border-t border-gray-100">
-                                    <span class="text-xs text-gray-500 group-hover:text-blue-600 transition-colors">
-                                        Voir tous les produits <i class="voyager-arrow-right"></i>
-                                    </span>
-                                </div>
-                            </a>
+            @endforeach
+        </div>
+    </div>
+</div>
+@endif
 
-                            <div class="stat-card stat-card-warning">
-                                <div class="flex items-center justify-between">
-                                    <div class="flex-1">
-                                        <p class="text-sm font-medium text-gray-600 mb-1">En Préparation</p>
-                                        <h3 class="text-3xl font-bold text-gray-900 mb-2">{{ $prep_commandes }}</h3>
-                                        <span class="text-xs text-gray-500">Commandes prêtes</span>
-                        </div>
-                                    <div class="w-16 h-16 bg-yellow-100 rounded-xl flex items-center justify-center">
-                                        <i class="voyager-clock text-yellow-600 text-3xl"></i>
-                    </div>
-                </div>
-                        </div>
-                    </div>
-                </div>
-
-                    <!-- Order Status Breakdown -->
-                    @if(isset($orderStatuses))
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 fade-in-up">
-                        <h2 class="text-lg font-semibold text-gray-900 mb-4">Répartition des Commandes</h2>
-                        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-                            <div class="text-center p-4 bg-blue-50 rounded-lg">
-                                <div class="text-2xl font-bold text-blue-600 mb-1">{{ $orderStatuses['nouvelle'] ?? 0 }}</div>
-                                <div class="text-xs text-blue-700 font-medium">Nouvelle</div>
+{{-- ════════════════════════════════════════════════════════
+     SECTION 5 — CHARTS ROW (Line Chart + Donut Chart)
+     ════════════════════════════════════════════════════════ --}}
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
+    {{-- Revenue Line Chart (2 cols) --}}
+    <div class="xl:col-span-2 bg-white rounded-xl border border-gray-100 p-5 fade-in fade-in-d2">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h2 class="text-sm font-semibold text-gray-900">Revenus — 7 Derniers Jours</h2>
+                <p class="text-xs text-gray-500 mt-0.5">Tendance hebdomadaire des ventes</p>
             </div>
-                            <div class="text-center p-4 bg-yellow-50 rounded-lg">
-                                <div class="text-2xl font-bold text-yellow-600 mb-1">{{ $orderStatuses['preparation'] ?? 0 }}</div>
-                                <div class="text-xs text-yellow-700 font-medium">Préparation</div>
-                            </div>
-                            <div class="text-center p-4 bg-green-50 rounded-lg">
-                                <div class="text-2xl font-bold text-green-600 mb-1">{{ $orderStatuses['prete'] ?? 0 }}</div>
-                                <div class="text-xs text-green-700 font-medium">Prête</div>
-                            </div>
-                            <div class="text-center p-4 bg-purple-50 rounded-lg">
-                                <div class="text-2xl font-bold text-purple-600 mb-1">{{ $orderStatuses['livraison'] ?? 0 }}</div>
-                                <div class="text-xs text-purple-700 font-medium">Livraison</div>
-                            </div>
-                            <div class="text-center p-4 bg-gray-50 rounded-lg">
-                                <div class="text-2xl font-bold text-gray-600 mb-1">{{ $orderStatuses['expidee'] ?? 0 }}</div>
-                                <div class="text-xs text-gray-700 font-medium">Expédiée</div>
-                            </div>
-                        </div>
-                    </div>
-                    @endif
+            @php
+                $revenueValues = isset($dailyRevenue) ? array_column($dailyRevenue, 'revenue') : [];
+                $weekTotal = array_sum($revenueValues);
+            @endphp
+            <span class="text-lg font-bold text-gray-900">{{ number_format($weekTotal, 0) }} <span class="text-xs font-medium text-gray-400">TND</span></span>
+        </div>
+        <div class="chart-container" style="height: 260px;">
+            <canvas id="revenueLineChart"></canvas>
+        </div>
+    </div>
 
-                    <!-- Top Products Widget -->
-                    @if(isset($topProducts) && count($topProducts) > 0)
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 fade-in-up">
-                        <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-lg font-semibold text-gray-900">Top Produits (30 derniers jours)</h2>
-                            <a href="{{ route('voyager.produits.index') }}" class="text-sm text-primary-600 hover:text-primary-700">
-                                Voir tout <i class="voyager-arrow-right"></i>
-                            </a>
-                </div>
-                        <div class="space-y-3">
-                            @foreach($topProducts as $index => $product)
-                                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                                    <div class="flex items-center gap-3 flex-1">
-                                        <div class="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center font-bold text-primary-600">
-                                            {{ $index + 1 }}
-                                        </div>
-                                        <div class="flex-1 min-w-0">
-                                            <p class="text-sm font-medium text-gray-900 truncate">{{ $product['name'] ?? 'Produit' }}</p>
-                                            <p class="text-xs text-gray-500">{{ number_format($product['quantity'] ?? 0, 0) }} unités vendues</p>
-                                        </div>
-                                    </div>
-                                    <div class="text-right">
-                                        <p class="text-sm font-bold text-gray-900">{{ number_format($product['revenue'] ?? 0, 2) }} TND</p>
-                                        <p class="text-xs text-gray-500">Revenus</p>
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
+    {{-- Revenue Donut Chart (1 col) --}}
+    @if(isset($revenueBySource))
+    <div class="bg-white rounded-xl border border-gray-100 p-5 fade-in fade-in-d3">
+        <div class="mb-4">
+            <h2 class="text-sm font-semibold text-gray-900">Revenus par Source</h2>
+            <p class="text-xs text-gray-500 mt-0.5">Répartition ce mois</p>
+        </div>
+        <div class="chart-container flex items-center justify-center" style="height: 180px;">
+            <canvas id="revenueDonutChart"></canvas>
+        </div>
+        {{-- Legend --}}
+        <div class="mt-4 space-y-2">
+            @php
+                $sourceColors = [
+                    'factures' => ['label' => 'Bon de Livraison', 'dot' => 'bg-blue-500'],
+                    'factures_tva' => ['label' => 'Factures TVA', 'dot' => 'bg-red-500'],
+                    'tickets' => ['label' => 'Tickets', 'dot' => 'bg-emerald-500'],
+                    'commandes' => ['label' => 'Commandes', 'dot' => 'bg-violet-500'],
+                ];
+                $totalSource = array_sum($revenueBySource);
+                $totalSource = $totalSource > 0 ? $totalSource : 1;
+            @endphp
+            @foreach($sourceColors as $key => $meta)
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full {{ $meta['dot'] }}"></span>
+                        <span class="text-xs text-gray-600">{{ $meta['label'] }}</span>
                     </div>
-                    @endif
-
-                    <!-- Recent Orders Table -->
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 fade-in-up">
-                        <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-lg font-semibold text-gray-900">Commandes Récentes</h2>
-                            <a href="{{ route('voyager.commandes.index') }}" class="text-sm text-primary-600 hover:text-primary-700">
-                                Voir toutes <i class="voyager-arrow-right"></i>
-                            </a>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full">
-                                <thead>
-                                    <tr class="border-b border-gray-200">
-                                        <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase">ID</th>
-                                        <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase">Client</th>
-                                        <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase">Montant</th>
-                                        <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase">État</th>
-                                        <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase">Date</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @if(isset($recentCommandes) && $recentCommandes->count() > 0)
-                                        @foreach($recentCommandes->take(8) as $commande)
-                                            <tr class="table-row-modern">
-                                                <td class="py-3 px-4">
-                                                    <a href="{{ route('voyager.commandes.show', $commande->id) }}" class="text-sm font-medium text-primary-600 hover:text-primary-700">
-                                                        #{{ $commande->id }}
-                                                    </a>
-                                                </td>
-                                                <td class="py-3 px-4">
-                                                    <p class="text-sm text-gray-900">
-                                                        {{ ($commande->nom ?? '') . ' ' . ($commande->prenom ?? '') ?: 'N/A' }}
-                                                    </p>
-                                                    @if($commande->phone)
-                                                        <p class="text-xs text-gray-500">{{ $commande->phone }}</p>
-                                                    @endif
-                                                </td>
-                                                <td class="py-3 px-4">
-                                                    <p class="text-sm font-semibold text-gray-900">{{ number_format($commande->prix_ttc ?? 0, 2) }} TND</p>
-                                                </td>
-                                                <td class="py-3 px-4">
-                                                    @php
-                                                        $statusMap = [
-                                                            'nouvelle_commande' => ['class' => 'status-nouvelle', 'label' => 'Nouvelle'],
-                                                            'en_cours_de_preparation' => ['class' => 'status-preparation', 'label' => 'Préparation'],
-                                                            'prete' => ['class' => 'status-prete', 'label' => 'Prête'],
-                                                            'en_cours_de_livraison' => ['class' => 'status-livraison', 'label' => 'Livraison'],
-                                                            'expidee' => ['class' => 'status-expidee', 'label' => 'Expédiée'],
-                                                        ];
-                                                        $status = $statusMap[$commande->etat ?? 'nouvelle_commande'] ?? $statusMap['nouvelle_commande'];
-                                                    @endphp
-                                                    <span class="status-badge {{ $status['class'] }}">
-                                                        {{ $status['label'] }}
-                                                    </span>
-                                                </td>
-                                                <td class="py-3 px-4">
-                                                    <p class="text-sm text-gray-600">{{ $commande->created_at->format('d/m/Y') }}</p>
-                                                    <p class="text-xs text-gray-500">{{ $commande->created_at->format('H:i') }}</p>
-                                                </td>
-                                            </tr>
-                                        @endforeach
-                                    @else
-                                        <tr>
-                                            <td colspan="5" class="py-8 text-center text-gray-500">
-                                                <i class="voyager-info-circled text-3xl mb-2 block"></i>
-                                                <p>Aucune commande récente</p>
-                                            </td>
-                                        </tr>
-                                    @endif
-                                </tbody>
-                            </table>
-                        </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-semibold text-gray-900">{{ number_format($revenueBySource[$key] ?? 0, 0) }}</span>
+                        <span class="text-[10px] text-gray-400">{{ round((($revenueBySource[$key] ?? 0) / $totalSource) * 100) }}%</span>
                     </div>
                 </div>
-
-                <!-- Right Sidebar -->
-                <div class="space-y-6">
-                    <!-- Recent Activity -->
-                    <div class="fade-in-up">
-                        <h2 class="text-lg font-semibold text-gray-900 mb-4">Activité Récente</h2>
-                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-                            <div class="space-y-3 max-h-[600px] overflow-y-auto">
-                                @if(isset($recentCommandes) && $recentCommandes->count() > 0)
-                                    @foreach($recentCommandes->take(5) as $commande)
-                                        <div class="activity-item">
-                                            <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                                <i class="voyager-file-text text-blue-600"></i>
-                                            </div>
-                                            <div class="flex-1 min-w-0">
-                                                <p class="text-sm font-medium text-gray-900 truncate">Nouvelle Commande #{{ $commande->id }}</p>
-                                                <p class="text-xs text-gray-500">{{ $commande->created_at->diffForHumans() }}</p>
-                                            </div>
-                                        </div>
-                                    @endforeach
-                                @endif
-                                
-                                @if(isset($recentFactures) && $recentFactures->count() > 0)
-                                    @foreach($recentFactures->take(3) as $facture)
-                                        <div class="activity-item">
-                                            <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                                <i class="voyager-receipt text-green-600"></i>
-                                </div>
-                                            <div class="flex-1 min-w-0">
-                                                <p class="text-sm font-medium text-gray-900 truncate">Facture #{{ $facture->id }}</p>
-                                                <p class="text-xs text-gray-500">{{ $facture->created_at->diffForHumans() }}</p>
-                                            </div>
-                                        </div>
-                                    @endforeach
-                                @endif
-                                
-                                @if(isset($recentClients) && $recentClients->count() > 0)
-                                    @foreach($recentClients->take(3) as $client)
-                                        <div class="activity-item">
-                                            <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                                <i class="voyager-person text-purple-600"></i>
-                            </div>
-                                            <div class="flex-1 min-w-0">
-                                                <p class="text-sm font-medium text-gray-900 truncate">{{ $client->nom ?? 'Nouveau Client' }}</p>
-                                                <p class="text-xs text-gray-500">{{ $client->created_at->diffForHumans() }}</p>
-                            </div>
-                            </div>
-                                    @endforeach
-                                @endif
-                                
-                                @if((!isset($recentCommandes) || $recentCommandes->count() == 0) && 
-                                    (!isset($recentFactures) || $recentFactures->count() == 0) &&
-                                    (!isset($recentClients) || $recentClients->count() == 0))
-                                    <div class="text-center py-8 text-gray-500">
-                                        <i class="voyager-info-circled text-4xl mb-2"></i>
-                                        <p class="text-sm">Aucune activité récente</p>
-                            </div>
-                                @endif
-                            </div>
-                        </div>
-                </div>
-
-                    <!-- Revenue by Source -->
-                    @if(isset($revenueBySource))
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 fade-in-up">
-                        <h2 class="text-lg font-semibold text-gray-900 mb-4">Revenus par Source (Mois)</h2>
-                        <div class="space-y-3">
-                            @php
-                                $totalSource = array_sum($revenueBySource);
-                                $totalSource = $totalSource > 0 ? $totalSource : 1;
-                            @endphp
-                            <div>
-                                <div class="flex items-center justify-between mb-1">
-                                    <span class="text-sm font-medium text-gray-700">Bon de Livraison</span>
-                                    <span class="text-sm font-bold text-gray-900">{{ number_format($revenueBySource['factures'] ?? 0, 2) }} TND</span>
-                                </div>
-                                <div class="w-full bg-gray-200 rounded-full h-2">
-                                    <div class="bg-blue-600 h-2 rounded-full" style="width: {{ (($revenueBySource['factures'] ?? 0) / $totalSource) * 100 }}%"></div>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="flex items-center justify-between mb-1">
-                                    <span class="text-sm font-medium text-gray-700">Factures TVA</span>
-                                    <span class="text-sm font-bold text-gray-900">{{ number_format($revenueBySource['factures_tva'] ?? 0, 2) }} TND</span>
-                                </div>
-                                <div class="w-full bg-gray-200 rounded-full h-2">
-                                    <div class="bg-red-600 h-2 rounded-full" style="width: {{ (($revenueBySource['factures_tva'] ?? 0) / $totalSource) * 100 }}%"></div>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="flex items-center justify-between mb-1">
-                                    <span class="text-sm font-medium text-gray-700">Tickets</span>
-                                    <span class="text-sm font-bold text-gray-900">{{ number_format($revenueBySource['tickets'] ?? 0, 2) }} TND</span>
-                                </div>
-                                <div class="w-full bg-gray-200 rounded-full h-2">
-                                    <div class="bg-green-600 h-2 rounded-full" style="width: {{ (($revenueBySource['tickets'] ?? 0) / $totalSource) * 100 }}%"></div>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="flex items-center justify-between mb-1">
-                                    <span class="text-sm font-medium text-gray-700">Commandes</span>
-                                    <span class="text-sm font-bold text-gray-900">{{ number_format($revenueBySource['commandes'] ?? 0, 2) }} TND</span>
-                                </div>
-                                <div class="w-full bg-gray-200 rounded-full h-2">
-                                    <div class="bg-purple-600 h-2 rounded-full" style="width: {{ (($revenueBySource['commandes'] ?? 0) / $totalSource) * 100 }}%"></div>
-                                </div>
-                            </div>
+            @endforeach
         </div>
     </div>
     @endif
+</div>
 
-                    <!-- Quick Stats Summary -->
-                    <div class="bg-gradient-to-br from-primary-50 to-purple-50 rounded-xl border border-primary-100 p-5 fade-in-up">
-                        <h2 class="text-lg font-semibold text-gray-900 mb-4">Résumé Global</h2>
-                        <div class="space-y-3">
-                            <div class="flex items-center justify-between">
-                                <span class="text-sm text-gray-600">Total Factures</span>
-                                <span class="text-sm font-bold text-gray-900">{{ $totalFactures ?? 0 }}</span>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <span class="text-sm text-gray-600">Total Tickets</span>
-                                <span class="text-sm font-bold text-gray-900">{{ $totalTickets ?? 0 }}</span>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <span class="text-sm text-gray-600">Total Commandes</span>
-                                <span class="text-sm font-bold text-gray-900">{{ $totalCommandes ?? 0 }}</span>
-                            </div>
-                            <div class="pt-3 border-t border-primary-200">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-sm font-semibold text-gray-900">Revenus Total (Mois)</span>
-                                    <span class="text-lg font-bold text-primary-600">{{ number_format($monthRevenue ?? 0, 2) }} TND</span>
-                                </div>
-                            </div>
+{{-- ════════════════════════════════════════════════════════
+     SECTION 6 — THREE-COLUMN: Top Products + Recent Orders + Activity
+     ════════════════════════════════════════════════════════ --}}
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
+
+    {{-- Top Products --}}
+    <div class="bg-white rounded-xl border border-gray-100 p-5 fade-in fade-in-d2">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-sm font-semibold text-gray-900">Top Produits</h2>
+            <span class="text-[10px] font-medium text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full">30 jours</span>
+        </div>
+        @if(isset($topProducts) && count($topProducts) > 0)
+            <div class="space-y-2">
+                @foreach($topProducts as $index => $product)
+                    <div class="product-row flex items-center gap-3 p-2.5 rounded-lg cursor-default">
+                        {{-- Rank Badge --}}
+                        @php
+                            $rankColors = ['bg-amber-100 text-amber-700', 'bg-gray-100 text-gray-600', 'bg-orange-100 text-orange-700'];
+                            $rankColor = $rankColors[$index] ?? 'bg-gray-50 text-gray-500';
+                        @endphp
+                        <div class="w-7 h-7 rounded-md {{ $rankColor }} flex items-center justify-center text-xs font-bold flex-shrink-0">
+                            {{ $index + 1 }}
+                        </div>
+                        {{-- Product Info --}}
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900 truncate">{{ $product['name'] ?? 'Produit' }}</p>
+                            <p class="text-[11px] text-gray-500">{{ number_format($product['quantity'] ?? 0, 0) }} vendus</p>
+                        </div>
+                        {{-- Revenue --}}
+                        <div class="text-right flex-shrink-0">
+                            <p class="text-sm font-semibold text-gray-900">{{ number_format($product['revenue'] ?? 0, 0) }}</p>
+                            <p class="text-[10px] text-gray-400">TND</p>
                         </div>
                     </div>
-                </div>
+                @endforeach
             </div>
-
-            <!-- Statistics Chart Section -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 fade-in-up">
-                <div class="text-center mb-6">
-                    <h3 class="text-2xl font-bold text-gray-900">
-                        Espace Statistiques
-                        @if(@$chart1 != null)
-                            : {{ @$chart1->options['chart_title'] }}
-                        @endif
-                    </h3>
-                </div>
-
-                <form id="contact_form" action="{{ route('voyager.chart') }}" method="POST" class="space-y-6">
-                    @csrf
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div class="space-y-6">
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">Module : *</label>
-                                    <?php
-                                    use TCG\Voyager\Facades\Voyager;
-                                    use Illuminate\Support\Str;
-                                    use Illuminate\Support\Facades\DB;
-                                    use TCG\Voyager\Database\Schema\SchemaManager;
-                                    $dataTypes = Voyager::model('DataType')
-                                        ->select('id', 'name', 'slug', 'model_name', 'display_name_singular')
-                                        ->get()
-                                        ->keyBy('name')
-                                        ->toArray();
-                                    $specific_tables = array_map(function ($table) use ($dataTypes) {
-                                        $table = Str::replaceFirst(DB::getTablePrefix(), '', $table);
-                                    return (object) [
-                                            'prefix' => DB::getTablePrefix(),
-                                            'display_name_singular' => $dataTypes[$table]['display_name_singular'] ?? null,
-                                            'model_name' => $dataTypes[$table]['model_name'] ?? null,
-                                            'name' => $table,
-                                            'slug' => $dataTypes[$table]['slug'] ?? null,
-                                            'dataTypeId' => $dataTypes[$table]['id'] ?? null,
-                                        ];
-                                    }, SchemaManager::listTableNames());
-
-                                $hidden = ['migrations', 'data_rows', 'articles', 'brands', 'categs', 'clients', 
-                                          'commande_details', 'details_factures', 'details_tickets', 'tags', 'menus', 
-                                          'faqs', 'medias', 'sous_categories', 'services', 'newsletters', 'posts', 
-                                          'sous_categories', 'coordinates', 'contacts', 'messages', 'produits', 
-                                          'slides', 'roles', 'data_types', 'menu_items', 'password_resets', 
-                                          'permission_role', 'personal_access_tokens', 'settings', 'annonces', 
-                                          'pages', 'aromas'];
-                                ?>
-                                <select name="dropdown1" id="dropdown1" onChange="showitems()"
-                                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200">
-                                            @foreach ($specific_tables as $table)
-                                                @continue(in_array($table->name, $hidden))
-                                                @if (@$table->model_name)
-                                                    <option value="{{ $table->model_name }}"
-                                                        @if (@$chart1->options['chart_title'] == $table->display_name_singular) selected @endif>
-                                                {{ $table->display_name_singular }}
-                                            </option>
-                                                @endif
-                                            @endforeach
-                                        </select>
-                                    </div>
-
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">Sélectionner durée :</label>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <input type="date" name="date1" id="date1" 
-                                           class="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200">
-                                    <input type="date" name="date2" id="date2" 
-                                           class="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200">
-                                </div>
-                                    </div>
-
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-3">Type affichage :</label>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <label class="flex flex-col items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-primary-300 transition-all duration-200 has-[:checked]:border-primary-500 has-[:checked]:bg-primary-50">
-                                        <input type="radio" id="Rect_Chart" name="chart" value="bar" checked class="mb-2">
-                                        <img src="{{ voyager_asset('images/Rectangular-Chart.JPG') }}" alt="Histogramme" class="w-full h-auto rounded">
-                                        <span class="mt-2 text-sm font-medium text-gray-700">Histogramme</span>
-                                    </label>
-                                    <label class="flex flex-col items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-primary-300 transition-all duration-200 has-[:checked]:border-primary-500 has-[:checked]:bg-primary-50">
-                                        <input type="radio" id="Line_Chart" name="chart" value="line" class="mb-2">
-                                        <img src="{{ voyager_asset('images/Line-Chart.png') }}" alt="Linéaire" class="w-full h-auto rounded">
-                                        <span class="mt-2 text-sm font-medium text-gray-700">Linéaire</span>
-                                    </label>
-                                    </div>
-                                </div>
-
-                            <button type="submit" 
-                                    class="w-full px-6 py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-all duration-200">
-                                Exécuter
-                            </button>
-                                    </div>
-
-                        @if (@$chart1 != null)
-                        <div class="bg-gray-50 rounded-xl p-6">
-                                    {!! @$chart1->renderHtml() !!}
-                            </div>
-                        @endif
-                    </div>
-            </form>
+        @else
+            <div class="text-center py-10">
+                <svg class="w-10 h-10 text-gray-300 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/></svg>
+                <p class="text-xs text-gray-400">Aucune donnée disponible</p>
             </div>
         @endif
     </div>
+
+    {{-- Recent Orders Table --}}
+    <div class="bg-white rounded-xl border border-gray-100 p-5 fade-in fade-in-d3">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-sm font-semibold text-gray-900">Commandes Récentes</h2>
+            <a href="{{ route('admin.commande') }}" class="text-xs font-medium text-primary-600 hover:text-primary-700 transition-colors">Voir tout →</a>
+        </div>
+        <div class="space-y-2 max-h-[380px] overflow-y-auto activity-scroll">
+            @if(isset($recentCommandes) && $recentCommandes->count() > 0)
+                @foreach($recentCommandes->take(8) as $commande)
+                    @php
+                        $statusMap = [
+                            'nouvelle_commande' => ['bg' => 'bg-blue-100', 'text' => 'text-blue-700', 'label' => 'Nouvelle'],
+                            'en_cours_de_preparation' => ['bg' => 'bg-amber-100', 'text' => 'text-amber-700', 'label' => 'Prép.'],
+                            'prete' => ['bg' => 'bg-green-100', 'text' => 'text-green-700', 'label' => 'Prête'],
+                            'en_cours_de_livraison' => ['bg' => 'bg-violet-100', 'text' => 'text-violet-700', 'label' => 'Livr.'],
+                            'expidee' => ['bg' => 'bg-gray-100', 'text' => 'text-gray-600', 'label' => 'Expéd.'],
+                        ];
+                        $st = $statusMap[$commande->etat ?? 'nouvelle_commande'] ?? $statusMap['nouvelle_commande'];
+                    @endphp
+                    <div class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-gray-50 transition-colors">
+                        <div class="w-8 h-8 rounded-full bg-primary-50 flex items-center justify-center flex-shrink-0">
+                            <span class="text-xs font-bold text-primary-600">#{{ $commande->id }}</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900 truncate">{{ ($commande->nom ?? '') . ' ' . ($commande->prenom ?? '') ?: 'N/A' }}</p>
+                            <p class="text-[11px] text-gray-500">{{ $commande->created_at->format('d/m H:i') }} · {{ number_format($commande->prix_ttc ?? 0, 2) }} TND</p>
+                        </div>
+                        <span class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold {{ $st['bg'] }} {{ $st['text'] }}">{{ $st['label'] }}</span>
+                    </div>
+                @endforeach
+            @else
+                <div class="text-center py-10">
+                    <svg class="w-10 h-10 text-gray-300 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/></svg>
+                    <p class="text-xs text-gray-400">Aucune commande récente</p>
+                </div>
+            @endif
+        </div>
+    </div>
+
+    {{-- Activity Feed + Global Summary --}}
+    <div class="space-y-6">
+        {{-- Activity Feed --}}
+        <div class="bg-white rounded-xl border border-gray-100 p-5 fade-in fade-in-d4">
+            <h2 class="text-sm font-semibold text-gray-900 mb-3">Activité Récente</h2>
+            <div class="space-y-2 max-h-[220px] overflow-y-auto activity-scroll">
+                @php $hasActivity = false; @endphp
+                @if(isset($recentCommandes) && $recentCommandes->count() > 0)
+                    @php $hasActivity = true; @endphp
+                    @foreach($recentCommandes->take(3) as $commande)
+                        <div class="flex items-center gap-2.5 p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                            <div class="w-7 h-7 bg-blue-100 rounded-md flex items-center justify-center flex-shrink-0">
+                                <svg class="w-3.5 h-3.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/></svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-xs font-medium text-gray-900 truncate">Commande #{{ $commande->id }}</p>
+                                <p class="text-[10px] text-gray-500">{{ $commande->created_at->diffForHumans() }}</p>
+                            </div>
+                        </div>
+                    @endforeach
+                @endif
+                @if(isset($recentFactures) && $recentFactures->count() > 0)
+                    @php $hasActivity = true; @endphp
+                    @foreach($recentFactures->take(2) as $facture)
+                        <div class="flex items-center gap-2.5 p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                            <div class="w-7 h-7 bg-emerald-100 rounded-md flex items-center justify-center flex-shrink-0">
+                                <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-xs font-medium text-gray-900 truncate">Facture #{{ $facture->id }}</p>
+                                <p class="text-[10px] text-gray-500">{{ $facture->created_at->diffForHumans() }}</p>
+                            </div>
+                        </div>
+                    @endforeach
+                @endif
+                @if(isset($recentClients) && $recentClients->count() > 0)
+                    @php $hasActivity = true; @endphp
+                    @foreach($recentClients->take(2) as $client)
+                        <div class="flex items-center gap-2.5 p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                            <div class="w-7 h-7 bg-violet-100 rounded-md flex items-center justify-center flex-shrink-0">
+                                <svg class="w-3.5 h-3.5 text-violet-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-xs font-medium text-gray-900 truncate">{{ $client->nom ?? 'Nouveau Client' }}</p>
+                                <p class="text-[10px] text-gray-500">{{ $client->created_at->diffForHumans() }}</p>
+                            </div>
+                        </div>
+                    @endforeach
+                @endif
+                @if(!$hasActivity)
+                    <div class="text-center py-6">
+                        <p class="text-xs text-gray-400">Aucune activité récente</p>
+                    </div>
+                @endif
+            </div>
+        </div>
+
+        {{-- Global Summary --}}
+        <div class="bg-gradient-to-br from-slate-50 to-blue-50 rounded-xl border border-blue-100/50 p-5 fade-in fade-in-d4">
+            <h2 class="text-sm font-semibold text-gray-900 mb-3">Résumé Global</h2>
+            <div class="space-y-2.5">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-gray-600 flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/></svg>
+                        Clients
+                    </span>
+                    <span class="text-xs font-bold text-gray-900">{{ number_format($totalClients ?? 0) }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-gray-600 flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/></svg>
+                        Produits
+                    </span>
+                    <span class="text-xs font-bold text-gray-900">{{ number_format($totalProducts ?? 0) }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-gray-600 flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+                        Factures
+                    </span>
+                    <span class="text-xs font-bold text-gray-900">{{ number_format($totalFactures ?? 0) }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-gray-600 flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z"/></svg>
+                        Tickets
+                    </span>
+                    <span class="text-xs font-bold text-gray-900">{{ number_format($totalTickets ?? 0) }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-gray-600 flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/></svg>
+                        Commandes
+                    </span>
+                    <span class="text-xs font-bold text-gray-900">{{ number_format($totalCommandes ?? 0) }}</span>
+                </div>
+                <div class="pt-2 mt-1 border-t border-blue-200/50">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-gray-900">Total Mois</span>
+                        <span class="text-base font-bold text-primary-600">{{ number_format($monthRevenue ?? 0, 2) }} TND</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+{{-- ════════════════════════════════════════════════════════
+     SECTION 7 — CLIENT SEARCH
+     ════════════════════════════════════════════════════════ --}}
+<div class="mb-6 fade-in fade-in-d3">
+    <form method="POST" action="{{ route('admin.historique') }}">
+        @csrf
+        <div class="bg-white rounded-xl border border-gray-100 p-5">
+            <div class="flex flex-col sm:flex-row sm:items-end gap-3">
+                <div class="flex-1">
+                    <label class="block text-xs font-semibold text-gray-700 mb-1.5">Historique Client</label>
+                    <div class="relative">
+                        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
+                        <input
+                            type="number"
+                            min="20000001"
+                            max="99999999"
+                            name="tel"
+                            placeholder="Numéro de téléphone (ex: 20123456)"
+                            required
+                            class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:bg-white transition-all"
+                        >
+                    </div>
+                </div>
+                <button
+                    type="submit"
+                    class="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-all"
+                >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
+                    Chercher
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+{{-- ════════════════════════════════════════════════════════
+     SECTION 8 — ADVANCED STATISTICS FORM
+     ════════════════════════════════════════════════════════ --}}
+<div class="bg-white rounded-xl border border-gray-100 p-5 fade-in fade-in-d4">
+    <div class="flex items-center gap-2 mb-5">
+        <svg class="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/></svg>
+        <h2 class="text-sm font-semibold text-gray-900">Espace Statistiques Avancées</h2>
+    </div>
+    <form id="contact_form" action="{{ route('admin.chart') }}" method="POST">
+        @csrf
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1.5">Module</label>
+                    <select name="dropdown1" id="dropdown1"
+                            class="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:bg-white transition-all">
+                        <option value="App\Models\Commande">Commandes</option>
+                        <option value="App\Models\Facture">Factures</option>
+                        <option value="App\Models\FactureTva">Factures TVA</option>
+                        <option value="App\Models\Ticket">Tickets</option>
+                        <option value="App\Models\Quotation">Devis</option>
+                        <option value="App\Models\User">Utilisateurs</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1.5">Période</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <input type="date" name="date1" id="date1" class="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:bg-white transition-all">
+                        <input type="date" name="date2" id="date2" class="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:bg-white transition-all">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1.5">Type d'affichage</label>
+                    <div class="flex gap-3">
+                        <label class="flex-1 flex items-center gap-2 p-3 bg-gray-50 border border-gray-200 rounded-lg cursor-pointer hover:border-primary-300 has-[:checked]:border-primary-500 has-[:checked]:bg-primary-50 transition-all">
+                            <input type="radio" name="chart" value="bar" checked class="text-primary-600 focus:ring-primary-500">
+                            <span class="text-sm font-medium text-gray-700">📊 Histogramme</span>
+                        </label>
+                        <label class="flex-1 flex items-center gap-2 p-3 bg-gray-50 border border-gray-200 rounded-lg cursor-pointer hover:border-primary-300 has-[:checked]:border-primary-500 has-[:checked]:bg-primary-50 transition-all">
+                            <input type="radio" name="chart" value="line" class="text-primary-600 focus:ring-primary-500">
+                            <span class="text-sm font-medium text-gray-700">📈 Linéaire</span>
+                        </label>
+                    </div>
+                </div>
+                <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-lg text-sm font-semibold hover:bg-primary-700 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-all">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z"/></svg>
+                    Exécuter
+                </button>
+            </div>
+            @if (@$chart1 != null)
+            <div class="bg-gray-50 rounded-xl p-5 flex items-center justify-center">
+                {!! @$chart1->renderHtml() !!}
+            </div>
+            @else
+            <div class="bg-gray-50 rounded-xl p-5 flex items-center justify-center min-h-[200px]">
+                <div class="text-center">
+                    <svg class="w-12 h-12 text-gray-300 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/></svg>
+                    <p class="text-xs text-gray-400">Sélectionnez un module et une période puis cliquez Exécuter</p>
+                </div>
+            </div>
+            @endif
+        </div>
+    </form>
+</div>
+
+@endif
 @endsection
 
 @section('javascript')
-@if(file_exists(public_path('js/app.js')))
-<script src="{{ asset('js/app.js') }}"></script>
-@endif
-    @if (@$chart1 != null)
-        {!! @$chart1->renderChartJsLibrary() !!}
-        {!! @$chart1->renderJs() !!}
+{{-- Chart.js CDN --}}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // ── Revenue Line Chart ─────────────────────────────────────
+    @if(isset($dailyRevenue) && count($dailyRevenue) > 0)
+    const lineCtx = document.getElementById('revenueLineChart');
+    if (lineCtx) {
+        const lineGradient = lineCtx.getContext('2d').createLinearGradient(0, 0, 0, 260);
+        lineGradient.addColorStop(0, 'rgba(59, 130, 246, 0.15)');
+        lineGradient.addColorStop(1, 'rgba(59, 130, 246, 0.01)');
+
+        new Chart(lineCtx, {
+            type: 'line',
+            data: {
+                labels: {!! json_encode(array_column($dailyRevenue, 'date')) !!},
+                datasets: [{
+                    label: 'Revenus (TND)',
+                    data: {!! json_encode(array_column($dailyRevenue, 'revenue')) !!},
+                    borderColor: '#3b82f6',
+                    backgroundColor: lineGradient,
+                    borderWidth: 2.5,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#3b82f6',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    pointHoverBorderWidth: 3,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#1e293b',
+                        titleFont: { size: 12, weight: '600' },
+                        bodyFont: { size: 12 },
+                        padding: 10,
+                        cornerRadius: 8,
+                        displayColors: false,
+                        callbacks: {
+                            label: (ctx) => ctx.parsed.y.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + ' TND'
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { size: 11, weight: '500' }, color: '#94a3b8' },
+                        border: { display: false }
+                    },
+                    y: {
+                        grid: { color: '#f1f5f9', drawBorder: false },
+                        ticks: {
+                            font: { size: 11 },
+                            color: '#94a3b8',
+                            callback: (v) => v.toLocaleString('fr-FR') + ' TND',
+                            maxTicksLimit: 5,
+                        },
+                        border: { display: false },
+                        beginAtZero: true,
+                    }
+                }
+            }
+        });
+    }
     @endif
+
+    // ── Revenue Donut Chart ────────────────────────────────────
+    @if(isset($revenueBySource))
+    const donutCtx = document.getElementById('revenueDonutChart');
+    if (donutCtx) {
+        new Chart(donutCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Bon de Livraison', 'Factures TVA', 'Tickets', 'Commandes'],
+                datasets: [{
+                    data: [
+                        {{ $revenueBySource['factures'] ?? 0 }},
+                        {{ $revenueBySource['factures_tva'] ?? 0 }},
+                        {{ $revenueBySource['tickets'] ?? 0 }},
+                        {{ $revenueBySource['commandes'] ?? 0 }}
+                    ],
+                    backgroundColor: ['#3b82f6', '#ef4444', '#10b981', '#8b5cf6'],
+                    borderWidth: 0,
+                    hoverOffset: 6,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '72%',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#1e293b',
+                        titleFont: { size: 12, weight: '600' },
+                        bodyFont: { size: 12 },
+                        padding: 10,
+                        cornerRadius: 8,
+                        callbacks: {
+                            label: (ctx) => ctx.label + ': ' + ctx.parsed.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + ' TND'
+                        }
+                    }
+                }
+            }
+        });
+    }
+    @endif
+});
+</script>
+
+{{-- Legacy chart support --}}
+@if (@$chart1 != null)
+    {!! @$chart1->renderChartJsLibrary() !!}
+    {!! @$chart1->renderJs() !!}
+@endif
 @endsection

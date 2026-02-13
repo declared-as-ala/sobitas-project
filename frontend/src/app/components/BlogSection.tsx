@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
+import Image from 'next/image';
 import { motion } from 'motion/react';
 import { Calendar, ArrowRight } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
@@ -13,16 +14,22 @@ import {
   CarouselPrevious,
 } from '@/app/components/ui/carousel';
 import { getStorageUrl } from '@/services/api';
-import { SafeImage } from '@/app/components/SafeImage';
 import type { Article } from '@/types';
 
 interface BlogSectionProps {
   articles: Article[];
 }
 
-// Decode HTML entities — server-safe (no document.createElement to avoid hydration mismatch)
+// Decode HTML entities properly
 function decodeHtmlEntities(text: string): string {
   if (!text) return '';
+  // Use browser's built-in decoder
+  if (typeof window !== 'undefined') {
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = text;
+    return textarea.value;
+  }
+  // Fallback for server-side: decode common entities
   return text
     .replace(/&nbsp;/g, ' ')
     .replace(/&amp;/g, '&')
@@ -30,10 +37,10 @@ function decodeHtmlEntities(text: string): string {
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
-    .replace(/&rsquo;/g, "\u2019")
-    .replace(/&lsquo;/g, "\u2018")
-    .replace(/&rdquo;/g, "\u201D")
-    .replace(/&ldquo;/g, "\u201C")
+    .replace(/&rsquo;/g, "'")
+    .replace(/&lsquo;/g, "'")
+    .replace(/&rdquo;/g, '"')
+    .replace(/&ldquo;/g, '"')
     .replace(/&eacute;/g, 'é')
     .replace(/&Eacute;/g, 'É')
     .replace(/&egrave;/g, 'è')
@@ -139,9 +146,9 @@ export function BlogSection({ articles }: BlogSectionProps) {
                       className="relative block aspect-[4/3] overflow-hidden"
                       loadingMessage={`Chargement de ${article.designation_fr}...`}
                     >
-                      <SafeImage
-                        src={article.cover ? getStorageUrl(article.cover, article.updated_at || article.created_at) : '/assets/img/placeholder.webp'}
-                        alt={article.designation_fr || 'Article'}
+                      <Image
+                        src={article.cover ? getStorageUrl(article.cover) : '/assets/img/placeholder.webp'}
+                        alt={article.designation_fr}
                         fill
                         className="object-cover transition-transform duration-500 group-hover:scale-110"
                         sizes="(max-width: 768px) 100vw, 50vw"

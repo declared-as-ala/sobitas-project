@@ -1,9 +1,9 @@
-@extends('voyager::master')
+@extends('layouts.admin')
 
 @section('content')
     @php
-        $coordonnee = App\Coordinate::first();
-        $produits = App\Product::all();
+        $coordonnee = App\Models\Coordinate::first();
+        $produits = App\Models\Product::all();
         $max = 100;
     @endphp
     <script>
@@ -14,8 +14,8 @@
         <div class="analytics-container">
             <div class="Dashboard Dashboard--full">
                 <form role="form" class="form-edit-add" id="myform"
-                    @if (@$edit) action="{{ route('voyager.pricelist.update', @$pricelist->id) }}"
-                    @else action="{{ route('voyager.pricelist.store') }}" @endif
+                    @if (@$edit) action="{{ route('admin.pricelist.update', @$pricelist->id) }}"
+                    @else action="{{ route('admin.pricelist.store') }}" @endif
                     method="POST">
                     @if (@$edit)
                         {{ method_field('PUT') }}
@@ -40,7 +40,7 @@
                         <!-- Price List Header -->
                         <div class="row" style="margin-left: 3px;margin-bottom: 3%;">
                             <div class="col-md-5">
-                                <img src="{{ Voyager::image($coordonnee->logo_facture) }}" alt=""
+                                <img src="{{ asset('storage/' . $coordonnee->logo_facture) }}" alt=""
                                     style="height: 100px;">
                                 <h4>{{ $coordonnee->abbreviation }}</h4>
                                 <p> <span></span> {{ $coordonnee->phone_1 }} @if ($coordonnee->phone_2)

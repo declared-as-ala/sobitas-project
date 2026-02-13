@@ -1,59 +1,60 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Imports;
 
-use App\Client;
+use App\Models\Client;
 use Maatwebsite\Excel\Concerns\ToModel;
 
 class ClientsImport implements ToModel
 {
     /**
-    * @param array $row
-    *
-    * @return \Illuminate\Database\Eloquent\Model|null
-    */
+     * @param array $row
+     * @return \Illuminate\Database\Eloquent\Model|null
+     */
     public function model(array $row)
     {
+        $name = trim(($row[0] ?? '') . ' ' . ($row[1] ?? ''));
+        $phone = $this->reformatPhone($row[2] ?? '');
 
-
-
-        $name = @$row[0] .' ' .@$row[1];
-        $phone = $this->reform(@$row[2]);
-
-
-        if($name == ' '){
+        if ($name === '' || $name === ' ') {
             $name = 'Ahmed';
         }
-        if($phone != false){
-            $exist = Client::where('phone_1' , $phone)->first();
-            if(!$exist){
-                return new Client([
-                    //
-                    "name" => $name,
 
-                    "phone_1" => $phone,
-                ]);
-            }else{
-                return;
-            }
-
-        }else{
-            return;
+        if ($phone === false) {
+            return null;
         }
 
+        $exists = Client::where('phone_1', $phone)->exists();
+
+        if ($exists) {
+            return null;
+        }
+
+        return new Client([
+            'name' => $name,
+            'phone_1' => $phone,
+        ]);
     }
 
-    public function reform($tel){
+    /**
+     * Normalize phone number to +216XXXXXXXX format.
+     */
+    private function reformatPhone(string $tel): string|false
+    {
+        $tel = str_replace(' ', '', $tel);
 
-        $tel = str_replace(" " , "" , $tel);
-        if(strlen($tel) == 12 && $tel[0] == '+' && $tel[1] == '2' && $tel[2] == '1'  && $tel[3] == '6'){
+        if (strlen($tel) === 12 && str_starts_with($tel, '+216')) {
             return $tel;
-        }else  if(strlen($tel) == 11 &&  $tel[0] == '2' && $tel[1] == '1'  && $tel[2] == '6'){
-            $tel = '+'.$tel;
-            return $tel;
-        } else if(strlen($tel) == 8 ){
-            $tel = '+216'.$tel;
-            return $tel;
+        }
+
+        if (strlen($tel) === 11 && str_starts_with($tel, '216')) {
+            return '+' . $tel;
+        }
+
+        if (strlen($tel) === 8) {
+            return '+216' . $tel;
         }
 
         return false;

@@ -1,6 +1,6 @@
-@extends('voyager::master')
+@extends('layouts.admin')
 
-@section('page_title', __('voyager::generic.viewing') . ' ' . 'Historique')
+@section('page_title', 'Historique')
 
 @section('page_header')
     <div class="container-fluid row">
@@ -19,7 +19,7 @@
 
         </div>
         <div class="col-md-7">
-            <form method="POST" action="{{ route('voyager.historique') }}" class="card" style="padding: 20px ; margin-top : 10px">
+            <form method="POST" action="{{ route('admin.historique') }}" class="card" style="padding: 20px ; margin-top : 10px">
                 @csrf
                 <label style="color: #444"><b>Chercher l'historique de votre Client </b></label>
                 <div class="row">
@@ -54,8 +54,7 @@
 }
 </style>
     <div class="page-content browse container-fluid">
-        @include('voyager::alerts')
-        <div class="row">
+<div class="row">
             <div class="col-md-12">
                 <div class="panel panel-bordered">
                     <div class="panel-body">
@@ -81,7 +80,7 @@
                                         <th> Etat </th>
 
                                         <th class="actions text-right dt-not-orderable">
-                                            {{ __('voyager::generic.actions') }}</th>
+                                            Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -113,12 +112,12 @@
 
                                             <td class="no-sort no-click bread-actions">
 
-                                                <a href="{{ route('voyager.edit_commande', $commande->id) }}"
+                                                <a href="{{ route('admin.edit_commande', $commande->id) }}"
                                                     title="Editer" class="btn btn-warning" target="_blank">
                                                     <i class="voyager-edit"></i> <span
                                                         class="hidden-xs hidden-sm">Editer</span>
                                                 </a>
-                                                <a href="{{ route('voyager.imprimer_commande', $commande->id) }}"
+                                                <a href="{{ route('admin.imprimer_commande', $commande->id) }}"
                                                     title="Editer" class="btn btn-primary" target="_blank">
                                                     <i class="voyager-receipt"></i> <span
                                                         class="hidden-xs hidden-sm">Afficher</span>
@@ -144,7 +143,7 @@
                                         <th> Ville </th>
 
                                         <th class="actions text-right dt-not-orderable">
-                                            {{ __('voyager::generic.actions') }}</th>
+                                            Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -159,12 +158,12 @@
 
                                             <td class="no-sort no-click bread-actions">
 
-                                                <a href="{{ route('voyager.edit_ticket', $ticket->id) }}"
+                                                <a href="{{ route('admin.edit_ticket', $ticket->id) }}"
                                                     title="Editer" class="btn btn-warning" target="_blank">
                                                     <i class="voyager-edit"></i> <span
                                                         class="hidden-xs hidden-sm">Editer</span>
                                                 </a>
-                                                <a href="{{ route('voyager.imprimer_ticket',  $ticket->id) }}"
+                                                <a href="{{ route('admin.imprimer_ticket',  $ticket->id) }}"
                                                     title="Editer" class="btn btn-primary" target="_blank">
                                                     <i class="voyager-receipt"></i> <span
                                                         class="hidden-xs hidden-sm">Afficher</span>
@@ -190,7 +189,7 @@
                                         <th>Ville</th>
 
                                         <th class="actions text-right dt-not-orderable">
-                                            {{ __('voyager::generic.actions') }}</th>
+                                            Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -206,12 +205,12 @@
 
                                             <td class="no-sort no-click bread-actions">
 
-                                                <a href="{{ route('voyager.edit_facture_tva', ['id' => $facture->id]) }}"
+                                                <a href="{{ route('admin.edit_facture_tva', ['id' => $facture->id]) }}"
                                                     title="Editer" class="btn btn-warning" target="_blank">
                                                     <i class="voyager-edit"></i> <span
                                                         class="hidden-xs hidden-sm">Editer</span>
                                                 </a>
-                                                <a href="{{ route('voyager.imprimer_facture_tva', ['id' => $facture->id]) }}"
+                                                <a href="{{ route('admin.imprimer_facture_tva', ['id' => $facture->id]) }}"
                                                     title="Editer" class="btn btn-primary" target="_blank">
                                                     <i class="voyager-receipt"></i> <span
                                                         class="hidden-xs hidden-sm">Afficher</span>
@@ -237,7 +236,7 @@
 
 
                                         <th class="actions text-right dt-not-orderable">
-                                            {{ __('voyager::generic.actions') }}</th>
+                                            Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -253,12 +252,12 @@
 
                                             <td class="no-sort no-click bread-actions">
 
-                                                <a href="{{ route('voyager.edit_facture', ['id' => $facture->id]) }}"
+                                                <a href="{{ route('admin.edit_facture', ['id' => $facture->id]) }}"
                                                     title="Editer" class="btn btn-warning" target="_blank">
                                                     <i class="voyager-edit"></i> <span
                                                         class="hidden-xs hidden-sm">Editer</span>
                                                 </a>
-                                                <a href="{{ route('voyager.imprimer_facture', ['id' => $facture->id]) }}"
+                                                <a href="{{ route('admin.imprimer_facture', ['id' => $facture->id]) }}"
                                                     title="Editer" class="btn btn-primary" target="_blank">
                                                     <i class="voyager-receipt"></i> <span
                                                         class="hidden-xs hidden-sm">Afficher</span>
@@ -281,12 +280,12 @@
 @stop
 
 @section('css')
-    <link rel="stylesheet" href="{{ voyager_asset('lib/css/responsive.dataTables.min.css') }}">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
 @stop
 
 @section('javascript')
     <!-- DataTables -->
-    <script src="{{ voyager_asset('lib/js/dataTables.responsive.min.js') }}"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
     <script>
         $(document).ready(function() {
 
@@ -294,10 +293,10 @@
                 array_merge(
                     [
                         'order' => true,
-                        'language' => __('voyager::datatable'),
+                        'language' => [],
                         'columnDefs' => [['targets' => 'dt-not-orderable', 'searchable' => false, 'orderable' => false]],
                     ],
-                    config('voyager.dashboard.data_tables', []),
+                    config('admin.dashboard.data_tables', []),
                 ),
                 true,
             ) !!});
@@ -306,10 +305,10 @@
                 array_merge(
                     [
                         'order' => true,
-                        'language' => __('voyager::datatable'),
+                        'language' => [],
                         'columnDefs' => [['targets' => 'dt-not-orderable', 'searchable' => false, 'orderable' => false]],
                     ],
-                    config('voyager.dashboard.data_tables', []),
+                    config('admin.dashboard.data_tables', []),
                 ),
                 true,
             ) !!});
@@ -317,10 +316,10 @@
                 array_merge(
                     [
                         'order' => true,
-                        'language' => __('voyager::datatable'),
+                        'language' => [],
                         'columnDefs' => [['targets' => 'dt-not-orderable', 'searchable' => false, 'orderable' => false]],
                     ],
-                    config('voyager.dashboard.data_tables', []),
+                    config('admin.dashboard.data_tables', []),
                 ),
                 true,
             ) !!});
@@ -329,10 +328,10 @@
                 array_merge(
                     [
                         'order' => true,
-                        'language' => __('voyager::datatable'),
+                        'language' => [],
                         'columnDefs' => [['targets' => 'dt-not-orderable', 'searchable' => false, 'orderable' => false]],
                     ],
-                    config('voyager.dashboard.data_tables', []),
+                    config('admin.dashboard.data_tables', []),
                 ),
                 true,
             ) !!});

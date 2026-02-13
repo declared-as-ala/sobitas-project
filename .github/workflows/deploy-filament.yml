@@ -73,62 +73,129 @@ jobs:
           command_timeout: 300s
           script: |
             set -e
-            echo "=== Filament Backend V2 Deploy Started ==="
+            echo "========================================"
+            echo "🚀 Filament Backend V2 Deploy Started"
+            echo "========================================"
 
             APP_DIR="/root/sobitas-project"
             cd "$APP_DIR" || { echo "❌ $APP_DIR not found"; exit 1; }
 
-            # Pull latest compose file from repo
-            echo "Pulling latest code..."
-            git pull origin main || true
+            # ── Step 1: Pull docker-compose.yml only (no full git pull) ──
+            # We only need docker-compose.yml changes, not the full repo
+            echo "📥 Pulling docker-compose.yml..."
+            git fetch origin main || true
+            git checkout origin/main -- docker-compose.yml 2>/dev/null || echo "⚠ docker-compose.yml unchanged"
 
-            # Login to GHCR
+            # ── Step 2: Login to GHCR ──
+            echo "🔐 Logging in to GHCR..."
             if [ -n "${{ secrets.GHCR_PAT }}" ]; then
               echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            else
+              echo "⚠ GHCR_PAT not set, using public pull"
             fi
 
-            # Pull latest backend image
-            echo "Pulling latest image..."
-            docker pull ghcr.io/declared-as-ala/sobitas-backend-v2:latest
+            # ── Step 3: Pull latest backend image ──
+            echo "📦 Pulling latest backend image..."
+            docker pull ghcr.io/declared-as-ala/sobitas-backend-v2:latest || {
+              echo "❌ Failed to pull image"
+              exit 1
+            }
 
-            # Ensure MySQL + Redis are up first, then recreate backend-v2
-            echo "Starting MySQL + Redis..."
+            # ── Step 4: Ensure dependencies are healthy ──
+            echo "🔍 Ensuring MySQL + Redis are healthy..."
             docker compose up -d mysql redis
-            echo "Waiting for MySQL to be healthy..."
-            sleep 15
+            echo "⏳ Waiting for MySQL to be healthy..."
+            timeout=60
+            while [ $timeout -gt 0 ]; do
+              if docker compose exec -T mysql mysqladmin ping -h localhost --silent 2>/dev/null; then
+                echo "✓ MySQL is healthy"
+                break
+              fi
+              sleep 2
+              timeout=$((timeout - 2))
+            done
+            if [ $timeout -le 0 ]; then
+              echo "❌ MySQL health check timeout"
+              exit 1
+            fi
 
-            # Recreate backend-v2 container with new image
-            echo "Recreating backend-v2..."
-            docker compose up -d --force-recreate backend-v2
+            # ── Step 5: Recreate backend-v2 container with new image ──
+            echo "🔄 Recreating backend-v2 container..."
+            docker compose up -d --force-recreate --no-deps backend-v2 || {
+              echo "❌ Failed to recreate backend-v2"
+              exit 1
+            }
 
-            # Re-copy public assets to shared volume
-            echo "Copying public assets..."
-            docker compose run --rm backend-v2-public-init || true
+            # ── Step 6: Wait for backend-v2 to be ready ──
+            echo "⏳ Waiting for backend-v2 to start..."
+            sleep 10
 
-            # Restart nginx to pick up new assets
-            echo "Restarting nginx-v2..."
-            docker compose up -d backend-nginx-v2
+            # ── Step 7: Copy public assets and create storage symlink ──
+            echo "📋 Copying public assets and creating storage symlink..."
+            docker compose run --rm backend-v2-public-init || {
+              echo "❌ Failed to initialize public volume"
+              exit 1
+            }
 
-            # Wait for startup
-            sleep 5
+            # ── Step 8: Restart nginx to pick up new assets ──
+            echo "🔄 Restarting nginx-v2..."
+            docker compose up -d --no-deps backend-nginx-v2 || {
+              echo "❌ Failed to restart nginx"
+              exit 1
+            }
 
-            # Clear Laravel caches
-            echo "=== Clearing caches ==="
+            # ── Step 9: Clear Laravel caches (before OPcache reset) ──
+            echo "🧹 Clearing Laravel caches..."
             docker compose exec -T backend-v2 php artisan config:clear || true
             docker compose exec -T backend-v2 php artisan cache:clear || true
             docker compose exec -T backend-v2 php artisan view:clear || true
             docker compose exec -T backend-v2 php artisan route:clear || true
-            docker compose exec -T backend-v2 php artisan optimize || true
-            echo "✓ Caches cleared"
+            echo "✓ Laravel caches cleared"
 
-            # Health check
-            echo "=== Health Check ==="
+            # ── Step 10: CRITICAL - Reset OPcache (validate_timestamps=0) ──
+            echo "🔄 Resetting OPcache (validate_timestamps=0)..."
+            # Method 1: Use opcache_reset() via PHP
+            docker compose exec -T backend-v2 php -r "if (function_exists('opcache_reset')) { opcache_reset(); echo 'OPcache reset successful\n'; } else { echo 'OPcache not available\n'; }" || true
+            # Method 2: Reload PHP-FPM to ensure clean state
+            docker compose exec -T backend-v2 killall -USR2 php-fpm 2>/dev/null || {
+              # Fallback: restart PHP-FPM container
+              echo "⚠ PHP-FPM reload failed, restarting container..."
+              docker compose restart backend-v2
+              sleep 5
+            }
+            echo "✓ OPcache reset complete"
+
+            # ── Step 11: Rebuild Laravel caches (after OPcache reset) ──
+            echo "🔨 Rebuilding Laravel caches..."
+            docker compose exec -T backend-v2 php artisan config:cache || true
+            docker compose exec -T backend-v2 php artisan route:cache || true
+            docker compose exec -T backend-v2 php artisan view:cache || true
+            echo "✓ Laravel caches rebuilt"
+
+            # ── Step 12: Health check ──
+            echo "========================================"
+            echo "🏥 Health Check"
+            echo "========================================"
             docker compose ps mysql redis backend-v2 backend-nginx-v2
             echo ""
-            echo "=== Recent Logs ==="
-            docker compose logs --tail 20 backend-v2
+            
+            # Test backend endpoint
+            echo "🔍 Testing backend endpoint..."
+            sleep 3
+            if curl -f -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8083/admin/login | grep -q "200\|302"; then
+              echo "✓ Backend is responding"
+            else
+              echo "⚠ Backend health check failed (may still be starting)"
+            fi
 
-            # Cleanup old images
+            echo ""
+            echo "=== Recent Logs ==="
+            docker compose logs --tail 30 backend-v2
+
+            # ── Step 13: Cleanup old images ──
+            echo "🧹 Cleaning up old images..."
             docker image prune -f || true
 
-            echo "=== Filament Backend V2 Deploy Completed ==="
+            echo "========================================"
+            echo "✅ Filament Backend V2 Deploy Completed"
+            echo "========================================"

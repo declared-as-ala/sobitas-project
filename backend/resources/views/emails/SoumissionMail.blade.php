@@ -633,7 +633,7 @@
 
 <body>
     @php
-        $coordonnee = App\Coordinate::first();
+        $coordonnee = App\Models\Coordinate::first();
     @endphp
 
     <div class="email-container">
@@ -641,7 +641,7 @@
         <div class="email-header">
             @if($coordonnee && $coordonnee->logo_facture)
                 <div class="logo-wrapper">
-                    <img src="{{ Voyager::image($coordonnee->logo_facture) }}" alt="Logo" class="logo" />
+                    <img src="{{ asset('storage/' . $coordonnee->logo_facture) }}" alt="Logo" class="logo" />
                 </div>
             @endif
             <h1>Bon de Livraison</h1>

@@ -1,11 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
+use App\Models\DetailsProductPriceList;
+use App\Models\Product;
+use App\Models\ProductPriceList;
 use Illuminate\Http\Request;
-use App\ProductPriceList;
-use App\DetailsProductPriceList;
-use App\Product;
 use Illuminate\Support\Facades\DB;
 
 class PriceListController extends Controller
@@ -21,7 +23,7 @@ class PriceListController extends Controller
     }
 
     /**
-     * Store a newly created price list in storage.
+     * Store a newly created price list.
      */
     public function store(Request $request)
     {
@@ -30,51 +32,32 @@ class PriceListController extends Controller
             'nb_product' => 'required|integer|min:1',
         ]);
 
-        DB::beginTransaction();
-
         try {
-            // Create the price list
-            $pricelist = new ProductPriceList();
-            $pricelist->designation = $request->designation;
-            $pricelist->save();
+            DB::beginTransaction();
 
-            // Get the number of products
-            $nb_product = intval($request->nb_product);
-            $nb_delete = intval($request->nb_delete);
-            $total_products = $nb_product - $nb_delete;
+            $pricelist = ProductPriceList::create([
+                'designation' => $request->designation,
+            ]);
 
-            // Save product details
-            for ($i = 1; $i <= $nb_product; $i++) {
-                $produit_id = $request->input('produit_id_' . $i);
-
-                if ($produit_id) {
-                    $detail = new DetailsProductPriceList();
-                    $detail->product_price_list_id = $pricelist->id;
-                    $detail->product_id = $produit_id;
-                    $detail->prix_unitaire = $request->input('prix_unitaire' . $i) ?? 0;
-                    $detail->prix_gros = $request->input('prix_gros' . $i) ?? 0;
-                    $detail->save();
-                }
-            }
+            $this->saveDetails($request, $pricelist->id);
 
             DB::commit();
 
             return redirect()
-                ->route('voyager.pricelists.print' , $pricelist->id)
+                ->route('admin.pricelists.print', $pricelist->id)
                 ->with([
-                    'message' => "Liste de prix créée avec succès",
-                    'alert-type' => 'success'
+                    'message' => 'Liste de prix créée avec succès',
+                    'alert-type' => 'success',
                 ]);
-
         } catch (\Exception $e) {
-            DB::rollback();
+            DB::rollBack();
 
             return redirect()
                 ->back()
                 ->withInput()
                 ->with([
-                    'message' => "Erreur lors de la création: " . $e->getMessage(),
-                    'alert-type' => 'error'
+                    'message' => 'Erreur lors de la création: ' . $e->getMessage(),
+                    'alert-type' => 'error',
                 ]);
         }
     }
@@ -82,85 +65,66 @@ class PriceListController extends Controller
     /**
      * Show the form for editing the specified price list.
      */
-    public function edit($id)
+    public function edit(int $id)
     {
         $pricelist = ProductPriceList::findOrFail($id);
         $details_pricelist = DetailsProductPriceList::where('product_price_list_id', $id)->get();
         $produits = Product::all();
 
-        $edit = true;
-        $edit_length = $details_pricelist->count();
-
-        return view('admin.price_lists', compact(
-            'pricelist',
-            'details_pricelist',
-            'produits',
-            'edit',
-            'edit_length'
-        ));
+        return view('admin.price_lists', [
+            'pricelist' => $pricelist,
+            'details_pricelist' => $details_pricelist,
+            'produits' => $produits,
+            'edit' => true,
+            'edit_length' => $details_pricelist->count(),
+        ]);
     }
 
     /**
-     * Update the specified price list in storage.
+     * Update the specified price list.
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, int $id)
     {
         $request->validate([
             'designation' => 'required|string|max:255',
             'nb_product' => 'required|integer|min:1',
         ]);
 
-        DB::beginTransaction();
-
         try {
-            // Update the price list
+            DB::beginTransaction();
+
             $pricelist = ProductPriceList::findOrFail($id);
-            $pricelist->designation = $request->designation;
-            $pricelist->save();
+            $pricelist->update(['designation' => $request->designation]);
 
-            // Delete all existing details
+            // Delete old details and recreate
             DetailsProductPriceList::where('product_price_list_id', $id)->delete();
-
-            // Get the number of products
-            $nb_product = intval($request->nb_product);
-            $nb_delete = intval($request->nb_delete);
-
-            // Save updated product details
-            for ($i = 1; $i <= $nb_product; $i++) {
-                $produit_id = $request->input('produit_id_' . $i);
-
-                if ($produit_id) {
-                    $detail = new DetailsProductPriceList();
-                    $detail->product_price_list_id = $pricelist->id;
-                    $detail->product_id = $produit_id;
-                    $detail->prix_unitaire = $request->input('prix_unitaire' . $i) ?? 0;
-                    $detail->prix_gros = $request->input('prix_gros' . $i) ?? 0;
-                    $detail->save();
-                }
-            }
+            $this->saveDetails($request, $pricelist->id);
 
             DB::commit();
 
             return redirect()
-                ->route('voyager.pricelists.print', $pricelist->id)
+                ->route('admin.pricelists.print', $pricelist->id)
                 ->with([
-                    'message' => "Liste de prix mise à jour avec succès",
-                    'alert-type' => 'success'
+                    'message' => 'Liste de prix mise à jour avec succès',
+                    'alert-type' => 'success',
                 ]);
-
         } catch (\Exception $e) {
-            DB::rollback();
+            DB::rollBack();
 
             return redirect()
                 ->back()
                 ->withInput()
                 ->with([
-                    'message' => "Erreur lors de la mise à jour: " . $e->getMessage(),
-                    'alert-type' => 'error'
+                    'message' => 'Erreur lors de la mise à jour: ' . $e->getMessage(),
+                    'alert-type' => 'error',
                 ]);
         }
     }
-        public function print($id)
+
+    /**
+     * Print price list view.
+     */
+    public function print(int $id)
     {
         $pricelist = ProductPriceList::findOrFail($id);
         $details_pricelist = DetailsProductPriceList::where('product_price_list_id', $id)
@@ -168,5 +132,26 @@ class PriceListController extends Controller
             ->get();
 
         return view('admin.imprimer_pricelist', compact('pricelist', 'details_pricelist'));
+    }
+
+    /**
+     * Save price list details from form data.
+     */
+    private function saveDetails(Request $request, int $priceListId): void
+    {
+        $nbProduct = (int) $request->nb_product;
+
+        for ($i = 1; $i <= $nbProduct; $i++) {
+            $produitId = $request->input('produit_id_' . $i);
+
+            if ($produitId) {
+                DetailsProductPriceList::create([
+                    'product_price_list_id' => $priceListId,
+                    'product_id' => $produitId,
+                    'prix_unitaire' => $request->input('prix_unitaire' . $i) ?? 0,
+                    'prix_gros' => $request->input('prix_gros' . $i) ?? 0,
+                ]);
+            }
+        }
     }
 }
