@@ -1,14 +1,13 @@
-name: Deploy Filament Backend (Docker Image) - V2 [DISABLED TEMPORARILY]
+name: Deploy Filament Backend (Docker Image) - V2
 
-# TEMPORARILY DISABLED - Only frontend workflow is active
 on:
-  # push:
-  #   branches: [main]
-  #   paths:
-  #     - "filament/**"
-  #     - "docker-compose.yml"
-  #     - "nginx/**"
-  #     - ".github/workflows/deploy-filament.yml"
+  push:
+    branches: [main]
+    paths:
+      - "filament/**"
+      - "docker-compose.yml"
+      - "nginx/**"
+      - ".github/workflows/deploy-filament.yml"
   workflow_dispatch:
     inputs:
       enabled:
@@ -23,8 +22,10 @@ env:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    # TEMPORARILY DISABLED - Uncomment to re-enable
-    if: github.event.inputs.enabled == 'true'
+    # Run on push to filament/ or manual dispatch with enabled=true
+    if: |
+      (github.event_name == 'push' && contains(github.event.head_commit.modified, 'filament/')) ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.enabled == 'true')
     permissions:
       contents: read
       packages: write
