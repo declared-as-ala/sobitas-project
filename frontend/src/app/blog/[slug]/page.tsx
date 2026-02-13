@@ -8,9 +8,9 @@ interface ArticlePageProps {
   params: Promise<{ slug: string }>;
 }
 
-// Force dynamic rendering & disable ALL fetch caching for this route.
+// dynamic = 'force-dynamic': page is rendered on every request.
+// fetch calls use next:{tags:['blog']} for on-demand revalidation.
 export const dynamic = 'force-dynamic';
-export const fetchCache = 'force-no-store';
 
 // Helper to strip HTML and get plain text
 function stripHtml(html: string): string {

@@ -368,80 +368,87 @@ export const getTags = async (): Promise<any[]> => {
   return response.data;
 };
 
-// Articles/Blog
-// Force no-cache for blog endpoints to ensure fresh data after admin changes.
-// IMPORTANT: Do NOT combine cache:'no-store' with next:{revalidate:0} — they conflict.
-// cache:'no-store' is the correct way to skip all Next.js Data Cache layers.
-// We also append a timestamp query param to bust any intermediary caches (CDN, Nginx, browser).
+// ==================== ARTICLES / BLOG ====================
+//
+// Caching strategy:
+//   Server-side fetches (getAllArticles, getArticleDetails, getLatestArticles)
+//   use `next: { tags: ['blog'] }` which opts into the Next.js Data Cache
+//   with on-demand tag-based revalidation.  The cache lives until the admin
+//   calls POST /api/revalidate-blog which runs `revalidateTag('blog')`.
+//
+//   Client-side fetch (getAllArticlesClient) is called from BlogPageClient
+//   on mount & visibilitychange as a safety-net.  It uses `cache:'no-store'`
+//   + no-cache headers so the browser always hits the origin API.
+//
+//   ⚠ Do NOT add ?_t=Date.now() to server-side URLs — it defeats the
+//   Data Cache entirely (every request looks like a different URL).
+// ─────────────────────────────────────────────────────────
+
 export const getAllArticles = async (): Promise<Article[]> => {
-  const response = await fetch(`${API_URL}/all_articles?_t=${Date.now()}`, {
+  const response = await fetch(`${API_URL}/all_articles`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
     },
-    cache: 'no-store',
+    next: { tags: ['blog'] }, // ISR: cached until revalidateTag('blog')
   });
-  
+
   if (!response.ok) {
     throw new Error(`Failed to fetch articles: ${response.statusText}`);
   }
-  
+
   const data = await response.json();
   return Array.isArray(data) ? data : (data.articles || []);
 };
 
 export const getArticleDetails = async (slug: string): Promise<Article> => {
-  const response = await fetch(`${API_URL}/article_details/${slug}?_t=${Date.now()}`, {
+  const response = await fetch(`${API_URL}/article_details/${slug}`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
     },
-    cache: 'no-store',
+    next: { tags: ['blog'] },
   });
-  
+
   if (!response.ok) {
     if (response.status === 404) {
       throw new Error('Article not found');
     }
     throw new Error(`Failed to fetch article: ${response.statusText}`);
   }
-  
+
   const data = await response.json();
   return data;
 };
 
 export const getLatestArticles = async (): Promise<Article[]> => {
-  const response = await fetch(`${API_URL}/latest_articles?_t=${Date.now()}`, {
+  const response = await fetch(`${API_URL}/latest_articles`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
     },
-    cache: 'no-store',
+    next: { tags: ['blog'] },
   });
-  
+
   if (!response.ok) {
     throw new Error(`Failed to fetch latest articles: ${response.statusText}`);
   }
-  
+
   const data = await response.json();
   return Array.isArray(data) ? data : (data.articles || []);
 };
 
 /**
- * Client-side fetch for articles — used by BlogPageClient to re-fetch
- * fresh data on mount, bypassing any server-side or Next.js cache.
+ * Client-side fetch for articles — called by BlogPageClient on mount
+ * and on visibilitychange to guarantee fresh data in the browser.
+ * Uses cache:'no-store' + no-cache headers (browser → origin, no Next.js
+ * Data Cache involved).  No ?_t= needed.
  */
 export const getAllArticlesClient = async (): Promise<Article[]> => {
-  const response = await fetch(`${API_URL}/all_articles?_t=${Date.now()}`, {
+  const response = await fetch(`${API_URL}/all_articles`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -451,11 +458,11 @@ export const getAllArticlesClient = async (): Promise<Article[]> => {
     },
     cache: 'no-store',
   });
-  
+
   if (!response.ok) {
     throw new Error(`Failed to fetch articles: ${response.statusText}`);
   }
-  
+
   const data = await response.json();
   return Array.isArray(data) ? data : (data.articles || []);
 };
