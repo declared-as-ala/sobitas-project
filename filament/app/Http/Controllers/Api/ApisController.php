@@ -29,6 +29,7 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class ApisController extends Controller
 {
@@ -189,9 +190,31 @@ class ApisController extends Controller
     {
         $perPage = $this->resolvePerPage($request);
 
-        $slides = Slide::select('id', 'cover', 'title', 'link', 'publier')
+        $slides = Slide::select('id', 'image', 'titre', 'lien', 'type')
             ->orderBy('id')
             ->paginate($perPage);
+
+        // Map response for backward compatibility with frontend
+        // Frontend expects: cover, title, link (not image, titre, lien)
+        $slides->getCollection()->transform(function ($slide) {
+            // Generate image URL - handle both relative paths and full URLs
+            $imageUrl = null;
+            if ($slide->image) {
+                if (filter_var($slide->image, FILTER_VALIDATE_URL)) {
+                    $imageUrl = $slide->image;
+                } else {
+                    $imageUrl = Storage::disk('public')->url($slide->image);
+                }
+            }
+
+            return [
+                'id' => $slide->id,
+                'cover' => $imageUrl,
+                'title' => $slide->titre,
+                'link' => $slide->lien,
+                'type' => $slide->type ?? 'web',
+            ];
+        });
 
         return $this->paginatedResponse($slides);
     }
