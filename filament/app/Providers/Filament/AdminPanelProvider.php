@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\Auth\Login;
 use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\Profile;
 use App\Filament\Pages\SendSms;
@@ -69,11 +70,10 @@ class AdminPanelProvider extends PanelProvider
         return $panel
             ->default()
             ->id('admin')
-            ->login()
+            ->login(Login::class)
             ->renderHook(
                 'panels::head.end',
                 fn (): string => '
-                    <link rel="stylesheet" href="' . asset('css/filament/admin/custom-sidebar.css') . '" />
                     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.min.css" />
                 '
             )
@@ -81,7 +81,6 @@ class AdminPanelProvider extends PanelProvider
                 'panels::body.end',
                 fn (): string => '
                     <script src="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.min.js"></script>
-                    <script src="' . asset('js/filament/admin/sidebar-hover.js') . '"></script>
                 '
             )
             // ── PERFORMANCE: Explicit registration instead of filesystem discovery ──
