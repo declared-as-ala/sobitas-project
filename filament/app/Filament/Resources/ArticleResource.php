@@ -38,7 +38,7 @@ class ArticleResource extends Resource
                 ->unique(ignoreRecord: true),
             Forms\Components\FileUpload::make('cover')
                 ->label('Image de couverture')
-                ->disk('cloudinary')
+                ->disk('public')
                 ->directory('articles')
                 ->image()
                 ->imageEditor()
@@ -73,7 +73,6 @@ class ArticleResource extends Resource
                     ->label('Image')
                     ->circular()
                     ->defaultImageUrl(function ($record) {
-                        // Handle Cloudinary URLs
                         if (!$record->cover) {
                             return null;
                         }
@@ -83,13 +82,7 @@ class ArticleResource extends Resource
                             return $record->cover;
                         }
                         
-                        // If Cloudinary public_id, construct URL
-                        $cloudName = config('cloudinary.cloud_name');
-                        if ($cloudName && !str_contains($record->cover, '/')) {
-                            return "https://res.cloudinary.com/{$cloudName}/image/upload/w_100,h_100,c_fill/{$record->cover}";
-                        }
-                        
-                        // Fallback: local storage
+                        // Local storage
                         return asset('storage/' . ltrim($record->cover, '/'));
                     }),
                 Tables\Columns\TextColumn::make('designation_fr')

@@ -17,7 +17,7 @@ class Article extends Model
     }
 
     /**
-     * Get the cover image URL (Cloudinary or local storage)
+     * Get the cover image URL (local storage)
      */
     protected function coverUrl(): Attribute
     {
@@ -28,20 +28,12 @@ class Article extends Model
                     return null;
                 }
 
-                // If already a full URL (Cloudinary), return as-is
+                // If already a full URL, return as-is
                 if (str_starts_with($cover, 'http://') || str_starts_with($cover, 'https://')) {
                     return $cover;
                 }
 
-                // If it's a Cloudinary public_id (no slashes), construct Cloudinary URL
-                if (!str_contains($cover, '/') && config('filesystems.default') === 'cloudinary') {
-                    $cloudName = config('cloudinary.cloud_name');
-                    if ($cloudName) {
-                        return "https://res.cloudinary.com/{$cloudName}/image/upload/{$cover}";
-                    }
-                }
-
-                // Fallback: local storage URL
+                // Local storage URL
                 return asset('storage/' . ltrim($cover, '/'));
             }
         );

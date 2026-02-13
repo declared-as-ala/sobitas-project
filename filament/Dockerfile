@@ -68,9 +68,7 @@ RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh && \
 COPY composer.json composer.lock ./
 
 # Install PHP dependencies (no scripts — artisan needs the full app + DB)
-# Use composer update to resolve dependencies fresh (handles stale lock file)
-# Then generate optimized autoloader
-RUN COMPOSER_MEMORY_LIMIT=-1 COMPOSER_ALLOW_SUPERUSER=1 composer update \
+RUN COMPOSER_MEMORY_LIMIT=-1 COMPOSER_ALLOW_SUPERUSER=1 composer install \
     --no-scripts \
     --no-interaction \
     --prefer-dist \
