@@ -12,7 +12,7 @@ use Illuminate\Validation\Rules\Password;
 
 class Profile extends Page
 {
-    protected static ?string $navigationIcon = 'heroicon-o-user-circle';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-user-circle';
 
     protected static string $view = 'filament.pages.profile';
 
