@@ -68,21 +68,13 @@ RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh && \
 COPY composer.json composer.lock ./
 
 # Install PHP dependencies (no scripts — artisan needs the full app + DB)
-# Increase memory limit and add verbose output for debugging
-RUN COMPOSER_MEMORY_LIMIT=-1 composer install \
+# Use composer update to resolve dependencies fresh (handles stale lock file)
+# Then generate optimized autoloader
+RUN COMPOSER_MEMORY_LIMIT=-1 COMPOSER_ALLOW_SUPERUSER=1 composer update \
     --no-scripts \
     --no-interaction \
     --prefer-dist \
-    --optimize-autoloader \
-    --verbose \
-    || (echo "❌ Composer install failed, trying with --ignore-platform-reqs..." && \
-        COMPOSER_MEMORY_LIMIT=-1 composer install \
-        --no-scripts \
-        --no-interaction \
-        --prefer-dist \
-        --optimize-autoloader \
-        --ignore-platform-reqs \
-        --verbose)
+    --optimize-autoloader
 
 # Copy application code (excludes files in .dockerignore, including public/storage symlink)
 # The public/storage symlink will be created at runtime by docker-entrypoint.sh
