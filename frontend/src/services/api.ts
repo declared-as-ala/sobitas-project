@@ -170,10 +170,17 @@ export const getCategories = async (): Promise<Category[]> => {
   return response.data;
 };
 
-// Slides
+// Slides - Use new Filament API (admin.sobitas.tn) instead of Voyager API
 export const getSlides = async (): Promise<any[]> => {
-  const response = await api.get('/slides');
-  return response.data;
+  // Use the new Filament backend API for slides
+  const response = await axios.get('https://admin.sobitas.tn/api/slides', {
+    timeout: 60000,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+  // Return the data array from the paginated response
+  return response.data?.data || response.data || [];
 };
 
 // Coordinates
