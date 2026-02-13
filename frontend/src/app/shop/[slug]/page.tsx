@@ -1,12 +1,14 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getProductDetails, getSimilarProducts } from '@/services/api';
+import { getProductDetails, getSimilarProducts, getCategories, getProductsByCategory, getProductsBySubCategory } from '@/services/api';
 import { getStorageUrl } from '@/services/api';
 import { ProductDetailClient } from '@/app/products/[id]/ProductDetailClient';
+import { ShopPageClient } from '@/app/shop/ShopPageClient';
 import type { Product } from '@/types';
 
 interface ProductPageProps {
   params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ page?: string }>;
 }
 
 // Helper function to decode HTML entities
@@ -225,69 +227,62 @@ function stripHtml(html: string | null | undefined): string {
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const { slug } = await params;
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
-  
+
+  // Try product first
   try {
     const product = await getProductDetails(slug);
-    const imageUrl = product.cover ? getStorageUrl(product.cover) : '';
-    
-    // Extract meta tags from product.meta if available
-    const metaTags = extractMetaFromHtml(product.meta);
-    
-    // Use meta tags from API if available, otherwise fallback to defaults
-    const title = metaTags.title || `${product.designation_fr} - Protéines & Compléments Tunisie | SOBITAS`;
-    
-    // Build description with proper fallback chain and HTML stripping
-    let description = metaTags.description;
-    if (!description && product.meta_description_fr) {
-      description = stripHtml(product.meta_description_fr);
+    if (product?.id) {
+      const imageUrl = product.cover ? getStorageUrl(product.cover) : '';
+      const metaTags = extractMetaFromHtml(product.meta);
+      const title = metaTags.title || `${product.designation_fr} - Protéines & Compléments Tunisie | SOBITAS`;
+      let description = metaTags.description;
+      if (!description && product.meta_description_fr) description = stripHtml(product.meta_description_fr);
+      if (!description && product.description_cover) description = stripHtml(product.description_cover);
+      if (!description && product.description_fr) description = stripHtml(product.description_fr);
+      if (!description) description = `Achetez ${product.designation_fr} en Tunisie – SOBITAS, protéines et compléments à Sousse.`;
+      const canonical = metaTags.canonical || `${baseUrl}/shop/${slug}`;
+      const ogUrl = metaTags.ogUrl || `${baseUrl}/shop/${slug}`;
+      return {
+        title,
+        description,
+        robots: metaTags.robots ? { index: metaTags.robots.includes('index'), follow: metaTags.robots.includes('follow') } : undefined,
+        alternates: { canonical },
+        openGraph: { title: metaTags.ogTitle || title, description: metaTags.ogDescription || description, images: imageUrl ? [imageUrl] : [], url: ogUrl, type: 'website' },
+        twitter: { card: 'summary_large_image', title: metaTags.twitterTitle || title, description: metaTags.twitterDescription || description, images: imageUrl ? [imageUrl] : [] },
+      };
     }
-    if (!description && product.description_cover) {
-      description = stripHtml(product.description_cover);
-    }
-    if (!description && product.description_fr) {
-      description = stripHtml(product.description_fr);
-    }
-    if (!description) {
-      description = `Achetez ${product.designation_fr} en Tunisie – SOBITAS, protéines et compléments à Sousse.`;
-    }
-    
-    const canonical = metaTags.canonical || `${baseUrl}/product/${slug}`;
-    const ogTitle = metaTags.ogTitle || title;
-    const ogDescription = metaTags.ogDescription || description;
-    const ogUrl = metaTags.ogUrl || `${baseUrl}/product/${slug}`;
-    const twitterTitle = metaTags.twitterTitle || title;
-    const twitterDescription = metaTags.twitterDescription || description;
-    
-    return {
-      title,
-      description,
-      robots: metaTags.robots ? {
-        index: metaTags.robots.includes('index'),
-        follow: metaTags.robots.includes('follow'),
-      } : undefined,
-      alternates: {
-        canonical,
-      },
-      openGraph: {
-        title: ogTitle,
-        description: ogDescription,
-        images: imageUrl ? [imageUrl] : [],
-        url: ogUrl,
-        type: 'website',
-      },
-      twitter: {
-        card: 'summary_large_image',
-        title: twitterTitle,
-        description: twitterDescription,
-        images: imageUrl ? [imageUrl] : [],
-      },
-    };
-  } catch (error) {
-    return {
-      title: 'Produit | SOBITAS Tunisie',
-      description: 'Protéines, whey, créatine et compléments alimentaires en Tunisie.',
-    };
+  } catch {
+    // Not a product, try category
   }
+
+  // Try as category or subcategory
+  try {
+    let categoryData;
+    try {
+      const result = await getProductsByCategory(slug);
+      categoryData = result?.category;
+    } catch {
+      const result = await getProductsBySubCategory(slug);
+      categoryData = result?.sous_category;
+    }
+    if (categoryData?.designation_fr) {
+      const title = `${categoryData.designation_fr} - Protéines & Compléments Tunisie | SOBITAS`;
+      const description = `Découvrez notre sélection de ${categoryData.designation_fr.toLowerCase()} en Tunisie. Qualité premium, livraison rapide.`;
+      return {
+        title,
+        description,
+        alternates: { canonical: `${baseUrl}/shop/${slug}` },
+        openGraph: { title, description, url: `${baseUrl}/shop/${slug}`, type: 'website' },
+      };
+    }
+  } catch {
+    // ignore
+  }
+
+  return {
+    title: 'Produit | SOBITAS Tunisie',
+    description: 'Protéines, whey, créatine et compléments alimentaires en Tunisie.',
+  };
 }
 
 function buildProductJsonLd(product: Product, baseUrl: string) {
@@ -302,7 +297,7 @@ function buildProductJsonLd(product: Product, baseUrl: string) {
           const parsed = JSON.parse(jsonLdContent);
           // Update URL and image if needed
           if (parsed.offers && parsed.offers.url) {
-            parsed.offers.url = `${baseUrl}/product/${product.slug}`;
+            parsed.offers.url = `${baseUrl}/shop/${product.slug}`;
           }
           if (parsed.image && product.cover) {
             parsed.image = getStorageUrl(product.cover);
@@ -342,7 +337,7 @@ function buildProductJsonLd(product: Product, baseUrl: string) {
     brand: product.brand ? { '@type': 'Brand', name: product.brand.designation_fr } : undefined,
     offers: {
       '@type': 'Offer',
-      url: `${baseUrl}/product/${product.slug}`,
+      url: `${baseUrl}/shop/${product.slug}`,
       priceCurrency: 'TND',
       price: String(price ?? 0),
       availability: inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
@@ -397,41 +392,90 @@ function buildProductJsonLd(product: Product, baseUrl: string) {
   return jsonLd;
 }
 
-export default async function ProductDetailPage({ params }: ProductPageProps) {
+export default async function ProductDetailPage({ params, searchParams }: ProductPageProps) {
   const { slug } = await params;
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
 
-  console.log(`[ProductPage] Resolving slug: "${slug}"`);
+  console.log(`[ShopSlugPage] Resolving slug: "${slug}"`);
 
+  // 1) Try as product first (product detail page)
   try {
     const product = await getProductDetails(slug);
-    
-    if (!product || !product.id) {
-      console.warn(`[ProductPage] Product "${slug}" returned empty data`);
-      notFound();
+    if (product?.id) {
+      console.log(`[ShopSlugPage] Found product: "${product.designation_fr}"`);
+      const similarData = product.sous_categorie_id
+        ? await getSimilarProducts(product.sous_categorie_id).catch(() => ({ products: [] }))
+        : { products: [] };
+      const productSchema = buildProductJsonLd(product, baseUrl);
+      return (
+        <>
+          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }} />
+          {product.content_seo && (
+            <div dangerouslySetInnerHTML={{ __html: product.content_seo }} style={{ display: 'none' }} />
+          )}
+          <ProductDetailClient product={product} similarProducts={similarData.products || []} />
+        </>
+      );
+    }
+  } catch {
+    // Not a product, try category/subcategory below
+  }
+
+  // 2) Try as category or subcategory (shop listing)
+  try {
+    let categoryData;
+    let productsData: { products: any[]; brands: any[]; categories: any[] };
+    let categories;
+    let brands;
+    let isSubcategory = false;
+
+    try {
+      const result = await getProductsByCategory(slug);
+      if (!result?.category?.designation_fr) notFound();
+      categoryData = result.category;
+      productsData = { products: result.products, brands: result.brands, categories: [] };
+      categories = await getCategories();
+      brands = result.brands;
+    } catch (categoryError: any) {
+      if (categoryError?.response?.status === 404 || categoryError?.message === 'Category not found') {
+        const result = await getProductsBySubCategory(slug);
+        if (!result?.sous_category?.designation_fr) notFound();
+        categoryData = result.sous_category;
+        productsData = { products: result.products, brands: result.brands, categories: [] };
+        categories = await getCategories();
+        brands = result.brands;
+        isSubcategory = true;
+      } else {
+        throw categoryError;
+      }
     }
 
-    console.log(`[ProductPage] Found product: "${product.designation_fr}"`);
+    if (!categoryData?.designation_fr) notFound();
 
-    // Fetch similar products
-    const similarData = product.sous_categorie_id 
-      ? await getSimilarProducts(product.sous_categorie_id).catch(() => ({ products: [] }))
-      : { products: [] };
-
-    const productSchema = buildProductJsonLd(product, baseUrl);
+    const breadcrumbJsonLd = {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Accueil', item: baseUrl },
+        { '@type': 'ListItem', position: 2, name: 'Boutique', item: `${baseUrl}/shop` },
+        { '@type': 'ListItem', position: 3, name: categoryData.designation_fr, item: `${baseUrl}/shop/${slug}` },
+      ],
+    };
 
     return (
       <>
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }} />
-        {/* Render additional SEO content if provided */}
-        {product.content_seo && (
-          <div dangerouslySetInnerHTML={{ __html: product.content_seo }} style={{ display: 'none' }} />
-        )}
-        <ProductDetailClient product={product} similarProducts={similarData.products || []} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+        <ShopPageClient
+          productsData={productsData}
+          categories={categories}
+          brands={brands}
+          initialCategory={slug}
+          isSubcategory={isSubcategory}
+        />
       </>
     );
   } catch (error) {
-    console.error('Error fetching product:', error);
+    console.error('[ShopSlugPage] Error resolving slug:', error);
     notFound();
   }
 }

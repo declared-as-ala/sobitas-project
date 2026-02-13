@@ -55,11 +55,20 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // Redirect old /products/[id] to /product/[id] (if it's actually a slug)
+  // Redirect old /product/* and /products/* to /shop/* (product detail by slug)
+  if (pathname.startsWith('/product/')) {
+    const slug = pathname.replace(/^\/product\/?/, '');
+    if (slug) {
+      const newUrl = new URL(`/shop/${slug}`, request.url);
+      return NextResponse.redirect(newUrl, 301);
+    }
+  }
   if (pathname.startsWith('/products/')) {
-    const slug = pathname.replace('/products/', '');
-    const newUrl = new URL(`/product/${slug}`, request.url);
-    return NextResponse.redirect(newUrl, 301);
+    const slug = pathname.replace(/^\/products\/?/, '');
+    if (slug) {
+      const newUrl = new URL(`/shop/${slug}`, request.url);
+      return NextResponse.redirect(newUrl, 301);
+    }
   }
 
   return response;

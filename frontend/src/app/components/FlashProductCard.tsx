@@ -132,7 +132,7 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
       {/* Image Container - Fixed height to prevent layout shift */}
       <div className="relative aspect-square w-full flex-shrink-0 overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-t-3xl">
         <LinkWithLoading 
-          href={`/products/${productData.slug || product.id}`} 
+          href={`/shop/${productData.slug || product.id}`} 
           className="block size-full" 
           aria-label={`Voir ${productData.name}`}
           loadingMessage={`Chargement de ${productData.name}...`}
@@ -213,7 +213,7 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
       <div className="relative flex flex-col flex-1 min-h-0 p-3 sm:p-4 md:p-5 bg-gradient-to-b from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-900/50 overflow-hidden">
         {/* Product Name */}
         <LinkWithLoading 
-          href={`/products/${productData.slug || product.id}`} 
+          href={`/shop/${productData.slug || product.id}`} 
           className="block mb-2 sm:mb-2.5"
           loadingMessage={`Chargement de ${productData.name}...`}
         >
@@ -251,7 +251,7 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
           
           {productData.reviewCount > 0 ? (
             <LinkWithLoading
-              href={`/products/${productData.slug || product.id}#reviews`}
+              href={`/shop/${productData.slug || product.id}#reviews`}
               className="text-[10px] sm:text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline transition-colors whitespace-nowrap"
             >
               ({productData.reviewCount} avis{productData.reviewCount > 1 ? 's' : ''})

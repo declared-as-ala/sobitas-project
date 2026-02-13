@@ -57,7 +57,7 @@ function buildProductJsonLd(product: Product, baseUrl: string) {
     brand: product.brand ? { '@type': 'Brand', name: product.brand.designation_fr } : undefined,
     offers: {
       '@type': 'Offer',
-      url: `${baseUrl}/products/${product.slug}`,
+      url: `${baseUrl}/shop/${product.slug}`,
       priceCurrency: 'TND',
       price: price ?? 0,
       availability: inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
