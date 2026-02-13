@@ -101,7 +101,6 @@ class SlideResource extends Resource
                     ->copyMessage('Lien copié!')
                     ->toggleable(),
             ])
-            ->reorderable('order_column')
             ->actions([
                 Actions\EditAction::make(),
                 Actions\DeleteAction::make()

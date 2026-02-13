@@ -3,7 +3,10 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Pages\Auth\Login;
+use App\Filament\Pages\Auth\RequestPasswordReset;
+use App\Filament\Pages\Auth\ResetPassword;
 use App\Filament\Pages\Dashboard;
+use App\Filament\Pages\Profile;
 use App\Filament\Pages\SendSms;
 use App\Filament\Resources\AnnonceResource;
 use App\Filament\Resources\ArticleResource;
@@ -70,6 +73,7 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->login(Login::class)
+            ->passwordReset(RequestPasswordReset::class, ResetPassword::class)
             ->renderHook(
                 'panels::head.end',
                 fn (): string => '
@@ -117,6 +121,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->pages([
                 Dashboard::class,
+                Profile::class,
                 SendSms::class,
             ])
             ->widgets([
