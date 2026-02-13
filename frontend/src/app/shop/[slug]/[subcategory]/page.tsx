@@ -5,7 +5,7 @@ import { ShopPageClient } from '../../ShopPageClient';
 import type { Category } from '@/types';
 
 interface SubCategoryPageProps {
-  params: Promise<{ category: string; subcategory: string }>;
+  params: Promise<{ slug: string; subcategory: string }>;
   searchParams: Promise<{ page?: string }>;
 }
 
@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function generateMetadata({ params }: SubCategoryPageProps): Promise<Metadata> {
-  const { category: categorySlug, subcategory: subcategorySlug } = await params;
+  const { slug: categorySlug, subcategory: subcategorySlug } = await params;
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
 
   try {
@@ -54,7 +54,7 @@ export async function generateMetadata({ params }: SubCategoryPageProps): Promis
 }
 
 export default async function SubCategoryPage({ params, searchParams }: SubCategoryPageProps) {
-  const { category: categorySlug, subcategory: subcategorySlug } = await params;
+  const { slug: categorySlug, subcategory: subcategorySlug } = await params;
   const { page } = await searchParams;
 
   console.log(`[SubCategoryPage] Resolving category: "${categorySlug}", subcategory: "${subcategorySlug}"`);

@@ -170,17 +170,52 @@ export const getCategories = async (): Promise<Category[]> => {
   return response.data;
 };
 
-// Slides - Use new Filament API (admin.sobitas.tn) instead of Voyager API
+// Slides from https://admin.protein.tn/api/slides – image/cover are relative (e.g. "slides/February2026/xxx.jpg"); we build full URLs with admin.protein.tn
+const SLIDES_API_BASE = 'https://admin.protein.tn';
+const SLIDES_STORAGE_PATH = `${SLIDES_API_BASE}/storage`;
+
+function toSlideImageUrl(path: string | null | undefined): string {
+  if (!path || path.startsWith('http://') || path.startsWith('https://')) return path || '';
+  const clean = path.replace(/^\//, '');
+  return clean ? `${SLIDES_STORAGE_PATH}/${clean}` : '';
+}
+
 export const getSlides = async (): Promise<any[]> => {
-  // Use the new Filament backend API for slides
-  const response = await axios.get('https://admin.sobitas.tn/api/slides', {
-    timeout: 60000,
-    headers: {
-      'Content-Type': 'application/json',
-    },
+  const response = await axios.get(`${SLIDES_API_BASE}/api/slides`, {
+    timeout: 10000,
+    headers: { 'Content-Type': 'application/json' },
   });
-  // Return the data array from the paginated response
-  return response.data?.data || response.data || [];
+  const raw = response.data?.data ?? response.data;
+  const list = Array.isArray(raw) ? raw : [];
+  return list.map((slide: any) => {
+    const imagePath = slide?.image || slide?.cover || '';
+    const coverPath = slide?.cover || slide?.image || '';
+    return {
+      ...slide,
+      image: toSlideImageUrl(imagePath) || slide?.image,
+      cover: toSlideImageUrl(coverPath) || slide?.cover,
+    };
+  });
+};
+
+// CMS pages for footer (Services & Ventes) from admin.protein.tn
+export interface CmsPage {
+  id: number;
+  title: string;
+  slug: string;
+}
+
+export const getCmsPages = async (): Promise<CmsPage[]> => {
+  try {
+    const response = await axios.get<CmsPage[]>('https://admin.protein.tn/api/pages', {
+      timeout: 10000,
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const data = response.data;
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
 };
 
 // Coordinates
@@ -486,8 +521,8 @@ export const getServices = async (): Promise<Service[]> => {
   return response.data;
 };
 
-// Pages
-export const getPages = async (): Promise<Page[]> => {
+// Pages (main API – for /page/[slug] etc.)
+export const getAppPages = async (): Promise<Page[]> => {
   const response = await api.get<Page[]>('/pages');
   return response.data;
 };

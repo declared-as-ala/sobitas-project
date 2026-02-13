@@ -100,7 +100,7 @@ export const HeroSlider = memo(function HeroSlider({ slides }: HeroSliderProps) 
 
     const withImage = slides.filter((slide: any) => {
       if (!slide) return false;
-      const hasImage = slide.image || slide.image_path || slide.cover || slide.url;
+      const hasImage = slide.cover || slide.image || slide.image_path || slide.url;
       return !!hasImage;
     });
 
@@ -112,7 +112,8 @@ export const HeroSlider = memo(function HeroSlider({ slides }: HeroSliderProps) 
 
     const sorted = [...filtered].sort((a: any, b: any) => (a.ordre || a.order || 0) - (b.ordre || b.order || 0));
     const transformed = sorted.map((slide: any) => {
-      const imagePath = slide.image || slide.image_path || slide.cover || slide.url || '';
+      // Prefer cover over image (photo) for display
+      const imagePath = slide.cover || slide.image || slide.image_path || slide.url || '';
       return {
         id: slide.id || Math.random(),
         titre: slide.titre || slide.title || slide.designation_fr || 'Protéines Premium',

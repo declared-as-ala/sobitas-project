@@ -7,14 +7,20 @@ import { Facebook, Instagram, Linkedin, Mail, Phone, MapPin, Sparkles, Loader2, 
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { motion } from 'motion/react';
-import { subscribeNewsletter, getStorageUrl } from '@/services/api';
+import { subscribeNewsletter, getStorageUrl, getCmsPages, type CmsPage } from '@/services/api';
 import { toast } from 'sonner';
 
 export function Footer() {
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [shouldLoadMap, setShouldLoadMap] = useState(false);
+  const [pages, setPages] = useState<CmsPage[]>([]);
   const mapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    getCmsPages().then(setPages);
+  }, []);
+
   // Lazy load Google Maps only when footer is visible (Intersection Observer)
   useEffect(() => {
     if (!mapRef.current) return;
@@ -169,16 +175,15 @@ export function Footer() {
 
           <div className="h-px bg-gray-800/60 w-full" aria-hidden="true" role="separator" />
 
-          {/* 5. Services & Ventes */}
+          {/* 5. Services & Ventes (from API) */}
           <div className="space-y-3 w-full">
             <h3 className="font-bold text-white text-sm uppercase tracking-wide">Services & Ventes</h3>
             <ul className="space-y-1.5">
-              <li><Link href="/page/conditions-generales" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Conditions générales de vente</Link></li>
-              <li><Link href="/page/politique-de-remboursement" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Politique de remboursement</Link></li>
-              <li><Link href="/page/mentions-legales" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Mentions légales</Link></li>
-              <li><Link href="/page/cookies" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Politique des cookies</Link></li>
-              <li><Link href="/page/a-propos" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">A propos</Link></li>
-              <li><Link href="/page/proteine-tunisie" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Proteine Tunisie</Link></li>
+              {pages.length > 0 ? pages.map((p) => (
+                <li key={p.id}>
+                  <Link href={`/page/${p.slug}`} className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">{p.title}</Link>
+                </li>
+              )) : null}
             </ul>
           </div>
 
@@ -319,35 +324,17 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Services & Legal */}
+          {/* Services & Ventes (from API) */}
           <div>
             <h3 className="font-semibold text-white mb-6">Services & Ventes</h3>
             <ul className="space-y-3">
-              <li>
-                <Link href="/page/conditions-generales" className="text-sm hover:text-red-500 transition-colors">
-                  Conditions générales
-                </Link>
-              </li>
-              <li>
-                <Link href="/page/politique-de-remboursement" className="text-sm hover:text-red-500 transition-colors">
-                  Politique de remboursement
-                </Link>
-              </li>
-              <li>
-                <Link href="/page/cookies" className="text-sm hover:text-red-500 transition-colors">
-                  Cookies
-                </Link>
-              </li>
-              <li>
-                <Link href="/page/a-propos" className="text-sm hover:text-red-500 transition-colors">
-                  A propos
-                </Link>
-              </li>
-              <li>
-                <Link href="/page/proteine-tunisie" className="text-sm hover:text-red-500 transition-colors">
-                  Proteine Tunisie
-                </Link>
-              </li>
+              {pages.map((p) => (
+                <li key={p.id}>
+                  <Link href={`/page/${p.slug}`} className="text-sm hover:text-red-500 transition-colors">
+                    {p.title}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
