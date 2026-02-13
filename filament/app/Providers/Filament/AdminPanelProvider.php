@@ -70,7 +70,6 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->login()
-            ->passwordReset()
             ->renderHook(
                 'panels::head.end',
                 fn (): string => '

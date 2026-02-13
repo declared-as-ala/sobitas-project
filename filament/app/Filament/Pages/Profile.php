@@ -14,7 +14,7 @@ class Profile extends Page
 {
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-user-circle';
 
-    protected static string $view = 'filament.pages.profile';
+    protected string $view = 'filament.pages.profile';
 
     protected static ?string $navigationLabel = 'Profile';
 
