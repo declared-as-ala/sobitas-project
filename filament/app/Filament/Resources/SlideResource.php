@@ -78,7 +78,6 @@ class SlideResource extends Resource
                     ->circular(false)
                     ->square()
                     ->defaultImageUrl(asset('placeholder.svg'))
-                    ->fallbackUrl(asset('placeholder.svg'))
                     ->extraAttributes([
                         'class' => 'rounded-lg object-cover',
                     ]),

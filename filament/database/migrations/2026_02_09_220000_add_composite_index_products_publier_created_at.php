@@ -21,16 +21,16 @@ return new class extends Migration
     public function up(): void
     {
         if (Schema::hasTable('products')) {
-            Schema::table('products', function (Blueprint $table) {
-                // Check if index doesn't already exist
-                $indexes = Schema::getConnection()
-                    ->getDoctrineSchemaManager()
-                    ->listTableIndexes('products');
-                
-                if (!isset($indexes['idx_products_publier_created_at'])) {
+            // Check if index already exists using raw query (compatible with all Laravel versions)
+            $indexExists = collect(
+                \DB::select("SHOW INDEX FROM products WHERE Key_name = 'idx_products_publier_created_at'")
+            )->isNotEmpty();
+
+            if (!$indexExists) {
+                Schema::table('products', function (Blueprint $table) {
                     $table->index(['publier', 'created_at'], 'idx_products_publier_created_at');
-                }
-            });
+                });
+            }
         }
     }
 

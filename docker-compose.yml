@@ -87,14 +87,14 @@ services:
       REDIS_DB: 0
       REDIS_CACHE_DB: 1
 
+      # Override MAIL_MAILER from .env (sendmail→smtp for Gmail)
+      # MAIL_USERNAME and MAIL_PASSWORD come from env_file (.env)
       MAIL_MAILER: smtp
-      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
-      MAIL_PORT: ${MAIL_PORT:-587}
-      MAIL_USERNAME: ${MAIL_USERNAME:-}
-      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_HOST: smtp.gmail.com
+      MAIL_PORT: "587"
       MAIL_ENCRYPTION: tls
-      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-bitoutawalid@gmail.com}
-      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Sobitas}
+      MAIL_FROM_ADDRESS: nachdit.customers@gmail.com
+      MAIL_FROM_NAME: Sobitas
     networks:
       - sobitas-net
     expose:
