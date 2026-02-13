@@ -7,11 +7,25 @@ mkdir -p /var/www/html/storage/logs
 mkdir -p /var/www/html/storage/framework/cache
 mkdir -p /var/www/html/storage/framework/sessions
 mkdir -p /var/www/html/storage/framework/views
+mkdir -p /var/www/html/storage/app/public
 mkdir -p /var/www/html/bootstrap/cache
 
 # Set ownership and permissions
 chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+
+# Ensure storage/app/public is writable (critical for file uploads)
+chown -R www-data:www-data /var/www/html/storage/app/public
+chmod -R 775 /var/www/html/storage/app/public
+
+# Create storage symlink if it doesn't exist (for public file access)
+if [ ! -L /var/www/html/public/storage ] || [ ! -e /var/www/html/public/storage ]; then
+    php artisan storage:link 2>/dev/null || {
+        # Fallback: create symlink manually if artisan fails
+        rm -f /var/www/html/public/storage
+        ln -s ../storage/app/public /var/www/html/public/storage
+    }
+fi
 
 # Ensure log file exists and is writable
 touch /var/www/html/storage/logs/laravel.log
