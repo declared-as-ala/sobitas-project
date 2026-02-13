@@ -69,7 +69,7 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           password: ${{ secrets.VPS_PASSWORD }}
-          script_stop: true
+          script_stop: false
           command_timeout: 300s
           script: |
             set -e
@@ -165,33 +165,31 @@ jobs:
             docker compose exec -T backend-v2 php artisan view:cache || true
             echo "✓ Laravel caches rebuilt"
 
+            # ── All critical steps done - disable exit on error for reporting ──
+            set +e
+
             # ── Step 12: Health check ──
             echo "========================================"
             echo "🏥 Health Check"
             echo "========================================"
-            docker compose ps mysql redis backend-v2 backend-nginx-v2
+            docker compose ps mysql redis backend-v2 backend-nginx-v2 2>/dev/null
             echo ""
-            
-            # Test backend endpoint (non-fatal)
+
             echo "🔍 Testing backend endpoint..."
             sleep 3
-            set +e
             HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8083/admin/login 2>/dev/null)
-            CURL_EXIT=$?
-            set -e
             if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "302" ]; then
               echo "✓ Backend is responding (HTTP $HTTP_CODE)"
             else
-              echo "⚠ Backend health check returned HTTP $HTTP_CODE (curl exit $CURL_EXIT, may still be starting)"
+              echo "⚠ Backend health check returned HTTP $HTTP_CODE (may still be starting)"
             fi
 
             echo ""
             echo "=== Recent Logs ==="
-            docker compose logs --tail 30 backend-v2
+            docker compose logs --tail 20 backend-v2 2>/dev/null
 
-            # ── Step 13: Cleanup old images ──
             echo "🧹 Cleaning up old images..."
-            docker image prune -f || true
+            docker image prune -f 2>/dev/null
 
             echo "========================================"
             echo "✅ Filament Backend V2 Deploy Completed"
