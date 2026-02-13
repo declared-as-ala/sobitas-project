@@ -154,15 +154,8 @@ jobs:
 
             # ── Step 10: CRITICAL - Reset OPcache (validate_timestamps=0) ──
             echo "🔄 Resetting OPcache (validate_timestamps=0)..."
-            # Method 1: Use opcache_reset() via PHP
-            docker compose exec -T backend-v2 php -r "if (function_exists('opcache_reset')) { opcache_reset(); echo 'OPcache reset successful\n'; } else { echo 'OPcache not available\n'; }" || true
-            # Method 2: Reload PHP-FPM to ensure clean state
-            docker compose exec -T backend-v2 killall -USR2 php-fpm 2>/dev/null || {
-              # Fallback: restart PHP-FPM container
-              echo "⚠ PHP-FPM reload failed, restarting container..."
-              docker compose restart backend-v2
-              sleep 5
-            }
+            # Use opcache_reset() via PHP (container was just recreated, so this ensures clean state)
+            docker compose exec -T backend-v2 php -r "if (function_exists('opcache_reset')) { opcache_reset(); echo 'OPcache reset successful'; } else { echo 'OPcache not available'; }" || true
             echo "✓ OPcache reset complete"
 
             # ── Step 11: Rebuild Laravel caches (after OPcache reset) ──
