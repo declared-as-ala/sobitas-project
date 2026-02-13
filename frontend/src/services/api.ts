@@ -368,75 +368,94 @@ export const getTags = async (): Promise<any[]> => {
   return response.data;
 };
 
-// ==================== ARTICLES / BLOG ====================
-// Strategy: ISR with tag-based on-demand revalidation
-// - Data Cache: responses cached for 60s (fast, no API hit on every request)
-// - Tags: revalidateTag('blog') instantly purges ALL blog caches
-// - Pages keep force-dynamic: always server-render, but data comes from cache
-// - Admin CRUD → POST /api/revalidate → revalidateTag('blog') → instant freshness
-
+// Articles/Blog
+// Force no-cache for blog endpoints to ensure fresh data after admin changes.
+// IMPORTANT: Do NOT combine cache:'no-store' with next:{revalidate:0} — they conflict.
+// cache:'no-store' is the correct way to skip all Next.js Data Cache layers.
+// We also append a timestamp query param to bust any intermediary caches (CDN, Nginx, browser).
 export const getAllArticles = async (): Promise<Article[]> => {
-  const response = await fetch(`${API_URL}/all_articles`, {
+  const response = await fetch(`${API_URL}/all_articles?_t=${Date.now()}`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
     },
-    next: {
-      tags: ['blog'],      // revalidateTag('blog') purges this
-      revalidate: 60,       // auto-refresh every 60s as fallback
-    },
+    cache: 'no-store',
   });
-
+  
   if (!response.ok) {
     throw new Error(`Failed to fetch articles: ${response.statusText}`);
   }
-
+  
   const data = await response.json();
   return Array.isArray(data) ? data : (data.articles || []);
 };
 
 export const getArticleDetails = async (slug: string): Promise<Article> => {
-  const response = await fetch(`${API_URL}/article_details/${slug}`, {
+  const response = await fetch(`${API_URL}/article_details/${slug}?_t=${Date.now()}`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
     },
-    next: {
-      tags: ['blog', `blog-${slug}`],  // purge specific slug or all blog
-      revalidate: 60,
-    },
+    cache: 'no-store',
   });
-
+  
   if (!response.ok) {
     if (response.status === 404) {
       throw new Error('Article not found');
     }
     throw new Error(`Failed to fetch article: ${response.statusText}`);
   }
-
+  
   const data = await response.json();
   return data;
 };
 
 export const getLatestArticles = async (): Promise<Article[]> => {
-  const response = await fetch(`${API_URL}/latest_articles`, {
+  const response = await fetch(`${API_URL}/latest_articles?_t=${Date.now()}`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
     },
-    next: {
-      tags: ['blog'],
-      revalidate: 60,
-    },
+    cache: 'no-store',
   });
-
+  
   if (!response.ok) {
     throw new Error(`Failed to fetch latest articles: ${response.statusText}`);
   }
+  
+  const data = await response.json();
+  return Array.isArray(data) ? data : (data.articles || []);
+};
 
+/**
+ * Client-side fetch for articles — used by BlogPageClient to re-fetch
+ * fresh data on mount, bypassing any server-side or Next.js cache.
+ */
+export const getAllArticlesClient = async (): Promise<Article[]> => {
+  const response = await fetch(`${API_URL}/all_articles?_t=${Date.now()}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+    },
+    cache: 'no-store',
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch articles: ${response.statusText}`);
+  }
+  
   const data = await response.json();
   return Array.isArray(data) ? data : (data.articles || []);
 };

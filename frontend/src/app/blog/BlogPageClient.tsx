@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Header } from '@/app/components/Header';
@@ -9,7 +9,7 @@ import { Calendar, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { motion } from 'motion/react';
 import type { Article } from '@/types';
-import { getStorageUrl } from '@/services/api';
+import { getStorageUrl, getAllArticlesClient } from '@/services/api';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { SafeImage } from '@/app/components/SafeImage';
@@ -35,7 +35,6 @@ const BLOG_CATEGORIES = [
 // Decode HTML entities properly (server-safe, no window/document)
 function decodeHtmlEntities(text: string): string {
   if (!text) return '';
-  // Server-safe decoding (no window/document to avoid hydration mismatch)
   return text
     .replace(/&nbsp;/g, ' ')
     .replace(/&amp;/g, '&')
@@ -123,22 +122,58 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
   const [isNavigating, setIsNavigating] = useState(false);
   const [mounted, setMounted] = useState(false);
   const isUserAction = useRef(false);
-  const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Initialize page from URL on mount (client-side only to avoid hydration mismatch)
+  // ─── Client-side re-fetch: ensures data is ALWAYS fresh ───
+  // The server component provides `articles` for the initial SSR/SEO render.
+  // On mount (client-side), we re-fetch from the API to guarantee freshness,
+  // which fixes the "deleted article reappears after F5" bug caused by
+  // Next.js server-side caching layers (Full Route Cache, Data Cache, CDN).
+  const [liveArticles, setLiveArticles] = useState<Article[]>(articles);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const refreshArticles = useCallback(async () => {
+    try {
+      setIsRefreshing(true);
+      const fresh = await getAllArticlesClient();
+      setLiveArticles(fresh);
+    } catch {
+      // Silently fall back to server-provided data
+      console.warn('[Blog] Client-side re-fetch failed, using server data');
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, []);
+
+  // Re-fetch on mount (client-side)
   useEffect(() => {
     setMounted(true);
+
+    // Read page from URL on initial mount
     const pageParam = searchParams.get('page');
     const urlPage = pageParam ? parseInt(pageParam, 10) : 1;
     if (!isNaN(urlPage) && urlPage >= 1) {
       setCurrentPage(urlPage);
     }
-  }, []); // Only run on mount
+
+    // Fetch fresh data from API (bypasses all server-side caching)
+    refreshArticles();
+
+    // Also re-fetch when user returns to this tab (handles admin edits in another tab)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshArticles();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Filter by category (keyword-based)
   const filteredArticles = useMemo(() => {
-    return articles.filter(a => articleMatchesCategory(a, activeCategory));
-  }, [articles, activeCategory]);
+    return liveArticles.filter(a => articleMatchesCategory(a, activeCategory));
+  }, [liveArticles, activeCategory]);
 
   // Sort by date (latest first)
   const sortedArticles = useMemo(() => {
@@ -157,43 +192,31 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
     [sortedArticles, startIndex, endIndex]
   );
 
-  // Sync currentPage from URL params (on refresh or URL change)
+  // Sync currentPage from URL params (on URL change from external navigation)
   useEffect(() => {
     const pageParam = searchParams.get('page');
     const urlPage = pageParam ? parseInt(pageParam, 10) : 1;
-    
-    // Only sync from URL if it's a valid page
-    // Skip if this was triggered by a user action
+
     if (!isUserAction.current && !isNaN(urlPage) && urlPage >= 1 && urlPage <= totalPages) {
-      setCurrentPage(prevPage => {
-        // Only update if different to avoid unnecessary re-renders
-        return urlPage !== prevPage ? urlPage : prevPage;
-      });
+      setCurrentPage(prevPage => (urlPage !== prevPage ? urlPage : prevPage));
     }
-    // Reset the flag after processing
     isUserAction.current = false;
   }, [searchParams, totalPages]);
 
   // Reset to page 1 when category changes
   useEffect(() => {
     setCurrentPage(1);
-    isUserAction.current = true; // Mark as user action to prevent URL sync effect from interfering
+    isUserAction.current = true;
   }, [activeCategory]);
 
   // Update URL when currentPage changes from user interaction
   useEffect(() => {
     if (!mounted) return;
-    
+
     const pageParam = searchParams.get('page');
     const urlPage = pageParam ? parseInt(pageParam, 10) : 1;
-    
-    // Only update URL if it doesn't match currentPage
+
     if (currentPage !== urlPage && isUserAction.current) {
-      // Cancel any pending navigation
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-      
       setIsNavigating(true);
       const params = new URLSearchParams(searchParams.toString());
       if (currentPage === 1) {
@@ -202,10 +225,8 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
         params.set('page', currentPage.toString());
       }
       const newUrl = params.toString() ? `/blog?${params.toString()}` : '/blog';
-      
-      // Update URL only (pagination is client-side; data is already in props)
       router.replace(newUrl, { scroll: false });
-      
+
       // Reset loading state after a short delay
       setTimeout(() => {
         setIsNavigating(false);
@@ -231,7 +252,7 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
       <Header />
 
       <main className="w-full mx-auto px-4 sm:px-6 max-w-[1024px] md:max-w-[1280px] lg:max-w-[1400px] xl:max-w-[1600px] py-6 sm:py-10 lg:py-14">
-        {/* Hero title – centered, GreenFacts-style */}
+        {/* Hero title – centered */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -262,13 +283,13 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
           </nav>
         </motion.div>
 
-        {sortedArticles.length === 0 ? (
+        {sortedArticles.length === 0 && !isRefreshing ? (
           <div className="text-center py-16">
             <p className="text-gray-500 dark:text-gray-400">Aucun article dans cette catégorie.</p>
           </div>
         ) : (
           <>
-            {/* Loading overlay during navigation */}
+            {/* Loading overlay during page navigation */}
             {isNavigating && (
               <div className="fixed inset-0 bg-black/20 dark:bg-black/40 backdrop-blur-sm z-40 flex items-center justify-center">
                 <div className="bg-white dark:bg-gray-900 rounded-lg px-6 py-4 shadow-lg">
@@ -279,7 +300,7 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
               </div>
             )}
 
-            {/* 1 col on mobile, 2 on tablet, 3 on desktop – responsive cards */}
+            {/* Article grid: 1 col mobile, 2 tablet, 3 desktop */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-7 lg:gap-8 xl:gap-9 mb-8 sm:mb-12">
               {isNavigating ? (
                 // Show skeletons during navigation
@@ -291,9 +312,8 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
                   const articleDate = article.created_at ? new Date(article.created_at) : new Date();
                   const excerpt = getExcerpt(article);
                   const readingMin = getReadingTimeMinutes(article);
-                  // Use stable key: page + id to prevent React from reusing old components
                   const stableKey = `blog-${currentPage}-${article.id}`;
-                  
+
                   return (
                     <motion.article
                       key={stableKey}
@@ -312,7 +332,7 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
                                 fill
                                 className="group-hover:scale-110 transition-transform duration-500"
                                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                                priority={index < 3} // Priority for first 3 images
+                                priority={index < 3}
                               />
                             ) : (
                               <div className="w-full h-full bg-gradient-to-br from-red-600 to-red-800" />

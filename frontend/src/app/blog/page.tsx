@@ -9,10 +9,12 @@ export const metadata: Metadata = {
   description: 'Guides, conseils prise de masse, choix whey et créatine. Tout pour la nutrition sportive en Tunisie.',
 };
 
-// force-dynamic: page always server-renders (no stale HTML from Full Route Cache)
-// Data fetching uses ISR via next: { tags: ['blog'], revalidate: 60 }
-// Admin CRUD → POST /api/revalidate → revalidateTag('blog') → instant freshness
+// Force dynamic rendering & disable ALL fetch caching for this route.
+// fetchCache = 'force-no-store' is the nuclear option: it ensures every fetch()
+// in this route segment bypasses the Next.js Data Cache, even if individual
+// fetch calls forget cache:'no-store'. This fixes stale blog data after admin edits.
 export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 
 async function getBlogData() {
   try {

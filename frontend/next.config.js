@@ -29,9 +29,9 @@ const nextConfig = {
   compress: true,
   poweredByHeader: false,
   experimental: {
-    // Prevent Next.js Client Router Cache from serving stale RSC payloads
-    // dynamic=0  → force-dynamic pages never cached in client router (default in Next 15)
-    // static=0   → ISR pages also not cached in client router → always fresh from server
+    // Disable the client-side Router Cache for both dynamic and static pages.
+    // This ensures navigating to /blog always fetches fresh RSC payloads from the server,
+    // preventing stale articles from appearing after admin edits/deletes.
     staleTimes: {
       dynamic: 0,
       static: 0,
@@ -44,25 +44,6 @@ const nextConfig = {
       '@radix-ui/react-tooltip',
       'motion',
     ],
-  },
-  // Response headers — prevent CDN from caching blog HTML independently of ISR
-  async headers() {
-    return [
-      {
-        source: '/blog',
-        headers: [
-          { key: 'CDN-Cache-Control', value: 'no-store' },
-          { key: 'Surrogate-Control', value: 'no-store' },
-        ],
-      },
-      {
-        source: '/blog/:slug*',
-        headers: [
-          { key: 'CDN-Cache-Control', value: 'no-store' },
-          { key: 'Surrogate-Control', value: 'no-store' },
-        ],
-      },
-    ];
   },
 }
 
