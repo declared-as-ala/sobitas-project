@@ -172,14 +172,17 @@ jobs:
             docker compose ps mysql redis backend-v2 backend-nginx-v2
             echo ""
             
-            # Test backend endpoint (non-fatal - don't fail deployment if health check fails)
+            # Test backend endpoint (non-fatal)
             echo "🔍 Testing backend endpoint..."
             sleep 3
-            HTTP_CODE=$(curl -f -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8083/admin/login 2>/dev/null || echo "000")
-            if echo "$HTTP_CODE" | grep -qE "200|302"; then
+            set +e
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8083/admin/login 2>/dev/null)
+            CURL_EXIT=$?
+            set -e
+            if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "302" ]; then
               echo "✓ Backend is responding (HTTP $HTTP_CODE)"
             else
-              echo "⚠ Backend health check returned HTTP $HTTP_CODE (may still be starting)"
+              echo "⚠ Backend health check returned HTTP $HTTP_CODE (curl exit $CURL_EXIT, may still be starting)"
             fi
 
             echo ""
