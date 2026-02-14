@@ -320,13 +320,13 @@ export const getProductsByCategory = async (slug: string): Promise<{
 
 export const getProductsBySubCategory = async (
   slug: string,
-  options?: { signal?: AbortSignal; perPage?: number }
+  options?: { signal?: AbortSignal; page?: number; perPage?: number }
 ): Promise<{
   sous_category: any;
   products: Product[];
   brands: Brand[];
   sous_categories: any[];
-  pagination?: { current_page: number; last_page: number; per_page: number; total: number };
+  pagination?: { total: number; current_page: number; last_page: number; per_page: number };
 }> => {
   const cleanSlug = (slug || '').trim();
   if (!cleanSlug) {
@@ -335,13 +335,12 @@ export const getProductsBySubCategory = async (
     throw err;
   }
   const signal = options?.signal;
-  const perPage = options?.perPage && [12, 24, 40, 60].includes(options.perPage) ? options.perPage : undefined;
+  const params: Record<string, number> = {};
+  if (options?.perPage != null && options.perPage > 0) params.per_page = options.perPage;
+  if (options?.page != null && options.page > 0) params.page = options.page;
   return withRetry(
     async () => {
-      const response = await api.get(`/productsBySubCategoryId/${cleanSlug}`, {
-        signal,
-        params: perPage ? { per_page: perPage } : undefined,
-      });
+      const response = await api.get(`/productsBySubCategoryId/${cleanSlug}`, { signal, params });
       if (!response.data || !response.data.sous_category || !response.data.sous_category.id) {
         console.warn(`Subcategory "${cleanSlug}" not found in API response`);
         const err: any = new Error('Subcategory not found');
