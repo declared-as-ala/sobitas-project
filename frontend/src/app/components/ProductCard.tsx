@@ -128,7 +128,7 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
       <div className="relative aspect-square w-full flex-shrink-0 overflow-hidden bg-gray-100 dark:bg-gray-700 rounded-t-[14px] sm:rounded-t-xl lg:rounded-t-2xl min-h-[200px] sm:min-h-[240px] md:min-h-[280px] lg:min-h-[320px]">
 
         <LinkWithLoading 
-          href={`/shop/${productData.slug || product.id}`} 
+          href={`/shop/${encodeURIComponent(productData.slug || String(product.id))}`} 
           className="block size-full" 
           aria-label={`Voir ${productData.name}`}
           loadingMessage={`Chargement de ${productData.name}...`}
@@ -216,7 +216,7 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
       {/* Content – flex-1 so CTA stays at bottom */}
       <div className="flex flex-col flex-1 min-h-0 p-3 sm:p-3 lg:p-4">
         <LinkWithLoading 
-          href={`/shop/${productData.slug || product.id}`} 
+          href={`/shop/${encodeURIComponent(productData.slug || String(product.id))}`} 
           className="block mb-1"
           loadingMessage={`Chargement de ${productData.name}...`}
         >
@@ -252,7 +252,7 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
             )}
             {productData.reviewCount > 0 ? (
               <LinkWithLoading
-                href={`/shop/${productData.slug || product.id}#reviews`}
+                href={`/shop/${encodeURIComponent(productData.slug || String(product.id))}#reviews`}
                 className="text-[11px] sm:text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline transition-colors"
               >
                 ({productData.reviewCount} avis client{productData.reviewCount > 1 ? 's' : ''})

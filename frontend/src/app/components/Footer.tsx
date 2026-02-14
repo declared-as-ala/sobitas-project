@@ -21,6 +21,12 @@ export function Footer() {
     getCmsPages().then(setPages);
   }, []);
 
+  // Exclude "Qui sommes nous ?" (and variants) from API pages — do not show in footer
+  const footerPages = pages.filter((p) => {
+    const title = (p.title || '').toLowerCase().trim();
+    return !title.includes('qui sommes');
+  });
+
   // Lazy load Google Maps only when footer is visible (Intersection Observer)
   useEffect(() => {
     if (!mapRef.current) return;
@@ -179,7 +185,7 @@ export function Footer() {
           <div className="space-y-3 w-full">
             <h3 className="font-bold text-white text-sm uppercase tracking-wide">Services & Ventes</h3>
             <ul className="space-y-1.5">
-              {pages.length > 0 ? pages.map((p) => (
+              {footerPages.length > 0 ? footerPages.map((p) => (
                 <li key={p.id}>
                   <Link href={`/page/${p.slug}`} className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">{p.title}</Link>
                 </li>
@@ -328,7 +334,7 @@ export function Footer() {
           <div>
             <h3 className="font-semibold text-white mb-6">Services & Ventes</h3>
             <ul className="space-y-3">
-              {pages.map((p) => (
+              {footerPages.map((p) => (
                 <li key={p.id}>
                   <Link href={`/page/${p.slug}`} className="text-sm hover:text-red-500 transition-colors">
                     {p.title}

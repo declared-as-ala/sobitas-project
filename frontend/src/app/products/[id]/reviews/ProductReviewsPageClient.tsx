@@ -203,7 +203,7 @@ export function ProductReviewsPageClient({ product }: ProductReviewsPageClientPr
         {/* Breadcrumb */}
         <nav className="mb-3 sm:mb-4 lg:mb-6 text-sm min-w-0">
           <Link
-            href={`/shop/${product.slug}`}
+            href={`/shop/${encodeURIComponent(product.slug ?? '')}`}
             className="inline-flex items-center gap-1 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 min-h-[44px] items-center break-words"
           >
             <ChevronLeft className="h-4 w-4 shrink-0" />

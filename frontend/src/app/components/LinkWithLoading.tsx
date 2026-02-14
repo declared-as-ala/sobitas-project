@@ -14,6 +14,17 @@ interface LinkWithLoadingProps {
   [key: string]: any;
 }
 
+/** True if href is same-origin internal (e.g. /shop/foo). */
+function isInternalLink(href: string): boolean {
+  return href.startsWith('/') && !href.startsWith('//');
+}
+
+/**
+ * We must NOT preventDefault + router.push() for internal links.
+ * Otherwise prefetch runs first; if the RSC returns 404 (e.g. dynamic route not yet resolved),
+ * that 404 is cached and router.push() then shows it — while a full page load works.
+ * So for internal links we use native Next.js Link behavior (no custom prefetch/push).
+ */
 export function LinkWithLoading({
   href,
   children,
@@ -26,12 +37,8 @@ export function LinkWithLoading({
   const { setLoading, setLoadingMessage } = useLoading();
 
   const handleClick = (e: MouseEvent<HTMLAnchorElement>) => {
-    // Call custom onClick if provided
-    if (onClick) {
-      onClick(e);
-    }
+    if (onClick) onClick(e);
 
-    // Don't intercept if it's a modifier key (Ctrl, Cmd, etc.) or external link
     if (
       e.ctrlKey ||
       e.metaKey ||
@@ -45,14 +52,14 @@ export function LinkWithLoading({
       return;
     }
 
-    // Prevent default navigation
-    e.preventDefault();
+    // Internal links: let Next.js Link handle navigation (avoids 404 from custom prefetch+push cache)
+    if (isInternalLink(href)) {
+      return;
+    }
 
-    // Set loading state
+    e.preventDefault();
     setLoadingMessage(loadingMessage || 'Chargement...');
     setLoading(true);
-
-    // Prefetch and navigate
     try {
       router.prefetch(href);
       router.push(href);

@@ -385,7 +385,7 @@ export function Header() {
                           {searchResults.slice(0, 6).map((product) => (
                             <Link
                               key={product.id}
-                              href={`/shop/${product.slug}`}
+                              href={`/shop/${encodeURIComponent(product.slug ?? String(product.id))}`}
                               onClick={() => {
                                 setSearchQuery('');
                                 setShowSearchResults(false);

@@ -392,6 +392,8 @@ function buildProductJsonLd(product: Product, baseUrl: string) {
   return jsonLd;
 }
 
+// 404 is only called after server resolution: product then category/subcategory are tried.
+// No premature 404 — client navigation uses native Next.js Link so RSC runs with correct slug.
 export default async function ProductDetailPage({ params, searchParams }: ProductPageProps) {
   const { slug } = await params;
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';

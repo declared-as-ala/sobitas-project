@@ -993,7 +993,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
 
                   {/* See More Reviews Button - Always show to navigate to full reviews page */}
                   <Button variant="outline" className="w-full" size="default" asChild>
-                    <Link href={`/shop/${product.slug}/reviews`} className="flex items-center justify-center gap-2">
+                    <Link href={`/shop/${encodeURIComponent(product.slug ?? '')}/reviews`} className="flex items-center justify-center gap-2">
                       Voir tous les avis ({reviewCount})
                       <ChevronRight className="h-4 w-4" />
                     </Link>
