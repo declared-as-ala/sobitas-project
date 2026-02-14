@@ -3,14 +3,13 @@
  * Uses product.qte from API when available; otherwise rupture === 1 → "unlimited" (cap 999), else 0.
  */
 
-/** Product-like shape for stock (qte optional, rupture optional) */
+/** Minimal product shape for stock (qte optional, rupture optional). No index signature so Product from @/types is assignable. */
 export interface ProductLike {
   id: number;
   qte?: number;
   quantityInStock?: number;
   availableStock?: number;
   rupture?: number;
-  [key: string]: unknown;
 }
 
 export interface CartItemLike {
