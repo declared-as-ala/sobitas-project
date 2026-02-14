@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import Image from 'next/image';
@@ -19,9 +20,11 @@ interface CategoryGridProps {
  * visible (placeholder gradient + shimmer) sur onError pour éviter une card toute grise.
  */
 function CategoryCard({ category }: { category: Category }) {
+  const router = useRouter();
   const [imageError, setImageError] = useState(false);
   const showImage = category.cover && !imageError;
   const imageUrl = category.cover ? getStorageUrl(category.cover) : '';
+  const href = `/shop/${category.slug}`;
 
   return (
     <article
@@ -29,9 +32,10 @@ function CategoryCard({ category }: { category: Category }) {
       style={{ minHeight: '160px' }}
     >
       <LinkWithLoading
-        href={`/shop/${category.slug}`}
+        href={href}
         aria-label={`Voir les produits de ${category.designation_fr}`}
         loadingMessage={`Chargement de ${category.designation_fr}...`}
+        onMouseEnter={() => router.prefetch(href)}
         className="absolute inset-0"
       >
         {/* Image container: position relative + overflow hidden + border-radius (inherited). Same height/ratio for all cards. */}

@@ -52,13 +52,11 @@ export default function CheckoutPage() {
     livraison_prenom: user?.name?.split(' ').slice(1).join(' ') || '',
     livraison_email: user?.email || '',
     livraison_phone: '',
-    phone2: '',
     pays: 'Tunisie',
     livraison_region: '',
     livraison_ville: '',
     livraison_code_postale: '',
     livraison_adresse1: '',
-    livraison_adresse2: '',
     note: '',
     livraison: 1,
   });
@@ -200,7 +198,6 @@ export default function CheckoutPage() {
           livraison_ville: formData.livraison_ville,
           livraison_code_postale: formData.livraison_code_postale || null,
           livraison_adresse1: formData.livraison_adresse1,
-          livraison_adresse2: formData.livraison_adresse2 || undefined,
           note: formData.note || undefined,
           livraison: formData.livraison,
           frais_livraison: shippingCost,
@@ -254,7 +251,6 @@ export default function CheckoutPage() {
             ville: formData.livraison_ville,
             code_postale: formData.livraison_code_postale?.toString(),
             adresse1: formData.livraison_adresse1,
-            adresse2: formData.livraison_adresse2,
             livraison: formData.livraison,
             frais_livraison: shippingCost,
             prix_ht: totalPrice,
@@ -593,7 +589,6 @@ export default function CheckoutPage() {
                     <div className="text-gray-600 dark:text-gray-400">
                       <p>{(order?.livraison_nom || order?.nom || '')} {(order?.livraison_prenom || order?.prenom || '')}</p>
                       <p>{order?.livraison_adresse1 || order?.adresse1 || ''}</p>
-                      {(order?.livraison_adresse2 || order?.adresse2) && <p>{order?.livraison_adresse2 || order?.adresse2}</p>}
                       <p>{(order?.livraison_ville || order?.ville || '')}, {(order?.livraison_region || order?.region || '')}</p>
                       {(order?.livraison_code_postale || order?.code_postale) && <p>{order?.livraison_code_postale || order?.code_postale || ''}</p>}
                       <p className="mt-2">
@@ -757,22 +752,6 @@ export default function CheckoutPage() {
                           />
                         </div>
                       </div>
-                      {showOptionalFields && (
-                        <div className="space-y-1.5">
-                          <Label htmlFor="phone2" className="text-[13px] font-medium text-gray-700 dark:text-gray-300">
-                            Téléphone 2 <span className="text-gray-400 text-xs">(optionnel)</span>
-                          </Label>
-                          <Input
-                            id="phone2"
-                            type="tel"
-                            inputMode="tel"
-                            value={formData.phone2}
-                            onChange={(e) => handleInputChange('phone2', e.target.value)}
-                            className="min-h-[48px] text-[15px] border border-gray-200 dark:border-gray-700 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 rounded-xl transition-all duration-200"
-                            placeholder="+216 XX XXX XXX"
-                          />
-                        </div>
-                      )}
                       <button
                         type="button"
                         onClick={() => setShowOptionalFields(!showOptionalFields)}
@@ -814,20 +793,7 @@ export default function CheckoutPage() {
                         />
                       </div>
                       {showOptionalFields && (
-                        <>
-                          <div className="space-y-1.5">
-                            <Label htmlFor="livraison_adresse2" className="text-[13px] font-medium text-gray-700 dark:text-gray-300">
-                              Adresse ligne 2 <span className="text-gray-400 text-xs">(optionnel)</span>
-                            </Label>
-                            <Input
-                              id="livraison_adresse2"
-                              value={formData.livraison_adresse2}
-                              onChange={(e) => handleInputChange('livraison_adresse2', e.target.value)}
-                              className="min-h-[48px] text-[15px] border border-gray-200 dark:border-gray-700 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 rounded-xl transition-all duration-200"
-                              placeholder="Appartement, étage, etc."
-                            />
-                          </div>
-                          <div className="space-y-1.5">
+                        <div className="space-y-1.5">
                             <Label htmlFor="note" className="text-[13px] font-medium text-gray-700 dark:text-gray-300">
                               Notes de commande <span className="text-gray-400 text-xs">(optionnel)</span>
                             </Label>
@@ -838,8 +804,7 @@ export default function CheckoutPage() {
                               className="w-full min-h-[100px] p-4 text-[15px] border border-gray-200 dark:border-gray-700 rounded-xl focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 resize-none"
                               placeholder="Consignes de livraison, instructions..."
                             />
-                          </div>
-                        </>
+                        </div>
                       )}
                     </div>
 

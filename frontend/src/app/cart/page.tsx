@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Header } from '@/app/components/Header';
@@ -12,6 +12,8 @@ import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { motion, AnimatePresence } from 'motion/react';
 import { productsData } from '@/data/products';
 import { getStorageUrl } from '@/services/api';
+import { getStockDisponible } from '@/util/cartStock';
+import { toast } from 'sonner';
 
 const FREE_SHIPPING_THRESHOLD = 300;
 
@@ -28,6 +30,25 @@ export default function CartPage() {
   } = useCart();
 
   const [showUpsells, setShowUpsells] = useState(true);
+  const hasClampedRef = useRef(false);
+
+  // Clamp cart quantities to current stock when product stock dropped below cart qty
+  useEffect(() => {
+    if (items.length === 0) return;
+    let didClamp = false;
+    items.forEach((item) => {
+      const stock = getStockDisponible(item.product as any);
+      if (stock >= 0 && item.quantity > stock) {
+        const newQty = Math.max(0, stock);
+        updateQuantity(item.product.id, newQty);
+        didClamp = true;
+      }
+    });
+    if (didClamp && !hasClampedRef.current) {
+      hasClampedRef.current = true;
+      toast.info('Quantité ajustée au stock disponible.');
+    }
+  }, [items]);
 
   const totalItems = getTotalItems();
   const totalPrice = getTotalPrice();
@@ -131,6 +152,18 @@ export default function CartPage() {
                     const displayPrice = getEffectivePrice(item.product);
                     const productName = (item.product as any).name || (item.product as any).designation_fr || 'Produit';
                     const productImage = (item.product as any).image || ((item.product as any).cover ? getStorageUrl((item.product as any).cover) : null);
+                    const stockDisponible = getStockDisponible(item.product as any);
+                    const maxQty = Math.max(1, stockDisponible);
+
+                    const handleIncreaseQty = () => {
+                      const next = item.quantity + 1;
+                      if (next > stockDisponible) {
+                        updateQuantity(item.product.id, maxQty);
+                        toast.info('Quantité ajustée au stock disponible.');
+                      } else {
+                        updateQuantity(item.product.id, next);
+                      }
+                    };
 
                     return (
                       <motion.div
@@ -174,24 +207,26 @@ export default function CartPage() {
                           </div>
 
                           <div className="flex items-center justify-between gap-2 mt-2">
-                            {/* Quantity - touch-friendly */}
+                            {/* Quantity - touch-friendly, clamped to stock */}
                             <div className="flex items-center rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                               <button
                                 type="button"
-                                onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                                className="flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 min-h-[44px] min-w-[44px] text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                                onClick={() => updateQuantity(item.product.id, Math.max(1, item.quantity - 1))}
+                                className="flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 min-h-[44px] min-w-[44px] text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:pointer-events-none"
                                 aria-label="Diminuer la quantité"
+                                disabled={item.quantity <= 1}
                               >
                                 <Minus className="h-4 w-4" />
                               </button>
-                              <span className="w-10 sm:w-12 text-center font-semibold text-sm tabular-nums">
+                              <span className="w-10 sm:w-12 text-center font-semibold text-sm tabular-nums" aria-live="polite">
                                 {item.quantity}
                               </span>
                               <button
                                 type="button"
-                                onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                                className="flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 min-h-[44px] min-w-[44px] text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                                onClick={handleIncreaseQty}
+                                className="flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 min-h-[44px] min-w-[44px] text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:pointer-events-none"
                                 aria-label="Augmenter la quantité"
+                                disabled={item.quantity >= maxQty}
                               >
                                 <Plus className="h-4 w-4" />
                               </button>

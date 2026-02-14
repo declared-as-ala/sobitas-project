@@ -99,3 +99,8 @@ export function ProductsSkeleton({
 export function CategorySkeleton(props: ProductsSkeletonProps) {
   return <ProductsSkeleton showBreadcrumb showFilters {...props} />;
 }
+
+/** Skeleton for subcategory page — same as category (title + filters + grid). */
+export function SubCategorySkeleton(props: ProductsSkeletonProps) {
+  return <ProductsSkeleton showBreadcrumb showFilters {...props} />;
+}

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { ChevronDown } from 'lucide-react';
 import { getCategories } from '@/services/api';
@@ -120,6 +121,7 @@ const findSubCategoryByName = (name: string, categories: Category[]): { slug: st
 };
 
 export function ProductsDropdown() {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
   const triggerRef = useRef<HTMLDivElement>(null);
@@ -229,14 +231,16 @@ export function ProductsDropdown() {
           // Find the category by title to get its slug
           const categoryData = findCategoryByName(category.title, categories);
           const categorySlug = categoryData?.slug || nameToSlug(category.title);
-          
+          const categoryHref = `/shop/${categorySlug}`;
+
           return (
             <div key={index} className="space-y-2 min-w-0">
               {/* Category title - link to category page using slug */}
               <LinkWithLoading
-                href={`/shop/${categorySlug}`}
+                href={categoryHref}
                 className="font-semibold text-sm sm:text-base text-red-600 dark:text-red-500 mb-3 leading-tight hover:underline block"
                 loadingMessage={`Chargement de ${category.title}...`}
+                onMouseEnter={() => router.prefetch(categoryHref)}
                 onMouseDown={(e: React.MouseEvent<HTMLAnchorElement>) => {
                   e.preventDefault();
                 }}
@@ -250,13 +254,15 @@ export function ProductsDropdown() {
                   const subCategory = findSubCategoryByName(item, categories);
                   // Use subcategory slug if found, otherwise convert name to slug
                   const itemSlug = subCategory?.slug || nameToSlug(item);
-                  
+                  const itemHref = `/shop/${itemSlug}`;
+
                   return (
                     <li key={itemIndex}>
                       <LinkWithLoading
-                        href={`/shop/${itemSlug}`}
+                        href={itemHref}
                         className="text-sm text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-500 transition-colors block py-1 break-words"
                         loadingMessage={`Chargement de ${item}...`}
+                        onMouseEnter={() => router.prefetch(itemHref)}
                         onMouseDown={(e: React.MouseEvent<HTMLAnchorElement>) => {
                           // Prevent blur from closing menu when clicking
                           e.preventDefault();
@@ -278,6 +284,7 @@ export function ProductsDropdown() {
           href="/shop"
           className="text-base font-semibold text-red-600 dark:text-red-500 hover:underline"
           loadingMessage="Chargement de la boutique..."
+          onMouseEnter={() => router.prefetch('/shop')}
           onMouseDown={(e: React.MouseEvent<HTMLAnchorElement>) => {
             e.preventDefault();
           }}
@@ -317,6 +324,7 @@ export function ProductsDropdown() {
         href="/shop"
         className="text-sm font-semibold text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-400 transition-colors flex items-center gap-1 whitespace-nowrap py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
         loadingMessage="Chargement de la boutique..."
+        onMouseEnter={() => router.prefetch('/shop')}
       >
         NOS PRODUITS
         <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />

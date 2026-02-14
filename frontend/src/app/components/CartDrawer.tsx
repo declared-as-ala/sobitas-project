@@ -15,6 +15,8 @@ import { Button } from '@/app/components/ui/button';
 import { Minus, Plus, Trash2, ShoppingBag } from 'lucide-react';
 import Link from 'next/link';
 import { getStorageUrl } from '@/services/api';
+import { getStockDisponible } from '@/util/cartStock';
+import { toast } from 'sonner';
 
 interface CartDrawerProps {
   open: boolean;
@@ -65,6 +67,18 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
             <div className="space-y-3 py-4">
               {items.map(item => {
                 const displayPrice = getEffectivePrice(item.product);
+                const stockDisponible = getStockDisponible(item.product as any);
+                const maxQty = Math.max(1, stockDisponible);
+
+                const handleIncrease = () => {
+                  const next = item.quantity + 1;
+                  if (next > stockDisponible) {
+                    updateQuantity(item.product.id, maxQty);
+                    toast.info('Quantité ajustée au stock disponible.');
+                  } else {
+                    updateQuantity(item.product.id, next);
+                  }
+                };
 
                 return (
                   <div
@@ -101,21 +115,21 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                           size="icon"
                           className="h-7 w-7 rounded-md border-gray-200 dark:border-gray-600"
                           onClick={() =>
-                            updateQuantity(item.product.id, item.quantity - 1)
+                            updateQuantity(item.product.id, Math.max(1, item.quantity - 1))
                           }
+                          disabled={item.quantity <= 1}
                         >
                           <Minus className="h-3.5 w-3.5" />
                         </Button>
-                        <span className="w-8 text-center text-sm font-medium tabular-nums">
+                        <span className="w-8 text-center text-sm font-medium tabular-nums" aria-live="polite">
                           {item.quantity}
                         </span>
                         <Button
                           variant="outline"
                           size="icon"
                           className="h-7 w-7 rounded-md border-gray-200 dark:border-gray-600"
-                          onClick={() =>
-                            updateQuantity(item.product.id, item.quantity + 1)
-                          }
+                          onClick={handleIncrease}
+                          disabled={item.quantity >= maxQty}
                         >
                           <Plus className="h-3.5 w-3.5" />
                         </Button>

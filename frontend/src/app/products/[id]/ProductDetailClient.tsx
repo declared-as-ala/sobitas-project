@@ -22,6 +22,10 @@ import { getStorageUrl, addReview, getProductDetails, getFAQs } from '@/services
 import { hasValidPromo } from '@/util/productPrice';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import {
+  getStockDisponible,
+  getMaxAddable,
+} from '@/util/cartStock';
 
 interface ProductDetailClientProps {
   product: Product;
@@ -32,7 +36,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
   const router = useRouter();
   const params = useParams();
   const productSlug = params?.id as string;
-  const { addToCart } = useCart();
+  const { addToCart, getCartQty } = useCart();
   const { isAuthenticated, user } = useAuth();
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -61,6 +65,10 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
     }
   }, []);
 
+  // Stock disponible (qte from API or rupture-based)
+  const stockDisponible = getStockDisponible(product as any);
+  const inCartQty = getCartQty(product.id);
+
   // Update product and reviews when initialProduct changes
   useEffect(() => {
     setProduct(initialProduct);
@@ -79,6 +87,16 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
       setFaqs(data);
     }).catch(err => console.error('Error fetching FAQs:', err));
   }, [initialProduct]);
+
+  // Clamp quantity to 1..stockDisponible when stock changes
+  useEffect(() => {
+    setQuantity((q) => {
+      const max = Math.max(1, stockDisponible);
+      if (q < 1) return 1;
+      if (stockDisponible <= 0) return 1;
+      return Math.min(max, q);
+    });
+  }, [stockDisponible]);
 
   const basePrice = product.prix || 0;
   const hasPromo = hasValidPromo(product);
@@ -185,13 +203,20 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
     : null;
 
   const handleAddToCart = () => {
-    // Check if product is out of stock
-    if (product.rupture !== 1) {
+    if (stockDisponible <= 0) {
       toast.error('Rupture de stock - Ce produit n\'est pas disponible');
       return;
     }
+    const requestedTotal = inCartQty + quantity;
+    if (requestedTotal > stockDisponible) {
+      const restant = getMaxAddable(stockDisponible, inCartQty);
+      toast.error(
+        `Stock insuffisant. Il reste ${restant} unité${restant !== 1 ? 's' : ''}.`
+      );
+      if (restant > 0) setQuantity(restant);
+      return;
+    }
 
-    // Transform product to match cart expectations
     const cartProduct = {
       ...product,
       name: product.designation_fr,
@@ -199,10 +224,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
       priceText: `${displayPrice} DT`,
       image: productImage,
     };
-
-    for (let i = 0; i < quantity; i++) {
-      addToCart(cartProduct as any);
-    }
+    addToCart(cartProduct as any, quantity);
     toast.success('Produit ajouté au panier');
   };
 
@@ -559,15 +581,19 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
                       size="icon"
                       className="h-9 w-9 min-h-[44px] min-w-[44px]"
                       onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      disabled={quantity <= 1}
+                      aria-label="Diminuer la quantité"
                     >
                       <Minus className="h-4 w-4" />
                     </Button>
-                    <span className="w-12 text-center font-bold text-lg">{quantity}</span>
+                    <span className="w-12 text-center font-bold text-lg" aria-live="polite">{quantity}</span>
                     <Button
                       variant="ghost"
                       size="icon"
                       className="h-9 w-9 min-h-[44px] min-w-[44px]"
-                      onClick={() => setQuantity(quantity + 1)}
+                      onClick={() => setQuantity(Math.min(stockDisponible, quantity + 1))}
+                      disabled={quantity >= stockDisponible || stockDisponible <= 0}
+                      aria-label="Augmenter la quantité"
                     >
                       <Plus className="h-4 w-4" />
                     </Button>
@@ -692,11 +718,11 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
                 <div className="space-y-3">
                   <div className="flex flex-wrap items-center gap-4">
                     <div className="flex items-center gap-2 border border-gray-200 dark:border-gray-800 rounded-xl px-2 py-1.5 min-h-[44px]">
-                      <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => setQuantity(Math.max(1, quantity - 1))}>
+                      <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => setQuantity(Math.max(1, quantity - 1))} disabled={quantity <= 1} aria-label="Diminuer la quantité">
                         <Minus className="h-4 w-4" />
                       </Button>
-                      <span className="w-10 text-center font-semibold">{quantity}</span>
-                      <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => setQuantity(quantity + 1)}>
+                      <span className="w-10 text-center font-semibold" aria-live="polite">{quantity}</span>
+                      <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => setQuantity(Math.min(stockDisponible, quantity + 1))} disabled={quantity >= stockDisponible || stockDisponible <= 0} aria-label="Augmenter la quantité">
                         <Plus className="h-4 w-4" />
                       </Button>
                     </div>
@@ -707,10 +733,10 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
                       size="lg"
                       className="flex-1 min-h-[52px] bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white text-base font-bold shadow-lg"
                       onClick={handleAddToCart}
-                      disabled={product.rupture !== 1}
+                      disabled={stockDisponible <= 0}
                     >
                       <ShoppingCart className="h-5 w-5 mr-2" />
-                      {product.rupture === 1 ? 'Ajouter au panier' : 'Rupture de stock'}
+                      {stockDisponible <= 0 ? 'Rupture de stock' : 'Ajouter au panier'}
                     </Button>
                     <div className="flex gap-2 shrink-0">
                       <Button variant="outline" size="icon" className="h-11 w-11" onClick={() => setIsFavorite(!isFavorite)} aria-label="Favoris">
@@ -1098,10 +1124,10 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
             size="lg"
             className="flex-1 min-h-[48px] sm:min-h-[52px] bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white text-base font-semibold shrink-0"
             onClick={handleAddToCart}
-            disabled={product.rupture !== 1}
+            disabled={stockDisponible <= 0}
           >
             <ShoppingCart className="h-5 w-5 mr-2 shrink-0" />
-            {product.rupture === 1 ? 'Ajouter' : 'Rupture'}
+            {stockDisponible <= 0 ? 'Rupture' : 'Ajouter'}
           </Button>
         </div>
       </div>

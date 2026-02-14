@@ -10,6 +10,7 @@ import { getStorageUrl } from '@/services/api';
 import { useCart } from '@/app/contexts/CartContext';
 import { toast } from 'sonner';
 import { hasValidPromo } from '@/util/productPrice';
+import { getStockDisponible } from '@/util/cartStock';
 import { useState, useMemo, memo, useCallback } from 'react';
 
 type FlashProduct = {
@@ -35,8 +36,11 @@ interface FlashProductCardProps {
 }
 
 export const FlashProductCard = memo(function FlashProductCard({ product }: FlashProductCardProps) {
-  const { addToCart } = useCart();
+  const { addToCart, getCartQty } = useCart();
   const [isAdding, setIsAdding] = useState(false);
+  const stockDisponible = getStockDisponible(product as any);
+  const inCartQty = getCartQty(product.id);
+  const canAddMore = stockDisponible > 0 && inCartQty < stockDisponible;
 
   const productData = useMemo(() => {
     const name = product.name || product.designation_fr || '';
@@ -80,15 +84,19 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
   const handleAddToCart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!productData.isInStock) {
+    if (!productData.isInStock || stockDisponible <= 0) {
       toast.error('Rupture de stock');
       return;
     }
+    if (inCartQty >= stockDisponible) {
+      toast.error(`Stock insuffisant. Il reste ${Math.max(0, stockDisponible - inCartQty)} unité(s).`);
+      return;
+    }
     setIsAdding(true);
-    addToCart(product as any);
+    addToCart(product as any, 1);
     toast.success('Produit ajouté au panier');
     setTimeout(() => setIsAdding(false), 500);
-  }, [productData.isInStock, addToCart, product]);
+  }, [productData.isInStock, stockDisponible, inCartQty, addToCart, product]);
 
   // Determine which badges to show (max 2)
   const badges = useMemo(() => {
@@ -331,8 +339,8 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
               size="lg"
               className="w-full min-h-[44px] sm:min-h-[48px] rounded-xl font-black text-xs sm:text-sm bg-gradient-to-r from-red-600 via-red-600 to-orange-600 hover:from-red-700 hover:via-red-700 hover:to-orange-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300 relative overflow-hidden group/btn"
               onClick={handleAddToCart}
-              disabled={isAdding || !productData.isInStock}
-              aria-label={`${productData.isInStock ? 'Acheter' : 'Rupture de stock'} ${productData.name}`}
+              disabled={isAdding || !productData.isInStock || !canAddMore}
+              aria-label={!canAddMore && productData.isInStock ? 'Stock maximum atteint' : `${productData.isInStock ? 'Acheter' : 'Rupture de stock'} ${productData.name}`}
             >
               {/* Shine effect on hover */}
               <motion.div
@@ -341,8 +349,10 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
               />
               <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2 relative z-10 flex-shrink-0" aria-hidden="true" />
               <span className="relative z-10 truncate">
-                {!productData.isInStock 
-                  ? 'Rupture de stock' 
+                {!productData.isInStock || stockDisponible <= 0
+                  ? 'Rupture de stock'
+                  : !canAddMore
+                  ? 'Stock max' 
                   : isAdding 
                   ? 'Ajouté ! ✓' 
                   : 'Acheter maintenant'}

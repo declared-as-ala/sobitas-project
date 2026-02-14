@@ -3,6 +3,9 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/app/components/ui/button';
+import { Header } from '@/app/components/Header';
+import { Footer } from '@/app/components/Footer';
+import { CategorySkeleton } from '@/app/components/ProductsSkeleton';
 import { AlertCircle, Home, RefreshCw, ShoppingBag } from 'lucide-react';
 
 export default function ShopSlugError({
@@ -17,34 +20,37 @@ export default function ShopSlugError({
   }, [error]);
 
   return (
-    <div className="min-h-[50vh] flex flex-col items-center justify-center px-4 py-12 text-center">
-      <div className="rounded-full bg-amber-100 dark:bg-amber-900/30 p-4 mb-4">
-        <AlertCircle className="h-10 w-10 text-amber-600 dark:text-amber-400" aria-hidden />
-      </div>
-      <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
-        Erreur de chargement
-      </h2>
-      <p className="text-gray-500 dark:text-gray-400 text-sm max-w-md mb-6">
-        Un problème réseau ou serveur empêche d&apos;afficher cette page. Réessayez ou revenez à la boutique.
-      </p>
-      <div className="flex flex-wrap gap-3 justify-center">
-        <Button onClick={reset} className="gap-2" size="lg">
-          <RefreshCw className="h-4 w-4" />
-          Réessayer
-        </Button>
-        <Button asChild variant="outline" size="lg" className="gap-2">
-          <Link href="/shop">
-            <ShoppingBag className="h-4 w-4" />
-            Boutique
-          </Link>
-        </Button>
-        <Button asChild variant="ghost" size="lg" className="gap-2">
-          <Link href="/">
-            <Home className="h-4 w-4" />
-            Accueil
-          </Link>
-        </Button>
-      </div>
-    </div>
+    <>
+      <Header />
+      <main className="w-full mx-auto px-4 sm:px-6 max-w-[1024px] md:max-w-[1280px] lg:max-w-[1400px] xl:max-w-[1600px] py-4 sm:py-8 lg:py-12">
+        {/* Banner erreur (non plein écran) */}
+        <div className="mb-6 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
+            <AlertCircle className="h-5 w-5 shrink-0" />
+            <span className="text-sm font-medium">Problème réseau. Réessayez ou consultez la boutique.</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={reset} size="sm" className="gap-2">
+              <RefreshCw className="h-4 w-4" />
+              Réessayer
+            </Button>
+            <Button asChild variant="outline" size="sm" className="gap-2">
+              <Link href="/shop">
+                <ShoppingBag className="h-4 w-4" />
+                Boutique
+              </Link>
+            </Button>
+            <Button asChild variant="ghost" size="sm" className="gap-2">
+              <Link href="/">
+                <Home className="h-4 w-4" />
+                Accueil
+              </Link>
+            </Button>
+          </div>
+        </div>
+        <CategorySkeleton />
+      </main>
+      <Footer />
+    </>
   );
 }

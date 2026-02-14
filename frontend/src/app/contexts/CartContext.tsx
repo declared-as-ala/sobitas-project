@@ -5,6 +5,7 @@ import { Product as DataProduct } from '@/data/products';
 import type { Product as ApiProduct } from '@/types';
 import { toast } from 'sonner';
 import { getEffectivePrice as getEffectivePriceUtil } from '@/util/productPrice';
+import { getStockDisponible, getCartQty } from '@/util/cartStock';
 
 // Support both Product types
 type Product = ApiProduct | DataProduct;
@@ -28,6 +29,8 @@ interface CartContextType {
   getTotalItems: () => number;
   getTotalPrice: () => number;
   getEffectivePrice: (product: Product) => number;
+  /** Quantité actuelle du produit dans le panier. */
+  getCartQty: (productId: number) => number;
   /** Drawer open state: opens on add-to-cart (desktop and mobile). */
   cartDrawerOpen: boolean;
   setCartDrawerOpen: (open: boolean) => void;
@@ -63,31 +66,46 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [items, isLoaded]);
 
   const addToCart = (product: Product, quantity: number = 1) => {
-    // Check if product is out of stock: rupture === 1 means in stock, !== 1 means out of stock
-    const isInStock = (product as any).rupture === 1 || (product as any).rupture === undefined;
-    
-    if (!isInStock) {
+    const stockDisponible = getStockDisponible(product as any);
+    if (stockDisponible <= 0) {
       toast.error('Rupture de stock - Ce produit n\'est pas disponible');
       return;
     }
-    
+
+    const inCartQty = getCartQty(items, product.id);
+    const requestedTotal = inCartQty + quantity;
+    if (requestedTotal > stockDisponible) {
+      const restant = Math.max(0, stockDisponible - inCartQty);
+      toast.error(
+        `Stock insuffisant. Il reste ${restant} unité${restant !== 1 ? 's' : ''}.`
+      );
+      if (restant > 0) {
+        setItems(prevItems => {
+          const existing = prevItems.find(item => item.product.id === product.id);
+          const newQty = inCartQty + restant;
+          if (existing) {
+            return prevItems.map(item =>
+              item.product.id === product.id ? { ...item, quantity: newQty } : item
+            );
+          }
+          return [...prevItems, { product, quantity: restant }];
+        });
+        setCartDrawerOpen(true);
+      }
+      return;
+    }
+
     setItems(prevItems => {
       const existingItem = prevItems.find(item => item.product.id === product.id);
-      
       if (existingItem) {
-        // Check if adding more would exceed stock (if stock is tracked)
-        // For now, just update quantity if item already exists
         return prevItems.map(item =>
           item.product.id === product.id
             ? { ...item, quantity: item.quantity + quantity }
             : item
         );
-      } else {
-        // Add new item
-        return [...prevItems, { product, quantity }];
       }
+      return [...prevItems, { product, quantity }];
     });
-    // Open cart drawer on add-to-cart (desktop and mobile)
     setCartDrawerOpen(true);
   };
 
@@ -120,6 +138,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     return items.reduce((total, item) => total + getEffectivePrice(item.product) * item.quantity, 0);
   };
 
+  const getCartQtyForProduct = (productId: number) => getCartQty(items, productId);
+
   return (
     <CartContext.Provider
       value={{
@@ -131,6 +151,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         getTotalItems,
         getTotalPrice,
         getEffectivePrice,
+        getCartQty: getCartQtyForProduct,
         cartDrawerOpen,
         setCartDrawerOpen,
       }}

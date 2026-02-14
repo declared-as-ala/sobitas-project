@@ -1,7 +1,8 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getCategories, getProductsBySubCategory, getAllBrands } from '@/services/api';
+import { getCategories, getProductsBySubCategory } from '@/services/api';
 import { ShopPageClient } from '../../ShopPageClient';
+import { SubCategoryFallbackClient } from '@/app/shop/SubCategoryFallbackClient';
 import type { Category } from '@/types';
 
 interface SubCategoryPageProps {
@@ -135,8 +136,16 @@ export default async function SubCategoryPage({ params, searchParams }: SubCateg
         />
       </>
     );
-  } catch (error) {
-    console.error('Error fetching subcategory data:', error);
-    notFound();
+  } catch (error: any) {
+    console.warn('[SubCategoryPage] Fetch error:', error?.message || error);
+    if (error?.response?.status === 404 || error?.message === 'Subcategory not found') {
+      notFound();
+    }
+    return (
+      <SubCategoryFallbackClient
+        categorySlug={categorySlug}
+        subcategorySlug={subcategorySlug}
+      />
+    );
   }
 }

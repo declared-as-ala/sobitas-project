@@ -12,6 +12,7 @@ import { useCart } from '@/app/contexts/CartContext';
 import { getStorageUrl } from '@/services/api';
 import { toast } from 'sonner';
 import { hasValidPromo } from '@/util/productPrice';
+import { getStockDisponible } from '@/util/cartStock';
 import { useState, useMemo, memo, useCallback } from 'react';
 
 type Product = ApiProduct | {
@@ -42,8 +43,11 @@ interface ProductCardProps {
 }
 
 export const ProductCard = memo(function ProductCard({ product, showBadge, badgeText, variant = 'default', showDescription = false, hideCountdown = false }: ProductCardProps) {
-  const { addToCart } = useCart();
+  const { addToCart, getCartQty } = useCart();
   const [isAdding, setIsAdding] = useState(false);
+  const stockDisponible = getStockDisponible(product as any);
+  const inCartQty = getCartQty(product.id);
+  const canAddMore = stockDisponible > 0 && inCartQty < stockDisponible;
 
   const productData = useMemo(() => {
     const name = (product as any).name || product.designation_fr || '';
@@ -95,15 +99,19 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
   const handleAddToCart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!productData.isInStock) {
+    if (!productData.isInStock || stockDisponible <= 0) {
       toast.error('Rupture de stock');
       return;
     }
+    if (inCartQty >= stockDisponible) {
+      toast.error(`Stock insuffisant. Il reste ${stockDisponible - inCartQty} unité(s).`);
+      return;
+    }
     setIsAdding(true);
-    addToCart(product as any);
+    addToCart(product as any, 1);
     toast.success('Produit ajouté au panier');
     setTimeout(() => setIsAdding(false), 500);
-  }, [productData.isInStock, addToCart, product]);
+  }, [productData.isInStock, stockDisponible, inCartQty, addToCart, product]);
 
   const isCompact = variant === 'compact';
 
@@ -204,11 +212,11 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
             size="sm"
             className="w-full min-h-[44px] bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-xl"
             onClick={handleAddToCart}
-            disabled={isAdding || !productData.isInStock}
-            aria-label={`Ajouter ${productData.name} au panier`}
+            disabled={isAdding || !productData.isInStock || !canAddMore}
+            aria-label={!canAddMore && productData.isInStock ? 'Stock maximum atteint' : `Ajouter ${productData.name} au panier`}
           >
             <ShoppingCart className="h-4 w-4 mr-2" aria-hidden="true" />
-            {!productData.isInStock ? 'Rupture de stock' : isAdding ? 'Ajouté !' : 'Ajouter au panier'}
+            {!productData.isInStock || stockDisponible <= 0 ? 'Rupture de stock' : !canAddMore ? 'Stock max' : isAdding ? 'Ajouté !' : 'Ajouter au panier'}
           </Button>
         </div>
       </div>
@@ -317,15 +325,17 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
         <div className="flex-shrink-0 pt-3 mt-2 border-t border-gray-100 dark:border-gray-700/60 lg:hidden block">
           <Button
             size="sm"
-            className={`w-full min-h-[44px] rounded-xl font-semibold text-[10px] xs:text-[11px] sm:text-sm active:scale-[0.98] transition-transform duration-150 select-none px-1.5 sm:px-2 ${productData.isInStock ? 'bg-red-600 hover:bg-red-700 text-white shadow-[0_2px_8px_rgba(220,38,38,0.35)]' : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed text-white'}`}
+            className={`w-full min-h-[44px] rounded-xl font-semibold text-[10px] xs:text-[11px] sm:text-sm active:scale-[0.98] transition-transform duration-150 select-none px-1.5 sm:px-2 ${productData.isInStock && canAddMore ? 'bg-red-600 hover:bg-red-700 text-white shadow-[0_2px_8px_rgba(220,38,38,0.35)]' : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed text-white'}`}
             onClick={handleAddToCart}
-            disabled={isAdding || !productData.isInStock}
+            disabled={isAdding || !productData.isInStock || !canAddMore}
             aria-label={`Ajouter ${productData.name} au panier`}
           >
             <ShoppingCart className={`size-3.5 sm:size-4 shrink-0 mr-1 sm:mr-1.5 md:mr-2 ${isCompact ? 'sm:mr-1.5' : ''}`} aria-hidden="true" />
             <span className="truncate max-w-full">
-              {!productData.isInStock ? (
+              {!productData.isInStock || stockDisponible <= 0 ? (
                 <><span className="hidden min-[360px]:inline">Rupture de stock</span><span className="min-[360px]:hidden">Rupture</span></>
+              ) : !canAddMore ? (
+                <><span className="hidden min-[360px]:inline">Stock max</span><span className="min-[360px]:hidden">Max</span></>
               ) : isAdding ? (
                 'Ajouté !'
               ) : (

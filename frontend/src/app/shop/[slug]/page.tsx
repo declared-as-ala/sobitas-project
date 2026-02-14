@@ -5,6 +5,7 @@ import { getStorageUrl } from '@/services/api';
 import { ProductDetailClient } from '@/app/products/[id]/ProductDetailClient';
 import { ShopPageClient } from '@/app/shop/ShopPageClient';
 import { CategoryFallbackClient } from '@/app/shop/CategoryFallbackClient';
+import { ProductDetailFallbackClient } from '@/app/shop/ProductDetailFallbackClient';
 import type { Product } from '@/types';
 
 interface ProductPageProps {
@@ -427,10 +428,10 @@ export default async function ProductDetailPage({ params, searchParams }: Produc
       );
     }
   } catch (productError: any) {
-    // Only try category when API explicitly returned 404 for product. Do not treat network/5xx as "not found".
-    if (productError?.response?.status !== 404) {
-      console.error('[ShopSlugPage] Product fetch error (not 404):', productError?.message || productError);
-      throw productError;
+    // Only try category when API explicitly returned 404 for product. Network/5xx → client fallback with retry.
+    if (productError?.response?.status !== 404 && productError?.message !== 'Product not found') {
+      console.warn('[ShopSlugPage] Product fetch error (network/5xx), using client fallback:', productError?.message || productError);
+      return <ProductDetailFallbackClient slug={slugStr} />;
     }
   }
 
