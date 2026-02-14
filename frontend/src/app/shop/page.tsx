@@ -13,11 +13,17 @@ export const revalidate = 0;
 
 async function getShopData() {
   try {
-    const [productsData, categories, brands] = await Promise.all([
-      getAllProducts(),
+    const [productsResponse, categories, brands] = await Promise.all([
+      getAllProducts({ perPage: 24, page: 1 }),
       getCategories(),
       getAllBrands(),
     ]);
+    const productsData = {
+      products: productsResponse.products,
+      brands: productsResponse.brands,
+      categories: productsResponse.categories,
+      pagination: productsResponse.pagination,
+    };
     return { productsData, categories, brands };
   } catch (error) {
     console.error('Error fetching shop data:', error);

@@ -225,32 +225,55 @@ export const getCoordinates = async (): Promise<Coordinate> => {
 };
 
 // Products
-export const getAllProducts = async (): Promise<{ products: Product[]; brands: Brand[]; categories: Category[] }> => {
+export type ProductsResponse = {
+  products: Product[];
+  brands: Brand[];
+  categories: Category[];
+  pagination?: { total: number; current_page: number; per_page: number; last_page: number };
+};
+
+export const getAllProducts = async (params?: {
+  page?: number;
+  perPage?: number;
+  search?: string;
+  brand_id?: number;
+  min_price?: number;
+  max_price?: number;
+  sort?: string;
+}): Promise<ProductsResponse> => {
   try {
-    const response = await api.get('/all_products');
-    // Ensure response.data exists and has the expected structure
+    const requestParams: Record<string, number | string> = {
+      per_page: params?.perPage ?? 24,
+      page: params?.page ?? 1,
+    };
+    if (params?.search?.trim()) requestParams.search = params.search.trim();
+    if (params?.brand_id != null) requestParams.brand_id = params.brand_id;
+    if (params?.min_price != null) requestParams.min_price = params.min_price;
+    if (params?.max_price != null) requestParams.max_price = params.max_price;
+    if (params?.sort) requestParams.sort = params.sort;
+
+    const response = await api.get('/all_products', { params: requestParams });
     if (!response.data) {
-      console.warn('[getAllProducts] API returned empty data, using defaults');
-      return {
-        products: [],
-        brands: [],
-        categories: [],
-      };
+      return { products: [], brands: [], categories: [] };
     }
-    // Ensure all required fields exist with defaults
+    const raw = response.data;
+    const products = Array.isArray(raw.products) ? raw.products : (raw.products?.data ?? []);
     return {
-      products: response.data.products || [],
-      brands: response.data.brands || [],
-      categories: response.data.categories || [],
+      products,
+      brands: raw.brands || [],
+      categories: raw.categories || [],
+      pagination: raw.pagination
+        ? {
+            total: raw.pagination.total,
+            current_page: raw.pagination.current_page,
+            per_page: raw.pagination.per_page,
+            last_page: raw.pagination.last_page,
+          }
+        : undefined,
     };
   } catch (error) {
     console.error('[getAllProducts] API error:', error);
-    // Return empty structure on error
-    return {
-      products: [],
-      brands: [],
-      categories: [],
-    };
+    return { products: [], brands: [], categories: [] };
   }
 };
 
@@ -335,9 +358,10 @@ export const getProductsBySubCategory = async (
     throw err;
   }
   const signal = options?.signal;
-  const params: Record<string, number> = {};
-  if (options?.perPage != null) params.per_page = options.perPage;
-  if (options?.page != null) params.page = options.page;
+  const params: Record<string, number> = {
+    per_page: options?.perPage ?? 24,
+    page: options?.page ?? 1,
+  };
   return withRetry(
     async () => {
       const response = await api.get(`/productsBySubCategoryId/${cleanSlug}`, { signal, params });
