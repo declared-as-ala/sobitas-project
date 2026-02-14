@@ -392,17 +392,23 @@ function buildProductJsonLd(product: Product, baseUrl: string) {
   return jsonLd;
 }
 
-// 404 is only called after server resolution: product then category/subcategory are tried.
-// No premature 404 — client navigation uses native Next.js Link so RSC runs with correct slug.
+// Only call notFound() when API explicitly returns 404. Never show 404 for network/5xx (avoids random 404s).
+// loading.tsx shows skeleton while RSC is loading; error.tsx shows "Réessayer" on non-404 errors.
 export default async function ProductDetailPage({ params, searchParams }: ProductPageProps) {
   const { slug } = await params;
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
 
-  console.log(`[ShopSlugPage] Resolving slug: "${slug}"`);
+  // Do not fetch with empty slug — invalid URL
+  if (!slug || !String(slug).trim()) {
+    notFound();
+  }
 
-  // 1) Try as product first (product detail page)
+  const slugStr = String(slug).trim();
+  console.log(`[ShopSlugPage] Resolving slug: "${slugStr}"`);
+
+  // 1) Try as product first (product detail page). Only treat as "not a product" on explicit 404.
   try {
-    const product = await getProductDetails(slug);
+    const product = await getProductDetails(slugStr);
     if (product?.id) {
       console.log(`[ShopSlugPage] Found product: "${product.designation_fr}"`);
       const similarData = product.sous_categorie_id
@@ -419,8 +425,12 @@ export default async function ProductDetailPage({ params, searchParams }: Produc
         </>
       );
     }
-  } catch {
-    // Not a product, try category/subcategory below
+  } catch (productError: any) {
+    // Only try category when API explicitly returned 404 for product. Do not treat network/5xx as "not found".
+    if (productError?.response?.status !== 404) {
+      console.error('[ShopSlugPage] Product fetch error (not 404):', productError?.message || productError);
+      throw productError;
+    }
   }
 
   // 2) Try as category or subcategory (shop listing)
@@ -432,7 +442,7 @@ export default async function ProductDetailPage({ params, searchParams }: Produc
     let isSubcategory = false;
 
     try {
-      const result = await getProductsByCategory(slug);
+      const result = await getProductsByCategory(slugStr);
       if (!result?.category?.designation_fr) notFound();
       categoryData = result.category;
       productsData = { products: result.products, brands: result.brands, categories: [] };
@@ -440,13 +450,18 @@ export default async function ProductDetailPage({ params, searchParams }: Produc
       brands = result.brands;
     } catch (categoryError: any) {
       if (categoryError?.response?.status === 404 || categoryError?.message === 'Category not found') {
-        const result = await getProductsBySubCategory(slug);
-        if (!result?.sous_category?.designation_fr) notFound();
-        categoryData = result.sous_category;
-        productsData = { products: result.products, brands: result.brands, categories: [] };
-        categories = await getCategories();
-        brands = result.brands;
-        isSubcategory = true;
+        try {
+          const result = await getProductsBySubCategory(slugStr);
+          if (!result?.sous_category?.designation_fr) notFound();
+          categoryData = result.sous_category;
+          productsData = { products: result.products, brands: result.brands, categories: [] };
+          categories = await getCategories();
+          brands = result.brands;
+          isSubcategory = true;
+        } catch (subError: any) {
+          if (subError?.response?.status === 404 || subError?.message === 'Subcategory not found') notFound();
+          throw subError;
+        }
       } else {
         throw categoryError;
       }
@@ -460,7 +475,7 @@ export default async function ProductDetailPage({ params, searchParams }: Produc
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'Accueil', item: baseUrl },
         { '@type': 'ListItem', position: 2, name: 'Boutique', item: `${baseUrl}/shop` },
-        { '@type': 'ListItem', position: 3, name: categoryData.designation_fr, item: `${baseUrl}/shop/${slug}` },
+        { '@type': 'ListItem', position: 3, name: categoryData.designation_fr, item: `${baseUrl}/shop/${slugStr}` },
       ],
     };
 
@@ -471,13 +486,15 @@ export default async function ProductDetailPage({ params, searchParams }: Produc
           productsData={productsData}
           categories={categories}
           brands={brands}
-          initialCategory={slug}
+          initialCategory={slugStr}
           isSubcategory={isSubcategory}
         />
       </>
     );
-  } catch (error) {
-    console.error('[ShopSlugPage] Error resolving slug:', error);
-    notFound();
+  } catch (error: any) {
+    console.error('[ShopSlugPage] Error resolving slug:', error?.message || error);
+    // Only 404 when API explicitly said not found. Network/5xx are rethrown so error.tsx shows "Réessayer".
+    if (error?.response?.status === 404) notFound();
+    throw error;
   }
 }

@@ -254,28 +254,41 @@ export const getAllProducts = async (): Promise<{ products: Product[]; brands: B
   }
 };
 
+const RETRY_DELAY_MS = 800;
+
+async function withRetry<T>(fn: () => Promise<T>, isRetryable: (err: any) => boolean): Promise<T> {
+  try {
+    return await fn();
+  } catch (err: any) {
+    if (!isRetryable(err)) throw err;
+    await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+    return fn();
+  }
+}
+
 export const getProductDetails = async (slug: string, cacheBust?: boolean): Promise<Product> => {
-  // Remove any query parameters from slug if present
-  const cleanSlug = slug.split('?')[0];
+  const cleanSlug = (slug || '').split('?')[0].trim();
+  if (!cleanSlug) {
+    const err: any = new Error('Product not found');
+    err.response = { status: 404 };
+    throw err;
+  }
   const url = cacheBust
     ? `/product_details/${cleanSlug}?t=${Date.now()}`
     : `/product_details/${cleanSlug}`;
-  try {
-    const response = await api.get<Product>(url);
-    if (!response.data || !response.data.id) {
-      console.warn(`Product "${cleanSlug}" not found in API response`);
-      throw new Error('Product not found');
-    }
-    return response.data;
-  } catch (error: any) {
-    // If 404, throw error so page can handle it with notFound()
-    if (error.response?.status === 404) {
-      console.warn(`Product "${cleanSlug}" not found (404)`);
-      throw error;
-    }
-    // Re-throw other errors
-    throw error;
-  }
+  return withRetry(
+    async () => {
+      const response = await api.get<Product>(url);
+      if (!response.data || !response.data.id) {
+        console.warn(`Product "${cleanSlug}" not found in API response`);
+        const err: any = new Error('Product not found');
+        err.response = { status: 404 };
+        throw err;
+      }
+      return response.data;
+    },
+    (err) => err?.response?.status !== 404 && (err?.code === 'ETIMEDOUT' || err?.code === 'ECONNRESET' || err?.code === 'ECONNABORTED' || (err?.response?.status >= 500 && err?.response?.status < 600))
+  );
 };
 
 export const getProductsByCategory = async (slug: string): Promise<{
@@ -284,23 +297,25 @@ export const getProductsByCategory = async (slug: string): Promise<{
   products: Product[];
   brands: Brand[];
 }> => {
-  try {
-    const response = await api.get(`/productsByCategoryId/${slug}`);
-    // Check if category exists in response
-    if (!response.data || !response.data.category || !response.data.category.id) {
-      console.warn(`Category "${slug}" not found in API response`);
-      throw new Error('Category not found');
-    }
-    return response.data;
-  } catch (error: any) {
-    // If 404, throw error so page can handle it with notFound()
-    if (error.response?.status === 404) {
-      console.warn(`Category "${slug}" not found (404)`);
-      throw error;
-    }
-    // Re-throw other errors
-    throw error;
+  const cleanSlug = (slug || '').trim();
+  if (!cleanSlug) {
+    const err: any = new Error('Category not found');
+    err.response = { status: 404 };
+    throw err;
   }
+  return withRetry(
+    async () => {
+      const response = await api.get(`/productsByCategoryId/${cleanSlug}`);
+      if (!response.data || !response.data.category || !response.data.category.id) {
+        console.warn(`Category "${cleanSlug}" not found in API response`);
+        const err: any = new Error('Category not found');
+        err.response = { status: 404 };
+        throw err;
+      }
+      return response.data;
+    },
+    (err) => err?.response?.status !== 404 && (err?.code === 'ETIMEDOUT' || err?.code === 'ECONNRESET' || err?.code === 'ECONNABORTED' || (err?.response?.status >= 500 && err?.response?.status < 600))
+  );
 };
 
 export const getProductsBySubCategory = async (slug: string): Promise<{
@@ -309,23 +324,25 @@ export const getProductsBySubCategory = async (slug: string): Promise<{
   brands: Brand[];
   sous_categories: any[];
 }> => {
-  try {
-    const response = await api.get(`/productsBySubCategoryId/${slug}`);
-    // Check if subcategory exists in response
-    if (!response.data || !response.data.sous_category || !response.data.sous_category.id) {
-      console.warn(`Subcategory "${slug}" not found in API response`);
-      throw new Error('Subcategory not found');
-    }
-    return response.data;
-  } catch (error: any) {
-    // If 404, throw error so page can handle it with notFound()
-    if (error.response?.status === 404) {
-      console.warn(`Subcategory "${slug}" not found (404)`);
-      throw error;
-    }
-    // Re-throw other errors
-    throw error;
+  const cleanSlug = (slug || '').trim();
+  if (!cleanSlug) {
+    const err: any = new Error('Subcategory not found');
+    err.response = { status: 404 };
+    throw err;
   }
+  return withRetry(
+    async () => {
+      const response = await api.get(`/productsBySubCategoryId/${cleanSlug}`);
+      if (!response.data || !response.data.sous_category || !response.data.sous_category.id) {
+        console.warn(`Subcategory "${cleanSlug}" not found in API response`);
+        const err: any = new Error('Subcategory not found');
+        err.response = { status: 404 };
+        throw err;
+      }
+      return response.data;
+    },
+    (err) => err?.response?.status !== 404 && (err?.code === 'ETIMEDOUT' || err?.code === 'ECONNRESET' || err?.code === 'ECONNABORTED' || (err?.response?.status >= 500 && err?.response?.status < 600))
+  );
 };
 
 export const getProductsByBrand = async (brandId: number): Promise<{
