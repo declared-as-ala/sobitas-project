@@ -94,3 +94,8 @@ export function ProductsSkeleton({
     </div>
   );
 }
+
+/** Skeleton for category page — same layout as products list. */
+export function CategorySkeleton(props: ProductsSkeletonProps) {
+  return <ProductsSkeleton showBreadcrumb showFilters {...props} />;
+}

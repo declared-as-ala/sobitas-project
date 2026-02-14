@@ -4,6 +4,7 @@ import { getProductDetails, getSimilarProducts, getCategories, getProductsByCate
 import { getStorageUrl } from '@/services/api';
 import { ProductDetailClient } from '@/app/products/[id]/ProductDetailClient';
 import { ShopPageClient } from '@/app/shop/ShopPageClient';
+import { CategoryFallbackClient } from '@/app/shop/CategoryFallbackClient';
 import type { Product } from '@/types';
 
 interface ProductPageProps {
@@ -493,8 +494,8 @@ export default async function ProductDetailPage({ params, searchParams }: Produc
     );
   } catch (error: any) {
     console.error('[ShopSlugPage] Error resolving slug:', error?.message || error);
-    // Only 404 when API explicitly said not found. Network/5xx are rethrown so error.tsx shows "Réessayer".
     if (error?.response?.status === 404) notFound();
-    throw error;
+    // Category fetch failed (network/5xx): let client show loading → list/empty or small error banner (no full-page error)
+    return <CategoryFallbackClient slug={slugStr} />;
   }
 }
