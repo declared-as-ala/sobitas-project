@@ -176,3 +176,15 @@ input[type="search"]::-webkit-search-results-decoration {
   display: none;
   -webkit-appearance: none;
 }
+
+/* Checkout: keep bottom bar fixed above keyboard on mobile (Safari iOS / Chrome Android).
+   --app-height and --keyboard-offset are set from visualViewport in CheckoutPage so
+   the bar stays at the bottom of the visible viewport when the keyboard opens. */
+.checkout-viewport-root {
+  min-height: var(--app-height, 100vh);
+}
+@media (min-width: 1024px) {
+  .checkout-viewport-root {
+    min-height: 100vh;
+  }
+}

@@ -74,6 +74,36 @@ export default function CheckoutPage() {
     }
   }, [items, router, isOrderComplete, isSubmitting, currentStep]);
 
+  /**
+   * Mobile viewport + keyboard fix (Safari iOS / Chrome Android).
+   * visualViewport gives the visible viewport size; when the keyboard opens,
+   * it shrinks so 100vh/layout viewport no longer match. We set --app-height
+   * so the layout uses the real visible height, and --keyboard-offset so the
+   * sticky checkout bar stays above the keyboard (bottom: offset) instead of
+   * jumping or sitting behind it.
+   */
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.visualViewport) return;
+    let rafId: number;
+    const update = () => {
+      rafId = requestAnimationFrame(() => {
+        const vv = window.visualViewport;
+        const height = vv?.height ?? window.innerHeight;
+        const keyboardOffset = Math.max(0, window.innerHeight - height);
+        document.documentElement.style.setProperty('--app-height', `${height}px`);
+        document.documentElement.style.setProperty('--keyboard-offset', `${keyboardOffset}px`);
+      });
+    };
+    update();
+    window.visualViewport.addEventListener('resize', update);
+    window.visualViewport.addEventListener('scroll', update);
+    return () => {
+      window.visualViewport.removeEventListener('resize', update);
+      window.visualViewport.removeEventListener('scroll', update);
+      cancelAnimationFrame(rafId);
+    };
+  }, []);
+
   // Sync formData when address selector values change
   useEffect(() => {
     setFormData(prev => ({
@@ -604,10 +634,9 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F7F8] dark:bg-gray-950">
+    <div className="checkout-viewport-root min-h-screen bg-[#F7F7F8] dark:bg-gray-950">
       <Header />
-      
-      <main className="max-w-[1160px] mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-12 pb-28 lg:pb-12">
+      <main className="checkout-main max-w-[1160px] mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-12 pb-[max(12rem,calc(env(safe-area-inset-bottom)+11rem))] lg:pb-12">
         {/* Progress: mobile = Étape 2/3, desktop = full stepper */}
         <div className="mb-6 lg:mb-8">
           <p className="text-sm font-medium text-gray-600 dark:text-gray-400 lg:hidden mb-4">
@@ -1063,10 +1092,14 @@ export default function CheckoutPage() {
             </motion.div>
           </div>
         </div>
+      </main>
 
-        {/* Mobile: sticky bottom bar (Total + CTA) + summary in sheet */}
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.3)] safe-area-pb">
-          <div className="max-w-[1160px] mx-auto px-4 py-4">
+      {/* Mobile: sticky bottom bar (Total + CTA). Outside main to avoid fixed being affected by any parent transform/overflow. Position uses --keyboard-offset so bar stays above keyboard (visualViewport). */}
+      <div
+        className="checkout-bottom-bar lg:hidden fixed left-0 right-0 z-40 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.3)] pb-[env(safe-area-inset-bottom)]"
+        style={{ bottom: 'var(--keyboard-offset, 0)' }}
+      >
+        <div className="max-w-[1160px] mx-auto px-4 py-4">
             <div className="flex items-center justify-between gap-4 mb-3">
               <div>
                 <p className="text-[13px] text-gray-500 dark:text-gray-400">Total</p>
@@ -1157,7 +1190,6 @@ export default function CheckoutPage() {
             </p>
           </div>
         </div>
-      </main>
 
       <Footer />
       <ScrollToTop />

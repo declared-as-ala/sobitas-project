@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { ChevronDown } from 'lucide-react';
 import { getCategories } from '@/services/api';
 import { Category } from '@/types';
+
+/** Header height approx for dropdown max-height (leave room below nav) */
+const HEADER_OFFSET_PX = 80;
 
 const menuCategories = [
   {
@@ -124,10 +127,18 @@ export function ProductsDropdown() {
   const [mounted, setMounted] = useState(false);
   const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
+  const rafScrollRef = useRef<number | null>(null);
+
+  const closeMenu = useCallback(() => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+    setIsOpen(false);
+  }, []);
 
   useEffect(() => {
     setMounted(true);
-    // Fetch categories to get slugs
     getCategories().then(setCategories).catch(console.error);
   }, []);
 
@@ -141,6 +152,47 @@ export function ProductsDropdown() {
     }
   }, [isOpen]);
 
+  // Close on scroll (wheel + scrollbar) so the menu never stays stuck over content. Throttled with rAF.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onScrollOrWheel = () => {
+      if (rafScrollRef.current != null) return;
+      rafScrollRef.current = requestAnimationFrame(() => {
+        rafScrollRef.current = null;
+        closeMenu();
+      });
+    };
+    window.addEventListener('scroll', onScrollOrWheel, { capture: true, passive: true });
+    window.addEventListener('wheel', onScrollOrWheel, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScrollOrWheel, { capture: true });
+      window.removeEventListener('wheel', onScrollOrWheel);
+      if (rafScrollRef.current != null) cancelAnimationFrame(rafScrollRef.current);
+    };
+  }, [isOpen, closeMenu]);
+
+  // Close on click outside (trigger + dropdown)
+  useEffect(() => {
+    if (!isOpen) return;
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as Node;
+      if (triggerRef.current?.contains(target) || dropdownRef.current?.contains(target)) return;
+      closeMenu();
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [isOpen, closeMenu]);
+
+  // Close on Escape
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeMenu();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, closeMenu]);
+
   const handleMouseEnter = () => {
     if (closeTimeoutRef.current) {
       clearTimeout(closeTimeoutRef.current);
@@ -150,27 +202,23 @@ export function ProductsDropdown() {
   };
 
   const handleMouseLeave = (e: React.MouseEvent) => {
-    // relatedTarget can be null or not a Node (e.g. when leaving to window) - contains() requires a Node
     const relatedTarget = e.relatedTarget as Node | null;
     const isNode = relatedTarget != null && relatedTarget instanceof Node;
-
     const isMovingToDropdown = isNode && (dropdownRef.current?.contains(relatedTarget) ?? false);
     const isMovingToTrigger = isNode && (triggerRef.current?.contains(relatedTarget) ?? false);
 
     if (!isMovingToDropdown && !isMovingToTrigger) {
-      // Add a small delay to allow smooth transition
-      closeTimeoutRef.current = setTimeout(() => {
-        setIsOpen(false);
-      }, 150);
+      closeTimeoutRef.current = setTimeout(closeMenu, 150);
     }
   };
 
   const dropdownContent = isOpen && mounted ? (
     <div
       ref={dropdownRef}
-      className="fixed left-0 right-0 w-full bg-white dark:bg-gray-900 border-y border-gray-200 dark:border-gray-800 shadow-xl z-[100] max-h-[85vh] overflow-y-auto"
+      className="fixed left-0 right-0 w-full bg-white dark:bg-gray-900 border-y border-gray-200 dark:border-gray-800 shadow-xl z-[100] overflow-y-auto"
       style={{
         top: `${dropdownPosition.top}px`,
+        maxHeight: `calc(100vh - ${HEADER_OFFSET_PX}px - 12px)`,
       }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -192,9 +240,7 @@ export function ProductsDropdown() {
                 onMouseDown={(e: React.MouseEvent<HTMLAnchorElement>) => {
                   e.preventDefault();
                 }}
-                onClick={() => {
-                  setTimeout(() => setIsOpen(false), 100);
-                }}
+                onClick={closeMenu}
               >
                 {category.title}
               </LinkWithLoading>
@@ -215,10 +261,7 @@ export function ProductsDropdown() {
                           // Prevent blur from closing menu when clicking
                           e.preventDefault();
                         }}
-                        onClick={() => {
-                          // Close menu after navigation
-                          setTimeout(() => setIsOpen(false), 100);
-                        }}
+                        onClick={closeMenu}
                       >
                         {item}
                       </LinkWithLoading>
@@ -238,9 +281,7 @@ export function ProductsDropdown() {
           onMouseDown={(e: React.MouseEvent<HTMLAnchorElement>) => {
             e.preventDefault();
           }}
-          onClick={() => {
-            setTimeout(() => setIsOpen(false), 100);
-          }}
+          onClick={closeMenu}
         >
           Voir tous les produits →
         </LinkWithLoading>
@@ -265,17 +306,10 @@ export function ProductsDropdown() {
       onMouseLeave={handleMouseLeave}
       onFocus={() => setIsOpen(true)}
       onBlur={(e) => {
-        // Don't close on blur when clicking links inside dropdown
         const relatedTarget = e.relatedTarget as HTMLElement;
-        if (dropdownRef.current?.contains(relatedTarget)) {
-          return;
-        }
-        // Only close if focus is moving outside both trigger and dropdown
+        if (dropdownRef.current?.contains(relatedTarget)) return;
         if (!e.currentTarget.contains(relatedTarget)) {
-          // Add delay to allow click events to process
-          closeTimeoutRef.current = setTimeout(() => {
-            setIsOpen(false);
-          }, 200);
+          closeTimeoutRef.current = setTimeout(closeMenu, 200);
         }
       }}
     >
