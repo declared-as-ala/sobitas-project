@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { motion, useInView, type Variants } from 'motion/react';
 
 // ─── Animated SVG Icons (premium, minimal, animatable) ───────────────────────
@@ -296,11 +296,50 @@ function FeatureCard({
   );
 }
 
-// ─── Section ───────────────────────────────────────────────────────────────
+// ─── Section (mobile: carousel with scroll-snap, desktop: grid) ───────────────
+
+const MOBILE_BREAKPOINT = 768;
 
 export function FeaturesSection() {
   const ref = useRef<HTMLElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: '-80px', amount: 0.2 });
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const [isMobile, setIsMobile] = useState(true);
+
+  const CAROUSEL_GAP = 16;
+
+  const updateCarouselIndex = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el || el.scrollWidth <= el.clientWidth) return;
+    const cardWidth = el.clientWidth * 0.88;
+    const step = cardWidth + CAROUSEL_GAP;
+    const index = Math.round(el.scrollLeft / step);
+    setCarouselIndex(Math.min(Math.max(0, index), features.length - 1));
+  }, []);
+
+  useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
+    const handler = () => setIsMobile(mql.matches);
+    handler();
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.addEventListener('scroll', updateCarouselIndex, { passive: true });
+    return () => el.removeEventListener('scroll', updateCarouselIndex);
+  }, [updateCarouselIndex]);
+
+  const scrollToIndex = (index: number) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const cardWidth = el.clientWidth * 0.88;
+    const step = cardWidth + CAROUSEL_GAP;
+    el.scrollTo({ left: index * step, behavior: 'smooth' });
+  };
 
   return (
     <section
@@ -328,21 +367,58 @@ export function FeaturesSection() {
           Nos avantages
         </h2>
 
+        {/* Mobile: horizontal carousel (scroll-snap). Desktop: grid */}
         <motion.div
-          className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8"
+          ref={scrollRef}
+          role="region"
+          aria-label="Avantages Sobitas"
+          className="flex md:grid overflow-x-auto md:overflow-visible gap-4 sm:gap-6 lg:gap-8 md:grid-cols-2 lg:grid-cols-4 snap-x md:snap-none pb-10 md:pb-0 scrollbar-hide"
+          style={{ WebkitOverflowScrolling: 'touch' }}
           variants={containerVariants}
           initial="hidden"
           animate={isInView ? 'visible' : 'hidden'}
         >
           {features.map((feature, index) => (
-            <FeatureCard
+            <div
               key={feature.id}
-              feature={feature}
-              index={index}
-              isInView={isInView}
-            />
+              className="flex-shrink-0 w-[88%] sm:w-[85%] md:w-auto md:flex-shrink snap-start snap-always"
+              style={{ scrollSnapAlign: 'start' }}
+            >
+              <FeatureCard
+                feature={feature}
+                index={index}
+                isInView={isInView}
+              />
+            </div>
           ))}
         </motion.div>
+
+        {/* Dots: mobile only, keyboard accessible */}
+        {isMobile && (
+          <div
+            className="flex justify-center gap-2 mt-4 md:hidden"
+            role="tablist"
+            aria-label="Slide des avantages"
+          >
+            {features.map((_, index) => (
+              <button
+                key={index}
+                type="button"
+                role="tab"
+                aria-selected={carouselIndex === index}
+                aria-label={`Avantage ${index + 1} sur ${features.length}`}
+                onClick={() => scrollToIndex(index)}
+                className="h-2 rounded-full transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
+                style={{
+                  width: carouselIndex === index ? 20 : 8,
+                  backgroundColor: carouselIndex === index
+                    ? 'rgb(220, 38, 38)'
+                    : 'rgba(0,0,0,0.15)',
+                }}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { ChevronRight, ChevronLeft, X } from 'lucide-react';
@@ -151,6 +151,31 @@ export function MobileProductsMenu({ open, onOpenChange }: MobileProductsMenuPro
     }
   }, [open]);
 
+  const closedByBackRef = useRef(false);
+
+  // Android back button: pushState when opening so back closes the sheet
+  useEffect(() => {
+    if (!open) {
+      closedByBackRef.current = false;
+      return;
+    }
+    closedByBackRef.current = false;
+    const id = 'mobile-products-menu-' + Date.now();
+    const state = { [id]: true };
+    window.history.pushState(state, '');
+    const onPopState = () => {
+      closedByBackRef.current = true;
+      onOpenChange(false);
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => {
+      window.removeEventListener('popstate', onPopState);
+      if (!closedByBackRef.current && window.history.state && (window.history.state as Record<string, unknown>)[id]) {
+        window.history.back();
+      }
+    };
+  }, [open, onOpenChange]);
+
   const selectedCategoryData = selectedCategory 
     ? menuCategories.find(cat => cat.title === selectedCategory)
     : null;
@@ -158,39 +183,49 @@ export function MobileProductsMenu({ open, onOpenChange }: MobileProductsMenuPro
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
-        side="right"
-        className="w-[85vw] max-w-[400px] p-0 flex flex-col overflow-hidden z-[60]"
+        side="bottom"
+        showCloseButton={false}
+        className="left-0 right-0 mx-0 w-full max-h-[90vh] rounded-t-2xl p-0 flex flex-col overflow-hidden z-[60] border-t border-gray-200 dark:border-gray-800"
       >
-        <div className="flex flex-col h-full">
-          {/* Header - Always visible, changes based on view */}
-          <SheetHeader className="px-4 sm:px-5 py-4 border-b border-gray-200 dark:border-gray-800 shrink-0">
-            <div className="flex items-center gap-3">
-              {selectedCategory && (
+        <div className="flex flex-col flex-1 min-h-0">
+          {/* Drag handle (bottom sheet affordance) */}
+          <div className="flex justify-center pt-2 pb-1 shrink-0" aria-hidden>
+            <div className="w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
+          </div>
+
+          {/* Header: one back (when in subcategory) + centered title + single close (X) */}
+          <SheetHeader className="px-4 py-3 border-b border-gray-200 dark:border-gray-800 shrink-0">
+            <div className="flex items-center gap-2 min-h-[44px]">
+              {selectedCategory ? (
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={handleBack}
-                  className="h-8 w-8 shrink-0"
+                  className="h-11 w-11 min-h-[44px] min-w-[44px] shrink-0 -ml-1"
+                  aria-label="Retour aux catégories"
                 >
                   <ChevronLeft className="h-5 w-5" />
                 </Button>
+              ) : (
+                <span className="w-11 shrink-0" aria-hidden />
               )}
-              <SheetTitle className="text-base sm:text-lg font-bold text-gray-900 dark:text-white flex-1 line-clamp-2">
+              <SheetTitle className="flex-1 text-center text-base font-bold text-gray-900 dark:text-white line-clamp-2 px-2">
                 {selectedCategory || 'Nos Produits'}
               </SheetTitle>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={handleClose}
-                className="h-8 w-8 shrink-0"
+                className="h-11 w-11 min-h-[44px] min-w-[44px] shrink-0 -mr-1"
+                aria-label="Fermer"
               >
                 <X className="h-5 w-5" />
               </Button>
             </div>
           </SheetHeader>
 
-          {/* Content Area - Changes based on selectedCategory */}
-          <div className="flex-1 overflow-y-auto py-2">
+          {/* Content Area - scrolls inside sheet; body stays fixed */}
+          <div className="flex-1 overflow-y-auto overscroll-contain py-2 min-h-0">
             <AnimatePresence mode="wait">
               {!selectedCategory ? (
                 // Main Categories View

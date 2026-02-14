@@ -29,6 +29,9 @@ import { useDebounce } from '@/util/debounce';
 import type { Product } from '@/types';
 
 const SCROLL_THRESHOLD = 24;
+const MOBILE_NAV_SCROLL_THRESHOLD = 20;   // navbar always visible when scrollY < this
+const MOBILE_NAV_SCROLL_DELTA = 12;       // min px change to avoid flicker (scroll direction)
+const MOBILE_BREAKPOINT = 768;
 const PHONE = '+216 27 612 500';
 const PHONE_FIXE = '+216 73 200 169';
 const MAPS_URL = 'https://maps.app.goo.gl/w2ytnYAKSZDmjznh6';
@@ -39,7 +42,26 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileProductsMenuOpen, setMobileProductsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [mobileNavVisible, setMobileNavVisible] = useState(true);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const lastScrollYRef = useRef(0);
+  const tickingRef = useRef(false);
   const { theme, setTheme } = useTheme();
+
+  useEffect(() => {
+    const check = () => {
+      const mobile = typeof window !== 'undefined' && window.innerWidth <= MOBILE_BREAKPOINT;
+      setIsMobileViewport(mobile);
+      if (mobile) {
+        const y = Math.max(0, window.scrollY);
+        lastScrollYRef.current = y;
+        setMobileNavVisible(y <= MOBILE_NAV_SCROLL_THRESHOLD);
+      }
+    };
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
   const { getTotalItems, cartDrawerOpen, setCartDrawerOpen } = useCart();
   const { isAuthenticated, user, logout } = useAuth();
   const cartItemsCount = getTotalItems();
@@ -94,13 +116,37 @@ export function Header() {
   }, []);
 
   const onScroll = useCallback(() => {
-    const next = window.scrollY > SCROLL_THRESHOLD;
-    setScrolled((prev) => (prev !== next ? next : prev));
+    const w = typeof window === 'undefined' ? 0 : window.innerWidth;
+    const currentScrollY = Math.max(0, (typeof window === 'undefined' ? 0 : window.scrollY));
+    const last = lastScrollYRef.current;
+
+    if (w > MOBILE_BREAKPOINT) {
+      setScrolled(currentScrollY > SCROLL_THRESHOLD);
+      lastScrollYRef.current = currentScrollY;
+      return;
+    }
+
+    if (currentScrollY <= MOBILE_NAV_SCROLL_THRESHOLD) {
+      setMobileNavVisible(true);
+    } else if (currentScrollY > last + MOBILE_NAV_SCROLL_DELTA) {
+      setMobileNavVisible(false);
+    } else if (currentScrollY < last - MOBILE_NAV_SCROLL_DELTA) {
+      setMobileNavVisible(true);
+    }
+    lastScrollYRef.current = currentScrollY;
   }, []);
 
   useEffect(() => {
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    const handleScroll = () => {
+      if (tickingRef.current) return;
+      tickingRef.current = true;
+      requestAnimationFrame(() => {
+        onScroll();
+        tickingRef.current = false;
+      });
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
   }, [onScroll]);
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
@@ -127,8 +173,17 @@ export function Header() {
     { href: '/about', label: 'QUI SOMMES NOUS' },
   ];
 
+  const mobileNavHidden = isMobileViewport && !mobileNavVisible;
+
   return (
-    <div className="sticky top-0 z-50 w-full">
+    <div
+      className="sticky top-0 z-50 w-full transition-transform duration-300 ease-out"
+      style={
+        mobileNavHidden
+          ? { transform: 'translateY(-100%)' }
+          : undefined
+      }
+    >
       {/* ========== 1. TOP INFO BAR (Slim, 32-36px) ========== */}
       <div className="bg-gray-900 text-white border-b border-gray-800/50">
         {/* Desktop: full info */}

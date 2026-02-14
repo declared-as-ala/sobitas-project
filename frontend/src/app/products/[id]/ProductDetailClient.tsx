@@ -43,6 +43,8 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [reviewSort, setReviewSort] = useState<'recent' | 'helpful'>('recent');
   const [reviewSearch, setReviewSearch] = useState('');
+  const [metaExpanded, setMetaExpanded] = useState(false);
+  const [descExpanded, setDescExpanded] = useState(false);
 
   // Use state to manage product data so we can update it after adding a review
   const [product, setProduct] = useState<Product>(initialProduct);
@@ -353,9 +355,48 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
           </Button>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-10 mb-6 sm:mb-10 lg:mb-16">
-          {/* LEFT: Product (images + info + description tabs) */}
-          <div className="lg:col-span-2 space-y-4 sm:space-y-6 lg:space-y-8">
+        {/* Desktop: 2 cols — left ~40% image (sticky), right ~60% info + tabs + reviews */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 sm:gap-8 lg:gap-10 mb-6 sm:mb-10 lg:mb-16">
+          {/* LEFT (desktop only): Image column — narrower, sticky */}
+          <div className="hidden lg:block lg:col-span-2 lg:sticky lg:top-24 lg:self-start">
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="relative bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-xl border border-gray-200 dark:border-gray-800 group"
+              style={{ aspectRatio: '1 / 1.15' }}
+            >
+              {productImage ? (
+                <Image
+                  src={productImage}
+                  alt={product.designation_fr}
+                  fill
+                  className="object-contain p-4 lg:p-5 group-hover:scale-105 transition-transform duration-300"
+                  sizes="(max-width: 1024px) 100vw, 42vw"
+                  priority
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    const parent = target.parentElement;
+                    if (parent && !parent.querySelector('.error-placeholder')) {
+                      const placeholder = document.createElement('div');
+                      placeholder.className = 'error-placeholder absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800';
+                      placeholder.innerHTML = '<svg class="h-24 w-24 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>';
+                      parent.appendChild(placeholder);
+                    }
+                  }}
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+                  <svg className="h-24 w-24 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                  </svg>
+                </div>
+              )}
+            </motion.div>
+          </div>
+
+          {/* RIGHT: Info + tabs + reviews (mobile: full flow with image first) */}
+          <div className="lg:col-span-3 min-w-0 space-y-4 sm:space-y-6 lg:space-y-8">
             {/* Mobile Layout: Image First (Hero Image) */}
             <div className="lg:hidden space-y-4 sm:space-y-5">
               {/* Product Image - Hero position on mobile */}
@@ -562,181 +603,151 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
                 </div>
               </div>
 
-              {/* Trust Badges - Mobile (larger on lg) */}
-              <div className="pt-4 sm:pt-6 lg:pt-8 border-t border-gray-200 dark:border-gray-800 px-1">
-                <div className="grid grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
-                  {/* Paiement Sécurisé */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="group relative flex flex-col items-center justify-center gap-2 lg:gap-3 p-4 sm:p-5 lg:p-6 xl:p-8 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 rounded-xl lg:rounded-2xl border-2 border-green-200/50 dark:border-green-800/50 min-w-0"
-                  >
-                    <div className="relative">
-                      <div className="absolute inset-0 bg-green-400/20 rounded-full blur-xl"></div>
-                      <div className="relative bg-gradient-to-br from-green-500 to-emerald-600 p-3 lg:p-4 xl:p-5 rounded-xl lg:rounded-2xl shadow-lg">
-                        <Shield className="h-6 w-6 sm:h-8 sm:w-8 lg:h-10 lg:w-10 xl:h-12 xl:w-12 text-white" strokeWidth={2.5} />
-                      </div>
+              {/* Trust badges — mobile: horizontal carousel (scroll-snap); tablet: 2 cols */}
+              <div className="pt-4 sm:pt-6 border-t border-gray-200 dark:border-gray-800 px-1">
+                <div
+                  className="flex md:grid overflow-x-auto md:overflow-visible gap-4 pb-2 md:pb-0 scrollbar-hide snap-x md:grid-cols-2 md:snap-none"
+                  style={{ WebkitOverflowScrolling: 'touch' }}
+                >
+                  <div className="flex items-center gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 shadow-sm min-h-[80px] flex-shrink-0 w-[240px] md:w-auto snap-start" style={{ scrollSnapAlign: 'start' }}>
+                    <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
+                      <Shield className="h-6 w-6 text-green-600 dark:text-green-400" strokeWidth={2} />
                     </div>
-                    <div className="text-center space-y-0.5 lg:space-y-1">
-                      <p className="text-xs sm:text-sm lg:text-base xl:text-lg font-bold text-gray-900 dark:text-white">Paiement</p>
-                      <p className="text-xs sm:text-sm lg:text-base xl:text-lg font-bold text-green-700 dark:text-green-400">Sécurisé</p>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-gray-900 dark:text-white">Paiement</p>
+                      <p className="text-sm text-green-700 dark:text-green-400">Sécurisé</p>
                     </div>
-                  </motion.div>
-
-                  {/* Livraison 2-3 j */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="group relative flex flex-col items-center justify-center gap-2 lg:gap-3 p-4 sm:p-5 lg:p-6 xl:p-8 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 rounded-xl lg:rounded-2xl border-2 border-blue-200/50 dark:border-blue-800/50 min-w-0"
-                  >
-                    <div className="relative">
-                      <div className="absolute inset-0 bg-blue-400/20 rounded-full blur-xl"></div>
-                      <div className="relative bg-gradient-to-br from-blue-500 to-cyan-600 p-3 lg:p-4 xl:p-5 rounded-xl lg:rounded-2xl shadow-lg">
-                        <Truck className="h-6 w-6 sm:h-8 sm:w-8 lg:h-10 lg:w-10 xl:h-12 xl:w-12 text-white" strokeWidth={2.5} />
-                      </div>
+                  </div>
+                  <div className="flex items-center gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 shadow-sm min-h-[80px] flex-shrink-0 w-[240px] md:w-auto snap-start" style={{ scrollSnapAlign: 'start' }}>
+                    <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
+                      <Truck className="h-6 w-6 text-blue-600 dark:text-blue-400" strokeWidth={2} />
                     </div>
-                    <div className="text-center space-y-0.5 lg:space-y-1">
-                      <p className="text-xs sm:text-sm lg:text-base xl:text-lg font-bold text-gray-900 dark:text-white">Livraison</p>
-                      <p className="text-xs sm:text-sm lg:text-base xl:text-lg font-bold text-blue-700 dark:text-blue-400">2-3 jours</p>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-gray-900 dark:text-white">Livraison</p>
+                      <p className="text-sm text-blue-700 dark:text-blue-400">2-3 jours</p>
                     </div>
-                  </motion.div>
-
-                  {/* Garantie Qualité */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                    className="group relative flex flex-col items-center justify-center gap-2 lg:gap-3 p-4 sm:p-5 lg:p-6 xl:p-8 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 rounded-xl lg:rounded-2xl border-2 border-amber-200/50 dark:border-amber-800/50 min-w-0"
-                  >
-                    <div className="relative">
-                      <div className="absolute inset-0 bg-amber-400/20 rounded-full blur-xl"></div>
-                      <div className="relative bg-gradient-to-br from-amber-500 to-orange-600 p-3 lg:p-4 xl:p-5 rounded-xl lg:rounded-2xl shadow-lg">
-                        <Award className="h-6 w-6 sm:h-8 sm:w-8 lg:h-10 lg:w-10 xl:h-12 xl:w-12 text-white" strokeWidth={2.5} />
-                      </div>
+                  </div>
+                  <div className="flex items-center gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 shadow-sm min-h-[80px] flex-shrink-0 w-[240px] md:w-auto snap-start" style={{ scrollSnapAlign: 'start' }}>
+                    <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
+                      <Award className="h-6 w-6 text-amber-600 dark:text-amber-400" strokeWidth={2} />
                     </div>
-                    <div className="text-center space-y-0.5 lg:space-y-1">
-                      <p className="text-xs sm:text-sm lg:text-base xl:text-lg font-bold text-gray-900 dark:text-white">Garantie</p>
-                      <p className="text-xs sm:text-sm lg:text-base xl:text-lg font-bold text-amber-700 dark:text-amber-400">Qualité</p>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-gray-900 dark:text-white">Garantie</p>
+                      <p className="text-sm text-amber-700 dark:text-amber-400">Qualité</p>
                     </div>
-                  </motion.div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Desktop Layout: Grid with image and info side by side */}
-            <div className="hidden lg:grid grid-cols-5 gap-8">
-              {/* Product Images - Left side, takes 3/5 (60%) on desktop */}
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="col-span-3 space-y-4"
-              >
-                {/* Main Image - Increased height on web, taller aspect ratio */}
-                <div className="relative bg-white dark:bg-gray-900 rounded-3xl overflow-hidden shadow-2xl border-2 border-gray-200 dark:border-gray-800 group min-h-0" style={{ aspectRatio: '1 / 1.4' }}>
-                  {productImage ? (
-                    <Image
-                      src={productImage}
-                      alt={product.designation_fr}
-                      fill
-                      className="object-contain p-6 xl:p-10 group-hover:scale-110 transition-transform duration-500"
-                      sizes="60vw"
-                      priority
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                        const parent = target.parentElement;
-                        if (parent && !parent.querySelector('.error-placeholder')) {
-                          const placeholder = document.createElement('div');
-                          placeholder.className = 'error-placeholder absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800';
-                          placeholder.innerHTML = '<svg class="h-24 w-24 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>';
-                          parent.appendChild(placeholder);
-                        }
-                      }}
-                    />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
-                      <svg className="h-24 w-24 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                      </svg>
-                    </div>
-                  )}
+            {/* Desktop Layout: Info only (image in left column) */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="hidden lg:block space-y-4 min-w-0"
+            >
+                {/* 1. Badges (stock, promo) */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge variant="outline" className="bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800">
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    {product.rupture === 1 ? 'En Stock' : 'Rupture de stock'}
+                  </Badge>
+                  {discount > 0 && <Badge className="bg-red-600 text-white">-{discount}% OFF</Badge>}
+                  {product.new_product === 1 && <Badge className="bg-blue-600 text-white">Nouveau</Badge>}
+                  {product.best_seller === 1 && <Badge className="bg-yellow-600 text-white">Top Vendu</Badge>}
                 </div>
-              </motion.div>
 
-              {/* Product Info - Right side, takes 2/5 (40%) on desktop */}
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="col-span-2 space-y-6 min-w-0"
-              >
-                {/* Title and Meta Description - Desktop only */}
+                {/* 2. Title — wide, max 2–3 lines */}
+                <div className="min-w-0">
+                  <h1 className="text-2xl lg:text-3xl xl:text-4xl font-bold text-gray-900 dark:text-white leading-snug line-clamp-3 break-words">
+                    {product.designation_fr}
+                  </h1>
+                  {product.brand && <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{product.brand.designation_fr}</p>}
+                  {product.sous_categorie && <p className="text-sm text-gray-600 dark:text-gray-400">{product.sous_categorie.designation_fr}</p>}
+                  {product.code_product && <p className="text-xs text-gray-500 mt-0.5">Code: {product.code_product}</p>}
+                </div>
+
+                {/* 3. Rating */}
+                {rating > 0 && (
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-0.5">
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} className={`h-5 w-5 ${i < Math.floor(rating) ? 'fill-yellow-400 text-yellow-400' : 'fill-gray-200 dark:fill-gray-700 text-gray-200 dark:text-gray-700'}`} />
+                      ))}
+                    </div>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">({rating.toFixed(1)}) · {reviewCount} avis</span>
+                  </div>
+                )}
+
+                {/* 4. Price — above the fold */}
+                <div className="py-3 border-y border-gray-200 dark:border-gray-800">
+                  <div className="flex flex-wrap items-baseline gap-3">
+                    <span className="text-3xl lg:text-4xl font-bold text-red-600 dark:text-red-400">{displayPrice} DT</span>
+                    {oldPrice && <span className="text-xl text-gray-400 line-through">{oldPrice} DT</span>}
+                  </div>
+                  {oldPrice && <p className="text-sm text-green-600 dark:text-green-400 mt-1">Vous économisez {oldPrice - displayPrice} DT</p>}
+                </div>
+
+                {/* 5. Quantity + CTA — visible without scroll */}
                 <div className="space-y-3">
-                  {/* Badges */}
-                  <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                    {discount > 0 && (
-                      <Badge className="bg-red-600 text-white text-sm px-3 py-1">
-                        -{discount}% OFF
-                      </Badge>
-                    )}
-                    {product.new_product === 1 && (
-                      <Badge className="bg-blue-600 text-white text-sm px-3 py-1">
-                        Nouveau
-                      </Badge>
-                    )}
-                    {product.best_seller === 1 && (
-                      <Badge className="bg-yellow-600 text-white text-sm px-3 py-1">
-                        Top Vendu
-                      </Badge>
-                    )}
-                    <Badge variant="outline" className="bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800">
-                      <CheckCircle2 className="h-3 w-3 mr-1" />
-                      {product.rupture === 1 ? 'En Stock' : 'Rupture de stock'}
-                    </Badge>
-                  </div>
-
-                  {/* Product Name */}
-                  <div className="min-w-0">
-                    <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-2 sm:mb-3 leading-tight break-words">
-                      {product.designation_fr}
-                    </h1>
-                    {product.brand && (
-                      <p className="text-sm sm:text-base lg:text-lg text-gray-600 dark:text-gray-400 mb-1">
-                        {product.brand.designation_fr}
-                      </p>
-                    )}
-                    {product.sous_categorie && (
-                      <p className="text-sm sm:text-base lg:text-lg text-gray-600 dark:text-gray-400 mb-2">
-                        {product.sous_categorie.designation_fr}
-                      </p>
-                    )}
-                    {product.code_product && (
-                      <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-500 mb-2">
-                        Code produit: {product.code_product}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Meta Description - Desktop */}
-                  {metaDescription && (
-                    <div className="pt-2 pb-3 border-b border-gray-200 dark:border-gray-800">
-                      <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed">
-                        {metaDescription}
-                      </p>
+                  <div className="flex flex-wrap items-center gap-4">
+                    <div className="flex items-center gap-2 border border-gray-200 dark:border-gray-800 rounded-xl px-2 py-1.5 min-h-[44px]">
+                      <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => setQuantity(Math.max(1, quantity - 1))}>
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                      <span className="w-10 text-center font-semibold">{quantity}</span>
+                      <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => setQuantity(quantity + 1)}>
+                        <Plus className="h-4 w-4" />
+                      </Button>
                     </div>
-                  )}
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Total: <strong className="text-gray-900 dark:text-white">{(displayPrice * quantity).toFixed(0)} DT</strong></span>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Button
+                      size="lg"
+                      className="flex-1 min-h-[52px] bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white text-base font-bold shadow-lg"
+                      onClick={handleAddToCart}
+                      disabled={product.rupture !== 1}
+                    >
+                      <ShoppingCart className="h-5 w-5 mr-2" />
+                      {product.rupture === 1 ? 'Ajouter au panier' : 'Rupture de stock'}
+                    </Button>
+                    <div className="flex gap-2 shrink-0">
+                      <Button variant="outline" size="icon" className="h-11 w-11" onClick={() => setIsFavorite(!isFavorite)} aria-label="Favoris">
+                        <Heart className={`h-5 w-5 ${isFavorite ? 'fill-red-600 text-red-600' : ''}`} />
+                      </Button>
+                      <Button variant="outline" size="icon" className="h-11 w-11" onClick={handleShare} aria-label="Partager">
+                        <Share2 className="h-5 w-5" />
+                      </Button>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Aromes (Flavors) */}
+                {/* 6. Meta description — clamped so CTA stays above fold */}
+                {metaDescription && (
+                  <div className="pt-2">
+                    <p className={`text-sm lg:text-base text-gray-600 dark:text-gray-400 leading-relaxed max-w-full ${!metaExpanded ? 'line-clamp-3' : ''}`}>
+                      {metaDescription}
+                    </p>
+                    {metaDescription.length > 120 && (
+                      <button
+                        type="button"
+                        onClick={() => setMetaExpanded(!metaExpanded)}
+                        className="text-sm font-medium text-red-600 dark:text-red-400 hover:underline mt-1"
+                      >
+                        {metaExpanded ? 'Voir moins' : 'Voir plus'}
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* 7. Aromes */}
                 {product.aromes && product.aromes.length > 0 && (
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-900 dark:text-white">
-                      Arômes disponibles
-                    </label>
+                  <div className="space-y-2 pt-2">
+                    <label className="text-sm font-semibold text-gray-900 dark:text-white">Arômes disponibles</label>
                     <div className="flex flex-wrap gap-2">
                       {product.aromes.map((arome) => (
-                        <Badge key={arome.id} variant="outline" className="bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700">
+                        <Badge key={arome.id} variant="outline" className="bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
                           {arome.designation_fr}
                         </Badge>
                       ))}
@@ -744,171 +755,37 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
                   </div>
                 )}
 
-                {/* Rating */}
-                {rating > 0 && (
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1">
-                      {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`h-5 w-5 ${i < Math.floor(rating)
-                            ? 'fill-yellow-400 text-yellow-400'
-                            : 'fill-gray-200 text-gray-200 dark:fill-gray-700 dark:text-gray-700'
-                            }`}
-                        />
-                      ))}
+                {/* 8. Trust badges — desktop: 3 cols */}
+                <div className="grid grid-cols-3 gap-4 border-t border-gray-200 dark:border-gray-800 pt-5">
+                  <div className="flex items-center gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 shadow-sm min-h-[80px]">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
+                      <Shield className="h-6 w-6 text-green-600 dark:text-green-400" strokeWidth={2} />
                     </div>
-                    <span className="text-gray-600 dark:text-gray-400">
-                      ({rating.toFixed(1)}) • {reviewCount} avis
-                    </span>
-                  </div>
-                )}
-
-                {/* Price */}
-                <div className="py-4 sm:py-6 border-y border-gray-200 dark:border-gray-800">
-                  <div className="flex flex-wrap items-baseline gap-2 sm:gap-4">
-                    <span className="text-2xl sm:text-3xl md:text-4xl font-bold text-red-600 dark:text-red-400">
-                      {displayPrice} DT
-                    </span>
-                    {oldPrice && (
-                      <span className="text-lg sm:text-xl md:text-2xl text-gray-400 line-through">
-                        {oldPrice} DT
-                      </span>
-                    )}
-                  </div>
-                  {oldPrice && (
-                    <p className="text-sm text-green-600 dark:text-green-400 mt-2">
-                      Vous économisez {oldPrice - displayPrice} DT
-                    </p>
-                  )}
-                </div>
-
-                {/* Quantity Selector */}
-                <div className="space-y-3 sm:space-y-4">
-                  <label className="text-sm font-semibold text-gray-900 dark:text-white">
-                    Quantité
-                  </label>
-                  <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-                    <div className="flex items-center gap-2 border border-gray-200 dark:border-gray-800 rounded-xl p-2 min-h-[44px]">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-9 w-9 sm:h-8 sm:w-8 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0"
-                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      >
-                        <Minus className="h-4 w-4" />
-                      </Button>
-                      <span className="w-12 text-center font-bold text-lg">{quantity}</span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-9 w-9 sm:h-8 sm:w-8 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0"
-                        onClick={() => setQuantity(quantity + 1)}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400 min-w-0">
-                      Total: <span className="font-bold text-lg text-gray-900 dark:text-white">
-                        {(displayPrice * quantity).toFixed(0)} DT
-                      </span>
+                    <div>
+                      <p className="font-semibold text-gray-900 dark:text-white">Paiement</p>
+                      <p className="text-sm text-green-700 dark:text-green-400">Sécurisé</p>
                     </div>
                   </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-                  <Button
-                    size="lg"
-                    className="flex-1 min-h-[48px] sm:min-h-[56px] bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white text-base sm:text-lg font-bold shadow-lg"
-                    onClick={handleAddToCart}
-                    disabled={product.rupture !== 1}
-                  >
-                    <ShoppingCart className="h-5 w-5 mr-2" />
-                    {product.rupture === 1 ? 'Ajouter au panier' : 'Rupture de stock'}
-                  </Button>
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="min-h-[48px] sm:min-h-[56px] px-4 sm:px-6 shrink-0"
-                    onClick={() => setIsFavorite(!isFavorite)}
-                  >
-                    <Heart className={`h-5 w-5 ${isFavorite ? 'fill-red-600 text-red-600' : ''}`} />
-                  </Button>
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="min-h-[48px] sm:min-h-[56px] px-4 sm:px-6 shrink-0"
-                    onClick={handleShare}
-                    aria-label="Partager (lien vers les avis)"
-                  >
-                    <Share2 className="h-5 w-5" />
-                  </Button>
-                </div>
-
-                {/* Trust Badges - Redesigned (larger on lg/xl) */}
-                <div className="pt-6 sm:pt-8 lg:pt-10 border-t border-gray-200 dark:border-gray-800">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 xl:gap-8">
-                    {/* Paiement Sécurisé */}
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.1 }}
-                      className="group relative flex flex-col items-center justify-center gap-3 lg:gap-4 p-5 sm:p-6 lg:p-8 xl:p-10 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 rounded-2xl border-2 border-green-200/50 dark:border-green-800/50 hover:border-green-300 dark:hover:border-green-700 hover:shadow-lg transition-all duration-300 min-w-0"
-                    >
-                      <div className="relative">
-                        <div className="absolute inset-0 bg-green-400/20 rounded-full blur-xl group-hover:bg-green-400/30 transition-colors"></div>
-                        <div className="relative bg-gradient-to-br from-green-500 to-emerald-600 p-4 lg:p-5 xl:p-6 rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
-                          <Shield className="h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 xl:h-14 xl:w-14 text-white" strokeWidth={2.5} />
-                        </div>
-                      </div>
-                      <div className="text-center space-y-1 lg:space-y-1.5">
-                        <p className="text-sm sm:text-base lg:text-lg xl:text-xl font-bold text-gray-900 dark:text-white">Paiement</p>
-                        <p className="text-sm sm:text-base lg:text-lg xl:text-xl font-bold text-green-700 dark:text-green-400">Sécurisé</p>
-                      </div>
-                    </motion.div>
-
-                    {/* Livraison 2-3 j */}
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.2 }}
-                      className="group relative flex flex-col items-center justify-center gap-3 lg:gap-4 p-5 sm:p-6 lg:p-8 xl:p-10 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 rounded-2xl border-2 border-blue-200/50 dark:border-blue-800/50 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-lg transition-all duration-300 min-w-0"
-                    >
-                      <div className="relative">
-                        <div className="absolute inset-0 bg-blue-400/20 rounded-full blur-xl group-hover:bg-blue-400/30 transition-colors"></div>
-                        <div className="relative bg-gradient-to-br from-blue-500 to-cyan-600 p-4 lg:p-5 xl:p-6 rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
-                          <Truck className="h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 xl:h-14 xl:w-14 text-white" strokeWidth={2.5} />
-                        </div>
-                      </div>
-                      <div className="text-center space-y-1 lg:space-y-1.5">
-                        <p className="text-sm sm:text-base lg:text-lg xl:text-xl font-bold text-gray-900 dark:text-white">Livraison</p>
-                        <p className="text-sm sm:text-base lg:text-lg xl:text-xl font-bold text-blue-700 dark:text-blue-400">2-3 jours</p>
-                      </div>
-                    </motion.div>
-
-                    {/* Garantie Qualité */}
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.3 }}
-                      className="group relative flex flex-col items-center justify-center gap-3 lg:gap-4 p-5 sm:p-6 lg:p-8 xl:p-10 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 rounded-2xl border-2 border-amber-200/50 dark:border-amber-800/50 hover:border-amber-300 dark:hover:border-amber-700 hover:shadow-lg transition-all duration-300 min-w-0"
-                    >
-                      <div className="relative">
-                        <div className="absolute inset-0 bg-amber-400/20 rounded-full blur-xl group-hover:bg-amber-400/30 transition-colors"></div>
-                        <div className="relative bg-gradient-to-br from-amber-500 to-orange-600 p-4 lg:p-5 xl:p-6 rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
-                          <Award className="h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 xl:h-14 xl:w-14 text-white" strokeWidth={2.5} />
-                        </div>
-                      </div>
-                      <div className="text-center space-y-1 lg:space-y-1.5">
-                        <p className="text-sm sm:text-base lg:text-lg xl:text-xl font-bold text-gray-900 dark:text-white">Garantie</p>
-                        <p className="text-sm sm:text-base lg:text-lg xl:text-xl font-bold text-amber-700 dark:text-amber-400">Qualité</p>
-                      </div>
-                    </motion.div>
+                  <div className="flex items-center gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 shadow-sm min-h-[80px]">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
+                      <Truck className="h-6 w-6 text-blue-600 dark:text-blue-400" strokeWidth={2} />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900 dark:text-white">Livraison</p>
+                      <p className="text-sm text-blue-700 dark:text-blue-400">2-3 jours</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 shadow-sm min-h-[80px]">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
+                      <Award className="h-6 w-6 text-amber-600 dark:text-amber-400" strokeWidth={2} />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900 dark:text-white">Garantie</p>
+                      <p className="text-sm text-amber-700 dark:text-amber-400">Qualité</p>
+                    </div>
                   </div>
                 </div>
               </motion.div>
-            </div>
 
             {/* Product Details Tabs */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="w-full min-w-0">
@@ -947,9 +824,16 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
                     {product.zone1 || 'Description du produit'}
                   </h3>
                   <div
-                    className="text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-sm max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-p:text-gray-600 prose-p:dark:text-gray-400 prose-strong:text-gray-900 prose-strong:dark:text-white prose-img:rounded-lg prose-img:shadow-md"
+                    className={`text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-sm max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-p:text-gray-600 prose-p:dark:text-gray-400 prose-strong:text-gray-900 prose-strong:dark:text-white prose-img:rounded-lg prose-img:shadow-md overflow-hidden transition-[max-height] duration-300 ${descExpanded ? 'max-h-[5000px]' : 'max-h-60'}`}
                     dangerouslySetInnerHTML={{ __html: product.description_fr || product.description_cover || 'Aucune description disponible.' }}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setDescExpanded(!descExpanded)}
+                    className="text-sm font-medium text-red-600 dark:text-red-400 hover:underline mt-3"
+                  >
+                    {descExpanded ? 'Voir moins' : 'Voir plus'}
+                  </button>
                 </TabsContent>
 
                 <TabsContent value="nutrition" className="bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 shadow-lg border border-gray-200 dark:border-gray-800 mt-0">
@@ -1003,17 +887,16 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
                 );
               })()}
             </motion.div>
-          </div>
 
-          {/* RIGHT: Comprehensive Reviews Section (Sidebar) – id for share link #reviews */}
-          <motion.div
-            id="reviews"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.15 }}
-            className="lg:col-span-1 min-w-0"
-          >
-            <div className="lg:sticky lg:top-4 space-y-3 sm:space-y-4 lg:space-y-6">
+            {/* Avis clients — below tabs (no longer sidebar) */}
+            <motion.div
+              id="reviews"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+              className="min-w-0 pt-6 border-t border-gray-200 dark:border-gray-800"
+            >
+            <div className="space-y-3 sm:space-y-4 lg:space-y-6">
               <h3 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-800 pb-2 sm:pb-3">Avis clients</h3>
 
               {reviewCount > 0 ? (
@@ -1175,6 +1058,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts }
               )}
             </div>
           </motion.div>
+          </div>
         </div>
 
         {/* Similar Products */}

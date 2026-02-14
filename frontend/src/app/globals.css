@@ -109,6 +109,19 @@
   }
 }
 
+/* Category card fallback: light shimmer so placeholder is not flat */
+@keyframes shimmer-placeholder {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.88;
+  }
+}
+.animate-shimmer-placeholder {
+  animation: shimmer-placeholder 2.5s ease-in-out infinite;
+}
+
 /* Hide scrollbar for horizontal scroll */
 @layer utilities {
   .scrollbar-hide {
