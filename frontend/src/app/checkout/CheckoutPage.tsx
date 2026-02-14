@@ -83,23 +83,23 @@ export default function CheckoutPage() {
    * jumping or sitting behind it.
    */
   useEffect(() => {
-    if (typeof window === 'undefined' || !window.visualViewport) return;
+    const vv = typeof window !== 'undefined' ? window.visualViewport : null;
+    if (!vv) return;
     let rafId: number;
     const update = () => {
       rafId = requestAnimationFrame(() => {
-        const vv = window.visualViewport;
-        const height = vv?.height ?? window.innerHeight;
+        const height = vv.height ?? window.innerHeight;
         const keyboardOffset = Math.max(0, window.innerHeight - height);
         document.documentElement.style.setProperty('--app-height', `${height}px`);
         document.documentElement.style.setProperty('--keyboard-offset', `${keyboardOffset}px`);
       });
     };
     update();
-    window.visualViewport.addEventListener('resize', update);
-    window.visualViewport.addEventListener('scroll', update);
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
     return () => {
-      window.visualViewport.removeEventListener('resize', update);
-      window.visualViewport.removeEventListener('scroll', update);
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
       cancelAnimationFrame(rafId);
     };
   }, []);
