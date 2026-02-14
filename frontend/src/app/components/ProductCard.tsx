@@ -125,7 +125,7 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
       ].join(' ')}
     >
       {/* Image + badges - Larger on desktop */}
-      <div className="relative aspect-square w-full flex-shrink-0 overflow-hidden bg-gray-100 dark:bg-gray-700 rounded-t-[14px] sm:rounded-t-xl lg:rounded-t-2xl min-h-[200px] sm:min-h-[240px] md:min-h-[280px] lg:min-h-[320px]">
+      <div className="relative aspect-square w-full flex-shrink-0 overflow-hidden bg-white dark:bg-white rounded-t-[14px] sm:rounded-t-xl lg:rounded-t-2xl min-h-[200px] sm:min-h-[240px] md:min-h-[280px] lg:min-h-[320px]">
 
         <LinkWithLoading 
           href={`/shop/${encodeURIComponent(productData.slug || String(product.id))}`} 
