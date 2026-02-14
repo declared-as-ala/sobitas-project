@@ -14,7 +14,7 @@ const ERROR_DISPLAY_DELAY_MS = 180;
 const MAX_RETRIES = 3;
 const RETRY_DELAYS_MS = [400, 800, 1600];
 
-type Status = 'loading' | 'success' | 'empty' | 'error' | 'notfound';
+type Status = 'loading' | 'success' | 'empty' | 'error' | 'not_found';
 
 interface SubCategoryFallbackClientProps {
   categorySlug: string;
