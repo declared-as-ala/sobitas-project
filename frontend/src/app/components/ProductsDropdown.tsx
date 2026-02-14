@@ -126,7 +126,9 @@ export function ProductsDropdown() {
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
   const triggerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const bridgeRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
+  const CLOSE_DELAY_MS = 220;
   const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const rafScrollRef = useRef<number | null>(null);
@@ -208,9 +210,10 @@ export function ProductsDropdown() {
     const isNode = relatedTarget != null && relatedTarget instanceof Node;
     const isMovingToDropdown = isNode && (dropdownRef.current?.contains(relatedTarget) ?? false);
     const isMovingToTrigger = isNode && (triggerRef.current?.contains(relatedTarget) ?? false);
+    const isMovingToBridge = isNode && (bridgeRef.current?.contains(relatedTarget) ?? false);
 
-    if (!isMovingToDropdown && !isMovingToTrigger) {
-      closeTimeoutRef.current = setTimeout(closeMenu, 150);
+    if (!isMovingToDropdown && !isMovingToTrigger && !isMovingToBridge) {
+      closeTimeoutRef.current = setTimeout(closeMenu, CLOSE_DELAY_MS);
     }
   };
 
