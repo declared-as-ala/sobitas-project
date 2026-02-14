@@ -1,17 +1,18 @@
 'use client';
 
-import { useState, useMemo, useEffect, Suspense } from 'react';
+import { useState, useMemo, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Header } from '@/app/components/Header';
 import { Footer } from '@/app/components/Footer';
 import { ProductCard } from '@/app/components/ProductCard';
+import { ProductsSkeleton } from '@/app/components/ProductsSkeleton';
 import { ShopBreadcrumbs } from '@/app/components/ShopBreadcrumbs';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Slider } from '@/app/components/ui/slider';
 import { Checkbox } from '@/app/components/ui/checkbox';
-import { Filter, Search, X } from 'lucide-react';
+import { Filter, Search, X, CircleAlert } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/app/components/ui/sheet';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/app/components/ui/accordion';
 import { Badge } from '@/app/components/ui/badge';
@@ -22,6 +23,8 @@ import type { Product, Category, Brand } from '@/types';
 import { searchProducts, getProductsByCategory, getProductsBySubCategory, getProductsByBrand } from '@/services/api';
 import { getStorageUrl } from '@/services/api';
 import { getEffectivePrice } from '@/util/productPrice';
+
+const SKELETON_MIN_MS = 300;
 
 interface ShopPageClientProps {
   productsData: {
@@ -64,12 +67,36 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
     return safeProductsData.products || [];
   });
   const [isSearching, setIsSearching] = useState(false);
+  const [showSkeleton, setShowSkeleton] = useState(false);
+  const skeletonShownAtRef = useRef<number | null>(null);
+  const [filterError, setFilterError] = useState<Error | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const [inStockOnly, setInStockOnly] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [currentBrand, setCurrentBrand] = useState<Brand | null>(null);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
   const PRODUCTS_PER_PAGE = 12;
+
+  // Keep skeleton visible at least SKELETON_MIN_MS to avoid flicker on fast loads
+  useEffect(() => {
+    if (isSearching) {
+      setShowSkeleton(true);
+      skeletonShownAtRef.current = Date.now();
+    } else {
+      if (skeletonShownAtRef.current === null) {
+        setShowSkeleton(false);
+        return;
+      }
+      const elapsed = Date.now() - skeletonShownAtRef.current;
+      const remaining = Math.max(0, SKELETON_MIN_MS - elapsed);
+      const t = setTimeout(() => {
+        setShowSkeleton(false);
+        skeletonShownAtRef.current = null;
+      }, remaining);
+      return () => clearTimeout(t);
+    }
+  }, [isSearching]);
 
   // Initialize from URL params or props
   useEffect(() => {
@@ -309,6 +336,7 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
     // If we have a text search, use debounce
 
     const applyFilters = async () => {
+      setFilterError(null);
       // 1. Search Query (Priority, Async Debounced)
       if (searchQuery.trim()) {
         setCurrentBrand(null);
@@ -407,6 +435,7 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
         } catch (error) {
           console.error('Error filtering by category:', error);
           setProducts([]);
+          setFilterError(error instanceof Error ? error : new Error('Erreur lors du chargement des produits'));
         } finally {
           setIsSearching(false);
         }
@@ -461,6 +490,7 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
             }
           } catch (error) {
             setProducts([]);
+            setFilterError(error instanceof Error ? error : new Error('Erreur lors du chargement de la marque'));
           } finally {
             setIsSearching(false);
           }
@@ -483,7 +513,7 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
       // Immediate for others
       applyFilters();
     }
-  }, [searchQuery, selectedCategories, selectedBrands, safeProductsData.products, brands, initialCategory]);
+  }, [searchQuery, selectedCategories, selectedBrands, safeProductsData.products, brands, initialCategory, retryCount]);
 
   // Reset description expanded state when brand changes
   useEffect(() => {
@@ -675,7 +705,7 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
             {currentBrand ? `Produits ${currentBrand.designation_fr}` : 'Tous nos produits'}
           </h1>
           <p className="text-sm sm:text-lg text-gray-600 dark:text-gray-400">
-            {!isSearching && (totalPages > 1 ? (
+            {!showSkeleton && (totalPages > 1 ? (
               `Affichage ${(currentPage - 1) * PRODUCTS_PER_PAGE + 1}-${Math.min(currentPage * PRODUCTS_PER_PAGE, filteredProducts.length)} sur ${filteredProducts.length} produit${filteredProducts.length > 1 ? 's' : ''}`
             ) : (
               `${filteredProducts.length} produit${filteredProducts.length > 1 ? 's' : ''} trouvé${filteredProducts.length > 1 ? 's' : ''}`
@@ -1093,19 +1123,27 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
 
           {/* Products Grid - Takes full width when filters closed */}
           <div className="flex-1 min-w-0">
-            {isSearching ? (
-              <div className="text-center py-12">
-                <div className="flex items-center justify-center">
-                  <Image
-                    src={getStorageUrl('coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp')}
-                    alt="SOBITAS Logo"
-                    width={60}
-                    height={60}
-                    className="h-12 w-12 md:h-16 md:w-16 animate-spin object-contain"
-                    unoptimized
-                  />
+            {filterError ? (
+              <div className="flex flex-col items-center justify-center py-12 sm:py-16 px-4">
+                <div className="rounded-full bg-red-100 dark:bg-red-900/30 p-4 mb-4">
+                  <CircleAlert className="h-10 w-10 text-red-600 dark:text-red-400" aria-hidden />
                 </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                  Une erreur s&apos;est produite
+                </h3>
+                <p className="text-gray-500 dark:text-gray-400 text-center max-w-md mb-6">
+                  {filterError.message}
+                </p>
+                <Button
+                  onClick={() => { setFilterError(null); setRetryCount(c => c + 1); }}
+                  variant="default"
+                  className="gap-2"
+                >
+                  Réessayer
+                </Button>
               </div>
+            ) : showSkeleton ? (
+              <ProductsSkeleton showBreadcrumb={false} showFilters={false} />
             ) : filteredProducts.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-gray-500 dark:text-gray-400 text-lg">
@@ -1151,11 +1189,17 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
   );
 }
 
-import { LoadingSpinner } from '@/app/components/LoadingSpinner';
-
 export function ShopPageClient(props: ShopPageClientProps) {
   return (
-    <Suspense fallback={<LoadingSpinner fullScreen message="Chargement des produits..." />}>
+    <Suspense fallback={
+      <>
+        <Header />
+        <main className="w-full mx-auto px-4 sm:px-6 max-w-[1024px] md:max-w-[1280px] lg:max-w-[1400px] xl:max-w-[1600px] py-4 sm:py-8 lg:py-12">
+          <ProductsSkeleton />
+        </main>
+        <Footer />
+      </>
+    }>
       <ShopContent {...props} />
     </Suspense>
   );
