@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { notFound } from 'next/navigation';
 import { Header } from '@/app/components/Header';
 import { Footer } from '@/app/components/Footer';
 import { CategorySkeleton } from '@/app/components/ProductsSkeleton';
@@ -15,7 +14,7 @@ const ERROR_DISPLAY_DELAY_MS = 180;
 const MAX_RETRIES = 3;
 const RETRY_DELAYS_MS = [400, 800, 1600];
 
-type Status = 'loading' | 'success' | 'empty' | 'error' | 'notfound';
+type Status = 'loading' | 'success' | 'empty' | 'error' | 'not_found';
 
 interface CategoryFallbackClientProps {
   slug: string;
@@ -34,7 +33,7 @@ export function CategoryFallbackClient({ slug }: CategoryFallbackClientProps) {
 
   const load = useCallback(async () => {
     if (!slug?.trim()) {
-      setStatus('notfound');
+      setStatus('not_found');
       return;
     }
     setStatus('loading');
@@ -58,7 +57,7 @@ export function CategoryFallbackClient({ slug }: CategoryFallbackClientProps) {
         }
         const categoryData = result?.category || result?.sous_category;
         if (!categoryData?.designation_fr) {
-          setStatus('notfound');
+          setStatus('not_found');
           return;
         }
         const categories = await getCategories();
@@ -75,8 +74,8 @@ export function CategoryFallbackClient({ slug }: CategoryFallbackClientProps) {
         return;
       } catch (err: any) {
         lastError = err;
-        if (err?.response?.status === 404) {
-          setStatus('notfound');
+        if (err?.response?.status === 404 || err?.message === 'Category not found' || err?.message === 'Subcategory not found') {
+          setStatus('not_found');
           return;
         }
         if (attempt < MAX_RETRIES) {
@@ -92,8 +91,6 @@ export function CategoryFallbackClient({ slug }: CategoryFallbackClientProps) {
   useEffect(() => {
     load();
   }, [load]);
-
-  if (status === 'notfound') notFound();
 
   // Success: ShopPageClient has its own Header/main/Footer
   if (status === 'success' && data) {
@@ -115,8 +112,15 @@ export function CategoryFallbackClient({ slug }: CategoryFallbackClientProps) {
         {status === 'loading' && <CategorySkeleton />}
         {status === 'empty' && data && (
           <EmptyState
-            title="Aucun produit trouvé dans cette catégorie."
+            title="Aucun produit trouvé"
             description="Cette catégorie ne contient aucun produit pour le moment."
+            showShopLink
+          />
+        )}
+        {status === 'not_found' && (
+          <EmptyState
+            title="Catégorie introuvable ou vide"
+            description="La catégorie demandée n'existe pas ou ne contient aucun produit."
             showShopLink
           />
         )}

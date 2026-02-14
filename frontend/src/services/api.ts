@@ -165,8 +165,8 @@ export const getHome = async (): Promise<HomeData> => {
 };
 
 // Categories
-export const getCategories = async (): Promise<Category[]> => {
-  const response = await api.get<Category[]>('/categories');
+export const getCategories = async (signal?: AbortSignal): Promise<Category[]> => {
+  const response = await api.get<Category[]>('/categories', { signal });
   return response.data;
 };
 
@@ -318,7 +318,10 @@ export const getProductsByCategory = async (slug: string): Promise<{
   );
 };
 
-export const getProductsBySubCategory = async (slug: string): Promise<{
+export const getProductsBySubCategory = async (
+  slug: string,
+  options?: { signal?: AbortSignal }
+): Promise<{
   sous_category: any;
   products: Product[];
   brands: Brand[];
@@ -330,9 +333,10 @@ export const getProductsBySubCategory = async (slug: string): Promise<{
     err.response = { status: 404 };
     throw err;
   }
+  const signal = options?.signal;
   return withRetry(
     async () => {
-      const response = await api.get(`/productsBySubCategoryId/${cleanSlug}`);
+      const response = await api.get(`/productsBySubCategoryId/${cleanSlug}`, { signal });
       if (!response.data || !response.data.sous_category || !response.data.sous_category.id) {
         console.warn(`Subcategory "${cleanSlug}" not found in API response`);
         const err: any = new Error('Subcategory not found');
@@ -341,7 +345,10 @@ export const getProductsBySubCategory = async (slug: string): Promise<{
       }
       return response.data;
     },
-    (err) => err?.response?.status !== 404 && (err?.code === 'ETIMEDOUT' || err?.code === 'ECONNRESET' || err?.code === 'ECONNABORTED' || (err?.response?.status >= 500 && err?.response?.status < 600))
+    (err) => {
+      if (err?.name === 'AbortError' || err?.code === 'ERR_CANCELED') return false;
+      return err?.response?.status !== 404 && (err?.code === 'ETIMEDOUT' || err?.code === 'ECONNRESET' || err?.code === 'ECONNABORTED' || (err?.response?.status >= 500 && err?.response?.status < 600));
+    }
   );
 };
 
