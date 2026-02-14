@@ -326,7 +326,7 @@ export const getProductsBySubCategory = async (
   products: Product[];
   brands: Brand[];
   sous_categories: any[];
-  pagination?: { total: number; current_page: number; last_page: number; per_page: number };
+  pagination?: { total: number; current_page: number; per_page: number; last_page: number };
 }> => {
   const cleanSlug = (slug || '').trim();
   if (!cleanSlug) {
@@ -336,8 +336,8 @@ export const getProductsBySubCategory = async (
   }
   const signal = options?.signal;
   const params: Record<string, number> = {};
-  if (options?.perPage != null && options.perPage > 0) params.per_page = options.perPage;
-  if (options?.page != null && options.page > 0) params.page = options.page;
+  if (options?.perPage != null) params.per_page = options.perPage;
+  if (options?.page != null) params.page = options.page;
   return withRetry(
     async () => {
       const response = await api.get(`/productsBySubCategoryId/${cleanSlug}`, { signal, params });
