@@ -126,6 +126,7 @@ export function ProductsDropdown() {
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
   const triggerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const bridgeRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
   const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -173,12 +174,12 @@ export function ProductsDropdown() {
     };
   }, [isOpen, closeMenu]);
 
-  // Close on click outside (trigger + dropdown)
+  // Close on click outside (trigger + dropdown + bridge)
   useEffect(() => {
     if (!isOpen) return;
     const onPointerDown = (e: PointerEvent) => {
       const target = e.target as Node;
-      if (triggerRef.current?.contains(target) || dropdownRef.current?.contains(target)) return;
+      if (triggerRef.current?.contains(target) || dropdownRef.current?.contains(target) || bridgeRef.current?.contains(target)) return;
       closeMenu();
     };
     document.addEventListener('pointerdown', onPointerDown);
@@ -203,28 +204,44 @@ export function ProductsDropdown() {
     setIsOpen(true);
   };
 
+  const CLOSE_DELAY_MS = 220;
+
   const handleMouseLeave = (e: React.MouseEvent) => {
     const relatedTarget = e.relatedTarget as Node | null;
     const isNode = relatedTarget != null && relatedTarget instanceof Node;
     const isMovingToDropdown = isNode && (dropdownRef.current?.contains(relatedTarget) ?? false);
     const isMovingToTrigger = isNode && (triggerRef.current?.contains(relatedTarget) ?? false);
+    const isMovingToBridge = isNode && (bridgeRef.current?.contains(relatedTarget) ?? false);
 
-    if (!isMovingToDropdown && !isMovingToTrigger) {
-      closeTimeoutRef.current = setTimeout(closeMenu, 150);
+    if (!isMovingToDropdown && !isMovingToTrigger && !isMovingToBridge) {
+      closeTimeoutRef.current = setTimeout(closeMenu, CLOSE_DELAY_MS);
     }
   };
 
   const dropdownContent = isOpen && mounted ? (
-    <div
-      ref={dropdownRef}
-      className="fixed left-0 right-0 w-full bg-white dark:bg-gray-900 border-y border-gray-200 dark:border-gray-800 shadow-xl z-[100] overflow-y-auto"
-      style={{
-        top: `${dropdownPosition.top}px`,
-        maxHeight: `calc(100vh - ${HEADER_OFFSET_PX}px - 12px)`,
-      }}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-    >
+    <>
+      {/* Invisible hover bridge between trigger and panel to avoid closing when moving mouse down */}
+      <div
+        ref={bridgeRef}
+        className="fixed left-0 right-0 z-[99]"
+        style={{
+          top: `${dropdownPosition.top - 8}px`,
+          height: '16px',
+        }}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        aria-hidden
+      />
+      <div
+        ref={dropdownRef}
+        className="fixed left-0 right-0 w-full bg-white dark:bg-gray-900 border-y border-gray-200 dark:border-gray-800 shadow-xl z-[100] overflow-y-auto"
+        style={{
+          top: `${dropdownPosition.top}px`,
+          maxHeight: `calc(100vh - ${HEADER_OFFSET_PX}px - 12px)`,
+        }}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-6">
         {menuCategories.map((category, index) => {
@@ -288,13 +305,21 @@ export function ProductsDropdown() {
           onMouseDown={(e: React.MouseEvent<HTMLAnchorElement>) => {
             e.preventDefault();
           }}
-          onClick={closeMenu}
+          onClick={(e: React.MouseEvent<HTMLAnchorElement>) => {
+            if (e.button === 0 && !e.ctrlKey && !e.metaKey) {
+              e.preventDefault();
+              router.push('/shop');
+              router.refresh();
+            }
+            closeMenu();
+          }}
         >
           Voir tous les produits →
         </LinkWithLoading>
       </div>
       </div>
     </div>
+    </>
   ) : null;
 
   useEffect(() => {
@@ -325,6 +350,14 @@ export function ProductsDropdown() {
         className="text-sm font-semibold text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-400 transition-colors flex items-center gap-1 whitespace-nowrap py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
         loadingMessage="Chargement de la boutique..."
         onMouseEnter={() => router.prefetch('/shop')}
+        onClick={(e: React.MouseEvent<HTMLAnchorElement>) => {
+          if (e.button === 0 && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            closeMenu();
+            router.push('/shop');
+            router.refresh();
+          }
+        }}
       >
         NOS PRODUITS
         <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />

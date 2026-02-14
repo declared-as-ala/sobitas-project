@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { ChevronRight, ChevronLeft, X } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/app/components/ui/sheet';
@@ -125,6 +125,7 @@ interface MobileProductsMenuProps {
 
 export function MobileProductsMenu({ open, onOpenChange }: MobileProductsMenuProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const prevPathnameRef = useRef(pathname);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -278,12 +279,20 @@ export function MobileProductsMenu({ open, onOpenChange }: MobileProductsMenuPro
                     })}
                   </div>
 
-                  {/* View All Products Link */}
+                  {/* View All Products Link - force refresh so /shop always shows all products */}
                   <div className="px-4 pt-4 pb-2 border-t border-gray-200 dark:border-gray-800 mt-4">
                     <LinkWithLoading
                       href="/shop"
                       className="flex items-center justify-center gap-2 py-3 px-4 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold text-sm transition-colors"
                       loadingMessage="Chargement de la boutique..."
+                      onClick={(e: React.MouseEvent<HTMLAnchorElement>) => {
+                        if (e.button === 0 && !e.ctrlKey && !e.metaKey) {
+                          e.preventDefault();
+                          handleClose();
+                          router.push('/shop');
+                          router.refresh();
+                        }
+                      }}
                     >
                       Voir tous les produits
                       <ChevronRight className="h-4 w-4" />

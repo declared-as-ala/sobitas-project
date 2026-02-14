@@ -42,10 +42,7 @@ export function SubCategoryFallbackClient({ categorySlug, subcategorySlug }: Sub
     let lastError: any;
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
       try {
-        const [result, categories] = await Promise.all([
-          getProductsBySubCategory(subcategorySlug.trim(), { per_page: 24 }),
-          getCategories(),
-        ]);
+        const result = await getProductsBySubCategory(subcategorySlug.trim());
         const subcategoryData = result?.sous_category;
         if (!subcategoryData?.designation_fr) {
           setStatus('not_found');
@@ -55,6 +52,7 @@ export function SubCategoryFallbackClient({ categorySlug, subcategorySlug }: Sub
           setStatus('not_found');
           return;
         }
+        const categories = await getCategories();
         const products = result?.products ?? [];
         const brands = result?.brands ?? [];
         setData({
