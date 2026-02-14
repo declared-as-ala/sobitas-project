@@ -24,9 +24,10 @@ export default async function ProductReviewsPage({ params }: ProductReviewsPageP
   const { slug } = await params;
   try {
     const product = await getProductDetails(slug);
-    if (!product) notFound();
+    if (!product?.id) notFound();
     return <ProductReviewsPageClient product={product} />;
-  } catch {
-    notFound();
+  } catch (error: any) {
+    if (error?.response?.status === 404 || error?.message === 'Product not found') notFound();
+    throw error;
   }
 }

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { getProductDetails, getSimilarProducts } from '@/services/api';
 import { getStorageUrl } from '@/services/api';
 import { ProductDetailClient } from './ProductDetailClient';
+import { ProductDetailFallbackClient } from '@/app/shop/ProductDetailFallbackClient';
 import type { Product } from '@/types';
 
 interface ProductPageProps {
@@ -70,17 +71,18 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
   const { id } = await params;
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://sobitas.tn';
 
-  try {
-    const [product, similarData] = await Promise.all([
-      getProductDetails(id),
-      getProductDetails(id).then(p =>
-        p.sous_categorie_id ? getSimilarProducts(p.sous_categorie_id) : Promise.resolve({ products: [] })
-      ).catch(() => ({ products: [] })),
-    ]);
+  if (!id?.trim()) {
+    notFound();
+  }
 
-    if (!product) {
+  try {
+    const product = await getProductDetails(id);
+    if (!product?.id) {
       notFound();
     }
+    const similarData = product.sous_categorie_id
+      ? await getSimilarProducts(product.sous_categorie_id).catch(() => ({ products: [] }))
+      : { products: [] };
 
     const productSchema = buildProductJsonLd(product, baseUrl);
 
@@ -90,8 +92,11 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
         <ProductDetailClient product={product} similarProducts={similarData.products || []} />
       </>
     );
-  } catch (error) {
-    console.error('Error fetching product:', error);
-    notFound();
+  } catch (error: any) {
+    if (error?.response?.status === 404 || error?.message === 'Product not found') {
+      notFound();
+    }
+    console.warn('Error fetching product (network/retry on client):', error?.message || error);
+    return <ProductDetailFallbackClient slug={String(id)} />;
   }
 }

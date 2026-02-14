@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { notFound } from 'next/navigation';
 import { Header } from '@/app/components/Header';
 import { Footer } from '@/app/components/Footer';
 import { CategorySkeleton } from '@/app/components/ProductsSkeleton';
@@ -33,7 +32,7 @@ export function SubCategoryFallbackClient({ categorySlug, subcategorySlug }: Sub
 
   const load = useCallback(async () => {
     if (!subcategorySlug?.trim()) {
-      setStatus('notfound');
+      setStatus('empty');
       return;
     }
     setStatus('loading');
@@ -46,11 +45,11 @@ export function SubCategoryFallbackClient({ categorySlug, subcategorySlug }: Sub
         const result = await getProductsBySubCategory(subcategorySlug.trim());
         const subcategoryData = result?.sous_category;
         if (!subcategoryData?.designation_fr) {
-          setStatus('notfound');
+          setStatus('not_found');
           return;
         }
         if (subcategoryData.categorie?.slug !== categorySlug) {
-          setStatus('notfound');
+          setStatus('not_found');
           return;
         }
         const categories = await getCategories();
@@ -66,7 +65,7 @@ export function SubCategoryFallbackClient({ categorySlug, subcategorySlug }: Sub
       } catch (err: any) {
         lastError = err;
         if (err?.response?.status === 404 || err?.message === 'Subcategory not found') {
-          setStatus('notfound');
+          setStatus('not_found');
           return;
         }
         if (attempt < MAX_RETRIES) {
@@ -82,8 +81,6 @@ export function SubCategoryFallbackClient({ categorySlug, subcategorySlug }: Sub
   useEffect(() => {
     load();
   }, [load]);
-
-  if (status === 'notfound') notFound();
 
   if (status === 'success' && data) {
     return (
@@ -105,8 +102,15 @@ export function SubCategoryFallbackClient({ categorySlug, subcategorySlug }: Sub
         {status === 'loading' && <CategorySkeleton />}
         {status === 'empty' && data && (
           <EmptyState
-            title="Aucun produit dans cette sous-catégorie."
+            title="Aucun produit trouvé"
             description="Cette sous-catégorie ne contient aucun produit pour le moment."
+            showShopLink
+          />
+        )}
+        {status === 'not_found' && (
+          <EmptyState
+            title="Catégorie introuvable ou vide"
+            description="La sous-catégorie demandée n'existe pas ou ne contient aucun produit."
             showShopLink
           />
         )}

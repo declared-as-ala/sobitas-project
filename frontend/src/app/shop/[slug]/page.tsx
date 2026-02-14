@@ -435,41 +435,42 @@ export default async function ProductDetailPage({ params, searchParams }: Produc
     }
   }
 
-  // 2) Try as category or subcategory (shop listing)
+  // 2) Try as category or subcategory (shop listing). Never notFound() here: empty/error → client fallback.
   try {
-    let categoryData;
-    let productsData: { products: any[]; brands: any[]; categories: any[] };
-    let categories;
-    let brands;
+    let categoryData: any = null;
+    let productsData: { products: any[]; brands: any[]; categories: any[] } | null = null;
+    let categories: any[] = [];
+    let brands: any[] = [];
     let isSubcategory = false;
 
     try {
       const result = await getProductsByCategory(slugStr);
-      if (!result?.category?.designation_fr) notFound();
-      categoryData = result.category;
-      productsData = { products: result.products, brands: result.brands, categories: [] };
-      categories = await getCategories();
-      brands = result.brands;
+      if (result?.category?.designation_fr) {
+        categoryData = result.category;
+        productsData = { products: result.products ?? [], brands: result.brands ?? [], categories: [] };
+        categories = await getCategories();
+        brands = result.brands ?? [];
+      }
     } catch (categoryError: any) {
       if (categoryError?.response?.status === 404 || categoryError?.message === 'Category not found') {
         try {
           const result = await getProductsBySubCategory(slugStr);
-          if (!result?.sous_category?.designation_fr) notFound();
-          categoryData = result.sous_category;
-          productsData = { products: result.products, brands: result.brands, categories: [] };
-          categories = await getCategories();
-          brands = result.brands;
-          isSubcategory = true;
-        } catch (subError: any) {
-          if (subError?.response?.status === 404 || subError?.message === 'Subcategory not found') notFound();
-          throw subError;
+          if (result?.sous_category?.designation_fr) {
+            categoryData = result.sous_category;
+            productsData = { products: result.products ?? [], brands: result.brands ?? [], categories: [] };
+            categories = await getCategories();
+            brands = result.brands ?? [];
+            isSubcategory = true;
+          }
+        } catch {
+          // Subcategory fetch failed → client will show loading/empty/error
         }
-      } else {
-        throw categoryError;
       }
     }
 
-    if (!categoryData?.designation_fr) notFound();
+    if (!categoryData?.designation_fr || !productsData) {
+      return <CategoryFallbackClient slug={slugStr} />;
+    }
 
     const breadcrumbJsonLd = {
       '@context': 'https://schema.org',
@@ -494,9 +495,7 @@ export default async function ProductDetailPage({ params, searchParams }: Produc
       </>
     );
   } catch (error: any) {
-    console.error('[ShopSlugPage] Error resolving slug:', error?.message || error);
-    if (error?.response?.status === 404) notFound();
-    // Category fetch failed (network/5xx): let client show loading → list/empty or small error banner (no full-page error)
+    console.warn('[ShopSlugPage] Category fetch error:', error?.message || error);
     return <CategoryFallbackClient slug={slugStr} />;
   }
 }

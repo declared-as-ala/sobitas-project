@@ -8,9 +8,10 @@ import { Button } from '@/app/components/ui/button';
 import { getProductDetails, getSimilarProducts } from '@/services/api';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 
-const MAX_RETRIES = 3;
-const RETRY_DELAYS_MS = [400, 800, 1600];
-const ERROR_DISPLAY_DELAY_MS = 200;
+const MAX_RETRIES = 2;
+const RETRY_DELAYS_MS = [400, 800];
+const ERROR_DISPLAY_DELAY_MS = 150;
+const NOT_FOUND_DELAY_MS = 150;
 
 type Status = 'loading' | 'success' | 'error' | 'notfound';
 
@@ -28,11 +29,10 @@ export function ProductDetailFallbackClient({ slug }: ProductDetailFallbackClien
   const [similarProducts, setSimilarProducts] = useState<any[]>([]);
   const [showErrorUi, setShowErrorUi] = useState(false);
 
+  const slugReady = !!slug?.trim();
+
   const load = useCallback(async () => {
-    if (!slug?.trim()) {
-      setStatus('notfound');
-      return;
-    }
+    if (!slugReady) return;
     setStatus('loading');
     setShowErrorUi(false);
     setProduct(null);
@@ -72,13 +72,30 @@ export function ProductDetailFallbackClient({ slug }: ProductDetailFallbackClien
     }
     setStatus('error');
     setTimeout(() => setShowErrorUi(true), ERROR_DISPLAY_DELAY_MS);
-  }, [slug]);
+  }, [slug, slugReady]);
 
   useEffect(() => {
+    if (!slugReady) return;
     load();
-  }, [load]);
+  }, [slugReady, load]);
 
-  if (status === 'notfound') notFound();
+  // Afficher 404 seulement après délai (évite flash) et uniquement quand le fetch a confirmé 404
+  useEffect(() => {
+    if (status !== 'notfound') return;
+    const t = setTimeout(() => {
+      notFound();
+    }, NOT_FOUND_DELAY_MS);
+    return () => clearTimeout(t);
+  }, [status]);
+
+  // Slug vide → Skeleton, jamais 404
+  if (!slugReady) {
+    return <ProductDetailSkeleton />;
+  }
+
+  if (status === 'notfound') {
+    return <ProductDetailSkeleton />;
+  }
 
   if (status === 'success' && product) {
     return (
