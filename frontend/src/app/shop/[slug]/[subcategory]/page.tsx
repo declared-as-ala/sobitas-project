@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: SubCategoryPageProps): Promis
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
 
   try {
-    const result = await getProductsBySubCategory(subcategorySlug);
+    const result = await getProductsBySubCategory(subcategorySlug, { per_page: 1 });
     const subcategoryData = result.sous_category;
 
     if (!subcategoryData || !subcategoryData.designation_fr) {

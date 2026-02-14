@@ -48,7 +48,11 @@ export function SubCategoryPageClient({ categorySlug, subcategorySlug }: SubCate
       let lastError: any;
       for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         try {
-          const result = await getProductsBySubCategory(subcategorySlug.trim(), { signal });
+          // Parallelize: subcategory+products and categories (avoids sequential wait)
+          const [result, categories] = await Promise.all([
+            getProductsBySubCategory(subcategorySlug.trim(), { signal, per_page: 24 }),
+            getCategories(signal),
+          ]);
           if (signal?.aborted) return;
 
           const subcategoryData = result?.sous_category;
@@ -62,9 +66,6 @@ export function SubCategoryPageClient({ categorySlug, subcategorySlug }: SubCate
             setData(null);
             return;
           }
-
-          const categories = await getCategories(signal);
-          if (signal?.aborted) return;
 
           const products = result?.products ?? [];
           const brands = result?.brands ?? [];

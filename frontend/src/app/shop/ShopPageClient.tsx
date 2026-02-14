@@ -115,7 +115,10 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
         return prev.length === 1 && prev[0] === decodedCategory ? prev : [decodedCategory];
       });
     } else {
+      // Boutique globale (/shop): reset filters and products so we never show "Aucun produit trouvé"
       setSelectedCategories([]);
+      setProducts(safeProductsData.products || []);
+      setCurrentBrand(null);
     }
 
     // Use initialBrand from props if available (new route structure), otherwise use query param
@@ -138,7 +141,7 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
     } else {
       setSearchQuery('');
     }
-  }, [searchParams, initialCategory, initialBrand]);
+  }, [searchParams, initialCategory, initialBrand, safeProductsData.products]);
 
   // Get unique subcategories from ALL products (not just filtered) for proper mapping
   const subCategories = useMemo(() => {
