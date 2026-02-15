@@ -216,28 +216,28 @@ export function ProductsDropdown() {
   const dropdownContent = isOpen && mounted ? (
     <div
       ref={dropdownRef}
-      className="fixed left-0 right-0 w-full bg-white dark:bg-gray-900 border-y border-gray-200 dark:border-gray-800 shadow-xl z-[100] overflow-y-auto"
+      className="fixed left-0 right-0 w-full bg-white dark:bg-gray-900 border-y border-gray-200 dark:border-gray-800 shadow-xl z-[100] overflow-visible"
       style={{
         top: `${dropdownPosition.top}px`,
-        maxHeight: `calc(100vh - ${HEADER_OFFSET_PX}px - 12px)`,
+        maxHeight: `calc(100vh - ${HEADER_OFFSET_PX}px - 16px)`,
       }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-6">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-3 pb-4 max-h-[calc(100vh-96px)] overflow-y-auto overscroll-contain">
+      <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-3">
         {menuCategories.map((category, index) => {
           const categoryData = findCategoryByName(category.title, categories);
           const categorySlug = categoryData?.slug ?? null;
           const categoryHref = categorySlug ? `/category/${categorySlug}` : null;
 
           return (
-            <div key={index} className="space-y-2 min-w-0">
+            <div key={index} className="space-y-0.5 min-w-0">
               {/* Category title – link only when we have API slug (never slugify from title) */}
               {categoryHref ? (
                 <LinkWithLoading
                   href={categoryHref}
-                  className="font-semibold text-sm sm:text-base text-red-600 dark:text-red-500 mb-3 leading-tight hover:underline block"
+                  className="font-semibold text-xs sm:text-sm text-red-600 dark:text-red-500 mb-1 leading-tight hover:underline block"
                   loadingMessage={`Chargement de ${category.title}...`}
                   onMouseEnter={() => router.prefetch(categoryHref)}
                   onMouseDown={(e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -248,11 +248,11 @@ export function ProductsDropdown() {
                   {category.title}
                 </LinkWithLoading>
               ) : (
-                <span className="font-semibold text-sm sm:text-base text-red-600 dark:text-red-500 mb-3 leading-tight block">
+                <span className="font-semibold text-xs sm:text-sm text-red-600 dark:text-red-500 mb-1 leading-tight block">
                   {category.title}
                 </span>
               )}
-              <ul className="space-y-1.5">
+              <ul className="space-y-0.5">
                 {category.items.map((item, itemIndex) => {
                   const subCategory = findSubCategoryByName(item, categories);
                   const itemSlug = subCategory?.slug ?? null;
@@ -263,7 +263,7 @@ export function ProductsDropdown() {
                       {itemHref ? (
                         <LinkWithLoading
                           href={itemHref}
-                          className="text-sm text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-500 transition-colors block py-1 break-words"
+                          className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-500 transition-colors block py-0.5 break-words"
                           loadingMessage={`Chargement de ${item}...`}
                           onMouseEnter={() => router.prefetch(itemHref)}
                           onMouseDown={(e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -274,7 +274,7 @@ export function ProductsDropdown() {
                           {item}
                         </LinkWithLoading>
                       ) : (
-                        <span className="text-sm text-gray-700 dark:text-gray-300 block py-1 break-words">
+                        <span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 block py-0.5 break-words">
                           {item}
                         </span>
                       )}
@@ -286,10 +286,10 @@ export function ProductsDropdown() {
           );
         })}
       </div>
-      <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-800">
+      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-800">
         <LinkWithLoading
           href="/shop"
-          className="text-base font-semibold text-red-600 dark:text-red-500 hover:underline"
+          className="text-sm font-semibold text-red-600 dark:text-red-500 hover:underline"
           loadingMessage="Chargement de la boutique..."
           onMouseEnter={() => router.prefetch('/shop')}
           onMouseDown={(e: React.MouseEvent<HTMLAnchorElement>) => {
