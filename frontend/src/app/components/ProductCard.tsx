@@ -11,7 +11,7 @@ import type { Product as ApiProduct } from '@/types';
 import { useCart } from '@/app/contexts/CartContext';
 import { getStorageUrl } from '@/services/api';
 import { toast } from 'sonner';
-import { hasValidPromo } from '@/util/productPrice';
+import { getPriceDisplay } from '@/util/productPrice';
 import { getStockDisponible } from '@/util/cartStock';
 import { useState, useMemo, memo, useCallback } from 'react';
 
@@ -54,23 +54,16 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
     const slug = product.slug || '';
     const image = (product as any).image || (product.cover ? getStorageUrl(product.cover) : '');
     const description = (product as any).description_cover || (product as any).description_fr || '';
-    // Get old price - ensure it's a number
-    const rawOldPrice = product.prix ?? (product as any).price ?? null;
-    const oldPrice = rawOldPrice != null && !isNaN(Number(rawOldPrice)) ? Number(rawOldPrice) : 0;
-    const validPromo = hasValidPromo(product as any);
-    // Show promo price only if valid, but always show old price if promo exists
-    const promoPrice = validPromo && product.promo != null ? Number(product.promo) : null;
-    const hasPromoValue = product.promo != null && product.promo !== undefined;
-    const newPrice = promoPrice ?? oldPrice;
-    const discount = promoPrice != null && oldPrice > 0 && oldPrice > promoPrice ? Math.round(((oldPrice - promoPrice) / oldPrice) * 100) : 0;
+    const priceDisplay = getPriceDisplay(product as any);
+    const discount =
+      priceDisplay.hasPromo && priceDisplay.oldPrice != null && priceDisplay.oldPrice > 0
+        ? Math.round(((priceDisplay.oldPrice - priceDisplay.finalPrice) / priceDisplay.oldPrice) * 100)
+        : 0;
     const isNew = product.new_product === 1;
     const isBestSeller = product.best_seller === 1;
     const rating = product.note || 0;
-    // Try to get review count from reviews_count (from withCount) or from reviews array
-    // Ensure it's a number and handle null/undefined/0
     const reviewsCountValue = (product as any).reviews_count;
     const reviewsArrayCount = ((product as any).reviews?.filter((r: any) => r.publier === 1) || []).length;
-    // Convert to number, default to 0 if null/undefined, otherwise use array count as fallback
     let reviewCount = 0;
     if (reviewsCountValue != null && reviewsCountValue !== undefined) {
       reviewCount = Number(reviewsCountValue) || 0;
@@ -83,11 +76,8 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
       slug,
       image,
       description,
-      oldPrice,
-      promoPrice,
-      newPrice,
+      priceDisplay,
       discount,
-      hasPromoValue,
       isNew,
       isBestSeller,
       rating,
@@ -177,7 +167,7 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
               Rupture
             </Badge>
           )}
-          {productData.isInStock && productData.discount > 0 && (
+          {productData.isInStock && productData.priceDisplay.hasPromo && productData.discount > 0 && (
             <Badge className="bg-red-600 text-white border-0 font-semibold text-[10px] px-1.5 py-0.5 sm:text-xs sm:px-2 sm:py-0.5">
               -{productData.discount}%
             </Badge>
@@ -189,12 +179,12 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
                   {badgeText}
                 </Badge>
               )}
-              {productData.isInStock && productData.promoPrice == null && !showBadge && productData.isNew && (
+              {productData.isInStock && !productData.priceDisplay.hasPromo && !showBadge && productData.isNew && (
                 <Badge className="bg-blue-600 text-white border-0 font-semibold text-[10px] px-1.5 py-0.5">
                   New
                 </Badge>
               )}
-              {productData.isInStock && productData.promoPrice == null && !showBadge && productData.isBestSeller && (
+              {productData.isInStock && !productData.priceDisplay.hasPromo && !showBadge && productData.isBestSeller && (
                 <Badge className="bg-amber-600 text-white border-0 font-semibold text-[10px] px-1.5 py-0.5">
                   Top Vendu
                 </Badge>
@@ -273,52 +263,31 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
           </div>
         )}
 
-        {/* Price */}
+        {/* Price – promo + old price only when hasPromo (active promo, not expired) */}
         <div className={`flex flex-wrap items-baseline gap-1 sm:gap-1.5 md:gap-2 mt-auto ${isCompact ? 'mb-0' : 'mb-0'}`}>
-          {(() => {
-            // Always check if there's a promo value, regardless of expiration
-            const promoValue = product.promo != null && !isNaN(Number(product.promo)) ? Number(product.promo) : null;
-            const oldPrice = productData.oldPrice;
-            const hasValidPromoPrice = productData.promoPrice != null;
-            
-            // Show old price crossed out if there's a promo value AND old price > 0 AND promo < old price
-            // This works for both valid and expired promos - we always show the old price when a promo exists
-            const shouldShowOldPrice = promoValue != null && oldPrice > 0 && promoValue < oldPrice;
-            
-            if (shouldShowOldPrice) {
-              // Use valid promo price if available, otherwise use the promo value (even if expired)
-              const displayPromoPrice = hasValidPromoPrice ? productData.promoPrice! : promoValue;
-              const displayDiscount = productData.discount > 0 
-                ? productData.discount 
-                : Math.round(((oldPrice - displayPromoPrice) / oldPrice) * 100);
-              
-              return (
-                <>
-                  <span className={`font-bold text-red-600 dark:text-red-400 tabular-nums ${isCompact ? 'text-sm' : 'text-base sm:text-lg md:text-xl'}`}>
-                    {displayPromoPrice} DT
-                  </span>
-                  <span
-                    className="text-gray-500 dark:text-gray-400 line-through tabular-nums text-[10px] sm:text-[11px] md:text-xs"
-                    style={{ textDecorationThickness: '1.5px' }}
-                    aria-label={`Prix barré: ${oldPrice} DT`}
-                  >
-                    {oldPrice} DT
-                  </span>
-                  {!isCompact && displayDiscount > 0 && (
-                    <span className="rounded bg-red-100 dark:bg-red-950/50 px-1 sm:px-1.5 py-0.5 text-[9px] sm:text-[10px] md:text-xs font-semibold text-red-700 dark:text-red-400 ml-0.5 sm:ml-0">
-                      -{displayDiscount}%
-                    </span>
-                  )}
-                </>
-              );
-            }
-            
-            return (
-              <span className={`font-bold text-gray-900 dark:text-white tabular-nums ${isCompact ? 'text-sm' : 'text-base sm:text-lg md:text-xl'}`}>
-                {productData.newPrice || productData.oldPrice} DT
+          {productData.priceDisplay.hasPromo && productData.priceDisplay.oldPrice != null ? (
+            <>
+              <span className={`font-bold text-red-600 dark:text-red-400 tabular-nums ${isCompact ? 'text-sm' : 'text-base sm:text-lg md:text-xl'}`}>
+                {productData.priceDisplay.finalPrice} DT
               </span>
-            );
-          })()}
+              <span
+                className="text-gray-500 dark:text-gray-400 line-through tabular-nums text-[10px] sm:text-[11px] md:text-xs"
+                style={{ textDecorationThickness: '1.5px' }}
+                aria-label={`Prix barré: ${productData.priceDisplay.oldPrice} DT`}
+              >
+                {productData.priceDisplay.oldPrice} DT
+              </span>
+              {!isCompact && productData.discount > 0 && (
+                <span className="rounded bg-red-100 dark:bg-red-950/50 px-1 sm:px-1.5 py-0.5 text-[9px] sm:text-[10px] md:text-xs font-semibold text-red-700 dark:text-red-400 ml-0.5 sm:ml-0">
+                  -{productData.discount}%
+                </span>
+              )}
+            </>
+          ) : (
+            <span className={`font-bold text-gray-900 dark:text-white tabular-nums ${isCompact ? 'text-sm' : 'text-base sm:text-lg md:text-xl'}`}>
+              {productData.priceDisplay.finalPrice} DT
+            </span>
+          )}
         </div>
 
         {/* CTA – always visible on mobile, overlay on desktop hover */}

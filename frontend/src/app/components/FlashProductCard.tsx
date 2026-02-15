@@ -9,7 +9,7 @@ import { Button } from '@/app/components/ui/button';
 import { getStorageUrl } from '@/services/api';
 import { useCart } from '@/app/contexts/CartContext';
 import { toast } from 'sonner';
-import { hasValidPromo } from '@/util/productPrice';
+import { getPriceDisplay } from '@/util/productPrice';
 import { getStockDisponible } from '@/util/cartStock';
 import { useState, useMemo, memo, useCallback } from 'react';
 
@@ -46,15 +46,11 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
     const name = product.name || product.designation_fr || '';
     const slug = product.slug || '';
     const image = product.image || (product.cover ? getStorageUrl(product.cover) : '');
-    const rawOldPrice = product.prix ?? product.price ?? null;
-    const oldPrice = rawOldPrice != null && !isNaN(Number(rawOldPrice)) ? Number(rawOldPrice) : 0;
-    const validPromo = hasValidPromo(product);
-    const promoPrice = validPromo && product.promo != null ? Number(product.promo) : null;
-    const hasPromoValue = product.promo != null && product.promo !== undefined;
-    const newPrice = promoPrice ?? oldPrice;
-    const discount = promoPrice != null && oldPrice > 0 && oldPrice > promoPrice 
-      ? Math.round(((oldPrice - promoPrice) / oldPrice) * 100) 
-      : 0;
+    const priceDisplay = getPriceDisplay(product);
+    const discount =
+      priceDisplay.hasPromo && priceDisplay.oldPrice != null && priceDisplay.oldPrice > 0
+        ? Math.round(((priceDisplay.oldPrice - priceDisplay.finalPrice) / priceDisplay.oldPrice) * 100)
+        : 0;
     const rating = product.note || 0;
     const reviewsCountValue = product.reviews_count;
     const reviewsArrayCount = (product.reviews?.filter((r) => r.publier === 1) || []).length;
@@ -65,16 +61,12 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
       reviewCount = reviewsArrayCount;
     }
     const isInStock = (product as any).rupture === 1 || (product as any).rupture === undefined;
-    
     return {
       name,
       slug,
       image,
-      oldPrice,
-      promoPrice,
-      newPrice,
+      priceDisplay,
       discount,
-      hasPromoValue,
       rating,
       reviewCount,
       isInStock,
@@ -98,20 +90,17 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
     setTimeout(() => setIsAdding(false), 500);
   }, [productData.isInStock, stockDisponible, inCartQty, addToCart, product]);
 
-  // Determine which badges to show (max 2)
+  // Determine which badges to show (max 2) – only when promo is active
   const badges = useMemo(() => {
     const badgeList: Array<{ text: string; color: 'red' | 'green' }> = [];
-    
-    if (productData.discount > 0) {
+    if (productData.priceDisplay.hasPromo && productData.discount > 0) {
       badgeList.push({ text: `-${productData.discount}%`, color: 'red' });
     }
-    
-    if (productData.hasPromoValue && productData.isInStock) {
+    if (productData.priceDisplay.hasPromo && productData.isInStock) {
       badgeList.push({ text: 'Promo', color: 'green' });
     }
-    
-    return badgeList.slice(0, 2); // Max 2 badges
-  }, [productData.discount, productData.hasPromoValue, productData.isInStock]);
+    return badgeList.slice(0, 2);
+  }, [productData.priceDisplay.hasPromo, productData.discount, productData.isInStock]);
 
   return (
     <motion.article
@@ -278,54 +267,41 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
           )}
         </div>
 
-        {/* Pricing - Dominant design with better visual hierarchy */}
+        {/* Pricing – promo + old price only when hasPromo (active promo, not expired) */}
         <div className="flex flex-wrap items-baseline gap-2 mb-3 sm:mb-4 mt-auto">
-          {(() => {
-            const promoValue = product.promo != null && !isNaN(Number(product.promo)) ? Number(product.promo) : null;
-            const oldPrice = productData.oldPrice;
-            const hasValidPromoPrice = productData.promoPrice != null;
-            const shouldShowOldPrice = promoValue != null && oldPrice > 0 && promoValue < oldPrice;
-            
-            if (shouldShowOldPrice) {
-              const displayPromoPrice = hasValidPromoPrice ? productData.promoPrice! : promoValue;
-              
-              return (
-                <div className="flex flex-col gap-1 w-full">
-                  <div className="flex items-baseline gap-2 sm:gap-3 flex-wrap">
-                    <motion.span
-                      initial={{ scale: 0.9 }}
-                      animate={{ scale: 1 }}
-                      className="font-black text-red-600 dark:text-red-400 tabular-nums text-xl sm:text-2xl md:text-3xl"
-                    >
-                      {displayPromoPrice} DT
-                    </motion.span>
-                    {productData.discount > 0 && (
-                      <motion.span
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="inline-flex items-center px-2 py-0.5 rounded-lg bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 font-bold text-[10px] sm:text-xs whitespace-nowrap"
-                      >
-                        -{productData.discount}%
-                      </motion.span>
-                    )}
-                  </div>
-                  <span
-                    className="text-gray-400 dark:text-gray-500 line-through tabular-nums text-sm sm:text-base font-semibold"
-                    style={{ textDecorationThickness: '2px' }}
-                    aria-label={`Prix barré: ${oldPrice} DT`}
+          {productData.priceDisplay.hasPromo && productData.priceDisplay.oldPrice != null ? (
+            <div className="flex flex-col gap-1 w-full">
+              <div className="flex items-baseline gap-2 sm:gap-3 flex-wrap">
+                <motion.span
+                  initial={{ scale: 0.9 }}
+                  animate={{ scale: 1 }}
+                  className="font-black text-red-600 dark:text-red-400 tabular-nums text-xl sm:text-2xl md:text-3xl"
+                >
+                  {productData.priceDisplay.finalPrice} DT
+                </motion.span>
+                {productData.discount > 0 && (
+                  <motion.span
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="inline-flex items-center px-2 py-0.5 rounded-lg bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 font-bold text-[10px] sm:text-xs whitespace-nowrap"
                   >
-                    {oldPrice} DT
-                  </span>
-                </div>
-              );
-            }
-            
-            return (
-              <span className="font-black text-gray-900 dark:text-white tabular-nums text-xl sm:text-2xl md:text-3xl">
-                {productData.newPrice || productData.oldPrice} DT
+                    -{productData.discount}%
+                  </motion.span>
+                )}
+              </div>
+              <span
+                className="text-gray-400 dark:text-gray-500 line-through tabular-nums text-sm sm:text-base font-semibold"
+                style={{ textDecorationThickness: '2px' }}
+                aria-label={`Prix barré: ${productData.priceDisplay.oldPrice} DT`}
+              >
+                {productData.priceDisplay.oldPrice} DT
               </span>
-            );
-          })()}
+            </div>
+          ) : (
+            <span className="font-black text-gray-900 dark:text-white tabular-nums text-xl sm:text-2xl md:text-3xl">
+              {productData.priceDisplay.finalPrice} DT
+            </span>
+          )}
         </div>
 
         {/* CTA Button - Always visible with enhanced design, constrained to card */}

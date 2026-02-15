@@ -12,6 +12,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/ap
 import { useDebounce } from '@/util/debounce';
 import { searchProducts } from '@/services/api';
 import { getStorageUrl } from '@/services/api';
+import { getPriceDisplay } from '@/util/productPrice';
 import type { Product } from '@/types';
 import { cn } from '@/app/components/ui/utils';
 
@@ -92,12 +93,20 @@ function SearchResults({
               {product.designation_fr}
             </p>
             <p className="text-xs text-muted-foreground">
-              {product.prix} DT
-              {product.promo != null && product.promo < product.prix && (
-                <span className="ml-1 text-red-600 dark:text-red-400">
-                  → {product.promo} DT
-                </span>
-              )}
+              {(() => {
+                const pd = getPriceDisplay(product);
+                if (pd.hasPromo && pd.oldPrice != null) {
+                  return (
+                    <>
+                      <span className="line-through">{pd.oldPrice} DT</span>
+                      <span className="ml-1 text-red-600 dark:text-red-400">
+                        → {pd.finalPrice} DT
+                      </span>
+                    </>
+                  );
+                }
+                return <>{pd.finalPrice} DT</>;
+              })()}
             </p>
           </div>
           <ArrowRight className="h-4 w-4 flex-shrink-0 text-muted-foreground" aria-hidden />

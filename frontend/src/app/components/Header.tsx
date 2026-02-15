@@ -25,6 +25,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/app/components/u
 import { cn } from '@/app/components/ui/utils';
 import { getStorageUrl } from '@/services/api';
 import { searchProducts } from '@/services/api';
+import { getPriceDisplay } from '@/util/productPrice';
 import { useDebounce } from '@/util/debounce';
 import type { Product } from '@/types';
 
@@ -410,12 +411,20 @@ export function Header() {
                                   {product.designation_fr}
                                 </p>
                                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                                  {product.prix} DT
-                                  {product.promo != null && product.promo < product.prix && (
-                                    <span className="ml-1 text-red-600 dark:text-red-400">
-                                      → {product.promo} DT
-                                    </span>
-                                  )}
+                                  {(() => {
+                                    const pd = getPriceDisplay(product);
+                                    if (pd.hasPromo && pd.oldPrice != null) {
+                                      return (
+                                        <>
+                                          <span className="line-through">{pd.oldPrice} DT</span>
+                                          <span className="ml-1 text-red-600 dark:text-red-400">
+                                            → {pd.finalPrice} DT
+                                          </span>
+                                        </>
+                                      );
+                                    }
+                                    return <>{pd.finalPrice} DT</>;
+                                  })()}
                                 </p>
                               </div>
                               <ArrowRight className="h-4 w-4 flex-shrink-0 text-gray-400" />
