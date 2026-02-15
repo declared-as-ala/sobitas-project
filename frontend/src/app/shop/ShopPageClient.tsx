@@ -966,7 +966,7 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
                 transition={{ duration: 0.2 }}
                 className="hidden md:block w-72 flex-shrink-0"
               >
-                <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 space-y-1 sticky top-4 shadow-sm">
+                <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 px-6 pt-6 pb-8 space-y-1 sticky top-4 shadow-sm overflow-visible">
                   <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200 dark:border-gray-800">
                     <h2 className="font-semibold text-base">Filtres</h2>
                     <div className="flex items-center gap-2">
@@ -1022,7 +1022,7 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
                           Catégories
                         </AccordionTrigger>
                         <AccordionContent className="pb-3">
-                          <div className="space-y-2 max-h-64 overflow-y-auto">
+                          <div className="space-y-2">
                             {categories.map(category => {
                               const count = filterCounts.categoryCounts.get(category.slug) || 0;
                               const isSelected = selectedCategories.includes(category.slug);
@@ -1060,7 +1060,7 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
                           Marques
                         </AccordionTrigger>
                         <AccordionContent className="pb-3">
-                          <div className="space-y-2 max-h-64 overflow-y-auto">
+                          <div className="space-y-2">
                             {brands.map(brand => {
                               const count = filterCounts.brandCounts.get(brand.id) || 0;
                               const isSelected = selectedBrands.includes(brand.id);

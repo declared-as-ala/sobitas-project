@@ -84,26 +84,36 @@ const menuCategories = [
   },
 ];
 
+// Helper to normalize for comparison
+const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+
 // Helper to find category by name (use returned slug only – never slugify from title)
 const findCategoryByName = (name: string, categories: Category[]): Category | null => {
-  const normalizedName = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-  return categories.find(cat => 
-    cat.designation_fr.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim() === normalizedName
-  ) || null;
+  const normalizedName = normalize(name);
+  return categories.find(cat => normalize(cat.designation_fr) === normalizedName) || null;
 };
 
-// Helper to find subcategory by name
+/** Menu label (normalized) → API slug when UI text differs from API (e.g. Bandages vs Bandes). Never slugify from label. */
+const subCategoryLabelToSlug: Record<string, string> = {
+  'bandages de soutien musculaire': 'bandes-de-soutien-musculaire',
+};
+
+// Helper to find subcategory: exact match on designation_fr, or alias map. Always returns API slug.
 const findSubCategoryByName = (name: string, categories: Category[]): { slug: string; name: string } | null => {
-  const normalizedName = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-  
+  const normalizedName = normalize(name);
+
   for (const category of categories) {
     if (category.sous_categories) {
-      const found = category.sous_categories.find((sub: any) => 
-        sub.designation_fr.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim() === normalizedName
-      );
-      if (found) {
-        return { slug: found.slug, name: found.designation_fr };
-      }
+      const found = category.sous_categories.find((sub: any) => normalize(sub.designation_fr) === normalizedName);
+      if (found) return { slug: found.slug, name: found.designation_fr };
+    }
+  }
+  // Fallback: known menu label ↔ API slug alias (so links use correct slug)
+  const aliasSlug = subCategoryLabelToSlug[normalizedName];
+  if (aliasSlug) {
+    for (const category of categories) {
+      const sub = category.sous_categories?.find((s: any) => s.slug === aliasSlug);
+      if (sub) return { slug: sub.slug, name: sub.designation_fr };
     }
   }
   return null;
