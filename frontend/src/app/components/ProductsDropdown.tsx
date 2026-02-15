@@ -84,18 +84,7 @@ const menuCategories = [
   },
 ];
 
-// Helper to convert name to slug format
-const nameToSlug = (name: string): string => {
-  return name
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Remove accents
-    .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric with hyphens
-    .replace(/^-+|-+$/g, '') // Remove leading/trailing hyphens
-    .trim();
-};
-
-// Helper to find category by name
+// Helper to find category by name (use returned slug only – never slugify from title)
 const findCategoryByName = (name: string, categories: Category[]): Category | null => {
   const normalizedName = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
   return categories.find(cat => 
@@ -228,49 +217,57 @@ export function ProductsDropdown() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-6">
         {menuCategories.map((category, index) => {
-          // Find the category by title to get its slug
           const categoryData = findCategoryByName(category.title, categories);
-          const categorySlug = categoryData?.slug || nameToSlug(category.title);
-          const categoryHref = `/category/${categorySlug}`;
+          const categorySlug = categoryData?.slug ?? null;
+          const categoryHref = categorySlug ? `/category/${categorySlug}` : null;
 
           return (
             <div key={index} className="space-y-2 min-w-0">
-              {/* Category title - link to category page using slug */}
-              <LinkWithLoading
-                href={categoryHref}
-                className="font-semibold text-sm sm:text-base text-red-600 dark:text-red-500 mb-3 leading-tight hover:underline block"
-                loadingMessage={`Chargement de ${category.title}...`}
-                onMouseEnter={() => router.prefetch(categoryHref)}
-                onMouseDown={(e: React.MouseEvent<HTMLAnchorElement>) => {
-                  e.preventDefault();
-                }}
-                onClick={closeMenu}
-              >
-                {category.title}
-              </LinkWithLoading>
+              {/* Category title – link only when we have API slug (never slugify from title) */}
+              {categoryHref ? (
+                <LinkWithLoading
+                  href={categoryHref}
+                  className="font-semibold text-sm sm:text-base text-red-600 dark:text-red-500 mb-3 leading-tight hover:underline block"
+                  loadingMessage={`Chargement de ${category.title}...`}
+                  onMouseEnter={() => router.prefetch(categoryHref)}
+                  onMouseDown={(e: React.MouseEvent<HTMLAnchorElement>) => {
+                    e.preventDefault();
+                  }}
+                  onClick={closeMenu}
+                >
+                  {category.title}
+                </LinkWithLoading>
+              ) : (
+                <span className="font-semibold text-sm sm:text-base text-red-600 dark:text-red-500 mb-3 leading-tight block">
+                  {category.title}
+                </span>
+              )}
               <ul className="space-y-1.5">
                 {category.items.map((item, itemIndex) => {
-                  // Try to find subcategory by name first
                   const subCategory = findSubCategoryByName(item, categories);
-                  // Use subcategory slug if found, otherwise convert name to slug
-                  const itemSlug = subCategory?.slug || nameToSlug(item);
-                  const itemHref = `/category/${itemSlug}`;
+                  const itemSlug = subCategory?.slug ?? null;
+                  const itemHref = itemSlug ? `/category/${itemSlug}` : null;
 
                   return (
                     <li key={itemIndex}>
-                      <LinkWithLoading
-                        href={itemHref}
-                        className="text-sm text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-500 transition-colors block py-1 break-words"
-                        loadingMessage={`Chargement de ${item}...`}
-                        onMouseEnter={() => router.prefetch(itemHref)}
-                        onMouseDown={(e: React.MouseEvent<HTMLAnchorElement>) => {
-                          // Prevent blur from closing menu when clicking
-                          e.preventDefault();
-                        }}
-                        onClick={closeMenu}
-                      >
-                        {item}
-                      </LinkWithLoading>
+                      {itemHref ? (
+                        <LinkWithLoading
+                          href={itemHref}
+                          className="text-sm text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-500 transition-colors block py-1 break-words"
+                          loadingMessage={`Chargement de ${item}...`}
+                          onMouseEnter={() => router.prefetch(itemHref)}
+                          onMouseDown={(e: React.MouseEvent<HTMLAnchorElement>) => {
+                            e.preventDefault();
+                          }}
+                          onClick={closeMenu}
+                        >
+                          {item}
+                        </LinkWithLoading>
+                      ) : (
+                        <span className="text-sm text-gray-700 dark:text-gray-300 block py-1 break-words">
+                          {item}
+                        </span>
+                      )}
                     </li>
                   );
                 })}

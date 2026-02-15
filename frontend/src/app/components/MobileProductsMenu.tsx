@@ -82,18 +82,7 @@ const menuCategories = [
   },
 ];
 
-// Helper to convert name to slug format
-const nameToSlug = (name: string): string => {
-  return name
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .trim();
-};
-
-// Helper to find category by name
+// Helper to find category by name (use returned slug only – never slugify from title)
 const findCategoryByName = (name: string, categories: Category[]): Category | null => {
   const normalizedName = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
   return categories.find(cat => 
@@ -303,12 +292,13 @@ export function MobileProductsMenu({ open, onOpenChange }: MobileProductsMenuPro
                   <div className="space-y-1 px-2">
                     {selectedCategoryData?.items.map((item, itemIndex) => {
                       const subCategory = findSubCategoryByName(item, categories);
-                      const itemSlug = subCategory?.slug || nameToSlug(item);
-                      
-                      return (
+                      const itemSlug = subCategory?.slug ?? null;
+                      const itemHref = itemSlug ? `/category/${itemSlug}` : null;
+
+                      return itemHref ? (
                         <LinkWithLoading
                           key={itemIndex}
-                          href={`/category/${itemSlug}`}
+                          href={itemHref}
                           className="block py-3 px-4 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition-colors border border-gray-200 dark:border-gray-800 mb-2"
                           loadingMessage={`Chargement de ${item}...`}
                         >
@@ -316,15 +306,22 @@ export function MobileProductsMenu({ open, onOpenChange }: MobileProductsMenuPro
                             {item}
                           </span>
                         </LinkWithLoading>
+                      ) : (
+                        <span
+                          key={itemIndex}
+                          className="block py-3 px-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                        >
+                          {item}
+                        </span>
                       );
                     })}
                   </div>
 
-                  {/* Category Link */}
+                  {/* Category Link – only when we have API slug */}
                   {selectedCategoryData && (() => {
                     const categoryData = findCategoryByName(selectedCategoryData.title, categories);
-                    const categorySlug = categoryData?.slug || nameToSlug(selectedCategoryData.title);
-                    
+                    const categorySlug = categoryData?.slug ?? null;
+                    if (!categorySlug) return null;
                     return (
                       <div className="px-4 pt-4 pb-2 border-t border-gray-200 dark:border-gray-800 mt-4">
                         <LinkWithLoading

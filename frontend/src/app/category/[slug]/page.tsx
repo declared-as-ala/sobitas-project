@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { getCategories } from '@/services/api';
 import { fetchCategoryOrSubCategory } from '@/services/api';
 import { ShopPageClient } from '@/app/shop/ShopPageClient';
@@ -15,10 +15,20 @@ export type PageProps = {
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+/** Legacy/wrong slugs → canonical slug (from API). Ensures correct API response and SEO. */
+const slugAliases: Record<string, string> = {
+  'bandages-de-soutien-musculaire': 'bandes-de-soutien-musculaire',
+};
+
+function getCanonicalSlug(slug: string): string {
+  return slugAliases[slug] ?? slug;
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
+  const canonicalSlug = getCanonicalSlug(slug?.trim() ?? '');
   try {
-    const { type, data } = await fetchCategoryOrSubCategory(slug);
+    const { type, data } = await fetchCategoryOrSubCategory(canonicalSlug);
     const title =
       type === 'subcategory'
         ? (data as any).sous_category?.designation_fr
@@ -37,6 +47,14 @@ export default async function CategoryPage({ params }: PageProps) {
   const cleanSlug = slug?.trim();
   if (!cleanSlug) notFound();
 
+  const canonicalSlug = getCanonicalSlug(cleanSlug);
+  if (canonicalSlug !== cleanSlug) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(`[category] Slug alias: "${cleanSlug}" → "${canonicalSlug}"`);
+    }
+    redirect(`/category/${encodeURIComponent(canonicalSlug)}`);
+  }
+
   let categories: Awaited<ReturnType<typeof getCategories>> = [];
   try {
     categories = await getCategories();
@@ -45,7 +63,7 @@ export default async function CategoryPage({ params }: PageProps) {
   }
 
   try {
-    const { type, data } = await fetchCategoryOrSubCategory(cleanSlug);
+    const { type, data } = await fetchCategoryOrSubCategory(canonicalSlug);
 
     if (type === 'subcategory') {
       const sub = data as {
@@ -76,7 +94,7 @@ export default async function CategoryPage({ params }: PageProps) {
             productsData={productsData}
             categories={categories}
             brands={sub.brands ?? []}
-            initialCategory={cleanSlug}
+            initialCategory={canonicalSlug}
             isSubcategory
             parentCategory={sub.sous_category?.categorie?.slug ?? undefined}
           />
@@ -112,7 +130,7 @@ export default async function CategoryPage({ params }: PageProps) {
             productsData={productsData}
             categories={categories}
             brands={cat.brands ?? []}
-            initialCategory={cleanSlug}
+            initialCategory={canonicalSlug}
           />
         </Suspense>
       );
