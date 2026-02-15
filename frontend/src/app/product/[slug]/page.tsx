@@ -1,4 +1,4 @@
-import { redirect } from 'next/navigation';
+import { redirect, RedirectType } from 'next/navigation';
 
 export type PageProps = {
   params: Promise<{ slug: string }>;
@@ -28,5 +28,5 @@ export default async function ProductRedirectPage({ params, searchParams }: Page
   });
   const queryString = query.toString();
   const dest = `/shop/${encodeURIComponent(cleanSlug)}${queryString ? `?${queryString}` : ''}`;
-  redirect(dest, 'replace');
+  redirect(dest, RedirectType.replace);
 }
