@@ -18,7 +18,7 @@ const slugMapping: Record<string, string> = {
 };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { slug } = params;
+  const { slug } = await params;
   const apiSlug = slugMapping[slug] ?? slug;
   try {
     const page = await getPageBySlug(apiSlug);
