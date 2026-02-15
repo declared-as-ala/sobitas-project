@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
+import { apiFetch, ApiError } from '@/services/http';
 import type {
   Product,
   Category,
@@ -57,20 +58,26 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor: retry on ETIMEDOUT/ECONNRESET, handle 401
+// Response interceptor: retry on 429 (max 2, backoff 400/900ms + jitter) and ETIMEDOUT/ECONNRESET, handle 401
+const RETRY_429_DELAYS = [400, 900];
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError & { config?: { _retryCount?: number } }) => {
     const retryCount = error.config?._retryCount ?? 0;
-    const isRetryable =
+    const status = error.response?.status;
+    const is429 = status === 429 && retryCount < 2;
+    const isNetwork =
       (error.code === 'ETIMEDOUT' || error.code === 'ECONNRESET' || error.code === 'ECONNABORTED') &&
       retryCount < 2;
-    if (isRetryable && error.config) {
+    const delay = is429
+      ? RETRY_429_DELAYS[retryCount]! * (0.8 + Math.random() * 0.4)
+      : 1500;
+    if ((is429 || isNetwork) && error.config) {
       (error.config as any)._retryCount = retryCount + 1;
-      await new Promise((r) => setTimeout(r, 1500));
+      await new Promise((r) => setTimeout(r, Math.floor(delay)));
       return api.request(error.config);
     }
-    if (error.response?.status === 401 && typeof window !== 'undefined') {
+    if (status === 401 && typeof window !== 'undefined') {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
@@ -296,23 +303,56 @@ export const getProductDetails = async (slug: string, cacheBust?: boolean): Prom
     err.response = { status: 404 };
     throw err;
   }
-  const url = cacheBust
-    ? `/product_details/${cleanSlug}?t=${Date.now()}`
-    : `/product_details/${cleanSlug}`;
-  return withRetry(
-    async () => {
-      const response = await api.get<Product>(url);
-      if (!response.data || !response.data.id) {
-        console.warn(`Product "${cleanSlug}" not found in API response`);
-        const err: any = new Error('Product not found');
-        err.response = { status: 404 };
-        throw err;
-      }
-      return response.data;
-    },
-    (err) => err?.response?.status !== 404 && (err?.code === 'ETIMEDOUT' || err?.code === 'ECONNRESET' || err?.code === 'ECONNABORTED' || (err?.response?.status >= 500 && err?.response?.status < 600))
-  );
+  const path = cacheBust
+    ? `product_details/${encodeURIComponent(cleanSlug)}?t=${Date.now()}`
+    : `product_details/${encodeURIComponent(cleanSlug)}`;
+  try {
+    const data = await apiFetch<Product>(path);
+    if (!data || !(data as any).id) throw new ApiError('Product not found', 404);
+    return data;
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) {
+      const err: any = new Error('Product not found');
+      err.response = { status: 404 };
+      throw err;
+    }
+    throw e;
+  }
 };
+
+/** Server-friendly: try subcategory first, then category. Uses apiFetch (429 retry, dedupe). */
+export async function fetchCategoryOrSubCategory(slug: string): Promise<
+  | { type: 'subcategory'; data: { sous_category: any; products: Product[]; brands: Brand[]; sous_categories: any[]; pagination?: any } }
+  | { type: 'category'; data: { category: Category; sous_categories: any[]; products: Product[]; brands: Brand[] } }
+> {
+  const cleanSlug = (slug || '').trim();
+  if (!cleanSlug) throw new ApiError('Not found', 404);
+
+  try {
+    const sub = await apiFetch<{ sous_category: any; products: Product[]; brands: Brand[]; sous_categories: any[]; pagination?: any }>(
+      `productsBySubCategoryId/${encodeURIComponent(cleanSlug)}?per_page=24&page=1`
+    );
+    if (sub?.sous_category?.id) return { type: 'subcategory', data: sub };
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) {
+      // try category
+    } else {
+      throw e;
+    }
+  }
+
+  try {
+    const cat = await apiFetch<{ category: Category; sous_categories: any[]; products: Product[]; brands: Brand[] }>(
+      `productsByCategoryId/${encodeURIComponent(cleanSlug)}`
+    );
+    if (cat?.category?.id) return { type: 'category', data: cat };
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) throw e;
+    throw e;
+  }
+
+  throw new ApiError('Category not found', 404);
+}
 
 export const getProductsByCategory = async (slug: string): Promise<{
   category: Category;
@@ -580,8 +620,15 @@ export const getAppPages = async (): Promise<Page[]> => {
 };
 
 export const getPageBySlug = async (slug: string): Promise<Page> => {
-  const response = await api.get<Page>(`/page/${slug}`);
-  return response.data;
+  const path = `page/${encodeURIComponent(slug)}`;
+  try {
+    const data = await apiFetch<Page>(path);
+    if (!data || !(data as any).title) throw new ApiError('Page not found', 404);
+    return data;
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) throw e;
+    throw e;
+  }
 };
 
 // FAQs
@@ -616,15 +663,14 @@ export const getOrderDetails = async (id: number): Promise<{
   return response.data;
 };
 
+const ORDER_429_DELAYS = [400, 900];
 export const createOrder = async (orderData: OrderRequest): Promise<{
   id: number;
   message: string;
   'alert-type': string;
 }> => {
-  // Always use Next.js API route proxy to avoid CORS issues
-  // This works in both development and production
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-  const response = await fetch('/api/orders', {
+  let response = await fetch('/api/orders', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -632,13 +678,26 @@ export const createOrder = async (orderData: OrderRequest): Promise<{
       ...(token && { Authorization: `Bearer ${token}` }),
     },
     body: JSON.stringify(orderData),
+    cache: 'no-store',
   });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Erreur lors de la création de la commande');
+  for (let attempt = 0; response.status === 429 && attempt < 2; attempt++) {
+    const delay = ORDER_429_DELAYS[attempt]! * (0.8 + Math.random() * 0.4);
+    await new Promise((r) => setTimeout(r, Math.floor(delay)));
+    response = await fetch('/api/orders', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      body: JSON.stringify(orderData),
+      cache: 'no-store',
+    });
   }
-
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error((error as any).error || 'Erreur lors de la création de la commande');
+  }
   return response.json();
 };
 

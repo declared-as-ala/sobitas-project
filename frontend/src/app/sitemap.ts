@@ -100,7 +100,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       const productUrls = products
         .filter((p: Product) => p.slug && p.publier === 1) // Only published products
         .map((p: Product) => ({
-          url: `${BASE_URL}/shop/${p.slug}`,
+          url: `${BASE_URL}/product/${p.slug}`,
           lastModified: getLastModified(p as ItemWithDates),
           changeFrequency: 'weekly' as const,
           priority: 0.7,
@@ -120,7 +120,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         if (category.slug) {
           // Add main category page with clean URL
           sitemapEntries.push({
-            url: `${BASE_URL}/shop/${category.slug}`,
+            url: `${BASE_URL}/category/${category.slug}`,
             lastModified: new Date(),
             changeFrequency: 'weekly' as const,
             priority: 0.8,
@@ -131,7 +131,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             category.sous_categories.forEach((subCategory: SubCategory) => {
               if (subCategory.slug) {
                 sitemapEntries.push({
-                  url: `${BASE_URL}/shop/${category.slug}/${subCategory.slug}`,
+                  url: `${BASE_URL}/category/${subCategory.slug}`,
                   lastModified: getLastModified(subCategory as ItemWithDates),
                   changeFrequency: 'weekly' as const,
                   priority: 0.75,

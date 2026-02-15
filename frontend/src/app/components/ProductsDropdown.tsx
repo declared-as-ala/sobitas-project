@@ -231,7 +231,7 @@ export function ProductsDropdown() {
           // Find the category by title to get its slug
           const categoryData = findCategoryByName(category.title, categories);
           const categorySlug = categoryData?.slug || nameToSlug(category.title);
-          const categoryHref = `/shop/${categorySlug}`;
+          const categoryHref = `/category/${categorySlug}`;
 
           return (
             <div key={index} className="space-y-2 min-w-0">
@@ -254,7 +254,7 @@ export function ProductsDropdown() {
                   const subCategory = findSubCategoryByName(item, categories);
                   // Use subcategory slug if found, otherwise convert name to slug
                   const itemSlug = subCategory?.slug || nameToSlug(item);
-                  const itemHref = `/shop/${itemSlug}`;
+                  const itemHref = `/category/${itemSlug}`;
 
                   return (
                     <li key={itemIndex}>

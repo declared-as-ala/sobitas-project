@@ -32,8 +32,8 @@ export function middleware(request: NextRequest) {
     const brand = searchParams.get('brand');
 
     if (category) {
-      // Redirect /shop?category=slug to /shop/slug
-      const newUrl = new URL(`/shop/${category}`, request.url);
+      // Redirect /shop?category=slug to /category/slug
+      const newUrl = new URL(`/category/${category}`, request.url);
       // Preserve other query params (like page)
       searchParams.forEach((value, key) => {
         if (key !== 'category') {
@@ -55,18 +55,11 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // Redirect old /product/* and /products/* to /shop/* (product detail by slug)
-  if (pathname.startsWith('/product/')) {
-    const slug = pathname.replace(/^\/product\/?/, '');
-    if (slug) {
-      const newUrl = new URL(`/shop/${slug}`, request.url);
-      return NextResponse.redirect(newUrl, 301);
-    }
-  }
+  // Redirect old /products/slug (string slug) to /product/slug; keep /products/[id] for numeric ID
   if (pathname.startsWith('/products/')) {
-    const slug = pathname.replace(/^\/products\/?/, '');
-    if (slug) {
-      const newUrl = new URL(`/shop/${slug}`, request.url);
+    const segment = pathname.replace(/^\/products\/?/, '');
+    if (segment && !/^\d+$/.test(segment)) {
+      const newUrl = new URL(`/product/${segment}`, request.url);
       return NextResponse.redirect(newUrl, 301);
     }
   }

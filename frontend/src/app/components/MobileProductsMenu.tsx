@@ -308,7 +308,7 @@ export function MobileProductsMenu({ open, onOpenChange }: MobileProductsMenuPro
                       return (
                         <LinkWithLoading
                           key={itemIndex}
-                          href={`/shop/${itemSlug}`}
+                          href={`/category/${itemSlug}`}
                           className="block py-3 px-4 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition-colors border border-gray-200 dark:border-gray-800 mb-2"
                           loadingMessage={`Chargement de ${item}...`}
                         >
@@ -328,7 +328,7 @@ export function MobileProductsMenu({ open, onOpenChange }: MobileProductsMenuPro
                     return (
                       <div className="px-4 pt-4 pb-2 border-t border-gray-200 dark:border-gray-800 mt-4">
                         <LinkWithLoading
-                          href={`/shop/${categorySlug}`}
+                          href={`/category/${categorySlug}`}
                           className="flex items-center justify-center gap-2 py-3 px-4 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold text-sm transition-colors"
                           loadingMessage={`Chargement de ${selectedCategoryData?.title}...`}
                         >

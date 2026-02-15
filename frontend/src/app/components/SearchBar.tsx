@@ -69,7 +69,7 @@ function SearchResults({
       {products.slice(0, MAX_SUGGESTIONS).map((product) => (
         <LinkWithLoading
           key={product.id}
-          href={`/shop/${encodeURIComponent(product.slug ?? String(product.id))}`}
+          href={`/product/${encodeURIComponent(product.slug ?? String(product.id))}`}
           onClick={onProductClick}
           className="flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800 focus:bg-gray-100 dark:focus:bg-gray-800 focus:outline-none"
           loadingMessage={`Chargement de ${product.designation_fr}...`}
