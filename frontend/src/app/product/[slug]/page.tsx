@@ -12,13 +12,13 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { slug } = params;
+  const { slug } = await params;
   try {
     const product = await getProductDetails(slug);
     const title = product.designation_fr ?? product.slug ?? 'Produit';
     return {
       title: `${title} | SOBITAS Tunisie`,
-      description: product.meta_description ?? product.description_fr?.replace(/<[^>]*>/g, '').slice(0, 160) ?? `Acheter ${title} - SOBITAS`,
+      description: product.meta_description_fr ?? product.description_fr?.replace(/<[^>]*>/g, '').slice(0, 160) ?? `Acheter ${title} - SOBITAS`,
     };
   } catch {
     return { title: 'Produit | SOBITAS' };
