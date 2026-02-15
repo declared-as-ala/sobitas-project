@@ -462,9 +462,14 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
 
               {/* Product Title - Directly below image */}
               <div className="min-w-0 px-1">
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 leading-tight break-words">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2 leading-tight break-words">
                   {product.designation_fr}
                 </h1>
+                {metaDescription && (
+                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-snug">
+                    {metaDescription}
+                  </p>
+                )}
               </div>
 
               {/* Meta Information Section - Category, Code, Stock Status, Discount Badge */}
@@ -690,6 +695,11 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   <h1 className="text-2xl lg:text-3xl xl:text-4xl font-bold text-gray-900 dark:text-white leading-snug line-clamp-3 break-words">
                     {product.designation_fr}
                   </h1>
+                  {metaDescription && (
+                    <p className="text-sm lg:text-base text-gray-600 dark:text-gray-400 mt-1 leading-snug">
+                      {metaDescription}
+                    </p>
+                  )}
                   {product.brand && <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{product.brand.designation_fr}</p>}
                   {product.sous_categorie && <p className="text-sm text-gray-600 dark:text-gray-400">{product.sous_categorie.designation_fr}</p>}
                   {product.code_product && <p className="text-xs text-gray-500 mt-0.5">Code: {product.code_product}</p>}
