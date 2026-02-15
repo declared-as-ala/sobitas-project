@@ -55,11 +55,20 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // Redirect old /products/slug (string slug) to /product/slug; keep /products/[id] for numeric ID
+  // Redirect legacy /product/... to official /shop/... (e.g. /product/slug, /product/slug/reviews)
+  if (pathname.startsWith('/product/')) {
+    const rest = pathname.slice('/product'.length) || '/';
+    const newUrl = new URL(`/shop${rest}`, request.url);
+    newUrl.search = request.nextUrl.search;
+    return NextResponse.redirect(newUrl, 301);
+  }
+
+  // Redirect old /products/slug (string slug) to /shop/slug; keep /products/[id] for numeric ID
   if (pathname.startsWith('/products/')) {
     const segment = pathname.replace(/^\/products\/?/, '');
     if (segment && !/^\d+$/.test(segment)) {
-      const newUrl = new URL(`/product/${segment}`, request.url);
+      const newUrl = new URL(`/shop/${segment}`, request.url);
+      newUrl.search = request.nextUrl.search;
       return NextResponse.redirect(newUrl, 301);
     }
   }

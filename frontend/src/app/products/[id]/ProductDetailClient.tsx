@@ -30,7 +30,7 @@ import {
 interface ProductDetailClientProps {
   product: Product;
   similarProducts: Product[];
-  /** When rendering under /product/[slug], pass slug so refetch/links work */
+  /** When rendering under /shop/[slug], pass slug so refetch/links work */
   slugOverride?: string;
 }
 
@@ -1021,7 +1021,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
 
                   {/* See More Reviews Button - Always show to navigate to full reviews page */}
                   <Button variant="outline" className="w-full" size="default" asChild>
-                    <Link href={`/product/${encodeURIComponent(product.slug ?? '')}#reviews`} className="flex items-center justify-center gap-2">
+                    <Link href={`/shop/${encodeURIComponent(product.slug ?? '')}#reviews`} className="flex items-center justify-center gap-2">
                       Voir tous les avis ({reviewCount})
                       <ChevronRight className="h-4 w-4" />
                     </Link>

@@ -100,7 +100,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       const productUrls = products
         .filter((p: Product) => p.slug && p.publier === 1) // Only published products
         .map((p: Product) => ({
-          url: `${BASE_URL}/product/${p.slug}`,
+          url: `${BASE_URL}/shop/${p.slug}`,
           lastModified: getLastModified(p as ItemWithDates),
           changeFrequency: 'weekly' as const,
           priority: 0.7,

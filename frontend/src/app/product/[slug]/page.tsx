@@ -1,54 +1,32 @@
-import { Metadata } from 'next';
-import { notFound } from 'next/navigation';
-import { getProductDetails, getSimilarProducts } from '@/services/api';
-import { ProductDetailClient } from '@/app/products/[id]/ProductDetailClient';
-import type { Product } from '@/types';
+import { redirect } from 'next/navigation';
 
 export type PageProps = {
   params: Promise<{ slug: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { slug } = await params;
-  try {
-    const product = await getProductDetails(slug);
-    const title = product.designation_fr ?? product.slug ?? 'Produit';
-    return {
-      title: `${title} | SOBITAS Tunisie`,
-      description: product.meta_description_fr ?? product.description_fr?.replace(/<[^>]*>/g, '').slice(0, 160) ?? `Acheter ${title} - SOBITAS`,
-    };
-  } catch {
-    return { title: 'Produit | SOBITAS' };
-  }
-}
-
-export default async function ProductPage({ params }: PageProps) {
+/**
+ * Legacy: /product/:slug redirects to official product URL /shop/:slug.
+ * Uses replace to avoid doubling history. Preserves query params.
+ */
+export default async function ProductRedirectPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
   const cleanSlug = slug?.trim();
-  if (!cleanSlug) notFound();
+  if (!cleanSlug) redirect('/shop');
 
-  let product: Product;
-  try {
-    product = await getProductDetails(cleanSlug);
-  } catch (e) {
-    console.error('Product fetch error:', e);
-    notFound();
-  }
-
-  if (!product?.id) notFound();
-
-  let similarProducts: Product[] = [];
-  if (product.sous_categorie_id) {
-    try {
-      const similar = await getSimilarProducts(product.sous_categorie_id);
-      similarProducts = similar?.products ?? [];
-    } catch {
-      // ignore
+  const sp = searchParams ? await searchParams : {};
+  const query = new URLSearchParams();
+  Object.entries(sp).forEach(([key, value]) => {
+    if (Array.isArray(value)) {
+      value.forEach((v) => query.append(key, v));
+    } else if (value != null && value !== '') {
+      query.set(key, value);
     }
-  }
-
-  return <ProductDetailClient product={product} similarProducts={similarProducts} slugOverride={cleanSlug} />;
+  });
+  const queryString = query.toString();
+  const dest = `/shop/${encodeURIComponent(cleanSlug)}${queryString ? `?${queryString}` : ''}`;
+  redirect(dest, 'replace');
 }
