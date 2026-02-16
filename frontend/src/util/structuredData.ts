@@ -5,6 +5,8 @@
  */
 
 import { getStorageUrl } from '@/services/api';
+import { getEffectivePrice } from '@/util/productPrice';
+import { buildCanonicalUrl } from '@/util/canonical';
 import type { Product, FAQ } from '@/types';
 
 const RICH_RESULTS_TEST = 'https://search.google.com/test/rich-results';
@@ -19,37 +21,47 @@ function stripHtml(html: string, maxLen: number = 500): string {
 }
 
 /**
- * Product schema: name, image, description, sku, brand, offers (price, priceCurrency=TND, availability, url).
- * When reviews exist: aggregateRating + review snippets (up to 5).
+ * Builds Product JSON-LD for Google Rich Results (Extraits de produits).
+ * Always includes: @context, @type, name, image (array), description, sku, offers (url, priceCurrency, price, availability, itemCondition).
+ * Uses canonical URL for offers.url. Price = effective selling price (promo if active). No aggregateRating unless we have real reviews.
  */
 export function buildProductSchema(product: Product, baseUrl: string): object {
-  const imageUrl = product.cover ? getStorageUrl(product.cover) : '';
-  const price = product.promo ?? product.prix;
+  const slug = (product.slug || '').trim() || String(product.id);
+  const canonicalPath = `/shop/${slug}`;
+  const productUrl = buildCanonicalUrl(canonicalPath);
+
+  const imageUrls: string[] = [product.cover, (product as { alt_cover?: string }).alt_cover]
+    .filter(Boolean) as string[];
+  const imageArray = imageUrls.length > 0 ? imageUrls.map((path) => getStorageUrl(path)) : [];
+  const price = getEffectivePrice(product);
   const inStock = (product as { rupture?: number }).rupture !== 1;
-  const productUrl = `${baseUrl}/shop/${product.slug}`;
   const description = stripHtml(
     product.description_cover || product.description_fr || '',
     500
   );
+  const sku = (product.code_product != null && String(product.code_product).trim() !== '')
+    ? String(product.code_product).trim()
+    : String(product.id);
 
   const schema: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'Product',
-    name: product.designation_fr,
-    description: description || undefined,
-    image: imageUrl || undefined,
-    sku: String(product.id),
-    brand: product.brand
+    name: product.designation_fr || 'Produit',
+    description: description || '',
+    image: imageArray.length > 0 ? imageArray : undefined,
+    sku,
+    brand: product.brand?.designation_fr
       ? { '@type': 'Brand', name: product.brand.designation_fr }
       : undefined,
     offers: {
       '@type': 'Offer',
       url: productUrl,
       priceCurrency: 'TND',
-      price: price ?? 0,
+      price: Number.isFinite(price) ? price : 0,
       availability: inStock
         ? 'https://schema.org/InStock'
         : 'https://schema.org/OutOfStock',
+      itemCondition: 'https://schema.org/NewCondition',
       seller: { '@type': 'Organization', name: 'SOBITAS' },
     },
   };
@@ -83,6 +95,9 @@ export function buildProductSchema(product: Product, baseUrl: string): object {
 
   return schema;
 }
+
+/** Alias for Product JSON-LD (Google Rich Results). Use in product page only once per page. */
+export const buildProductJsonLd = buildProductSchema;
 
 /**
  * BreadcrumbList schema for category and product pages.
@@ -340,16 +355,17 @@ const REQUIRED: Record<StructuredDataType, string[]> = {
  */
 /**
  * Returns a short checklist for testing with Google Rich Results Test.
- * Use: https://search.google.com/test/rich-results
+ * Validate Product fix: Google Search Console → URL Inspection → “Validate Fix” after deploying.
  */
 export function getRichResultsChecklist(): string[] {
   return [
-    '1. Open https://search.google.com/test/rich-results',
-    '2. Enter your page URL (e.g. production or ngrok) and run the test',
-    '3. Product: expect Product + optional AggregateRating/Review',
+    `1. Open ${RICH_RESULTS_TEST}`,
+    '2. Enter your product page URL (e.g. https://protein.tn/shop/one-a-day-biotech-usa) and run the test',
+    '3. Product: expect Product with offers (price, availability, itemCondition); optional AggregateRating/Review only if we have real data',
     '4. Category/Product: expect BreadcrumbList',
     '5. Sitewide: Organization, LocalBusiness, WebSite',
     '6. FAQ page / product with FAQs: expect FAQPage',
+    '7. Search Console: after fix is live, use “Validate Fix” for the “Extraits de produits” issue',
   ];
 }
 

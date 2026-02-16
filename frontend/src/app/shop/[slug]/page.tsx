@@ -3,7 +3,7 @@ import { notFound, permanentRedirect } from 'next/navigation';
 import { getProductDetails, getSimilarProducts, getFAQs } from '@/services/api';
 import { buildCanonicalUrl } from '@/util/canonical';
 import {
-  buildProductSchema,
+  buildProductJsonLd,
   buildBreadcrumbListSchema,
   buildWebPageSchema,
   buildFAQPageSchema,
@@ -139,6 +139,7 @@ export default async function ShopProductPage({ params, searchParams }: PageProp
 
   return (
     <>
+      {/* Single Product JSON-LD per page (Google Rich Results – Extraits de produits) */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageSchema) }} />
