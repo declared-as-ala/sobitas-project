@@ -6,14 +6,15 @@ import { SafeImage } from '@/app/components/SafeImage';
 import { Header } from '@/app/components/Header';
 import { Footer } from '@/app/components/Footer';
 import { Button } from '@/app/components/ui/button';
-import { ArrowLeft, Calendar, Clock, ArrowRight, Share2 } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, ArrowRight, Share2, Sparkles } from 'lucide-react';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { motion } from 'motion/react';
 import type { Article } from '@/types';
 import { getStorageUrl } from '@/services/api';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
+import { toast } from 'sonner';
 
 interface ArticleDetailClientProps {
   article: Article;
@@ -69,17 +70,28 @@ function decodeHtmlEntities(text: string): string {
     .replace(/&Iuml;/g, 'Ï');
 }
 
+// Strip HTML to plain text (for reading time and ChatGPT prompt)
+function stripHtmlToText(html: string): string {
+  if (!html) return '';
+  return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
 // Calculate reading time based on content
 function calculateReadingTime(content: string): number {
   if (!content) return 1;
-  const text = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  const text = stripHtmlToText(content);
   const words = text.split(/\s+/).filter(Boolean).length;
   const wordsPerMinute = 200;
   return Math.max(1, Math.ceil(words / wordsPerMinute));
 }
 
+const CHATGPT_BASE = 'https://chat.openai.com/';
+/** Max length for ChatGPT ?q= param (browser URL limits); longer prompts go to clipboard only */
+const CHATGPT_QUERY_MAX_LEN = 2000;
+
 export function ArticleDetailClient({ article, relatedArticles, children }: ArticleDetailClientProps) {
   const router = useRouter();
+  const contentRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
   const articleDate = article.created_at ? new Date(article.created_at) : new Date();
   const content = article.description_fr || article.description || '';
@@ -88,6 +100,18 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Make links in article content open in new tab and look clickable (backlinks)
+  useEffect(() => {
+    if (!mounted || !contentRef.current) return;
+    const links = contentRef.current.querySelectorAll('a[href^="http"]');
+    links.forEach((el) => {
+      const a = el as HTMLAnchorElement;
+      a.setAttribute('target', '_blank');
+      a.setAttribute('rel', 'noopener noreferrer');
+      a.classList.add('article-link');
+    });
+  }, [mounted, content]);
 
   const handleShare = () => {
     if (!mounted || typeof window === 'undefined') return;
@@ -101,6 +125,33 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
     } else {
       navigator.clipboard.writeText(window.location.href);
       alert('Lien copié dans le presse-papiers !');
+    }
+  };
+
+  const handleSummarizeWithChatGPT = () => {
+    if (typeof window === 'undefined') return;
+    const title = decodeHtmlEntities(article.designation_fr || '');
+    const url = window.location.href;
+    const plainText = stripHtmlToText(content);
+    const fullPrompt = `Résume cet article en quelques points clés.\n\nTitre: ${title}\nURL: ${url}\n\n--- Contenu ---\n\n${plainText}`;
+
+    const copyAndOpen = (chatUrl: string, message: string) => {
+      navigator.clipboard.writeText(fullPrompt).then(() => {
+        window.open(chatUrl, '_blank', 'noopener,noreferrer');
+        toast.success(message);
+      }).catch(() => {
+        window.open(chatUrl, '_blank', 'noopener,noreferrer');
+        toast.info('Ouvrez ChatGPT et collez le contenu depuis le presse-papiers (Ctrl+V).');
+      });
+    };
+
+    if (fullPrompt.length <= CHATGPT_QUERY_MAX_LEN) {
+      const chatUrl = `${CHATGPT_BASE}?q=${encodeURIComponent(fullPrompt)}`;
+      copyAndOpen(chatUrl, 'ChatGPT ouvert avec le contenu dans la zone de dialogue.');
+    } else {
+      const shortPrompt = `Résume l'article suivant. Le contenu complet est déjà copié dans le presse-papiers : collez (Ctrl+V) ici puis envoyez.\n\nTitre: ${title}\nURL: ${url}`;
+      const chatUrl = `${CHATGPT_BASE}?q=${encodeURIComponent(shortPrompt)}`;
+      copyAndOpen(chatUrl, 'Contenu copié. Collez (Ctrl+V) dans la zone de dialogue puis envoyez pour le résumé.');
     }
   };
 
@@ -132,7 +183,7 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
               </h1>
               
               {/* Meta Information */}
-              <div className="flex flex-wrap items-center gap-4 sm:gap-6 text-sm sm:text-base text-gray-600 dark:text-gray-400">
+              <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm sm:text-base text-gray-600 dark:text-gray-400">
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 sm:h-5 sm:w-5" />
                   <span>{format(articleDate, 'd MMMM yyyy', { locale: fr })}</span>
@@ -141,15 +192,26 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
                   <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
                   <span>{readingTime} min de lecture</span>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleShare}
-                  className="ml-auto text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
-                >
-                  <Share2 className="h-4 w-4 mr-2" />
-                  Partager
-                </Button>
+                <div className="flex flex-wrap items-center gap-2 ml-auto">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSummarizeWithChatGPT}
+                    className="border-emerald-500/60 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 dark:border-emerald-500/50"
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Résumer avec ChatGPT
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleShare}
+                    className="text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+                  >
+                    <Share2 className="h-4 w-4 mr-2" />
+                    Partager
+                  </Button>
+                </div>
               </div>
             </header>
 
@@ -167,13 +229,13 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
               </div>
             )}
 
-            {/* Article Content */}
+            {/* Article Content – links inside content styled as clear, clickable (backlinks open in new tab) */}
             <div className="px-4 sm:px-6 lg:px-8 pb-6 sm:pb-8 lg:pb-12">
               <div 
-                className="prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none
+                ref={contentRef}
+                className="article-content prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none
                   prose-headings:text-gray-900 dark:prose-headings:text-white
                   prose-p:text-gray-700 dark:prose-p:text-gray-300
-                  prose-a:text-red-600 dark:prose-a:text-red-400
                   prose-strong:text-gray-900 dark:prose-strong:text-white
                   prose-ul:text-gray-700 dark:prose-ul:text-gray-300
                   prose-ol:text-gray-700 dark:prose-ol:text-gray-300

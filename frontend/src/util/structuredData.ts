@@ -185,7 +185,7 @@ export function buildWebSiteSchema(baseUrl: string): object {
     name: 'SOBITAS – Protéine Tunisie',
     url: base,
     description:
-      'Boutique de protéines, whey, créatine et compléments alimentaires en Tunisie. Livraison Sousse, Tunis.',
+      'Proteine Tunisie : boutique whey protein, créatine et compléments alimentaires. Livraison rapide Sousse, Tunis, Sfax.',
     publisher: {
       '@type': 'Organization',
       name: 'SOBITAS',

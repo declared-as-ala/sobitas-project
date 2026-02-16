@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
-import { notFound } from 'next/navigation';
-import { getProductDetails, getSimilarProducts, getFAQs } from '@/services/api';
+import { notFound, permanentRedirect } from 'next/navigation';
+import { getProductDetails, getSimilarProducts, getFAQs, fetchCategoryOrSubCategory } from '@/services/api';
 import { buildCanonicalUrl } from '@/util/canonical';
 import {
   buildProductSchema,
@@ -35,8 +35,17 @@ function productDescription(product: { meta_description_fr?: string; description
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
+  const cleanSlug = slug?.trim();
+  if (cleanSlug) {
+    try {
+      await fetchCategoryOrSubCategory(cleanSlug);
+      permanentRedirect(`/category/${cleanSlug}`);
+    } catch {
+      // Not a category slug, continue to product metadata
+    }
+  }
   try {
-    const product = await getProductDetails(slug);
+    const product = await getProductDetails(cleanSlug ?? slug);
     const title = productTitle(product);
     return {
       title,
@@ -59,6 +68,14 @@ export default async function ShopProductPage({ params }: PageProps) {
   const { slug } = await params;
   const cleanSlug = slug?.trim();
   if (!cleanSlug) notFound();
+
+  // Legacy: /shop/fat-burner etc. were category URLs; redirect to /category/slug so we don't lose links (301/308)
+  try {
+    await fetchCategoryOrSubCategory(cleanSlug);
+    permanentRedirect(`/category/${cleanSlug}`);
+  } catch {
+    // Not a category, treat as product slug
+  }
 
   let product: Product;
   try {

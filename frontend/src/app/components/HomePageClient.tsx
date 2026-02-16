@@ -117,6 +117,15 @@ export function HomePageClient({ accueil, slides }: HomePageClientProps) {
       <main>
         {/* Above the fold - Critical content - Hero must render first */}
         <HeroSlider slides={slides} />
+        {/* SEO: single visible H1 for main query "proteine tunisie" */}
+        <section className="text-center py-4 px-4 bg-white dark:bg-gray-950" aria-label="Titre principal">
+          <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">
+            Proteine Tunisie – Votre partenaire nutrition
+          </h1>
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+            Whey protein, creatine et compléments – Livraison rapide Sousse, Tunis, Sfax
+          </p>
+        </section>
         {/* FeaturesSection - Fixed height to prevent CLS */}
         <div style={{ minHeight: '200px' }}>
           <FeaturesSection />

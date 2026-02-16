@@ -6,22 +6,20 @@ import { HomePageClient } from './components/HomePageClient';
 import type { AccueilData } from '@/types';
 
 export const metadata: Metadata = {
-  title: 'Protein Tunisie – Whey Protein, Creatine & Sobitas Premium | Protein.tn',
-  description: 'Découvrez la meilleure proteine en Tunisie avec Sobitas : whey protein, creatine, BCAA et compléments certifiés premium. Livraison rapide et prix compétitifs. Commandez maintenant sur Protein.tn.',
-  keywords: 'proteine tunisie, whey Tunisie, créatine Tunisie, compléments alimentaires Sousse, compléments alimentaires Tunis, acheter whey Tunisie, protéine musculation Tunisie',
+  title: 'Proteine Tunisie – N°1 Whey, Creatine & Livraison Rapide | SOBITAS Protein.tn',
+  description: 'Proteine Tunisie : achetez whey protein, creatine et compléments en Tunisie. Livraison rapide Sousse, Tunis, Sfax. Meilleur prix proteine tunisie – SOBITAS.',
+  keywords: 'proteine tunisie, protein tunisie, whey tunisie, whey protein tunisie, créatine tunisie, compléments alimentaires Sousse, acheter whey Tunisie, protéine musculation Tunisie',
   alternates: {
     canonical: buildCanonicalUrl('/'),
   },
   openGraph: {
-    title: 'Protein Tunisie – Whey Protein, Creatine & Sobitas Premium | Protein.tn',
-    description: 'Découvrez la meilleure proteine en Tunisie avec Sobitas : whey protein, creatine, BCAA et compléments certifiés premium. Livraison rapide et prix compétitifs. Commandez maintenant sur Protein.tn.',
+    title: 'Proteine Tunisie – N°1 Whey, Creatine & Livraison Rapide | SOBITAS Protein.tn',
+    description: 'Proteine Tunisie : achetez whey protein, creatine et compléments en Tunisie. Livraison rapide Sousse, Tunis, Sfax. Meilleur prix – SOBITAS.',
     images: ['/assets/img/logo/logo.webp'],
     url: buildCanonicalUrl('/'),
     type: 'website',
   },
-  other: {
-
-  },
+  other: {},
 };
 
 // Force dynamic rendering to ensure fresh data on every request

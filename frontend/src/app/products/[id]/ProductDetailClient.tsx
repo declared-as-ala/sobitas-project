@@ -49,7 +49,6 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [reviewSort, setReviewSort] = useState<'recent' | 'helpful'>('recent');
   const [reviewSearch, setReviewSearch] = useState('');
-  const [metaExpanded, setMetaExpanded] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
 
   // Use state to manage product data so we can update it after adding a review
@@ -517,15 +516,6 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 </div>
               </div>
 
-              {/* Description - Below meta section */}
-              {metaDescription && (
-                <div className="pt-3 sm:pt-4 pb-4 sm:pb-5 border-b border-gray-200 dark:border-gray-800 px-1">
-                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed max-w-full">
-                    {metaDescription}
-                  </p>
-                </div>
-              )}
-
               {/* Rating - Mobile */}
               {rating > 0 && (
                 <div className="flex items-center gap-2 px-1">
@@ -771,24 +761,6 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     </div>
                   </div>
                 </div>
-
-                {/* 6. Meta description — clamped so CTA stays above fold */}
-                {metaDescription && (
-                  <div className="pt-2">
-                    <p className={`text-sm lg:text-base text-gray-600 dark:text-gray-400 leading-relaxed max-w-full ${!metaExpanded ? 'line-clamp-3' : ''}`}>
-                      {metaDescription}
-                    </p>
-                    {metaDescription.length > 120 && (
-                      <button
-                        type="button"
-                        onClick={() => setMetaExpanded(!metaExpanded)}
-                        className="text-sm font-medium text-red-600 dark:text-red-400 hover:underline mt-1"
-                      >
-                        {metaExpanded ? 'Voir moins' : 'Voir plus'}
-                      </button>
-                    )}
-                  </div>
-                )}
 
                 {/* 7. Aromes */}
                 {product.aromes && product.aromes.length > 0 && (
