@@ -14,10 +14,27 @@ import type { Product } from '@/types';
 
 export type PageProps = {
   params: Promise<{ slug: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+
+/**
+ * Build redirect URL with query string preserved (UTM, etc.).
+ * Used when redirecting /shop/:slug (category) → /category/:slug.
+ */
+function buildRedirectUrl(path: string, searchParams: Record<string, string | string[] | undefined> | null): string {
+  if (!searchParams || Object.keys(searchParams).length === 0) return path;
+  const q = new URLSearchParams();
+  Object.entries(searchParams).forEach(([key, value]) => {
+    if (value === undefined) return;
+    if (Array.isArray(value)) value.forEach((v) => q.append(key, v));
+    else q.append(key, value);
+  });
+  const search = q.toString();
+  return search ? `${path}?${search}` : path;
+}
 
 /** CTR-optimized product title for Tunisia SERP (aim: position #1). */
 function productTitle(product: { designation_fr?: string; slug?: string }): string {
@@ -33,9 +50,10 @@ function productDescription(product: { meta_description_fr?: string; description
   return `Acheter ${title} en Tunisie – Meilleur prix, livraison rapide Sousse Tunis. SOBITAS.`;
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const cleanSlug = slug?.trim();
+  const sp = searchParams ? await searchParams : null;
   if (!cleanSlug) return { title: 'Produit | SOBITAS Tunisie' };
   try {
     const product = await getProductDetails(cleanSlug);
@@ -53,36 +71,40 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
   try {
     await fetchCategoryOrSubCategory(cleanSlug);
-    permanentRedirect(`/category/${cleanSlug}`);
+    permanentRedirect(buildRedirectUrl(`/category/${cleanSlug}`, sp));
   } catch {
     // Not a category either
   }
   return { title: 'Produit | SOBITAS Tunisie' };
 }
 
-/** Product detail page – official URL: /shop/:slug */
-export default async function ShopProductPage({ params }: PageProps) {
+/**
+ * Product detail page – official URL: /shop/:slug
+ * Logic (SEO + UX): 1) If slug is a product → 200 product page. 2) If slug is a category (legacy) → 308 redirect to /category/:slug (query params preserved). 3) Else → 404.
+ * Note: Next.js permanentRedirect() returns HTTP 308 (Permanent); SEO-equivalent to 301.
+ */
+export default async function ShopProductPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
   const cleanSlug = slug?.trim();
+  const sp = searchParams ? await searchParams : null;
   if (!cleanSlug) notFound();
 
-  // 1) Try product first (primary use of /shop/:slug)
+  // 1) Product first (never break product pages)
   let product: Product | null = null;
   try {
     product = await getProductDetails(cleanSlug);
-  } catch (e) {
+  } catch {
     // Not a product or API error
   }
 
   if (product?.id) {
-    // Slug is a product → show product page (no redirect)
+    // Slug is a product → 200, no redirect
   } else {
-    // 2) Legacy: slug might be a category that used to live at /shop (e.g. /shop/fat-burner → /category/fat-burner)
+    // 2) Legacy category: /shop/proteine-whey → /category/proteine-whey (301/308, query params kept)
     try {
       await fetchCategoryOrSubCategory(cleanSlug);
-      permanentRedirect(`/category/${cleanSlug}`);
+      permanentRedirect(buildRedirectUrl(`/category/${cleanSlug}`, sp));
     } catch {
-      // Not a category either → 404
       notFound();
     }
   }
