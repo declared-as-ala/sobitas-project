@@ -24,6 +24,7 @@ import { ChevronDown, ChevronUp, Phone, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/app/components/ui/dialog';
 import { CheckoutFooterCTA } from '@/app/checkout/CheckoutFooterCTA';
+import { useKeyboardOpen } from '@/hooks/useKeyboardOpen';
 
 const FREE_SHIPPING_THRESHOLD = 300;
 
@@ -40,7 +41,8 @@ export default function CheckoutPage() {
   const [showOptionalFields, setShowOptionalFields] = useState(false);
   const [mobileSummaryOpen, setMobileSummaryOpen] = useState(false);
   const [showCardPaymentModal, setShowCardPaymentModal] = useState(false);
-  
+  const keyboardOpen = useKeyboardOpen();
+
   // Single address (livraison) selector state
   const [gouvernorat, setGouvernorat] = useState('');
   const [delegation, setDelegation] = useState('');
@@ -74,12 +76,9 @@ export default function CheckoutPage() {
   }, [items, router, isOrderComplete, isSubmitting, currentStep]);
 
   /**
-   * Mobile viewport + keyboard fix (Safari iOS / Chrome Android).
-   * visualViewport gives the visible viewport size; when the keyboard opens,
-   * it shrinks so 100vh/layout viewport no longer match. We set --app-height
-   * so the layout uses the real visible height, and --keyboard-offset so the
-   * checkout footer CTA stays above the keyboard (bottom: offset) instead of
-   * jumping or sitting behind it.
+   * Mobile viewport: set --app-height from visualViewport so we avoid 100vh jumps
+   * (Safari iOS). We no longer set --keyboard-offset: the CTA is hidden when
+   * keyboard is open (useKeyboardOpen) so the layout stays intact.
    */
   useEffect(() => {
     const vv = typeof window !== 'undefined' ? window.visualViewport : null;
@@ -88,9 +87,7 @@ export default function CheckoutPage() {
     const update = () => {
       rafId = requestAnimationFrame(() => {
         const height = vv.height ?? window.innerHeight;
-        const keyboardOffset = Math.max(0, window.innerHeight - height);
         document.documentElement.style.setProperty('--app-height', `${height}px`);
-        document.documentElement.style.setProperty('--keyboard-offset', `${keyboardOffset}px`);
       });
     };
     update();
@@ -650,9 +647,13 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="checkout-viewport-root min-h-screen min-h-[100dvh] bg-[#F7F7F8] dark:bg-gray-950 flex flex-col">
+    <div
+      className={`checkout-viewport-root min-h-screen min-h-[100dvh] bg-[#F7F7F8] dark:bg-gray-950 flex flex-col ${keyboardOpen ? 'isKeyboardOpen' : ''}`}
+      data-keyboard-open={keyboardOpen || undefined}
+      style={{ ['--checkout-cta-padding' as string]: keyboardOpen ? '1.5rem' : '12rem' }}
+    >
       <Header />
-      <main className="checkout-main flex-1 max-w-[1160px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-12 pb-[12rem] lg:pb-12">
+      <main className="checkout-main flex-1 max-w-[1160px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-12 pb-[var(--checkout-cta-padding,12rem)] lg:pb-12">
         {/* Progress: mobile = Étape 2/3, desktop = full stepper */}
         <div className="mb-6 lg:mb-8">
           <p className="text-sm font-medium text-gray-600 dark:text-gray-400 lg:hidden mb-4">
@@ -1081,6 +1082,7 @@ export default function CheckoutPage() {
       </main>
 
       <CheckoutFooterCTA
+        keyboardOpen={keyboardOpen}
         isSubmitting={isSubmitting}
         finalTotal={finalTotal}
         totalPrice={totalPrice}

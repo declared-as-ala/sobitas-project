@@ -6,9 +6,10 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/ap
 import { Shield, Truck, Loader2, Phone, MessageCircle } from 'lucide-react';
 import { getStorageUrl } from '@/services/api';
 
-export const CHECKOUT_CTA_HEIGHT_REM = 12; // 12rem = 192px, reserved as padding-bottom for form container on mobile
+export const CHECKOUT_CTA_HEIGHT_REM = 12; // 12rem = 192px, reserved as padding-bottom for form container on mobile when CTA visible
 
 interface CheckoutFooterCTAProps {
+  keyboardOpen?: boolean;
   isSubmitting: boolean;
   finalTotal: number;
   totalPrice: number;
@@ -21,6 +22,7 @@ interface CheckoutFooterCTAProps {
 }
 
 export function CheckoutFooterCTA({
+  keyboardOpen = false,
   isSubmitting,
   finalTotal,
   totalPrice,
@@ -33,14 +35,14 @@ export function CheckoutFooterCTA({
 }: CheckoutFooterCTAProps) {
   return (
     <footer
-      className="checkout-cta-footer lg:hidden fixed inset-x-0 bottom-0 z-[60] bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-[0_-4px_24px_rgba(0,0,0,0.08)] dark:shadow-[0_-4px_24px_rgba(0,0,0,0.25)]"
+      className={`checkout-cta-footer lg:hidden fixed left-0 right-0 bottom-0 z-50 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.2)] transition-transform duration-200 ease-out ${keyboardOpen ? 'checkout-cta-footer--keyboard-open' : ''}`}
       style={{
-        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-        bottom: 'var(--keyboard-offset, 0)',
+        paddingBottom: 'calc(12px + env(safe-area-inset-bottom, 0px))',
       }}
       aria-label="Passer la commande"
+      aria-hidden={keyboardOpen}
     >
-      <div className="max-w-[1160px] mx-auto px-4 py-3 sm:py-4">
+      <div className="max-w-[1160px] mx-auto px-4 py-3 min-h-[72px] flex flex-col justify-center">
         <div className="flex items-center justify-between gap-3 mb-3">
           <div className="min-w-0">
             <p className="text-[13px] text-gray-500 dark:text-gray-400">Total</p>
@@ -103,7 +105,7 @@ export function CheckoutFooterCTA({
           type="button"
           onClick={onSubmit}
           disabled={isSubmitting}
-          className="checkout-cta-button w-full min-h-[56px] text-base font-semibold bg-red-600 hover:bg-red-700 text-white rounded-2xl shadow-[0_4px_16px_rgba(220,38,38,0.25)] hover:shadow-[0_6px_20px_rgba(220,38,38,0.3)] transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2 whitespace-nowrap"
+          className="checkout-cta-button w-full min-h-[52px] max-h-[56px] text-base font-semibold bg-red-600 hover:bg-red-700 text-white rounded-[14px] shadow-[0_4px_16px_rgba(220,38,38,0.25)] hover:shadow-[0_6px_20px_rgba(220,38,38,0.3)] transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2 whitespace-nowrap"
         >
           {isSubmitting ? (
             <>

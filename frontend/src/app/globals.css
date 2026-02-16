@@ -177,12 +177,15 @@ input[type="search"]::-webkit-search-results-decoration {
   -webkit-appearance: none;
 }
 
-/* Checkout: viewport + CTA footer (mobile).
-   --app-height and --keyboard-offset are set from visualViewport in CheckoutPage so
-   the CTA stays above the keyboard. Use dvh on mobile to avoid Safari toolbar jumps. */
+/* Checkout: viewport (no 100vh on mobile; use dvh/svh to avoid Safari toolbar jumps). */
 .checkout-viewport-root {
   min-height: 100vh;
   min-height: var(--app-height, 100dvh);
+}
+@supports (height: 100svh) {
+  .checkout-viewport-root {
+    min-height: var(--app-height, 100svh);
+  }
 }
 @media (min-width: 1024px) {
   .checkout-viewport-root {
@@ -190,9 +193,28 @@ input[type="search"]::-webkit-search-results-decoration {
   }
 }
 
-/* Checkout CTA footer: mobile-only, fixed at bottom, safe-area, z-index above content. */
+/* Checkout CTA footer: fixed bottom, safe-area, 72–88px height, button 52–56px. */
+.checkout-cta-footer {
+  /* position, left, right, bottom, z-index in component */
+}
 .checkout-cta-footer .checkout-cta-button {
-  min-height: 56px;
+  min-height: 52px;
+}
+
+/* Hide CTA when keyboard is open: slide down so layout never breaks (iOS/Android). */
+.checkout-cta-footer--keyboard-open {
+  transform: translateY(110%);
+  pointer-events: none;
+}
+
+/* When keyboard open, reduce main padding so content doesn't sit on a huge gap. */
+.checkout-viewport-root.isKeyboardOpen .checkout-main {
+  padding-bottom: 1.5rem;
+}
+@media (min-width: 1024px) {
+  .checkout-viewport-root.isKeyboardOpen .checkout-main {
+    padding-bottom: 3rem;
+  }
 }
 
 /* Blog article content: links (and backlinks) look clearly clickable and well designed */

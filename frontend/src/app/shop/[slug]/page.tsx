@@ -36,31 +36,28 @@ function productDescription(product: { meta_description_fr?: string; description
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const cleanSlug = slug?.trim();
-  if (cleanSlug) {
-    try {
-      await fetchCategoryOrSubCategory(cleanSlug);
-      permanentRedirect(`/category/${cleanSlug}`);
-    } catch {
-      // Not a category slug, continue to product metadata
-    }
-  }
+  if (!cleanSlug) return { title: 'Produit | SOBITAS Tunisie' };
   try {
-    const product = await getProductDetails(cleanSlug ?? slug);
-    const title = productTitle(product);
-    return {
-      title,
-      description: productDescription(product, product.designation_fr ?? product.slug ?? 'Produit'),
-      alternates: {
-        canonical: buildCanonicalUrl(`/shop/${slug}`),
-      },
-      openGraph: {
+    const product = await getProductDetails(cleanSlug);
+    if (product?.id) {
+      const title = productTitle(product);
+      return {
         title,
         description: productDescription(product, product.designation_fr ?? product.slug ?? 'Produit'),
-      },
-    };
+        alternates: { canonical: buildCanonicalUrl(`/shop/${slug}`) },
+        openGraph: { title, description: productDescription(product, product.designation_fr ?? product.slug ?? 'Produit') },
+      };
+    }
   } catch {
-    return { title: 'Produit | SOBITAS Tunisie' };
+    // Not a product, try legacy category redirect
   }
+  try {
+    await fetchCategoryOrSubCategory(cleanSlug);
+    permanentRedirect(`/category/${cleanSlug}`);
+  } catch {
+    // Not a category either
+  }
+  return { title: 'Produit | SOBITAS Tunisie' };
 }
 
 /** Product detail page – official URL: /shop/:slug */
@@ -69,28 +66,34 @@ export default async function ShopProductPage({ params }: PageProps) {
   const cleanSlug = slug?.trim();
   if (!cleanSlug) notFound();
 
-  // Legacy: /shop/fat-burner etc. were category URLs; redirect to /category/slug so we don't lose links (301/308)
-  try {
-    await fetchCategoryOrSubCategory(cleanSlug);
-    permanentRedirect(`/category/${cleanSlug}`);
-  } catch {
-    // Not a category, treat as product slug
-  }
-
-  let product: Product;
+  // 1) Try product first (primary use of /shop/:slug)
+  let product: Product | null = null;
   try {
     product = await getProductDetails(cleanSlug);
   } catch (e) {
-    console.error('Product fetch error:', e);
-    notFound();
+    // Not a product or API error
   }
 
-  if (!product?.id) notFound();
+  if (product?.id) {
+    // Slug is a product → show product page (no redirect)
+  } else {
+    // 2) Legacy: slug might be a category that used to live at /shop (e.g. /shop/fat-burner → /category/fat-burner)
+    try {
+      await fetchCategoryOrSubCategory(cleanSlug);
+      permanentRedirect(`/category/${cleanSlug}`);
+    } catch {
+      // Not a category either → 404
+      notFound();
+    }
+  }
+
+  // From here product is defined and has id
+  const safeProduct = product!;
 
   let similarProducts: Product[] = [];
-  if (product.sous_categorie_id) {
+  if (safeProduct.sous_categorie_id) {
     try {
-      const similar = await getSimilarProducts(product.sous_categorie_id);
+      const similar = await getSimilarProducts(safeProduct.sous_categorie_id);
       similarProducts = similar?.products ?? [];
     } catch {
       // ignore
@@ -98,22 +101,22 @@ export default async function ShopProductPage({ params }: PageProps) {
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://sobitas.tn';
-  const productSchema = buildProductSchema(product, baseUrl);
+  const productSchema = buildProductSchema(safeProduct, baseUrl);
   validateStructuredData(productSchema, 'Product');
 
   const breadcrumbItems = [
     { name: 'Accueil', url: '/' },
     { name: 'Boutique', url: '/shop' },
   ];
-  const cat = product.sous_categorie?.categorie;
-  const sub = product.sous_categorie;
+  const cat = safeProduct.sous_categorie?.categorie;
+  const sub = safeProduct.sous_categorie;
   if (cat?.slug) breadcrumbItems.push({ name: cat.designation_fr || cat.slug, url: `/category/${cat.slug}` });
   if (sub?.slug && sub.slug !== cat?.slug) breadcrumbItems.push({ name: sub.designation_fr || sub.slug, url: `/category/${sub.slug}` });
-  breadcrumbItems.push({ name: product.designation_fr, url: `/shop/${cleanSlug}` });
+  breadcrumbItems.push({ name: safeProduct.designation_fr, url: `/shop/${cleanSlug}` });
   const breadcrumbSchema = buildBreadcrumbListSchema(breadcrumbItems, baseUrl);
   validateStructuredData(breadcrumbSchema, 'BreadcrumbList');
-  const webPageSchema = buildWebPageSchema(product.designation_fr, `/shop/${cleanSlug}`, baseUrl, {
-    description: (product.description_fr || '').replace(/<[^>]*>/g, ' ').trim().slice(0, 200),
+  const webPageSchema = buildWebPageSchema(safeProduct.designation_fr, `/shop/${cleanSlug}`, baseUrl, {
+    description: (safeProduct.description_fr || '').replace(/<[^>]*>/g, ' ').trim().slice(0, 200),
   });
 
   let faqSchema: ReturnType<typeof buildFAQPageSchema> = null;
@@ -133,7 +136,7 @@ export default async function ShopProductPage({ params }: PageProps) {
       {faqSchema && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       )}
-      <ProductDetailClient product={product} similarProducts={similarProducts} slugOverride={cleanSlug} />
+      <ProductDetailClient product={safeProduct} similarProducts={similarProducts} slugOverride={cleanSlug} />
     </>
   );
 }
