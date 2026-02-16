@@ -38,11 +38,13 @@ interface ShopPageClientProps {
   isSubcategory?: boolean;
   parentCategory?: string;
   initialBrand?: number;
-  /** Optional SEO landing block (H1, intro, how-to, FAQs, related links). Rendered after breadcrumb. */
+  /** Optional SEO landing block (H1, intro, how-to, FAQs). Rendered after breadcrumb. */
   categorySeoLanding?: React.ReactNode;
+  /** Optional SEO block for bottom of page (Catégories associées + Produits phares). Rendered after product grid. */
+  categorySeoLandingBottom?: React.ReactNode;
 }
 
-function ShopContent({ productsData, categories, brands, initialCategory, isSubcategory, parentCategory, initialBrand, categorySeoLanding }: ShopPageClientProps) {
+function ShopContent({ productsData, categories, brands, initialCategory, isSubcategory, parentCategory, initialBrand, categorySeoLanding, categorySeoLandingBottom }: ShopPageClientProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
@@ -1167,7 +1169,8 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-5 lg:gap-6 xl:gap-7">
+                {/* Grid: 2 cols mobile/md (wider cards on tablet), 3 lg, 4 xl. Min card width respected via 2 cols on md. */}
+                <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5 lg:gap-6 min-w-0">
                   {paginatedProducts.map(product => (
                     <ProductCard
                       key={product.id}
@@ -1183,6 +1186,11 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
                       totalPages={totalPages}
                       onPageChange={handlePageChange}
                     />
+                  </div>
+                )}
+                {categorySeoLandingBottom && (
+                  <div className="mt-10 sm:mt-12 lg:mt-16 pt-8 sm:pt-10 border-t border-gray-200 dark:border-gray-800">
+                    {categorySeoLandingBottom}
                   </div>
                 )}
               </>

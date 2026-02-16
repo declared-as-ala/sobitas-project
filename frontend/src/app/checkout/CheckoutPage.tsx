@@ -629,9 +629,9 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="checkout-viewport-root min-h-screen bg-[#F7F7F8] dark:bg-gray-950">
+    <div className="checkout-viewport-root min-h-screen min-h-[100dvh] bg-[#F7F7F8] dark:bg-gray-950 flex flex-col">
       <Header />
-      <main className="checkout-main max-w-[1160px] mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-12 pb-[max(12rem,calc(env(safe-area-inset-bottom)+11rem))] lg:pb-12">
+      <main className="checkout-main flex-1 max-w-[1160px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-12 pb-44 sm:pb-48 lg:pb-12">
         {/* Progress: mobile = Étape 2/3, desktop = full stepper */}
         <div className="mb-6 lg:mb-8">
           <p className="text-sm font-medium text-gray-600 dark:text-gray-400 lg:hidden mb-4">
@@ -1059,9 +1059,9 @@ export default function CheckoutPage() {
         </div>
       </main>
 
-      {/* Mobile: sticky bottom bar (Total + CTA). Outside main to avoid fixed being affected by any parent transform/overflow. Position uses --keyboard-offset so bar stays above keyboard (visualViewport). */}
+      {/* Mobile: fixed bottom bar (Total + CTA). Fixed to viewport bottom so it stays visible while scrolling the form. */}
       <div
-        className="checkout-bottom-bar lg:hidden fixed left-0 right-0 z-40 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.3)] pb-[env(safe-area-inset-bottom)]"
+        className="checkout-bottom-bar lg:hidden fixed inset-x-0 bottom-0 z-50 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.3)] pb-[env(safe-area-inset-bottom)]"
         style={{ bottom: 'var(--keyboard-offset, 0)' }}
       >
         <div className="max-w-[1160px] mx-auto px-4 py-4">

@@ -178,8 +178,21 @@ export default async function CategoryPage({ params }: PageProps) {
           faqs={seoContent?.faqs ?? []}
           relatedCategories={relatedCategories}
           bestProducts={bestProducts}
+          section="top"
         />
       );
+      const categorySeoLandingBottom = (relatedCategories.length > 0 || bestProducts.length > 0) ? (
+        <CategorySeoLanding
+          title={title}
+          intro={null}
+          howToChooseTitle={null}
+          howToChooseBody={null}
+          faqs={[]}
+          relatedCategories={relatedCategories}
+          bestProducts={bestProducts}
+          section="bottom"
+        />
+      ) : null;
 
       return (
         <>
@@ -205,6 +218,7 @@ export default async function CategoryPage({ params }: PageProps) {
               isSubcategory
               parentCategory={sub.sous_category?.categorie?.slug ?? undefined}
               categorySeoLanding={categorySeoLanding}
+              categorySeoLandingBottom={categorySeoLandingBottom}
             />
           </Suspense>
         </>
@@ -252,8 +266,21 @@ export default async function CategoryPage({ params }: PageProps) {
           faqs={seoContent?.faqs ?? []}
           relatedCategories={relatedCategories}
           bestProducts={bestProducts}
+          section="top"
         />
       );
+      const categorySeoLandingBottom = (relatedCategories.length > 0 || bestProducts.length > 0) ? (
+        <CategorySeoLanding
+          title={title}
+          intro={null}
+          howToChooseTitle={null}
+          howToChooseBody={null}
+          faqs={[]}
+          relatedCategories={relatedCategories}
+          bestProducts={bestProducts}
+          section="bottom"
+        />
+      ) : null;
 
       return (
         <>
@@ -277,6 +304,7 @@ export default async function CategoryPage({ params }: PageProps) {
               brands={cat.brands ?? []}
               initialCategory={canonicalSlug}
               categorySeoLanding={categorySeoLanding}
+              categorySeoLandingBottom={categorySeoLandingBottom}
             />
           </Suspense>
         </>

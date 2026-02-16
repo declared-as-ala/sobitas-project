@@ -112,7 +112,7 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
       viewport={{ once: true, margin: '20px' }}
       transition={{ duration: 0.2 }}
       className={[
-        'group flex flex-col h-full w-full overflow-hidden',
+        'group flex flex-col h-full w-full min-w-0 overflow-hidden',
         'rounded-[14px] sm:rounded-xl lg:rounded-2xl',
         'bg-white dark:bg-gray-800',
         'border border-gray-200/90 dark:border-gray-700/80',
@@ -122,12 +122,12 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
         '[@media(hover:hover)]:lg:hover:shadow-2xl [@media(hover:hover)]:lg:hover:border-red-500/40 [@media(hover:hover)]:lg:dark:hover:border-red-500/40 [@media(hover:hover)]:lg:hover:-translate-y-1',
       ].join(' ')}
     >
-      {/* Image + badges - Larger on desktop */}
-      <div className="relative aspect-square w-full flex-shrink-0 overflow-hidden bg-white dark:bg-white rounded-t-[14px] sm:rounded-t-xl lg:rounded-t-2xl min-h-[200px] sm:min-h-[240px] md:min-h-[280px] lg:min-h-[320px]">
+      {/* Image area: square aspect, subtle bg, contained centered image */}
+      <div className="relative aspect-square w-full flex-shrink-0 overflow-hidden rounded-t-[14px] sm:rounded-t-xl lg:rounded-t-2xl bg-gray-50 dark:bg-gray-100/80 flex items-center justify-center">
 
         <LinkWithLoading 
           href={`/shop/${encodeURIComponent(productData.slug || String(product.id))}`} 
-          className="block size-full" 
+          className={`block size-full flex items-center justify-center ${isCompact ? 'p-2 md:p-3' : 'p-3 md:p-4 lg:p-5'}`}
           aria-label={`Voir ${productData.name}`}
           loadingMessage={`Chargement de ${productData.name}...`}
         >
@@ -137,10 +137,10 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
               alt={productData.name}
               width={400}
               height={400}
-              className={`size-full object-contain transition-transform duration-300 ${isCompact ? 'p-1.5 sm:p-2' : 'p-2 sm:p-4 md:p-5 lg:p-6'} [@media(hover:hover)]:lg:group-hover:scale-110 [@media(hover:hover)]:lg:transition-transform [@media(hover:hover)]:lg:duration-500`}
+              className="size-full object-contain transition-transform duration-300 [@media(hover:hover)]:lg:group-hover:scale-105 [@media(hover:hover)]:lg:transition-transform [@media(hover:hover)]:lg:duration-500"
               loading="lazy"
-              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, (max-width: 1600px) 20vw, 20vw"
-              quality={70}
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
+              quality={75}
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 target.style.display = 'none';
@@ -154,21 +154,21 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
               }}
             />
           ) : (
-            <div className="size-full flex items-center justify-center bg-gray-200 dark:bg-gray-700" aria-hidden="true">
-              <ShoppingCart className="h-12 w-12 text-gray-400" />
+            <div className="size-full flex items-center justify-center bg-gray-200/50 dark:bg-gray-700/50" aria-hidden="true">
+              <ShoppingCart className="h-10 w-10 md:h-12 md:w-12 text-gray-400" />
             </div>
           )}
         </LinkWithLoading>
 
-        {/* Badges – top-left, small and clean */}
-        <div className={`absolute top-2 left-2 z-10 flex flex-col gap-1 ${isCompact ? 'gap-0.5' : 'gap-1'}`}>
+        {/* Badges – top-left, fixed position, no layout shift */}
+        <div className="absolute top-2.5 left-2.5 z-10 flex flex-col gap-1 pointer-events-none">
           {!productData.isInStock && (
-            <Badge className="bg-gray-900 text-white border-0 font-semibold text-[10px] px-1.5 py-0.5 sm:text-xs sm:px-2 sm:py-0.5">
+            <Badge className="w-fit bg-gray-800 text-white border-0 font-semibold text-[10px] px-2 py-0.5 sm:text-xs shadow-sm">
               Rupture
             </Badge>
           )}
           {productData.isInStock && productData.priceDisplay.hasPromo && productData.discount > 0 && (
-            <Badge className="bg-red-600 text-white border-0 font-semibold text-[10px] px-1.5 py-0.5 sm:text-xs sm:px-2 sm:py-0.5">
+            <Badge className="w-fit bg-red-600 text-white border-0 font-semibold text-[10px] px-2 py-0.5 sm:text-xs shadow-sm">
               -{productData.discount}%
             </Badge>
           )}
@@ -211,15 +211,15 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
         </div>
       </div>
 
-      {/* Content – flex-1 so CTA stays at bottom */}
-      <div className="flex flex-col flex-1 min-h-0 p-3 sm:p-3 lg:p-4">
+      {/* Content – reduced padding, typography tuned for md */}
+      <div className="flex flex-col flex-1 min-h-0 p-2.5 sm:p-3 md:p-3 lg:p-4">
         <LinkWithLoading 
           href={`/shop/${encodeURIComponent(productData.slug || String(product.id))}`} 
-          className="block mb-1"
+          className="block mb-0.5 md:mb-1"
           loadingMessage={`Chargement de ${productData.name}...`}
         >
           <h3
-            className={`font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug transition-colors group-hover:text-red-600 dark:group-hover:text-red-400 ${isCompact ? 'text-[13px] sm:text-xs min-h-[2.25rem]' : 'text-sm sm:text-base md:text-lg min-h-[2.5rem] sm:min-h-0'}`}
+            className={`font-semibold text-gray-900 dark:text-white line-clamp-2 leading-tight md:leading-snug transition-colors group-hover:text-red-600 dark:group-hover:text-red-400 ${isCompact ? 'text-[13px] sm:text-sm md:text-[15px] lg:text-base' : 'text-sm sm:text-base md:text-[15px] lg:text-base'}`}
           >
             {productData.name}
           </h3>
@@ -290,8 +290,8 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
           )}
         </div>
 
-        {/* CTA – always visible on mobile, overlay on desktop hover */}
-        <div className="flex-shrink-0 pt-3 mt-2 border-t border-gray-100 dark:border-gray-700/60 lg:hidden block">
+        {/* CTA – always visible on mobile/tablet, overlay on desktop hover */}
+        <div className="flex-shrink-0 pt-2 md:pt-3 mt-1.5 md:mt-2 border-t border-gray-100 dark:border-gray-700/60 lg:hidden block">
           <Button
             size="sm"
             className={`w-full min-h-[44px] rounded-xl font-semibold text-[10px] xs:text-[11px] sm:text-sm active:scale-[0.98] transition-transform duration-150 select-none px-1.5 sm:px-2 ${productData.isInStock && canAddMore ? 'bg-red-600 hover:bg-red-700 text-white shadow-[0_2px_8px_rgba(220,38,38,0.35)]' : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed text-white'}`}

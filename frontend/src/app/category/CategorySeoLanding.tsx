@@ -9,7 +9,7 @@ export interface RelatedLink {
 }
 
 interface CategorySeoLandingProps {
-  /** Page title (H1). Required. */
+  /** Page title (H1). Required for top/all. */
   title: string;
   /** Intro HTML or plain text (newlines → paragraphs). Server-rendered. */
   intro: string | null;
@@ -20,6 +20,8 @@ interface CategorySeoLandingProps {
   bestProducts: RelatedLink[];
   /** If true, output FAQPage JSON-LD. */
   withFaqSchema?: boolean;
+  /** 'top' = H1 + intro + how-to + FAQs only; 'bottom' = Catégories associées + Produits phares only; 'all' = everything (default). */
+  section?: 'top' | 'bottom' | 'all';
 }
 
 /** Renders plain text as paragraphs (double newline = new paragraph). */
@@ -47,6 +49,7 @@ export function CategorySeoLanding({
   relatedCategories,
   bestProducts,
   withFaqSchema = true,
+  section = 'all',
 }: CategorySeoLandingProps) {
   const hasIntro = intro && intro.trim().length > 0;
   const hasHowTo = howToChooseTitle && howToChooseBody;
@@ -55,10 +58,13 @@ export function CategorySeoLanding({
   const hasBest = bestProducts.length > 0;
 
   const faqSchema =
-    withFaqSchema && hasFaqs
+    withFaqSchema && hasFaqs && (section === 'top' || section === 'all')
       ? buildFAQPageSchema(faqs.map((f) => ({ id: 0, question: f.question, reponse: f.answer })))
       : null;
   if (faqSchema) validateStructuredData(faqSchema, 'FAQPage');
+
+  const showTop = section === 'top' || section === 'all';
+  const showBottom = section === 'bottom' || section === 'all';
 
   return (
     <div className="space-y-8 sm:space-y-10 lg:space-y-12">
@@ -69,6 +75,8 @@ export function CategorySeoLanding({
         />
       )}
 
+      {showTop && (
+        <>
       <header>
         <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white tracking-tight">
           {title}
@@ -124,20 +132,22 @@ export function CategorySeoLanding({
           </ul>
         </section>
       )}
+        </>
+      )}
 
-      {(hasRelated || hasBest) && (
-        <section className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
+      {showBottom && (hasRelated || hasBest) && (
+        <section className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8 lg:gap-10">
           {hasRelated && (
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+            <div className="rounded-xl sm:rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 p-4 sm:p-6">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
                 Catégories associées
               </h2>
-              <ul className="space-y-2">
+              <ul className="space-y-2 sm:space-y-2.5">
                 {relatedCategories.map((c) => (
                   <li key={c.slug}>
                     <Link
                       href={c.url}
-                      className="text-red-600 dark:text-red-400 hover:underline font-medium"
+                      className="inline-flex items-center font-medium text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 hover:underline transition-colors"
                     >
                       {c.name}
                     </Link>
@@ -147,18 +157,23 @@ export function CategorySeoLanding({
             </div>
           )}
           {hasBest && (
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+            <div className="rounded-xl sm:rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 sm:p-6 shadow-sm">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
                 Produits phares
               </h2>
-              <ul className="space-y-2">
+              <ul className="grid grid-cols-1 sm:grid-cols-1 gap-2 sm:gap-2.5">
                 {bestProducts.map((p) => (
                   <li key={p.slug}>
                     <Link
                       href={p.url}
-                      className="text-red-600 dark:text-red-400 hover:underline font-medium"
+                      className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-800/50 hover:bg-red-50 dark:hover:bg-red-950/20 hover:border-red-200 dark:hover:border-red-900/50 transition-colors group"
                     >
-                      {p.name}
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-sm font-semibold group-hover:bg-red-200 dark:group-hover:bg-red-900/50 transition-colors">
+                        →
+                      </span>
+                      <span className="font-medium text-gray-900 dark:text-white group-hover:text-red-600 dark:group-hover:text-red-400 line-clamp-2">
+                        {p.name}
+                      </span>
                     </Link>
                   </li>
                 ))}
