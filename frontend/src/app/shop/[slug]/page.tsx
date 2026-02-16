@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
-import { getProductDetails, getSimilarProducts, getFAQs, fetchCategoryOrSubCategory } from '@/services/api';
+import { getProductDetails, getSimilarProducts, getFAQs } from '@/services/api';
 import { buildCanonicalUrl } from '@/util/canonical';
 import {
   buildProductSchema,
@@ -67,13 +67,8 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
       };
     }
   } catch {
-    // Product not found → try category redirect (anti-404 for old /shop/* links)
-  }
-  try {
-    await fetchCategoryOrSubCategory(cleanSlug);
+    // Product not found → always redirect to /category/:slug (old /shop/* category links)
     permanentRedirect(buildCategoryRedirectUrl(cleanSlug, search));
-  } catch {
-    // Not a category either → 404
   }
   return { title: 'Produit | SOBITAS Tunisie' };
 }
@@ -97,14 +92,8 @@ export default async function ShopProductPage({ params, searchParams }: PageProp
   if (product?.id) {
     // Valid product → render product page (no redirect)
   } else {
-    // 2) Product 404 → try category/subcategory with same slug (301, preserve UTM etc.)
-    try {
-      await fetchCategoryOrSubCategory(cleanSlug);
-      permanentRedirect(buildCategoryRedirectUrl(cleanSlug, search));
-    } catch {
-      // Neither product nor category → 404
-      notFound();
-    }
+    // 2) Product not found → redirect to /category/:slug (old /shop/* links). Category page will 404 if slug doesn't exist.
+    permanentRedirect(buildCategoryRedirectUrl(cleanSlug, search));
   }
 
   // From here product is defined and has id
