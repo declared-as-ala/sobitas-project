@@ -20,20 +20,20 @@ export type PageProps = {
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-/**
- * Build redirect URL with query string preserved (UTM, etc.).
- * Used when redirecting /shop/:slug (category) → /category/:slug.
- */
-function buildRedirectUrl(path: string, searchParams: Record<string, string | string[] | undefined> | null): string {
-  if (!searchParams || Object.keys(searchParams).length === 0) return path;
+/** Build /category/:slug URL and preserve query params (UTM, etc.) for 301 redirect. */
+function buildCategoryRedirectUrl(
+  slug: string,
+  searchParams: Record<string, string | string[] | undefined> | undefined
+): string {
+  const base = `/category/${encodeURIComponent(slug)}`;
+  if (!searchParams || Object.keys(searchParams).length === 0) return base;
   const q = new URLSearchParams();
   Object.entries(searchParams).forEach(([key, value]) => {
-    if (value === undefined) return;
-    if (Array.isArray(value)) value.forEach((v) => q.append(key, v));
-    else q.append(key, value);
+    if (Array.isArray(value)) value.forEach((v) => q.append(key, String(v)));
+    else if (value != null && value !== '') q.set(key, String(value));
   });
-  const search = q.toString();
-  return search ? `${path}?${search}` : path;
+  const query = q.toString();
+  return query ? `${base}?${query}` : base;
 }
 
 /** CTR-optimized product title for Tunisia SERP (aim: position #1). */
@@ -53,8 +53,8 @@ function productDescription(product: { meta_description_fr?: string; description
 export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const cleanSlug = slug?.trim();
-  const sp = searchParams ? await searchParams : null;
   if (!cleanSlug) return { title: 'Produit | SOBITAS Tunisie' };
+  const search = searchParams ? await searchParams : undefined;
   try {
     const product = await getProductDetails(cleanSlug);
     if (product?.id) {
@@ -67,44 +67,42 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
       };
     }
   } catch {
-    // Not a product, try legacy category redirect
+    // Product not found → try category redirect (anti-404 for old /shop/* links)
   }
   try {
     await fetchCategoryOrSubCategory(cleanSlug);
-    permanentRedirect(buildRedirectUrl(`/category/${cleanSlug}`, sp));
+    permanentRedirect(buildCategoryRedirectUrl(cleanSlug, search));
   } catch {
-    // Not a category either
+    // Not a category either → 404
   }
   return { title: 'Produit | SOBITAS Tunisie' };
 }
 
-/**
- * Product detail page – official URL: /shop/:slug
- * Logic (SEO + UX): 1) If slug is a product → 200 product page. 2) If slug is a category (legacy) → 308 redirect to /category/:slug (query params preserved). 3) Else → 404.
- * Note: Next.js permanentRedirect() returns HTTP 308 (Permanent); SEO-equivalent to 301.
- */
+/** Product detail page – official URL: /shop/:slug. Anti-404: if slug is not a product, try 301 to /category/:slug (preserve query). */
 export default async function ShopProductPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
   const cleanSlug = slug?.trim();
-  const sp = searchParams ? await searchParams : null;
   if (!cleanSlug) notFound();
 
-  // 1) Product first (never break product pages)
+  const search = searchParams ? await searchParams : undefined;
+
+  // 1) Try product first – if found, always 200 (never redirect a valid product)
   let product: Product | null = null;
   try {
     product = await getProductDetails(cleanSlug);
   } catch {
-    // Not a product or API error
+    // Product not found or API error
   }
 
   if (product?.id) {
-    // Slug is a product → 200, no redirect
+    // Valid product → render product page (no redirect)
   } else {
-    // 2) Legacy category: /shop/proteine-whey → /category/proteine-whey (301/308, query params kept)
+    // 2) Product 404 → try category/subcategory with same slug (301, preserve UTM etc.)
     try {
       await fetchCategoryOrSubCategory(cleanSlug);
-      permanentRedirect(buildRedirectUrl(`/category/${cleanSlug}`, sp));
+      permanentRedirect(buildCategoryRedirectUrl(cleanSlug, search));
     } catch {
+      // Neither product nor category → 404
       notFound();
     }
   }
