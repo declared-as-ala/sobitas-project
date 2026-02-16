@@ -12,7 +12,7 @@ export function getBaseUrl(): string {
   if (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_BASE_URL) {
     return process.env.NEXT_PUBLIC_BASE_URL.replace(/\/$/, '');
   }
-  return 'https://sobitas.tn';
+  return 'https://protein.tn';
 }
 
 /**

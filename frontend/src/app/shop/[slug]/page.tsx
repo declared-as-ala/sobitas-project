@@ -109,8 +109,8 @@ export default async function ShopProductPage({ params, searchParams }: PageProp
     }
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://sobitas.tn';
-  const productSchema = buildProductSchema(safeProduct, baseUrl);
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
+  const productSchema = buildProductJsonLd(safeProduct, baseUrl);
   validateStructuredData(productSchema, 'Product');
 
   const breadcrumbItems = [
