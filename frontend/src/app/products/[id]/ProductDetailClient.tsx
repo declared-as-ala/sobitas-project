@@ -474,10 +474,15 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
 
               {/* Meta Information Section - Category, Code, Stock Status, Discount Badge */}
               <div className="space-y-2.5 sm:space-y-3 px-1">
-                {/* Category */}
-                {product.sous_categorie && (
+                {/* Category – internal link with keyword anchor for SEO */}
+                {product.sous_categorie?.slug && (
                   <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400">
-                    {product.sous_categorie.designation_fr}
+                    <Link
+                      href={`/category/${product.sous_categorie.slug}`}
+                      className="text-red-600 dark:text-red-400 hover:underline"
+                    >
+                      {product.sous_categorie.designation_fr}
+                    </Link>
                   </p>
                 )}
                 
@@ -701,7 +706,13 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     </p>
                   )}
                   {product.brand && <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{product.brand.designation_fr}</p>}
-                  {product.sous_categorie && <p className="text-sm text-gray-600 dark:text-gray-400">{product.sous_categorie.designation_fr}</p>}
+                  {product.sous_categorie?.slug && (
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <Link href={`/category/${product.sous_categorie!.slug}`} className="text-red-600 dark:text-red-400 hover:underline">
+                        {product.sous_categorie.designation_fr}
+                      </Link>
+                    </p>
+                  )}
                   {product.code_product && <p className="text-xs text-gray-500 mt-0.5">Code: {product.code_product}</p>}
                 </div>
 

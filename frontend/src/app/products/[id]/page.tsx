@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { getProductDetails, getSimilarProducts } from '@/services/api';
 import { getStorageUrl } from '@/services/api';
 import { ProductDetailClient } from './ProductDetailClient';
@@ -79,6 +79,10 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
     const product = await getProductDetails(id);
     if (!product?.id) {
       notFound();
+    }
+    // Canonical product URL is /shop/:slug; permanently redirect /products/:id to consolidate SEO
+    if (product.slug) {
+      permanentRedirect(`/shop/${encodeURIComponent(product.slug)}`);
     }
     const similarData = product.sous_categorie_id
       ? await getSimilarProducts(product.sous_categorie_id).catch(() => ({ products: [] }))

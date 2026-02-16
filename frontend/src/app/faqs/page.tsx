@@ -1,27 +1,12 @@
 import { Metadata } from 'next';
 import { getFAQs } from '@/services/api';
+import { buildFAQPageSchema, validateStructuredData } from '@/util/structuredData';
 import { FAQsPageClient } from './FAQsPageClient';
-import type { FAQ } from '@/types';
 
 export const metadata: Metadata = {
   title: 'FAQ – Livraison, Paiement, Protéines | Sobitas Tunisie',
   description: 'Réponses sur commande, livraison, paiement et produits. Tout savoir sur l’achat de compléments alimentaires en Tunisie.',
 };
-
-function buildFAQPageSchema(faqs: FAQ[]) {
-  if (!faqs.length) return null;
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: faqs
-      .filter((f) => f.question && f.reponse)
-      .map((f) => ({
-        '@type': 'Question',
-        name: f.question,
-        acceptedAnswer: { '@type': 'Answer', text: f.reponse },
-      })),
-  };
-}
 
 async function getFAQsData() {
   try {
@@ -36,6 +21,7 @@ async function getFAQsData() {
 export default async function FAQsPage() {
   const { faqs } = await getFAQsData();
   const faqSchema = buildFAQPageSchema(faqs);
+  if (faqSchema) validateStructuredData(faqSchema, 'FAQPage');
 
   return (
     <>

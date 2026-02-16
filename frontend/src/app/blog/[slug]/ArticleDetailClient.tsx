@@ -18,6 +18,8 @@ import { useMemo, useState, useEffect } from 'react';
 interface ArticleDetailClientProps {
   article: Article;
   relatedArticles: Article[];
+  /** Optional SEO block (FAQ + internal links) rendered between content and related articles */
+  children?: React.ReactNode;
 }
 
 // Decode HTML entities properly (server-safe, no window/document)
@@ -76,7 +78,7 @@ function calculateReadingTime(content: string): number {
   return Math.max(1, Math.ceil(words / wordsPerMinute));
 }
 
-export function ArticleDetailClient({ article, relatedArticles }: ArticleDetailClientProps) {
+export function ArticleDetailClient({ article, relatedArticles, children }: ArticleDetailClientProps) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const articleDate = article.created_at ? new Date(article.created_at) : new Date();
@@ -183,6 +185,7 @@ export function ArticleDetailClient({ article, relatedArticles }: ArticleDetailC
                   prose-pre:bg-gray-100 dark:prose-pre:bg-gray-800"
                 dangerouslySetInnerHTML={{ __html: decodeHtmlEntities(content) }}
               />
+              {children}
             </div>
           </article>
 

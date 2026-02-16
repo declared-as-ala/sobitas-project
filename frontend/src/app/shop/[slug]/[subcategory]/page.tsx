@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import { getProductsBySubCategory } from '@/services/api';
+import { buildCanonicalUrl } from '@/util/canonical';
 import { SubCategoryPageClient } from '@/app/shop/SubCategoryPageClient';
 
 interface SubCategoryPageProps {
@@ -12,7 +13,6 @@ export const revalidate = 0;
 
 export async function generateMetadata({ params }: SubCategoryPageProps): Promise<Metadata> {
   const { slug: categorySlug, subcategory: subcategorySlug } = await params;
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
 
   try {
     const result = await getProductsBySubCategory(subcategorySlug);
@@ -28,17 +28,18 @@ export async function generateMetadata({ params }: SubCategoryPageProps): Promis
     const categoryName = subcategoryData.categorie?.designation_fr || '';
     const title = `${subcategoryData.designation_fr} - ${categoryName} | SOBITAS Tunisie`;
     const description = `Découvrez notre sélection de ${subcategoryData.designation_fr.toLowerCase()} en Tunisie. Qualité premium, livraison rapide.`;
+    const canonicalUrl = buildCanonicalUrl(`/shop/${categorySlug}/${subcategorySlug}`);
 
     return {
       title,
       description,
       alternates: {
-        canonical: `${baseUrl}/shop/${categorySlug}/${subcategorySlug}`,
+        canonical: canonicalUrl,
       },
       openGraph: {
         title,
         description,
-        url: `${baseUrl}/shop/${categorySlug}/${subcategorySlug}`,
+        url: canonicalUrl,
         type: 'website',
       },
     };

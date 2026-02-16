@@ -8,7 +8,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { LoadingProvider } from "@/contexts/LoadingContext";
 import { GlobalLoader } from "@/app/components/GlobalLoader";
 import { NavigationHandler } from "@/app/components/NavigationHandler";
-import { Toaster } from "sonner";
+import { DeferredToaster } from "@/app/components/DeferredToaster";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -101,63 +101,16 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://sobitas.tn';
-  const orgSchema = {
-    '@context': 'https://schema.org',
-    '@type': 'Organization',
-    name: 'SOBITAS',
-    url: baseUrl,
-    logo: `${baseUrl}/icon.png`,
-    description: 'Distributeur officiel de protéines et compléments alimentaires en Tunisie. Whey, créatine, gainer, BCAA à Sousse. Livraison Tunis, Sousse et toute la Tunisie.',
-    address: {
-      '@type': 'PostalAddress',
-      streetAddress: 'Rue Rihab',
-      addressLocality: 'Sousse',
-      postalCode: '4000',
-      addressCountry: 'TN',
-    },
-    telephone: '+21627612500',
-    email: 'contact@protein.tn',
-    sameAs: [
-      'https://www.facebook.com/sobitass/',
-      'https://www.instagram.com/sobitass/',
-      'https://twitter.com/TunisieProteine',
-      'https://www.tiktok.com/@sobitassousse',
-    ],
-  };
-  const localBusinessSchema = {
-    '@context': 'https://schema.org',
-    '@type': 'LocalBusiness',
-    '@id': `${baseUrl}/#localbusiness`,
-    name: 'SOBITAS – Protéines & Compléments Alimentaires Tunisie',
-    image: `${baseUrl}/icon.png`,
-    url: baseUrl,
-    telephone: '+21627612500',
-    email: 'contact@protein.tn',
-    address: {
-      '@type': 'PostalAddress',
-      streetAddress: 'Rue Rihab',
-      addressLocality: 'Sousse',
-      postalCode: '4000',
-      addressCountry: 'TN',
-    },
-    priceRange: '$$',
-    openingHoursSpecification: { '@type': 'OpeningHoursSpecification', dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'], opens: '09:00', closes: '19:00' },
-  };
-  const websiteSchema = {
-    '@context': 'https://schema.org',
-    '@type': 'WebSite',
-    name: 'SOBITAS – Protéine Tunisie',
-    url: baseUrl,
-    description: 'Boutique de protéines, whey, créatine et compléments alimentaires en Tunisie. Livraison Sousse, Tunis.',
-    publisher: { '@type': 'Organization', name: 'SOBITAS', logo: { '@type': 'ImageObject', url: `${baseUrl}/icon.png` } },
-    inLanguage: 'fr-TN',
-  };
+  const { buildOrganizationSchema, buildLocalBusinessSchema, buildWebSiteSchema } = await import('@/util/structuredData');
+  const orgSchema = buildOrganizationSchema(baseUrl);
+  const localBusinessSchema = buildLocalBusinessSchema(baseUrl);
+  const websiteSchema = buildWebSiteSchema(baseUrl);
 
   return (
     <html lang="fr" suppressHydrationWarning data-scroll-behavior="smooth">
@@ -186,7 +139,7 @@ export default function RootLayout({
                 </Suspense>
                 {children}
                 <GlobalLoader />
-                <Toaster position="top-center" richColors className="sonner-toaster" />
+                <DeferredToaster />
               </CartProvider>
             </AuthProvider>
           </LoadingProvider>

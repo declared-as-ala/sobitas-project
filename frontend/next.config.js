@@ -28,6 +28,26 @@ const nextConfig = {
   },
   compress: true,
   poweredByHeader: false,
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          { key: 'X-DNS-Prefetch-Control', value: 'on' },
+        ],
+      },
+      {
+        source: '/_next/static/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      {
+        source: '/icon.png',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=86400' }],
+      },
+    ];
+  },
   experimental: {
     // Disable the client-side Router Cache for both dynamic and static pages.
     // This ensures navigating to /blog always fetches fresh RSC payloads from the server,
@@ -43,6 +63,7 @@ const nextConfig = {
       '@radix-ui/react-tabs',
       '@radix-ui/react-tooltip',
       'motion',
+      'sonner',
     ],
   },
 }

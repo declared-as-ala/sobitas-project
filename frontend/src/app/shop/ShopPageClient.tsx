@@ -38,9 +38,11 @@ interface ShopPageClientProps {
   isSubcategory?: boolean;
   parentCategory?: string;
   initialBrand?: number;
+  /** Optional SEO landing block (H1, intro, how-to, FAQs, related links). Rendered after breadcrumb. */
+  categorySeoLanding?: React.ReactNode;
 }
 
-function ShopContent({ productsData, categories, brands, initialCategory, isSubcategory, parentCategory, initialBrand }: ShopPageClientProps) {
+function ShopContent({ productsData, categories, brands, initialCategory, isSubcategory, parentCategory, initialBrand, categorySeoLanding }: ShopPageClientProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
@@ -639,6 +641,9 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
           
           return breadcrumbItems.length > 1 ? <ShopBreadcrumbs items={breadcrumbItems} /> : null;
         })()}
+
+        {/* Category SEO landing (intro, how-to, FAQs, related links) – server-rendered */}
+        {categorySeoLanding && <div className="mb-8 sm:mb-10 lg:mb-12">{categorySeoLanding}</div>}
 
         {/* Brand description – shown when filtering by brand (e.g. /shop?brand=1) */}
         {currentBrand && (

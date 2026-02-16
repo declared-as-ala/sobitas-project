@@ -2,7 +2,7 @@ import { MetadataRoute } from 'next';
 import { getAllProducts, getAllArticles, getCategories, getAllBrands } from '@/services/api';
 import type { Product, Article, Category, Brand, SubCategory } from '@/types';
 
-const BASE_URL = 'https://protein.tn';
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://sobitas.tn';
 
 // Static pages with their priorities and change frequencies
 const staticPages: MetadataRoute.Sitemap = [

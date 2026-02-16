@@ -2,6 +2,9 @@ import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getArticleDetails, getLatestArticles } from '@/services/api';
 import { getStorageUrl } from '@/services/api';
+import { buildCanonicalUrl } from '@/util/canonical';
+import { buildArticleSchema } from '@/util/structuredData';
+import { BlogSeoBlock } from '@/app/blog/BlogSeoBlock';
 import { ArticleDetailClient } from './ArticleDetailClient';
 
 interface ArticlePageProps {
@@ -30,20 +33,26 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
     const description = stripHtml(article.description_fr || article.description || '');
     const metaDescription = description || `Découvrez ${article.designation_fr} sur le blog Sobitas - Conseils nutrition et sport`;
     
+    const canonicalUrl = buildCanonicalUrl(`/blog/${encodeURIComponent(slug)}`);
+    const title = article.designation_fr || 'Blog';
+    const descriptionWithTunisia = metaDescription.includes('Tunisie') ? metaDescription : `${metaDescription} Conseils nutrition sportive Tunisie – SOBITAS.`;
     return {
-      title: `${article.designation_fr} | Blog Sobitas`,
-      description: metaDescription,
+      title,
+      description: descriptionWithTunisia.slice(0, 160),
+      alternates: {
+        canonical: canonicalUrl,
+      },
       openGraph: {
-        title: article.designation_fr,
-        description: metaDescription,
+        title,
+        description: descriptionWithTunisia.slice(0, 160),
         images: imageUrl ? [imageUrl] : [],
         type: 'article',
-        url: `https://protein.tn/blog/${slug}`,
+        url: canonicalUrl,
       },
       twitter: {
         card: 'summary_large_image',
-        title: article.designation_fr,
-        description: metaDescription,
+        title,
+        description: descriptionWithTunisia.slice(0, 160),
         images: imageUrl ? [imageUrl] : [],
       },
     };
@@ -68,10 +77,19 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
       notFound();
     }
 
-    // Filter out current article from related
     const filteredRelated = relatedArticles.filter(a => a.slug !== slug).slice(0, 3);
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://sobitas.tn';
+    const articleImageUrl = article.cover ? getStorageUrl(article.cover) : undefined;
+    const articleSchema = buildArticleSchema(article, baseUrl, articleImageUrl);
 
-    return <ArticleDetailClient article={article} relatedArticles={filteredRelated} />;
+    return (
+      <>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
+        <ArticleDetailClient article={article} relatedArticles={filteredRelated}>
+          <BlogSeoBlock slug={slug} />
+        </ArticleDetailClient>
+      </>
+    );
   } catch (error) {
     console.error('Error fetching article:', error);
     notFound();

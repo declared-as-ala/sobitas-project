@@ -1,11 +1,11 @@
 import { MetadataRoute } from 'next';
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://sobitas.tn';
 
 /**
- * Generates a standards-compliant robots.txt file.
- * Only uses standard directives: User-agent, Allow, Disallow, Sitemap, Host
- * Does not include non-standard directives like Content-Signal
+ * Generates a standards-compliant robots.txt for SEO.
+ * - Index: /, /shop, /category/*, /blog, /blog/*, product pages, static pages
+ * - Noindex: account, checkout, cart, login, register, api, admin
  */
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -22,6 +22,8 @@ export default function robots(): MetadataRoute.Robots {
           '/login',
           '/register',
           '/api/',
+          '/admin',
+          '/admin/',
           '/order-confirmation/',
         ],
       },
@@ -37,6 +39,8 @@ export default function robots(): MetadataRoute.Robots {
           '/login',
           '/register',
           '/api/',
+          '/admin',
+          '/admin/',
           '/order-confirmation/',
         ],
       },
