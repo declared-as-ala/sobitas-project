@@ -37,7 +37,7 @@ interface ItemWithDates {
   created_at?: string;
 }
 
-/** Returns sitemap entries for XML. Used by app/sitemap.xml/route.ts only (no metadata sitemap to avoid HTML response). */
+/** Returns sitemap entries for XML. Used by app/sitemap.ts (Next.js metadata file → /sitemap.xml as application/xml). */
 export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
   const sitemapEntries: MetadataRoute.Sitemap = [...staticPages];
 

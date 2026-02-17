@@ -14,7 +14,8 @@ import { Badge } from '@/app/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 import { Input } from '@/app/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
-import { Minus, Plus, ShoppingCart, Star, Shield, Truck, Award, ArrowLeft, Heart, Share2, ZoomIn, CheckCircle2, Loader2, BadgeCheck, Search, ChevronRight } from 'lucide-react';
+import { Minus, Plus, ShoppingCart, Star, Shield, Truck, Award, ArrowLeft, Heart, Share2, ZoomIn, CheckCircle2, Loader2, BadgeCheck, Search, ChevronRight, Zap } from 'lucide-react';
+import { QuickOrderDrawer } from '@/app/components/QuickOrderDrawer';
 import { motion } from 'motion/react';
 import { Card, CardContent } from '@/app/components/ui/card';
 import type { Product, Review, FAQ } from '@/types';
@@ -203,6 +204,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
     ? stripHtml(product.description_cover)
     : null;
 
+  /** Cart logic: unchanged. "Commander vite" uses QuickOrderDrawer and does not add to or clear cart. */
   const handleAddToCart = () => {
     if (stockDisponible <= 0) {
       toast.error('Rupture de stock - Ce produit n\'est pas disponible');
@@ -741,6 +743,16 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       <ShoppingCart className="h-5 w-5 mr-2" />
                       {stockDisponible <= 0 ? 'Rupture de stock' : 'Ajouter au panier'}
                     </Button>
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      className="flex-1 min-h-[52px] border-2 border-amber-500 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 text-base font-bold"
+                      onClick={() => setQuickOrderOpen(true)}
+                      disabled={stockDisponible <= 0}
+                    >
+                      <Zap className="h-5 w-5 mr-2" />
+                      Commander vite
+                    </Button>
                     <div className="flex gap-2 shrink-0">
                       <Button variant="outline" size="icon" className="h-11 w-11" onClick={() => setIsFavorite(!isFavorite)} aria-label="Favoris">
                         <Heart className={`h-5 w-5 ${isFavorite ? 'fill-red-600 text-red-600' : ''}`} />
@@ -1113,9 +1125,29 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
             <ShoppingCart className="h-5 w-5 mr-2 shrink-0" />
             {stockDisponible <= 0 ? 'Rupture' : 'Ajouter'}
           </Button>
+          <Button
+            size="lg"
+            variant="outline"
+            className="min-h-[48px] sm:min-h-[52px] border-2 border-amber-500 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 font-semibold shrink-0 px-4"
+            onClick={() => setQuickOrderOpen(true)}
+            disabled={stockDisponible <= 0}
+            aria-label="Commander vite"
+          >
+            <Zap className="h-5 w-5 sm:mr-1" />
+            <span className="hidden sm:inline">Vite</span>
+          </Button>
         </div>
       </div>
 
+      <QuickOrderDrawer
+        open={quickOrderOpen}
+        onOpenChange={setQuickOrderOpen}
+        productId={product.id}
+        productName={product.designation_fr || ''}
+        quantity={quantity}
+        unitPrice={displayPrice}
+        onSuccess={() => {}}
+      />
       <Footer />
       <ScrollToTop />
     </div>

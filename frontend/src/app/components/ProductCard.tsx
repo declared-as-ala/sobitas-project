@@ -30,7 +30,6 @@ type Product = ApiProduct | {
   best_seller?: number;
   promo?: number;
   promo_expiration_date?: string;
-  note?: number;
 };
 
 interface ProductCardProps {
@@ -220,6 +219,7 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
           </p>
         )}
 
+        {/* No rating/avis on listing cards – only on product detail page */}
         {/* Price – promo + old price only when hasPromo (active promo, not expired) */}
         <div className={`flex flex-wrap items-baseline gap-1 sm:gap-1.5 md:gap-2 mt-auto ${isCompact ? 'mb-0' : 'mb-0'}`}>
           {productData.priceDisplay.hasPromo && productData.priceDisplay.oldPrice != null ? (

@@ -8,6 +8,8 @@ import type {
   Order,
   OrderRequest,
   OrderDetail,
+  QuickOrderPayload,
+  QuickOrderResponse,
   User,
   LoginRequest,
   RegisterRequest,
@@ -716,6 +718,26 @@ export const createOrder = async (orderData: OrderRequest): Promise<{
     throw new Error((error as any).error || 'Erreur lors de la création de la commande');
   }
   return response.json();
+};
+
+/** Quick order (commande rapide) – one product, minimal form. Does not modify cart. */
+export const submitQuickOrder = async (payload: QuickOrderPayload): Promise<QuickOrderResponse> => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  const response = await fetch('/api/quick-order', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
+    body: JSON.stringify(payload),
+    cache: 'no-store',
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error((data as any).error || 'Erreur lors de la commande rapide');
+  }
+  return data as QuickOrderResponse;
 };
 
 // ==================== AUTHENTICATED API ENDPOINTS ====================

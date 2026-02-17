@@ -24,9 +24,6 @@ type FlashProduct = {
   slug?: string;
   promo?: number;
   promo_expiration_date?: string;
-  note?: number;
-  reviews_count?: number;
-  reviews?: Array<{ publier?: number }>;
   rupture?: number;
   [key: string]: unknown;
 };
@@ -208,6 +205,7 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
           </h3>
         </LinkWithLoading>
 
+        {/* No rating/avis on listing cards – only on product detail page */}
         {/* Pricing – promo + old price only when hasPromo (active promo, not expired) */}
         <div className="flex flex-wrap items-baseline gap-2 mb-3 sm:mb-4 mt-auto">
           {productData.priceDisplay.hasPromo && productData.priceDisplay.oldPrice != null ? (

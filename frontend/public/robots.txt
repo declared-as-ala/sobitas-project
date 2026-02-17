@@ -1,0 +1,30 @@
+User-agent: *
+Allow: /
+Disallow: /account
+Disallow: /account/
+Disallow: /checkout
+Disallow: /checkout/
+Disallow: /cart
+Disallow: /login
+Disallow: /register
+Disallow: /api/
+Disallow: /admin
+Disallow: /admin/
+Disallow: /order-confirmation/
+
+User-agent: Googlebot
+Allow: /
+Disallow: /account
+Disallow: /account/
+Disallow: /checkout
+Disallow: /checkout/
+Disallow: /cart
+Disallow: /login
+Disallow: /register
+Disallow: /api/
+Disallow: /admin
+Disallow: /admin/
+Disallow: /order-confirmation/
+
+Sitemap: https://protein.tn/sitemap.xml
+Host: protein.tn

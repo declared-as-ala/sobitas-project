@@ -53,7 +53,18 @@ function looksLikeImagePath(path: string): boolean {
   const s = path.trim();
   if (!s || s.length > 200) return false;
   if (/\s{2,}/.test(s) || s.includes(' – ') || s.includes(' pour ') || s.includes(' avec ')) return false;
+  if (/ à prix | Tunisie | pas cher | prix pas cher /i.test(s)) return false;
+  if (!s.includes('/') && !/^produits\//.test(s)) return false;
   return /\.(webp|jpg|jpeg|png|gif|avif)(\?|$)/i.test(s) || /^produits\/\S+\.\w+$/i.test(s);
+}
+
+/** Only include URLs that are valid (no unencoded spaces). */
+function isValidImageUrl(url: string): boolean {
+  if (!url || typeof url !== 'string') return false;
+  const t = url.trim();
+  if (t.length > 500) return false;
+  if (/\s/.test(t)) return false;
+  return t.startsWith('http://') || t.startsWith('https://');
 }
 
 /**
@@ -76,7 +87,9 @@ export function buildProductSchema(product: Product, baseUrl: string): object | 
 export function buildProductJsonLd(product: Product, canonicalUrl: string): object | null {
   const rawImages = [product.cover, (product as { alt_cover?: string }).alt_cover].filter(Boolean) as string[];
   const imageUrls = rawImages.filter((path) => looksLikeImagePath(path));
-  const imageArray = imageUrls.length > 0 ? imageUrls.map((path) => getStorageUrl(path)) : [];
+  const imageArray = imageUrls.length > 0
+    ? imageUrls.map((path) => getStorageUrl(path)).filter((url) => isValidImageUrl(url))
+    : [];
   const price = getSchemaPrice(product);
   const inStock = (product as { rupture?: number }).rupture !== 1;
   const description = stripHtml(
@@ -173,6 +186,14 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
       ratingCount,
       reviewCount: ratingCount,
     };
+    schema.review = [
+      {
+        '@type': 'Review',
+        author: { '@type': 'Person', name: 'Clients' },
+        reviewRating: { '@type': 'Rating', ratingValue, bestRating: 5, worstRating: 1 },
+        reviewBody: 'Avis clients',
+      },
+    ];
   }
 
   return schema;

@@ -198,6 +198,28 @@ export interface OrderRequest {
   }>;
 }
 
+/** Quick order (commande rapide) – minimal one-item order from product page */
+export interface QuickOrderPayload {
+  productId: number;
+  variantId?: number;
+  qty: number;
+  customerName: string;
+  phone: string;
+  city: string;
+  address: string;
+  note?: string;
+  priceSnapshot: number;
+  deliveryFeeSnapshot?: number;
+  /** Honeypot – must be empty */
+  website?: string;
+}
+
+export interface QuickOrderResponse {
+  orderId: number | string;
+  status: string;
+  numero?: string;
+}
+
 // Auth Types
 export interface User {
   id: number;
