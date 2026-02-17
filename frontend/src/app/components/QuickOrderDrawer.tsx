@@ -23,7 +23,7 @@ import {
 } from '@/app/components/ui/select';
 import { submitQuickOrder } from '@/services/api';
 import type { QuickOrderPayload, QuickOrderResponse } from '@/types';
-import { Loader2, CheckCircle2, Zap } from 'lucide-react';
+import { Loader2, CheckCircle2, Zap, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 const GOUVERNORATS = [
@@ -32,6 +32,9 @@ const GOUVERNORATS = [
   'MONASTIR', 'NABEUL', 'SFAX', 'SIDI BOUZID', 'SILIANA', 'SOUSSE', 'TATAOUINE',
   'TOZEUR', 'TUNIS', 'ZAGHOUAN',
 ];
+
+const WHATSAPP_NUMBER = '21627612500';
+const WHATSAPP_BASE = `https://wa.me/${WHATSAPP_NUMBER}`;
 
 export interface QuickOrderDrawerProps {
   open: boolean;
@@ -84,21 +87,20 @@ export function QuickOrderDrawer({
       setErrors({});
       setWebsite('');
       trackEvent('quick_order_open', { product_id: productId });
-      setTimeout(() => nameInputRef.current?.focus(), 100);
+      setTimeout(() => phoneInputRef.current?.focus(), 150);
     }
   }, [open, productId]);
 
   const validate = (): boolean => {
     const e: Record<string, string> = {};
-    if (!(customerName || '').trim()) e.customerName = 'Nom et prénom requis';
     if (!(phone || '').trim()) e.phone = 'Téléphone requis';
     else {
       const digits = phone.replace(/\s/g, '').replace(/^\+216/, '');
       if (!/^[0-9]{8}$/.test(digits) && !/^2[0-9]{7}$/.test(digits)) {
-        e.phone = '8 chiffres (ex: 12 345 678)';
+        e.phone = '8 chiffres';
       }
     }
-    if (!(city || '').trim()) e.city = 'Ville / Gouvernorat requis';
+    if (!(city || '').trim()) e.city = 'Gouvernorat requis';
     if (!(address || '').trim()) e.address = 'Adresse requise';
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -132,10 +134,11 @@ export function QuickOrderDrawer({
       setResult(res);
       trackEvent('quick_order_success', { order_id: res.orderId, product_id: productId });
       onSuccess?.(res);
-    } catch (err: any) {
-      const msg = err?.message || 'Erreur. Réessayez.';
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur. Réessayez.';
       setErrors({ submit: msg });
       toast.error(msg);
+      trackEvent('quick_order_fail', { product_id: productId, error: msg });
     } finally {
       setIsSubmitting(false);
     }
@@ -163,22 +166,38 @@ export function QuickOrderDrawer({
             Commande rapide
           </DrawerTitle>
           <DrawerDescription className="text-gray-600 dark:text-gray-400">
-            {productName} × {quantity} — {total.toFixed(0)} DT
+            {productName} × {quantity} — {total.toFixed(0)} DT · Livraison 2–3 jours
           </DrawerDescription>
         </DrawerHeader>
 
         <div className="flex-1 overflow-y-auto px-4 pb-4">
           {result ? (
-            <div className="py-8 text-center">
-              <CheckCircle2 className="mx-auto h-14 w-14 text-green-600 dark:text-green-400 mb-4" />
+            <div className="py-6 text-center">
+              <CheckCircle2 className="mx-auto h-14 w-14 text-green-600 dark:text-green-400 mb-4" aria-hidden />
               <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Commande confirmée</h3>
               <p className="text-gray-600 dark:text-gray-400 mb-1">
                 Référence : <strong className="text-gray-900 dark:text-white">{result.numero ?? `#${result.orderId}`}</strong>
               </p>
-              <p className="text-sm text-gray-500 dark:text-gray-500">
+              <p className="text-sm text-gray-500 dark:text-gray-500 mb-4">
                 Nous vous contacterons pour confirmer la livraison.
               </p>
-              <Button className="mt-6 min-h-[48px] px-6" onClick={handleClose}>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Si vous préférez, confirmez sur WhatsApp :</p>
+              <Button
+                asChild
+                className="min-h-[48px] w-full bg-[#25D366] hover:bg-[#20BD5A] text-white font-semibold mb-3"
+              >
+                <a
+                  href={`${WHATSAPP_BASE}?text=${encodeURIComponent(
+                    `Bonjour, je viens de passer une commande rapide.\nRéf: ${result.numero ?? result.orderId}\nProduit: ${productName}\nQté: ${quantity}\nTél: ${phone}\nVille: ${city}\nAdresse: ${address}`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <MessageCircle className="h-5 w-5 mr-2" />
+                  Confirmer sur WhatsApp
+                </a>
+              </Button>
+              <Button variant="outline" className="min-h-[44px] px-6" onClick={handleClose}>
                 Fermer
               </Button>
             </div>
@@ -195,20 +214,6 @@ export function QuickOrderDrawer({
                 aria-hidden
               />
               <div className="space-y-1.5">
-                <Label htmlFor="qo-name" className="text-sm font-medium">Nom & Prénom *</Label>
-                <Input
-                  id="qo-name"
-                  ref={nameInputRef}
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  placeholder="Ahmed Ben Ali"
-                  className="min-h-[48px] text-base"
-                  autoComplete="name"
-                  aria-invalid={!!errors.customerName}
-                />
-                {errors.customerName && <p className="text-xs text-red-600 dark:text-red-400">{errors.customerName}</p>}
-              </div>
-              <div className="space-y-1.5">
                 <Label htmlFor="qo-phone" className="text-sm font-medium">Téléphone *</Label>
                 <Input
                   id="qo-phone"
@@ -223,6 +228,18 @@ export function QuickOrderDrawer({
                   aria-invalid={!!errors.phone}
                 />
                 {errors.phone && <p className="text-xs text-red-600 dark:text-red-400">{errors.phone}</p>}
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="qo-name" className="text-sm font-medium text-gray-600 dark:text-gray-400">Nom & Prénom (optionnel)</Label>
+                <Input
+                  id="qo-name"
+                  ref={nameInputRef}
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  placeholder="Ahmed Ben Ali"
+                  className="min-h-[48px] text-base"
+                  autoComplete="name"
+                />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="qo-city" className="text-sm font-medium">Ville / Gouvernorat *</Label>
@@ -262,10 +279,12 @@ export function QuickOrderDrawer({
                   rows={2}
                 />
               </div>
-              <div className="rounded-xl bg-gray-100 dark:bg-gray-800 p-3 text-sm">
+              <div className="rounded-xl bg-gray-100 dark:bg-gray-800 p-3 text-sm space-y-1">
                 <p className="font-semibold text-gray-900 dark:text-white">Total : {total.toFixed(0)} DT</p>
                 {deliveryNote > 0 && <p className="text-gray-600 dark:text-gray-400">+ Livraison : {deliveryNote.toFixed(0)} DT</p>}
-                <p className="text-gray-500 dark:text-gray-500 mt-1">Paiement à la livraison.</p>
+                <p className="text-gray-500 dark:text-gray-500 text-xs mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                  Paiement à la livraison · Livraison 24–72h · Produits authentiques
+                </p>
               </div>
               {errors.submit && (
                 <p className="text-sm text-red-600 dark:text-red-400">{errors.submit}</p>

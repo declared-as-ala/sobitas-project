@@ -114,7 +114,7 @@ export function HomePageClient({ accueil, slides }: HomePageClientProps) {
         : 0;
     const reviewCount =
       p.reviews_count ?? p.review_count ?? p.avis_count ?? p.nombre_avis ?? p.nb_avis ?? p.total_reviews ?? p.reviewsCount;
-    let normalizedCount =
+    const normalizedCount =
       reviewCount != null && reviewCount !== ''
         ? Math.max(0, Number(reviewCount) || 0)
         : countFromArray > 0

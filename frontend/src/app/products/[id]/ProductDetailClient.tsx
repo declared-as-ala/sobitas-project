@@ -51,6 +51,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
   const [reviewSort, setReviewSort] = useState<'recent' | 'helpful'>('recent');
   const [reviewSearch, setReviewSearch] = useState('');
   const [descExpanded, setDescExpanded] = useState(false);
+  const [quickOrderOpen, setQuickOrderOpen] = useState(false);
 
   // Use state to manage product data so we can update it after adding a review
   const [product, setProduct] = useState<Product>(initialProduct);

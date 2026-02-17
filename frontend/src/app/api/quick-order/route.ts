@@ -70,12 +70,6 @@ export async function POST(request: NextRequest) {
     const cityTrim = (city || '').trim();
     const addressTrim = (address || '').trim();
 
-    if (!nameTrim) {
-      return NextResponse.json(
-        { error: 'Nom et prénom requis.' },
-        { status: 400 }
-      );
-    }
     if (!phoneTrim) {
       return NextResponse.json(
         { error: 'Téléphone requis.' },
@@ -139,11 +133,11 @@ export async function POST(request: NextRequest) {
     });
 
     const contentType = response.headers.get('content-type');
-    let data: any;
+    let data: { id?: number; numero?: string; message?: string; error?: string; commande?: { id?: number; numero?: string }; data?: { id?: number } };
     if (contentType?.includes('application/json')) {
       data = await response.json();
     } else {
-      const text = await response.text();
+      await response.text();
       return NextResponse.json(
         { error: 'Erreur serveur. Réessayez.' },
         { status: response.status || 500 }
@@ -165,9 +159,9 @@ export async function POST(request: NextRequest) {
       status: 'created',
       numero: numero ?? (orderId ? `#${orderId}` : undefined),
     } as QuickOrderResponse);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[quick-order]', error);
-    const msg = error.name === 'AbortError' ? 'Délai dépassé. Réessayez.' : 'Erreur inattendue. Réessayez.';
+    const msg = error instanceof Error && error.name === 'AbortError' ? 'Délai dépassé. Réessayez.' : 'Erreur inattendue. Réessayez.';
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
