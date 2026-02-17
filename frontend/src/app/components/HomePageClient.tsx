@@ -1,11 +1,11 @@
 'use client';
 
-import { useMemo, Suspense } from 'react';
+import { useMemo, Suspense, useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { HeroSlider } from '@/app/components/HeroSlider';
 
 import type { AccueilData, Product } from '@/types';
-import { getStorageUrl } from '@/services/api';
+import { getStorageUrl, getProductDetails } from '@/services/api';
 
 // Defer header and topbar - they're not critical for LCP but keep SSR for SEO
 const Header = dynamic(() => import('@/app/components/Header').then(mod => ({ default: mod.Header })), {
@@ -55,6 +55,12 @@ interface HomePageClientProps {
   slides: any[];
 }
 
+function getReviewCountFromProduct(p: { reviews?: { stars?: number; publier?: number }[]; avis?: { stars?: number; publier?: number }[] }): number {
+  const arr = p.reviews ?? p.avis ?? [];
+  if (!Array.isArray(arr)) return 0;
+  return arr.filter((r: any) => typeof r?.stars === 'number' && (r.publier === undefined || r.publier === 1)).length;
+}
+
 export function HomePageClient({ accueil, slides }: HomePageClientProps) {
   // Provide default empty structure if accueil is undefined/null
   const safeAccueil: AccueilData = accueil || {
@@ -66,37 +72,95 @@ export function HomePageClient({ accueil, slides }: HomePageClientProps) {
     best_sellers: [],
   };
 
-  // Memoize product transformations to prevent unnecessary recalculations
-  const transformProduct = useMemo(() => (product: Product) => ({
-    id: product.id,
-    name: product.designation_fr,
-    price: product.promo && product.promo_expiration_date ? product.promo : product.prix,
-    priceText: `${product.prix} DT`,
-    image: product.cover ? getStorageUrl(product.cover) : undefined,
-    category: product.sous_categorie?.designation_fr || '',
-    slug: product.slug,
-    designation_fr: product.designation_fr,
-    prix: product.prix,
-    promo: product.promo,
-    promo_expiration_date: product.promo_expiration_date,
-    cover: product.cover,
-    new_product: product.new_product,
-    best_seller: product.best_seller,
-    note: product.note,
-    reviews_count: (product as any).reviews_count ?? null,
-  }), []);
+  const [reviewCountsById, setReviewCountsById] = useState<Record<number, number>>({});
 
-  const newProducts = useMemo(() =>
-    (safeAccueil.new_product || []).slice(0, 8).map(transformProduct),
-    [safeAccueil.new_product, transformProduct]
+  useEffect(() => {
+    const products = [
+      ...(safeAccueil.new_product || []).slice(0, 8),
+      ...(safeAccueil.best_sellers || []).slice(0, 4),
+      ...(safeAccueil.packs || []).slice(0, 4),
+      ...(safeAccueil.ventes_flash || []).slice(0, 4),
+    ];
+    const bySlug = new Map<string, { id: number }>();
+    products.forEach((p: any) => {
+      if (p?.slug && p?.id) bySlug.set(p.slug, { id: p.id });
+    });
+    const slugs = Array.from(bySlug.keys());
+    if (slugs.length === 0) return;
+    Promise.all(slugs.map((slug) => getProductDetails(slug).catch(() => null)))
+      .then((results) => {
+        const next: Record<number, number> = {};
+        results.forEach((product) => {
+          if (product?.id) {
+            const count = getReviewCountFromProduct(product);
+            if (count > 0) next[product.id] = count;
+          }
+        });
+        setReviewCountsById((prev) => ({ ...prev, ...next }));
+      })
+      .catch(() => {});
+  }, [safeAccueil.new_product, safeAccueil.best_sellers, safeAccueil.packs, safeAccueil.ventes_flash]);
+
+  // Memoize product transformations to prevent unnecessary recalculations
+  const transformProduct = useMemo(() => (product: Product) => {
+    const p = product as any;
+    const reviewsArray = p.reviews ?? p.avis ?? [];
+    const countFromArray = Array.isArray(reviewsArray)
+      ? reviewsArray.filter((r: any) => typeof r?.stars === 'number' && (r.publier === undefined || r.publier === 1)).length
+      : 0;
+    const countFromObj =
+      reviewsArray && typeof reviewsArray === 'object' && !Array.isArray(reviewsArray)
+        ? Math.max(0, Number((reviewsArray as any).count ?? (reviewsArray as any).total ?? 0) || 0)
+        : 0;
+    const reviewCount =
+      p.reviews_count ?? p.review_count ?? p.avis_count ?? p.nombre_avis ?? p.nb_avis ?? p.total_reviews ?? p.reviewsCount;
+    let normalizedCount =
+      reviewCount != null && reviewCount !== ''
+        ? Math.max(0, Number(reviewCount) || 0)
+        : countFromArray > 0
+          ? countFromArray
+          : countFromObj;
+    return {
+      id: product.id,
+      name: product.designation_fr,
+      price: product.promo && product.promo_expiration_date ? product.promo : product.prix,
+      priceText: `${product.prix} DT`,
+      image: product.cover ? getStorageUrl(product.cover) : undefined,
+      category: product.sous_categorie?.designation_fr || '',
+      slug: product.slug,
+      designation_fr: product.designation_fr,
+      prix: product.prix,
+      promo: product.promo,
+      promo_expiration_date: product.promo_expiration_date,
+      cover: product.cover,
+      new_product: product.new_product,
+      best_seller: product.best_seller,
+      note: product.note,
+      review_count: normalizedCount > 0 ? normalizedCount : null,
+      reviews_count: normalizedCount > 0 ? normalizedCount : null,
+      reviews: Array.isArray(reviewsArray) && reviewsArray.length > 0 ? reviewsArray : undefined,
+    };
+  }, []);
+
+  const mergeReviewCounts = useMemo(() => (product: ReturnType<typeof transformProduct extends (p: Product) => infer R ? R : never>) => {
+    const fetchedCount = reviewCountsById[product.id];
+    if (fetchedCount != null && fetchedCount > 0) {
+      return { ...product, review_count: fetchedCount, reviews_count: fetchedCount };
+    }
+    return product;
+  }, [reviewCountsById]);
+
+  const newProducts = useMemo(
+    () => (safeAccueil.new_product || []).slice(0, 8).map(transformProduct).map(mergeReviewCounts),
+    [safeAccueil.new_product, transformProduct, mergeReviewCounts]
   );
-  const bestSellers = useMemo(() =>
-    (safeAccueil.best_sellers || []).slice(0, 4).map(transformProduct),
-    [safeAccueil.best_sellers, transformProduct]
+  const bestSellers = useMemo(
+    () => (safeAccueil.best_sellers || []).slice(0, 4).map(transformProduct).map(mergeReviewCounts),
+    [safeAccueil.best_sellers, transformProduct, mergeReviewCounts]
   );
-  const packs = useMemo(() =>
-    (safeAccueil.packs || []).slice(0, 4).map(transformProduct),
-    [safeAccueil.packs, transformProduct]
+  const packs = useMemo(
+    () => (safeAccueil.packs || []).slice(0, 4).map(transformProduct).map(mergeReviewCounts),
+    [safeAccueil.packs, transformProduct, mergeReviewCounts]
   );
   // Ventes flash: only products with promo + future promo_expiration_date (match backend logic)
   const flashSales = useMemo(() => {
@@ -107,8 +171,8 @@ export function HomePageClient({ accueil, slides }: HomePageClientProps) {
       const exp = new Date(p.promo_expiration_date);
       return !isNaN(exp.getTime()) && exp.getTime() > now.getTime();
     });
-    return valid.map(transformProduct);
-  }, [safeAccueil.ventes_flash, transformProduct]);
+    return valid.map(transformProduct).map(mergeReviewCounts);
+  }, [safeAccueil.ventes_flash, transformProduct, mergeReviewCounts]);
 
   return (
     <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-white dark:bg-gray-950">

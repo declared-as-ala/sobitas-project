@@ -15,7 +15,16 @@ interface FlashProduct {
   promo?: number;
   promo_expiration_date?: string;
   cover?: string;
+  /** API may send discount in % (prefer over computed) */
+  discount_percent?: number;
+  promo_percent?: number;
   [key: string]: unknown;
+}
+
+/** Clamp discount between 0 and 90 for display safety. */
+function clampDiscount(percent: number): number {
+  if (!Number.isFinite(percent) || percent < 0) return 0;
+  return Math.min(90, Math.round(percent));
 }
 
 interface VentesFlashSectionProps {
@@ -68,22 +77,27 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
     return () => clearInterval(interval);
   }, [earliestExpiration]);
 
-  // Calculate average discount for stats (must be before early return)
-  const averageDiscount = useMemo(() => {
+  // Max discount for "Jusqu'à X% de réduction" – compute from prix/promo for every product, then take MAX
+  const maxDiscount = useMemo(() => {
     if (products.length === 0) return 0;
-    const discounts = products
-      .map(p => {
-        const prix = p.prix ?? 0;
-        const promo = p.promo ?? 0;
-        if (prix > 0 && promo > 0 && promo < prix) {
-          return Math.round(((prix - promo) / prix) * 100);
-        }
-        return 0;
-      })
-      .filter(d => d > 0);
-    return discounts.length > 0 
-      ? Math.round(discounts.reduce((a, b) => a + b, 0) / discounts.length)
-      : 0;
+    const discounts: number[] = [];
+    for (const p of products) {
+      const rawOld = (p as any).prix ?? (p as any).price ?? (p as any).prix_ht;
+      const rawNew = (p as any).promo ?? (p as any).promo_prix;
+      const oldPrice = Number(rawOld) || 0;
+      const newPrice = Number(rawNew) || 0;
+      if (oldPrice <= 0 || newPrice <= 0 || newPrice >= oldPrice) continue;
+      const computed = Math.round(((oldPrice - newPrice) / oldPrice) * 100);
+      const apiPercent = (p as FlashProduct).discount_percent ?? (p as FlashProduct).promo_percent;
+      const fromApi = typeof apiPercent === 'number' && Number.isFinite(apiPercent) ? clampDiscount(apiPercent) : 0;
+      const percent = clampDiscount(Math.max(computed, fromApi));
+      if (percent > 0) discounts.push(percent);
+    }
+    const max = discounts.length > 0 ? Math.max(...discounts) : 0;
+    if (process.env.NODE_ENV === 'development' && products.length > 0) {
+      console.debug('[VentesFlash] maxDiscount:', max, 'products:', products.length, 'per-product %:', discounts.join(', '));
+    }
+    return max;
   }, [products]);
 
   // Early return after all hooks
@@ -223,7 +237,11 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
                 <div className="flex items-center gap-2 px-4 py-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl shadow-lg border border-red-200 dark:border-red-900">
                   <TrendingDown className="h-5 w-5 text-red-600 dark:text-red-400" />
                   <span className="text-sm sm:text-base font-bold text-gray-900 dark:text-white">
-                    Jusqu'à <span className="text-red-600 dark:text-red-400">{averageDiscount}%</span> de réduction
+                    {maxDiscount > 0 ? (
+                      <>Jusqu'à <span className="text-red-600 dark:text-red-400">{maxDiscount}%</span> de réduction</>
+                    ) : (
+                      <>Offres du moment</>
+                    )}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 px-4 py-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl shadow-lg border border-orange-200 dark:border-orange-900">

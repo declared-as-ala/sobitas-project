@@ -143,14 +143,27 @@ export const getAccueil = async (): Promise<AccueilData> => {
         best_sellers: [],
       };
     }
-    // Ensure all required fields exist with defaults
+    const ensureReviewCount = (products: any[]): any[] => {
+      if (!Array.isArray(products)) return products;
+      return products.map((p) => {
+        if (!p || typeof p !== 'object') return p;
+        const arr = p.reviews ?? p.avis;
+        const count = p.reviews_count ?? p.review_count ?? p.avis_count ?? p.nombre_avis;
+        if (count != null && count !== '') return p;
+        if (Array.isArray(arr) && arr.length > 0) {
+          const n = arr.filter((r: any) => typeof r?.stars === 'number' && (r.publier === undefined || r.publier === 1)).length;
+          return { ...p, reviews_count: n, review_count: n };
+        }
+        return p;
+      });
+    };
     return {
       categories: response.data.categories || [],
       last_articles: response.data.last_articles || [],
-      ventes_flash: response.data.ventes_flash || [],
-      new_product: response.data.new_product || [],
-      packs: response.data.packs || [],
-      best_sellers: response.data.best_sellers || [],
+      ventes_flash: ensureReviewCount(response.data.ventes_flash || []),
+      new_product: ensureReviewCount(response.data.new_product || []),
+      packs: ensureReviewCount(response.data.packs || []),
+      best_sellers: ensureReviewCount(response.data.best_sellers || []),
     };
   } catch (error) {
     console.error('[getAccueil] API error:', error);
@@ -309,6 +322,10 @@ export const getProductDetails = async (slug: string, cacheBust?: boolean): Prom
   try {
     const data = await apiFetch<Product>(path);
     if (!data || !(data as any).id) throw new ApiError('Product not found', 404);
+    const raw = data as Product & { avis?: Review[] };
+    if (Array.isArray(raw.avis) && !Array.isArray(raw.reviews)) {
+      return { ...raw, reviews: raw.avis } as Product;
+    }
     return data;
   } catch (e) {
     if (e instanceof ApiError && e.status === 404) {

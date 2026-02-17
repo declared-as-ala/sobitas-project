@@ -4,7 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { motion } from 'motion/react';
-import { ShoppingCart, Star } from 'lucide-react';
+import { ShoppingCart } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
 import type { Product as ApiProduct } from '@/types';
@@ -61,15 +61,6 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
         : 0;
     const isNew = product.new_product === 1;
     const isBestSeller = product.best_seller === 1;
-    const rating = product.note || 0;
-    const reviewsCountValue = (product as any).reviews_count;
-    const reviewsArrayCount = ((product as any).reviews?.filter((r: any) => r.publier === 1) || []).length;
-    let reviewCount = 0;
-    if (reviewsCountValue != null && reviewsCountValue !== undefined) {
-      reviewCount = Number(reviewsCountValue) || 0;
-    } else if (reviewsArrayCount > 0) {
-      reviewCount = reviewsArrayCount;
-    }
     const isInStock = (product as any).rupture === 1 || (product as any).rupture === undefined;
     return {
       name,
@@ -80,8 +71,6 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
       discount,
       isNew,
       isBestSeller,
-      rating,
-      reviewCount,
       isInStock,
     };
   }, [product]);
@@ -229,38 +218,6 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
           <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mt-1 mb-2">
             {productData.description}
           </p>
-        )}
-
-        {!isCompact && (productData.rating > 0 || productData.reviewCount > 0) && (
-          <div className="flex items-center gap-2 mb-2">
-            {productData.rating > 0 && (
-              <div className="flex gap-0.5" aria-label={`Note: ${productData.rating.toFixed(1)} sur 5`}>
-                {[...Array(5)].map((_, i) => {
-                  // Fill star if rating is >= (i+1) - for 5-star rating, all 5 stars will be filled
-                  const isFilled = productData.rating >= (i + 1);
-                  return (
-                    <Star
-                      key={i}
-                      className={`size-3.5 sm:size-4 ${isFilled ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 text-gray-200 dark:fill-gray-600 dark:text-gray-600'}`}
-                      aria-hidden="true"
-                    />
-                  );
-                })}
-              </div>
-            )}
-            {productData.reviewCount > 0 ? (
-              <LinkWithLoading
-                href={`/shop/${encodeURIComponent(productData.slug || String(product.id))}#reviews`}
-                className="text-[11px] sm:text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline transition-colors"
-              >
-                ({productData.reviewCount} avis client{productData.reviewCount > 1 ? 's' : ''})
-              </LinkWithLoading>
-            ) : productData.rating > 0 ? (
-              <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400">
-                (Aucun avis)
-              </span>
-            ) : null}
-          </div>
         )}
 
         {/* Price – promo + old price only when hasPromo (active promo, not expired) */}

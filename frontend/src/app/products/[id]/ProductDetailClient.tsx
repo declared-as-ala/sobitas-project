@@ -459,64 +459,14 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 </div>
               </motion.div>
 
-              {/* Product Title - Directly below image */}
+              {/* 1. Title (H1) only */}
               <div className="min-w-0 px-1">
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2 leading-tight break-words">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white leading-tight break-words">
                   {product.designation_fr}
                 </h1>
-                {metaDescription && (
-                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-snug">
-                    {metaDescription}
-                  </p>
-                )}
               </div>
 
-              {/* Meta Information Section - Category, Code, Stock Status, Discount Badge */}
-              <div className="space-y-2.5 sm:space-y-3 px-1">
-                {/* Category – internal link with keyword anchor for SEO */}
-                {product.sous_categorie?.slug && (
-                  <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400">
-                    <Link
-                      href={`/category/${product.sous_categorie.slug}`}
-                      className="text-red-600 dark:text-red-400 hover:underline"
-                    >
-                      {product.sous_categorie.designation_fr}
-                    </Link>
-                  </p>
-                )}
-                
-                {/* Product Code */}
-                {product.code_product && (
-                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-500">
-                    Code produit: {product.code_product}
-                  </p>
-                )}
-
-                {/* Stock Status and Discount Badge - Compact */}
-                <div className="flex items-center gap-2 sm:gap-3 flex-wrap pt-1">
-                  <Badge variant="outline" className="bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800 text-xs sm:text-sm px-2.5 py-1">
-                    <CheckCircle2 className="h-3 w-3 mr-1" />
-                    {product.rupture === 1 ? 'En Stock' : 'Rupture de stock'}
-                  </Badge>
-                  {discount > 0 && (
-                    <Badge className="bg-red-600 text-white text-xs sm:text-sm px-2.5 py-1">
-                      -{discount}% OFF
-                    </Badge>
-                  )}
-                  {product.new_product === 1 && (
-                    <Badge className="bg-blue-600 text-white text-xs sm:text-sm px-2.5 py-1">
-                      Nouveau
-                    </Badge>
-                  )}
-                  {product.best_seller === 1 && (
-                    <Badge className="bg-yellow-600 text-white text-xs sm:text-sm px-2.5 py-1">
-                      Top Vendu
-                    </Badge>
-                  )}
-                </div>
-              </div>
-
-              {/* Rating - Mobile */}
+              {/* 2. Rating - stars + value + count */}
               {rating > 0 && (
                 <div className="flex items-center gap-2 px-1">
                   <div className="flex items-center gap-1">
@@ -536,8 +486,8 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 </div>
               )}
 
-              {/* Price - Mobile */}
-              <div className="py-4 sm:py-5 border-y border-gray-200 dark:border-gray-800 px-1">
+              {/* 3. Price - current + old + savings */}
+              <div className="py-3 sm:py-4 border-y border-gray-200 dark:border-gray-800 px-1">
                 <div className="flex flex-wrap items-baseline gap-2 sm:gap-3">
                   <span className="text-3xl sm:text-4xl font-bold text-red-600 dark:text-red-400">
                     {displayPrice} DT
@@ -553,6 +503,44 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     Vous économisez {oldPrice - displayPrice} DT
                   </p>
                 )}
+              </div>
+
+              {/* 4. Meta Description - short SEO snippet */}
+              {metaDescription && (
+                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed px-1 line-clamp-3">
+                  {metaDescription}
+                </p>
+              )}
+
+              {/* Category, Code, Stock/Promo badges - lighter metadata */}
+              <div className="space-y-2 px-1">
+                {(product.sous_categorie?.slug || product.code_product) && (
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
+                    {product.sous_categorie?.slug && (
+                      <Link href={`/category/${product.sous_categorie.slug}`} className="text-red-600 dark:text-red-400 hover:underline">
+                        {product.sous_categorie.designation_fr}
+                      </Link>
+                    )}
+                    {product.code_product && (
+                      <span>Code: {product.code_product}</span>
+                    )}
+                  </div>
+                )}
+                <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                  <Badge variant="outline" className="bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800 text-xs sm:text-sm px-2.5 py-1">
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    {product.rupture === 1 ? 'En Stock' : 'Rupture de stock'}
+                  </Badge>
+                  {discount > 0 && (
+                    <Badge className="bg-red-600 text-white text-xs sm:text-sm px-2.5 py-1">-{discount}% OFF</Badge>
+                  )}
+                  {product.new_product === 1 && (
+                    <Badge className="bg-blue-600 text-white text-xs sm:text-sm px-2.5 py-1">Nouveau</Badge>
+                  )}
+                  {product.best_seller === 1 && (
+                    <Badge className="bg-yellow-600 text-white text-xs sm:text-sm px-2.5 py-1">Top Vendu</Badge>
+                  )}
+                </div>
               </div>
 
               {/* Aromes (Flavors) - Mobile */}
@@ -668,13 +656,13 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
               </div>
             </div>
 
-            {/* Desktop Layout: Info only (image in left column) */}
+            {/* Desktop Layout: Info only (image in left column). Order: Title → Rating → Price → Meta Description */}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="hidden lg:block space-y-4 min-w-0"
+              className="hidden lg:block space-y-3 min-w-0"
             >
-                {/* 1. Badges (stock, promo) */}
+                {/* Badges (stock, promo) */}
                 <div className="flex items-center gap-2 flex-wrap">
                   <Badge variant="outline" className="bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800">
                     <CheckCircle2 className="h-3 w-3 mr-1" />
@@ -685,28 +673,12 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   {product.best_seller === 1 && <Badge className="bg-yellow-600 text-white">Top Vendu</Badge>}
                 </div>
 
-                {/* 2. Title — wide, max 2–3 lines */}
-                <div className="min-w-0">
-                  <h1 className="text-2xl lg:text-3xl xl:text-4xl font-bold text-gray-900 dark:text-white leading-snug line-clamp-3 break-words">
-                    {product.designation_fr}
-                  </h1>
-                  {metaDescription && (
-                    <p className="text-sm lg:text-base text-gray-600 dark:text-gray-400 mt-1 leading-snug">
-                      {metaDescription}
-                    </p>
-                  )}
-                  {product.brand && <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{product.brand.designation_fr}</p>}
-                  {product.sous_categorie?.slug && (
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      <Link href={`/category/${product.sous_categorie!.slug}`} className="text-red-600 dark:text-red-400 hover:underline">
-                        {product.sous_categorie.designation_fr}
-                      </Link>
-                    </p>
-                  )}
-                  {product.code_product && <p className="text-xs text-gray-500 mt-0.5">Code: {product.code_product}</p>}
-                </div>
+                {/* 1. Title (H1) only */}
+                <h1 className="text-2xl lg:text-3xl xl:text-4xl font-bold text-gray-900 dark:text-white leading-snug line-clamp-3 break-words">
+                  {product.designation_fr}
+                </h1>
 
-                {/* 3. Rating */}
+                {/* 2. Rating */}
                 {rating > 0 && (
                   <div className="flex items-center gap-2">
                     <div className="flex items-center gap-0.5">
@@ -718,13 +690,31 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   </div>
                 )}
 
-                {/* 4. Price — above the fold */}
+                {/* 3. Price — prominent */}
                 <div className="py-3 border-y border-gray-200 dark:border-gray-800">
                   <div className="flex flex-wrap items-baseline gap-3">
                     <span className="text-3xl lg:text-4xl font-bold text-red-600 dark:text-red-400">{displayPrice} DT</span>
                     {oldPrice && <span className="text-xl text-gray-400 line-through">{oldPrice} DT</span>}
                   </div>
                   {oldPrice && <p className="text-sm text-green-600 dark:text-green-400 mt-1">Vous économisez {oldPrice - displayPrice} DT</p>}
+                </div>
+
+                {/* 4. Meta Description - short SEO snippet */}
+                {metaDescription && (
+                  <p className="text-sm lg:text-base text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-3">
+                    {metaDescription}
+                  </p>
+                )}
+
+                {/* Category, Code, Brand - lighter metadata */}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
+                  {product.brand && <span>{product.brand.designation_fr}</span>}
+                  {product.sous_categorie?.slug && (
+                    <Link href={`/category/${product.sous_categorie!.slug}`} className="text-red-600 dark:text-red-400 hover:underline">
+                      {product.sous_categorie.designation_fr}
+                    </Link>
+                  )}
+                  {product.code_product && <span>Code: {product.code_product}</span>}
                 </div>
 
                 {/* 5. Quantity + CTA — visible without scroll */}
@@ -807,84 +797,84 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   </div>
                 </div>
               </motion.div>
+          </div>
+        </div>
 
-            {/* Product Details Tabs */}
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="w-full min-w-0">
-              {(() => {
-                // Check if nutrition_values exists and has content (handle null, undefined, empty string)
-                const hasNutritionContent = product.nutrition_values != null && 
-                  String(product.nutrition_values).trim() !== '' && 
-                  String(product.nutrition_values).trim() !== '<p></p>' &&
-                  String(product.nutrition_values).trim() !== '<p><br></p>';
-                // Check if questions exists and has content
-                const hasQuestions = product.questions != null && 
-                  String(product.questions).trim() !== '' && 
-                  String(product.questions).trim() !== '<p></p>' &&
-                  String(product.questions).trim() !== '<p><br></p>';
-                // Always show nutrition tab, so count is: description (1) + nutrition (1) + questions (if exists)
-                const tabCount = hasQuestions ? 3 : 2;
-                
-                return (
-              <Tabs defaultValue="description" className="w-full">
-                    <TabsList className={`grid w-full mb-4 sm:mb-6 bg-gray-100 dark:bg-gray-900 rounded-lg sm:rounded-xl p-1 gap-1 ${tabCount === 3 ? 'grid-cols-3' : tabCount === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                      <TabsTrigger value="description" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2">
-                        {product.zone1 || 'Description'}
+        {/* Description / Nutrition / Questions — full width, wider container, less scrolling */}
+        <section className="mx-auto w-full max-w-7xl px-4 md:px-6 pt-4 sm:pt-6 lg:pt-8 pb-6">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="w-full">
+            {(() => {
+              const hasNutritionContent = product.nutrition_values != null &&
+                String(product.nutrition_values).trim() !== '' &&
+                String(product.nutrition_values).trim() !== '<p></p>' &&
+                String(product.nutrition_values).trim() !== '<p><br></p>';
+              const hasQuestions = product.questions != null &&
+                String(product.questions).trim() !== '' &&
+                String(product.questions).trim() !== '<p></p>' &&
+                String(product.questions).trim() !== '<p><br></p>';
+              const tabCount = hasQuestions ? 3 : 2;
+
+              return (
+                <Tabs defaultValue="description" className="w-full">
+                  <TabsList className={`grid w-full mb-3 sm:mb-4 bg-gray-100 dark:bg-gray-900 rounded-lg sm:rounded-xl p-1 gap-1 ${tabCount === 3 ? 'grid-cols-3' : tabCount === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                    <TabsTrigger value="description" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2">
+                      {product.zone1 || 'Description'}
+                    </TabsTrigger>
+                    <TabsTrigger value="nutrition" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2">
+                      {product.zone3 || 'Valeurs Nutritionnelles'}
+                    </TabsTrigger>
+                    {hasQuestions && (
+                      <TabsTrigger value="questions" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2">
+                        {product.zone4 || 'Questions'}
                       </TabsTrigger>
-                      <TabsTrigger value="nutrition" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2">
-                        {product.zone3 || 'Valeurs Nutritionnelles'}
-                      </TabsTrigger>
-                      {hasQuestions && (
-                        <TabsTrigger value="questions" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2">
-                          {product.zone4 || 'Questions'}
-                        </TabsTrigger>
-                      )}
-                </TabsList>
+                    )}
+                  </TabsList>
 
-                <TabsContent value="description" className="bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 shadow-lg border border-gray-200 dark:border-gray-800 mt-0">
-                  <h3 className="text-lg sm:text-xl md:text-2xl font-bold mb-3 sm:mb-4">
-                    {product.zone1 || 'Description du produit'}
-                  </h3>
-                  <div
-                    className={`text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-sm max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-p:text-gray-600 prose-p:dark:text-gray-400 prose-strong:text-gray-900 prose-strong:dark:text-white prose-img:rounded-lg prose-img:shadow-md overflow-hidden transition-[max-height] duration-300 ${descExpanded ? 'max-h-[5000px]' : 'max-h-60'}`}
-                    dangerouslySetInnerHTML={{ __html: product.description_fr || product.description_cover || 'Aucune description disponible.' }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setDescExpanded(!descExpanded)}
-                    className="text-sm font-medium text-red-600 dark:text-red-400 hover:underline mt-3"
-                  >
-                    {descExpanded ? 'Voir moins' : 'Voir plus'}
-                  </button>
-                </TabsContent>
-
-                <TabsContent value="nutrition" className="bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 shadow-lg border border-gray-200 dark:border-gray-800 mt-0">
-                  <h3 className="text-lg sm:text-xl md:text-2xl font-bold mb-4 sm:mb-6">
-                    {product.zone3 || 'Valeurs Nutritionnelles'}
-                  </h3>
-                  {hasNutritionContent ? (
+                  <TabsContent value="description" className="bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl p-4 sm:p-5 lg:p-6 shadow-lg border border-gray-200 dark:border-gray-800 mt-0">
+                    <h3 className="text-lg sm:text-xl font-bold mb-3 text-gray-900 dark:text-white">
+                      {product.zone1 || 'Description du produit'}
+                    </h3>
                     <div
-                      className="text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-sm max-w-none prose-img:rounded-lg prose-img:shadow-md prose-img:w-full prose-img:h-auto"
-                      dangerouslySetInnerHTML={{ __html: product.nutrition_values || '' }}
+                      className={`text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-base max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-p:text-gray-600 prose-p:dark:text-gray-400 prose-p:leading-relaxed prose-strong:text-gray-900 prose-strong:dark:text-white prose-img:rounded-lg prose-img:shadow-md overflow-hidden transition-[max-height] duration-300 ${descExpanded ? 'max-h-[5000px]' : 'max-h-60'}`}
+                      dangerouslySetInnerHTML={{ __html: product.description_fr || product.description_cover || 'Aucune description disponible.' }}
                     />
-                  ) : (
-                    <div className="text-center py-8 sm:py-12">
-                      <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base">
-                        Les valeurs nutritionnelles ne sont pas disponibles pour ce produit.
-                      </p>
-                    </div>
-                  )}
-                </TabsContent>
+                    <button
+                      type="button"
+                      onClick={() => setDescExpanded(!descExpanded)}
+                      className="text-sm font-medium text-red-600 dark:text-red-400 hover:underline mt-3"
+                    >
+                      {descExpanded ? 'Voir moins' : 'Lire plus'}
+                    </button>
+                  </TabsContent>
 
-                <TabsContent value="questions" className="bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 shadow-lg border border-gray-200 dark:border-gray-800 mt-0">
-                  <h3 className="text-lg sm:text-xl md:text-2xl font-bold mb-3 sm:mb-4">
-                    {product.zone4 || 'Questions Fréquentes'}
-                  </h3>
-                  {product.questions && product.questions.trim() !== '' ? (
-                    <div
-                      className="text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-sm max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-headings:mb-2 prose-headings:mt-4 prose-p:text-gray-600 prose-p:dark:text-gray-400 prose-p:my-2 prose-strong:text-gray-900 prose-strong:dark:text-white"
-                      dangerouslySetInnerHTML={{ __html: product.questions }}
-                    />
-                  ) : faqs.length > 0 ? (
+                  <TabsContent value="nutrition" className="bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl p-4 sm:p-5 lg:p-6 shadow-lg border border-gray-200 dark:border-gray-800 mt-0">
+                    <h3 className="text-lg sm:text-xl font-bold mb-3 text-gray-900 dark:text-white">
+                      {product.zone3 || 'Valeurs Nutritionnelles'}
+                    </h3>
+                    {hasNutritionContent ? (
+                      <div
+                        className="text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-base max-w-none prose-p:leading-relaxed prose-img:rounded-lg prose-img:shadow-md prose-img:w-full prose-img:h-auto"
+                        dangerouslySetInnerHTML={{ __html: product.nutrition_values || '' }}
+                      />
+                    ) : (
+                      <div className="text-center py-6 sm:py-8">
+                        <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base">
+                          Les valeurs nutritionnelles ne sont pas disponibles pour ce produit.
+                        </p>
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="questions" className="bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl p-4 sm:p-5 lg:p-6 shadow-lg border border-gray-200 dark:border-gray-800 mt-0">
+                    <h3 className="text-lg sm:text-xl font-bold mb-3 text-gray-900 dark:text-white">
+                      {product.zone4 || 'Questions Fréquentes'}
+                    </h3>
+                    {product.questions && product.questions.trim() !== '' ? (
+                      <div
+                        className="text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-base max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-headings:mb-2 prose-headings:mt-4 prose-p:text-gray-600 prose-p:dark:text-gray-400 prose-p:leading-relaxed prose-p:my-2 prose-strong:text-gray-900 prose-strong:dark:text-white"
+                        dangerouslySetInnerHTML={{ __html: product.questions }}
+                      />
+                    ) : faqs.length > 0 ? (
                     <div className="space-y-4">
                       {faqs.map((faq) => (
                         <div key={faq.id} className="border-b border-gray-100 dark:border-gray-800 pb-4 last:border-0 last:pb-0">
@@ -1079,8 +1069,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
               )}
             </div>
           </motion.div>
-          </div>
-        </div>
+        </section>
 
         {/* Similar Products */}
         {similarProducts.length > 0 && (

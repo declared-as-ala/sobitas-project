@@ -176,10 +176,20 @@ async function main() {
       console.log('FAIL: sitemap.xml returned', sitemapRes.status);
       failed++;
     } else {
+      const contentType = (sitemapRes.headers.get('content-type') || '').toLowerCase();
       const xml = await sitemapRes.text();
       const urlCount = (xml.match(/<url>/gi) || []).length;
-      report.sitemap = true;
-      console.log('OK: sitemap.xml 200, URLs:', urlCount);
+      const isXml = /^\s*<\?xml/i.test(xml) && !/<html/i.test(xml);
+      if (!contentType.includes('xml')) {
+        console.log('FAIL: sitemap.xml Content-Type is not XML:', contentType);
+        failed++;
+      } else if (!isXml) {
+        console.log('FAIL: sitemap.xml body is not XML (starts with <?xml, no <html)');
+        failed++;
+      } else {
+        report.sitemap = true;
+        console.log('OK: sitemap.xml 200, Content-Type: xml, URLs:', urlCount);
+      }
     }
   } catch (e) {
     console.log('FAIL: sitemap.xml -', e.message);

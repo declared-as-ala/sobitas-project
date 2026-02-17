@@ -110,8 +110,14 @@ export default async function ShopProductPage({ params, searchParams }: PageProp
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
-  const productSchema = buildProductJsonLd(safeProduct, baseUrl);
-  validateStructuredData(productSchema, 'Product');
+  const canonicalUrl = buildCanonicalUrl(`/shop/${cleanSlug}`);
+  const productSchema = buildProductJsonLd(safeProduct, canonicalUrl);
+  if (productSchema) {
+    validateStructuredData(productSchema, 'Product');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Product JSON-LD]', JSON.stringify(productSchema, null, 2));
+    }
+  }
 
   const breadcrumbItems = [
     { name: 'Accueil', url: '/' },
@@ -139,8 +145,10 @@ export default async function ShopProductPage({ params, searchParams }: PageProp
 
   return (
     <>
-      {/* Single Product JSON-LD per page (Google Rich Results – Extraits de produits) */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }} />
+      {/* Single Product JSON-LD per page (Google Rich Results – Product snippets). Only one script when schema is valid. */}
+      {productSchema != null && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }} />
+      )}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageSchema) }} />
       {faqSchema && (

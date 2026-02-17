@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://sobitas.tn';
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
 
 /**
  * Serves a standards-compliant robots.txt (User-agent, Allow, Disallow, Sitemap, Host only).

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import Script from "next/script";
 import { Suspense } from "react";
 import "./globals.css";
 import { ThemeProvider } from "@/app/components/ThemeProvider";
@@ -131,19 +130,18 @@ export default async function RootLayout({
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }} />
       </head>
       <body className={inter.className}>
-        {/* Google tag (gtag.js) */}
-        <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-0J0J27JZ7D"
-          strategy="afterInteractive"
+        {/* Google tag (gtag.js) — native script to avoid Script component runtime in server layout */}
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-0J0J27JZ7D" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-0J0J27JZ7D');
+            `,
+          }}
         />
-        <Script id="gtag-init" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-0J0J27JZ7D');
-          `}
-        </Script>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <LoadingProvider>
             <AuthProvider>

@@ -4,7 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { motion } from 'motion/react';
-import { ShoppingCart, Star } from 'lucide-react';
+import { ShoppingCart } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { getStorageUrl } from '@/services/api';
 import { useCart } from '@/app/contexts/CartContext';
@@ -51,15 +51,6 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
       priceDisplay.hasPromo && priceDisplay.oldPrice != null && priceDisplay.oldPrice > 0
         ? Math.round(((priceDisplay.oldPrice - priceDisplay.finalPrice) / priceDisplay.oldPrice) * 100)
         : 0;
-    const rating = product.note || 0;
-    const reviewsCountValue = product.reviews_count;
-    const reviewsArrayCount = (product.reviews?.filter((r) => r.publier === 1) || []).length;
-    let reviewCount = 0;
-    if (reviewsCountValue != null && reviewsCountValue !== undefined) {
-      reviewCount = Number(reviewsCountValue) || 0;
-    } else if (reviewsArrayCount > 0) {
-      reviewCount = reviewsArrayCount;
-    }
     const isInStock = (product as any).rupture === 1 || (product as any).rupture === undefined;
     return {
       name,
@@ -67,8 +58,6 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
       image,
       priceDisplay,
       discount,
-      rating,
-      reviewCount,
       isInStock,
     };
   }, [product]);
@@ -218,54 +207,6 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
             {productData.name}
           </h3>
         </LinkWithLoading>
-
-        {/* Ratings & Reviews */}
-        <div className="flex items-center gap-1.5 sm:gap-2 mb-2.5 sm:mb-3 flex-wrap">
-          {productData.rating > 0 ? (
-            <div className="flex gap-0.5 items-center" aria-label={`Note: ${productData.rating.toFixed(1)} sur 5`}>
-              {[...Array(5)].map((_, i) => {
-                const isFilled = productData.rating >= (i + 1);
-                return (
-                  <Star
-                    key={i}
-                    className={`size-3.5 sm:size-4 flex-shrink-0 ${isFilled ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 text-gray-200 dark:fill-gray-600 dark:text-gray-600'}`}
-                    aria-hidden="true"
-                  />
-                );
-              })}
-            </div>
-          ) : (
-            <div className="flex gap-0.5 items-center flex-shrink-0" aria-label="Aucune note">
-              {[...Array(5)].map((_, i) => (
-                <Star
-                  key={i}
-                  className="size-3.5 sm:size-4 fill-gray-200 text-gray-200 dark:fill-gray-600 dark:text-gray-600"
-                  aria-hidden="true"
-                />
-              ))}
-            </div>
-          )}
-          
-          {productData.reviewCount > 0 ? (
-            <LinkWithLoading
-              href={`/shop/${encodeURIComponent(productData.slug || String(product.id))}#reviews`}
-              className="text-[10px] sm:text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline transition-colors whitespace-nowrap"
-            >
-              ({productData.reviewCount} avis{productData.reviewCount > 1 ? 's' : ''})
-            </LinkWithLoading>
-          ) : (
-            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 leading-tight">
-              {productData.rating > 0 ? (
-                <span className="inline-flex items-center gap-1">
-                  <span className="whitespace-nowrap">Soyez le premier à noter</span>
-                  <span className="text-amber-400">⭐</span>
-                </span>
-              ) : (
-                'Nouveau produit'
-              )}
-            </span>
-          )}
-        </div>
 
         {/* Pricing – promo + old price only when hasPromo (active promo, not expired) */}
         <div className="flex flex-wrap items-baseline gap-2 mb-3 sm:mb-4 mt-auto">

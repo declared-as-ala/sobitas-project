@@ -6,8 +6,7 @@
 
 import { getStorageUrl } from '@/services/api';
 import { getEffectivePrice } from '@/util/productPrice';
-import { buildCanonicalUrl } from '@/util/canonical';
-import type { Product, FAQ } from '@/types';
+import type { Product, FAQ, Review } from '@/types';
 
 const RICH_RESULTS_TEST = 'https://search.google.com/test/rich-results';
 
@@ -21,19 +20,64 @@ function stripHtml(html: string, maxLen: number = 500): string {
 }
 
 /**
- * Builds Product JSON-LD for Google Rich Results (Extraits de produits).
- * Always includes: @context, @type, name, image (array), description, sku, offers (url, priceCurrency, price, availability, itemCondition).
- * Uses canonical URL for offers.url. Price = effective selling price (promo if active). No aggregateRating unless we have real reviews.
+ * Normalize price for schema.org: numbers only. Converts comma to dot, strips currency symbols/text/spaces.
+ * Returns a number suitable for offers.price, or null if unparseable.
  */
-export function buildProductSchema(product: Product, baseUrl: string): object {
-  const slug = (product.slug || '').trim() || String(product.id);
-  const canonicalPath = `/shop/${slug}`;
-  const productUrl = buildCanonicalUrl(canonicalPath);
+function parsePriceForSchema(value: unknown): number | null {
+  if (value == null) return null;
+  if (typeof value === 'number' && Number.isFinite(value) && value >= 0) return value;
+  const s = String(value).replace(/,/g, '.').replace(/[^\d.-]/g, '').trim();
+  if (!s) return null;
+  const n = parseFloat(s);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
 
-  const imageUrls: string[] = [product.cover, (product as { alt_cover?: string }).alt_cover]
-    .filter(Boolean) as string[];
+/** Schema price: effective selling price (promo if active), normalized. Fallback: product.prix then 0. Never null. */
+function getSchemaPrice(product: Product): number {
+  const effective = getEffectivePrice(product);
+  let num = parsePriceForSchema(effective);
+  if (num === null) num = parsePriceForSchema((product as { prix?: number }).prix);
+  if (num === null) num = 0;
+  return num;
+}
+
+/** priceValidUntil: today + 1 year in YYYY-MM-DD (fixes GSC warning). */
+function getPriceValidUntil(): string {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+/** True if string looks like a storage path (e.g. produits/.../file.webp), not alt text or description. */
+function looksLikeImagePath(path: string): boolean {
+  const s = path.trim();
+  if (!s || s.length > 200) return false;
+  if (/\s{2,}/.test(s) || s.includes(' – ') || s.includes(' pour ') || s.includes(' avec ')) return false;
+  return /\.(webp|jpg|jpeg|png|gif|avif)(\?|$)/i.test(s) || /^produits\/\S+\.\w+$/i.test(s);
+}
+
+/**
+ * Builds Product JSON-LD for Google Rich Results (Product snippets).
+ * Use buildProductJsonLd(product, canonicalUrl) so offers.url matches rel=canonical.
+ * Always includes valid offers with price (normalized), priceValidUntil, availability, itemCondition.
+ * Only adds aggregateRating/review when we have real data; author is always Person type.
+ */
+export function buildProductSchema(product: Product, baseUrl: string): object | null {
+  const base = baseUrl.replace(/\/$/, '');
+  const slug = (product.slug || '').trim() || String(product.id);
+  const canonicalUrl = `${base}/shop/${slug}`;
+  return buildProductJsonLd(product, canonicalUrl);
+}
+
+/**
+ * Builds Product JSON-LD. Pass canonicalUrl so it matches rel=canonical (one script per product page).
+ * Price: valid format only (number); priceValidUntil = today + 1 year. No aggregateRating/review unless real data.
+ */
+export function buildProductJsonLd(product: Product, canonicalUrl: string): object | null {
+  const rawImages = [product.cover, (product as { alt_cover?: string }).alt_cover].filter(Boolean) as string[];
+  const imageUrls = rawImages.filter((path) => looksLikeImagePath(path));
   const imageArray = imageUrls.length > 0 ? imageUrls.map((path) => getStorageUrl(path)) : [];
-  const price = getEffectivePrice(product);
+  const price = getSchemaPrice(product);
   const inStock = (product as { rupture?: number }).rupture !== 1;
   const description = stripHtml(
     product.description_cover || product.description_fr || '',
@@ -42,6 +86,13 @@ export function buildProductSchema(product: Product, baseUrl: string): object {
   const sku = (product.code_product != null && String(product.code_product).trim() !== '')
     ? String(product.code_product).trim()
     : String(product.id);
+
+  if (!Number.isFinite(price) || price < 0) {
+    if (process.env.NODE_ENV === 'development' && typeof window === 'undefined') {
+      console.warn('[structured-data] Product', product.id, 'has no valid price; skipping Product JSON-LD');
+    }
+    return null;
+  }
 
   const schema: Record<string, unknown> = {
     '@context': 'https://schema.org',
@@ -55,49 +106,77 @@ export function buildProductSchema(product: Product, baseUrl: string): object {
       : undefined,
     offers: {
       '@type': 'Offer',
-      url: productUrl,
+      url: canonicalUrl,
       priceCurrency: 'TND',
-      price: Number.isFinite(price) ? price : 0,
+      price: Math.round(price * 100) / 100,
       availability: inStock
         ? 'https://schema.org/InStock'
         : 'https://schema.org/OutOfStock',
       itemCondition: 'https://schema.org/NewCondition',
+      priceValidUntil: getPriceValidUntil(),
       seller: { '@type': 'Organization', name: 'SOBITAS' },
     },
   };
 
-  const reviews = (product.reviews || []).filter((r) => r.publier === 1);
+  const reviewsRaw = product.reviews ?? (product as { avis?: Review[] }).avis ?? [];
+  const reviews = (reviewsRaw as Review[]).filter(
+    (r) => typeof r.stars === 'number' && (r.publier === undefined || r.publier === 1)
+  );
+  const apiReviewCount = (product as { review_count?: number; reviews_count?: number }).review_count
+    ?? (product as { review_count?: number; reviews_count?: number }).reviews_count
+    ?? reviews.length;
+
   if (reviews.length > 0) {
     const sum = reviews.reduce((s, r) => s + r.stars, 0);
-    const ratingValue = sum / reviews.length;
+    let ratingValue = sum / reviews.length;
+    ratingValue = Math.max(1, Math.min(5, Math.round(ratingValue * 10) / 10));
+    const ratingCount = Math.max(1, Math.floor(reviews.length));
     schema.aggregateRating = {
       '@type': 'AggregateRating',
-      ratingValue: Math.round(ratingValue * 10) / 10,
+      ratingValue,
       bestRating: 5,
       worstRating: 1,
-      ratingCount: reviews.length,
-      reviewCount: reviews.length,
+      ratingCount,
+      reviewCount: ratingCount,
     };
     const reviewSnippets = reviews
       .slice(0, 5)
-      .filter((r) => r.comment && r.comment.trim())
-      .map((r) => ({
-        '@type': 'Review' as const,
-        author: { '@type': 'Person', name: (r.user?.name || 'Client').trim() || 'Client' },
-        datePublished: r.created_at || undefined,
-        reviewRating: { '@type': 'Rating', ratingValue: r.stars, bestRating: 5, worstRating: 1 },
-        reviewBody: (r.comment || '').trim().slice(0, 1000),
-      }));
+      .filter((r) => r.comment && String(r.comment).trim())
+      .map((r) => {
+        const authorName = (r.user?.name && String(r.user.name).trim()) || 'Client';
+        const ratingVal = typeof r.stars === 'number' ? Math.max(1, Math.min(5, r.stars)) : 5;
+        return {
+          '@type': 'Review' as const,
+          author: { '@type': 'Person' as const, name: authorName },
+          datePublished: r.created_at || undefined,
+          reviewRating: { '@type': 'Rating' as const, ratingValue: ratingVal, bestRating: 5, worstRating: 1 },
+          reviewBody: String(r.comment).trim().slice(0, 1000),
+        };
+      });
     if (reviewSnippets.length > 0) {
       schema.review = reviewSnippets;
     }
+  } else if (
+    typeof product.note === 'number' &&
+    Number.isFinite(product.note) &&
+    product.note >= 1 &&
+    product.note <= 5 &&
+    apiReviewCount >= 1
+  ) {
+    const ratingValue = Math.max(1, Math.min(5, Math.round(product.note * 10) / 10));
+    const ratingCount = Math.max(1, Math.floor(Number(apiReviewCount)));
+    schema.aggregateRating = {
+      '@type': 'AggregateRating',
+      ratingValue,
+      bestRating: 5,
+      worstRating: 1,
+      ratingCount,
+      reviewCount: ratingCount,
+    };
   }
 
   return schema;
 }
-
-/** Alias for Product JSON-LD (Google Rich Results). Use in product page only once per page. */
-export const buildProductJsonLd = buildProductSchema;
 
 /**
  * BreadcrumbList schema for category and product pages.
