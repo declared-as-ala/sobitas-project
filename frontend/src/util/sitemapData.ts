@@ -41,27 +41,36 @@ interface ItemWithDates {
 export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
   const sitemapEntries: MetadataRoute.Sitemap = [...staticPages];
 
+  // Fetch all data in parallel so the sitemap responds quickly when requested (e.g. by Google).
+  const [productsRes, categories, brands, articles] = await Promise.allSettled([
+    getAllProducts({ perPage: 5000, page: 1 }),
+    getCategories(),
+    getAllBrands(),
+    getAllArticles(),
+  ]);
+
   try {
-    const { products } = await getAllProducts();
-    if (Array.isArray(products) && products.length > 0) {
-      const productUrls = products
-        .filter((p: Product) => p.slug && p.publier === 1)
-        .map((p: Product) => ({
-          url: `${BASE_URL}/shop/${p.slug}`,
-          lastModified: getLastModified(p as ItemWithDates),
-          changeFrequency: 'weekly' as const,
-          priority: 0.7,
-        }));
-      sitemapEntries.push(...productUrls);
+    if (productsRes.status === 'fulfilled' && productsRes.value?.products) {
+      const products = productsRes.value.products;
+      if (Array.isArray(products) && products.length > 0) {
+        const productUrls = products
+          .filter((p: Product) => p.slug && p.publier === 1)
+          .map((p: Product) => ({
+            url: `${BASE_URL}/shop/${p.slug}`,
+            lastModified: getLastModified(p as ItemWithDates),
+            changeFrequency: 'weekly' as const,
+            priority: 0.7,
+          }));
+        sitemapEntries.push(...productUrls);
+      }
     }
   } catch (error) {
-    console.error('Error fetching products for sitemap:', error);
+    console.error('Error processing products for sitemap:', error);
   }
 
   try {
-    const categories = await getCategories();
-    if (Array.isArray(categories) && categories.length > 0) {
-      categories.forEach((category: Category) => {
+    if (categories.status === 'fulfilled' && Array.isArray(categories.value) && categories.value.length > 0) {
+      categories.value.forEach((category: Category) => {
         if (category.slug) {
           sitemapEntries.push({
             url: `${BASE_URL}/category/${category.slug}`,
@@ -85,13 +94,12 @@ export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
       });
     }
   } catch (error) {
-    console.error('Error fetching categories for sitemap:', error);
+    console.error('Error processing categories for sitemap:', error);
   }
 
   try {
-    const brands = await getAllBrands();
-    if (Array.isArray(brands) && brands.length > 0) {
-      brands.forEach((brand: Brand) => {
+    if (brands.status === 'fulfilled' && Array.isArray(brands.value) && brands.value.length > 0) {
+      brands.value.forEach((brand: Brand) => {
         if (brand.id && brand.designation_fr) {
           sitemapEntries.push({
             url: `${BASE_URL}/brand/${nameToSlug(brand.designation_fr)}`,
@@ -103,13 +111,12 @@ export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
       });
     }
   } catch (error) {
-    console.error('Error fetching brands for sitemap:', error);
+    console.error('Error processing brands for sitemap:', error);
   }
 
   try {
-    const articles = await getAllArticles();
-    if (Array.isArray(articles) && articles.length > 0) {
-      const articleUrls = articles
+    if (articles.status === 'fulfilled' && Array.isArray(articles.value) && articles.value.length > 0) {
+      const articleUrls = articles.value
         .filter((a: Article) => a.slug)
         .map((a: Article) => ({
           url: `${BASE_URL}/blog/${a.slug}`,
@@ -120,7 +127,7 @@ export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
       sitemapEntries.push(...articleUrls);
     }
   } catch (error) {
-    console.error('Error fetching articles for sitemap:', error);
+    console.error('Error processing articles for sitemap:', error);
   }
 
   return sitemapEntries;
