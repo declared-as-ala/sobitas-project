@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { ShoppingCart, User, Menu, Moon, Sun, Phone, Package, MapPin, Truck, Search, X, Loader2, ArrowRight, ChevronRight } from 'lucide-react';
+import { ShoppingCart, User, Menu, Moon, Sun, Phone, Package, MapPin, Truck, Search, X, Loader2, ArrowRight, ChevronRight, Heart } from 'lucide-react';
 import { SearchBar } from './SearchBar';
 import { Button } from '@/app/components/ui/button';
 import { useTheme } from 'next-themes';
@@ -12,6 +12,7 @@ import { ProductsDropdown } from './ProductsDropdown';
 import { MobileProductsMenu } from './MobileProductsMenu';
 import { CartDrawer } from './CartDrawer';
 import { useCart } from '@/app/contexts/CartContext';
+import { useFavorites } from '@/contexts/FavoritesContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { motion } from 'motion/react';
 import {
@@ -64,6 +65,7 @@ export function Header() {
     return () => window.removeEventListener('resize', check);
   }, []);
   const { getTotalItems, cartDrawerOpen, setCartDrawerOpen } = useCart();
+  const { count: favoritesCount } = useFavorites();
   const { isAuthenticated, user, logout } = useAuth();
   const cartItemsCount = getTotalItems();
   
@@ -168,7 +170,7 @@ export function Header() {
   const navLinks = [
     { href: '/', label: 'ACCUEIL' },
     { href: '/packs', label: 'PACKS' },
-    { href: '/brands', label: 'MARQUES' },
+    { href: '/brands', label: 'Brands' },
     { href: '/blog', label: 'BLOG' },
     { href: '/contact', label: 'CONTACT' },
     { href: '/about', label: 'QUI SOMMES NOUS' },
@@ -252,6 +254,21 @@ export function Header() {
 
             <div className="flex items-center gap-0 flex-shrink-0">
               <SearchBar variant="mobile" className="-mr-0.5" />
+              <Link href="/favoris">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative h-12 w-12 min-h-[48px] min-w-[48px] flex-shrink-0 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+                  aria-label={favoritesCount > 0 ? `Favoris - ${favoritesCount} produit${favoritesCount > 1 ? 's' : ''}` : 'Favoris'}
+                >
+                  <Heart className="h-6 w-6" aria-hidden />
+                  {favoritesCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center bg-red-600 text-white text-[10px] font-bold rounded-full">
+                      {favoritesCount > 99 ? '99+' : favoritesCount}
+                    </span>
+                  )}
+                </Button>
+              </Link>
               <Button
                 variant="ghost"
                 size="icon"
@@ -521,6 +538,22 @@ export function Header() {
                   {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
               </Button>
 
+                {/* Favoris */}
+              <Link href="/favoris">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative h-10 w-10 text-white hover:bg-red-700 dark:hover:bg-red-800 transition-all shrink-0"
+                  aria-label={favoritesCount > 0 ? `Favoris - ${favoritesCount} produits` : 'Favoris'}
+                >
+                  <Heart className="h-6 w-6" />
+                  {favoritesCount > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[20px] h-[20px] flex items-center justify-center bg-white text-red-600 text-xs font-bold rounded-full border-2 border-red-600">
+                      {favoritesCount > 99 ? '99+' : favoritesCount}
+                    </span>
+                  )}
+                </Button>
+              </Link>
                 {/* Shopping Cart */}
               <Button
                 variant="ghost"
@@ -552,7 +585,7 @@ export function Header() {
               PACKS
             </Link>
           <Link href="/brands" className="text-sm font-semibold text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-400 transition-colors whitespace-nowrap py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
-              MARQUES
+              Brands
             </Link>
           <Link href="/blog" className="text-sm font-semibold text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-400 transition-colors whitespace-nowrap py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
               BLOG

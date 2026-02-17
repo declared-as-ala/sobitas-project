@@ -905,7 +905,7 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
                             min={priceBounds.min}
                             max={priceBounds.max}
                             step={10}
-                            className="w-full"
+                            className="w-full [&_[data-slot=slider-range]]:bg-orange-500 [&_[data-slot=slider-thumb]]:border-orange-500 [&_[data-slot=slider-thumb]]:ring-orange-500/30 [&_[data-slot=slider-thumb]]:focus-visible:ring-orange-500/40"
                           />
                           <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
                             <span>{priceBounds.min} DT</span>
@@ -1116,7 +1116,7 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
                             min={priceBounds.min}
                             max={priceBounds.max}
                             step={10}
-                            className="w-full"
+                            className="w-full [&_[data-slot=slider-range]]:bg-orange-500 [&_[data-slot=slider-thumb]]:border-orange-500 [&_[data-slot=slider-thumb]]:ring-orange-500/30 [&_[data-slot=slider-thumb]]:focus-visible:ring-orange-500/40"
                           />
                           <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
                             <span>{priceBounds.min} DT</span>

@@ -41,6 +41,12 @@ function getSchemaPrice(product: Product): number {
   return num;
 }
 
+/** Format price for schema.org: numeric string only (no "DT", no spaces). Google requirement. */
+function formatSchemaPrice(price: number): string {
+  const n = Math.round(price * 100) / 100;
+  return Number.isInteger(n) ? String(n) : n.toFixed(2);
+}
+
 /** priceValidUntil: today + 1 year in YYYY-MM-DD (fixes GSC warning). */
 function getPriceValidUntil(): string {
   const d = new Date();
@@ -85,11 +91,14 @@ export function buildProductSchema(product: Product, baseUrl: string): object | 
  * Price: valid format only (number); priceValidUntil = today + 1 year. No aggregateRating/review unless real data.
  */
 export function buildProductJsonLd(product: Product, canonicalUrl: string): object | null {
+  // Main product cover first so Google uses it as primary image (matches og:image and avoids wrong product image in search).
   const rawImages = [product.cover, (product as { alt_cover?: string }).alt_cover].filter(Boolean) as string[];
-  const imageUrls = rawImages.filter((path) => looksLikeImagePath(path));
-  const imageArray = imageUrls.length > 0
-    ? imageUrls.map((path) => getStorageUrl(path)).filter((url) => isValidImageUrl(url))
-    : [];
+  const imagePaths = rawImages.filter((path) => looksLikeImagePath(path));
+  if (imagePaths.length === 0 && product.cover) imagePaths.push(product.cover);
+  const imageArray = imagePaths
+    .map((path) => getStorageUrl(path))
+    .filter((url) => isValidImageUrl(url));
+  const dedupedImages = [...new Set(imageArray)];
   const price = getSchemaPrice(product);
   const inStock = (product as { rupture?: number }).rupture !== 1;
   const description = stripHtml(
@@ -107,28 +116,40 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
     return null;
   }
 
+  const offersPayload: Record<string, unknown> = {
+    '@type': 'Offer',
+    url: canonicalUrl,
+    priceCurrency: 'TND',
+    price: formatSchemaPrice(price),
+    availability: inStock
+      ? 'https://schema.org/InStock'
+      : 'https://schema.org/OutOfStock',
+    itemCondition: 'https://schema.org/NewCondition',
+    priceValidUntil: getPriceValidUntil(),
+    seller: { '@type': 'Organization', name: 'SOBITAS' },
+    shippingDetails: {
+      '@type': 'OfferShippingDetails',
+      shippingRate: { '@type': 'MonetaryAmount', value: 0, currency: 'TND' },
+      deliveryTime: {
+        '@type': 'ShippingDeliveryTime',
+        handlingTime: { '@type': 'QuantitativeValue', minValue: 0, maxValue: 1, unitCode: 'DAY' },
+        transitTime: { '@type': 'QuantitativeValue', minValue: 1, maxValue: 3, unitCode: 'DAY' },
+      },
+    },
+  };
+
   const schema: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: product.designation_fr || 'Produit',
     description: description || '',
-    image: imageArray.length > 0 ? imageArray : undefined,
+    image: dedupedImages.length > 0 ? dedupedImages : undefined,
     sku,
+    productID: sku,
     brand: product.brand?.designation_fr
       ? { '@type': 'Brand', name: product.brand.designation_fr }
       : undefined,
-    offers: {
-      '@type': 'Offer',
-      url: canonicalUrl,
-      priceCurrency: 'TND',
-      price: Math.round(price * 100) / 100,
-      availability: inStock
-        ? 'https://schema.org/InStock'
-        : 'https://schema.org/OutOfStock',
-      itemCondition: 'https://schema.org/NewCondition',
-      priceValidUntil: getPriceValidUntil(),
-      seller: { '@type': 'Organization', name: 'SOBITAS' },
-    },
+    offers: offersPayload,
   };
 
   const reviewsRaw = product.reviews ?? (product as { avis?: Review[] }).avis ?? [];
@@ -139,21 +160,21 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
     ?? (product as { review_count?: number; reviews_count?: number }).reviews_count
     ?? reviews.length;
 
+  /* Only add aggregateRating and review when real reviews exist (no fake ratings). */
   if (reviews.length > 0) {
     const sum = reviews.reduce((s, r) => s + r.stars, 0);
-    let ratingValue = sum / reviews.length;
-    ratingValue = Math.max(1, Math.min(5, Math.round(ratingValue * 10) / 10));
-    const ratingCount = Math.max(1, Math.floor(reviews.length));
+    const ratingValue = Math.max(1, Math.min(5, Math.round((sum / reviews.length) * 10) / 10));
+    const reviewCount = Math.max(1, Math.floor(reviews.length));
     schema.aggregateRating = {
       '@type': 'AggregateRating',
-      ratingValue,
+      ratingValue: String(ratingValue),
       bestRating: 5,
       worstRating: 1,
-      ratingCount,
-      reviewCount: ratingCount,
+      ratingCount: reviewCount,
+      reviewCount,
     };
     const reviewSnippets = reviews
-      .slice(0, 5)
+      .slice(0, 3)
       .filter((r) => r.comment && String(r.comment).trim())
       .map((r) => {
         const authorName = (r.user?.name && String(r.user.name).trim()) || 'Client';
@@ -169,31 +190,6 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
     if (reviewSnippets.length > 0) {
       schema.review = reviewSnippets;
     }
-  } else if (
-    typeof product.note === 'number' &&
-    Number.isFinite(product.note) &&
-    product.note >= 1 &&
-    product.note <= 5 &&
-    apiReviewCount >= 1
-  ) {
-    const ratingValue = Math.max(1, Math.min(5, Math.round(product.note * 10) / 10));
-    const ratingCount = Math.max(1, Math.floor(Number(apiReviewCount)));
-    schema.aggregateRating = {
-      '@type': 'AggregateRating',
-      ratingValue,
-      bestRating: 5,
-      worstRating: 1,
-      ratingCount,
-      reviewCount: ratingCount,
-    };
-    schema.review = [
-      {
-        '@type': 'Review',
-        author: { '@type': 'Person', name: 'Clients' },
-        reviewRating: { '@type': 'Rating', ratingValue, bestRating: 5, worstRating: 1 },
-        reviewBody: 'Avis clients',
-      },
-    ];
   }
 
   return schema;

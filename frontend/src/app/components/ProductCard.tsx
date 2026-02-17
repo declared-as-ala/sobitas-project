@@ -4,11 +4,14 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { motion } from 'motion/react';
-import { ShoppingCart } from 'lucide-react';
+import { ShoppingCart, Zap, Heart } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
+import { useQuickOrder } from '@/contexts/QuickOrderContext';
+import type { QuickOrderProduct } from '@/contexts/QuickOrderContext';
 import { Badge } from '@/app/components/ui/badge';
 import type { Product as ApiProduct } from '@/types';
 import { useCart } from '@/app/contexts/CartContext';
+import { useFavorites } from '@/contexts/FavoritesContext';
 import { getStorageUrl } from '@/services/api';
 import { toast } from 'sonner';
 import { getPriceDisplay } from '@/util/productPrice';
@@ -41,9 +44,40 @@ interface ProductCardProps {
   hideCountdown?: boolean;
 }
 
+function toQuickOrderProduct(product: Product): QuickOrderProduct {
+  const p = product as any;
+  return {
+    id: product.id,
+    designation_fr: p.name || product.designation_fr || '',
+    slug: product.slug,
+    cover: product.cover,
+    prix: p.prix ?? p.price ?? 0,
+    promo: p.promo ?? undefined,
+    promo_expiration_date: p.promo_expiration_date ?? undefined,
+    rupture: p.rupture,
+    aromes: p.aromes,
+  };
+}
+
+function toFavoriteProduct(product: Product): { id: number; designation_fr: string; slug?: string; cover?: string; prix?: number; promo?: number | null; rupture?: number } {
+  const p = product as any;
+  return {
+    id: product.id,
+    designation_fr: p.name || product.designation_fr || '',
+    slug: product.slug,
+    cover: product.cover,
+    prix: p.prix ?? p.price ?? product.prix,
+    promo: p.promo ?? undefined,
+    rupture: p.rupture,
+  };
+}
+
 export const ProductCard = memo(function ProductCard({ product, showBadge, badgeText, variant = 'default', showDescription = false, hideCountdown = false }: ProductCardProps) {
   const { addToCart, getCartQty } = useCart();
+  const { openQuickOrder } = useQuickOrder();
+  const { isFavorite, toggleFavorite } = useFavorites();
   const [isAdding, setIsAdding] = useState(false);
+  const favorite = isFavorite(product.id);
   const stockDisponible = getStockDisponible(product as any);
   const inCartQty = getCartQty(product.id);
   const canAddMore = stockDisponible > 0 && inCartQty < stockDisponible;
@@ -73,6 +107,13 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
       isInStock,
     };
   }, [product]);
+
+  const handleCommanderMaintenant = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!productData.isInStock || stockDisponible <= 0) return;
+    openQuickOrder(toQuickOrderProduct(product));
+  }, [openQuickOrder, product, productData.isInStock, stockDisponible]);
 
   const handleAddToCart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -148,6 +189,15 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
           )}
         </LinkWithLoading>
 
+        {/* Favoris – top-right */}
+        <button
+          type="button"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(toFavoriteProduct(product)); }}
+          className="absolute top-2.5 right-2.5 z-10 p-1.5 rounded-full bg-white/90 dark:bg-gray-800/90 shadow-sm border border-gray-200/80 dark:border-gray-700/80 hover:bg-white dark:hover:bg-gray-800 transition-colors pointer-events-auto"
+          aria-label={favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+        >
+          <Heart className={`h-4 w-4 sm:h-5 sm:w-5 ${favorite ? 'fill-red-600 text-red-600' : 'text-gray-500 dark:text-gray-400'}`} />
+        </button>
         {/* Badges – top-left, fixed position, no layout shift */}
         <div className="absolute top-2.5 left-2.5 z-10 flex flex-col gap-1 pointer-events-none">
           {!productData.isInStock && (
@@ -181,20 +231,30 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
           )}
         </div>
 
-        {/* Desktop only: hover overlay CTA (no hover on touch) */}
+        {/* Desktop only: hover overlay CTAs (Commander maintenant + Ajouter au panier) */}
         <div
-          className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/70 to-transparent hidden opacity-0 transition-opacity duration-200 [@media(hover:hover)]:lg:block [@media(hover:hover)]:lg:group-hover:opacity-100 pointer-events-none [@media(hover:hover)]:lg:group-hover:pointer-events-auto"
+          className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/70 to-transparent hidden opacity-0 transition-opacity duration-200 [@media(hover:hover)]:lg:block [@media(hover:hover)]:lg:group-hover:opacity-100 pointer-events-none [@media(hover:hover)]:lg:group-hover:pointer-events-auto space-y-2"
           aria-hidden="true"
         >
           <Button
             size="sm"
-            className="w-full min-h-[44px] bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-xl"
+            className="w-full min-h-[44px] bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-xl"
+            onClick={handleCommanderMaintenant}
+            disabled={!productData.isInStock || stockDisponible <= 0}
+            aria-label="Commander maintenant"
+          >
+            <Zap className="h-4 w-4 mr-2" aria-hidden="true" />
+            Commander maintenant
+          </Button>
+          <Button
+            size="sm"
+            className="w-full min-h-[40px] bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-xl"
             onClick={handleAddToCart}
             disabled={isAdding || !productData.isInStock || !canAddMore}
             aria-label={!canAddMore && productData.isInStock ? 'Stock maximum atteint' : `Ajouter ${productData.name} au panier`}
           >
-            <ShoppingCart className="h-4 w-4 mr-2" aria-hidden="true" />
-            {!productData.isInStock || stockDisponible <= 0 ? 'Rupture de stock' : !canAddMore ? 'Stock max' : isAdding ? 'Ajouté !' : 'Ajouter au panier'}
+            <ShoppingCart className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
+            {!productData.isInStock || stockDisponible <= 0 ? 'Rupture' : !canAddMore ? 'Stock max' : isAdding ? 'Ajouté !' : 'Ajouter au panier'}
           </Button>
         </div>
       </div>
@@ -247,26 +307,28 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
           )}
         </div>
 
-        {/* CTA – always visible on mobile/tablet, overlay on desktop hover */}
-        <div className="flex-shrink-0 pt-2 md:pt-3 mt-1.5 md:mt-2 border-t border-gray-100 dark:border-gray-700/60 lg:hidden block">
+        {/* CTAs – Commander maintenant (primary) + Ajouter au panier; always visible on mobile/tablet */}
+        <div className="flex-shrink-0 pt-2 md:pt-3 mt-1.5 md:mt-2 border-t border-gray-100 dark:border-gray-700/60 lg:hidden block space-y-2">
           <Button
             size="sm"
-            className={`w-full min-h-[44px] rounded-xl font-semibold text-[10px] xs:text-[11px] sm:text-sm active:scale-[0.98] transition-transform duration-150 select-none px-1.5 sm:px-2 ${productData.isInStock && canAddMore ? 'bg-red-600 hover:bg-red-700 text-white shadow-[0_2px_8px_rgba(220,38,38,0.35)]' : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed text-white'}`}
+            className={`w-full min-h-[44px] rounded-xl font-semibold text-[10px] xs:text-[11px] sm:text-sm active:scale-[0.98] transition-transform duration-150 select-none px-1.5 sm:px-2 ${productData.isInStock && stockDisponible > 0 ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-[0_2px_8px_rgba(245,158,11,0.35)]' : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed text-white'}`}
+            onClick={handleCommanderMaintenant}
+            disabled={!productData.isInStock || stockDisponible <= 0}
+            aria-label="Commander maintenant"
+          >
+            <Zap className={`size-3.5 sm:size-4 shrink-0 mr-1 sm:mr-1.5 ${isCompact ? 'sm:mr-1.5' : ''}`} aria-hidden="true" />
+            <span className="truncate max-w-full">Commander maintenant</span>
+          </Button>
+          <Button
+            size="sm"
+            className={`w-full min-h-[40px] rounded-xl font-semibold text-[10px] xs:text-[11px] sm:text-sm active:scale-[0.98] transition-transform duration-150 select-none px-1.5 sm:px-2 ${productData.isInStock && canAddMore ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-gray-300 dark:bg-gray-600 cursor-not-allowed text-white border border-gray-200 dark:border-gray-600'}`}
             onClick={handleAddToCart}
             disabled={isAdding || !productData.isInStock || !canAddMore}
             aria-label={`Ajouter ${productData.name} au panier`}
           >
-            <ShoppingCart className={`size-3.5 sm:size-4 shrink-0 mr-1 sm:mr-1.5 md:mr-2 ${isCompact ? 'sm:mr-1.5' : ''}`} aria-hidden="true" />
+            <ShoppingCart className={`size-3.5 sm:size-4 shrink-0 mr-1 sm:mr-1.5 ${isCompact ? 'sm:mr-1.5' : ''}`} aria-hidden="true" />
             <span className="truncate max-w-full">
-              {!productData.isInStock || stockDisponible <= 0 ? (
-                <><span className="hidden min-[360px]:inline">Rupture de stock</span><span className="min-[360px]:hidden">Rupture</span></>
-              ) : !canAddMore ? (
-                <><span className="hidden min-[360px]:inline">Stock max</span><span className="min-[360px]:hidden">Max</span></>
-              ) : isAdding ? (
-                'Ajouté !'
-              ) : (
-                <><span className="hidden min-[360px]:inline">Ajouter au panier</span><span className="min-[360px]:hidden">Panier</span></>
-              )}
+              {!productData.isInStock || stockDisponible <= 0 ? 'Rupture' : !canAddMore ? 'Stock max' : isAdding ? 'Ajouté !' : 'Ajouter au panier'}
             </span>
           </Button>
         </div>

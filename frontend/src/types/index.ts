@@ -115,6 +115,12 @@ export interface Article {
   created_at?: string;
   updated_at?: string; // Added for cache busting
   publier?: number;
+  /** Optional: category slug for product recommendations (e.g. "whey") */
+  category_slug?: string;
+  /** Optional: tags/keywords for matching products */
+  tags?: string[];
+  /** Optional: admin-set product slugs for "Produits recommandés" (manual override) */
+  recommended_product_slugs?: string[];
 }
 
 // Order Types
@@ -203,11 +209,18 @@ export interface QuickOrderPayload {
   productId: number;
   variantId?: number;
   qty: number;
-  customerName?: string;
+  /** Required: first name / family name */
+  nom: string;
+  prenom: string;
   phone: string;
-  city: string;
-  address: string;
-  note?: string;
+  /** New flow: gouvernorat + délégation + localité (like checkout). If set, address is not required. */
+  gouvernorat?: string;
+  delegation?: string;
+  localite?: string;
+  codePostal?: string;
+  /** Legacy: used only when gouvernorat/delegation/localite not provided */
+  city?: string;
+  address?: string;
   priceSnapshot: number;
   deliveryFeeSnapshot?: number;
   currency?: string;

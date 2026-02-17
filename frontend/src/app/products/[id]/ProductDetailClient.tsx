@@ -15,7 +15,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/ta
 import { Input } from '@/app/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
 import { Minus, Plus, ShoppingCart, Star, Shield, Truck, Award, ArrowLeft, Heart, Share2, ZoomIn, CheckCircle2, Loader2, BadgeCheck, Search, ChevronRight, Zap } from 'lucide-react';
-import { QuickOrderDrawer } from '@/app/components/QuickOrderDrawer';
+import { useQuickOrder } from '@/contexts/QuickOrderContext';
+import { useFavorites } from '@/contexts/FavoritesContext';
+import type { QuickOrderProduct } from '@/contexts/QuickOrderContext';
 import { motion } from 'motion/react';
 import { Card, CardContent } from '@/app/components/ui/card';
 import type { Product, Review, FAQ } from '@/types';
@@ -27,15 +29,20 @@ import {
   getStockDisponible,
   getMaxAddable,
 } from '@/util/cartStock';
+import { cn } from '@/app/components/ui/utils';
+
+export type BreadcrumbItem = { name: string; url: string };
 
 interface ProductDetailClientProps {
   product: Product;
   similarProducts: Product[];
   /** When rendering under /shop/[slug], pass slug so refetch/links work */
   slugOverride?: string;
+  /** Breadcrumb path (Accueil > Category > Product). BreadcrumbList schema is output by the server. */
+  breadcrumbItems?: BreadcrumbItem[];
 }
 
-export function ProductDetailClient({ product: initialProduct, similarProducts, slugOverride }: ProductDetailClientProps) {
+export function ProductDetailClient({ product: initialProduct, similarProducts, slugOverride, breadcrumbItems = [] }: ProductDetailClientProps) {
   const router = useRouter();
   const params = useParams();
   const productSlug = (slugOverride ?? (params?.slug as string) ?? (params?.id as string)) ?? '';
@@ -43,7 +50,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
   const { isAuthenticated, user } = useAuth();
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
-  const [isFavorite, setIsFavorite] = useState(false);
+  const { isFavorite: isInFavorites, toggleFavorite } = useFavorites();
   const [reviewStars, setReviewStars] = useState(0);
   const [reviewComment, setReviewComment] = useState('');
   const [showReviewForm, setShowReviewForm] = useState(false);
@@ -51,10 +58,20 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
   const [reviewSort, setReviewSort] = useState<'recent' | 'helpful'>('recent');
   const [reviewSearch, setReviewSearch] = useState('');
   const [descExpanded, setDescExpanded] = useState(false);
-  const [quickOrderOpen, setQuickOrderOpen] = useState(false);
+  const [showFullDescription, setShowFullDescription] = useState(false);
+  const { openQuickOrder } = useQuickOrder();
 
   // Use state to manage product data so we can update it after adding a review
   const [product, setProduct] = useState<Product>(initialProduct);
+  const favoriteProduct = {
+    id: product.id,
+    designation_fr: product.designation_fr,
+    slug: product.slug,
+    cover: product.cover,
+    prix: product.prix,
+    promo: product.promo ?? null,
+    rupture: product.rupture,
+  };
   // Backend already filters reviews by publier = 1 in the relationship, so use all reviews returned
   // The publier field is hidden in JSON response, so we can't filter on frontend
   const [reviews, setReviews] = useState<Review[]>(initialProduct.reviews || []);
@@ -112,7 +129,8 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
     : 0);
   const reviewCount = reviews.length;
 
-  // Filter and sort reviews for display (on product page show first N; full list on reviews page)
+  // Filter and sort reviews for display (on product page show first 20; full list on /shop/:slug/reviews)
+  const REVIEWS_ON_PRODUCT_PAGE = 20;
   const filteredReviews = [...reviews]
     .filter(r => !reviewSearch || (r.comment?.toLowerCase().includes(reviewSearch.toLowerCase())))
     .sort((a, b) => {
@@ -123,7 +141,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
       }
       return 0;
     });
-  const reviewsToShowOnPage = filteredReviews.slice(0, 5);
+  const reviewsToShowOnPage = filteredReviews.slice(0, REVIEWS_ON_PRODUCT_PAGE);
 
   const images = product.cover ? [product.cover] : [];
   const productImage = images[0] ? getStorageUrl(images[0]) : '';
@@ -205,7 +223,28 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
     ? stripHtml(product.description_cover)
     : null;
 
-  /** Cart logic: unchanged. "Commande rapide" uses QuickOrderDrawer and does not add to or clear cart. */
+  /** Points clés: 3–6 bullets derived from description (Amazon-style) */
+  const keyPoints = (() => {
+    const raw = product.description_fr || product.description_cover || '';
+    if (!raw) return [];
+    const text = stripHtml(raw);
+    const sentences = text.split(/[.\n]+/).map(s => s.trim()).filter(s => s.length > 15);
+    return sentences.slice(0, 6);
+  })();
+
+  const quickOrderProduct: QuickOrderProduct = {
+    id: product.id,
+    designation_fr: product.designation_fr ?? '',
+    slug: product.slug,
+    cover: product.cover,
+    prix: product.prix ?? 0,
+    promo: product.promo ?? undefined,
+    promo_expiration_date: product.promo_expiration_date ?? undefined,
+    rupture: product.rupture,
+    aromes: product.aromes,
+  };
+
+  /** Cart logic: unchanged. "Commander maintenant" uses shared Quick Order modal and does not add to or clear cart. */
   const handleAddToCart = () => {
     if (stockDisponible <= 0) {
       toast.error('Rupture de stock - Ce produit n\'est pas disponible');
@@ -365,6 +404,25 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
       <Header />
 
       <main className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-3 sm:py-6 lg:py-12 pb-44 lg:pb-12">
+        {/* Breadcrumb: Accueil > Category > Subcategory > Product */}
+        {breadcrumbItems.length > 0 && (
+          <nav aria-label="Fil d'Ariane" className="mb-3 sm:mb-4 text-sm text-gray-500 dark:text-gray-400">
+            <ol className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+              {breadcrumbItems.map((item, i) => (
+                <li key={i} className="flex items-center gap-x-1.5">
+                  {i > 0 && <span className="text-gray-400 dark:text-gray-500" aria-hidden>›</span>}
+                  {i < breadcrumbItems.length - 1 ? (
+                    <Link href={item.url} className="hover:text-red-600 dark:hover:text-red-400 underline-offset-2 hover:underline">
+                      {item.name}
+                    </Link>
+                  ) : (
+                    <span className="text-gray-900 dark:text-white font-medium" aria-current="page">{item.name}</span>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </nav>
+        )}
         {/* Back Button */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
@@ -381,65 +439,84 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
           </Button>
         </motion.div>
 
-        {/* Desktop: 2 cols — left ~40% image (sticky), right ~60% info + tabs + reviews */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 sm:gap-8 lg:gap-10 mb-6 sm:mb-10 lg:mb-16">
-          {/* LEFT (desktop only): Image column — narrower, sticky */}
-          <div className="hidden lg:block lg:col-span-2 lg:sticky lg:top-24 lg:self-start">
+        {/* Layout: 2 cols desktop (Image left, larger | Info + buy right), mobile single col. */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8 xl:gap-10 mb-6 sm:mb-8 lg:mb-10">
+          {/* A) COLONNE GAUCHE — Gallery (desktop): bigger image, aligned left */}
+          <div className="hidden lg:block lg:col-span-7 min-w-0 lg:pr-2">
             <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="relative bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-xl border border-gray-200 dark:border-gray-800 group"
-              style={{ aspectRatio: '1 / 1.15' }}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="sticky top-24"
             >
-              {productImage ? (
-                <Image
-                  src={productImage}
-                  alt={product.designation_fr}
-                  fill
-                  className="object-contain p-4 lg:p-5 group-hover:scale-105 transition-transform duration-300"
-                  sizes="(max-width: 1024px) 100vw, 42vw"
-                  priority
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                    const parent = target.parentElement;
-                    if (parent && !parent.querySelector('.error-placeholder')) {
-                      const placeholder = document.createElement('div');
-                      placeholder.className = 'error-placeholder absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800';
-                      placeholder.innerHTML = '<svg class="h-24 w-24 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>';
-                      parent.appendChild(placeholder);
-                    }
-                  }}
-                />
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
-                  <svg className="h-24 w-24 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                  </svg>
-                </div>
-              )}
+              <div className="relative w-full rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg group aspect-square min-h-[420px] xl:min-h-[520px]">
+                {productImage ? (
+                  <Image
+                    src={productImage}
+                    alt={product.designation_fr ?? product.slug ?? 'Produit'}
+                    fill
+                    className="object-contain p-2 group-hover:scale-[1.03] transition-transform duration-300"
+                    sizes="(max-width: 1024px) 100vw, 58vw"
+                    priority
+                    fetchPriority="high"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const parent = target.parentElement;
+                      if (parent && !parent.querySelector('.error-placeholder')) {
+                        const ph = document.createElement('div');
+                        ph.className = 'error-placeholder absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800';
+                        ph.innerHTML = '<svg class="h-24 w-24 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>';
+                        parent.appendChild(ph);
+                      }
+                    }}
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+                    <svg className="h-24 w-24 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                    </svg>
+                  </div>
+                )}
+              </div>
             </motion.div>
           </div>
 
-          {/* RIGHT: Info + tabs + reviews (mobile: full flow with image first) */}
-          <div className="lg:col-span-3 min-w-0 space-y-4 sm:space-y-6 lg:space-y-8">
-            {/* Mobile Layout: Image First (Hero Image) */}
+          {/* B) COLONNE DROITE — Infos + prix + quantité + CTAs + garanties (desktop) / mobile first block */}
+          <div className="lg:col-span-5 min-w-0 space-y-3 sm:space-y-4">
+            {/* Mobile Layout: Image First then badges, title, etc. */}
             <div className="lg:hidden space-y-4 sm:space-y-5">
-              {/* Product Image - Hero position on mobile */}
+              {/* Badges at top (En Stock, -X% OFF) */}
+              <div className="flex items-center gap-2 sm:gap-3 flex-wrap px-1">
+                <Badge variant="outline" className="bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800 text-xs sm:text-sm px-2.5 py-1">
+                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                  {product.rupture === 1 ? 'En Stock' : 'Rupture de stock'}
+                </Badge>
+                {discount > 0 && (
+                  <Badge className="bg-red-600 text-white text-xs sm:text-sm px-2.5 py-1">-{discount}% OFF</Badge>
+                )}
+                {product.new_product === 1 && (
+                  <Badge className="bg-blue-600 text-white text-xs sm:text-sm px-2.5 py-1">New</Badge>
+                )}
+                {product.best_seller === 1 && (
+                  <Badge className="bg-amber-600 text-white text-xs sm:text-sm px-2.5 py-1">Top Vendu</Badge>
+                )}
+              </div>
+              {/* Product Image - Hero position on mobile, larger */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="w-full"
               >
-                <div className="relative bg-white dark:bg-gray-900 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border-2 border-gray-200 dark:border-gray-800 group min-h-0 mx-auto max-w-full" style={{ aspectRatio: '1 / 1' }}>
+                <div className="relative bg-gray-100 dark:bg-gray-800 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-700 group mx-auto w-full" style={{ aspectRatio: '1 / 1' }}>
                   {productImage ? (
                     <Image
                       src={productImage}
-                      alt={product.designation_fr}
+                      alt={product.designation_fr ?? product.slug ?? 'Produit'}
                       fill
-                      className="object-contain p-4 sm:p-6 group-hover:scale-110 transition-transform duration-500"
-                      sizes="(max-width: 1024px) 100vw, 60vw"
+                      className="object-contain p-3 sm:p-4 group-hover:scale-105 transition-transform duration-500"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 50vw"
                       priority
+                      fetchPriority="high"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
                         target.style.display = 'none';
@@ -462,32 +539,31 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 </div>
               </motion.div>
 
-              {/* 1. Title (H1) only */}
+              {/* 1. Title (H1) — max 2 lines */}
               <div className="min-w-0 px-1">
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white leading-tight break-words">
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight break-words line-clamp-2">
                   {product.designation_fr}
                 </h1>
               </div>
 
-              {/* 2. Rating - stars + value + count */}
-              {rating > 0 && (
-                <div className="flex items-center gap-2 px-1">
-                  <div className="flex items-center gap-1">
-                    {[...Array(5)].map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`h-4 w-4 sm:h-5 sm:w-5 ${i < Math.floor(rating)
-                          ? 'fill-yellow-400 text-yellow-400'
-                          : 'fill-gray-200 text-gray-200 dark:fill-gray-700 dark:text-gray-700'
-                          }`}
-                      />
-                    ))}
-                  </div>
-                  <span className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
-                    ({rating.toFixed(1)}) • {reviewCount} avis
-                  </span>
+              {/* 2. Rating - stars + value + count (clickable → #reviews) */}
+              <button
+                type="button"
+                onClick={() => document.getElementById('reviews')?.scrollIntoView({ behavior: 'smooth' })}
+                className="flex items-center gap-2 px-1 text-left"
+              >
+                <div className="flex items-center gap-1">
+                  {[1,2,3,4,5].map((i) => (
+                    <Star
+                      key={i}
+                      className={`h-4 w-4 sm:h-5 sm:w-5 ${i <= Math.round(rating) ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 text-gray-200 dark:fill-gray-700 dark:text-gray-700'}`}
+                    />
+                  ))}
                 </div>
-              )}
+                <span className="text-sm sm:text-base text-primary-600 dark:text-primary-400 font-medium">
+                  ({rating > 0 ? rating.toFixed(1) : '0'}) • {reviewCount} avis
+                </span>
+              </button>
 
               {/* 3. Price - current + old + savings */}
               <div className="py-3 sm:py-4 border-y border-gray-200 dark:border-gray-800 px-1">
@@ -515,38 +591,18 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 </p>
               )}
 
-              {/* Category, Code, Stock/Promo badges - lighter metadata */}
-              <div className="space-y-2 px-1">
-                {(product.sous_categorie?.slug || product.code_product) && (
+              {/* Category line only (directly above Arômes) — product code hidden on detail page */}
+              {product.sous_categorie?.slug && (
+                <div className="px-1">
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
-                    {product.sous_categorie?.slug && (
-                      <Link href={`/category/${product.sous_categorie.slug}`} className="text-red-600 dark:text-red-400 hover:underline">
-                        {product.sous_categorie.designation_fr}
-                      </Link>
-                    )}
-                    {product.code_product && (
-                      <span>Code: {product.code_product}</span>
-                    )}
+                    <Link href={`/category/${product.sous_categorie.slug}`} className="text-red-600 dark:text-red-400 hover:underline">
+                      {product.sous_categorie.designation_fr}
+                    </Link>
                   </div>
-                )}
-                <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                  <Badge variant="outline" className="bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800 text-xs sm:text-sm px-2.5 py-1">
-                    <CheckCircle2 className="h-3 w-3 mr-1" />
-                    {product.rupture === 1 ? 'En Stock' : 'Rupture de stock'}
-                  </Badge>
-                  {discount > 0 && (
-                    <Badge className="bg-red-600 text-white text-xs sm:text-sm px-2.5 py-1">-{discount}% OFF</Badge>
-                  )}
-                  {product.new_product === 1 && (
-                    <Badge className="bg-blue-600 text-white text-xs sm:text-sm px-2.5 py-1">Nouveau</Badge>
-                  )}
-                  {product.best_seller === 1 && (
-                    <Badge className="bg-yellow-600 text-white text-xs sm:text-sm px-2.5 py-1">Top Vendu</Badge>
-                  )}
                 </div>
-              </div>
+              )}
 
-              {/* Aromes (Flavors) - Mobile */}
+              {/* Arômes disponibles — directly under category line, above quantity */}
               {product.aromes && product.aromes.length > 0 && (
                 <div className="space-y-2 px-1">
                   <label className="text-sm font-semibold text-gray-900 dark:text-white">
@@ -605,9 +661,9 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   size="lg"
                   variant="outline"
                   className="min-h-[48px] px-4 shrink-0"
-                  onClick={() => setIsFavorite(!isFavorite)}
+                  onClick={() => toggleFavorite(favoriteProduct)}
                 >
-                  <Heart className={`h-5 w-5 ${isFavorite ? 'fill-red-600 text-red-600' : ''}`} />
+                  <Heart className={`h-5 w-5 ${isInFavorites(product.id) ? 'fill-red-600 text-red-600' : ''}`} />
                 </Button>
                 <Button
                   size="lg"
@@ -619,6 +675,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   <Share2 className="h-5 w-5" />
                 </Button>
               </div>
+              <p className="lg:hidden text-xs text-gray-500 dark:text-gray-400 px-1">Paiement à la livraison • Livraison 24–72h • Produits authentiques</p>
 
               {/* Trust badges — mobile: horizontal carousel (scroll-snap); tablet: 2 cols */}
               <div className="pt-4 sm:pt-6 border-t border-gray-200 dark:border-gray-800 px-1">
@@ -631,8 +688,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       <Shield className="h-6 w-6 text-green-600 dark:text-green-400" strokeWidth={2} />
                     </div>
                     <div className="min-w-0">
-                      <p className="font-semibold text-gray-900 dark:text-white">Paiement</p>
-                      <p className="text-sm text-green-700 dark:text-green-400">Sécurisé</p>
+                      <p className="font-semibold text-gray-900 dark:text-white">Paiement Sécurisé</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 shadow-sm min-h-[80px] flex-shrink-0 w-[240px] md:w-auto snap-start" style={{ scrollSnapAlign: 'start' }}>
@@ -640,8 +696,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       <Truck className="h-6 w-6 text-blue-600 dark:text-blue-400" strokeWidth={2} />
                     </div>
                     <div className="min-w-0">
-                      <p className="font-semibold text-gray-900 dark:text-white">Livraison</p>
-                      <p className="text-sm text-blue-700 dark:text-blue-400">2-3 jours</p>
+                      <p className="font-semibold text-gray-900 dark:text-white">Livraison 2-3 jours</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 shadow-sm min-h-[80px] flex-shrink-0 w-[240px] md:w-auto snap-start" style={{ scrollSnapAlign: 'start' }}>
@@ -649,170 +704,151 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       <Award className="h-6 w-6 text-amber-600 dark:text-amber-400" strokeWidth={2} />
                     </div>
                     <div className="min-w-0">
-                      <p className="font-semibold text-gray-900 dark:text-white">Garantie</p>
-                      <p className="text-sm text-amber-700 dark:text-amber-400">Qualité</p>
+                      <p className="font-semibold text-gray-900 dark:text-white">Garantie Qualité</p>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Desktop Layout: Info only (image in left column). Order: Title → Rating → Price → Meta Description */}
+            {/* Desktop Layout: badges, title, rating, price, description, category, quantity, CTAs, arômes, service cards */}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="hidden lg:block space-y-3 min-w-0"
+              className="hidden lg:block space-y-4 min-w-0"
             >
-                {/* Badges (stock, promo) */}
+                {/* Badges */}
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Badge variant="outline" className="bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800">
+                  <Badge variant="outline" className="bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800 text-xs px-2.5 py-1">
                     <CheckCircle2 className="h-3 w-3 mr-1" />
                     {product.rupture === 1 ? 'En Stock' : 'Rupture de stock'}
                   </Badge>
-                  {discount > 0 && <Badge className="bg-red-600 text-white">-{discount}% OFF</Badge>}
-                  {product.new_product === 1 && <Badge className="bg-blue-600 text-white">Nouveau</Badge>}
-                  {product.best_seller === 1 && <Badge className="bg-yellow-600 text-white">Top Vendu</Badge>}
+                  {discount > 0 && (
+                    <Badge className="bg-red-600 text-white text-xs px-2.5 py-1">-{discount}% OFF</Badge>
+                  )}
+                  {product.new_product === 1 && (
+                    <Badge className="bg-blue-600 text-white text-xs px-2.5 py-1">New</Badge>
+                  )}
+                  {product.best_seller === 1 && (
+                    <Badge className="bg-amber-600 text-white text-xs px-2.5 py-1">Top Vendu</Badge>
+                  )}
                 </div>
-
-                {/* 1. Title (H1) only */}
-                <h1 className="text-2xl lg:text-3xl xl:text-4xl font-bold text-gray-900 dark:text-white leading-snug line-clamp-3 break-words">
+                <h1 className="text-xl xl:text-2xl font-bold text-gray-900 dark:text-white leading-snug line-clamp-2 break-words">
                   {product.designation_fr}
                 </h1>
-
-                {/* 2. Rating */}
-                {rating > 0 && (
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-0.5">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} className={`h-5 w-5 ${i < Math.floor(rating) ? 'fill-yellow-400 text-yellow-400' : 'fill-gray-200 dark:fill-gray-700 text-gray-200 dark:text-gray-700'}`} />
-                      ))}
-                    </div>
-                    <span className="text-sm text-gray-600 dark:text-gray-400">({rating.toFixed(1)}) · {reviewCount} avis</span>
+                <button
+                  type="button"
+                  onClick={() => document.getElementById('reviews')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="flex items-center gap-2 text-left"
+                >
+                  <div className="flex items-center gap-0.5">
+                    {[1,2,3,4,5].map((i) => (
+                      <Star key={i} className={`h-4 w-4 ${i <= Math.round(rating) ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 dark:fill-gray-700 text-gray-200 dark:text-gray-700'}`} />
+                    ))}
                   </div>
-                )}
-
-                {/* 3. Price — prominent */}
-                <div className="py-3 border-y border-gray-200 dark:border-gray-800">
-                  <div className="flex flex-wrap items-baseline gap-3">
-                    <span className="text-3xl lg:text-4xl font-bold text-red-600 dark:text-red-400">{displayPrice} DT</span>
-                    {oldPrice && <span className="text-xl text-gray-400 line-through">{oldPrice} DT</span>}
-                  </div>
-                  {oldPrice && <p className="text-sm text-green-600 dark:text-green-400 mt-1">Vous économisez {oldPrice - displayPrice} DT</p>}
+                  <span className="text-sm text-primary-600 dark:text-primary-400 font-medium hover:underline">({rating > 0 ? rating.toFixed(1) : '0'}) – {reviewCount} avis</span>
+                </button>
+                {/* Price */}
+                <div className="flex flex-wrap items-baseline gap-2">
+                  <span className="text-2xl xl:text-3xl font-bold text-red-600 dark:text-red-400">{displayPrice} DT</span>
+                  {oldPrice && (
+                    <span className="text-lg text-gray-400 dark:text-gray-500 line-through">{oldPrice} DT</span>
+                  )}
                 </div>
-
-                {/* 4. Meta Description - short SEO snippet */}
-                {metaDescription && (
-                  <p className="text-sm lg:text-base text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-3">
-                    {metaDescription}
-                  </p>
+                {oldPrice && (
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Vous économisez {(oldPrice - displayPrice).toFixed(0)} DT</p>
                 )}
-
-                {/* Category, Code, Brand - lighter metadata */}
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
-                  {product.brand && <span>{product.brand.designation_fr}</span>}
-                  {product.sous_categorie?.slug && (
-                    <Link href={`/category/${product.sous_categorie!.slug}`} className="text-red-600 dark:text-red-400 hover:underline">
+                {metaDescription && (
+                  <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-3">{metaDescription}</p>
+                )}
+                {product.sous_categorie?.slug && (
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
+                    <Link href={`/category/${product.sous_categorie.slug}`} className="text-red-600 dark:text-red-400 hover:underline">
                       {product.sous_categorie.designation_fr}
                     </Link>
-                  )}
-                  {product.code_product && <span>Code: {product.code_product}</span>}
-                </div>
-
-                {/* 5. Quantity + CTA — visible without scroll */}
-                <div className="space-y-3">
-                  <div className="flex flex-wrap items-center gap-4">
-                    <div className="flex items-center gap-2 border border-gray-200 dark:border-gray-800 rounded-xl px-2 py-1.5 min-h-[44px]">
-                      <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => setQuantity(Math.max(1, quantity - 1))} disabled={quantity <= 1} aria-label="Diminuer la quantité">
-                        <Minus className="h-4 w-4" />
-                      </Button>
-                      <span className="w-10 text-center font-semibold" aria-live="polite">{quantity}</span>
-                      <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => setQuantity(Math.min(stockDisponible, quantity + 1))} disabled={quantity >= stockDisponible || stockDisponible <= 0} aria-label="Augmenter la quantité">
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Total: <strong className="text-gray-900 dark:text-white">{(displayPrice * quantity).toFixed(0)} DT</strong></span>
                   </div>
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <Button
-                      size="lg"
-                      className="flex-1 min-h-[52px] bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white text-base font-bold shadow-lg"
-                      onClick={handleAddToCart}
-                      disabled={stockDisponible <= 0}
-                    >
-                      <ShoppingCart className="h-5 w-5 mr-2" />
-                      {stockDisponible <= 0 ? 'Rupture de stock' : 'Ajouter au panier'}
+                )}
+                {/* Quantity + Total */}
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+                    <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => setQuantity(Math.max(1, quantity - 1))} disabled={quantity <= 1} aria-label="Diminuer la quantité">
+                      <Minus className="h-4 w-4" />
                     </Button>
-                    <Button
-                      size="lg"
-                      variant="outline"
-                      className="flex-1 min-h-[52px] border-2 border-amber-500 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 text-base font-bold"
-                      onClick={() => setQuickOrderOpen(true)}
-                      disabled={stockDisponible <= 0}
-                    >
-                      <Zap className="h-5 w-5 mr-2" />
-                      Commande rapide
+                    <span className="w-10 text-center font-semibold text-sm tabular-nums" aria-live="polite">{quantity}</span>
+                    <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => setQuantity(Math.min(stockDisponible, quantity + 1))} disabled={quantity >= stockDisponible || stockDisponible <= 0} aria-label="Augmenter la quantité">
+                      <Plus className="h-4 w-4" />
                     </Button>
-                    <div className="flex gap-2 shrink-0">
-                      <Button variant="outline" size="icon" className="h-11 w-11" onClick={() => setIsFavorite(!isFavorite)} aria-label="Favoris">
-                        <Heart className={`h-5 w-5 ${isFavorite ? 'fill-red-600 text-red-600' : ''}`} />
-                      </Button>
-                      <Button variant="outline" size="icon" className="h-11 w-11" onClick={handleShare} aria-label="Partager">
-                        <Share2 className="h-5 w-5" />
-                      </Button>
-                    </div>
                   </div>
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white">Total: {(displayPrice * quantity).toFixed(0)} DT</span>
                 </div>
-
-                {/* 7. Aromes */}
+                {/* CTAs: Ajouter au panier first (red), Commander maintenant second (amber) */}
+                <div className="flex flex-col gap-2">
+                  <Button
+                    size="lg"
+                    className="w-full min-h-[48px] bg-red-600 hover:bg-red-700 text-white font-bold"
+                    onClick={handleAddToCart}
+                    disabled={stockDisponible <= 0}
+                  >
+                    <ShoppingCart className="h-5 w-5 mr-2" />
+                    {stockDisponible <= 0 ? 'Rupture de stock' : 'Ajouter au panier'}
+                  </Button>
+                  <Button
+                    size="lg"
+                    className="w-full min-h-[48px] bg-amber-500 hover:bg-amber-600 text-white font-semibold"
+                    onClick={() => openQuickOrder(quickOrderProduct, { initialQty: quantity })}
+                    disabled={stockDisponible <= 0}
+                  >
+                    <Zap className="h-5 w-5 mr-2" />
+                    Commander maintenant
+                  </Button>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="icon" className="h-10 w-10" onClick={() => toggleFavorite(favoriteProduct)} aria-label="Favoris">
+                    <Heart className={`h-5 w-5 ${isInFavorites(product.id) ? 'fill-red-600 text-red-600' : ''}`} />
+                  </Button>
+                  <Button variant="outline" size="icon" className="h-10 w-10" onClick={handleShare} aria-label="Partager">
+                    <Share2 className="h-5 w-5" />
+                  </Button>
+                </div>
                 {product.aromes && product.aromes.length > 0 && (
-                  <div className="space-y-2 pt-2">
-                    <label className="text-sm font-semibold text-gray-900 dark:text-white">Arômes disponibles</label>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white mb-1.5">Arômes disponibles</p>
                     <div className="flex flex-wrap gap-2">
                       {product.aromes.map((arome) => (
-                        <Badge key={arome.id} variant="outline" className="bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+                        <Badge key={arome.id} variant="outline" className="bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 rounded-md">
                           {arome.designation_fr}
                         </Badge>
                       ))}
                     </div>
                   </div>
                 )}
-
-                {/* 8. Trust badges — desktop: 3 cols */}
-                <div className="grid grid-cols-3 gap-4 border-t border-gray-200 dark:border-gray-800 pt-5">
-                  <div className="flex items-center gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 shadow-sm min-h-[80px]">
-                    <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
-                      <Shield className="h-6 w-6 text-green-600 dark:text-green-400" strokeWidth={2} />
+                {/* Service assurances */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-gray-200 dark:border-gray-800">
+                  <div className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30">
+                    <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
+                      <Shield className="h-5 w-5 text-green-600 dark:text-green-400" strokeWidth={2} />
                     </div>
-                    <div>
-                      <p className="font-semibold text-gray-900 dark:text-white">Paiement</p>
-                      <p className="text-sm text-green-700 dark:text-green-400">Sécurisé</p>
-                    </div>
+                    <p className="font-medium text-sm text-gray-900 dark:text-white">Paiement Sécurisé</p>
                   </div>
-                  <div className="flex items-center gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 shadow-sm min-h-[80px]">
-                    <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
-                      <Truck className="h-6 w-6 text-blue-600 dark:text-blue-400" strokeWidth={2} />
+                  <div className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30">
+                    <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
+                      <Truck className="h-5 w-5 text-blue-600 dark:text-blue-400" strokeWidth={2} />
                     </div>
-                    <div>
-                      <p className="font-semibold text-gray-900 dark:text-white">Livraison</p>
-                      <p className="text-sm text-blue-700 dark:text-blue-400">2-3 jours</p>
-                    </div>
+                    <p className="font-medium text-sm text-gray-900 dark:text-white">Livraison 2-3 jours</p>
                   </div>
-                  <div className="flex items-center gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 shadow-sm min-h-[80px]">
-                    <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
-                      <Award className="h-6 w-6 text-amber-600 dark:text-amber-400" strokeWidth={2} />
+                  <div className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30">
+                    <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
+                      <Award className="h-5 w-5 text-amber-600 dark:text-amber-400" strokeWidth={2} />
                     </div>
-                    <div>
-                      <p className="font-semibold text-gray-900 dark:text-white">Garantie</p>
-                      <p className="text-sm text-amber-700 dark:text-amber-400">Qualité</p>
-                    </div>
+                    <p className="font-medium text-sm text-gray-900 dark:text-white">Garantie Qualité</p>
                   </div>
                 </div>
               </motion.div>
           </div>
         </div>
 
-        {/* Description / Nutrition / Questions — full width, wider container, less scrolling */}
-        <section className="mx-auto w-full max-w-7xl px-4 md:px-6 pt-6 sm:pt-8 lg:pt-10 pb-6" aria-label="Description et informations produit">
+        {/* Description / Nutrition / Questions — full width; spacing so sections never overlap */}
+        <section className="mx-auto w-full max-w-7xl px-4 md:px-6 pt-8 sm:pt-10 lg:pt-12 pb-6 sm:pb-8 border-t border-gray-100 dark:border-gray-800 mt-8 sm:mt-10" aria-label="Description et informations produit">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="w-full mb-0">
             {(() => {
               const hasNutritionContent = product.nutrition_values != null &&
@@ -827,15 +863,15 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
 
               return (
                 <Tabs defaultValue="description" className="w-full flex flex-col gap-4 sm:gap-5">
-                  <TabsList className={`grid w-full shrink-0 bg-gray-100 dark:bg-gray-900 rounded-lg sm:rounded-xl p-1.5 sm:p-1 gap-2 min-h-[44px] ${tabCount === 3 ? 'grid-cols-3' : tabCount === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                    <TabsTrigger value="description" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2.5 sm:py-2 min-h-[40px] sm:min-h-0">
+                  <TabsList className="flex w-full shrink-0 bg-gray-100 dark:bg-gray-900 rounded-lg sm:rounded-xl p-2 sm:p-1.5 gap-2 sm:gap-1.5 min-h-[44px]">
+                    <TabsTrigger value="description" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2.5 sm:py-2 min-h-[40px] sm:min-h-0 flex-1 min-w-0 px-2 sm:px-2 truncate" title={product.zone1 || 'Description'}>
                       {product.zone1 || 'Description'}
                     </TabsTrigger>
-                    <TabsTrigger value="nutrition" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2.5 sm:py-2 min-h-[40px] sm:min-h-0">
-                      {product.zone3 || 'Valeurs Nutritionnelles'}
+                    <TabsTrigger value="nutrition" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2.5 sm:py-2 min-h-[40px] sm:min-h-0 flex-1 min-w-0 px-2 sm:px-2 truncate" title={product.zone3 || 'Valeurs nutritionnelles'}>
+                      {product.zone3 || 'Valeurs nutritionnelles'}
                     </TabsTrigger>
                     {hasQuestions && (
-                      <TabsTrigger value="questions" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2.5 sm:py-2 min-h-[40px] sm:min-h-0">
+                      <TabsTrigger value="questions" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2.5 sm:py-2 min-h-[40px] sm:min-h-0 flex-1 min-w-0 px-2 sm:px-2 truncate" title={product.zone4 || 'Questions'}>
                         {product.zone4 || 'Questions'}
                       </TabsTrigger>
                     )}
@@ -860,16 +896,18 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     </div>
                   </TabsContent>
 
-                  <TabsContent value="nutrition" className="mt-0 pt-0 rounded-xl sm:rounded-2xl focus-visible:outline-none data-[state=inactive]:hidden data-[state=inactive]:absolute data-[state=inactive]:pointer-events-none">
-                    <div className="p-4 sm:p-5 lg:p-6 pt-5 sm:pt-6 border-t border-gray-200 dark:border-gray-800">
-                    <h3 className="text-lg sm:text-xl font-bold mb-3 text-gray-900 dark:text-white">
-                      {product.zone3 || 'Valeurs Nutritionnelles'}
-                    </h3>
+                  <TabsContent value="nutrition" className="mt-0 pt-0 rounded-xl sm:rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden focus-visible:outline-none data-[state=inactive]:hidden data-[state=inactive]:absolute data-[state=inactive]:pointer-events-none">
+                    <div className="p-3 sm:p-5 lg:p-6 pt-4 sm:pt-6 border-t border-gray-200 dark:border-gray-800">
+                      <h3 className="text-base sm:text-lg font-bold mb-3 text-gray-900 dark:text-white">
+                        {product.zone3 || 'Valeurs Nutritionnelles'}
+                      </h3>
                     {hasNutritionContent ? (
-                      <div
-                        className="text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-base max-w-none prose-p:leading-relaxed prose-img:rounded-lg prose-img:shadow-md prose-img:w-full prose-img:h-auto"
-                        dangerouslySetInnerHTML={{ __html: product.nutrition_values || '' }}
-                      />
+                      <div className="w-full min-w-0 overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
+                        <div
+                          className="nutrition-content text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-sm sm:prose-base max-w-none prose-p:leading-relaxed prose-p:my-1 sm:prose-p:my-2 prose-img:rounded-lg prose-img:shadow-md prose-img:max-w-full prose-img:h-auto prose-table:text-left prose-th:py-2 prose-th:px-2 sm:prose-th:px-3 prose-td:py-2 prose-td:px-2 sm:prose-td:px-3 prose-table:w-full min-w-[280px]"
+                          dangerouslySetInnerHTML={{ __html: product.nutrition_values || '' }}
+                        />
+                      </div>
                     ) : (
                       <div className="text-center py-6 sm:py-8">
                         <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base">
@@ -1019,10 +1057,15 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     ))}
                   </div>
 
-                  {/* See More Reviews Button - Always show to navigate to full reviews page */}
+                  {/* See more: link to full reviews page (e.g. /shop/serious-mass-5-45-kg-optimum-nutrition/reviews) */}
                   <Button variant="outline" className="w-full" size="default" asChild>
-                    <Link href={`/shop/${encodeURIComponent(product.slug ?? '')}#reviews`} className="flex items-center justify-center gap-2">
-                      Voir tous les avis ({reviewCount})
+                    <Link
+                      href={product.slug ? `/shop/${encodeURIComponent(product.slug)}/reviews` : `/products/${product.id}/reviews`}
+                      className="flex items-center justify-center gap-2"
+                    >
+                      {reviewCount > REVIEWS_ON_PRODUCT_PAGE
+                        ? `Voir plus d'avis (${reviewCount} au total)`
+                        : `Voir tous les avis (${reviewCount})`}
                       <ChevronRight className="h-4 w-4" />
                     </Link>
                   </Button>
@@ -1099,21 +1142,29 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
             <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6 lg:mb-8">
               Produits similaires
             </h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 lg:gap-6">
+            {/* Mobile: horizontal carousel with snap; Desktop: grid 4 cols */}
+            <div
+              className="flex md:grid overflow-x-auto md:overflow-visible gap-3 sm:gap-4 lg:gap-6 pb-2 md:pb-0 snap-x snap-mandatory md:snap-none md:grid-cols-4 scrollbar-hide -mx-3 px-3 sm:mx-0 sm:px-0"
+              style={{ WebkitOverflowScrolling: 'touch' }}
+            >
               {similarProducts.map((similarProduct, index) => (
-                <ProductCard
-                  key={similarProduct.id || `similar-${index}`}
-                  product={similarProduct}
-                  variant="compact"
-                />
+                <div key={similarProduct.id || `similar-${index}`} className="shrink-0 w-[min(180px,42vw)] sm:w-[min(200px,45vw)] md:w-auto md:min-w-0 snap-center">
+                  <ProductCard
+                    product={similarProduct}
+                    variant="compact"
+                  />
+                </div>
               ))}
             </div>
           </motion.div>
         )}
       </main>
 
-      {/* Sticky CTAs (Mobile): Commander maintenant primary, Ajouter au panier secondary */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 p-3 sm:p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] z-50 safe-area-pb">
+      {/* Sticky CTAs (Mobile): Ajouter au panier primary, Commande rapide secondary */}
+      <div
+        className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 p-3 sm:p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] z-50"
+        style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}
+      >
         <div className="max-w-7xl mx-auto flex flex-col gap-2 sm:gap-3">
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total</p>
@@ -1123,36 +1174,28 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
           </div>
           <Button
             size="lg"
-            className="w-full min-h-[52px] bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-base font-bold shrink-0"
-            onClick={() => setQuickOrderOpen(true)}
+            className="w-full min-h-[52px] bg-red-600 hover:bg-red-700 text-white text-base font-bold shrink-0"
+            onClick={handleAddToCart}
+            disabled={stockDisponible <= 0}
+            aria-label="Ajouter au panier"
+          >
+            <ShoppingCart className="h-5 w-5 mr-2 shrink-0" />
+            {stockDisponible <= 0 ? 'Rupture' : 'Ajouter au panier'}
+          </Button>
+          <Button
+            size="lg"
+            variant="outline"
+            className="w-full min-h-[48px] border-2 border-amber-500 text-amber-600 dark:text-amber-400 bg-white dark:bg-gray-800 font-semibold shrink-0 hover:bg-amber-50 dark:hover:bg-amber-950/20"
+            onClick={() => openQuickOrder(quickOrderProduct, { initialQty: quantity })}
             disabled={stockDisponible <= 0}
             aria-label="Commander maintenant"
           >
             <Zap className="h-5 w-5 mr-2 shrink-0" />
             Commander maintenant
           </Button>
-          <Button
-            size="lg"
-            variant="outline"
-            className="w-full min-h-[48px] border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 font-semibold shrink-0"
-            onClick={handleAddToCart}
-            disabled={stockDisponible <= 0}
-          >
-            <ShoppingCart className="h-5 w-5 mr-2 shrink-0" />
-            {stockDisponible <= 0 ? 'Rupture' : 'Ajouter au panier'}
-          </Button>
         </div>
       </div>
 
-      <QuickOrderDrawer
-        open={quickOrderOpen}
-        onOpenChange={setQuickOrderOpen}
-        productId={product.id}
-        productName={product.designation_fr || ''}
-        quantity={quantity}
-        unitPrice={displayPrice}
-        onSuccess={() => {}}
-      />
       <Footer />
       <ScrollToTop />
     </div>

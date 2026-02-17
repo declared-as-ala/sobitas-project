@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
-import { getProductDetails, getSimilarProducts, getFAQs } from '@/services/api';
+import { getProductDetails, getSimilarProducts, getFAQs, getStorageUrl } from '@/services/api';
 import { buildCanonicalUrl } from '@/util/canonical';
 import {
   buildProductJsonLd,
@@ -36,18 +36,18 @@ function buildCategoryRedirectUrl(
   return query ? `${base}?${query}` : base;
 }
 
-/** CTR-optimized product title for Tunisia SERP (aim: position #1). */
+/** CTR-optimized product title for Tunisia SERP (aim: position #1). Format: Product Name – Prix Tunisie & Livraison Rapide | Protein.tn */
 function productTitle(product: { designation_fr?: string; slug?: string }): string {
   const name = product.designation_fr ?? product.slug ?? 'Produit';
-  return `${name} – Meilleur Prix & Livraison Tunisie`;
+  return `${name} – Prix Tunisie & Livraison Rapide | Protein.tn`;
 }
 
-/** Meta description with Tunisia intent (prix, livraison, SOBITAS). */
-function productDescription(product: { meta_description_fr?: string; description_fr?: string; designation_fr?: string }, title: string): string {
+/** Meta description: benefit + authenticity + delivery + location (Tunisie). Max 160 chars. */
+function productDescription(product: { meta_description_fr?: string; description_fr?: string; designation_fr?: string }, productName: string): string {
   if (product.meta_description_fr?.trim()) return product.meta_description_fr.slice(0, 160);
-  const plain = (product.description_fr || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 140);
-  if (plain) return `${plain} Prix Tunisie. Livraison rapide SOBITAS.`;
-  return `Acheter ${title} en Tunisie – Meilleur prix, livraison rapide Sousse Tunis. SOBITAS.`;
+  const plain = (product.description_fr || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
+  if (plain) return `${plain} Prix Tunisie. Produits authentiques. Livraison 24-72h. SOBITAS Protein.tn`;
+  return `Acheter ${productName} en Tunisie – Meilleur prix, livraison rapide, produits authentiques. Sousse, Tunis, toute la Tunisie. Protein.tn`;
 }
 
 export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
@@ -59,15 +59,42 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     const product = await getProductDetails(cleanSlug);
     if (product?.id) {
       const title = productTitle(product);
+      const description = productDescription(product, product.designation_fr ?? product.slug ?? 'Produit');
+      const canonicalUrl = buildCanonicalUrl(`/shop/${cleanSlug}`);
+      // Use only this product's cover so Google shows the correct image (never another product's).
+      // Add ?for=<slug> so the image URL is unique per product and caches don't mix results.
+      const baseImageUrl = product.cover ? getStorageUrl(product.cover) : null;
+      const imageUrl =
+        baseImageUrl && (baseImageUrl.startsWith('http://') || baseImageUrl.startsWith('https://'))
+          ? `${baseImageUrl}${baseImageUrl.includes('?') ? '&' : '?'}for=${encodeURIComponent(cleanSlug)}`
+          : null;
+      const productName = product.designation_fr ?? product.slug ?? 'Produit';
+      const ogImage = imageUrl
+        ? { url: imageUrl, width: 1200, height: 1200, alt: productName }
+        : undefined;
       return {
         title,
-        description: productDescription(product, product.designation_fr ?? product.slug ?? 'Produit'),
-        alternates: { canonical: buildCanonicalUrl(`/shop/${slug}`) },
-        openGraph: { title, description: productDescription(product, product.designation_fr ?? product.slug ?? 'Produit') },
+        description,
+        robots: { index: true, follow: true },
+        alternates: { canonical: canonicalUrl },
+        openGraph: {
+          type: 'website',
+          url: canonicalUrl,
+          title,
+          description,
+          siteName: 'Protein.tn',
+          images: ogImage ? [ogImage] : undefined,
+          locale: 'fr_TN',
+        },
+        twitter: {
+          card: 'summary_large_image',
+          title,
+          description,
+          images: imageUrl ? [imageUrl] : undefined,
+        },
       };
     }
   } catch {
-    // Product not found → always redirect to /category/:slug (old /shop/* category links)
     permanentRedirect(buildCategoryRedirectUrl(cleanSlug, search));
   }
   return { title: 'Produit | SOBITAS Tunisie' };
@@ -154,7 +181,7 @@ export default async function ShopProductPage({ params, searchParams }: PageProp
       {faqSchema && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       )}
-      <ProductDetailClient product={safeProduct} similarProducts={similarProducts} slugOverride={cleanSlug} />
+      <ProductDetailClient product={safeProduct} similarProducts={similarProducts} slugOverride={cleanSlug} breadcrumbItems={breadcrumbItems} />
     </>
   );
 }

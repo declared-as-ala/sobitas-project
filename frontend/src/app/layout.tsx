@@ -3,9 +3,7 @@ import { Inter } from "next/font/google";
 import { Suspense } from "react";
 import "./globals.css";
 import { ThemeProvider } from "@/app/components/ThemeProvider";
-import { CartProvider } from "@/app/contexts/CartContext";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { LoadingProvider } from "@/contexts/LoadingContext";
+import { Providers } from "@/app/providers";
 import { GlobalLoader } from "@/app/components/GlobalLoader";
 import { NavigationHandler } from "@/app/components/NavigationHandler";
 import { DeferredToaster } from "@/app/components/DeferredToaster";
@@ -143,18 +141,14 @@ export default async function RootLayout({
           }}
         />
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-          <LoadingProvider>
-            <AuthProvider>
-              <CartProvider>
-                <Suspense fallback={null}>
-                  <NavigationHandler />
-                </Suspense>
-                {children}
-                <GlobalLoader />
-                <DeferredToaster />
-              </CartProvider>
-            </AuthProvider>
-          </LoadingProvider>
+          <Providers>
+            <Suspense fallback={null}>
+              <NavigationHandler />
+            </Suspense>
+            {children}
+            <GlobalLoader />
+            <DeferredToaster />
+          </Providers>
         </ThemeProvider>
       </body>
     </html>

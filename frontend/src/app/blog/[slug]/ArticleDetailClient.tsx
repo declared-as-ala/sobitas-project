@@ -6,6 +6,7 @@ import { SafeImage } from '@/app/components/SafeImage';
 import { Header } from '@/app/components/Header';
 import { Footer } from '@/app/components/Footer';
 import { Button } from '@/app/components/ui/button';
+import { BlogRecommendedProducts } from '@/app/blog/BlogRecommendedProducts';
 import { ArrowLeft, Calendar, Clock, ArrowRight, Share2, Sparkles } from 'lucide-react';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { motion } from 'motion/react';
@@ -250,6 +251,13 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
               {children}
             </div>
           </article>
+
+          {/* Produits recommandés – lazy-loaded, 4–8 products (category / best sellers) */}
+          <BlogRecommendedProducts
+            article={article}
+            categorySlug={article.category_slug}
+            recommendedProductSlugs={article.recommended_product_slugs ?? []}
+          />
 
           {/* Related Articles */}
           {relatedArticles.length > 0 && (

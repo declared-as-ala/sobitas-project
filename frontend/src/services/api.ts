@@ -489,9 +489,20 @@ export const getNewProducts = async (): Promise<Product[]> => {
   return response.data;
 };
 
+/** Meilleurs ventes: uses /best_sellers (8 products), fallback to /latest_products.best_sellers (4). */
 export const getBestSellers = async (): Promise<Product[]> => {
-  const response = await api.get('/best_sellers');
-  return response.data;
+  try {
+    const response = await api.get<Product[] | { best_sellers?: Product[] }>('/best_sellers');
+    const data = response.data;
+    if (Array.isArray(data)) return data;
+    if (data && Array.isArray((data as { best_sellers?: Product[] }).best_sellers)) {
+      return (data as { best_sellers: Product[] }).best_sellers;
+    }
+  } catch {
+    // Backend may not have /best_sellers yet: use latest_products
+  }
+  const fallback = await api.get<{ best_sellers?: Product[] }>('/latest_products').catch((): { data: { best_sellers?: Product[] } } => ({ data: {} }));
+  return Array.isArray(fallback.data?.best_sellers) ? fallback.data.best_sellers : [];
 };
 
 export const getFlashSales = async (): Promise<Product[]> => {

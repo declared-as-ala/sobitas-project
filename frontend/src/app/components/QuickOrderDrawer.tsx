@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
-import { Textarea } from '@/app/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -13,18 +13,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/app/components/ui/select';
+import { AddressSelector } from '@/app/components/AddressSelector';
+import { Badge } from '@/app/components/ui/badge';
 import { submitQuickOrder } from '@/services/api';
+import { getStorageUrl } from '@/services/api';
 import type { QuickOrderPayload, QuickOrderResponse } from '@/types';
-import { Loader2, CheckCircle2, Zap, MessageCircle, X } from 'lucide-react';
+import type { QuickOrderProduct } from '@/contexts/QuickOrderContext';
+import { getPriceDisplay } from '@/util/productPrice';
+import { Loader2, CheckCircle2, Zap, X, Minus, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/app/components/ui/utils';
-
-const GOUVERNORATS = [
-  'ARIANA', 'BÉJA', 'BEN AROUS', 'BIZERTE', 'GABÈS', 'GAFSA', 'JENDOUBA',
-  'KAIROUAN', 'KASSERINE', 'KÉBILI', 'LE KEF', 'MAHDIA', 'MANOUBA', 'MÉDENINE',
-  'MONASTIR', 'NABEUL', 'SFAX', 'SIDI BOUZID', 'SILIANA', 'SOUSSE', 'TATAOUINE',
-  'TOZEUR', 'TUNIS', 'ZAGHOUAN',
-];
 
 const WHATSAPP_NUMBER = '21627612500';
 const WHATSAPP_BASE = `https://wa.me/${WHATSAPP_NUMBER}`;
@@ -32,11 +30,9 @@ const WHATSAPP_BASE = `https://wa.me/${WHATSAPP_NUMBER}`;
 export interface QuickOrderDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  productId: number;
-  productName: string;
-  quantity: number;
-  unitPrice: number;
-  variantId?: number;
+  product: QuickOrderProduct;
+  initialQty?: number;
+  initialVariantId?: number;
   onSuccess?: (result: QuickOrderResponse) => void;
 }
 
@@ -52,51 +48,64 @@ function trackEvent(name: string, params?: Record<string, unknown>) {
 export function QuickOrderDrawer({
   open,
   onOpenChange,
-  productId,
-  productName,
-  quantity,
-  unitPrice,
-  variantId,
+  product,
+  initialQty = 1,
+  initialVariantId,
   onSuccess,
 }: QuickOrderDrawerProps) {
   const [internalOpen, setInternalOpen] = useState(false);
-  const [customerName, setCustomerName] = useState('');
+  const [quantity, setQuantity] = useState(Math.max(1, initialQty));
+  const [selectedVariantId, setSelectedVariantId] = useState<number | undefined>(initialVariantId ?? product.aromes?.[0]?.id);
+  const [nom, setNom] = useState('');
+  const [prenom, setPrenom] = useState('');
   const [phone, setPhone] = useState('');
-  const [city, setCity] = useState('');
-  const [address, setAddress] = useState('');
-  const [note, setNote] = useState('');
+  const [gouvernorat, setGouvernorat] = useState('');
+  const [delegation, setDelegation] = useState('');
+  const [localite, setLocalite] = useState('');
+  const [codePostal, setCodePostal] = useState('');
   const [website, setWebsite] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState<QuickOrderResponse | null>(null);
   const phoneInputRef = useRef<HTMLInputElement>(null);
 
+  const priceDisplay = getPriceDisplay(product);
+  const unitPrice = priceDisplay.finalPrice;
   const total = unitPrice * quantity;
   const deliveryNote = 0;
+  const inStock = product.rupture === 1 || product.rupture === undefined;
+  const discount = priceDisplay.hasPromo && priceDisplay.oldPrice != null && priceDisplay.oldPrice > 0
+    ? Math.round(((priceDisplay.oldPrice - unitPrice) / priceDisplay.oldPrice) * 100)
+    : 0;
+  const productImage = product.cover ? getStorageUrl(product.cover) : '';
 
   useEffect(() => {
     setInternalOpen(open);
   }, [open]);
 
   useEffect(() => {
-    if (open) {
+    if (open && product) {
+      setQuantity(Math.max(1, initialQty));
+      setSelectedVariantId(initialVariantId ?? product.aromes?.[0]?.id);
       setResult(null);
       setErrors({});
       setWebsite('');
-      trackEvent('quick_order_open', { product_id: productId });
+      trackEvent('quick_order_open', { product_id: product.id });
       document.body.style.overflow = 'hidden';
-      setTimeout(() => phoneInputRef.current?.focus(), 150);
+      setTimeout(() => document.getElementById('qo-nom')?.focus(), 150);
     }
     return () => {
       document.body.style.overflow = '';
     };
-  }, [open, productId]);
+  }, [open, product?.id, initialQty, initialVariantId, product?.aromes]);
 
   const hasFormData = () =>
-    [phone, customerName, city, address, note].some((v) => (v || '').trim() !== '');
+    [nom, prenom, phone, gouvernorat, delegation, localite].some((v) => (v || '').trim() !== '');
 
   const validate = (): boolean => {
     const e: Record<string, string> = {};
+    if (!(nom || '').trim()) e.nom = 'Nom requis';
+    if (!(prenom || '').trim()) e.prenom = 'Prénom requis';
     if (!(phone || '').trim()) e.phone = 'Téléphone requis';
     else {
       const digits = phone.replace(/\s/g, '').replace(/^\+216/, '');
@@ -104,8 +113,9 @@ export function QuickOrderDrawer({
         e.phone = '8 chiffres';
       }
     }
-    if (!(city || '').trim()) e.city = 'Gouvernorat requis';
-    if (!(address || '').trim()) e.address = 'Adresse requise';
+    if (!(gouvernorat || '').trim()) e.gouvernorat = 'Gouvernorat requis';
+    if (!(delegation || '').trim()) e.delegation = 'Délégation requise';
+    if (!(localite || '').trim()) e.localite = 'Localité requise';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -117,17 +127,19 @@ export function QuickOrderDrawer({
 
     setIsSubmitting(true);
     setErrors({});
-    trackEvent('quick_order_submit', { product_id: productId });
+    trackEvent('quick_order_submit', { product_id: product.id });
 
     const payload: QuickOrderPayload = {
-      productId,
-      variantId,
+      productId: product.id,
+      variantId: selectedVariantId,
       qty: quantity,
-      customerName: customerName.trim(),
+      nom: nom.trim(),
+      prenom: prenom.trim(),
       phone: phone.trim().replace(/\s/g, ''),
-      city: city.trim(),
-      address: address.trim(),
-      note: note.trim() || undefined,
+      gouvernorat: gouvernorat.trim(),
+      delegation: delegation.trim(),
+      localite: localite.trim(),
+      codePostal: codePostal.trim() || undefined,
       priceSnapshot: unitPrice,
       deliveryFeeSnapshot: deliveryNote,
       website: website || undefined,
@@ -136,13 +148,13 @@ export function QuickOrderDrawer({
     try {
       const res = await submitQuickOrder(payload);
       setResult(res);
-      trackEvent('quick_order_success', { order_id: res.orderId, product_id: productId });
+      trackEvent('quick_order_success', { order_id: res.orderId, product_id: product.id });
       onSuccess?.(res);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur. Réessayez.';
       setErrors({ submit: msg });
       toast.error(msg);
-      trackEvent('quick_order_fail', { product_id: productId, error: msg });
+      trackEvent('quick_order_fail', { product_id: product.id, error: msg });
     } finally {
       setIsSubmitting(false);
     }
@@ -153,11 +165,13 @@ export function QuickOrderDrawer({
     onOpenChange(false);
     setTimeout(() => {
       setResult(null);
-      setCustomerName('');
+      setNom('');
+      setPrenom('');
       setPhone('');
-      setCity('');
-      setAddress('');
-      setNote('');
+      setGouvernorat('');
+      setDelegation('');
+      setLocalite('');
+      setCodePostal('');
       setErrors({});
     }, 200);
   };
@@ -176,7 +190,7 @@ export function QuickOrderDrawer({
     }
   };
 
-  const summaryLine = `${productName} × ${quantity} — ${total.toFixed(0)} DT · Livraison 24–72h`;
+  const summaryLine = `${product.designation_fr} × ${quantity} — ${total.toFixed(0)} DT · Livraison 24–72h`;
 
   return (
     <DialogPrimitive.Root open={internalOpen} onOpenChange={handleOpenChange}>
@@ -212,7 +226,7 @@ export function QuickOrderDrawer({
             <div className="min-w-0">
               <DialogPrimitive.Title className="flex items-center gap-2 text-lg font-bold text-gray-900 dark:text-white">
                 <Zap className="h-5 w-5 shrink-0 text-amber-500" />
-                Commande rapide
+                Commander maintenant
               </DialogPrimitive.Title>
               <DialogPrimitive.Description className="mt-1 text-sm text-gray-600 dark:text-gray-400 truncate">
                 {summaryLine}
@@ -239,22 +253,6 @@ export function QuickOrderDrawer({
                   <p className="text-sm text-gray-500 dark:text-gray-500 mb-4">
                     Nous vous contacterons pour confirmer la livraison.
                   </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Si vous préférez, confirmez sur WhatsApp :</p>
-                  <Button
-                    asChild
-                    className="min-h-[48px] w-full bg-[#25D366] hover:bg-[#20BD5A] text-white font-semibold mb-3"
-                  >
-                    <a
-                      href={`${WHATSAPP_BASE}?text=${encodeURIComponent(
-                        `Bonjour, je viens de passer une commande rapide.\nRéf: ${result.numero ?? result.orderId}\nProduit: ${productName}\nQté: ${quantity}\nTél: ${phone}\nVille: ${city}\nAdresse: ${address}`
-                      )}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <MessageCircle className="h-5 w-5 mr-2" />
-                      Confirmer sur WhatsApp
-                    </a>
-                  </Button>
                   <Button variant="outline" className="min-h-[44px] px-6" onClick={handleClose}>
                     Fermer
                   </Button>
@@ -272,94 +270,171 @@ export function QuickOrderDrawer({
                     aria-hidden
                   />
 
-                  {/* Phone + Name: stack on mobile, 2 cols on desktop */}
+                  {/* Product summary: image + name + price + discount + stock */}
+                  <div className="flex gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
+                    {productImage ? (
+                      <div className="relative w-16 h-16 sm:w-20 sm:h-20 shrink-0 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
+                        <Image
+                          src={productImage}
+                          alt={product.designation_fr}
+                          fill
+                          className="object-contain"
+                          sizes="80px"
+                        />
+                      </div>
+                    ) : null}
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-gray-900 dark:text-white text-sm sm:text-base line-clamp-2">
+                        {product.designation_fr}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <span className="font-bold text-red-600 dark:text-red-400 text-sm">{unitPrice} DT</span>
+                        {priceDisplay.hasPromo && priceDisplay.oldPrice != null && (
+                          <span className="text-gray-500 dark:text-gray-400 line-through text-xs">{priceDisplay.oldPrice} DT</span>
+                        )}
+                        {discount > 0 && (
+                          <Badge className="bg-red-600 text-white text-[10px] px-1.5 py-0">-{discount}%</Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        {inStock ? 'En stock' : 'Rupture de stock'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Quantité (stepper) */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      Quantité *
+                    </Label>
+                    <div className="flex items-center gap-2 border border-gray-200 dark:border-gray-700 rounded-lg p-2 w-fit">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 shrink-0"
+                        onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                        disabled={quantity <= 1}
+                        aria-label="Diminuer la quantité"
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                      <span className="w-10 text-center font-semibold tabular-nums" aria-live="polite">{quantity}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 shrink-0"
+                        onClick={() => setQuantity((q) => q + 1)}
+                        disabled={!inStock}
+                        aria-label="Augmenter la quantité"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Variant (arômes) when product has variants */}
+                  {product.aromes && product.aromes.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        Arôme / Variante *
+                      </Label>
+                      <Select
+                        value={selectedVariantId != null ? String(selectedVariantId) : ''}
+                        onValueChange={(v) => setSelectedVariantId(v ? Number(v) : undefined)}
+                      >
+                        <SelectTrigger className="h-12 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 w-full">
+                          <SelectValue placeholder="Choisir..." />
+                        </SelectTrigger>
+                        <SelectContent className="z-[200]">
+                          {product.aromes.map((ar) => (
+                            <SelectItem key={ar.id} value={String(ar.id)}>{ar.designation_fr}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {/* Nom, Prénom, Téléphone (required) – order: Nom & Prénom before Téléphone */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="qo-phone" className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        Téléphone *
+                      <Label htmlFor="qo-nom" className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        Nom *
                       </Label>
                       <Input
-                        id="qo-phone"
-                        ref={phoneInputRef}
-                        type="tel"
-                        inputMode="numeric"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="12 345 678"
+                        id="qo-nom"
+                        value={nom}
+                        onChange={(e) => setNom(e.target.value)}
+                        placeholder="Ben Ali"
                         className="h-12 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-0"
-                        autoComplete="tel"
-                        aria-invalid={!!errors.phone}
+                        autoComplete="family-name"
+                        aria-invalid={!!errors.nom}
                       />
-                      {errors.phone && <p className="text-xs text-red-600 dark:text-red-400">{errors.phone}</p>}
+                      {errors.nom && <p className="text-xs text-red-600 dark:text-red-400">{errors.nom}</p>}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="qo-name" className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Nom & Prénom (optionnel)
+                      <Label htmlFor="qo-prenom" className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        Prénom *
                       </Label>
                       <Input
-                        id="qo-name"
-                        value={customerName}
-                        onChange={(e) => setCustomerName(e.target.value)}
-                        placeholder="Ahmed Ben Ali"
+                        id="qo-prenom"
+                        value={prenom}
+                        onChange={(e) => setPrenom(e.target.value)}
+                        placeholder="Ahmed"
                         className="h-12 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-0"
-                        autoComplete="name"
+                        autoComplete="given-name"
+                        aria-invalid={!!errors.prenom}
                       />
+                      {errors.prenom && <p className="text-xs text-red-600 dark:text-red-400">{errors.prenom}</p>}
                     </div>
                   </div>
-
-                  {/* Gouvernorat */}
                   <div className="space-y-2">
-                    <Label htmlFor="qo-city" className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      Gouvernorat *
-                    </Label>
-                    <Select value={city || undefined} onValueChange={setCity}>
-                      <SelectTrigger
-                        id="qo-city"
-                        className="h-12 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 data-[placeholder]:text-gray-500 focus:ring-2 focus:ring-red-500 focus:ring-offset-0 w-full"
-                        aria-invalid={!!errors.city}
-                      >
-                        <SelectValue placeholder="Choisir..." />
-                      </SelectTrigger>
-                      <SelectContent className="z-[200] max-h-[min(280px,60vh)] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-xl rounded-lg">
-                        {GOUVERNORATS.map((g) => (
-                          <SelectItem key={g} value={g} className="py-2.5 px-3">{g}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {errors.city && <p className="text-xs text-red-600 dark:text-red-400">{errors.city}</p>}
-                  </div>
-
-                  {/* Address */}
-                  <div className="space-y-2">
-                    <Label htmlFor="qo-address" className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      Adresse *
+                    <Label htmlFor="qo-phone" className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      Téléphone *
                     </Label>
                     <Input
-                      id="qo-address"
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      placeholder="Rue, numéro, bâtiment..."
+                      id="qo-phone"
+                      ref={phoneInputRef}
+                      type="tel"
+                      inputMode="numeric"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="12 345 678"
                       className="h-12 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-0"
-                      autoComplete="street-address"
-                      aria-invalid={!!errors.address}
+                      autoComplete="tel"
+                      aria-invalid={!!errors.phone}
                     />
-                    {errors.address && <p className="text-xs text-red-600 dark:text-red-400">{errors.address}</p>}
+                    {errors.phone && <p className="text-xs text-red-600 dark:text-red-400">{errors.phone}</p>}
                   </div>
 
-                  {/* Note */}
-                  <div className="space-y-2">
-                    <Label htmlFor="qo-note" className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                      Note (optionnel)
-                    </Label>
-                    <Textarea
-                      id="qo-note"
-                      value={note}
-                      onChange={(e) => setNote(e.target.value)}
-                      placeholder="Instructions de livraison..."
-                      className="min-h-[88px] rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-0 resize-none"
-                      rows={2}
-                    />
-                  </div>
+                  {/* Adresse de livraison: Gouvernorat → Délégation → Localité (like checkout) */}
+                  <AddressSelector
+                    gouvernorat={gouvernorat}
+                    delegation={delegation}
+                    localite={localite}
+                    codePostal={codePostal}
+                    onGouvernoratChange={(v) => {
+                      setGouvernorat(v);
+                      setDelegation('');
+                      setLocalite('');
+                      setCodePostal('');
+                    }}
+                    onDelegationChange={(v) => {
+                      setDelegation(v);
+                      setLocalite('');
+                      setCodePostal('');
+                    }}
+                    onLocaliteChange={(v, postal) => {
+                      setLocalite(v);
+                      setCodePostal(postal);
+                    }}
+                    label="Adresse de livraison"
+                    required
+                  />
+                  {errors.gouvernorat && <p className="text-xs text-red-600 dark:text-red-400">{errors.gouvernorat}</p>}
+                  {errors.delegation && <p className="text-xs text-red-600 dark:text-red-400">{errors.delegation}</p>}
+                  {errors.localite && <p className="text-xs text-red-600 dark:text-red-400">{errors.localite}</p>}
 
                   {errors.submit && (
                     <p className="text-sm text-red-600 dark:text-red-400">{errors.submit}</p>

@@ -3,6 +3,15 @@ import type { OrderRequest, QuickOrderPayload, QuickOrderResponse } from '@/type
 
 const API_URL = 'https://admin.protein.tn/api';
 
+type AddCommandeResponse = {
+  id?: number;
+  numero?: string;
+  message?: string;
+  error?: string;
+  commande?: { id?: number; numero?: string };
+  data?: { id?: number };
+};
+
 /** Simple rate limit: IP -> timestamps (last N requests). Max 5 per minute. */
 const rateLimitMap = new Map<string, number[]>();
 const RATE_LIMIT_WINDOW_MS = 60_000;
@@ -18,20 +27,12 @@ function isRateLimited(ip: string): boolean {
   return false;
 }
 
-function parseName(full: string): { nom: string; prenom: string } {
-  const t = (full || '').trim();
-  const i = t.indexOf(' ');
-  if (i <= 0) return { nom: t || 'Client', prenom: '' };
-  return { nom: t.slice(0, i).trim(), prenom: t.slice(i + 1).trim() };
-}
-
 function validatePhone(phone: string): boolean {
   const digits = phone.replace(/\s/g, '').replace(/^\+216/, '');
   return /^[0-9]{8}$/.test(digits) || /^2[0-9]{7}$/.test(digits);
 }
 
-export async function POST(request: NextRequest) {
-  try {
+async function handleQuickOrder(request: NextRequest): Promise<Response> {
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? request.headers.get('x-real-ip') ?? 'unknown';
     if (isRateLimited(ip)) {
       return NextResponse.json(
@@ -49,11 +50,15 @@ export async function POST(request: NextRequest) {
     const {
       productId,
       qty,
-      customerName,
+      nom: bodyNom,
+      prenom: bodyPrenom,
       phone,
+      gouvernorat,
+      delegation,
+      localite,
+      codePostal,
       city,
       address,
-      note,
       priceSnapshot,
       deliveryFeeSnapshot = 0,
     } = body;
@@ -65,11 +70,22 @@ export async function POST(request: NextRequest) {
       );
     }
     const qtyNum = Math.max(1, Math.min(99, Number(qty) || 1));
-    const nameTrim = (customerName || '').trim();
+    const nom = (bodyNom ?? '').trim();
+    const prenom = (bodyPrenom ?? '').trim();
     const phoneTrim = (phone || '').trim();
+    const govTrim = (gouvernorat || '').trim();
+    const delTrim = (delegation || '').trim();
+    const locTrim = (localite || '').trim();
     const cityTrim = (city || '').trim();
     const addressTrim = (address || '').trim();
+    const useAddressFlow = !govTrim && !delTrim && !locTrim;
 
+    if (!nom) {
+      return NextResponse.json(
+        { error: 'Nom requis.' },
+        { status: 400 }
+      );
+    }
     if (!phoneTrim) {
       return NextResponse.json(
         { error: 'Téléphone requis.' },
@@ -82,21 +98,32 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    if (!cityTrim) {
-      return NextResponse.json(
-        { error: 'Ville / Gouvernorat requis.' },
-        { status: 400 }
-      );
-    }
-    if (!addressTrim) {
-      return NextResponse.json(
-        { error: 'Adresse requise.' },
-        { status: 400 }
-      );
+    if (useAddressFlow) {
+      if (!cityTrim) {
+        return NextResponse.json(
+          { error: 'Ville / Gouvernorat requis.' },
+          { status: 400 }
+        );
+      }
+      if (!addressTrim) {
+        return NextResponse.json(
+          { error: 'Adresse requise.' },
+          { status: 400 }
+        );
+      }
+    } else {
+      if (!govTrim || !delTrim || !locTrim) {
+        return NextResponse.json(
+          { error: 'Gouvernorat, délégation et localité requis.' },
+          { status: 400 }
+        );
+      }
     }
 
-    const { nom, prenom } = parseName(nameTrim);
     const livraisonEmail = `quickorder-${Date.now()}@protein.tn`;
+    const livraisonRegion = useAddressFlow ? cityTrim : govTrim;
+    const livraisonVille = useAddressFlow ? cityTrim : [delTrim, locTrim].filter(Boolean).join(', ');
+    const livraisonAdresse1 = useAddressFlow ? addressTrim : 'Livraison';
 
     const orderPayload: OrderRequest = {
       commande: {
@@ -104,10 +131,10 @@ export async function POST(request: NextRequest) {
         livraison_prenom: prenom,
         livraison_email: livraisonEmail,
         livraison_phone: phoneTrim,
-        livraison_region: cityTrim,
-        livraison_ville: cityTrim,
-        livraison_adresse1: addressTrim,
-        note: (note || '').trim() || undefined,
+        livraison_region: livraisonRegion,
+        livraison_ville: livraisonVille,
+        livraison_code_postale: (codePostal || '').trim() || undefined,
+        livraison_adresse1: livraisonAdresse1,
         livraison: 1,
         frais_livraison: Number(deliveryFeeSnapshot) || 0,
       },
@@ -133,7 +160,7 @@ export async function POST(request: NextRequest) {
     });
 
     const contentType = response.headers.get('content-type');
-    let data: { id?: number; numero?: string; message?: string; error?: string; commande?: { id?: number; numero?: string }; data?: { id?: number } };
+    let data: AddCommandeResponse;
     if (contentType?.includes('application/json')) {
       data = await response.json();
     } else {
@@ -154,14 +181,18 @@ export async function POST(request: NextRequest) {
     const orderId = data.id ?? data.commande?.id ?? data.data?.id ?? 0;
     const numero = data.numero ?? data.commande?.numero;
 
-    return NextResponse.json({
+    const result: QuickOrderResponse = {
       orderId,
       status: 'created',
       numero: numero ?? (orderId ? `#${orderId}` : undefined),
-    } as QuickOrderResponse);
-  } catch (error: unknown) {
+    };
+    return NextResponse.json(result);
+}
+
+export async function POST(request: NextRequest) {
+  return handleQuickOrder(request).catch((error: unknown) => {
     console.error('[quick-order]', error);
     const msg = error instanceof Error && error.name === 'AbortError' ? 'Délai dépassé. Réessayez.' : 'Erreur inattendue. Réessayez.';
     return NextResponse.json({ error: msg }, { status: 500 });
-  }
+  });
 }

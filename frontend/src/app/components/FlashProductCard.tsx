@@ -94,7 +94,7 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '20px' }}
       transition={{ duration: 0.3 }}
-      className="group relative flex flex-col h-full w-full overflow-hidden rounded-3xl bg-white dark:bg-gray-800 border-2 border-gray-200/50 dark:border-gray-700/50 shadow-lg hover:shadow-2xl transition-all duration-500 ease-out hover:scale-[1.03] hover:border-red-300 dark:hover:border-red-700"
+      className="group relative flex flex-col h-full w-full overflow-hidden rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-xl transition-all duration-500 ease-out hover:scale-[1.03] hover:border-red-300 dark:hover:border-red-700"
     >
       {/* Glow effect on hover */}
       <motion.div
@@ -113,7 +113,7 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
         />
       )}
       {/* Image Container - Fixed height to prevent layout shift */}
-      <div className="relative aspect-square w-full flex-shrink-0 overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-t-3xl">
+      <div className="relative aspect-square w-full flex-shrink-0 overflow-hidden bg-white dark:bg-gray-800 rounded-t-3xl">
         <LinkWithLoading 
           href={`/shop/${encodeURIComponent(productData.slug || String(product.id))}`} 
           className="block size-full" 
@@ -193,7 +193,7 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
       </div>
 
       {/* Content Section */}
-      <div className="relative flex flex-col flex-1 min-h-0 p-3 sm:p-4 md:p-5 bg-gradient-to-b from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-900/50 overflow-hidden">
+      <div className="relative flex flex-col flex-1 min-h-0 p-3 sm:p-4 md:p-5 bg-white dark:bg-gray-800 overflow-hidden">
         {/* Product Name */}
         <LinkWithLoading 
           href={`/shop/${encodeURIComponent(productData.slug || String(product.id))}`} 
