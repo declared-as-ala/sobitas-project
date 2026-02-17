@@ -36,13 +36,13 @@ export function ScrollToTop() {
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.8 }}
-          className="fixed bottom-8 right-8 z-50"
+          className="fixed bottom-20 right-4 sm:bottom-8 sm:right-8 z-[45]"
         >
           <Button
             onClick={scrollToTop}
             size="icon"
-            className="h-12 w-12 rounded-full bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl transition-all"
-            aria-label="Scroll to top"
+            className="h-11 w-11 sm:h-12 sm:w-12 rounded-full bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl transition-all"
+            aria-label="Retour en haut"
           >
             <ArrowUp className="h-6 w-6" />
           </Button>

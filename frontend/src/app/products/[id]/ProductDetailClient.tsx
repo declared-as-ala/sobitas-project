@@ -12,6 +12,7 @@ import { ProductCard } from '@/app/components/ProductCard';
 import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/app/components/ui/accordion';
 import { Input } from '@/app/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
 import { Minus, Plus, ShoppingCart, Star, Shield, Truck, Award, ArrowLeft, Heart, Share2, ZoomIn, CheckCircle2, Loader2, BadgeCheck, Search, ChevronRight, Zap } from 'lucide-react';
@@ -39,7 +40,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
   const router = useRouter();
   const params = useParams();
   const productSlug = (slugOverride ?? (params?.slug as string) ?? (params?.id as string)) ?? '';
-  const { addToCart, getCartQty } = useCart();
+  const { addToCart, getCartQty, setCartDrawerOpen, getTotalItems } = useCart();
   const { isAuthenticated, user } = useAuth();
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -123,7 +124,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
       }
       return 0;
     });
-  const reviewsToShowOnPage = filteredReviews.slice(0, 5);
+  const reviewsToShowOnPage = filteredReviews.slice(0, 3);
 
   const images = product.cover ? [product.cover] : [];
   const productImage = images[0] ? getStorageUrl(images[0]) : '';
@@ -205,7 +206,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
     ? stripHtml(product.description_cover)
     : null;
 
-  /** Cart logic: unchanged. "Commander vite" uses QuickOrderDrawer and does not add to or clear cart. */
+  /** Cart logic: unchanged. "Commande rapide" uses QuickOrderDrawer and does not add to or clear cart. */
   const handleAddToCart = () => {
     if (stockDisponible <= 0) {
       toast.error('Rupture de stock - Ce produit n\'est pas disponible');
@@ -364,12 +365,30 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
     <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
       <Header />
 
-      <main className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-3 sm:py-6 lg:py-12 pb-20 lg:pb-12">
-        {/* Back Button */}
+      <main className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-0 sm:py-6 lg:py-12 pb-24 lg:pb-12">
+        {/* Mobile: Sticky top bar — Back + Logo + Cart */}
+        <div className="lg:hidden sticky top-0 z-40 flex items-center justify-between gap-3 h-12 px-3 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shrink-0">
+          <Button variant="ghost" size="icon" onClick={() => router.back()} className="h-10 w-10 shrink-0" aria-label="Retour">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <Link href="/" className="flex items-center min-w-0 flex-1 justify-center" aria-label="Accueil">
+            <span className="text-base font-semibold text-gray-900 dark:text-white truncate">SOBITAS</span>
+          </Link>
+          <Button variant="ghost" size="icon" onClick={() => setCartDrawerOpen(true)} className="relative h-10 w-10 shrink-0" aria-label="Panier">
+            <ShoppingCart className="h-5 w-5" />
+            {getTotalItems() > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 h-4 min-w-[16px] px-1 rounded-full bg-red-600 text-[10px] font-bold text-white flex items-center justify-center">
+                {getTotalItems() > 99 ? '99+' : getTotalItems()}
+              </span>
+            )}
+          </Button>
+        </div>
+
+        {/* Back Button — desktop only */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="mb-4 sm:mb-6"
+          className="mb-4 sm:mb-6 hidden lg:block"
         >
           <Button
             variant="ghost"
@@ -423,138 +442,112 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
 
           {/* RIGHT: Info + tabs + reviews (mobile: full flow with image first) */}
           <div className="lg:col-span-3 min-w-0 space-y-4 sm:space-y-6 lg:space-y-8">
-            {/* Mobile Layout: Image First (Hero Image) */}
-            <div className="lg:hidden space-y-4 sm:space-y-5">
-              {/* Product Image - Hero position on mobile */}
+            {/* Mobile Layout: compact, conversion-focused */}
+            <div className="lg:hidden space-y-3">
+              {/* Gallery: full-width, aspect ratio reserved */}
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="w-full"
+                className="w-full rounded-xl overflow-hidden bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800"
+                style={{ aspectRatio: '1 / 1' }}
               >
-                <div className="relative bg-white dark:bg-gray-900 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border-2 border-gray-200 dark:border-gray-800 group min-h-0 mx-auto max-w-full" style={{ aspectRatio: '1 / 1' }}>
-                  {productImage ? (
-                    <Image
-                      src={productImage}
-                      alt={product.designation_fr}
-                      fill
-                      className="object-contain p-4 sm:p-6 group-hover:scale-110 transition-transform duration-500"
-                      sizes="(max-width: 1024px) 100vw, 60vw"
-                      priority
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                        const parent = target.parentElement;
-                        if (parent && !parent.querySelector('.error-placeholder')) {
-                          const placeholder = document.createElement('div');
-                          placeholder.className = 'error-placeholder absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800';
-                          placeholder.innerHTML = '<svg class="h-24 w-24 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>';
-                          parent.appendChild(placeholder);
-                        }
-                      }}
-                    />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
-                      <svg className="h-24 w-24 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                      </svg>
-                    </div>
-                  )}
-                </div>
+                {productImage ? (
+                  <Image
+                    src={productImage}
+                    alt={product.designation_fr}
+                    fill
+                    className="object-contain p-4"
+                    sizes="(max-width: 768px) 100vw, 60vw"
+                    priority
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const parent = target.parentElement;
+                      if (parent && !parent.querySelector('.error-placeholder')) {
+                        const placeholder = document.createElement('div');
+                        placeholder.className = 'error-placeholder absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800';
+                        placeholder.innerHTML = '<svg class="h-16 w-16 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>';
+                        parent.appendChild(placeholder);
+                      }
+                    }}
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+                    <svg className="h-16 w-16 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                    </svg>
+                  </div>
+                )}
               </motion.div>
 
-              {/* 1. Title (H1) only */}
-              <div className="min-w-0 px-1">
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white leading-tight break-words">
+              <div className="px-1 space-y-2">
+                {/* Title: max 2 lines */}
+                <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-snug line-clamp-2">
                   {product.designation_fr}
                 </h1>
-              </div>
 
-              {/* 2. Rating - stars + value + count */}
-              {rating > 0 && (
-                <div className="flex items-center gap-2 px-1">
-                  <div className="flex items-center gap-1">
-                    {[...Array(5)].map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`h-4 w-4 sm:h-5 sm:w-5 ${i < Math.floor(rating)
-                          ? 'fill-yellow-400 text-yellow-400'
-                          : 'fill-gray-200 text-gray-200 dark:fill-gray-700 dark:text-gray-700'
-                          }`}
-                      />
-                    ))}
-                  </div>
-                  <span className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
-                    ({rating.toFixed(1)}) • {reviewCount} avis
-                  </span>
-                </div>
-              )}
+                {/* Rating: clickable → #reviews */}
+                {rating > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => document.getElementById('reviews')?.scrollIntoView({ behavior: 'smooth' })}
+                    className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+                  >
+                    <div className="flex items-center gap-0.5">
+                      {[...Array(5)].map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`h-4 w-4 ${i < Math.floor(rating) ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 dark:fill-gray-700'}`}
+                        />
+                      ))}
+                    </div>
+                    <span>({reviewCount} avis)</span>
+                  </button>
+                )}
 
-              {/* 3. Price - current + old + savings */}
-              <div className="py-3 sm:py-4 border-y border-gray-200 dark:border-gray-800 px-1">
-                <div className="flex flex-wrap items-baseline gap-2 sm:gap-3">
-                  <span className="text-3xl sm:text-4xl font-bold text-red-600 dark:text-red-400">
-                    {displayPrice} DT
-                  </span>
+                {/* Price: big current + small old + discount badge */}
+                <div className="flex flex-wrap items-baseline gap-2">
+                  <span className="text-2xl font-bold text-red-600 dark:text-red-400">{displayPrice} DT</span>
                   {oldPrice && (
-                    <span className="text-xl sm:text-2xl text-gray-400 line-through">
-                      {oldPrice} DT
-                    </span>
+                    <>
+                      <span className="text-base text-gray-400 line-through">{oldPrice} DT</span>
+                      {discount > 0 && (
+                        <Badge className="bg-red-600 text-white text-xs px-1.5 py-0">-{discount}%</Badge>
+                      )}
+                    </>
                   )}
                 </div>
-                {oldPrice && (
-                  <p className="text-sm sm:text-base text-green-600 dark:text-green-400 mt-2">
-                    Vous économisez {oldPrice - displayPrice} DT
-                  </p>
-                )}
-              </div>
 
-              {/* 4. Meta Description - short SEO snippet */}
-              {metaDescription && (
-                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed px-1 line-clamp-3">
-                  {metaDescription}
-                </p>
-              )}
-
-              {/* Category, Code, Stock/Promo badges - lighter metadata */}
-              <div className="space-y-2 px-1">
-                {(product.sous_categorie?.slug || product.code_product) && (
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
-                    {product.sous_categorie?.slug && (
-                      <Link href={`/category/${product.sous_categorie.slug}`} className="text-red-600 dark:text-red-400 hover:underline">
-                        {product.sous_categorie.designation_fr}
-                      </Link>
-                    )}
-                    {product.code_product && (
-                      <span>Code: {product.code_product}</span>
-                    )}
-                  </div>
-                )}
-                <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                  <Badge variant="outline" className="bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800 text-xs sm:text-sm px-2.5 py-1">
-                    <CheckCircle2 className="h-3 w-3 mr-1" />
-                    {product.rupture === 1 ? 'En Stock' : 'Rupture de stock'}
-                  </Badge>
-                  {discount > 0 && (
-                    <Badge className="bg-red-600 text-white text-xs sm:text-sm px-2.5 py-1">-{discount}% OFF</Badge>
-                  )}
-                  {product.new_product === 1 && (
-                    <Badge className="bg-blue-600 text-white text-xs sm:text-sm px-2.5 py-1">Nouveau</Badge>
-                  )}
-                  {product.best_seller === 1 && (
-                    <Badge className="bg-yellow-600 text-white text-xs sm:text-sm px-2.5 py-1">Top Vendu</Badge>
-                  )}
+                {/* Stock + promo badges: small, one line */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs text-green-700 dark:text-green-400 font-medium">
+                    {product.rupture === 1 ? 'En stock' : 'Rupture'}
+                  </span>
+                  {product.new_product === 1 && <Badge className="text-[10px] px-1.5 py-0 bg-blue-600">Nouveau</Badge>}
+                  {product.best_seller === 1 && <Badge className="text-[10px] px-1.5 py-0 bg-amber-600">Top</Badge>}
                 </div>
               </div>
 
-              {/* Aromes (Flavors) - Mobile */}
+              {/* Compact trust row: 3 items, one line */}
+              <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
+                <span className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+                  <Shield className="h-3.5 w-3.5 text-green-600" /> Paiement à la livraison
+                </span>
+                <span className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+                  <Truck className="h-3.5 w-3.5 text-blue-600" /> 24–72h
+                </span>
+                <span className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+                  <Award className="h-3.5 w-3.5 text-amber-600" /> Authentiques
+                </span>
+              </div>
+
+              {/* Variants (arômes): pills */}
               {product.aromes && product.aromes.length > 0 && (
-                <div className="space-y-2 px-1">
-                  <label className="text-sm font-semibold text-gray-900 dark:text-white">
-                    Arômes disponibles
-                  </label>
-                  <div className="flex flex-wrap gap-2">
+                <div className="px-1">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Arômes</p>
+                  <div className="flex flex-wrap gap-1.5">
                     {product.aromes.map((arome) => (
-                      <Badge key={arome.id} variant="outline" className="bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700">
+                      <Badge key={arome.id} variant="outline" className="text-xs px-2 py-0.5 rounded-full bg-white dark:bg-gray-800">
                         {arome.designation_fr}
                       </Badge>
                     ))}
@@ -562,99 +555,41 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 </div>
               )}
 
-              {/* Quantity Selector - Mobile */}
-              <div className="space-y-3 px-1">
-                <label className="text-sm font-semibold text-gray-900 dark:text-white">
-                  Quantité
-                </label>
-                <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-                  <div className="flex items-center gap-2 border border-gray-200 dark:border-gray-800 rounded-xl p-2 min-h-[44px]">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-9 w-9 min-h-[44px] min-w-[44px]"
-                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      disabled={quantity <= 1}
-                      aria-label="Diminuer la quantité"
-                    >
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                    <span className="w-12 text-center font-bold text-lg" aria-live="polite">{quantity}</span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-9 w-9 min-h-[44px] min-w-[44px]"
-                      onClick={() => setQuantity(Math.min(stockDisponible, quantity + 1))}
-                      disabled={quantity >= stockDisponible || stockDisponible <= 0}
-                      aria-label="Augmenter la quantité"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400 min-w-0">
-                    Total: <span className="font-bold text-lg text-gray-900 dark:text-white">
-                      {(displayPrice * quantity).toFixed(0)} DT
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons - Mobile (hidden, using sticky bottom bar instead) */}
-              <div className="lg:hidden space-y-3 px-1 pt-2">
-                <div className="flex gap-3">
+              {/* Quantity: compact stepper + total */}
+              <div className="flex items-center justify-between gap-3 px-1">
+                <div className="flex items-center gap-0 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
                   <Button
-                    size="lg"
-                    variant="outline"
-                    className="min-h-[48px] px-4 shrink-0"
-                    onClick={() => setIsFavorite(!isFavorite)}
+                    variant="ghost"
+                    size="icon"
+                    className="h-10 w-10 rounded-none"
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    disabled={quantity <= 1}
+                    aria-label="Diminuer"
                   >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <span className="w-10 text-center text-sm font-semibold" aria-live="polite">{quantity}</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-10 w-10 rounded-none"
+                    onClick={() => setQuantity(Math.min(stockDisponible, quantity + 1))}
+                    disabled={quantity >= stockDisponible || stockDisponible <= 0}
+                    aria-label="Augmenter"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  Total <strong className="text-gray-900 dark:text-white">{(displayPrice * quantity).toFixed(0)} DT</strong>
+                </span>
+                <div className="flex gap-1">
+                  <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => setIsFavorite(!isFavorite)} aria-label="Favoris">
                     <Heart className={`h-5 w-5 ${isFavorite ? 'fill-red-600 text-red-600' : ''}`} />
                   </Button>
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="min-h-[48px] px-4 shrink-0"
-                    onClick={handleShare}
-                    aria-label="Partager (lien vers les avis)"
-                  >
+                  <Button variant="ghost" size="icon" className="h-10 w-10" onClick={handleShare} aria-label="Partager">
                     <Share2 className="h-5 w-5" />
                   </Button>
-                </div>
-              </div>
-
-              {/* Trust badges — mobile: horizontal carousel (scroll-snap); tablet: 2 cols */}
-              <div className="pt-4 sm:pt-6 border-t border-gray-200 dark:border-gray-800 px-1">
-                <div
-                  className="flex md:grid overflow-x-auto md:overflow-visible gap-4 pb-2 md:pb-0 scrollbar-hide snap-x md:grid-cols-2 md:snap-none"
-                  style={{ WebkitOverflowScrolling: 'touch' }}
-                >
-                  <div className="flex items-center gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 shadow-sm min-h-[80px] flex-shrink-0 w-[240px] md:w-auto snap-start" style={{ scrollSnapAlign: 'start' }}>
-                    <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
-                      <Shield className="h-6 w-6 text-green-600 dark:text-green-400" strokeWidth={2} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-semibold text-gray-900 dark:text-white">Paiement</p>
-                      <p className="text-sm text-green-700 dark:text-green-400">Sécurisé</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 shadow-sm min-h-[80px] flex-shrink-0 w-[240px] md:w-auto snap-start" style={{ scrollSnapAlign: 'start' }}>
-                    <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
-                      <Truck className="h-6 w-6 text-blue-600 dark:text-blue-400" strokeWidth={2} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-semibold text-gray-900 dark:text-white">Livraison</p>
-                      <p className="text-sm text-blue-700 dark:text-blue-400">2-3 jours</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 shadow-sm min-h-[80px] flex-shrink-0 w-[240px] md:w-auto snap-start" style={{ scrollSnapAlign: 'start' }}>
-                    <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
-                      <Award className="h-6 w-6 text-amber-600 dark:text-amber-400" strokeWidth={2} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-semibold text-gray-900 dark:text-white">Garantie</p>
-                      <p className="text-sm text-amber-700 dark:text-amber-400">Qualité</p>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
@@ -752,7 +687,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       disabled={stockDisponible <= 0}
                     >
                       <Zap className="h-5 w-5 mr-2" />
-                      Commander vite
+                      Commande rapide
                     </Button>
                     <div className="flex gap-2 shrink-0">
                       <Button variant="outline" size="icon" className="h-11 w-11" onClick={() => setIsFavorite(!isFavorite)} aria-label="Favoris">
@@ -813,8 +748,8 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
           </div>
         </div>
 
-        {/* Description / Nutrition / Questions — full width, wider container, less scrolling */}
-        <section className="mx-auto w-full max-w-7xl px-4 md:px-6 pt-4 sm:pt-6 lg:pt-8 pb-6">
+        {/* Description / Nutrition / Questions — mobile: accordions; desktop: tabs */}
+        <section className="mx-auto w-full max-w-7xl px-3 sm:px-4 md:px-6 pt-4 sm:pt-6 lg:pt-8 pb-6">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="w-full">
             {(() => {
               const hasNutritionContent = product.nutrition_values != null &&
@@ -827,80 +762,152 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 String(product.questions).trim() !== '<p><br></p>';
               const tabCount = hasQuestions ? 3 : 2;
 
+              const descriptionHtml = product.description_fr || product.description_cover || 'Aucune description disponible.';
+              const livraisonPaiement = (
+                <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
+                  <p><strong className="text-gray-900 dark:text-white">Paiement :</strong> À la livraison (espèces ou carte). Paiement sécurisé en ligne possible.</p>
+                  <p><strong className="text-gray-900 dark:text-white">Livraison :</strong> 24–72h en Tunisie. Livraison gratuite à partir de 300 DT.</p>
+                </div>
+              );
+
               return (
-                <Tabs defaultValue="description" className="w-full">
-                  <TabsList className={`grid w-full mb-3 sm:mb-4 bg-gray-100 dark:bg-gray-900 rounded-lg sm:rounded-xl p-1 gap-1 ${tabCount === 3 ? 'grid-cols-3' : tabCount === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                    <TabsTrigger value="description" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2">
-                      {product.zone1 || 'Description'}
-                    </TabsTrigger>
-                    <TabsTrigger value="nutrition" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2">
-                      {product.zone3 || 'Valeurs Nutritionnelles'}
-                    </TabsTrigger>
-                    {hasQuestions && (
-                      <TabsTrigger value="questions" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2">
-                        {product.zone4 || 'Questions'}
-                      </TabsTrigger>
-                    )}
-                  </TabsList>
+                <>
+                  {/* Mobile: Accordions */}
+                  <div className="md:hidden">
+                    <Accordion type="multiple" defaultValue={[]} className="w-full space-y-0 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
+                      <AccordionItem value="description" className="border-b border-gray-200 dark:border-gray-800 last:border-b-0">
+                        <AccordionTrigger className="px-4 py-3 text-sm font-semibold text-left">
+                          {product.zone1 || 'Description'}
+                        </AccordionTrigger>
+                        <AccordionContent className="px-4 pb-4">
+                          <div
+                            className={`text-sm text-gray-600 dark:text-gray-400 leading-relaxed prose prose-sm max-w-none overflow-hidden ${descExpanded ? '' : 'max-h-32'}`}
+                            dangerouslySetInnerHTML={{ __html: descriptionHtml }}
+                          />
+                          <button type="button" onClick={() => setDescExpanded(!descExpanded)} className="text-xs font-medium text-red-600 dark:text-red-400 mt-2">
+                            {descExpanded ? 'Voir moins' : 'Lire plus'}
+                          </button>
+                        </AccordionContent>
+                      </AccordionItem>
+                      <AccordionItem value="nutrition" className="border-b border-gray-200 dark:border-gray-800 last:border-b-0">
+                        <AccordionTrigger className="px-4 py-3 text-sm font-semibold text-left">
+                          {product.zone3 || 'Valeurs nutritionnelles'}
+                        </AccordionTrigger>
+                        <AccordionContent className="px-4 pb-4">
+                          {hasNutritionContent ? (
+                            <div className="text-sm text-gray-600 dark:text-gray-400 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: product.nutrition_values || '' }} />
+                          ) : (
+                            <p className="text-sm text-gray-500">Non disponible.</p>
+                          )}
+                        </AccordionContent>
+                      </AccordionItem>
+                      {hasQuestions && (
+                        <AccordionItem value="questions" className="border-b border-gray-200 dark:border-gray-800 last:border-b-0">
+                          <AccordionTrigger className="px-4 py-3 text-sm font-semibold text-left">
+                            {product.zone4 || 'Questions'}
+                          </AccordionTrigger>
+                          <AccordionContent className="px-4 pb-4">
+                            {product.questions?.trim() ? (
+                              <div className="text-sm prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: product.questions }} />
+                            ) : faqs.length > 0 ? (
+                              <div className="space-y-3">
+                                {faqs.map((faq) => (
+                                  <div key={faq.id}>
+                                    <p className="font-medium text-gray-900 dark:text-white">{faq.question}</p>
+                                    <p className="text-gray-600 dark:text-gray-400 text-xs mt-0.5">{faq.reponse}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-gray-500">Aucune question.</p>
+                            )}
+                          </AccordionContent>
+                        </AccordionItem>
+                      )}
+                      <AccordionItem value="livraison" className="last:border-b-0">
+                        <AccordionTrigger className="px-4 py-3 text-sm font-semibold text-left">
+                          Livraison & paiement
+                        </AccordionTrigger>
+                        <AccordionContent className="px-4 pb-4">{livraisonPaiement}</AccordionContent>
+                      </AccordionItem>
+                    </Accordion>
+                  </div>
 
-                  <TabsContent value="description" className="bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl p-4 sm:p-5 lg:p-6 shadow-lg border border-gray-200 dark:border-gray-800 mt-0">
-                    <h3 className="text-lg sm:text-xl font-bold mb-3 text-gray-900 dark:text-white">
-                      {product.zone1 || 'Description du produit'}
-                    </h3>
-                    <div
-                      className={`text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-base max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-p:text-gray-600 prose-p:dark:text-gray-400 prose-p:leading-relaxed prose-strong:text-gray-900 prose-strong:dark:text-white prose-img:rounded-lg prose-img:shadow-md overflow-hidden transition-[max-height] duration-300 ${descExpanded ? 'max-h-[5000px]' : 'max-h-60'}`}
-                      dangerouslySetInnerHTML={{ __html: product.description_fr || product.description_cover || 'Aucune description disponible.' }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setDescExpanded(!descExpanded)}
-                      className="text-sm font-medium text-red-600 dark:text-red-400 hover:underline mt-3"
-                    >
-                      {descExpanded ? 'Voir moins' : 'Lire plus'}
-                    </button>
-                  </TabsContent>
+                  {/* Desktop: Tabs */}
+                  <div className="hidden md:block">
+                    <Tabs defaultValue="description" className="w-full">
+                      <TabsList className={`grid w-full mb-3 sm:mb-4 bg-gray-100 dark:bg-gray-900 rounded-lg sm:rounded-xl p-1 gap-1 ${tabCount === 3 ? 'grid-cols-3' : tabCount === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                        <TabsTrigger value="description" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2">
+                          {product.zone1 || 'Description'}
+                        </TabsTrigger>
+                        <TabsTrigger value="nutrition" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2">
+                          {product.zone3 || 'Valeurs Nutritionnelles'}
+                        </TabsTrigger>
+                        {hasQuestions && (
+                          <TabsTrigger value="questions" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2">
+                            {product.zone4 || 'Questions'}
+                          </TabsTrigger>
+                        )}
+                      </TabsList>
 
-                  <TabsContent value="nutrition" className="bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl p-4 sm:p-5 lg:p-6 shadow-lg border border-gray-200 dark:border-gray-800 mt-0">
-                    <h3 className="text-lg sm:text-xl font-bold mb-3 text-gray-900 dark:text-white">
-                      {product.zone3 || 'Valeurs Nutritionnelles'}
-                    </h3>
-                    {hasNutritionContent ? (
-                      <div
-                        className="text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-base max-w-none prose-p:leading-relaxed prose-img:rounded-lg prose-img:shadow-md prose-img:w-full prose-img:h-auto"
-                        dangerouslySetInnerHTML={{ __html: product.nutrition_values || '' }}
-                      />
-                    ) : (
-                      <div className="text-center py-6 sm:py-8">
-                        <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base">
-                          Les valeurs nutritionnelles ne sont pas disponibles pour ce produit.
-                        </p>
-                      </div>
-                    )}
-                  </TabsContent>
+                      <TabsContent value="description" className="bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl p-4 sm:p-5 lg:p-6 shadow-lg border border-gray-200 dark:border-gray-800 mt-0">
+                        <h3 className="text-lg sm:text-xl font-bold mb-3 text-gray-900 dark:text-white">
+                          {product.zone1 || 'Description du produit'}
+                        </h3>
+                        <div
+                          className={`text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-base max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-p:text-gray-600 prose-p:dark:text-gray-400 prose-p:leading-relaxed prose-strong:text-gray-900 prose-strong:dark:text-white prose-img:rounded-lg prose-img:shadow-md overflow-hidden transition-[max-height] duration-300 ${descExpanded ? 'max-h-[5000px]' : 'max-h-60'}`}
+                          dangerouslySetInnerHTML={{ __html: descriptionHtml }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setDescExpanded(!descExpanded)}
+                          className="text-sm font-medium text-red-600 dark:text-red-400 hover:underline mt-3"
+                        >
+                          {descExpanded ? 'Voir moins' : 'Lire plus'}
+                        </button>
+                      </TabsContent>
 
-                  <TabsContent value="questions" className="bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl p-4 sm:p-5 lg:p-6 shadow-lg border border-gray-200 dark:border-gray-800 mt-0">
-                    <h3 className="text-lg sm:text-xl font-bold mb-3 text-gray-900 dark:text-white">
-                      {product.zone4 || 'Questions Fréquentes'}
-                    </h3>
-                    {product.questions && product.questions.trim() !== '' ? (
-                      <div
-                        className="text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-base max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-headings:mb-2 prose-headings:mt-4 prose-p:text-gray-600 prose-p:dark:text-gray-400 prose-p:leading-relaxed prose-p:my-2 prose-strong:text-gray-900 prose-strong:dark:text-white"
-                        dangerouslySetInnerHTML={{ __html: product.questions }}
-                      />
-                    ) : faqs.length > 0 ? (
-                    <div className="space-y-4">
-                      {faqs.map((faq) => (
-                        <div key={faq.id} className="border-b border-gray-100 dark:border-gray-800 pb-4 last:border-0 last:pb-0">
-                          <h4 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-start gap-2">
-                            <span className="text-red-600 dark:text-red-400 shrink-0">Q.</span>
-                            {faq.question}
-                          </h4>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 pl-6">
-                            {faq.reponse}
-                          </p>
+                      <TabsContent value="nutrition" className="bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl p-4 sm:p-5 lg:p-6 shadow-lg border border-gray-200 dark:border-gray-800 mt-0">
+                        <h3 className="text-lg sm:text-xl font-bold mb-3 text-gray-900 dark:text-white">
+                          {product.zone3 || 'Valeurs Nutritionnelles'}
+                        </h3>
+                        {hasNutritionContent ? (
+                          <div
+                            className="text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-base max-w-none prose-p:leading-relaxed prose-img:rounded-lg prose-img:shadow-md prose-img:w-full prose-img:h-auto"
+                            dangerouslySetInnerHTML={{ __html: product.nutrition_values || '' }}
+                          />
+                        ) : (
+                          <div className="text-center py-6 sm:py-8">
+                            <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base">
+                              Les valeurs nutritionnelles ne sont pas disponibles pour ce produit.
+                            </p>
+                          </div>
+                        )}
+                      </TabsContent>
+
+                      <TabsContent value="questions" className="bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl p-4 sm:p-5 lg:p-6 shadow-lg border border-gray-200 dark:border-gray-800 mt-0">
+                        <h3 className="text-lg sm:text-xl font-bold mb-3 text-gray-900 dark:text-white">
+                          {product.zone4 || 'Questions Fréquentes'}
+                        </h3>
+                        {product.questions && product.questions.trim() !== '' ? (
+                          <div
+                            className="text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-base max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-headings:mb-2 prose-headings:mt-4 prose-p:text-gray-600 prose-p:dark:text-gray-400 prose-p:leading-relaxed prose-p:my-2 prose-strong:text-gray-900 prose-strong:dark:text-white"
+                            dangerouslySetInnerHTML={{ __html: product.questions }}
+                          />
+                        ) : faqs.length > 0 ? (
+                        <div className="space-y-4">
+                          {faqs.map((faq) => (
+                            <div key={faq.id} className="border-b border-gray-100 dark:border-gray-800 pb-4 last:border-0 last:pb-0">
+                              <h4 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-start gap-2">
+                                <span className="text-red-600 dark:text-red-400 shrink-0">Q.</span>
+                                {faq.question}
+                              </h4>
+                              <p className="text-sm text-gray-600 dark:text-gray-400 pl-6">
+                                {faq.reponse}
+                              </p>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
                   ) : (
                     <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
                       Aucune question pour le moment. N'hésitez pas à nous contacter si vous avez des questions spécifiques.
@@ -908,50 +915,60 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   )}
                 </TabsContent>
               </Tabs>
-                );
-              })()}
-            </motion.div>
+                  </div>
+                </>
+              );
+            })()}
+          </motion.div>
 
-            {/* Avis clients — below tabs (no longer sidebar) */}
+            {/* Avis clients — compact on mobile */}
             <motion.div
               id="reviews"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
-              className="min-w-0 pt-6 border-t border-gray-200 dark:border-gray-800"
+              className="min-w-0 pt-4 sm:pt-6 border-t border-gray-200 dark:border-gray-800"
             >
             <div className="space-y-3 sm:space-y-4 lg:space-y-6">
-              <h3 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-800 pb-2 sm:pb-3">Avis clients</h3>
+              <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white pb-2 sm:pb-3">Avis clients</h3>
 
               {reviewCount > 0 ? (
                 <>
-                  {/* Overall Rating */}
-                  <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-3 sm:p-4 border border-green-200 dark:border-green-900/50">
-                    <div className="flex items-center gap-2 text-green-600 dark:text-green-400 text-xs sm:text-sm font-medium mb-2 sm:mb-3">
-                      <Shield className="h-4 w-4 sm:h-5 sm:w-5" />
-                      <span>100% authentique</span>
-                    </div>
-                    <div className="flex items-baseline gap-2 mb-2">
-                      <span className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white">
+                  {/* Overall Rating — compact on mobile */}
+                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3 sm:p-4 border border-gray-200 dark:border-gray-700">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                      <span className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                         {rating > 0 ? rating.toFixed(1) : '–'}
                       </span>
-                      <span className="text-gray-500 dark:text-gray-400 text-sm sm:text-base">/ 5</span>
+                      <span className="text-gray-500 text-sm">/ 5</span>
+                      <div className="flex items-center gap-0.5">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                          <Star
+                            key={i}
+                            className={`h-4 w-4 shrink-0 ${i <= Math.round(rating) ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 dark:fill-gray-700'}`}
+                          />
+                        ))}
+                      </div>
+                      <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                        {reviewCount} avis
+                      </span>
                     </div>
-                    <div className="flex items-center gap-1 mb-2 sm:mb-3">
-                      {[1, 2, 3, 4, 5].map((i) => (
-                        <Star
-                          key={i}
-                          className={`h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 shrink-0 ${i <= Math.round(rating) ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 dark:fill-gray-700'}`}
-                        />
-                      ))}
+                    <div className="mt-2 flex items-center gap-2">
+                      <Button variant="outline" size="sm" className="h-9 text-xs" asChild>
+                        <Link href={`/shop/${encodeURIComponent(product.slug ?? '')}#reviews`}>
+                          Voir tous les avis
+                        </Link>
+                      </Button>
+                      {isAuthenticated && (
+                        <Button size="sm" className="h-9 text-xs bg-red-600 hover:bg-red-700" onClick={() => setShowReviewForm(!showReviewForm)}>
+                          {showReviewForm ? 'Annuler' : 'Écrire un avis'}
+                        </Button>
+                      )}
                     </div>
-                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                      Basé sur {reviewCount} avis
-                    </p>
                   </div>
 
-                  {/* Rating Distribution */}
-                  <div className="space-y-2">
+                  {/* Rating Distribution — compact on mobile */}
+                  <div className="space-y-1.5 sm:space-y-2">
                     {[5, 4, 3, 2, 1].map((starLevel) => {
                       const count = reviews.filter(r => r.stars === starLevel).length;
                       const pct = reviewCount > 0 ? (count / reviewCount) * 100 : 0;
@@ -971,29 +988,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     })}
                   </div>
 
-                  {/* What customers say */}
-                  <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                    <h3 className="font-semibold text-sm text-gray-900 dark:text-white mb-2">Ce que disent les clients</h3>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-                      Les clients apprécient la qualité élevée et les ingrédients détaillés de ce produit. 
-                      Beaucoup soulignent son efficacité et sa facilité d'utilisation. 
-                      La qualité du produit et son rapport qualité-prix sont également salués.
-                    </p>
-                  </div>
-
-                  {/* Review Highlights */}
-                  <div>
-                    <h3 className="font-semibold text-sm text-gray-900 dark:text-white mb-2">Points forts des avis</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {['Qualité élevée', 'Efficace', 'Bon rapport qualité-prix', 'Facile à utiliser'].map((tag) => (
-                        <Badge key={tag} className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-0 px-2 py-1 text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Sample Reviews */}
+                  {/* Sample Reviews — 2–3 preview */}
                   <div className="space-y-2 sm:space-y-3">
                     {reviewsToShowOnPage.map((review) => (
                       <div key={review.id} className="p-2 sm:p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
@@ -1015,24 +1010,6 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     ))}
                   </div>
 
-                  {/* See More Reviews Button - Always show to navigate to full reviews page */}
-                  <Button variant="outline" className="w-full" size="default" asChild>
-                    <Link href={`/shop/${encodeURIComponent(product.slug ?? '')}#reviews`} className="flex items-center justify-center gap-2">
-                      Voir tous les avis ({reviewCount})
-                      <ChevronRight className="h-4 w-4" />
-                    </Link>
-                  </Button>
-
-                  {/* Add Review Button */}
-                  {isAuthenticated && (
-                    <Button
-                      onClick={() => setShowReviewForm(!showReviewForm)}
-                      className="w-full bg-red-600 hover:bg-red-700 text-white"
-                      size="default"
-                    >
-                      {showReviewForm ? 'Annuler' : 'Écrire un avis'}
-                    </Button>
-                  )}
                 </>
               ) : (
                 <div className="p-4 sm:p-5 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
@@ -1084,7 +1061,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
           </motion.div>
         </section>
 
-        {/* Similar Products */}
+        {/* Similar Products: mobile horizontal carousel (1.2 cards), desktop grid */}
         {similarProducts.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1092,10 +1069,17 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
             transition={{ delay: 0.3 }}
             className="min-w-0"
           >
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6 lg:mb-8">
+            <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 md:mb-6 px-1">
               Produits similaires
             </h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 lg:gap-6">
+            <div className="md:hidden overflow-x-auto snap-x snap-mandatory flex gap-3 pb-2 -mx-1 px-1 scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
+              {similarProducts.map((similarProduct, index) => (
+                <div key={similarProduct.id || `similar-${index}`} className="flex-shrink-0 w-[78%] sm:w-[72%] snap-start">
+                  <ProductCard product={similarProduct} variant="compact" />
+                </div>
+              ))}
+            </div>
+            <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
               {similarProducts.map((similarProduct, index) => (
                 <ProductCard
                   key={similarProduct.id || `similar-${index}`}
@@ -1108,34 +1092,37 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
         )}
       </main>
 
-      {/* Sticky Add to Cart (Mobile) */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 p-3 sm:p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] z-50 safe-area-pb">
-        <div className="max-w-7xl mx-auto flex items-center gap-3 sm:gap-4">
+      {/* Sticky bottom buy bar (mobile only): Total + Ajouter + Commande rapide, safe-area */}
+      <div
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 p-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]"
+        style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}
+      >
+        <div className="max-w-7xl mx-auto flex items-center gap-3">
           <div className="flex-1 min-w-0">
-            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total</p>
-            <p className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400 truncate">
+            <p className="text-xs text-gray-500 dark:text-gray-400">Total</p>
+            <p className="text-lg font-bold text-red-600 dark:text-red-400 truncate">
               {(displayPrice * quantity).toFixed(0)} DT
             </p>
           </div>
           <Button
             size="lg"
-            className="flex-1 min-h-[48px] sm:min-h-[52px] bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white text-base font-semibold shrink-0"
+            className="flex-1 min-h-[44px] sm:min-h-[48px] bg-red-600 hover:bg-red-700 text-white text-sm font-semibold shrink-0"
             onClick={handleAddToCart}
             disabled={stockDisponible <= 0}
           >
-            <ShoppingCart className="h-5 w-5 mr-2 shrink-0" />
+            <ShoppingCart className="h-4 w-4 mr-1.5 shrink-0" />
             {stockDisponible <= 0 ? 'Rupture' : 'Ajouter'}
           </Button>
           <Button
             size="lg"
             variant="outline"
-            className="min-h-[48px] sm:min-h-[52px] border-2 border-amber-500 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 font-semibold shrink-0 px-4"
+            className="min-h-[44px] w-11 sm:w-auto sm:min-h-[48px] sm:px-3 border border-amber-500 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 font-medium shrink-0"
             onClick={() => setQuickOrderOpen(true)}
             disabled={stockDisponible <= 0}
-            aria-label="Commander vite"
+            aria-label="Commande rapide"
           >
-            <Zap className="h-5 w-5 sm:mr-1" />
-            <span className="hidden sm:inline">Vite</span>
+            <Zap className="h-4 w-4 sm:mr-1" />
+            <span className="hidden sm:inline text-sm">Rapide</span>
           </Button>
         </div>
       </div>

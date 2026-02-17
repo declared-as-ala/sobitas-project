@@ -3,9 +3,10 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Facebook, Instagram, Linkedin, Mail, Phone, MapPin, Sparkles, Loader2, MessageCircle } from 'lucide-react';
+import { Facebook, Instagram, Linkedin, Mail, Phone, MapPin, Sparkles, Loader2, MessageCircle, ChevronUp } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/app/components/ui/accordion';
 import { motion } from 'motion/react';
 import { subscribeNewsletter, getStorageUrl, getCmsPages, type CmsPage } from '@/services/api';
 import { toast } from 'sonner';
@@ -71,39 +72,38 @@ export function Footer() {
   return (
     <footer id="contact" className="bg-gradient-to-b from-gray-900 via-gray-950 to-black text-gray-300 border-t border-gray-800/60">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-16">
-        {/* Mobile: Premium single-column stacked layout (Nike/Gymshark style) */}
-        <div className="md:hidden flex flex-col gap-8 pb-6 w-full max-w-full overflow-hidden">
-          {/* 1. Logo + tagline - scaled down, premium, no crop */}
-          <div className="space-y-4 w-full">
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-20px' }}
-              transition={{ duration: 0.4, ease: 'easeOut' }}
-              className="flex justify-start"
+        {/* Mobile: Accordion sections + Retour en haut */}
+        <div className="md:hidden flex flex-col gap-4 pb-6 w-full max-w-full overflow-hidden">
+          <div className="flex items-center justify-between gap-4">
+            <Link href="/" className="block max-w-[120px] opacity-90 hover:opacity-100">
+              <Image
+                src={getStorageUrl('coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp')}
+                alt="SOBITAS"
+                width={120}
+                height={38}
+                className="w-full h-auto object-contain"
+                loading="lazy"
+              />
+            </Link>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-gray-400 hover:text-white shrink-0"
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              aria-label="Retour en haut"
             >
-              <Link href="/" className="block max-w-[140px] opacity-90 hover:opacity-100 transition-opacity duration-300">
-                <Image
-                  src={getStorageUrl('coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp')}
-                  alt="Protein.tn - SOBITAS"
-                  width={140}
-                  height={45}
-                  className="w-full h-auto object-contain object-left"
-                  sizes="(max-width: 480px) 100px, (max-width: 768px) 120px, 140px"
-                  loading="lazy"
-                />
-              </Link>
-            </motion.div>
-            <p className="text-sm text-gray-400 leading-relaxed max-w-full">
-              PROTEINE TUNISIE - SOBITAS votre distributeur officiel d&apos;articles de sport et de compléments alimentaires en Tunisie.
-            </p>
+              <ChevronUp className="h-5 w-5 mr-1" />
+              <span className="text-xs">Haut</span>
+            </Button>
           </div>
 
-          <div className="h-px bg-gray-800/60 w-full" aria-hidden="true" role="separator" />
-
-          {/* 2. Suivez-nous */}
+          <Accordion type="multiple" defaultValue={[]} className="w-full border-0">
+            <AccordionItem value="suivez" className="border-b border-gray-800/60">
+              <AccordionTrigger className="py-3 text-white text-sm font-bold uppercase tracking-wide hover:no-underline [&[data-state=open]>svg]:rotate-180">
+                Suivez-nous
+              </AccordionTrigger>
+              <AccordionContent className="pb-3">
           <div className="space-y-3 w-full">
-            <h3 className="font-bold text-white text-sm uppercase tracking-wide">Suivez-nous</h3>
             <p className="text-sm text-gray-400">
               Nous facilitons la communication et le suivi sur nos réseaux sociaux.
             </p>
@@ -127,12 +127,15 @@ export function Footer() {
               </a>
             </div>
           </div>
+              </AccordionContent>
+            </AccordionItem>
 
-          <div className="h-px bg-gray-800/60 w-full" aria-hidden="true" role="separator" />
-
-          {/* 3. Abonnez-vous */}
+            <AccordionItem value="newsletter" className="border-b border-gray-800/60">
+              <AccordionTrigger className="py-3 text-white text-sm font-bold uppercase tracking-wide hover:no-underline">
+                Abonnez-vous
+              </AccordionTrigger>
+              <AccordionContent className="pb-3">
           <div className="space-y-3 w-full">
-            <h3 className="font-bold text-white text-sm uppercase tracking-wide">Abonnez-vous</h3>
             <p className="text-sm text-gray-400">
               Rejoignez nos abonnés et recevez les nouveautés et offres chaque semaine.
             </p>
@@ -178,12 +181,15 @@ export function Footer() {
               </div>
             </div>
           </div>
+              </AccordionContent>
+            </AccordionItem>
 
-          <div className="h-px bg-gray-800/60 w-full" aria-hidden="true" role="separator" />
-
-          {/* 5. Services & Ventes (from API) */}
+            <AccordionItem value="services" className="border-b border-gray-800/60">
+              <AccordionTrigger className="py-3 text-white text-sm font-bold uppercase tracking-wide hover:no-underline">
+                Services & Ventes
+              </AccordionTrigger>
+              <AccordionContent className="pb-3">
           <div className="space-y-3 w-full">
-            <h3 className="font-bold text-white text-sm uppercase tracking-wide">Services & Ventes</h3>
             <ul className="space-y-1.5">
               {footerPages.length > 0 ? footerPages.map((p) => (
                 <li key={p.id}>
@@ -192,12 +198,14 @@ export function Footer() {
               )) : null}
             </ul>
           </div>
+              </AccordionContent>
+            </AccordionItem>
 
-          <div className="h-px bg-gray-800/60 w-full" aria-hidden="true" role="separator" />
-
-          {/* 6. Navigation */}
-          <div className="space-y-3 w-full">
-            <h3 className="font-bold text-white text-sm uppercase tracking-wide">Navigation</h3>
+            <AccordionItem value="nav" className="border-b border-gray-800/60">
+              <AccordionTrigger className="py-3 text-white text-sm font-bold uppercase tracking-wide hover:no-underline">
+                Navigation
+              </AccordionTrigger>
+              <AccordionContent className="pb-3">
             <ul className="space-y-1.5">
               <li><Link href="/" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Accueil</Link></li>
               <li><Link href="/shop" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Nos produits</Link></li>
@@ -205,7 +213,9 @@ export function Footer() {
               <li><Link href="/blog" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Blog</Link></li>
               <li><Link href="/contact" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Contact</Link></li>
             </ul>
-          </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </div>
 
         {/* Desktop: 4-column layout */}

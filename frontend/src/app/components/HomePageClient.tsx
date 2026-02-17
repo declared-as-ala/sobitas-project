@@ -142,7 +142,7 @@ export function HomePageClient({ accueil, slides }: HomePageClientProps) {
     };
   }, []);
 
-  const mergeReviewCounts = useMemo(() => (product: ReturnType<typeof transformProduct extends (p: Product) => infer R ? R : never>) => {
+  const mergeReviewCounts = useMemo(() => (product: ReturnType<typeof transformProduct>) => {
     const fetchedCount = reviewCountsById[product.id];
     if (fetchedCount != null && fetchedCount > 0) {
       return { ...product, review_count: fetchedCount, reviews_count: fetchedCount };
