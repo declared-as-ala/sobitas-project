@@ -86,7 +86,7 @@ export function CategoryGrid({ categories = [] }: CategoryGridProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-8 sm:mb-12">
           <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-2 sm:mb-4">
-            Nos Catégories
+            Nos catégories populaires
           </h2>
           <p className="text-sm sm:text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
             Explorez notre large gamme de produits pour tous vos objectifs

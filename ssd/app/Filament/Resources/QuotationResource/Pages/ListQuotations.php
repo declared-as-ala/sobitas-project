@@ -17,7 +17,7 @@ class ListQuotations extends ListRecords
     {
         return [
             Tables\Actions\CreateAction::make()
-                ->modalHeading('Créer un devis')
+                ->modalHeading('Create Quotation')
                 ->using(function (array $data) {
                     return DB::transaction(function () use ($data) {
                         $details = $data['details'] ?? [];

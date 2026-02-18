@@ -30,6 +30,7 @@ Route::get('/media', [ApisController::class, 'media']);
 // Products
 Route::get('/latest_products', [ApisController::class, 'latestProducts']);
 Route::get('/latest_packs', [ApisController::class, 'latestPacks']);
+Route::get('/best_sellers', [ApisController::class, 'bestSellers']);
 Route::get('/packs', [ApisController::class, 'packs']);
 Route::get('/ventes_flash', [ApisController::class, 'flash']);
 Route::get('/all_products', [ApisController::class, 'allProducts']);

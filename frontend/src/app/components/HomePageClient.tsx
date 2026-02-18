@@ -184,10 +184,10 @@ export function HomePageClient({ accueil, slides }: HomePageClientProps) {
         {/* SEO: single visible H1 for main query "proteine tunisie" */}
         <section className="text-center py-4 px-4 bg-white dark:bg-gray-950" aria-label="Titre principal">
           <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">
-            Proteine Tunisie – Votre partenaire nutrition
+            Protéine Tunisie – Votre partenaire nutrition sportive
           </h1>
           <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-            Whey protein, creatine et compléments – Livraison rapide Sousse, Tunis, Sfax
+            Whey protein, créatine et compléments alimentaires – Livraison rapide à Sousse, Tunis, Sfax et dans toute la Tunisie
           </p>
         </section>
         {/* FeaturesSection - Fixed height to prevent CLS */}
@@ -210,7 +210,7 @@ export function HomePageClient({ accueil, slides }: HomePageClientProps) {
 
         {(safeAccueil.best_sellers?.length ?? 0) > 0 && (
           <ProductSection
-            title="Meilleurs Ventes"
+            title="Produits les plus vendus"
             subtitle="Les produits les plus populaires"
             products={bestSellers as any}
             showBadge
@@ -245,6 +245,57 @@ export function HomePageClient({ accueil, slides }: HomePageClientProps) {
         <Suspense fallback={null}>
           <BrandsSection />
         </Suspense>
+
+        {/* SEO text block – visible, crawlable content near bottom of homepage */}
+        <section
+          className="py-10 sm:py-14 md:py-16 bg-white dark:bg-gray-950 border-t border-gray-100 dark:border-gray-800"
+          aria-label="Informations sur la protéine en Tunisie"
+        >
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-4">
+              Nutrition sportive Tunisie : protéine, whey et créatine de qualité
+            </h2>
+            <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
+              Chez <strong>SOBITAS</strong>, nous accompagnons depuis plusieurs années les athlètes et passionnés de
+              fitness à travers toute la <strong>nutrition sportive Tunisie</strong>. Sur <strong>Protein.tn</strong>,
+              vous trouvez une sélection rigoureuse de protéines, gainers, acides aminés et vitamines pensée pour la
+              performance, la prise de masse ou la sèche. Chaque référence est choisie pour sa traçabilité, son profil
+              nutritionnel et son rapport qualité / prix afin de vous garantir une expérience fiable à chaque
+              commande.
+            </p>
+            <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
+              Notre gamme <strong>proteine Tunisie</strong> couvre tous les besoins : <strong>whey Tunisie</strong> pour
+              une assimilation rapide après l&apos;entraînement, isolates pour les sportifs exigeants, protéines multi-sources
+              pour les collations, mais aussi options végétales pour ceux qui privilégient une alimentation plant-based.
+              Nous proposons également une large sélection de <strong>créatine Tunisie</strong> (monohydrate, en poudre ou
+              en capsules) afin de soutenir la force, la récupération et les performances sur le long terme.
+            </p>
+            <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
+              Pour compléter votre programme, découvrez nos formules ciblées de
+              <strong> complément alimentaire Tunisie</strong> : BCAA, oméga 3, multivitamines, brûleurs de graisses et
+              boosters pré-workout. Chaque <strong>complément alimentaire</strong> est détaillé avec sa fiche produit,
+              ses dosages et ses conseils d&apos;utilisation afin de vous aider à faire le bon choix en fonction de votre
+              niveau et de vos objectifs.
+            </p>
+            <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
+              En choisissant SOBITAS, vous profitez d&apos;une expertise locale sur la
+              <strong> nutrition sportive Tunisie</strong>, d&apos;un service client réactif et d&apos;une livraison rapide dans
+              tout le pays. Que vous soyez débutant en musculation, athlète confirmé ou coach sportif, notre équipe est
+              disponible pour vous orienter vers les meilleurs produits et vous aider à construire une routine efficace
+              et durable.
+            </p>
+            <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white mt-6 mb-3">
+              Livraison en Tunisie & avis clients
+            </h2>
+            <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 leading-relaxed">
+              Nous livrons partout en Tunisie via des partenaires fiables, avec un suivi précis de vos colis et des
+              délais optimisés pour Sousse, Tunis, Sfax et les autres régions. Les <strong>avis clients</strong> laissés
+              sur nos produits vous permettent de vérifier la satisfaction des sportifs qui utilisent déjà nos
+              protéines, <strong>whey</strong> et <strong>crÉatine</strong>. Commandez vos compléments en ligne en toute
+              confiance sur <strong>Protein.tn</strong> et rejoignez la communauté SOBITAS.
+            </p>
+          </div>
+        </section>
       </main>
 
       <Suspense fallback={<div className="h-64 bg-gray-50 dark:bg-gray-900" />}>

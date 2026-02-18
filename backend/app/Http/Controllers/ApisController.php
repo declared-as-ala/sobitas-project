@@ -146,6 +146,14 @@ class ApisController extends Controller
             ->latest('created_at')->limit(4)->get();
     }
 
+    /** Meilleurs ventes: up to 8 products for blog recommendations and other uses. */
+    public function bestSellers()
+    {
+        return Product::where('best_seller', 1)->where('publier', 1)
+            ->select(self::PRODUCT_SELECT)
+            ->latest('created_at')->limit(8)->get();
+    }
+
     public function productDetails($slug)
     {
         return Product::where('slug', $slug)->where('publier', 1)

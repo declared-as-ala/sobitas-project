@@ -135,6 +135,7 @@ export function SafeImage({
             <Image
               src={fallbackSrc}
               alt={alt}
+              title={alt}
               fill={fill}
               width={fill ? undefined : width}
               height={fill ? undefined : height}
@@ -156,6 +157,7 @@ export function SafeImage({
         <Image
           src={finalSrc}
           alt={alt}
+          title={alt}
           fill={fill}
           width={fill ? undefined : width}
           height={fill ? undefined : height}

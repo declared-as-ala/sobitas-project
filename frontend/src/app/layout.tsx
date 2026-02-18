@@ -18,7 +18,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || 'https://sobitas.tn'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn'),
   icons: {
     icon: [
       { url: '/icon.png', sizes: 'any' },
@@ -29,16 +29,18 @@ export const metadata: Metadata = {
     shortcut: '/icon.png',
   },
   title: {
-    default: "Proteine Tunisie – N°1 Whey, Creatine & Livraison | SOBITAS Protein.tn",
+    default: "Protéine Tunisie | Whey, Créatine & Compléments – SOBITAS",
     template: "%s | Protein.tn"
   },
-  description: "Proteine Tunisie : whey protein, creatine et compléments. Livraison rapide Sousse, Tunis, Sfax. Meilleur prix proteine tunisie – SOBITAS.",
+  description: "Protéine Tunisie : whey protein, créatine et compléments alimentaires. Livraison rapide à travers toute la Tunisie avec SOBITAS sur Protein.tn.",
   keywords: [
     "proteine tunisie",
     "protein tunisie",
+    "whey tunisie",
     "whey protein",
     "whey proteine tunisie",
     "protéine whey tunisie",
+    "créatine tunisie",
     "créatine monohydrate tunisie",
     "gainer tunisie",
     "mass gainer tunisie",
@@ -50,13 +52,13 @@ export const metadata: Metadata = {
     "acheter protéine tunisie",
     "achat protéine tunisie",
     "où acheter protéine en tunisie",
-    "créatine monohydrate effet secondaire",
-    "comment prendre créatine",
     "proteine pas cher tunisie",
     "proteine en ligne tunisie",
     "proteine musculation tunisie",
     "proteine isolate tunisie",
-    "proteine vegan tunisie"
+    "proteine vegan tunisie",
+    "complément alimentaire tunisie",
+    "nutrition sportive tunisie"
   ],
   authors: [{ name: "SOBITAS" }],
   creator: "SOBITAS",
@@ -64,23 +66,23 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "fr_FR",
-    url: "https://sobitas.tn",
-    siteName: "Sobitas",
-    title: "Proteine Tunisie – N°1 Whey, Creatine & Livraison | SOBITAS Protein.tn",
-    description: "Proteine Tunisie : whey protein, creatine et compléments. Livraison rapide Sousse, Tunis, Sfax. Meilleur prix – SOBITAS.",
+    url: "https://protein.tn",
+    siteName: "Protein.tn",
+    title: "Protéine Tunisie | Whey, Créatine & Compléments – SOBITAS",
+    description: "Protéine Tunisie : whey protein, créatine et compléments alimentaires avec livraison rapide partout en Tunisie sur Protein.tn.",
     images: [
       {
-        url: "/icon.png", // Fixed: Use local icon instead of broken external path
+        url: "/icon.png",
         width: 512,
         height: 512,
-        alt: "Sobitas - Protéine Tunisie",
+        alt: "Protein.tn - Protéine Tunisie par SOBITAS",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Proteine Tunisie – N°1 Whey, Creatine & Livraison | SOBITAS Protein.tn",
-    description: "Proteine Tunisie : whey protein, creatine et compléments. Livraison rapide Sousse, Tunis, Sfax. Meilleur prix – SOBITAS.",
+    title: "Protéine Tunisie | Whey, Créatine & Compléments – SOBITAS",
+    description: "Protéine Tunisie : whey protein, créatine et compléments alimentaires avec livraison rapide partout en Tunisie sur Protein.tn.",
     images: ["/icon.png"],
   },
   robots: {
@@ -104,7 +106,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://sobitas.tn';
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
   const { buildOrganizationSchema, buildLocalBusinessSchema, buildWebSiteSchema } = await import('@/util/structuredData');
   const orgSchema = buildOrganizationSchema(baseUrl);
   const localBusinessSchema = buildLocalBusinessSchema(baseUrl);

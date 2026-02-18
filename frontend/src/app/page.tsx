@@ -5,22 +5,30 @@ import { buildCanonicalUrl } from '@/util/canonical';
 import { HomePageClient } from './components/HomePageClient';
 import type { AccueilData } from '@/types';
 
-export const metadata: Metadata = {
-  title: 'Proteine Tunisie – N°1 Whey, Creatine & Livraison Rapide | SOBITAS Protein.tn',
-  description: 'Proteine Tunisie : achetez whey protein, creatine et compléments en Tunisie. Livraison rapide Sousse, Tunis, Sfax. Meilleur prix proteine tunisie – SOBITAS.',
-  keywords: 'proteine tunisie, protein tunisie, whey tunisie, whey protein tunisie, créatine tunisie, compléments alimentaires Sousse, acheter whey Tunisie, protéine musculation Tunisie',
-  alternates: {
-    canonical: buildCanonicalUrl('/'),
-  },
-  openGraph: {
-    title: 'Proteine Tunisie – N°1 Whey, Creatine & Livraison Rapide | SOBITAS Protein.tn',
-    description: 'Proteine Tunisie : achetez whey protein, creatine et compléments en Tunisie. Livraison rapide Sousse, Tunis, Sfax. Meilleur prix – SOBITAS.',
-    images: ['/assets/img/logo/logo.webp'],
-    url: buildCanonicalUrl('/'),
-    type: 'website',
-  },
-  other: {},
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const canonical = buildCanonicalUrl('/');
+  const title = 'Protéine Tunisie | Whey, Créatine & Compléments – SOBITAS';
+  const description =
+    'Protéine Tunisie : whey protein, créatine et compléments alimentaires. Livraison rapide à Sousse, Tunis, Sfax et partout en Tunisie avec SOBITAS sur Protein.tn.';
+
+  return {
+    title,
+    description,
+    keywords:
+      'proteine tunisie, protein tunisie, whey tunisie, whey protein tunisie, créatine tunisie, complément alimentaire tunisie, nutrition sportive tunisie, protéine musculation Tunisie',
+    alternates: {
+      canonical: canonical,
+    },
+    openGraph: {
+      title,
+      description,
+      images: ['/assets/img/logo/logo.webp'],
+      url: canonical,
+      type: 'website',
+    },
+    other: {},
+  };
+}
 
 // Force dynamic rendering to ensure fresh data on every request
 export const dynamic = 'force-dynamic';

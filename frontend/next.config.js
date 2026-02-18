@@ -48,6 +48,21 @@ const nextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      {
+        source: '/:path*',
+        has: [
+          {
+            type: 'host',
+            value: 'www.protein.tn',
+          },
+        ],
+        destination: 'https://protein.tn/:path*',
+        permanent: true,
+      },
+    ];
+  },
   experimental: {
     // Disable the client-side Router Cache for both dynamic and static pages.
     // This ensures navigating to /blog always fetches fresh RSC payloads from the server,

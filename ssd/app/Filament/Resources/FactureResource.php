@@ -5,7 +5,6 @@ namespace App\Filament\Resources;
 use App\Client;
 use App\DetailsFacture;
 use App\Facture;
-use App\Filament\Components\Actions\PrintAction;
 use App\Filament\Resources\FactureResource\Pages;
 use App\Message;
 use App\Product;
@@ -136,25 +135,19 @@ class FactureResource extends BaseResource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('id')
-                    ->label('#')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('numero')
-                    ->label('N° Facture')
                     ->searchable()
-                    ->sortable()
-                    ->formatStateUsing(fn ($state) => $state ? 'Facture #' . $state : ''),
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('client.name')
                     ->label('Client')
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('prix_ttc')
                     ->label('Total TTC')
-                    ->money('TND')
-                    ->sortable()
-                    ->alignRight(),
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
-                    ->label('Date')
-                    ->date('d/m/Y')
+                    ->dateTime()
                     ->sortable(),
             ])
             ->filters([
@@ -165,7 +158,7 @@ class FactureResource extends BaseResource
             ])
             ->actions([
                 Tables\Actions\EditAction::make()
-                    ->modalHeading('Modifier la facture')
+                    ->modalHeading('Edit Facture')
                     ->using(function (Facture $record, array $data) {
                         return DB::transaction(function () use ($record, $data) {
                             $details = $data['details'] ?? [];
@@ -190,7 +183,10 @@ class FactureResource extends BaseResource
                             return $record;
                         });
                     }),
-                PrintAction::make('voyager.imprimer_facture'),
+                Tables\Actions\Action::make('print')
+                    ->label('Print')
+                    ->url(fn (Facture $record): string => route('voyager.imprimer_facture', ['id' => $record->id]))
+                    ->openUrlInNewTab(),
             ])
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make(),
