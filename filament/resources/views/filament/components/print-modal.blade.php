@@ -1,7 +1,7 @@
 {{-- Print modal: iframe loads print view; "Imprimer" triggers iframe print (same page, no new tab) --}}
 <div class="flex flex-col gap-4">
     <iframe
-        src="{{ $printUrl }}"
+        src="{{ str_contains($printUrl, '?') ? $printUrl . '&embed=1' : $printUrl . '?embed=1' }}"
         class="print-modal-iframe w-full border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900"
         style="height: 75vh; min-height: 400px;"
         title="{{ $title ?? 'Aperçu' }}"
