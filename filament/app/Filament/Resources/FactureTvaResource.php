@@ -65,6 +65,7 @@ class FactureTvaResource extends Resource
                     ->modalContent(fn (FactureTva $record) => view('filament.components.print-modal', [
                         'printUrl' => route('facture-tvas.print', ['factureTva' => $record->id]),
                         'title' => 'Facture ' . $record->numero,
+                        'showStyleSwitcher' => true,
                     ]))
                     ->modalSubmitAction(false)
                     ->closeParentActions(),

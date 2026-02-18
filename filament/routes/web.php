@@ -39,9 +39,34 @@ Route::middleware(['auth'])->group(function () {
             ->get();
         $coordonnee = \App\Models\Coordinate::first();
 
-        return view('filament.invoices.print', [
+        // Row calculation: pu_ht, tva%, pu_ttc = pu_ht*(1+tva/100), total_ttc = pu_ttc*qte (no backend change)
+        $defaultTva = (float) ($factureTva->tva ?? 19);
+        $invoice_rows = $details_facture->map(function ($d, $i) use ($defaultTva) {
+            $qte = (int) ($d->qte ?? $d->quantite ?? 0);
+            $pu_ht = (float) ($d->prix_unitaire ?? 0);
+            $tva_pct = (float) ($d->tva ?? $defaultTva);
+            $pu_ttc = round($pu_ht * (1 + $tva_pct / 100), 3);
+            $total_ht = round($pu_ht * $qte, 3);
+            $total_ttc = round($pu_ttc * $qte, 3);
+            return [
+                'index' => $i + 1,
+                'produit' => $d->product->designation_fr ?? '—',
+                'qte' => $qte,
+                'pu_ht' => $pu_ht,
+                'tva_pct' => $tva_pct,
+                'pu_ttc' => $pu_ttc,
+                'total_ht' => $total_ht,
+                'total_ttc' => $total_ttc,
+            ];
+        })->all();
+
+        $style = request()->query('style', 'classic');
+        $view = $style === 'modern' ? 'filament.invoice.modern' : 'filament.invoice.classic';
+
+        return view($view, [
             'facture' => $factureTva,
             'details_facture' => $details_facture,
+            'invoice_rows' => $invoice_rows,
             'coordonnee' => $coordonnee,
         ]);
     })->name('facture-tvas.print');

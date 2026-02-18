@@ -35,6 +35,7 @@ class EditFactureTva extends EditRecord
                 ->modalContent(fn () => view('filament.components.print-modal', [
                     'printUrl' => route('facture-tvas.print', ['factureTva' => $this->record->id]),
                     'title' => 'Facture ' . $this->record->numero,
+                    'showStyleSwitcher' => true,
                 ]))
                 ->modalSubmitAction(false)
                 ->closeParentActions(),
