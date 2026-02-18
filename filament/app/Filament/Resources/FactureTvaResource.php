@@ -47,15 +47,14 @@ class FactureTvaResource extends Resource
         return $table
             ->modifyQueryUsing(fn (Builder $query) => $query->with('client:id,name'))
             ->columns([
-                Tables\Columns\TextColumn::make('numero')->label('N°')->searchable()->sortable()->weight(\Filament\Support\Enums\FontWeight::Bold),
+                Tables\Columns\TextColumn::make('numero')->label('N°')->searchable()->sortable(),
                 Tables\Columns\TextColumn::make('client.name')->label('Client')->searchable()->sortable(),
-                Tables\Columns\TextColumn::make('prix_ttc')->label('Total TTC')->money('TND')->sortable()->alignEnd(),
-                Tables\Columns\TextColumn::make('tva')->label('TVA')->suffix('%')->alignEnd(),
-                Tables\Columns\TextColumn::make('created_at')->label('Date')->dateTime('d/m/Y')->sortable()->color('gray'),
+                Tables\Columns\TextColumn::make('prix_ttc')->label('Total TTC')->money('TND')->sortable(),
+                Tables\Columns\TextColumn::make('tva')->label('TVA')->suffix('%'),
+                Tables\Columns\TextColumn::make('created_at')->label('Date')->dateTime('d/m/Y')->sortable(),
             ])
             ->defaultSort('created_at', 'desc')
             ->defaultPaginationPageOption(25)
-            ->striped()
             ->actions([
                 Actions\EditAction::make(),
                 Actions\Action::make('print')
@@ -65,7 +64,7 @@ class FactureTvaResource extends Resource
                     ->modalHeading('Aperçu d\'impression')
                     ->modalContent(fn (FactureTva $record) => view('filament.components.print-modal', [
                         'printUrl' => route('facture-tvas.print', ['factureTva' => $record->id]),
-                        'title' => 'Facture TVA ' . $record->numero,
+                        'title' => 'Facture ' . $record->numero,
                     ]))
                     ->modalSubmitAction(false)
                     ->closeParentActions(),

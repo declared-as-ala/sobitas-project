@@ -12,14 +12,14 @@ class EditFactureTva extends EditRecord
 
     public function getHeading(): string
     {
-        return 'Facture TVA #' . $this->record->numero;
+        return 'Facture #' . $this->record->numero;
     }
 
     public function getSubheading(): ?string
     {
         $client = $this->record->client?->name ?? '—';
         $date = $this->record->created_at?->format('d/m/Y') ?? '—';
-        $total = number_format((float) ($this->record->prix_ttc ?? 0), 2, ',', ' ') . ' TND';
+        $total = number_format((float) ($this->record->prix_ttc ?? 0), 3, ',', ' ') . ' TND';
 
         return "Client : {$client} · Date : {$date} · Total : {$total}";
     }
@@ -34,7 +34,7 @@ class EditFactureTva extends EditRecord
                 ->modalHeading('Aperçu d\'impression')
                 ->modalContent(fn () => view('filament.components.print-modal', [
                     'printUrl' => route('facture-tvas.print', ['factureTva' => $this->record->id]),
-                    'title' => 'Facture TVA ' . $this->record->numero,
+                    'title' => 'Facture ' . $this->record->numero,
                 ]))
                 ->modalSubmitAction(false)
                 ->closeParentActions(),

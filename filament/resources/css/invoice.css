@@ -1,0 +1,293 @@
+/**
+ * Modern invoice layout – screen + A4 print.
+ * Use with .invoice-print container.
+ */
+
+@page {
+  size: A4;
+  margin: 12mm;
+}
+
+/* ---- Screen: centered A4-like container ---- */
+.invoice-print {
+  width: 210mm;
+  min-height: 297mm;
+  margin: 24px auto;
+  padding: 12mm 15mm;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.06);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #1f2937;
+}
+
+/* ---- Print: full width, no shadow/border ---- */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .invoice-print,
+  .invoice-print * {
+    visibility: visible;
+  }
+
+  .invoice-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    max-width: none;
+    min-height: auto;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    background: #fff;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  /* Table: avoid row breaks ---- */
+  .invoice-print table tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .invoice-print thead {
+    display: table-header-group;
+  }
+}
+
+/* ---- Header: grid ---- */
+.invoice-header {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.invoice-company {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.invoice-company .invoice-logo {
+  max-width: 160px;
+  max-height: 48px;
+  object-fit: contain;
+}
+
+.invoice-company .invoice-company-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.invoice-company .invoice-meta {
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.invoice-title-block {
+  text-align: right;
+}
+
+.invoice-title-block .invoice-title {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #111827;
+  margin: 0 0 12px 0;
+}
+
+.invoice-title-block .invoice-meta-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.invoice-title-block .invoice-meta-list strong {
+  color: #374151;
+}
+
+.invoice-badge {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-radius: 6px;
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+/* ---- Client card ---- */
+.invoice-client-card {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+}
+
+.invoice-client-card .invoice-client-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.invoice-client-card .invoice-client-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 8px;
+}
+
+.invoice-client-card .invoice-client-details {
+  font-size: 12px;
+  color: #4b5563;
+  line-height: 1.6;
+}
+
+/* ---- Products table ---- */
+.invoice-table-wrap {
+  margin-bottom: 24px;
+  overflow-x: auto;
+}
+
+.invoice-print table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.invoice-print table thead th {
+  background: #f3f4f6;
+  color: #374151;
+  font-weight: 600;
+  text-align: left;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.invoice-print table thead th.text-right {
+  text-align: right;
+}
+
+.invoice-print table tbody td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.invoice-print table tbody tr:nth-child(even) {
+  background: #fafafa;
+}
+
+.invoice-print table tbody td.col-product {
+  font-weight: 500;
+  color: #111827;
+}
+
+.invoice-print table tbody td.text-right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Totals summary (right-aligned card) ---- */
+.invoice-totals {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 28px;
+}
+
+.invoice-totals-card {
+  width: 100%;
+  max-width: 280px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 16px 20px;
+}
+
+.invoice-totals-card .invoice-totals-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.invoice-totals-card .invoice-totals-row.invoice-totals-row-ttc {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 2px solid #e5e7eb;
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.invoice-totals-card .invoice-totals-row .amount {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Footer ---- */
+.invoice-footer {
+  margin-top: 32px;
+  padding-top: 20px;
+  border-top: 1px solid #e5e7eb;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.invoice-footer .invoice-note {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border-left: 3px solid #9ca3af;
+}
+
+.invoice-footer .invoice-note-label {
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 4px;
+}
+
+.invoice-footer .invoice-signature-area {
+  margin-top: 24px;
+  padding-top: 12px;
+  text-align: center;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #9ca3af;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.invoice-footer .invoice-rib {
+  margin-top: 16px;
+  font-size: 11px;
+  color: #9ca3af;
+  text-align: center;
+}

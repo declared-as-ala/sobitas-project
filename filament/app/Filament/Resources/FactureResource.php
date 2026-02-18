@@ -80,13 +80,11 @@ class FactureResource extends Resource
         return $table
             // Eager load client to prevent N+1 on client.name column
             ->modifyQueryUsing(fn (Builder $query) => $query->with('client:id,name'))
-            ->striped()
             ->columns([
                 Tables\Columns\TextColumn::make('numero')
                     ->label('N°')
                     ->searchable()
-                    ->sortable()
-                    ->weight(\Filament\Support\Enums\FontWeight::Bold),
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('client.name')
                     ->label('Client')
                     ->searchable()
@@ -94,21 +92,19 @@ class FactureResource extends Resource
                 Tables\Columns\TextColumn::make('prix_ttc')
                     ->label('Total TTC')
                     ->money('TND')
-                    ->sortable()
-                    ->alignEnd(),
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('remise')
                     ->label('Remise')
                     ->money('TND')
-                    ->toggleable(isToggledHiddenByDefault: true)
-                    ->alignEnd(),
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Date')
                     ->dateTime('d/m/Y')
-                    ->sortable()
-                    ->color('gray'),
+                    ->sortable(),
             ])
             ->defaultSort('created_at', 'desc')
             ->defaultPaginationPageOption(25)
+            ->striped()
             ->actions([
                 Actions\EditAction::make(),
                 Actions\Action::make('print')

@@ -33,13 +33,16 @@ Route::middleware(['auth'])->group(function () {
     })->name('tickets.print');
 
     Route::get('facture-tvas/{factureTva}/print', function (\App\Models\FactureTva $factureTva) {
+        $factureTva->load('client');
         $details_facture = \App\Models\DetailsFactureTva::where('facture_tva_id', $factureTva->id)
             ->with('product:id,designation_fr')
             ->get();
+        $coordonnee = \App\Models\Coordinate::first();
 
-        return view('admin.imprimer_facture_tva', [
+        return view('filament.invoices.print', [
             'facture' => $factureTva,
             'details_facture' => $details_facture,
+            'coordonnee' => $coordonnee,
         ]);
     })->name('facture-tvas.print');
 
