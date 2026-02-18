@@ -170,7 +170,7 @@ export function Header() {
   const navLinks = [
     { href: '/', label: 'ACCUEIL' },
     { href: '/packs', label: 'PACKS' },
-    { href: '/brands', label: 'Brands' },
+    { href: '/brands', label: 'BRANDS' },
     { href: '/blog', label: 'BLOG' },
     { href: '/contact', label: 'CONTACT' },
     { href: '/about', label: 'QUI SOMMES NOUS' },
@@ -585,7 +585,7 @@ export function Header() {
               PACKS
             </Link>
           <Link href="/brands" className="text-sm font-semibold text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-400 transition-colors whitespace-nowrap py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
-              Brands
+              BRANDS
             </Link>
           <Link href="/blog" className="text-sm font-semibold text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-400 transition-colors whitespace-nowrap py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
               BLOG

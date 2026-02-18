@@ -60,6 +60,8 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
   const [descExpanded, setDescExpanded] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const { openQuickOrder } = useQuickOrder();
+  /** When product has multiple aromes, user must select one before add to cart / quick order. */
+  const [selectedAromaId, setSelectedAromaId] = useState<number | null>(null);
 
   // Use state to manage product data so we can update it after adding a review
   const [product, setProduct] = useState<Product>(initialProduct);
@@ -95,6 +97,16 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
     // Backend's reviews() relationship already filters by publier = 1, so all returned reviews are published
     const productReviews = initialProduct.reviews || [];
     setReviews(productReviews);
+
+    // Aroma: when only one, auto-select; when multiple, require user to choose
+    const aromes = initialProduct.aromes;
+    if (aromes && aromes.length === 1) {
+      setSelectedAromaId(aromes[0].id);
+    } else if (aromes && aromes.length > 1) {
+      setSelectedAromaId(null);
+    } else {
+      setSelectedAromaId(null);
+    }
 
     // Debug: Log nutrition_values to check if it's being returned
     if (process.env.NODE_ENV === 'development') {
@@ -244,8 +256,16 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
     aromes: product.aromes,
   };
 
-  /** Cart logic: unchanged. "Commander maintenant" uses shared Quick Order modal and does not add to or clear cart. */
+  /** When product has more than one aroma, selection is required before add to cart. */
+  const hasMultipleAromes = (product.aromes?.length ?? 0) > 1;
+  const aromaRequiredButMissing = hasMultipleAromes && selectedAromaId == null;
+
+  /** Cart logic. "Commander maintenant" uses shared Quick Order modal. */
   const handleAddToCart = () => {
+    if (aromaRequiredButMissing) {
+      toast.error('Veuillez choisir un arôme avant d\'ajouter au panier');
+      return;
+    }
     if (stockDisponible <= 0) {
       toast.error('Rupture de stock - Ce produit n\'est pas disponible');
       return;
@@ -260,15 +280,25 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
       return;
     }
 
+    const selectedAroma = product.aromes?.find(a => a.id === selectedAromaId);
     const cartProduct = {
       ...product,
       name: product.designation_fr,
       price: displayPrice,
       priceText: `${displayPrice} DT`,
       image: productImage,
+      ...(selectedAroma && { selectedAroma: { id: selectedAroma.id, designation_fr: selectedAroma.designation_fr } }),
     };
     addToCart(cartProduct as any, quantity);
     toast.success('Produit ajouté au panier');
+  };
+
+  const handleQuickOrderClick = () => {
+    if (aromaRequiredButMissing) {
+      toast.error('Veuillez choisir un arôme avant de commander');
+      return;
+    }
+    openQuickOrder(quickOrderProduct, { initialQty: quantity, initialVariantId: selectedAromaId ?? undefined });
   };
 
   const handleSubmitReview = async () => {
@@ -602,18 +632,31 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 </div>
               )}
 
-              {/* Arômes disponibles — directly under category line, above quantity */}
+              {/* Arômes — selectable when more than one (required before add to cart); large touch targets */}
               {product.aromes && product.aromes.length > 0 && (
-                <div className="space-y-2 px-1">
-                  <label className="text-sm font-semibold text-gray-900 dark:text-white">
-                    Arômes disponibles
+                <div className="space-y-3 px-1">
+                  <label className="text-base font-semibold text-gray-900 dark:text-white">
+                    {hasMultipleAromes ? 'Choisir un arôme *' : 'Arôme'}
                   </label>
-                  <div className="flex flex-wrap gap-2">
-                    {product.aromes.map((arome) => (
-                      <Badge key={arome.id} variant="outline" className="bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700">
-                        {arome.designation_fr}
-                      </Badge>
-                    ))}
+                  <div className="flex flex-wrap gap-3">
+                    {product.aromes.map((arome) => {
+                      const isSelected = selectedAromaId === arome.id;
+                      return (
+                        <Button
+                          key={arome.id}
+                          type="button"
+                          variant={isSelected ? 'default' : 'outline'}
+                          size="default"
+                          className={cn(
+                            'min-h-[48px] px-5 py-3 text-base font-medium rounded-xl',
+                            isSelected && 'bg-red-600 hover:bg-red-700 text-white'
+                          )}
+                          onClick={() => setSelectedAromaId(arome.id)}
+                        >
+                          {arome.designation_fr}
+                        </Button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -781,22 +824,50 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   </div>
                   <span className="text-sm font-semibold text-gray-900 dark:text-white">Total: {(displayPrice * quantity).toFixed(0)} DT</span>
                 </div>
+                {/* Arômes — selectable when more than one (required before add to cart); large for clarity */}
+                {product.aromes && product.aromes.length > 0 && (
+                  <div>
+                    <p className="text-base font-semibold text-gray-900 dark:text-white mb-2">
+                      {hasMultipleAromes ? 'Choisir un arôme *' : 'Arôme'}
+                    </p>
+                    <div className="flex flex-wrap gap-3">
+                      {product.aromes.map((arome) => {
+                        const isSelected = selectedAromaId === arome.id;
+                        return (
+                          <Button
+                            key={arome.id}
+                            type="button"
+                            variant={isSelected ? 'default' : 'outline'}
+                            size="default"
+                            className={cn(
+                              'min-h-[48px] px-5 py-3 text-base font-medium rounded-xl',
+                              isSelected && 'bg-red-600 hover:bg-red-700 text-white'
+                            )}
+                            onClick={() => setSelectedAromaId(arome.id)}
+                          >
+                            {arome.designation_fr}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
                 {/* CTAs: Ajouter au panier first (red), Commander maintenant second (amber) */}
                 <div className="flex flex-col gap-2">
                   <Button
                     size="lg"
                     className="w-full min-h-[48px] bg-red-600 hover:bg-red-700 text-white font-bold"
                     onClick={handleAddToCart}
-                    disabled={stockDisponible <= 0}
+                    disabled={stockDisponible <= 0 || aromaRequiredButMissing}
                   >
                     <ShoppingCart className="h-5 w-5 mr-2" />
-                    {stockDisponible <= 0 ? 'Rupture de stock' : 'Ajouter au panier'}
+                    {stockDisponible <= 0 ? 'Rupture de stock' : aromaRequiredButMissing ? 'Choisir un arôme' : 'Ajouter au panier'}
                   </Button>
                   <Button
                     size="lg"
                     className="w-full min-h-[48px] bg-amber-500 hover:bg-amber-600 text-white font-semibold"
-                    onClick={() => openQuickOrder(quickOrderProduct, { initialQty: quantity })}
-                    disabled={stockDisponible <= 0}
+                    onClick={handleQuickOrderClick}
+                    disabled={stockDisponible <= 0 || aromaRequiredButMissing}
                   >
                     <Zap className="h-5 w-5 mr-2" />
                     Commander maintenant
@@ -810,18 +881,6 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     <Share2 className="h-5 w-5" />
                   </Button>
                 </div>
-                {product.aromes && product.aromes.length > 0 && (
-                  <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white mb-1.5">Arômes disponibles</p>
-                    <div className="flex flex-wrap gap-2">
-                      {product.aromes.map((arome) => (
-                        <Badge key={arome.id} variant="outline" className="bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 rounded-md">
-                          {arome.designation_fr}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
                 {/* Service assurances */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-gray-200 dark:border-gray-800">
                   <div className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30">
@@ -1176,18 +1235,18 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
             size="lg"
             className="w-full min-h-[52px] bg-red-600 hover:bg-red-700 text-white text-base font-bold shrink-0"
             onClick={handleAddToCart}
-            disabled={stockDisponible <= 0}
+            disabled={stockDisponible <= 0 || aromaRequiredButMissing}
             aria-label="Ajouter au panier"
           >
             <ShoppingCart className="h-5 w-5 mr-2 shrink-0" />
-            {stockDisponible <= 0 ? 'Rupture' : 'Ajouter au panier'}
+            {stockDisponible <= 0 ? 'Rupture' : aromaRequiredButMissing ? 'Choisir un arôme' : 'Ajouter au panier'}
           </Button>
           <Button
             size="lg"
             variant="outline"
             className="w-full min-h-[48px] border-2 border-amber-500 text-amber-600 dark:text-amber-400 bg-white dark:bg-gray-800 font-semibold shrink-0 hover:bg-amber-50 dark:hover:bg-amber-950/20"
-            onClick={() => openQuickOrder(quickOrderProduct, { initialQty: quantity })}
-            disabled={stockDisponible <= 0}
+            onClick={handleQuickOrderClick}
+            disabled={stockDisponible <= 0 || aromaRequiredButMissing}
             aria-label="Commander maintenant"
           >
             <Zap className="h-5 w-5 mr-2 shrink-0" />

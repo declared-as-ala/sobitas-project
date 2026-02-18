@@ -139,6 +139,7 @@ export function HomePageClient({ accueil, slides }: HomePageClientProps) {
       review_count: normalizedCount > 0 ? normalizedCount : null,
       reviews_count: normalizedCount > 0 ? normalizedCount : null,
       reviews: Array.isArray(reviewsArray) && reviewsArray.length > 0 ? reviewsArray : undefined,
+      aromes: p.aromes,
     };
   }, []);
 

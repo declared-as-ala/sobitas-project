@@ -12,11 +12,18 @@ import { Badge } from '@/app/components/ui/badge';
 import type { Product as ApiProduct } from '@/types';
 import { useCart } from '@/app/contexts/CartContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
-import { getStorageUrl } from '@/services/api';
+import { getStorageUrl, getProductDetails } from '@/services/api';
 import { toast } from 'sonner';
 import { getPriceDisplay } from '@/util/productPrice';
 import { getStockDisponible } from '@/util/cartStock';
 import { useState, useMemo, memo, useCallback } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/app/components/ui/dialog';
+import { cn } from '@/app/components/ui/utils';
 
 type Product = ApiProduct | {
   id: number;
@@ -77,10 +84,19 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
   const { openQuickOrder } = useQuickOrder();
   const { isFavorite, toggleFavorite } = useFavorites();
   const [isAdding, setIsAdding] = useState(false);
+  const [aromaDialogOpen, setAromaDialogOpen] = useState(false);
+  const [cardSelectedAromaId, setCardSelectedAromaId] = useState<number | null>(null);
+  /** When API didn't return aromes, we fetch product details; this holds the fetched product for the dialog */
+  const [fetchedProductForDialog, setFetchedProductForDialog] = useState<any>(null);
+  const [isFetchingAromes, setIsFetchingAromes] = useState(false);
   const favorite = isFavorite(product.id);
   const stockDisponible = getStockDisponible(product as any);
   const inCartQty = getCartQty(product.id);
   const canAddMore = stockDisponible > 0 && inCartQty < stockDisponible;
+  const aromes = (product as any).aromes as { id: number; designation_fr: string }[] | undefined;
+  /** Aromes to show in dialog: from API or from fetched product when API had none */
+  const aromesForDialog = fetchedProductForDialog?.aromes ?? aromes;
+  const hasMultipleAromes = aromesForDialog && aromesForDialog.length > 1;
 
   const productData = useMemo(() => {
     const name = (product as any).name || product.designation_fr || '';
@@ -115,7 +131,27 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
     openQuickOrder(toQuickOrderProduct(product));
   }, [openQuickOrder, product, productData.isInStock, stockDisponible]);
 
-  const handleAddToCart = useCallback((e: React.MouseEvent) => {
+  const doAddToCart = useCallback((prod: any, selectedAroma: { id: number; designation_fr: string } | null) => {
+    const price = prod.prix != null ? getPriceDisplay(prod).finalPrice : productData.priceDisplay.finalPrice;
+    const image = prod.cover ? getStorageUrl(prod.cover) : productData.image;
+    const cartProduct = {
+      ...prod,
+      name: prod.name ?? prod.designation_fr,
+      price,
+      priceText: `${price} DT`,
+      image,
+      ...(selectedAroma && { selectedAroma }),
+    };
+    setIsAdding(true);
+    addToCart(cartProduct, 1);
+    toast.success('Produit ajouté au panier');
+    setTimeout(() => setIsAdding(false), 500);
+    setAromaDialogOpen(false);
+    setCardSelectedAromaId(null);
+    setFetchedProductForDialog(null);
+  }, [productData.priceDisplay.finalPrice, productData.image, addToCart]);
+
+  const handleAddToCart = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (!productData.isInStock || stockDisponible <= 0) {
@@ -126,11 +162,39 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
       toast.error(`Stock insuffisant. Il reste ${stockDisponible - inCartQty} unité(s).`);
       return;
     }
-    setIsAdding(true);
-    addToCart(product as any, 1);
-    toast.success('Produit ajouté au panier');
-    setTimeout(() => setIsAdding(false), 500);
-  }, [productData.isInStock, stockDisponible, inCartQty, addToCart, product]);
+    const slug = productData.slug || String(product.id);
+    const aromesFromProduct = (product as any).aromes;
+    const hasAromesFromApi = Array.isArray(aromesFromProduct) && aromesFromProduct.length > 0;
+    if (hasAromesFromApi) {
+      if (aromesFromProduct.length > 1) {
+        setFetchedProductForDialog(null);
+        setCardSelectedAromaId(null);
+        setAromaDialogOpen(true);
+        return;
+      }
+      const singleAroma = aromesFromProduct.length === 1 ? aromesFromProduct[0] : null;
+      doAddToCart(product as any, singleAroma);
+      return;
+    }
+    if (isFetchingAromes) return;
+    setIsFetchingAromes(true);
+    try {
+      const fullProduct = await getProductDetails(slug, true);
+      const fullAromes = (fullProduct as any).aromes;
+      if (Array.isArray(fullAromes) && fullAromes.length > 1) {
+        setFetchedProductForDialog(fullProduct);
+        setCardSelectedAromaId(null);
+        setAromaDialogOpen(true);
+      } else {
+        const singleAroma = fullAromes?.length === 1 ? fullAromes[0] : null;
+        doAddToCart(fullProduct as any, singleAroma);
+      }
+    } catch {
+      toast.error('Impossible de charger le produit. Réessayez.');
+    } finally {
+      setIsFetchingAromes(false);
+    }
+  }, [productData.isInStock, stockDisponible, inCartQty, productData.slug, product, productData.name, doAddToCart, isFetchingAromes]);
 
   const isCompact = variant === 'compact';
 
@@ -250,11 +314,11 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
             size="sm"
             className="w-full min-h-[40px] bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-xl"
             onClick={handleAddToCart}
-            disabled={isAdding || !productData.isInStock || !canAddMore}
+            disabled={isAdding || isFetchingAromes || !productData.isInStock || !canAddMore}
             aria-label={!canAddMore && productData.isInStock ? 'Stock maximum atteint' : `Ajouter ${productData.name} au panier`}
           >
             <ShoppingCart className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
-            {!productData.isInStock || stockDisponible <= 0 ? 'Rupture' : !canAddMore ? 'Stock max' : isAdding ? 'Ajouté !' : 'Ajouter au panier'}
+            {!productData.isInStock || stockDisponible <= 0 ? 'Rupture' : !canAddMore ? 'Stock max' : isFetchingAromes ? 'Chargement...' : isAdding ? 'Ajouté !' : 'Ajouter au panier'}
           </Button>
         </div>
       </div>
@@ -321,18 +385,78 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
           </Button>
           <Button
             size="sm"
-            className={`w-full min-h-[40px] rounded-xl font-semibold text-[10px] xs:text-[11px] sm:text-sm active:scale-[0.98] transition-transform duration-150 select-none px-1.5 sm:px-2 ${productData.isInStock && canAddMore ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-gray-300 dark:bg-gray-600 cursor-not-allowed text-white border border-gray-200 dark:border-gray-600'}`}
+            className={`w-full min-h-[40px] rounded-xl font-semibold text-[10px] xs:text-[11px] sm:text-sm active:scale-[0.98] transition-transform duration-150 select-none px-1.5 sm:px-2 ${productData.isInStock && canAddMore && !isFetchingAromes ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-gray-300 dark:bg-gray-600 cursor-not-allowed text-white border border-gray-200 dark:border-gray-600'}`}
             onClick={handleAddToCart}
-            disabled={isAdding || !productData.isInStock || !canAddMore}
+            disabled={isAdding || isFetchingAromes || !productData.isInStock || !canAddMore}
             aria-label={`Ajouter ${productData.name} au panier`}
           >
             <ShoppingCart className={`size-3.5 sm:size-4 shrink-0 mr-1 sm:mr-1.5 ${isCompact ? 'sm:mr-1.5' : ''}`} aria-hidden="true" />
             <span className="truncate max-w-full">
-              {!productData.isInStock || stockDisponible <= 0 ? 'Rupture' : !canAddMore ? 'Stock max' : isAdding ? 'Ajouté !' : 'Ajouter au panier'}
+              {!productData.isInStock || stockDisponible <= 0 ? 'Rupture' : !canAddMore ? 'Stock max' : isFetchingAromes ? 'Chargement...' : isAdding ? 'Ajouté !' : 'Ajouter au panier'}
             </span>
           </Button>
         </div>
       </div>
+
+      {/* Aroma selection dialog – solid panel, clear in light and dark mode */}
+      <Dialog open={aromaDialogOpen} onOpenChange={(open) => { setAromaDialogOpen(open); if (!open) { setCardSelectedAromaId(null); setFetchedProductForDialog(null); } }}>
+        <DialogContent
+          className={cn(
+            'sm:max-w-md p-6 sm:p-6',
+            'bg-white dark:bg-gray-900',
+            'border-2 border-gray-200 dark:border-gray-700',
+            'shadow-2xl shadow-black/20 dark:shadow-black/50',
+            'ring-2 ring-gray-900/5 dark:ring-white/10',
+            '[&>button]:text-gray-700 [&>button]:dark:text-gray-300 [&>button]:hover:bg-gray-100 [&>button]:dark:hover:bg-gray-800 [&>button]:rounded-full [&>button]:p-2'
+          )}
+        >
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-gray-900 dark:text-white">
+              Choisir un arôme
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600 dark:text-gray-300 font-medium">{productData.name}</p>
+          <div className="flex flex-wrap gap-3 py-3">
+            {aromesForDialog?.map((arome: { id: number; designation_fr: string }) => {
+              const isSelected = cardSelectedAromaId === arome.id;
+              return (
+                <Button
+                  key={arome.id}
+                  type="button"
+                  variant={isSelected ? 'default' : 'outline'}
+                  size="default"
+                  className={cn(
+                    'min-h-[48px] px-5 py-3 text-base font-medium rounded-xl',
+                    'border-2 dark:border-gray-600',
+                    isSelected && 'bg-red-600 hover:bg-red-700 text-white border-red-600 dark:border-red-600'
+                  )}
+                  onClick={() => setCardSelectedAromaId(arome.id)}
+                >
+                  {arome.designation_fr}
+                </Button>
+              );
+            })}
+          </div>
+          <Button
+            size="lg"
+            className="w-full min-h-[48px] bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl border-0"
+            onClick={(e) => {
+              e.preventDefault();
+              if (cardSelectedAromaId == null) {
+                toast.error('Veuillez choisir un arôme');
+                return;
+              }
+              const selectedAroma = aromesForDialog?.find((a: { id: number }) => a.id === cardSelectedAromaId) ?? null;
+              const productToAdd = fetchedProductForDialog ?? product;
+              doAddToCart(productToAdd as any, selectedAroma);
+            }}
+            disabled={cardSelectedAromaId == null}
+          >
+            <ShoppingCart className="h-5 w-5 mr-2" />
+            Ajouter au panier
+          </Button>
+        </DialogContent>
+      </Dialog>
     </motion.article>
   );
 });

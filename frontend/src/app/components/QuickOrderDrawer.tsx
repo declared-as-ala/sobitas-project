@@ -6,17 +6,9 @@ import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/app/components/ui/select';
 import { AddressSelector } from '@/app/components/AddressSelector';
 import { Badge } from '@/app/components/ui/badge';
-import { submitQuickOrder } from '@/services/api';
-import { getStorageUrl } from '@/services/api';
+import { submitQuickOrder, getProductDetails, getStorageUrl } from '@/services/api';
 import type { QuickOrderPayload, QuickOrderResponse } from '@/types';
 import type { QuickOrderProduct } from '@/contexts/QuickOrderContext';
 import { getPriceDisplay } from '@/util/productPrice';
@@ -56,6 +48,9 @@ export function QuickOrderDrawer({
   const [internalOpen, setInternalOpen] = useState(false);
   const [quantity, setQuantity] = useState(Math.max(1, initialQty));
   const [selectedVariantId, setSelectedVariantId] = useState<number | undefined>(initialVariantId ?? product.aromes?.[0]?.id);
+  /** When API didn't return aromes, we fetch full product so the drawer can show aroma selector */
+  const [productWithAromes, setProductWithAromes] = useState<QuickOrderProduct>(product);
+  const [isLoadingAromes, setIsLoadingAromes] = useState(false);
   const [nom, setNom] = useState('');
   const [prenom, setPrenom] = useState('');
   const [phone, setPhone] = useState('');
@@ -86,6 +81,7 @@ export function QuickOrderDrawer({
   useEffect(() => {
     if (open && product) {
       setQuantity(Math.max(1, initialQty));
+      setProductWithAromes(product);
       setSelectedVariantId(initialVariantId ?? product.aromes?.[0]?.id);
       setResult(null);
       setErrors({});
@@ -93,11 +89,25 @@ export function QuickOrderDrawer({
       trackEvent('quick_order_open', { product_id: product.id });
       document.body.style.overflow = 'hidden';
       setTimeout(() => document.getElementById('qo-nom')?.focus(), 150);
+      const hasAromes = product.aromes && product.aromes.length > 0;
+      if (!hasAromes && product.slug) {
+        setIsLoadingAromes(true);
+        getProductDetails(product.slug, true)
+          .then((full) => {
+            const aromes = (full as any).aromes;
+            if (aromes && aromes.length > 0) {
+              setProductWithAromes({ ...product, aromes } as QuickOrderProduct);
+              setSelectedVariantId(initialVariantId ?? aromes[0]?.id);
+            }
+          })
+          .catch(() => {})
+          .finally(() => setIsLoadingAromes(false));
+      }
     }
     return () => {
       document.body.style.overflow = '';
     };
-  }, [open, product?.id, initialQty, initialVariantId, product?.aromes]);
+  }, [open, product?.id, product?.slug, initialQty, initialVariantId, product?.aromes]);
 
   const hasFormData = () =>
     [nom, prenom, phone, gouvernorat, delegation, localite].some((v) => (v || '').trim() !== '');
@@ -116,9 +126,15 @@ export function QuickOrderDrawer({
     if (!(gouvernorat || '').trim()) e.gouvernorat = 'Gouvernorat requis';
     if (!(delegation || '').trim()) e.delegation = 'Délégation requise';
     if (!(localite || '').trim()) e.localite = 'Localité requise';
+    const aromes = productWithAromes.aromes;
+    if (aromes && aromes.length > 1 && selectedVariantId == null) {
+      e.arome = 'Veuillez choisir un arôme';
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   };
+
+  const needsAromaSelection = (productWithAromes.aromes?.length ?? 0) > 1 && selectedVariantId == null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -302,59 +318,78 @@ export function QuickOrderDrawer({
                     </div>
                   </div>
 
-                  {/* Quantité (stepper) */}
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      Quantité *
-                    </Label>
-                    <div className="flex items-center gap-2 border border-gray-200 dark:border-gray-700 rounded-lg p-2 w-fit">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-9 w-9 shrink-0"
-                        onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                        disabled={quantity <= 1}
-                        aria-label="Diminuer la quantité"
-                      >
-                        <Minus className="h-4 w-4" />
-                      </Button>
-                      <span className="w-10 text-center font-semibold tabular-nums" aria-live="polite">{quantity}</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-9 w-9 shrink-0"
-                        onClick={() => setQuantity((q) => q + 1)}
-                        disabled={!inStock}
-                        aria-label="Augmenter la quantité"
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Variant (arômes) when product has variants */}
-                  {product.aromes && product.aromes.length > 0 && (
+                  {/* Quantité & Arôme – side by side, same prominence */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Quantité */}
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        Arôme / Variante *
+                        Quantité *
                       </Label>
-                      <Select
-                        value={selectedVariantId != null ? String(selectedVariantId) : ''}
-                        onValueChange={(v) => setSelectedVariantId(v ? Number(v) : undefined)}
-                      >
-                        <SelectTrigger className="h-12 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 w-full">
-                          <SelectValue placeholder="Choisir..." />
-                        </SelectTrigger>
-                        <SelectContent className="z-[200]">
-                          {product.aromes.map((ar) => (
-                            <SelectItem key={ar.id} value={String(ar.id)}>{ar.designation_fr}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div className="flex items-center gap-2 border-2 border-gray-200 dark:border-gray-700 rounded-xl p-2 w-full sm:w-fit bg-white dark:bg-gray-800">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-10 w-10 shrink-0 rounded-lg"
+                          onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                          disabled={quantity <= 1}
+                          aria-label="Diminuer la quantité"
+                        >
+                          <Minus className="h-4 w-4" />
+                        </Button>
+                        <span className="flex-1 sm:w-10 text-center font-bold text-lg tabular-nums" aria-live="polite">{quantity}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-10 w-10 shrink-0 rounded-lg"
+                          onClick={() => setQuantity((q) => q + 1)}
+                          disabled={!inStock}
+                          aria-label="Augmenter la quantité"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
-                  )}
+
+                    {/* Arôme / Variante – same level as quantity; big buttons when multiple */}
+                    {productWithAromes.aromes && productWithAromes.aromes.length > 0 && (
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                          Arôme *
+                        </Label>
+                        {isLoadingAromes ? (
+                          <p className="text-sm text-gray-500 dark:text-gray-400 py-2">Chargement des arômes...</p>
+                        ) : productWithAromes.aromes.length === 1 ? (
+                          <p className="text-sm font-medium text-gray-700 dark:text-gray-300 py-2 border border-gray-200 dark:border-gray-700 rounded-xl px-3 h-12 flex items-center bg-white dark:bg-gray-800">
+                            {productWithAromes.aromes[0].designation_fr}
+                          </p>
+                        ) : (
+                          <div className="flex flex-wrap gap-2">
+                            {productWithAromes.aromes.map((ar) => {
+                              const isSelected = selectedVariantId === ar.id;
+                              return (
+                                <Button
+                                  key={ar.id}
+                                  type="button"
+                                  variant={isSelected ? 'default' : 'outline'}
+                                  size="default"
+                                  className={cn(
+                                    'min-h-[44px] px-4 py-2 text-sm font-medium rounded-xl border-2',
+                                    isSelected && 'bg-red-600 hover:bg-red-700 text-white border-red-600 dark:border-red-600'
+                                  )}
+                                  onClick={() => setSelectedVariantId(ar.id)}
+                                >
+                                  {ar.designation_fr}
+                                </Button>
+                              );
+                            })}
+                          </div>
+                        )}
+                        {errors.arome && <p className="text-xs text-red-600 dark:text-red-400">{errors.arome}</p>}
+                      </div>
+                    )}
+                  </div>
 
                   {/* Nom, Prénom, Téléphone (required) – order: Nom & Prénom before Téléphone */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -457,7 +492,7 @@ export function QuickOrderDrawer({
               <Button
                 type="submit"
                 form="quick-order-form"
-                disabled={isSubmitting}
+                disabled={isSubmitting || needsAromaSelection}
                 className="w-full h-12 rounded-lg text-base font-bold bg-red-600 hover:bg-red-700 text-white focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
               >
                 {isSubmitting ? (
