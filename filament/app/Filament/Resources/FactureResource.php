@@ -33,8 +33,9 @@ class FactureResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            // Use relationship() instead of Client::pluck() — avoids loading all clients eagerly
-            Forms\Components\Select::make('client_id')
+            Forms\Components\Section::make('Informations du bon de livraison')
+                ->schema([
+                    Forms\Components\Select::make('client_id')
                 ->label('Client')
                 ->relationship('client', 'name')
                 ->searchable()
@@ -44,7 +45,7 @@ class FactureResource extends Resource
                 ->label('Numéro')
                 ->disabled()
                 ->dehydrated(false),
-            Forms\Components\TextInput::make('remise')
+                    Forms\Components\TextInput::make('remise')
                 ->label('Remise')
                 ->numeric()
                 ->prefix('DT')
@@ -54,7 +55,7 @@ class FactureResource extends Resource
                 ->numeric()
                 ->suffix('%')
                 ->default(0),
-            Forms\Components\TextInput::make('timbre')
+                    Forms\Components\TextInput::make('timbre')
                 ->label('Timbre fiscal')
                 ->numeric()
                 ->prefix('DT')
@@ -64,11 +65,13 @@ class FactureResource extends Resource
                 ->numeric()
                 ->prefix('DT')
                 ->disabled(),
-            Forms\Components\TextInput::make('prix_ttc')
+                    Forms\Components\TextInput::make('prix_ttc')
                 ->label('Prix TTC')
                 ->numeric()
                 ->prefix('DT')
                 ->disabled(),
+                ])
+                ->columns(2),
         ]);
     }
 
@@ -77,11 +80,13 @@ class FactureResource extends Resource
         return $table
             // Eager load client to prevent N+1 on client.name column
             ->modifyQueryUsing(fn (Builder $query) => $query->with('client:id,name'))
+            ->striped()
             ->columns([
                 Tables\Columns\TextColumn::make('numero')
                     ->label('N°')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->weight(\Filament\Support\Enums\FontWeight::Bold),
                 Tables\Columns\TextColumn::make('client.name')
                     ->label('Client')
                     ->searchable()
@@ -89,26 +94,34 @@ class FactureResource extends Resource
                 Tables\Columns\TextColumn::make('prix_ttc')
                     ->label('Total TTC')
                     ->money('TND')
-                    ->sortable(),
+                    ->sortable()
+                    ->alignEnd(),
                 Tables\Columns\TextColumn::make('remise')
                     ->label('Remise')
                     ->money('TND')
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->alignEnd(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Date')
                     ->dateTime('d/m/Y')
-                    ->sortable(),
+                    ->sortable()
+                    ->color('gray'),
             ])
             ->defaultSort('created_at', 'desc')
             ->defaultPaginationPageOption(25)
             ->actions([
+                Actions\EditAction::make(),
                 Actions\Action::make('print')
                     ->label('Imprimer')
                     ->icon('heroicon-o-printer')
-                    ->color('info')
-                    ->url(fn (Facture $record) => url("/factures/{$record->id}/print"))
-                    ->openUrlInNewTab(),
-                Actions\EditAction::make(),
+                    ->color('gray')
+                    ->modalHeading('Aperçu d\'impression')
+                    ->modalContent(fn (Facture $record) => view('filament.components.print-modal', [
+                        'printUrl' => route('factures.print', ['facture' => $record->id]),
+                        'title' => 'Bon de livraison ' . $record->numero,
+                    ]))
+                    ->modalSubmitAction(false)
+                    ->closeParentActions(),
                 Actions\DeleteAction::make(),
             ])
             ->bulkActions([

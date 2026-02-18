@@ -76,7 +76,7 @@ class AdminPanelProvider extends PanelProvider
                 'panels::head.end',
                 fn (): string => '
                     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.min.css" />
-                '
+                ' . "\n" . view('filament.components.custom-admin-styles')->render()
             )
             ->renderHook(
                 'panels::body.end',

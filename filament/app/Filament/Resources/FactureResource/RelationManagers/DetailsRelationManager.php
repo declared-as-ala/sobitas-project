@@ -42,17 +42,21 @@ class DetailsRelationManager extends RelationManager
     {
         return $table
             ->modifyQueryUsing(fn (Builder $query) => $query->with('product:id,designation_fr'))
+            ->striped()
             ->columns([
                 Tables\Columns\TextColumn::make('product.designation_fr')
                     ->label('Produit'),
                 Tables\Columns\TextColumn::make('qte')
-                    ->label('Quantité'),
+                    ->label('Quantité')
+                    ->alignEnd(),
                 Tables\Columns\TextColumn::make('prix_unitaire')
                     ->label('Prix unitaire')
-                    ->money('TND'),
+                    ->money('TND')
+                    ->alignEnd(),
                 Tables\Columns\TextColumn::make('prix_ttc')
                     ->label('Total')
-                    ->money('TND'),
+                    ->money('TND')
+                    ->alignEnd(),
             ])
             ->headerActions([
                 Actions\CreateAction::make(),

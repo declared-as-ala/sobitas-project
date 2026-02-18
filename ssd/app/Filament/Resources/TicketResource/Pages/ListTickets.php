@@ -16,7 +16,7 @@ class ListTickets extends ListRecords
     {
         return [
             Tables\Actions\CreateAction::make()
-                ->modalHeading('Create Ticket')
+                ->modalHeading('Créer un ticket')
                 ->using(function (array $data) {
                     return DB::transaction(function () use ($data) {
                         $details = $data['details'] ?? [];

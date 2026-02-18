@@ -47,19 +47,23 @@ class DetailsRelationManager extends RelationManager
     {
         return $table
             ->modifyQueryUsing(fn (\Illuminate\Database\Eloquent\Builder $query) => $query->with('product:id,designation_fr'))
+            ->striped()
             ->columns([
                 Tables\Columns\TextColumn::make('product.designation_fr')
                     ->label('Produit'),
                 Tables\Columns\TextColumn::make('designation')
                     ->label('Désignation'),
                 Tables\Columns\TextColumn::make('qte')
-                    ->label('Qté'),
+                    ->label('Qté')
+                    ->alignEnd(),
                 Tables\Columns\TextColumn::make('prix_unitaire')
                     ->label('P.U.')
-                    ->money('TND'),
+                    ->money('TND')
+                    ->alignEnd(),
                 Tables\Columns\TextColumn::make('prix_ttc')
                     ->label('Total')
-                    ->money('TND'),
+                    ->money('TND')
+                    ->alignEnd(),
             ])
             ->headerActions([
                 Actions\CreateAction::make(),

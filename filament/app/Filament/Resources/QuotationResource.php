@@ -71,6 +71,15 @@ class QuotationResource extends Resource
                             ->label('Remise')
                             ->numeric()
                             ->default(0),
+                        Forms\Components\Select::make('statut')
+                            ->label('Statut')
+                            ->options([
+                                'brouillon' => 'Brouillon',
+                                'en_attente' => 'En attente',
+                                'valide' => 'Validé',
+                                'refuse' => 'Refusé',
+                            ])
+                            ->nullable(),
                     ])->columns(2),
             ]);
     }
@@ -79,11 +88,13 @@ class QuotationResource extends Resource
     {
         return $table
             ->modifyQueryUsing(fn (Builder $query) => $query->with('client:id,name'))
+            ->striped()
             ->columns([
                 Tables\Columns\TextColumn::make('numero')
                     ->label('N°')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->weight(\Filament\Support\Enums\FontWeight::Bold),
                 Tables\Columns\TextColumn::make('client.name')
                     ->label('Client')
                     ->searchable()
@@ -91,15 +102,36 @@ class QuotationResource extends Resource
                 Tables\Columns\TextColumn::make('prix_ht')
                     ->label('HT')
                     ->money('TND')
-                    ->sortable(),
+                    ->sortable()
+                    ->alignEnd(),
                 Tables\Columns\TextColumn::make('prix_ttc')
                     ->label('TTC')
                     ->money('TND')
-                    ->sortable(),
+                    ->sortable()
+                    ->alignEnd(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Date')
                     ->dateTime('d/m/Y')
-                    ->sortable(),
+                    ->sortable()
+                    ->color('gray'),
+                Tables\Columns\TextColumn::make('statut')
+                    ->label('Statut')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state): string => match ($state) {
+                        'brouillon' => 'Brouillon',
+                        'valide' => 'Validé',
+                        'refuse' => 'Refusé',
+                        'en_attente' => 'En attente',
+                        default => '—',
+                    })
+                    ->color(fn (?string $state): string => match ($state) {
+                        'brouillon' => 'gray',
+                        'valide' => 'success',
+                        'refuse' => 'danger',
+                        'en_attente' => 'warning',
+                        default => 'gray',
+                    })
+                    ->toggleable(isToggledHiddenByDefault: false),
             ])
             ->defaultSort('created_at', 'desc')
             ->defaultPaginationPageOption(25)
@@ -121,8 +153,13 @@ class QuotationResource extends Resource
                     ->label('Imprimer')
                     ->icon('heroicon-o-printer')
                     ->color('gray')
-                    ->url(fn (Quotation $record): string => route('quotations.print', ['quotation' => $record->id]))
-                    ->openUrlInNewTab(),
+                    ->modalHeading('Aperçu d\'impression')
+                    ->modalContent(fn (Quotation $record) => view('filament.components.print-modal', [
+                        'printUrl' => route('quotations.print', ['quotation' => $record->id]),
+                        'title' => 'Devis ' . $record->numero,
+                    ]))
+                    ->modalSubmitAction(false)
+                    ->closeParentActions(),
                 Actions\DeleteAction::make(),
             ])
             ->bulkActions([

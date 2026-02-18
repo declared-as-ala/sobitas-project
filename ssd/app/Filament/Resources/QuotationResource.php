@@ -125,10 +125,13 @@ class QuotationResource extends BaseResource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('id')
+                    ->label('#')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('numero')
+                    ->label('N° Devis')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->formatStateUsing(fn ($state) => $state ? 'Devis #' . $state : ''),
                 Tables\Columns\TextColumn::make('client.name')
                     ->label('Client')
                     ->searchable()
@@ -136,9 +139,11 @@ class QuotationResource extends BaseResource
                 Tables\Columns\TextColumn::make('prix_ttc')
                     ->label('Total TTC')
                     ->money('TND')
-                    ->sortable(),
+                    ->sortable()
+                    ->alignRight(),
                 Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime()
+                    ->label('Date')
+                    ->date('d/m/Y')
                     ->sortable(),
             ])
             ->filters([
@@ -149,7 +154,7 @@ class QuotationResource extends BaseResource
             ])
             ->actions([
                 Tables\Actions\EditAction::make()
-                    ->modalHeading('Edit Quotation')
+                    ->modalHeading('Modifier le devis')
                     ->using(function (Quotation $record, array $data) {
                         return DB::transaction(function () use ($record, $data) {
                             $details = $data['details'] ?? [];

@@ -16,7 +16,7 @@ class ListFactures extends ListRecords
     {
         return [
             Tables\Actions\CreateAction::make()
-                ->modalHeading('Create Facture')
+                ->modalHeading('Créer une facture')
                 ->using(function (array $data) {
                     return DB::transaction(function () use ($data) {
                         $details = $data['details'] ?? [];
