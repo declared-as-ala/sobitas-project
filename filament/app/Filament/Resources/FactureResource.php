@@ -36,40 +36,40 @@ class FactureResource extends Resource
             Forms\Components\Section::make('Informations du bon de livraison')
                 ->schema([
                     Forms\Components\Select::make('client_id')
-                ->label('Client')
-                ->relationship('client', 'name')
-                ->searchable()
-                ->preload()
-                ->required(),
-            Forms\Components\TextInput::make('numero')
-                ->label('Numéro')
-                ->disabled()
-                ->dehydrated(false),
+                        ->label('Client')
+                        ->relationship('client', 'name')
+                        ->searchable()
+                        ->preload()
+                        ->required(),
+                    Forms\Components\TextInput::make('numero')
+                        ->label('Numéro')
+                        ->disabled()
+                        ->dehydrated(false),
                     Forms\Components\TextInput::make('remise')
-                ->label('Remise')
-                ->numeric()
-                ->prefix('DT')
-                ->default(0),
-            Forms\Components\TextInput::make('pourcentage_remise')
-                ->label('% Remise')
-                ->numeric()
-                ->suffix('%')
-                ->default(0),
+                        ->label('Remise')
+                        ->numeric()
+                        ->prefix('DT')
+                        ->default(0),
+                    Forms\Components\TextInput::make('pourcentage_remise')
+                        ->label('% Remise')
+                        ->numeric()
+                        ->suffix('%')
+                        ->default(0),
                     Forms\Components\TextInput::make('timbre')
-                ->label('Timbre fiscal')
-                ->numeric()
-                ->prefix('DT')
-                ->default(0),
-            Forms\Components\TextInput::make('prix_ht')
-                ->label('Prix HT')
-                ->numeric()
-                ->prefix('DT')
-                ->disabled(),
+                        ->label('Timbre fiscal')
+                        ->numeric()
+                        ->prefix('DT')
+                        ->default(0),
+                    Forms\Components\TextInput::make('prix_ht')
+                        ->label('Prix HT')
+                        ->numeric()
+                        ->prefix('DT')
+                        ->disabled(),
                     Forms\Components\TextInput::make('prix_ttc')
-                ->label('Prix TTC')
-                ->numeric()
-                ->prefix('DT')
-                ->disabled(),
+                        ->label('Prix TTC')
+                        ->numeric()
+                        ->prefix('DT')
+                        ->disabled(),
                 ])
                 ->columns(2),
         ]);
