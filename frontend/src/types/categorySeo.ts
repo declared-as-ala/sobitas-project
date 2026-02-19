@@ -33,6 +33,12 @@ export interface CategorySeoContent {
    * Products must belong to this category or subcategory.
    */
   bestProductSlugs: string[];
+  /** Optional: override meta title (55–60 chars, keyword-first for CTR). */
+  metaTitle?: string;
+  /** Optional: meta description (150–160 chars). */
+  metaDescription?: string;
+  /** Optional: absolute URL for og:image (category hero or best-seller). */
+  ogImage?: string;
 }
 
 export const CATEGORY_SEO_CONTENT_DEFAULTS: Partial<CategorySeoContent> = {

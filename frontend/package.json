@@ -7,7 +7,8 @@
     "build": "cross-env NODE_OPTIONS=--no-deprecation next build",
     "start": "cross-env NODE_OPTIONS=--no-deprecation next start",
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx --max-warnings 999",
-    "verify-seo": "node scripts/verify-seo.js"
+    "verify-seo": "node scripts/verify-seo.js",
+    "seo-audit-category": "node scripts/seo-audit-category.js"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",

@@ -2,6 +2,7 @@
 
 import { useMemo, Suspense, useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { HeroSlider } from '@/app/components/HeroSlider';
 
 import type { AccueilData, Product } from '@/types';
@@ -182,13 +183,20 @@ export function HomePageClient({ accueil, slides }: HomePageClientProps) {
       <main>
         {/* Above the fold - Critical content - Hero must render first */}
         <HeroSlider slides={slides} />
-        {/* SEO: single visible H1 for main query "proteine tunisie" */}
+        {/* SEO: single visible H1 for main query "proteine tunisie" + internal link creatine */}
         <section className="text-center py-4 px-4 bg-white dark:bg-gray-950" aria-label="Titre principal">
           <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">
             Protéine Tunisie – Votre partenaire nutrition sportive
           </h1>
           <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-            Whey protein, créatine et compléments alimentaires – Livraison rapide à Sousse, Tunis, Sfax et dans toute la Tunisie
+            <Link href="/category/proteine-whey" className="text-red-600 dark:text-red-400 hover:underline font-medium">
+              whey protein
+            </Link>
+            {' '}et{' '}
+            <Link href="/category/creatine" className="text-red-600 dark:text-red-400 hover:underline font-medium">
+              créatine en Tunisie
+            </Link>
+            {' '}– compléments alimentaires – Livraison rapide à Sousse, Tunis, Sfax et dans toute la Tunisie
           </p>
         </section>
         {/* FeaturesSection - Fixed height to prevent CLS */}

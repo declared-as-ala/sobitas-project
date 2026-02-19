@@ -89,16 +89,39 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         ? (data as any).sous_category?.designation_fr
         : (data as any).category?.designation_fr;
     const seoContent = await getCategorySeoContent(canonicalSlug);
-    const metaTitle = toMetaTitle(seoContent?.h1, apiTitle);
-    const description = seoContent?.intro?.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160)
-      || `Découvrez notre sélection ${apiTitle ? `- ${apiTitle}` : ''}. Qualité premium, livraison rapide Tunisie.`;
+    let metaTitle = (seoContent?.metaTitle && seoContent.metaTitle.length <= META_TITLE_MAX_LEN)
+      ? seoContent.metaTitle
+      : toMetaTitle(seoContent?.h1, apiTitle);
+    if (metaTitle.length > META_TITLE_MAX_LEN) {
+      const cut = metaTitle.slice(0, META_TITLE_MAX_LEN - 1);
+      const lastSpace = cut.lastIndexOf(' ');
+      metaTitle = lastSpace > 40 ? cut.slice(0, lastSpace) : cut;
+    }
+    metaTitle = metaTitle.slice(0, META_TITLE_MAX_LEN);
+    // Root layout has template "%s | Protein.tn" – use absolute so our capped title (≤60) is used as-is
+    const description = (seoContent?.metaDescription && seoContent.metaDescription.length <= 160)
+      ? seoContent.metaDescription
+      : (seoContent?.intro?.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160)
+        || `Découvrez notre sélection ${apiTitle ? `- ${apiTitle}` : ''}. Qualité premium, livraison rapide Tunisie.`);
+    const canonicalUrl = buildCanonicalUrl(`/category/${encodeURIComponent(canonicalSlug)}`);
+    const descTrimmed = description.slice(0, 160);
+    const ogImage = seoContent?.ogImage || undefined;
     return {
-      title: metaTitle,
-      description,
-      alternates: {
-        canonical: buildCanonicalUrl(`/category/${encodeURIComponent(canonicalSlug)}`),
+      title: { absolute: metaTitle },
+      description: descTrimmed,
+      alternates: { canonical: canonicalUrl },
+      openGraph: {
+        title: metaTitle,
+        description: descTrimmed,
+        url: canonicalUrl,
+        ...(ogImage && { images: [{ url: ogImage, width: 1200, height: 630, alt: apiTitle || 'Catégorie' }] }),
       },
-      openGraph: { title: metaTitle, description: description.slice(0, 160) },
+      twitter: {
+        card: 'summary_large_image',
+        title: metaTitle,
+        description: descTrimmed,
+        ...(ogImage && { images: [ogImage] }),
+      },
     };
   } catch {
     return { title: 'Catégorie | SOBITAS' };
@@ -178,19 +201,20 @@ export default async function CategoryPage({ params }: PageProps) {
           faqs={seoContent?.faqs ?? []}
           relatedCategories={relatedCategories}
           bestProducts={bestProducts}
-          section="top"
+          section="header"
         />
       );
-      const categorySeoLandingBottom = (relatedCategories.length > 0 || bestProducts.length > 0) ? (
+      const hasSeoContentBelow = (seoContent?.intro ?? '').trim().length > 0 || (seoContent?.faqs?.length ?? 0) > 0 || relatedCategories.length > 0 || bestProducts.length > 0;
+      const categorySeoLandingBottom = hasSeoContentBelow ? (
         <CategorySeoLanding
           title={title}
-          intro={null}
-          howToChooseTitle={null}
-          howToChooseBody={null}
-          faqs={[]}
+          intro={seoContent?.intro ?? null}
+          howToChooseTitle={seoContent?.howToChooseTitle ?? null}
+          howToChooseBody={seoContent?.howToChooseBody ?? null}
+          faqs={seoContent?.faqs ?? []}
           relatedCategories={relatedCategories}
           bestProducts={bestProducts}
-          section="bottom"
+          section="below-fold"
         />
       ) : null;
 
@@ -266,19 +290,20 @@ export default async function CategoryPage({ params }: PageProps) {
           faqs={seoContent?.faqs ?? []}
           relatedCategories={relatedCategories}
           bestProducts={bestProducts}
-          section="top"
+          section="header"
         />
       );
-      const categorySeoLandingBottom = (relatedCategories.length > 0 || bestProducts.length > 0) ? (
+      const hasSeoContentBelowCat = (seoContent?.intro ?? '').trim().length > 0 || (seoContent?.faqs?.length ?? 0) > 0 || relatedCategories.length > 0 || bestProducts.length > 0;
+      const categorySeoLandingBottom = hasSeoContentBelowCat ? (
         <CategorySeoLanding
           title={title}
-          intro={null}
-          howToChooseTitle={null}
-          howToChooseBody={null}
-          faqs={[]}
+          intro={seoContent?.intro ?? null}
+          howToChooseTitle={seoContent?.howToChooseTitle ?? null}
+          howToChooseBody={seoContent?.howToChooseBody ?? null}
+          faqs={seoContent?.faqs ?? []}
           relatedCategories={relatedCategories}
           bestProducts={bestProducts}
-          section="bottom"
+          section="below-fold"
         />
       ) : null;
 

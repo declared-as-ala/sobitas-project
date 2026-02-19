@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { CategorySeoContent } from '@/types/categorySeo';
-import { buildFAQPageSchema, validateStructuredData } from '@/util/structuredData';
+import { buildFAQPageSchemaFromQA, validateStructuredData } from '@/util/structuredData';
+import { CategorySeoLandingExpandable } from '@/app/category/CategorySeoLandingExpandable';
 
 export interface RelatedLink {
   slug: string;
@@ -20,8 +21,8 @@ interface CategorySeoLandingProps {
   bestProducts: RelatedLink[];
   /** If true, output FAQPage JSON-LD. */
   withFaqSchema?: boolean;
-  /** 'top' = H1 + intro + how-to + FAQs only; 'bottom' = Catégories associées + Produits phares only; 'all' = everything (default). */
-  section?: 'top' | 'bottom' | 'all';
+  /** 'header' = trust row + H1 only (products above the fold); 'below-fold' = intro + how-to + FAQ + related + best (no H1); 'top' = H1 + intro + how-to + FAQs; 'bottom' = Catégories + Produits phares; 'all' = everything. */
+  section?: 'header' | 'below-fold' | 'top' | 'bottom' | 'all';
 }
 
 /** Renders plain text as paragraphs (double newline = new paragraph). */
@@ -58,13 +59,15 @@ export function CategorySeoLanding({
   const hasBest = bestProducts.length > 0;
 
   const faqSchema =
-    withFaqSchema && hasFaqs && (section === 'top' || section === 'all')
-      ? buildFAQPageSchema(faqs.map((f) => ({ id: 0, question: f.question, reponse: f.answer })))
+    withFaqSchema && hasFaqs && (section === 'top' || section === 'all' || section === 'below-fold')
+      ? buildFAQPageSchemaFromQA(faqs)
       : null;
   if (faqSchema) validateStructuredData(faqSchema, 'FAQPage');
 
+  const showHeader = section === 'header' || section === 'top' || section === 'all';
   const showTop = section === 'top' || section === 'all';
-  const showBottom = section === 'bottom' || section === 'all';
+  const showContentBelowFold = section === 'below-fold';
+  const showBottom = section === 'bottom' || section === 'all' || section === 'below-fold';
 
   return (
     <div className="space-y-8 sm:space-y-10 lg:space-y-12">
@@ -75,27 +78,36 @@ export function CategorySeoLanding({
         />
       )}
 
-      {showTop && (
+      {/* Header only (above product grid): trust row + H1 */}
+      {showHeader && (
         <>
+      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-3 sm:mb-4">
+        Paiement à la livraison • Livraison 24–72h • Produits authentiques
+      </p>
       <header>
         <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white tracking-tight">
           {title}
         </h1>
       </header>
-
-      {hasIntro && (
-        <section className="prose prose-gray dark:prose-invert max-w-none prose-p:text-gray-700 dark:prose-p:text-gray-300 prose-p:leading-relaxed">
-          <div className="text-base sm:text-lg">
-            {intro.includes('<') ? (
-              <div dangerouslySetInnerHTML={{ __html: intro }} />
-            ) : (
-              textToParagraphs(intro)
-            )}
-          </div>
-        </section>
+        </>
       )}
 
-      {hasHowTo && (
+      {/* Full content (intro, how-to, FAQ) – when section is top/all or below-fold */}
+      {(showTop || showContentBelowFold) && hasIntro && (
+        <CategorySeoLandingExpandable>
+          <section className="prose prose-gray dark:prose-invert max-w-none prose-p:text-gray-700 dark:prose-p:text-gray-300 prose-p:leading-relaxed prose-headings:mt-6 prose-headings:mb-2">
+            <div className="text-base sm:text-lg">
+              {intro.includes('<') ? (
+                <div dangerouslySetInnerHTML={{ __html: intro }} />
+              ) : (
+                textToParagraphs(intro)
+              )}
+            </div>
+          </section>
+        </CategorySeoLandingExpandable>
+      )}
+
+      {(showTop || showContentBelowFold) && hasHowTo && (
         <section className="rounded-xl sm:rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 p-4 sm:p-6 lg:p-8">
           <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
             {howToChooseTitle}
@@ -110,7 +122,7 @@ export function CategorySeoLanding({
         </section>
       )}
 
-      {hasFaqs && (
+      {(showTop || showContentBelowFold) && hasFaqs && (
         <section className="border border-gray-200 dark:border-gray-700 rounded-xl sm:rounded-2xl overflow-hidden bg-white dark:bg-gray-900">
           <h2 className="sr-only">Questions fréquentes</h2>
           <ul className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -131,8 +143,6 @@ export function CategorySeoLanding({
             ))}
           </ul>
         </section>
-      )}
-        </>
       )}
 
       {showBottom && (hasRelated || hasBest) && (

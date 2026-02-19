@@ -252,6 +252,23 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
             </div>
           </article>
 
+          {/* Internal linking: creatine category for creatine-related articles */}
+          {/\bcréatine\b|\bcreatine\b/i.test(`${article.designation_fr ?? ''} ${article.description_fr ?? ''}`) && (
+            <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30">
+              <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
+                Acheter de la <Link href="/category/creatine" className="text-red-600 dark:text-red-400 font-medium hover:underline">créatine en Tunisie</Link> au meilleur prix : livraison rapide, paiement à la livraison. Découvrez aussi notre <Link href="/category/creatine" className="text-red-600 dark:text-red-400 hover:underline">créatine monohydrate</Link> et toute la gamme sur Protein.tn.
+              </p>
+            </div>
+          )}
+          {/* Internal linking: whey category for whey-related articles */}
+          {/\bwhey\b|\bprot[eé]ine\s+(lactos[eé]rum|lait)\b/i.test(`${article.designation_fr ?? ''} ${article.description_fr ?? ''}`) && (
+            <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30">
+              <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
+                <Link href="/category/proteine-whey" className="text-red-600 dark:text-red-400 font-medium hover:underline">Whey protein Tunisie</Link> au meilleur prix : livraison rapide, produits originaux. <Link href="/category/proteine-whey" className="text-red-600 dark:text-red-400 hover:underline">Acheter whey en Tunisie</Link> – découvrez notre sélection de <Link href="/category/proteine-whey" className="text-red-600 dark:text-red-400 hover:underline">meilleure whey protein</Link> sur Protein.tn.
+              </p>
+            </div>
+          )}
+
           {/* Produits recommandés – lazy-loaded, 4–8 products (category / best sellers) */}
           <BlogRecommendedProducts
             article={article}

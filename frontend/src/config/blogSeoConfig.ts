@@ -20,9 +20,11 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       { question: "Où acheter de la whey en Tunisie ?", answer: "SOBITAS propose une large gamme de whey protein en Tunisie avec livraison à Sousse, Tunis et Sfax. Consultez notre catégorie whey protein tunisie pour les prix et la livraison." },
     ],
     internalLinks: [
-      { anchor: 'whey protein tunisie', href: '/category/whey-protein' },
+      { anchor: 'whey protein tunisie', href: '/category/proteine-whey' },
+      { anchor: 'acheter whey en tunisie', href: '/category/proteine-whey' },
+      { anchor: 'meilleure whey protein', href: '/category/proteine-whey' },
       { anchor: 'creatine tunisie', href: '/category/creatine' },
-      { anchor: 'prix whey Tunisie', href: '/category/proteines' },
+      { anchor: 'prix whey Tunisie', href: '/category/proteine-whey' },
     ],
   },
   'whey-ou-isolate': {
@@ -31,8 +33,10 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       { question: "Quel est le meilleur prix isolate whey Tunisie ?", answer: "SOBITAS propose des isolats de whey à des prix compétitifs. Consultez notre catégorie whey protein tunisie pour comparer les prix et la livraison en Tunisie." },
     ],
     internalLinks: [
-      { anchor: 'whey protein tunisie', href: '/category/whey-protein' },
-      { anchor: 'isolat whey tunisie', href: '/category/whey-protein' },
+      { anchor: 'whey protein tunisie', href: '/category/proteine-whey' },
+      { anchor: 'acheter whey en tunisie', href: '/category/proteine-whey' },
+      { anchor: 'meilleure whey protein', href: '/category/proteine-whey' },
+      { anchor: 'isolat whey tunisie', href: '/category/proteine-whey' },
       { anchor: 'creatine tunisie', href: '/category/creatine' },
     ],
   },
@@ -45,7 +49,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     internalLinks: [
       { anchor: 'creatine tunisie', href: '/category/creatine' },
       { anchor: 'creatine monohydrate prix tunisie', href: '/category/creatine' },
-      { anchor: 'whey protein tunisie', href: '/category/whey-protein' },
+      { anchor: 'whey protein tunisie', href: '/category/proteine-whey' },
     ],
   },
   'bcaa-utile-ou-pas': {
@@ -56,7 +60,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     ],
     internalLinks: [
       { anchor: 'bcaa tunisie', href: '/category/bcaa' },
-      { anchor: 'whey protein tunisie', href: '/category/whey-protein' },
+      { anchor: 'whey protein tunisie', href: '/category/proteine-whey' },
       { anchor: 'creatine tunisie', href: '/category/creatine' },
     ],
   },
@@ -68,7 +72,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     internalLinks: [
       { anchor: 'creatine tunisie', href: '/category/creatine' },
       { anchor: 'comment prendre creatine', href: '/blog/comment-prendre-creatine' },
-      { anchor: 'whey protein tunisie', href: '/category/whey-protein' },
+      { anchor: 'whey protein tunisie', href: '/category/proteine-whey' },
     ],
   },
 };

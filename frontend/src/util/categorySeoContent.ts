@@ -20,6 +20,7 @@ export const CONTENT_SLUG_ALIASES: Record<string, string> = {
   'pre-workout-tunisie': 'pre-workout',
   'isolat-whey': 'whey-protein',
   'isolate-whey': 'whey-protein',
+  'proteine-whey': 'whey-protein',
 };
 
 function getContentPath(contentSlug: string): string {
@@ -61,6 +62,9 @@ export async function getCategorySeoContent(slug: string): Promise<Partial<Categ
       bestProductSlugs: Array.isArray(data.bestProductSlugs)
         ? data.bestProductSlugs.filter((s) => typeof s === 'string')
         : [],
+      metaTitle: typeof data.metaTitle === 'string' ? data.metaTitle.trim() || undefined : undefined,
+      metaDescription: typeof data.metaDescription === 'string' ? data.metaDescription.trim() || undefined : undefined,
+      ogImage: typeof data.ogImage === 'string' ? data.ogImage.trim() || undefined : undefined,
     };
   } catch {
     return null;

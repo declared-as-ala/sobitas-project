@@ -644,8 +644,8 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
           return breadcrumbItems.length > 1 ? <ShopBreadcrumbs items={breadcrumbItems} /> : null;
         })()}
 
-        {/* Category SEO landing (intro, how-to, FAQs, related links) – server-rendered */}
-        {categorySeoLanding && <div className="mb-8 sm:mb-10 lg:mb-12">{categorySeoLanding}</div>}
+        {/* Category SEO: header only above grid (H1 + trust); full content is below grid */}
+        {categorySeoLanding && <div className="mb-4 sm:mb-6">{categorySeoLanding}</div>}
 
         {/* Brand description – shown when filtering by brand (e.g. /shop?brand=1) */}
         {currentBrand && (
@@ -705,15 +705,17 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
           </motion.div>
         )}
 
-        {/* Page Header - compact on mobile */}
+        {/* Page Header: when category SEO landing is present, only one H1 (in landing); show count only here */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-4 sm:mb-10"
         >
-          <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-2 sm:mb-3 bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-            {currentBrand ? `Produits ${currentBrand.designation_fr}` : 'Tous nos produits'}
-          </h1>
+          {!categorySeoLanding && (
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-2 sm:mb-3 bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
+              {currentBrand ? `Produits ${currentBrand.designation_fr}` : 'Tous nos produits'}
+            </h1>
+          )}
           <p className="text-sm sm:text-lg text-gray-600 dark:text-gray-400">
             {!showSkeleton && (totalPages > 1 ? (
               `Affichage ${(currentPage - 1) * PRODUCTS_PER_PAGE + 1}-${Math.min(currentPage * PRODUCTS_PER_PAGE, filteredProducts.length)} sur ${filteredProducts.length} produit${filteredProducts.length > 1 ? 's' : ''}`

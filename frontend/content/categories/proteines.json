@@ -8,6 +8,6 @@
     { "question": "Livraison protéine Tunisie ?", "answer": "Livraison rapide à Sousse, Tunis, Sfax et toute la Tunisie. Paiement à la livraison possible. Commandez sur Protein.tn." },
     { "question": "Whey ou isolate pour la Tunisie ?", "answer": "La whey concentrée est économique et efficace ; l’isolat est plus pur en protéines et adapté à la sèche ou aux intolérants au lactose. Les deux sont disponibles sur Protein.tn." }
   ],
-  "relatedCategorySlugs": ["whey-protein", "creatine", "bcaa", "mass-gainer", "pre-workout"],
+  "relatedCategorySlugs": ["proteine-whey", "creatine", "bcaa", "mass-gainer", "pre-workout"],
   "bestProductSlugs": []
 }

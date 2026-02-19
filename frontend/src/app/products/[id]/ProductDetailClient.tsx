@@ -631,6 +631,29 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   </div>
                 </div>
               )}
+              {/* Internal linking: Complétez avec créatine / whey (when product is not in that category) */}
+              {product.sous_categorie?.slug && (
+                <div className="px-1 space-y-2">
+                  {!product.sous_categorie.slug.toLowerCase().includes('creatine') && (
+                    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/50 p-3 sm:p-4">
+                      <p className="text-sm text-gray-700 dark:text-gray-300">
+                        Complétez avec la{' '}
+                        <Link href="/category/creatine" className="text-red-600 dark:text-red-400 font-medium hover:underline">créatine en Tunisie</Link>
+                        {' '}– meilleurs prix, livraison rapide.
+                      </p>
+                    </div>
+                  )}
+                  {!product.sous_categorie.slug.toLowerCase().includes('whey') && !product.sous_categorie.slug.toLowerCase().includes('proteine') && (
+                    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/50 p-3 sm:p-4">
+                      <p className="text-sm text-gray-700 dark:text-gray-300">
+                        Complétez avec la{' '}
+                        <Link href="/category/proteine-whey" className="text-red-600 dark:text-red-400 font-medium hover:underline">whey protein</Link>
+                        {' '}– meilleur prix, livraison Tunisie.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Arômes — selectable when more than one (required before add to cart); large touch targets */}
               {product.aromes && product.aromes.length > 0 && (
@@ -809,6 +832,25 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     <Link href={`/category/${product.sous_categorie.slug}`} className="text-red-600 dark:text-red-400 hover:underline">
                       {product.sous_categorie.designation_fr}
                     </Link>
+                  </div>
+                )}
+                {/* Internal linking: Complétez avec créatine / whey (when product is not in that category) */}
+                {product.sous_categorie?.slug && (
+                  <div className="space-y-2">
+                    {!product.sous_categorie.slug.toLowerCase().includes('creatine') && (
+                      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/50 p-3 sm:p-4">
+                        <p className="text-sm text-gray-700 dark:text-gray-300">
+                          Complétez avec la <Link href="/category/creatine" className="text-red-600 dark:text-red-400 font-medium hover:underline">créatine en Tunisie</Link> – meilleurs prix, livraison rapide.
+                        </p>
+                      </div>
+                    )}
+                    {!product.sous_categorie.slug.toLowerCase().includes('whey') && !product.sous_categorie.slug.toLowerCase().includes('proteine') && (
+                      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/50 p-3 sm:p-4">
+                        <p className="text-sm text-gray-700 dark:text-gray-300">
+                          Complétez avec la <Link href="/category/proteine-whey" className="text-red-600 dark:text-red-400 font-medium hover:underline">whey protein</Link> – meilleur prix, livraison Tunisie.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
                 {/* Quantity + Total */}
