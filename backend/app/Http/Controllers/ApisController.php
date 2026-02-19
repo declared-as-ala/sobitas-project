@@ -56,21 +56,26 @@ class ApisController extends Controller
     {
         $new_product = Product::where('new_product', 1)->where('publier', 1)
             ->select(self::PRODUCT_SELECT)
+            ->with('aromes')
             ->latest('created_at')->limit(8)->get();
         $packs = Product::where('pack', 1)->where('publier', 1)
             ->select(self::PRODUCT_SELECT)
+            ->with('aromes')
             ->latest('created_at')->limit(4)->get();
         $last_articles = Article::where('publier', 1)->latest('created_at')
             ->select('id', 'slug', 'designation_fr', 'cover', 'created_at')->limit(4)->get();
         $ventes_flash = Product::whereNotNull('promo')->where('publier', 1)
             ->whereDate('promo_expiration_date', '>', Carbon::now())
-            ->select(self::PRODUCT_SELECT)->get();
+            ->select(self::PRODUCT_SELECT)
+            ->with('aromes')
+            ->get();
         $categories = Categ::select('id', 'cover', 'slug', 'designation_fr')
             ->with(['sous_categories' => function ($query) {
                 $query->select('id', 'slug', 'designation_fr', 'categorie_id');
             }])->get();
         $best_sellers = Product::where('best_seller', 1)->where('publier', 1)
             ->select(self::PRODUCT_SELECT)
+            ->with('aromes')
             ->latest('created_at')->limit(4)->get();
         return [
             'categories' => $categories,
@@ -86,17 +91,22 @@ class ApisController extends Controller
     {
         $new_product = Product::where('new_product', 1)->where('publier', 1)
             ->select(self::PRODUCT_SELECT)
+            ->with('aromes')
             ->latest('created_at')->limit(8)->get();
         $packs = Product::where('pack', 1)->where('publier', 1)
             ->select(self::PRODUCT_SELECT)
+            ->with('aromes')
             ->latest('created_at')->limit(4)->get();
         $last_articles = Article::where('publier', 1)->latest('created_at')
             ->select('id', 'slug', 'designation_fr', 'cover', 'created_at')->limit(4)->get();
         $ventes_flash = Product::whereNotNull('promo')->where('publier', 1)
             ->whereDate('promo_expiration_date', '>', Carbon::now())
-            ->select(self::PRODUCT_SELECT)->get();
+            ->select(self::PRODUCT_SELECT)
+            ->with('aromes')
+            ->get();
         $best_sellers = Product::where('best_seller', 1)->where('publier', 1)
             ->select(self::PRODUCT_SELECT)
+            ->with('aromes')
             ->latest('created_at')->limit(4)->get();
         return [
             'last_articles' => $last_articles,
@@ -132,9 +142,11 @@ class ApisController extends Controller
             ->latest('created_at')->limit(8)->get();
         $packs = Product::where('pack', 1)->where('publier', 1)
             ->select(self::PRODUCT_SELECT)
+            ->with('aromes')
             ->latest('created_at')->limit(4)->get();
         $best_sellers = Product::where('best_seller', 1)->where('publier', 1)
             ->select(self::PRODUCT_SELECT)
+            ->with('aromes')
             ->latest('created_at')->limit(4)->get();
         return ['new_product' => $new_product, 'packs' => $packs, 'best_sellers' => $best_sellers];
     }
