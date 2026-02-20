@@ -461,14 +461,14 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
 
         {/* Layout: 2 cols desktop (Image left, larger | Info + buy right), mobile single col. */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8 xl:gap-10 mb-6 sm:mb-8 lg:mb-10">
-          {/* A) COLONNE GAUCHE — Gallery (desktop): bigger image, aligned left */}
-          <div className="hidden lg:block lg:col-span-7 min-w-0 lg:pr-2">
+          {/* A) COLONNE GAUCHE — Gallery (desktop): image slightly smaller */}
+          <div className="hidden lg:block lg:col-span-6 min-w-0 lg:pr-2">
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               className="sticky top-24"
             >
-              <div className="relative w-full rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg group aspect-square min-h-[420px] xl:min-h-[520px]">
+              <div className="relative w-full max-w-[480px] rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg group aspect-square min-h-[360px] xl:min-h-[440px]">
                 {productImage ? (
                   <Image
                     src={productImage}
@@ -502,7 +502,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
           </div>
 
           {/* B) COLONNE DROITE — Infos + prix + quantité + CTAs + garanties (desktop) / mobile first block */}
-          <div className="lg:col-span-5 min-w-0 space-y-3 sm:space-y-4">
+          <div className="lg:col-span-6 min-w-0 space-y-3 sm:space-y-4">
             {/* Mobile Layout: Image First then badges, title, etc. */}
             <div className="lg:hidden space-y-4 sm:space-y-5">
               {/* Badges at top (En Stock, -X% OFF) */}
@@ -521,13 +521,13 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   <Badge className="bg-amber-600 text-white text-xs sm:text-sm px-2.5 py-1">Top Vendu</Badge>
                 )}
               </div>
-              {/* Product Image - Hero position on mobile, larger */}
+              {/* Product Image - slightly smaller on mobile */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="w-full"
+                className="w-full max-w-[320px] sm:max-w-[380px] mx-auto"
               >
-                <div className="relative bg-gray-100 dark:bg-gray-800 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-700 group mx-auto w-full" style={{ aspectRatio: '1 / 1' }}>
+                <div className="relative bg-gray-100 dark:bg-gray-800 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-700 group w-full" style={{ aspectRatio: '1 / 1' }}>
                   {productImage ? (
                     <Image
                       src={productImage}
@@ -602,28 +602,6 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     Vous économisez {oldPrice - displayPrice} DT
                   </p>
                 )}
-              </div>
-
-              {/* CTAs visible without scroll — mobile */}
-              <div className="lg:hidden flex flex-col gap-2 px-1 pt-2">
-                <Button
-                  size="lg"
-                  className="w-full min-h-[48px] bg-red-600 hover:bg-red-700 text-white font-bold"
-                  onClick={handleAddToCart}
-                  disabled={stockDisponible <= 0}
-                >
-                  <ShoppingCart className="h-5 w-5 mr-2" />
-                  {stockDisponible <= 0 ? 'Rupture de stock' : 'Ajouter au panier'}
-                </Button>
-                <Button
-                  size="lg"
-                  className="w-full min-h-[48px] bg-violet-600 hover:bg-violet-700 !text-white font-semibold shadow-md hover:shadow-lg transition-shadow [&_svg]:!text-white"
-                  onClick={handleQuickOrderClick}
-                  disabled={stockDisponible <= 0}
-                >
-                  <Zap className="h-5 w-5 mr-2" />
-                  Commander maintenant
-                </Button>
               </div>
 
               {/* 4. Meta Description - short SEO snippet */}
@@ -877,24 +855,24 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     </div>
                   </div>
                 )}
-                {/* CTAs: Ajouter au panier, Commander maintenant — visible without scroll */}
+                {/* CTAs: Ajouter au panier, Commander maintenant — visible without scroll (desktop: slightly smaller) */}
                 <div className="flex flex-col gap-2">
                   <Button
-                    size="lg"
-                    className="w-full min-h-[48px] bg-red-600 hover:bg-red-700 text-white font-bold"
+                    size="default"
+                    className="w-full min-h-[42px] h-auto py-2.5 text-sm bg-red-600 hover:bg-red-700 text-white font-bold"
                     onClick={handleAddToCart}
                     disabled={stockDisponible <= 0}
                   >
-                    <ShoppingCart className="h-5 w-5 mr-2" />
+                    <ShoppingCart className="h-4 w-4 mr-2" />
                     {stockDisponible <= 0 ? 'Rupture de stock' : 'Ajouter au panier'}
                   </Button>
                   <Button
-                    size="lg"
-                    className="w-full min-h-[48px] bg-violet-600 hover:bg-violet-700 !text-white font-semibold shadow-md hover:shadow-lg transition-shadow [&_svg]:!text-white"
+                    size="default"
+                    className="w-full min-h-[42px] h-auto py-2.5 text-sm bg-amber-500 hover:bg-amber-600 !text-white font-semibold shadow-md hover:shadow-lg transition-shadow [&_svg]:!text-white"
                     onClick={handleQuickOrderClick}
                     disabled={stockDisponible <= 0}
                   >
-                    <Zap className="h-5 w-5 mr-2" />
+                    <Zap className="h-4 w-4 mr-2" />
                     Commander maintenant
                   </Button>
                 </div>
@@ -1273,9 +1251,9 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
         )}
       </main>
 
-      {/* Sticky CTAs (Mobile): Ajouter au panier primary, Commande rapide secondary */}
+      {/* Sticky CTAs (Mobile): slightly smaller buttons */}
       <div
-        className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 p-3 sm:p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] z-50"
+        className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 p-2.5 sm:p-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] z-50"
         style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}
       >
         <div className="max-w-7xl mx-auto flex flex-col gap-2 sm:gap-3">
@@ -1286,23 +1264,23 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
             </p>
           </div>
           <Button
-            size="lg"
-            className="w-full min-h-[52px] bg-red-600 hover:bg-red-700 text-white text-base font-bold shrink-0"
+            size="default"
+            className="w-full min-h-[42px] h-auto py-2.5 text-sm bg-red-600 hover:bg-red-700 text-white font-bold shrink-0"
             onClick={handleAddToCart}
             disabled={stockDisponible <= 0}
             aria-label="Ajouter au panier"
           >
-            <ShoppingCart className="h-5 w-5 mr-2 shrink-0" />
+            <ShoppingCart className="h-4 w-4 mr-2 shrink-0" />
             {stockDisponible <= 0 ? 'Rupture' : 'Ajouter au panier'}
           </Button>
           <Button
-            size="lg"
-            className="w-full min-h-[48px] bg-violet-600 hover:bg-violet-700 !text-white font-semibold shrink-0 shadow-md hover:shadow-lg transition-shadow [&_svg]:!text-white"
+            size="default"
+            className="w-full min-h-[42px] h-auto py-2.5 text-sm bg-amber-500 hover:bg-amber-600 !text-white font-semibold shrink-0 shadow-md hover:shadow-lg transition-shadow [&_svg]:!text-white"
             onClick={handleQuickOrderClick}
             disabled={stockDisponible <= 0}
             aria-label="Commander maintenant"
           >
-            <Zap className="h-5 w-5 mr-2 shrink-0" />
+            <Zap className="h-4 w-4 mr-2 shrink-0" />
             Commander maintenant
           </Button>
         </div>
