@@ -60,7 +60,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
   const [descExpanded, setDescExpanded] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const { openQuickOrder } = useQuickOrder();
-  /** When product has multiple aromes, user must select one before add to cart / quick order. */
+  /** Selected aroma for display; add to cart / command use this or first aroma. */
   const [selectedAromaId, setSelectedAromaId] = useState<number | null>(null);
 
   // Use state to manage product data so we can update it after adding a review
@@ -98,12 +98,10 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
     const productReviews = initialProduct.reviews || [];
     setReviews(productReviews);
 
-    // Aroma: when only one, auto-select; when multiple, require user to choose
+    // Aroma: auto-select first (display only; add to cart / command use first or selected)
     const aromes = initialProduct.aromes;
-    if (aromes && aromes.length === 1) {
+    if (aromes && aromes.length > 0) {
       setSelectedAromaId(aromes[0].id);
-    } else if (aromes && aromes.length > 1) {
-      setSelectedAromaId(null);
     } else {
       setSelectedAromaId(null);
     }
@@ -256,16 +254,12 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
     aromes: product.aromes,
   };
 
-  /** When product has more than one aroma, selection is required before add to cart. */
   const hasMultipleAromes = (product.aromes?.length ?? 0) > 1;
-  const aromaRequiredButMissing = hasMultipleAromes && selectedAromaId == null;
+  /** Effective aroma for cart/quick order: selected or first (never block add/command). */
+  const effectiveAromaId = selectedAromaId ?? product.aromes?.[0]?.id;
 
   /** Cart logic. "Commander maintenant" uses shared Quick Order modal. */
   const handleAddToCart = () => {
-    if (aromaRequiredButMissing) {
-      toast.error('Veuillez choisir un arôme avant d\'ajouter au panier');
-      return;
-    }
     if (stockDisponible <= 0) {
       toast.error('Rupture de stock - Ce produit n\'est pas disponible');
       return;
@@ -280,7 +274,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
       return;
     }
 
-    const selectedAroma = product.aromes?.find(a => a.id === selectedAromaId);
+    const selectedAroma = product.aromes?.find(a => a.id === effectiveAromaId);
     const cartProduct = {
       ...product,
       name: product.designation_fr,
@@ -294,11 +288,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
   };
 
   const handleQuickOrderClick = () => {
-    if (aromaRequiredButMissing) {
-      toast.error('Veuillez choisir un arôme avant de commander');
-      return;
-    }
-    openQuickOrder(quickOrderProduct, { initialQty: quantity, initialVariantId: selectedAromaId ?? undefined });
+    openQuickOrder(quickOrderProduct, { initialQty: quantity, initialVariantId: effectiveAromaId ?? undefined });
   };
 
   const handleSubmitReview = async () => {
@@ -614,6 +604,28 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 )}
               </div>
 
+              {/* CTAs visible without scroll — mobile */}
+              <div className="lg:hidden flex flex-col gap-2 px-1 pt-2">
+                <Button
+                  size="lg"
+                  className="w-full min-h-[48px] bg-red-600 hover:bg-red-700 text-white font-bold"
+                  onClick={handleAddToCart}
+                  disabled={stockDisponible <= 0}
+                >
+                  <ShoppingCart className="h-5 w-5 mr-2" />
+                  {stockDisponible <= 0 ? 'Rupture de stock' : 'Ajouter au panier'}
+                </Button>
+                <Button
+                  size="lg"
+                  className="w-full min-h-[48px] bg-violet-600 hover:bg-violet-700 !text-white font-semibold shadow-md hover:shadow-lg transition-shadow [&_svg]:!text-white"
+                  onClick={handleQuickOrderClick}
+                  disabled={stockDisponible <= 0}
+                >
+                  <Zap className="h-5 w-5 mr-2" />
+                  Commander maintenant
+                </Button>
+              </div>
+
               {/* 4. Meta Description - short SEO snippet */}
               {metaDescription && (
                 <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed px-1 line-clamp-3">
@@ -659,7 +671,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
               {product.aromes && product.aromes.length > 0 && (
                 <div className="space-y-3 px-1">
                   <label className="text-base font-semibold text-gray-900 dark:text-white">
-                    {hasMultipleAromes ? 'Choisir un arôme *' : 'Arôme'}
+                    Arôme
                   </label>
                   <div className="flex flex-wrap gap-3">
                     {product.aromes.map((arome) => {
@@ -824,6 +836,76 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 {oldPrice && (
                   <p className="text-sm text-gray-600 dark:text-gray-400">Vous économisez {(oldPrice - displayPrice).toFixed(0)} DT</p>
                 )}
+                {/* Quantity + Total — placed high so CTAs are visible without scroll */}
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+                    <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => setQuantity(Math.max(1, quantity - 1))} disabled={quantity <= 1} aria-label="Diminuer la quantité">
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <span className="w-10 text-center font-semibold text-sm tabular-nums" aria-live="polite">{quantity}</span>
+                    <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => setQuantity(Math.min(stockDisponible, quantity + 1))} disabled={quantity >= stockDisponible || stockDisponible <= 0} aria-label="Augmenter la quantité">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white">Total: {(displayPrice * quantity).toFixed(0)} DT</span>
+                </div>
+                {/* Arômes */}
+                {product.aromes && product.aromes.length > 0 && (
+                  <div>
+                    <p className="text-base font-semibold text-gray-900 dark:text-white mb-2">
+                      Arôme
+                    </p>
+                    <div className="flex flex-wrap gap-3">
+                      {product.aromes.map((arome) => {
+                        const isSelected = selectedAromaId === arome.id;
+                        return (
+                          <Button
+                            key={arome.id}
+                            type="button"
+                            variant={isSelected ? 'default' : 'outline'}
+                            size="default"
+                            className={cn(
+                              'min-h-[48px] px-5 py-3 text-base font-medium rounded-xl',
+                              isSelected && 'bg-red-600 hover:bg-red-700 text-white'
+                            )}
+                            onClick={() => setSelectedAromaId(arome.id)}
+                          >
+                            {arome.designation_fr}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {/* CTAs: Ajouter au panier, Commander maintenant — visible without scroll */}
+                <div className="flex flex-col gap-2">
+                  <Button
+                    size="lg"
+                    className="w-full min-h-[48px] bg-red-600 hover:bg-red-700 text-white font-bold"
+                    onClick={handleAddToCart}
+                    disabled={stockDisponible <= 0}
+                  >
+                    <ShoppingCart className="h-5 w-5 mr-2" />
+                    {stockDisponible <= 0 ? 'Rupture de stock' : 'Ajouter au panier'}
+                  </Button>
+                  <Button
+                    size="lg"
+                    className="w-full min-h-[48px] bg-violet-600 hover:bg-violet-700 !text-white font-semibold shadow-md hover:shadow-lg transition-shadow [&_svg]:!text-white"
+                    onClick={handleQuickOrderClick}
+                    disabled={stockDisponible <= 0}
+                  >
+                    <Zap className="h-5 w-5 mr-2" />
+                    Commander maintenant
+                  </Button>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="icon" className="h-10 w-10" onClick={() => toggleFavorite(favoriteProduct)} aria-label="Favoris">
+                    <Heart className={`h-5 w-5 ${isInFavorites(product.id) ? 'fill-red-600 text-red-600' : ''}`} />
+                  </Button>
+                  <Button variant="outline" size="icon" className="h-10 w-10" onClick={handleShare} aria-label="Partager">
+                    <Share2 className="h-5 w-5" />
+                  </Button>
+                </div>
                 {metaDescription && (
                   <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-3">{metaDescription}</p>
                 )}
@@ -853,76 +935,6 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     )}
                   </div>
                 )}
-                {/* Quantity + Total */}
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
-                    <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => setQuantity(Math.max(1, quantity - 1))} disabled={quantity <= 1} aria-label="Diminuer la quantité">
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                    <span className="w-10 text-center font-semibold text-sm tabular-nums" aria-live="polite">{quantity}</span>
-                    <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => setQuantity(Math.min(stockDisponible, quantity + 1))} disabled={quantity >= stockDisponible || stockDisponible <= 0} aria-label="Augmenter la quantité">
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <span className="text-sm font-semibold text-gray-900 dark:text-white">Total: {(displayPrice * quantity).toFixed(0)} DT</span>
-                </div>
-                {/* Arômes — selectable when more than one (required before add to cart); large for clarity */}
-                {product.aromes && product.aromes.length > 0 && (
-                  <div>
-                    <p className="text-base font-semibold text-gray-900 dark:text-white mb-2">
-                      {hasMultipleAromes ? 'Choisir un arôme *' : 'Arôme'}
-                    </p>
-                    <div className="flex flex-wrap gap-3">
-                      {product.aromes.map((arome) => {
-                        const isSelected = selectedAromaId === arome.id;
-                        return (
-                          <Button
-                            key={arome.id}
-                            type="button"
-                            variant={isSelected ? 'default' : 'outline'}
-                            size="default"
-                            className={cn(
-                              'min-h-[48px] px-5 py-3 text-base font-medium rounded-xl',
-                              isSelected && 'bg-red-600 hover:bg-red-700 text-white'
-                            )}
-                            onClick={() => setSelectedAromaId(arome.id)}
-                          >
-                            {arome.designation_fr}
-                          </Button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-                {/* CTAs: Ajouter au panier first (red), Commander maintenant second (amber) */}
-                <div className="flex flex-col gap-2">
-                  <Button
-                    size="lg"
-                    className="w-full min-h-[48px] bg-red-600 hover:bg-red-700 text-white font-bold"
-                    onClick={handleAddToCart}
-                    disabled={stockDisponible <= 0 || aromaRequiredButMissing}
-                  >
-                    <ShoppingCart className="h-5 w-5 mr-2" />
-                    {stockDisponible <= 0 ? 'Rupture de stock' : aromaRequiredButMissing ? 'Choisir un arôme' : 'Ajouter au panier'}
-                  </Button>
-                  <Button
-                    size="lg"
-                    className="w-full min-h-[48px] bg-amber-500 hover:bg-amber-600 text-white font-semibold"
-                    onClick={handleQuickOrderClick}
-                    disabled={stockDisponible <= 0 || aromaRequiredButMissing}
-                  >
-                    <Zap className="h-5 w-5 mr-2" />
-                    Commander maintenant
-                  </Button>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="icon" className="h-10 w-10" onClick={() => toggleFavorite(favoriteProduct)} aria-label="Favoris">
-                    <Heart className={`h-5 w-5 ${isInFavorites(product.id) ? 'fill-red-600 text-red-600' : ''}`} />
-                  </Button>
-                  <Button variant="outline" size="icon" className="h-10 w-10" onClick={handleShare} aria-label="Partager">
-                    <Share2 className="h-5 w-5" />
-                  </Button>
-                </div>
                 {/* Service assurances */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-gray-200 dark:border-gray-800">
                   <div className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30">
@@ -1277,18 +1289,17 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
             size="lg"
             className="w-full min-h-[52px] bg-red-600 hover:bg-red-700 text-white text-base font-bold shrink-0"
             onClick={handleAddToCart}
-            disabled={stockDisponible <= 0 || aromaRequiredButMissing}
+            disabled={stockDisponible <= 0}
             aria-label="Ajouter au panier"
           >
             <ShoppingCart className="h-5 w-5 mr-2 shrink-0" />
-            {stockDisponible <= 0 ? 'Rupture' : aromaRequiredButMissing ? 'Choisir un arôme' : 'Ajouter au panier'}
+            {stockDisponible <= 0 ? 'Rupture' : 'Ajouter au panier'}
           </Button>
           <Button
             size="lg"
-            variant="outline"
-            className="w-full min-h-[48px] border-2 border-amber-500 text-amber-600 dark:text-amber-400 bg-white dark:bg-gray-800 font-semibold shrink-0 hover:bg-amber-50 dark:hover:bg-amber-950/20"
+            className="w-full min-h-[48px] bg-violet-600 hover:bg-violet-700 !text-white font-semibold shrink-0 shadow-md hover:shadow-lg transition-shadow [&_svg]:!text-white"
             onClick={handleQuickOrderClick}
-            disabled={stockDisponible <= 0 || aromaRequiredButMissing}
+            disabled={stockDisponible <= 0}
             aria-label="Commander maintenant"
           >
             <Zap className="h-5 w-5 mr-2 shrink-0" />
