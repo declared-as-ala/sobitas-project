@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { buildBackendOrderPayload } from '@/lib/orderPayload';
 import type { QuickOrderPayload, QuickOrderResponse } from '@/types';
 
-// Commande backend – fetch from admin.sobitas.tn (override with NEXT_PUBLIC_API_URL or API_BACKEND_URL)
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? process.env.API_BACKEND_URL ?? 'https://admin.sobitas.tn/api';
+// Commande backend – fetch from admin.protein.tn (override with NEXT_PUBLIC_API_URL or API_BACKEND_URL)
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? process.env.API_BACKEND_URL ?? 'https://admin.protein.tn/api';
 
 type AddCommandeResponse = {
   id?: number;

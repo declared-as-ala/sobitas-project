@@ -5,7 +5,7 @@
 
 const API_BASE =
   typeof process !== 'undefined'
-    ? (process.env.NEXT_PUBLIC_API_BASE_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'https://admin.sobitas.tn/api')
+    ? (process.env.NEXT_PUBLIC_API_BASE_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'https://admin.protein.tn/api')
     : '';
 
 const MAX_429_RETRIES = 2;
