@@ -23,7 +23,7 @@ class SoumissionMail extends Mailable
     }
 
     /**
-     * Build the message.ssss
+     * Build the message.sssspp
      */
     public function build(): static
     {
