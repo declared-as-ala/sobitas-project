@@ -102,7 +102,20 @@ export async function apiFetch<T = unknown>(
     if (existing) return existing.promise as Promise<T>;
   }
 
-  const promise = doFetch<T>(url, options, 0);
+  // Wrap the raw fetch promise with a catch so rejections always have a handler.
+  // This prevents Node.js from treating ApiError rejections as "unhandledRejection"
+  // in cases where callers forget to await or attach their own .catch.
+  const rawPromise = doFetch<T>(url, options, 0);
+  const promise = rawPromise.catch((error) => {
+    if (error instanceof ApiError && typeof console !== 'undefined') {
+      console.error('[apiFetch] Unhandled ApiError', {
+        url,
+        status: error.status,
+        message: error.message,
+      });
+    }
+    throw error;
+  });
   if (useDedupe) {
     const ttlId = setTimeout(() => {
       inFlight.delete(url);

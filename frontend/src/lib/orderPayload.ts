@@ -69,8 +69,10 @@ export function buildBackendOrderPayload(params: {
   panier: Array<{ produit_id: number; quantite: number; prix_unitaire: number }>;
   user_id?: number;
   m_remise?: number;
+  /** Code promo appliqué côté client (optionnel). */
+  coupon_code?: string;
 }): BackendOrderPayload {
-  const { livraison, panier, user_id, m_remise } = params;
+  const { livraison, panier, user_id, m_remise, coupon_code } = params;
   const commande: BackendCommandeFields = {
     livraison_nom: livraison.livraison_nom,
     livraison_prenom: livraison.livraison_prenom,
