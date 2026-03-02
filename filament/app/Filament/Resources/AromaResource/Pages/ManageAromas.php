@@ -1,0 +1,21 @@
+<?php
+
+namespace App\Filament\Resources\AromaResource\Pages;
+
+use App\Filament\Resources\AromaResource;
+use Filament\Actions;
+use Filament\Resources\Pages\ManageRecords;
+
+class ManageAromas extends ManageRecords
+{
+    protected static string $resource = AromaResource::class;
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Actions\CreateAction::make()
+                ->label('Ajouter un aroma')
+                ->slideOver(),
+        ];
+    }
+}

@@ -1,0 +1,213 @@
+/* Dashboard Widgets Custom Styles */
+
+/* Quick Actions - Pastel Tiles */
+.action-tile-blue {
+    background-color: #eff6ff;
+    border: 1px solid transparent;
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    transition: all 0.2s;
+}
+
+.action-tile-blue:hover {
+    background-color: #dbeafe;
+    border-color: #e5e7eb;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    transform: scale(1.02);
+}
+
+.action-icon-blue {
+    background-color: #dbeafe;
+    color: #2563eb;
+}
+
+.action-label-blue {
+    color: #2563eb;
+}
+
+.action-tile-purple {
+    background-color: #faf5ff;
+}
+
+.action-tile-purple:hover {
+    background-color: #f3e8ff;
+    border-color: #e5e7eb;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    transform: scale(1.02);
+}
+
+.action-icon-purple {
+    background-color: #f3e8ff;
+    color: #9333ea;
+}
+
+.action-label-purple {
+    color: #9333ea;
+}
+
+.action-tile-green {
+    background-color: #f0fdf4;
+}
+
+.action-tile-green:hover {
+    background-color: #dcfce7;
+    border-color: #e5e7eb;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    transform: scale(1.02);
+}
+
+.action-icon-green {
+    background-color: #dcfce7;
+    color: #16a34a;
+}
+
+.action-label-green {
+    color: #16a34a;
+}
+
+.action-tile-amber {
+    background-color: #fffbeb;
+}
+
+.action-tile-amber:hover {
+    background-color: #fef3c7;
+    border-color: #e5e7eb;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    transform: scale(1.02);
+}
+
+.action-icon-amber {
+    background-color: #fef3c7;
+    color: #d97706;
+}
+
+.action-label-amber {
+    color: #d97706;
+}
+
+.action-tile-pink {
+    background-color: #fdf2f8;
+}
+
+.action-tile-pink:hover {
+    background-color: #fce7f3;
+    border-color: #e5e7eb;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    transform: scale(1.02);
+}
+
+.action-icon-pink {
+    background-color: #fce7f3;
+    color: #db2777;
+}
+
+.action-label-pink {
+    color: #db2777;
+}
+
+.action-tile-indigo {
+    background-color: #eef2ff;
+}
+
+.action-tile-indigo:hover {
+    background-color: #e0e7ff;
+    border-color: #e5e7eb;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    transform: scale(1.02);
+}
+
+.action-icon-indigo {
+    background-color: #e0e7ff;
+    color: #4f46e5;
+}
+
+.action-label-indigo {
+    color: #4f46e5;
+}
+
+/* Alert Cards */
+.alert-card-critical {
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+    border-left: 4px solid #dc2626;
+}
+
+.alert-badge-critical {
+    background-color: #dc2626;
+    color: white;
+}
+
+.alert-button-critical {
+    background-color: #dc2626;
+    color: white;
+}
+
+.alert-button-critical:hover {
+    background-color: #b91c1c;
+}
+
+.alert-card-warning {
+    background-color: #fffbeb;
+    border: 1px solid #fed7aa;
+    border-left: 4px solid #ea580c;
+}
+
+.alert-badge-warning {
+    background-color: #ea580c;
+    color: white;
+}
+
+.alert-button-warning {
+    background-color: #ea580c;
+    color: white;
+}
+
+.alert-button-warning:hover {
+    background-color: #c2410c;
+}
+
+.alert-card-info {
+    background-color: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-left: 4px solid #2563eb;
+}
+
+.alert-badge-info {
+    background-color: #2563eb;
+    color: white;
+}
+
+.alert-button-info {
+    background-color: #2563eb;
+    color: white;
+}
+
+.alert-button-info:hover {
+    background-color: #1d4ed8;
+}
+
+/* General Widget Card */
+.widget-card {
+    background-color: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .widget-card {
+        background-color: #111827;
+        border-color: #374151;
+    }
+
+    .action-tile-blue,
+    .action-tile-purple,
+    .action-tile-green,
+    .action-tile-amber,
+    .action-tile-pink,
+    .action-tile-indigo {
+        background-color: #1f2937;
+    }
+}

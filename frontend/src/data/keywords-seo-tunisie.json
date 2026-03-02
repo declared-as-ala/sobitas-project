@@ -1,0 +1,34 @@
+{
+  "primary_keywords": [
+    { "keyword": "protéine Tunisie", "intent": "transactional", "priority": "P1" },
+    { "keyword": "whey Tunisie", "intent": "transactional", "priority": "P1" },
+    { "keyword": "whey pas cher Tunisie", "intent": "transactional", "priority": "P1" },
+    { "keyword": "créatine Tunisie", "intent": "transactional", "priority": "P1" },
+    { "keyword": "compléments alimentaires Tunisie", "intent": "transactional", "priority": "P1" },
+    { "keyword": "acheter whey Tunisie", "intent": "transactional", "priority": "P1" },
+    { "keyword": "protéine Sousse", "intent": "transactional_local", "priority": "P1" },
+    { "keyword": "compléments alimentaires Sousse", "intent": "transactional_local", "priority": "P1" },
+    { "keyword": "compléments alimentaires Tunis", "intent": "transactional_local", "priority": "P1" },
+    { "keyword": "protéine musculation Tunisie", "intent": "transactional", "priority": "P1" }
+  ],
+  "secondary_keywords": [
+    { "keyword": "gainer Tunisie", "intent": "transactional", "priority": "P2" },
+    { "keyword": "BCAA Tunisie", "intent": "transactional", "priority": "P2" },
+    { "keyword": "whey isolate Tunisie", "intent": "transactional", "priority": "P2" },
+    { "keyword": "prise de masse Tunisie", "intent": "transactional_informational", "priority": "P2" }
+  ],
+  "informational_keywords": [
+    { "keyword": "quel complément prendre prise de masse Tunisie", "intent": "informational" },
+    { "keyword": "comment choisir sa whey Tunisie", "intent": "informational" },
+    { "keyword": "whey ou isolate différence", "intent": "informational" },
+    { "keyword": "créatine monohydrate ou HCL", "intent": "informational" },
+    { "keyword": "meilleure protéine prise de masse", "intent": "informational" }
+  ],
+  "clusters": {
+    "proteines_whey": ["protéine Tunisie", "whey Tunisie", "whey pas cher Tunisie", "whey isolate Tunisie", "protéine musculation Tunisie", "acheter whey Tunisie"],
+    "creatine": ["créatine Tunisie", "créatine monohydrate Tunisie", "créatine pas cher"],
+    "prise_de_masse": ["gainer Tunisie", "prise de masse Tunisie", "compléments prise de masse", "quel complément prendre prise de masse Tunisie"],
+    "autres_complements": ["BCAA Tunisie", "oméga 3 Tunisie", "pré-workout Tunisie", "brûleur de graisse Tunisie"],
+    "local": ["protéine Sousse", "compléments Sousse", "whey Tunis", "protéine Tunis", "compléments alimentaires Sousse", "compléments alimentaires Tunis"]
+  }
+}

@@ -1,0 +1,12 @@
+backend/storage/
+backend/storage/**
+
+# if you need storage but not public, use:
+# backend/storage/logs/
+# backend/storage/framework/
+# backend/storage/app/*.zip
+# backend/storage/app/**/*.zip
+# backend/storage/app/public/
+
+node_modules/
+.env

@@ -1,0 +1,185 @@
+# ==============================================================
+# sobitas-project - Filament v2 + MySQL + Redis + Frontend
+# ==============================================================
+# Self-contained. MySQL is shared with SOBITAS-FULL-PROJECT
+# via the sobitas-full-net external network.
+# ==============================================================
+
+services:
+  # -------------------------
+  # MySQL 8 (reuses existing sobitas-project_mysql-data volume)
+  # Shared with SOBITAS-FULL-PROJECT (Voyager backend)
+  # -------------------------
+  mysql:
+    image: mysql:8.0
+    container_name: sobitas-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootsecret}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-protein_db}
+      MYSQL_USER: ${MYSQL_USER:-laravel}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-secret}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - sobitas-net
+      - sobitas-full-net
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-rootsecret}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # -------------------------
+  # Redis (for Filament v2 cache/session)
+  # -------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: sobitas-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
+    volumes:
+      - redis-data:/data
+    networks:
+      - sobitas-net
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a ${REDIS_PASSWORD:-} ping | grep PONG >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  # ==========================================================
+  # Filament Backend V2 (from GHCR image) - admin.sobitas.tn
+  # ==========================================================
+  backend-v2:
+    image: ghcr.io/declared-as-ala/sobitas-backend-v2:latest
+    container_name: sobitas-backend-v2
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: ${MYSQL_DATABASE:-protein_db}
+      DB_USERNAME: ${MYSQL_USER:-laravel}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-secret}
+
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_URL: https://admin.sobitas.tn
+      ASSET_URL: https://admin.sobitas.tn
+      FILESYSTEM_DISK: public
+      FILESYSTEM_DRIVER: public
+
+      CACHE_DRIVER: redis
+      SESSION_DRIVER: redis
+      QUEUE_CONNECTION: redis
+      LOG_CHANNEL: stderr
+
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      REDIS_CACHE_DB: 1
+
+      # Override MAIL_MAILER from .env (sendmail→smtp for Gmail)
+      # MAIL_USERNAME and MAIL_PASSWORD come from env_file (.env)
+      MAIL_MAILER: smtp
+      MAIL_HOST: smtp.gmail.com
+      MAIL_PORT: "587"
+      MAIL_ENCRYPTION: tls
+      MAIL_FROM_ADDRESS: nachdit.customers@gmail.com
+      MAIL_FROM_NAME: Sobitas
+    networks:
+      - sobitas-net
+    expose:
+      - "9000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - backend-v2-vendor:/var/www/html/vendor
+      - backend-v2-bootstrap-cache:/var/www/html/bootstrap/cache
+      - backend-v2-storage:/var/www/html/storage
+
+  # ---- Copies public assets from image to shared volume ----
+  # CRITICAL: This service copies public/ from image to backend-v2-public volume
+  # and creates the storage symlink pointing to backend-v2-storage
+  backend-v2-public-init:
+    image: ghcr.io/declared-as-ala/sobitas-backend-v2:latest
+    container_name: sobitas-backend-v2-public-init
+    restart: "no"
+    networks:
+      - sobitas-net
+    volumes:
+      - backend-v2-public:/public
+      - backend-v2-storage:/var/www/html/storage:ro  # Read-only access to storage for symlink
+    entrypoint: ["/bin/sh", "-c"]
+    command: |
+      set -e
+      echo "=== Copying public assets and creating storage symlink ==="
+      # Clear existing public volume contents
+      find /public -mindepth 1 -delete 2>/dev/null || true
+      # Copy all public assets from image
+      cp -a /var/www/html/public/. /public/
+      # CRITICAL: Create storage symlink in public volume
+      # The symlink must point to the storage volume mounted in nginx
+      rm -f /public/storage
+      ln -s /var/www/html/storage/app/public /public/storage
+      echo "✓ Public assets copied"
+      echo "✓ Storage symlink created: /public/storage -> /var/www/html/storage/app/public"
+      ls -la /public | grep storage || echo "⚠ Warning: symlink verification failed"
+
+  # ---- Nginx for Filament v2 (port 8083) ----
+  backend-nginx-v2:
+    image: nginx:stable
+    container_name: sobitas-laravel-nginx-v2
+    restart: unless-stopped
+    ports:
+      - "8083:80"
+    networks:
+      - sobitas-net
+    depends_on:
+      - backend-v2
+    volumes:
+      - backend-v2-public:/var/www/html/public:ro
+      - backend-v2-storage:/var/www/html/storage:rw
+      - ./nginx/configuration.conf:/etc/nginx/conf.d/default.conf:ro
+
+  # ---- Frontend (Next.js from GHCR) ----
+  frontend:
+    image: ghcr.io/declared-as-ala/sobitas-frontend:latest
+    container_name: sobitas-frontend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: https://admin.protein.tn/api
+      NEXT_PUBLIC_STORAGE_URL: https://admin.protein.tn/storage
+    ports:
+      - "3001:3000"
+    networks:
+      - sobitas-net
+
+volumes:
+  mysql-data:
+  redis-data:
+  backend-v2-vendor:
+  backend-v2-bootstrap-cache:
+  backend-v2-storage:
+  backend-v2-public:
+
+networks:
+  # Local network for sobitas-project services
+  sobitas-net:
+    driver: bridge
+  # External network to share MySQL with SOBITAS-FULL-PROJECT (Voyager)
+  sobitas-full-net:
+    external: true
+    name: sobitas-full-project_sobitas-net

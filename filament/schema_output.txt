@@ -1,0 +1,130 @@
+Processing table: commandes
+Array
+(
+    [0] => id
+    [1] => user_id
+    [2] => remise
+    [3] => prix_ht
+    [4] => prix_ttc
+    [5] => tva
+    [6] => timbre
+    [7] => etat
+    [8] => created_by
+    [9] => updated_by
+    [10] => created_at
+    [11] => updated_at
+    [12] => nom
+    [13] => prenom
+    [14] => adresse1
+    [15] => adresse2
+    [16] => email
+    [17] => phone
+    [18] => pays
+    [19] => region
+    [20] => ville
+    [21] => code_postale
+    [22] => note
+    [23] => livraison
+    [24] => frais_livraison
+    [25] => livraison_nom
+    [26] => livraison_no
+    [27] => livraison_prenom
+    [28] => livraison_adresse1
+    [29] => livraison_adresse2
+    [30] => livraison_email
+    [31] => livraison_phone
+    [32] => livraison_region
+    [33] => livraison_ville
+    [34] => livraison_code_postale
+    [35] => numero
+    [36] => historique
+)
+
+Processing table: commande_details
+Array
+(
+    [0] => id
+    [1] => commande_id
+    [2] => produit_id
+    [3] => qte
+    [4] => created_by
+    [5] => updated_by
+    [6] => created_at
+    [7] => updated_at
+    [8] => designation
+    [9] => prix_unitaire
+    [10] => prix_ht
+    [11] => prix_ttc
+    [12] => tva
+)
+
+Processing table: products
+Array
+(
+    [0] => id
+    [1] => sous_categorie_id
+    [2] => designation_fr
+    [3] => cover
+    [4] => qte
+    [5] => prix_ht
+    [6] => prix
+    [7] => promo_ht
+    [8] => promo
+    [9] => description_fr
+    [10] => publier
+    [11] => created_by
+    [12] => updated_by
+    [13] => created_at
+    [14] => updated_at
+    [15] => code_product
+    [16] => slug
+    [17] => pack
+    [18] => brand_id
+    [19] => new_product
+    [20] => best_seller
+    [21] => gallery
+    [22] => note
+    [23] => meta_description_fr
+    [24] => promo_expiration_date
+    [25] => rupture
+    [26] => alt_cover
+    [27] => description_cover
+    [28] => meta
+    [29] => content_seo
+    [30] => review
+    [31] => aggregateRating
+    [32] => nutrition_values
+    [33] => questions
+    [34] => zone1
+    [35] => zone2
+    [36] => zone3
+    [37] => zone4
+)
+
+Processing table: categs
+Array
+(
+    [0] => id
+    [1] => designation_fr
+    [2] => description_fr
+    [3] => created_by
+    [4] => updated_by
+    [5] => created_at
+    [6] => updated_at
+    [7] => cover
+    [8] => product_liste_cover
+    [9] => alt_cover
+    [10] => description_cover
+    [11] => meta
+    [12] => content_seo
+    [13] => slug
+    [14] => review
+    [15] => aggregateRating
+    [16] => nutrition_values
+    [17] => questions
+    [18] => more_details
+    [19] => zone1
+    [20] => zone2
+    [21] => zone3
+)
+
