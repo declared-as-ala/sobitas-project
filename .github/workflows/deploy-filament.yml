@@ -98,6 +98,11 @@ jobs:
             echo "🔍 Start deps..."
             docker compose -f "$COMPOSE_FILE" up -d mysql redis
 
+            if ! grep -q 'APP_KEY=base64:' .env 2>/dev/null; then
+              KEY=$(docker compose -f "$COMPOSE_FILE" run --rm backend-v2 php artisan key:generate --show 2>/dev/null || true)
+              [ -n "$KEY" ] && echo "APP_KEY=$KEY" >> .env && echo "✓ APP_KEY added to .env"
+            fi
+
             echo "🔄 Restart backend..."
             docker compose -f "$COMPOSE_FILE" up -d --force-recreate --no-deps backend-v2
 

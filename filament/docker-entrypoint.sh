@@ -3,6 +3,18 @@ set -e
 
 cd /var/www/html
 
+# ── Ensure .env exists (Laravel and key:generate read it; env_file does not create a file) ──
+if [ ! -f .env ]; then
+  touch .env
+  [ -n "$APP_KEY" ] && echo "APP_KEY=$APP_KEY" >> .env
+  [ -n "$APP_ENV" ] && echo "APP_ENV=$APP_ENV" >> .env
+  [ -n "$APP_DEBUG" ] && echo "APP_DEBUG=$APP_DEBUG" >> .env
+  [ -n "$APP_URL" ] && echo "APP_URL=$APP_URL" >> .env
+fi
+if [ -z "$APP_KEY" ] || ! grep -q 'APP_KEY=base64:' .env 2>/dev/null; then
+  php artisan key:generate --force 2>/dev/null || true
+fi
+
 # ── Install vendor if volume is empty ──────────────────────
 if [ ! -f vendor/autoload.php ]; then
     echo "========================================"
@@ -23,13 +35,6 @@ mkdir -p bootstrap/cache
 # ── Set permissions ────────────────────────────────────────
 chown -R www-data:www-data storage bootstrap/cache 2>/dev/null || true
 chmod -R 775 storage bootstrap/cache 2>/dev/null || true
-
-# ── Generate app key if missing ────────────────────────────
-if [ -z "$APP_KEY" ] || [ "$APP_KEY" = "" ]; then
-    if grep -q "APP_KEY=$" .env 2>/dev/null || ! grep -q "APP_KEY" .env 2>/dev/null; then
-        php artisan key:generate --force 2>/dev/null || true
-    fi
-fi
 
 # ── Create storage symlink (CRITICAL for file serving) ─────
 # This creates public/storage -> storage/app/public
