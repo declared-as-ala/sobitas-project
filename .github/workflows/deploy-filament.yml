@@ -83,10 +83,14 @@ jobs:
             cd "$APP_DIR" || { echo "❌ $APP_DIR not found"; exit 1; }
 
             # ── Step 1: Pull docker-compose.yml only (no full git pull) ──
-            # We only need docker-compose.yml changes, not the full repo
             echo "📥 Pulling docker-compose.yml..."
             git fetch origin main || true
             git checkout origin/main -- docker-compose.yml 2>/dev/null || echo "⚠ docker-compose.yml unchanged"
+            if [ ! -f docker-compose.yml ]; then
+              echo "❌ docker-compose.yml not found in $APP_DIR. Ensure the repo is cloned (e.g. git clone ... $APP_DIR)."
+              exit 1
+            fi
+            echo "✓ docker-compose.yml ready"
 
             # ── Step 2: Login to GHCR ──
             echo "🔐 Logging in to GHCR..."
@@ -106,13 +110,15 @@ jobs:
             # ── Step 4: Ensure dependencies are healthy ──
             echo "🔍 Ensuring MySQL + Redis are healthy..."
             docker compose up -d mysql redis
-            echo "⏳ Waiting for MySQL to be healthy..."
+            echo "⏳ Waiting for MySQL (sobitas-mysql) to be healthy..."
             timeout=60
             while [ $timeout -gt 0 ]; do
-              if docker compose exec -T mysql mysqladmin ping -h localhost --silent 2>/dev/null; then
+              STATUS=$(docker inspect -f '{{.State.Health.Status}}' sobitas-mysql 2>/dev/null || echo "unknown")
+              if [ "$STATUS" = "healthy" ]; then
                 echo "✓ MySQL is healthy"
                 break
               fi
+              echo "  MySQL status: $STATUS (waiting...)"
               sleep 2
               timeout=$((timeout - 2))
             done
