@@ -52,6 +52,8 @@ export default function CheckoutPage() {
     totals: { subtotal_ht: number; discount_ht: number; net_ht: number; tva: number; timbre: number; frais_livraison: number; total_ttc: number };
   } | null>(null);
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+  const [couponMessage, setCouponMessage] = useState<string | null>(null);
+  const [couponMessageType, setCouponMessageType] = useState<'success' | 'error' | null>(null);
 
   // Single address (livraison) selector state
   const [gouvernorat, setGouvernorat] = useState('');
@@ -179,7 +181,15 @@ export default function CheckoutPage() {
 
   async function handleApplyCoupon() {
     const code = couponInput.trim();
-    if (!code) return;
+    setCouponMessage(null);
+    setCouponMessageType(null);
+
+    if (!code) {
+      setCouponMessage('Veuillez saisir un code promo.');
+      setCouponMessageType('error');
+      return;
+    }
+
     setIsApplyingCoupon(true);
     try {
       const subtotal = totalPrice;
@@ -200,12 +210,20 @@ export default function CheckoutPage() {
           free_shipping: result.free_shipping,
           totals: result.totals,
         });
+        setCouponMessage(result.message || 'Code promo appliqué');
+        setCouponMessageType('success');
         toast.success(result.message || 'Code promo appliqué');
       } else {
-        toast.error(result.message || 'Code promo invalide ou expiré');
+        const message = result.message || 'Code promo invalide ou expiré';
+        setCouponMessage(message);
+        setCouponMessageType('error');
+        toast.error(message);
       }
     } catch (err: any) {
-      toast.error(err?.message || 'Erreur lors de l\'application du code promo');
+      const message = err?.message || 'Erreur lors de l\'application du code promo';
+      setCouponMessage(message);
+      setCouponMessageType('error');
+      toast.error(message);
     } finally {
       setIsApplyingCoupon(false);
     }
@@ -218,6 +236,8 @@ export default function CheckoutPage() {
       await removeCoupon({ subtotal_ht: subtotal, frais_livraison: frais });
       setAppliedCoupon(null);
       setCouponInput('');
+      setCouponMessage('Code promo retiré');
+      setCouponMessageType('success');
       toast.success('Code promo retiré');
     } catch (err: any) {
       toast.error(err?.message || 'Erreur lors de la suppression du code');
@@ -761,9 +781,9 @@ export default function CheckoutPage() {
           </Button>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-          {/* Checkout Form - single column on mobile */}
-          <div className="lg:col-span-2">
+        <div className="checkout-layout">
+          {/* Checkout Form */}
+          <section className="checkout-form">
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
               <Card className="bg-white dark:bg-gray-900 border-0 shadow-[0_4px_16px_rgba(0,0,0,0.05)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.2)] rounded-2xl overflow-hidden">
                 <CardHeader className="border-b border-gray-100 dark:border-gray-800 pb-4">
@@ -853,54 +873,6 @@ export default function CheckoutPage() {
                       <div className="hidden">
                         <Label htmlFor="pays">Pays</Label>
                         <Input id="pays" value={formData.pays} readOnly className="sr-only" />
-                      </div>
-
-                      {/* Code promo */}
-                      <div className="space-y-2 pt-2 border-t border-gray-100 dark:border-gray-800">
-                        <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                          <Tag className="h-4 w-4 text-red-600" />
-                          Code promo
-                        </h3>
-                        {appliedCoupon ? (
-                          <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
-                            <span className="font-medium text-green-800 dark:text-green-200">
-                              {appliedCoupon.code} appliqué
-                              {appliedCoupon.discount_ht > 0 && (
-                                <span className="text-green-600 dark:text-green-400 ml-1">
-                                  (-{appliedCoupon.discount_ttc.toFixed(2)} DT)
-                                </span>
-                              )}
-                            </span>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/30"
-                              onClick={handleRemoveCoupon}
-                            >
-                              <X className="h-4 w-4 mr-1" /> Retirer
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="flex gap-2">
-                            <Input
-                              value={couponInput}
-                              onChange={(e) => setCouponInput(e.target.value)}
-                              placeholder="Ex: SOBI10"
-                              className="flex-1 min-h-[48px] rounded-xl"
-                              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleApplyCoupon())}
-                            />
-                            <Button
-                              type="button"
-                              variant="outline"
-                              className="rounded-xl min-h-[48px] border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20"
-                              onClick={handleApplyCoupon}
-                              disabled={isApplyingCoupon || !couponInput.trim()}
-                            >
-                              {isApplyingCoupon ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Appliquer'}
-                            </Button>
-                          </div>
-                        )}
                       </div>
                       </div>
 
@@ -1077,11 +1049,11 @@ export default function CheckoutPage() {
                 </CardContent>
               </Card>
             </motion.div>
-          </div>
+          </section>
 
-          {/* Order Summary - desktop only; mobile uses sticky bar + sheet */}
-          <div className="hidden lg:block lg:col-span-1">
-            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="sticky top-4">
+          {/* Order Summary */}
+          <aside className="checkout-summary" aria-label="Récapitulatif de la commande">
+            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="checkout-summary-inner">
               <Card className="bg-white dark:bg-gray-900 border-0 shadow-[0_4px_16px_rgba(0,0,0,0.05)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.2)] rounded-2xl overflow-hidden">
                 <CardHeader className="border-b border-gray-100 dark:border-gray-800 pb-4">
                   <CardTitle className="flex items-center gap-3 text-lg font-semibold text-gray-900 dark:text-white">
@@ -1131,6 +1103,87 @@ export default function CheckoutPage() {
                       );
                     })}
                   </div>
+
+                  {/* Code promo (summary column) */}
+                  <section className="checkout-coupon pt-4 border-t border-gray-200 dark:border-gray-800" aria-labelledby="checkout-coupon-title">
+                    <h3
+                      id="checkout-coupon-title"
+                      className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-2"
+                    >
+                      <Tag className="h-4 w-4 text-red-600" />
+                      Code promo
+                    </h3>
+                    {appliedCoupon ? (
+                      <div className="flex flex-col gap-2 p-3 rounded-xl bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-medium text-green-800 dark:text-green-200">
+                            {appliedCoupon.code} appliqué
+                            {appliedCoupon.discount_ht > 0 && (
+                              <span className="text-green-600 dark:text-green-400 ml-1">
+                                (-{appliedCoupon.discount_ttc.toFixed(2)} DT)
+                              </span>
+                            )}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/30"
+                            onClick={handleRemoveCoupon}
+                          >
+                            <X className="h-4 w-4 mr-1" aria-hidden="true" /> Retirer
+                          </Button>
+                        </div>
+                        {couponMessage && (
+                          <p
+                            className={`checkout-coupon-message text-xs ${
+                              couponMessageType === 'error'
+                                ? 'text-red-600 dark:text-red-400'
+                                : 'text-green-700 dark:text-green-300'
+                            }`}
+                          >
+                            {couponMessage}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <Label htmlFor="coupon_code" className="sr-only">
+                          Code promo
+                        </Label>
+                        <div className="checkout-coupon-row">
+                          <Input
+                            id="coupon_code"
+                            value={couponInput}
+                            onChange={(e) => setCouponInput(e.target.value)}
+                            placeholder="Ex: SOBI10"
+                            className="checkout-coupon-input min-h-[48px] rounded-xl"
+                            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleApplyCoupon())}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="checkout-coupon-button rounded-xl min-h-[48px] border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20"
+                            onClick={handleApplyCoupon}
+                            disabled={isApplyingCoupon || !couponInput.trim()}
+                          >
+                            {isApplyingCoupon ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Appliquer'}
+                          </Button>
+                        </div>
+                        {couponMessage && (
+                          <p
+                            className={`checkout-coupon-message text-xs ${
+                              couponMessageType === 'error'
+                                ? 'text-red-600 dark:text-red-400'
+                                : 'text-green-700 dark:text-green-300'
+                            }`}
+                          >
+                            {couponMessage}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </section>
 
                   {/* Summary */}
                   <div className="border-t border-gray-200 dark:border-gray-800 pt-4 space-y-3">
@@ -1201,7 +1254,7 @@ export default function CheckoutPage() {
                 </CardContent>
               </Card>
             </motion.div>
-          </div>
+          </aside>
         </div>
       </main>
 

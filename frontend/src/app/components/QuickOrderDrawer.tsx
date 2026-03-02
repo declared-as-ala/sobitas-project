@@ -8,11 +8,11 @@ import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { AddressSelector } from '@/app/components/AddressSelector';
 import { Badge } from '@/app/components/ui/badge';
-import { submitQuickOrder, getProductDetails, getStorageUrl } from '@/services/api';
+import { submitQuickOrder, getProductDetails, getStorageUrl, applyCoupon, removeCoupon } from '@/services/api';
 import type { QuickOrderPayload, QuickOrderResponse } from '@/types';
 import type { QuickOrderProduct } from '@/contexts/QuickOrderContext';
 import { getPriceDisplay } from '@/util/productPrice';
-import { Loader2, CheckCircle2, Zap, X, Minus, Plus } from 'lucide-react';
+import { Loader2, CheckCircle2, Zap, X, Minus, Plus, Tag } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/app/components/ui/utils';
 
@@ -63,11 +63,23 @@ export function QuickOrderDrawer({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState<QuickOrderResponse | null>(null);
   const phoneInputRef = useRef<HTMLInputElement>(null);
+  const [couponInput, setCouponInput] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    code: string;
+    discount_ht: number;
+    discount_ttc: number;
+    free_shipping?: boolean;
+    totals: { subtotal_ht: number; discount_ht: number; net_ht: number; tva: number; timbre: number; frais_livraison: number; total_ttc: number };
+  } | null>(null);
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+  const [couponMessage, setCouponMessage] = useState<string | null>(null);
+  const [couponMessageType, setCouponMessageType] = useState<'success' | 'error' | null>(null);
 
   const priceDisplay = getPriceDisplay(product);
   const unitPrice = priceDisplay.finalPrice;
-  const total = unitPrice * quantity;
+  const subtotal = unitPrice * quantity;
   const deliveryNote = 0;
+  const total = appliedCoupon?.totals ? appliedCoupon.totals.total_ttc : subtotal + deliveryNote;
   const inStock = product.rupture === 1 || product.rupture === undefined;
   const discount = priceDisplay.hasPromo && priceDisplay.oldPrice != null && priceDisplay.oldPrice > 0
     ? Math.round(((priceDisplay.oldPrice - unitPrice) / priceDisplay.oldPrice) * 100)
@@ -136,6 +148,63 @@ export function QuickOrderDrawer({
 
   const needsAromaSelection = (productWithAromes.aromes?.length ?? 0) > 1 && selectedVariantId == null;
 
+  const handleApplyCoupon = async () => {
+    const code = couponInput.trim();
+    setCouponMessage(null);
+    setCouponMessageType(null);
+    if (!code) {
+      setCouponMessage('Veuillez saisir un code promo.');
+      setCouponMessageType('error');
+      return;
+    }
+    setIsApplyingCoupon(true);
+    try {
+      const result = await applyCoupon({
+        code,
+        subtotal_ht: subtotal,
+        frais_livraison: deliveryNote,
+        ...(phone.trim() && { phone: phone.trim().replace(/\s/g, '') }),
+      });
+      if (result.success && result.totals != null) {
+        setAppliedCoupon({
+          code: result.coupon?.code ?? code,
+          discount_ht: result.discount_ht ?? 0,
+          discount_ttc: result.discount_ttc ?? 0,
+          free_shipping: result.free_shipping,
+          totals: result.totals,
+        });
+        setCouponMessage(result.message || 'Code promo appliqué');
+        setCouponMessageType('success');
+        toast.success(result.message || 'Code promo appliqué');
+      } else {
+        const msg = result.message || 'Code promo invalide ou expiré';
+        setCouponMessage(msg);
+        setCouponMessageType('error');
+        toast.error(msg);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur lors de l\'application du code.';
+      setCouponMessage(msg);
+      setCouponMessageType('error');
+      toast.error(msg);
+    } finally {
+      setIsApplyingCoupon(false);
+    }
+  };
+
+  const handleRemoveCoupon = async () => {
+    try {
+      await removeCoupon({ subtotal_ht: subtotal, frais_livraison: deliveryNote });
+      setAppliedCoupon(null);
+      setCouponInput('');
+      setCouponMessage('Code promo retiré');
+      setCouponMessageType('success');
+      toast.success('Code promo retiré');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Erreur.');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting || result) return;
@@ -159,6 +228,7 @@ export function QuickOrderDrawer({
       priceSnapshot: unitPrice,
       deliveryFeeSnapshot: deliveryNote,
       website: website || undefined,
+      ...(appliedCoupon?.code && { couponCode: appliedCoupon.code }),
     };
 
     try {
@@ -189,6 +259,10 @@ export function QuickOrderDrawer({
       setLocalite('');
       setCodePostal('');
       setErrors({});
+      setCouponInput('');
+      setAppliedCoupon(null);
+      setCouponMessage(null);
+      setCouponMessageType(null);
     }, 200);
   };
 
@@ -471,6 +545,61 @@ export function QuickOrderDrawer({
                   {errors.delegation && <p className="text-xs text-red-600 dark:text-red-400">{errors.delegation}</p>}
                   {errors.localite && <p className="text-xs text-red-600 dark:text-red-400">{errors.localite}</p>}
 
+                  {/* Code promo */}
+                  <section className="pt-2 border-t border-gray-200 dark:border-gray-800" aria-labelledby="qo-coupon-title">
+                    <h3 id="qo-coupon-title" className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-2">
+                      <Tag className="h-4 w-4 text-red-600" aria-hidden="true" />
+                      Code promo
+                    </h3>
+                    {appliedCoupon ? (
+                      <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
+                        <span className="font-medium text-green-800 dark:text-green-200 text-sm">
+                          {appliedCoupon.code} appliqué
+                          {appliedCoupon.discount_ht > 0 && (
+                            <span className="text-green-600 dark:text-green-400 ml-1">(-{appliedCoupon.discount_ttc.toFixed(2)} DT)</span>
+                          )}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/30 text-sm"
+                          onClick={handleRemoveCoupon}
+                        >
+                          <X className="h-4 w-4 mr-1" aria-hidden="true" /> Retirer
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <Label htmlFor="qo-coupon_code" className="sr-only">Code promo</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            id="qo-coupon_code"
+                            value={couponInput}
+                            onChange={(e) => setCouponInput(e.target.value)}
+                            placeholder="Ex: SOBI10"
+                            className="flex-1 min-h-[44px] rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleApplyCoupon())}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="shrink-0 min-h-[44px] px-4 rounded-lg border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20"
+                            onClick={handleApplyCoupon}
+                            disabled={isApplyingCoupon || !couponInput.trim()}
+                          >
+                            {isApplyingCoupon ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Appliquer'}
+                          </Button>
+                        </div>
+                        {couponMessage && (
+                          <p className={cn('text-xs', couponMessageType === 'error' ? 'text-red-600 dark:text-red-400' : 'text-green-700 dark:text-green-300')}>
+                            {couponMessage}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </section>
+
                   {errors.submit && (
                     <p className="text-sm text-red-600 dark:text-red-400">{errors.submit}</p>
                   )}
@@ -482,9 +611,17 @@ export function QuickOrderDrawer({
           {/* Sticky footer: total + trust + primary button (only when form visible) */}
           {!result && (
             <div className="shrink-0 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 rounded-b-2xl md:rounded-b-2xl">
-              <div className="flex items-center justify-between gap-3 mb-2">
-                <span className="text-sm font-semibold text-gray-900 dark:text-white">Total : {total.toFixed(0)} DT</span>
-                {deliveryNote > 0 && <span className="text-sm text-gray-600 dark:text-gray-400">+ Livraison : {deliveryNote.toFixed(0)} DT</span>}
+              <div className="space-y-1 mb-2">
+                {appliedCoupon && appliedCoupon.discount_ht > 0 && (
+                  <div className="flex items-center justify-between gap-3 text-sm">
+                    <span className="text-gray-600 dark:text-gray-400">Remise ({appliedCoupon.code})</span>
+                    <span className="font-medium text-green-600 dark:text-green-400">-{appliedCoupon.discount_ttc.toFixed(2)} DT</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white">Total : {total.toFixed(0)} DT</span>
+                  {deliveryNote > 0 && !appliedCoupon?.free_shipping && <span className="text-sm text-gray-600 dark:text-gray-400">+ Livraison : {deliveryNote.toFixed(0)} DT</span>}
+                </div>
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-500 mb-3">
                 Paiement à la livraison · Livraison 24–72h · Produits authentiques

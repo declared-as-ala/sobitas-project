@@ -193,6 +193,35 @@ input[type="search"]::-webkit-search-results-decoration {
   }
 }
 
+/* Checkout layout: form (left) + summary (right) */
+.checkout-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.checkout-form,
+.checkout-summary {
+  min-width: 0;
+}
+
+.checkout-summary-inner {
+  position: static;
+}
+
+@media (min-width: 1024px) {
+  .checkout-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(360px, 420px);
+    gap: 2rem;
+  }
+
+  .checkout-summary-inner {
+    position: sticky;
+    top: 1rem;
+  }
+}
+
 /* Checkout CTA footer: fixed bottom, safe-area, 72–88px height, button 52–56px. */
 .checkout-cta-footer {
   /* position, left, right, bottom, z-index in component */
@@ -214,6 +243,33 @@ input[type="search"]::-webkit-search-results-decoration {
 @media (min-width: 1024px) {
   .checkout-viewport-root.isKeyboardOpen .checkout-main {
     padding-bottom: 3rem;
+  }
+}
+
+/* Checkout coupon block inside summary (responsive row/stack) */
+.checkout-coupon-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.checkout-coupon-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.checkout-coupon-button {
+  flex: 0 0 auto;
+  width: 8.75rem; /* ~140px */
+}
+
+@media (max-width: 768px) {
+  .checkout-coupon-row {
+    flex-direction: column;
+  }
+
+  .checkout-coupon-button {
+    width: 100%;
   }
 }
 

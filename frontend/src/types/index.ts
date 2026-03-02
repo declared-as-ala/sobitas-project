@@ -227,6 +227,8 @@ export interface QuickOrderPayload {
   source?: string;
   /** Honeypot – must be empty */
   website?: string;
+  /** Code promo (validated via /coupons/apply before submit) */
+  couponCode?: string;
 }
 
 export interface QuickOrderResponse {

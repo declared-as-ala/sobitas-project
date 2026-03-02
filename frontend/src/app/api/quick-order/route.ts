@@ -63,6 +63,7 @@ async function handleQuickOrder(request: NextRequest): Promise<Response> {
       address,
       priceSnapshot,
       deliveryFeeSnapshot = 0,
+      couponCode,
     } = body;
 
     if (!productId || !Number.isFinite(priceSnapshot) || priceSnapshot < 0) {
@@ -144,6 +145,7 @@ async function handleQuickOrder(request: NextRequest): Promise<Response> {
       panier: [
         { produit_id: productId, quantite: qtyNum, prix_unitaire: priceSnapshot },
       ],
+      ...(couponCode && String(couponCode).trim() !== '' && { coupon_code: String(couponCode).trim() }),
     });
 
     const authHeader = request.headers.get('Authorization');
