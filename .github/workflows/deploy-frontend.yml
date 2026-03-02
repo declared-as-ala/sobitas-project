@@ -92,6 +92,7 @@ jobs:
             docker pull ghcr.io/declared-as-ala/sobitas-frontend:latest
 
             echo "🔄 Restart frontend..."
+            docker rm -f sobitas-frontend 2>/dev/null || true
             docker compose -f "$COMPOSE_FILE" up -d --force-recreate --no-deps frontend
 
             echo "✅ Frontend deploy done"
