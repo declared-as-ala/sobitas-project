@@ -1,36 +1,54 @@
-- name: Deploy to VPS
-  uses: appleboy/ssh-action@v1.0.3
-  env:
-    GHCR_USERNAME: declared-as-ala
-    GHCR_PAT: ${{ secrets.GHCR_PAT }}
-  with:
-    host: ${{ secrets.VPS_HOST }}
-    username: ${{ secrets.VPS_USER }}
-    password: ${{ secrets.VPS_PASSWORD }}
-    port: ${{ secrets.VPS_PORT || 22 }}
-    request_pty: true
-    script_stop: true
-    command_timeout: 900s
-    envs: GHCR_USERNAME,GHCR_PAT
-    script: |
-      set -e
-      echo "🔐 GHCR login..."
-      echo "USER=$GHCR_USERNAME PATLEN=${#GHCR_PAT}"
-      printf '%s' "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+name: Deploy Filament Backend to VPS
 
-      cd /root/sobitas-project
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'filament/**'
+      - 'backend/**'
+      - '.github/workflows/deploy-filament.yml'
+  workflow_dispatch:
 
-      echo "📥 Update docker-compose.yml..."
-      git fetch origin main || true
-      git checkout origin/main -- docker-compose.yml 2>/dev/null || true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      echo "📦 Pull latest image..."
-      docker pull ghcr.io/declared-as-ala/sobitas-backend-v2:latest
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          GHCR_USERNAME: declared-as-ala
+          GHCR_PAT: ${{ secrets.GHCR_PAT }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          request_pty: true
+          script_stop: true
+          command_timeout: 900s
+          envs: GHCR_USERNAME,GHCR_PAT
+          script: |
+            set -e
+            echo "🔐 GHCR login..."
+            echo "USER=$GHCR_USERNAME PATLEN=${#GHCR_PAT}"
+            printf '%s' "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
 
-      echo "🔄 Restart services..."
-      docker compose up -d mysql redis
-      docker compose up -d --force-recreate --no-deps backend-v2
-      docker compose run --rm backend-v2-public-init
-      docker compose up -d --no-deps backend-nginx-v2
+            cd /root/sobitas-project
 
-      echo "✅ Done"
+            echo "📥 Update docker-compose.yml..."
+            git fetch origin main || true
+            git checkout origin/main -- docker-compose.yml 2>/dev/null || true
+
+            echo "📦 Pull latest image..."
+            docker pull ghcr.io/declared-as-ala/sobitas-backend-v2:latest
+
+            echo "🔄 Restart services..."
+            docker compose up -d mysql redis
+            docker compose up -d --force-recreate --no-deps backend-v2
+            docker compose run --rm backend-v2-public-init
+            docker compose up -d --no-deps backend-nginx-v2
+
+            echo "✅ Done"
