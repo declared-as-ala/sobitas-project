@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Support\DashboardHeaderActions;
 use App\Filament\Widgets\DashboardAlertsWidget;
 use App\Filament\Widgets\DashboardHeaderWidget;
 use App\Filament\Widgets\QuickActionsWidget;
@@ -19,6 +20,8 @@ use Filament\Pages\Dashboard as BaseDashboard;
 
 class Dashboard extends BaseDashboard
 {
+    use DashboardHeaderActions;
+
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-presentation-chart-line';
 
     protected static ?string $title = 'Tableau de bord Marketplace';
