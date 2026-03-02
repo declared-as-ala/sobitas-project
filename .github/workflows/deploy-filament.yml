@@ -111,9 +111,15 @@ jobs:
             echo "🔍 Ensuring MySQL + Redis are healthy..."
             docker compose up -d mysql redis
             echo "⏳ Waiting for MySQL (sobitas-mysql) to be healthy..."
-            timeout=60
+            timeout=90
             while [ $timeout -gt 0 ]; do
-              STATUS=$(docker inspect -f '{{.State.Health.Status}}' sobitas-mysql 2>/dev/null || echo "unknown")
+              if ! docker inspect sobitas-mysql &>/dev/null; then
+                echo "  MySQL container not ready yet..."
+                sleep 2
+                timeout=$((timeout - 2))
+                continue
+              fi
+              STATUS=$(docker inspect -f '{{.State.Health.Status}}' sobitas-mysql 2>/dev/null || echo "starting")
               if [ "$STATUS" = "healthy" ]; then
                 echo "✓ MySQL is healthy"
                 break
@@ -123,7 +129,8 @@ jobs:
               timeout=$((timeout - 2))
             done
             if [ $timeout -le 0 ]; then
-              echo "❌ MySQL health check timeout"
+              echo "❌ MySQL health check timeout. Last status: $STATUS"
+              docker compose ps mysql 2>/dev/null || true
               exit 1
             fi
 
