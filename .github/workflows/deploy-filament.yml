@@ -71,141 +71,40 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           password: ${{ secrets.VPS_PASSWORD }}
-          script_stop: false
+          port: ${{ secrets.VPS_PORT || 22 }}
           command_timeout: 900s
+          script_stop: true
           script: |
             set -e
-            echo "========================================"
-            echo "🚀 Filament Backend V2 Deploy Started"
-            echo "========================================"
-
             APP_DIR="/root/sobitas-project"
-            cd "$APP_DIR" || { echo "❌ $APP_DIR not found"; exit 1; }
+            COMPOSE_FILE="$APP_DIR/docker-compose.yml"
 
-            # ── Step 1: Pull docker-compose.yml only (no full git pull) ──
-            echo "📥 Pulling docker-compose.yml..."
+            cd "$APP_DIR"
+
+            [ -f .env ] || { [ -f filament/.env.example ] && cp filament/.env.example .env || touch .env; }
+
+            echo "📥 Updating docker-compose.yml..."
             git fetch origin main || true
-            git checkout origin/main -- docker-compose.yml 2>/dev/null || echo "⚠ docker-compose.yml unchanged"
-            if [ ! -f docker-compose.yml ]; then
-              echo "❌ docker-compose.yml not found in $APP_DIR. Ensure the repo is cloned (e.g. git clone ... $APP_DIR)."
-              exit 1
-            fi
-            echo "✓ docker-compose.yml ready"
+            git checkout origin/main -- docker-compose.yml 2>/dev/null || true
 
-            # ── Step 2: Login to GHCR ──
             echo "🔐 Logging in to GHCR..."
             if [ -n "${{ secrets.GHCR_PAT }}" ]; then
-              echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            else
-              echo "⚠ GHCR_PAT not set, using public pull"
+              echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u declared-as-ala --password-stdin
             fi
 
-            # ── Step 3: Pull latest backend image ──
-            echo "📦 Pulling latest backend image..."
-            docker pull ghcr.io/declared-as-ala/sobitas-backend-v2:latest || {
-              echo "❌ Failed to pull image"
-              exit 1
-            }
+            echo "📦 Pull latest image..."
+            docker pull ghcr.io/declared-as-ala/sobitas-backend-v2:latest
 
-            # ── Step 4: Ensure dependencies are healthy ──
-            echo "🔍 Ensuring MySQL + Redis are healthy..."
-            docker compose up -d mysql redis
-            echo "⏳ Waiting for MySQL (sobitas-mysql) to be healthy..."
-            timeout=90
-            while [ $timeout -gt 0 ]; do
-              if ! docker inspect sobitas-mysql &>/dev/null; then
-                echo "  MySQL container not ready yet..."
-                sleep 2
-                timeout=$((timeout - 2))
-                continue
-              fi
-              STATUS=$(docker inspect -f '{{.State.Health.Status}}' sobitas-mysql 2>/dev/null || echo "starting")
-              if [ "$STATUS" = "healthy" ]; then
-                echo "✓ MySQL is healthy"
-                break
-              fi
-              echo "  MySQL status: $STATUS (waiting...)"
-              sleep 2
-              timeout=$((timeout - 2))
-            done
-            if [ $timeout -le 0 ]; then
-              echo "❌ MySQL health check timeout. Last status: $STATUS"
-              docker compose ps mysql 2>/dev/null || true
-              exit 1
-            fi
+            echo "🔍 Start deps..."
+            docker compose -f "$COMPOSE_FILE" up -d mysql redis
 
-            # ── Step 5: Recreate backend-v2 container with new image ──
-            echo "🔄 Recreating backend-v2 container..."
-            docker compose up -d --force-recreate --no-deps backend-v2 || {
-              echo "❌ Failed to recreate backend-v2"
-              exit 1
-            }
+            echo "🔄 Restart backend..."
+            docker compose -f "$COMPOSE_FILE" up -d --force-recreate --no-deps backend-v2
 
-            # ── Step 6: Wait for backend-v2 to be ready ──
-            echo "⏳ Waiting for backend-v2 to start..."
-            sleep 10
+            echo "📋 Init public volume..."
+            docker compose -f "$COMPOSE_FILE" run --rm backend-v2-public-init
 
-            # ── Step 7: Copy public assets and create storage symlink ──
-            echo "📋 Copying public assets and creating storage symlink..."
-            docker compose run --rm backend-v2-public-init || {
-              echo "❌ Failed to initialize public volume"
-              exit 1
-            }
+            echo "🔄 Restart nginx..."
+            docker compose -f "$COMPOSE_FILE" up -d --no-deps backend-nginx-v2
 
-            # ── Step 8: Restart nginx to pick up new assets ──
-            echo "🔄 Restarting nginx-v2..."
-            docker compose up -d --no-deps backend-nginx-v2 || {
-              echo "❌ Failed to restart nginx"
-              exit 1
-            }
-
-            # ── Step 9: Clear Laravel caches (before OPcache reset) ──
-            echo "🧹 Clearing Laravel caches..."
-            docker compose exec -T backend-v2 php artisan config:clear || true
-            docker compose exec -T backend-v2 php artisan cache:clear || true
-            docker compose exec -T backend-v2 php artisan view:clear || true
-            docker compose exec -T backend-v2 php artisan route:clear || true
-            echo "✓ Laravel caches cleared"
-
-            # ── Step 10: CRITICAL - Reset OPcache (validate_timestamps=0) ──
-            echo "🔄 Resetting OPcache (validate_timestamps=0)..."
-            # Use opcache_reset() via PHP (container was just recreated, so this ensures clean state)
-            docker compose exec -T backend-v2 php -r "if (function_exists('opcache_reset')) { opcache_reset(); echo 'OPcache reset successful'; } else { echo 'OPcache not available'; }" || true
-            echo "✓ OPcache reset complete"
-
-            # ── Step 11: Rebuild Laravel caches (after OPcache reset) ──
-            echo "🔨 Rebuilding Laravel caches..."
-            docker compose exec -T backend-v2 php artisan config:cache || true
-            docker compose exec -T backend-v2 php artisan route:cache || true
-            docker compose exec -T backend-v2 php artisan view:cache || true
-            echo "✓ Laravel caches rebuilt"
-
-            # ── All critical steps done - disable exit on error for reporting ──
-            set +e
-
-            # ── Step 12: Health check ──
-            echo "========================================"
-            echo "🏥 Health Check"
-            echo "========================================"
-            docker compose ps mysql redis backend-v2 backend-nginx-v2 2>/dev/null
-            echo ""
-
-            echo "🔍 Testing backend endpoint..."
-            sleep 3
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8083/admin/login 2>/dev/null)
-            if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "302" ]; then
-              echo "✓ Backend is responding (HTTP $HTTP_CODE)"
-            else
-              echo "⚠ Backend health check returned HTTP $HTTP_CODE (may still be starting)"
-            fi
-
-            echo ""
-            echo "=== Recent Logs ==="
-            docker compose logs --tail 20 backend-v2 2>/dev/null
-
-            echo "🧹 Cleaning up old images..."
-            docker image prune -f 2>/dev/null
-
-            echo "========================================"
-            echo "✅ Filament Backend V2 Deploy Completed"
-            echo "========================================"
+            echo "✅ Deploy done"
