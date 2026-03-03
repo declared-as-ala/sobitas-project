@@ -82,7 +82,7 @@ class FactureTvaResource extends Resource
                                 ->schema([
                                     Forms\Components\Placeholder::make('line_title')
                                         ->label('')
-                                        ->content(function (Forms\Get $get): \Illuminate\Support\HtmlString {
+                                        ->content(function ($get): \Illuminate\Support\HtmlString {
                                             $product = null;
                                             if ($id = $get('produit_id')) {
                                                 $product = \App\Models\Product::find($id);
@@ -124,7 +124,7 @@ class FactureTvaResource extends Resource
                                         ->columnSpan(2),
                                     Forms\Components\Placeholder::make('prix_ht_display')
                                         ->label('Total HT')
-                                        ->content(fn (Forms\Get $get) => number_format((float) $get('qte') * (float) $get('prix_unitaire'), 3, '.', ' ') . ' DT')
+                                        ->content(fn ($get) => number_format((float) $get('qte') * (float) $get('prix_unitaire'), 3, '.', ' ') . ' DT')
                                         ->extraAttributes(['class' => 'invoice-edit-lines-repeater-totals'])
                                         ->columnSpan(2),
                                     Forms\Components\TextInput::make('tva_pct')
@@ -137,7 +137,7 @@ class FactureTvaResource extends Resource
                                         ->columnSpan(1),
                                     Forms\Components\Placeholder::make('prix_ttc_display')
                                         ->label('Total TTC')
-                                        ->content(function (Forms\Get $get) use ($defaultTva): string {
+                                        ->content(function ($get) use ($defaultTva): string {
                                             $qte = (float) ($get('qte') ?? 0);
                                             $pu = (float) ($get('prix_unitaire') ?? 0);
                                             $tva = (float) ($get('tva_pct') ?? $defaultTva);
@@ -149,7 +149,7 @@ class FactureTvaResource extends Resource
                                         ->columnSpan(1),
                                     Forms\Components\Placeholder::make('tva_line')
                                         ->label('')
-                                        ->content(function (Forms\Get $get) use ($defaultTva): \Illuminate\Support\HtmlString {
+                                        ->content(function ($get) use ($defaultTva): \Illuminate\Support\HtmlString {
                                             $qte = (float) ($get('qte') ?? 0);
                                             $pu = (float) ($get('prix_unitaire') ?? 0);
                                             $tva = (float) ($get('tva_pct') ?? $defaultTva);
