@@ -73,6 +73,18 @@ class FactureTvaResource extends Resource
                             Forms\Components\Placeholder::make('barcode_scan')
                                 ->label('')
                                 ->content(fn () => new \Illuminate\Support\HtmlString(view('filament.components.barcode-scan-compact')->render())),
+                            Forms\Components\Placeholder::make('details_header')
+                                ->label('')
+                                ->content(fn () => new \Illuminate\Support\HtmlString('
+                                    <div class="invoice-edit-lines-header">
+                                        <div>Produit</div>
+                                        <div class="invoice-edit-lines-header-col--num">Qté</div>
+                                        <div class="invoice-edit-lines-header-col--money">P.U HT</div>
+                                        <div class="invoice-edit-lines-header-col--num">TVA %</div>
+                                        <div class="invoice-edit-lines-header-col--money">Total HT</div>
+                                        <div class="invoice-edit-lines-header-col--money">Total TTC</div>
+                                    </div>
+                                ')),
                             Repeater::make('details')
                                 ->label('')
                                 ->live()
@@ -102,7 +114,7 @@ class FactureTvaResource extends Resource
                                         ->live(debounce: 300)
                                         ->columnSpan(1),
                                     Forms\Components\TextInput::make('prix_unitaire')
-                                        ->label('P.U')
+                                        ->label('P.U HT')
                                         ->numeric()
                                         ->default(0)
                                         ->prefix('DT')
@@ -110,9 +122,9 @@ class FactureTvaResource extends Resource
                                         ->live(debounce: 300)
                                         ->columnSpan(2),
                                     Forms\Components\Placeholder::make('prix_ht_display')
-                                        ->label('P.T/HT')
+                                        ->label('Total HT')
                                         ->content(fn ($get) => number_format((float) $get('qte') * (float) $get('prix_unitaire'), 3, '.', ' ') . ' DT')
-                                        ->extraAttributes(['style' => 'text-align: right;'])
+                                        ->extraAttributes(['class' => 'invoice-edit-lines-repeater-totals'])
                                         ->columnSpan(2),
                                     Forms\Components\TextInput::make('tva_pct')
                                         ->label('TVA %')
@@ -123,18 +135,20 @@ class FactureTvaResource extends Resource
                                         ->live(debounce: 300)
                                         ->columnSpan(1),
                                     Forms\Components\Placeholder::make('prix_ttc_display')
-                                        ->label('TVA (DT)')
-                                        ->content(fn ($get) => number_format((float) $get('qte') * (float) $get('prix_unitaire') * (float) ($get('tva_pct') ?? $defaultTva) / 100, 3, '.', ' ') . ' DT')
-                                        ->extraAttributes(['style' => 'text-align: right;'])
+                                        ->label('Total TTC')
+                                        ->content(fn ($get) => number_format((float) $get('qte') * (float) $get('prix_unitaire') * (1 + (float) ($get('tva_pct') ?? $defaultTva) / 100), 3, '.', ' ') . ' DT')
+                                        ->extraAttributes(['class' => 'invoice-edit-lines-repeater-totals'])
                                         ->columnSpan(1),
                                 ])
                                 ->columns(12)
                                 ->defaultItems(1)
                                 ->addActionLabel('Ajouter produit')
                                 ->columnSpanFull()
+                                ->extraAttributes(['class' => 'invoice-edit-lines-repeater'])
                                 ->itemLabel(fn (array $state) => isset($state['produit_id']) ? (\App\Models\Product::find($state['produit_id'])?->designation_fr ?? 'Ligne') : 'Ligne'),
                         ])
-                        ->columnSpanFull(),
+                        ->columnSpanFull()
+                        ->extraAttributes(['class' => 'invoice-edit-lines-section']),
                 ])->columnSpan(2),
 
                 /* Right column (1/3): Totaux sticky */

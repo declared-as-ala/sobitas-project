@@ -124,16 +124,21 @@ class EditFactureTva extends EditRecord
     protected function getHeaderActions(): array
     {
         return array_merge(parent::getHeaderActions(), [
+            Actions\Action::make('print')
+                ->label('Imprimer')
+                ->icon('heroicon-o-printer')
+                ->modalHeading('Aperçu d\'impression')
+                ->modalContent(fn () => view('filament.components.print-modal', [
+                    'printUrl' => route('facture-tvas.print', ['factureTva' => $this->record->id]),
+                    'title' => 'Facture ' . $this->record->numero,
+                ]))
+                ->modalSubmitAction(false),
+            Actions\Action::make('downloadPdf')
+                ->label('Télécharger PDF')
+                ->icon('heroicon-o-arrow-down-tray')
+                ->url(fn () => route('facture-tvas.download', ['factureTva' => $this->record->id]))
+                ->openUrlInNewTab(),
             ActionGroup::make([
-                Actions\Action::make('print')
-                    ->label('Imprimer')
-                    ->icon('heroicon-o-printer')
-                    ->modalHeading('Aperçu d\'impression')
-                    ->modalContent(fn () => view('filament.components.print-modal', [
-                        'printUrl' => route('facture-tvas.print', ['factureTva' => $this->record->id]),
-                        'title' => 'Facture ' . $this->record->numero,
-                    ]))
-                    ->modalSubmitAction(false),
                 Actions\DeleteAction::make(),
             ])->label('Autres actions')->icon('heroicon-o-ellipsis-vertical'),
         ]);

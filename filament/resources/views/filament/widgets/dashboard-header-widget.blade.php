@@ -93,10 +93,10 @@
             {{-- Right: Controls --}}
             <div class="dh-right">
                 <select wire:model.live="preset" class="dh-select">
-                @foreach($this->getPresets() as $value => $label)
-                    <option value="{{ $value }}">{{ $label }}</option>
-                @endforeach
-            </select>
+                    @foreach($this->getPresets() as $value => $label)
+                        <option value="{{ $value }}">{{ $label }}</option>
+                    @endforeach
+                </select>
 
                 <x-filament::button
                     wire:click="refreshStats"
@@ -118,28 +118,7 @@
                     <span wire:loading.remove wire:target="refreshStats">Actualiser</span>
                     <span wire:loading wire:target="refreshStats">Actualisation…</span>
                 </x-filament::button>
-
-                <x-filament::button
-                    wire:click="exportData"
-                    wire:loading.attr="disabled"
-                    wire:target="exportData"
-                    type="button"
-                    size="sm"
-                    color="gray"
-                    outlined
-                >
-                    <x-slot name="icon">
-                        <x-filament::icon
-                            icon="heroicon-o-arrow-down-tray"
-                            style="width:1rem;height:1rem;"
-                            wire:loading.class="animate-spin"
-                            wire:target="exportData"
-                        />
-                    </x-slot>
-                    <span wire:loading.remove wire:target="exportData">Exporter</span>
-                    <span wire:loading wire:target="exportData">Export…</span>
-                </x-filament::button>
+            </div>
         </div>
-    </div>
     </x-filament::section>
 </x-filament-widgets::widget>

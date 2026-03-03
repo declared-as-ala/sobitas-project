@@ -16,4 +16,9 @@ class DashboardHeaderWidget extends Widget
     protected int | string | array $columnSpan = 'full';
     
     protected static bool $isLazy = false;
+
+    public function mount(): void
+    {
+        $this->preset = session('dashboard.filter.preset', '30d');
+    }
 }

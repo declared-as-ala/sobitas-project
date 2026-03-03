@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class DateRangeFilterService
 {
@@ -24,6 +25,7 @@ class DateRangeFilterService
             '30d' => self::getLastNDaysPeriod($now, 30),
             'mtd' => self::getMonthToDatePeriod($now),
             'ytd' => self::getYearToDatePeriod($now),
+            'all' => self::getAllTimePeriod($now),
             'custom' => self::getCustomPeriod($customStart, $customEnd),
             default => self::getLastNDaysPeriod($now, 30), // Default to 30 days
         };
@@ -93,6 +95,34 @@ class DateRangeFilterService
     }
 
     /**
+     * All-time period from first order to today, vs previous equivalent span.
+     */
+    private static function getAllTimePeriod(Carbon $now): array
+    {
+        $firstOrderDate = DB::table('commandes')->min('created_at');
+
+        if (! $firstOrderDate) {
+            return self::getLastNDaysPeriod($now, 30);
+        }
+
+        $start = Carbon::parse($firstOrderDate)->startOfDay();
+        $end = $now->copy()->endOfDay();
+        $days = $start->diffInDays($end) + 1;
+
+        $prevEnd = $start->copy()->subDay()->endOfDay();
+        $prevStart = $prevEnd->copy()->subDays($days - 1)->startOfDay();
+
+        return [
+            'start' => $start,
+            'end' => $end,
+            'prev_start' => $prevStart,
+            'prev_end' => $prevEnd,
+            'label' => 'Tout le temps',
+            'days' => $days,
+        ];
+    }
+
+    /**
      * Year-to-date vs same period last year.
      */
     private static function getYearToDatePeriod(Carbon $now): array
@@ -110,7 +140,7 @@ class DateRangeFilterService
             'end' => $end,
             'prev_start' => $prevStart,
             'prev_end' => $prevEnd,
-            'label' => 'Année en cours',
+            'label' => 'Cette année',
             'days' => $daysElapsed,
         ];
     }
@@ -175,7 +205,8 @@ class DateRangeFilterService
             '7d' => '7 derniers jours',
             '30d' => '30 derniers jours',
             'mtd' => 'Mois en cours',
-            'ytd' => 'Année en cours',
+            'ytd' => 'Cette année',
+            'all' => 'Tout le temps',
             'custom' => 'Période personnalisée',
         ];
     }

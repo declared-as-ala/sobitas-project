@@ -2,9 +2,11 @@
 
 namespace App\Filament\Support;
 
+use App\Services\DateRangeFilterService;
+
 trait DashboardHeaderActions
 {
-    public string $preset = '30_days';
+    public string $preset = '30d';
 
     public bool $isRefreshing = false;
 
@@ -12,18 +14,13 @@ trait DashboardHeaderActions
 
     public function getPresets(): array
     {
-        return [
-            '7_days' => '7 derniers jours',
-            '30_days' => '30 derniers jours',
-            '90_days' => '90 derniers jours',
-            'this_month' => 'Ce mois',
-            'last_month' => 'Mois dernier',
-        ];
+        return DateRangeFilterService::getPresets();
     }
 
     public function updatedPreset($value): void
     {
-        $this->dispatch('dashboardFilterUpdated', preset: $value);
+        session(['dashboard.filter.preset' => $value]);
+        $this->dispatch('dashboardFilterUpdated');
     }
 
     public function refreshStats(): void
@@ -31,7 +28,9 @@ trait DashboardHeaderActions
         $this->isRefreshing = true;
 
         try {
-            $this->dispatch('dashboardFilterUpdated', preset: $this->preset);
+            session(['dashboard.filter.preset' => $this->preset]);
+
+            $this->dispatch('dashboardFilterUpdated');
 
             $this->dispatch('$refresh');
 
