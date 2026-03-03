@@ -143,22 +143,6 @@ class EditTicket extends EditRecord
     protected function getHeaderActions(): array
     {
         return array_merge(parent::getHeaderActions(), [
-            Actions\Action::make('createInvoice')
-                ->label('Créer Facture TVA pour ce ticket')
-                ->icon('heroicon-o-document-duplicate')
-                ->color('success')
-                ->visible(fn () => $this->record->isTicketCaisse() && $this->record->details()->exists())
-                ->modalHeading('Créer une facture TVA (liée à ce ticket)')
-                ->modalDescription('La facture sera liée à ce ticket de caisse et ne sera pas comptée une seconde fois dans le CA.')
-                ->action(function (TicketToInvoiceService $service) {
-                    $invoice = $service->createInvoiceFromTicket($this->record);
-                    Notification::make()
-                        ->title('Facture TVA créée')
-                        ->body('Facture #' . $invoice->numero . ' créée (liée à ce ticket).')
-                        ->success()
-                        ->send();
-                    $this->redirect(FactureTvaResource::getUrl('edit', ['record' => $invoice]));
-                }),
             Actions\Action::make('print')
                 ->label('Imprimer')
                 ->icon('heroicon-o-printer')

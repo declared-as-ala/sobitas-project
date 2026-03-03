@@ -33,7 +33,7 @@
             x-on:click.outside="$wire.close()"
         >
             @php
-                $flat = $component->getFlatResults();
+                $flat = $this->getFlatResults();
                 $hasError = isset($groups['_error']);
             @endphp
             @if(empty($groups) || $hasError)

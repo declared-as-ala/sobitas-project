@@ -76,7 +76,7 @@ class FactureTvaResource extends Resource
                             Repeater::make('details')
                                 ->label('')
                                 ->live()
-                                ->afterStateUpdated(function ($get, $set) {
+                                ->afterStateUpdated(function ($set, $get) {
                                     self::recalculateFactureTvaTotals($get, $set);
                                 })
                                 ->schema([
@@ -87,20 +87,50 @@ class FactureTvaResource extends Resource
                                         ->preload()
                                         ->required()
                                         ->live()
+                                        ->columnSpan(7)
                                         ->afterStateUpdated(function ($state, $set) {
                                             if ($state && $product = \App\Models\Product::find($state)) {
                                                 $set('prix_unitaire', (float) ($product->prix ?? 0));
                                             }
                                         }),
-                                    Forms\Components\TextInput::make('qte')->label('Qté')->numeric()->default(1)->minValue(1)->required()->live(debounce: 300),
-                                    Forms\Components\TextInput::make('prix_unitaire')->label('P.U')->numeric()->default(0)->prefix('DT')->required()->live(debounce: 300),
-                                    Forms\Components\Placeholder::make('prix_ht_display')->label('P.T/HT')->content(fn ($get) => number_format((float) $get('qte') * (float) $get('prix_unitaire'), 3, '.', ' ') . ' DT'),
-                                    Forms\Components\TextInput::make('tva_pct')->label('TVA %')->numeric()->default($defaultTva)->suffix('%')->required()->live(debounce: 300),
-                                    Forms\Components\Placeholder::make('prix_ttc_display')->label('TVA')->content(fn ($get) => number_format((float) $get('qte') * (float) $get('prix_unitaire') * (float) ($get('tva_pct') ?? $defaultTva) / 100, 3, '.', ' ') . ' DT'),
+                                    Forms\Components\TextInput::make('qte')
+                                        ->label('Qté')
+                                        ->numeric()
+                                        ->default(1)
+                                        ->minValue(1)
+                                        ->required()
+                                        ->live(debounce: 300)
+                                        ->columnSpan(1),
+                                    Forms\Components\TextInput::make('prix_unitaire')
+                                        ->label('P.U')
+                                        ->numeric()
+                                        ->default(0)
+                                        ->prefix('DT')
+                                        ->required()
+                                        ->live(debounce: 300)
+                                        ->columnSpan(2),
+                                    Forms\Components\Placeholder::make('prix_ht_display')
+                                        ->label('P.T/HT')
+                                        ->content(fn ($get) => number_format((float) $get('qte') * (float) $get('prix_unitaire'), 3, '.', ' ') . ' DT')
+                                        ->extraAttributes(['style' => 'text-align: right;'])
+                                        ->columnSpan(2),
+                                    Forms\Components\TextInput::make('tva_pct')
+                                        ->label('TVA %')
+                                        ->numeric()
+                                        ->default($defaultTva)
+                                        ->suffix('%')
+                                        ->required()
+                                        ->live(debounce: 300)
+                                        ->columnSpan(1),
+                                    Forms\Components\Placeholder::make('prix_ttc_display')
+                                        ->label('TVA (DT)')
+                                        ->content(fn ($get) => number_format((float) $get('qte') * (float) $get('prix_unitaire') * (float) ($get('tva_pct') ?? $defaultTva) / 100, 3, '.', ' ') . ' DT')
+                                        ->extraAttributes(['style' => 'text-align: right;'])
+                                        ->columnSpan(1),
                                 ])
-                                ->columns(5)
+                                ->columns(12)
                                 ->defaultItems(1)
-                                ->addActionLabel('Ajouter une ligne')
+                                ->addActionLabel('Ajouter produit')
                                 ->columnSpanFull()
                                 ->itemLabel(fn (array $state) => isset($state['produit_id']) ? (\App\Models\Product::find($state['produit_id'])?->designation_fr ?? 'Ligne') : 'Ligne'),
                         ])

@@ -1,3 +1,3 @@
-<div class="flex flex-1 items-center justify-center px-2 lg:px-4">
+<div class="filament-global-search">
     @livewire('global-search')
 </div>

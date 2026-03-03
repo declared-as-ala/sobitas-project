@@ -132,7 +132,12 @@
         get iframeEl() { return this.$refs.previewIframe; },
         doPrint() {
             const ifr = this.iframeEl;
-            if (ifr && ifr.contentWindow) ifr.contentWindow.print();
+            if (ifr && ifr.contentWindow && typeof ifr.contentWindow.print === 'function') {
+                ifr.contentWindow.focus();
+                ifr.contentWindow.print();
+            } else {
+                window.open('{{ $printUrl }}', '_blank');
+            }
         },
         doClose() {
             this.$dispatch('close');

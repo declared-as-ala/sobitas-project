@@ -1,0 +1,39 @@
+/**
+ * Filament v4 – Topbar & profile dropdown visibility fixes.
+ *
+ * Goal:
+ * - Keep the topbar (and avatar menu) above all page content.
+ * - Prevent the dropdown from being covered or clipped by sticky headers.
+ *
+ * Scope: Only Filament structural classes, no Tailwind utilities.
+ */
+
+/* 1) Ensure the topbar stays on top of the layout stack */
+.fi-header,
+.fi-topbar-ctn,
+.fi-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    overflow: visible;
+}
+
+/* 2) Keep page headers below the topbar and avoid clipping */
+.fi-page-header-main-ctn,
+.fi-page-header,
+.fi-header-actions {
+    z-index: 20;
+    overflow: visible;
+}
+
+/* 3) Floating UI portals & dropdown panels (user menu, global search, nav) */
+[data-floating-ui-portal],
+[data-floating-ui-portal] .fi-dropdown-panel,
+.fi-topbar .fi-dropdown-panel,
+.fi-topbar .fi-dropdown,
+.fi-topbar .fi-user-menu,
+.fi-topbar .fi-user-menu-trigger,
+.fi-topbar .fi-dropdown-content {
+    z-index: 2000 !important;
+}
+

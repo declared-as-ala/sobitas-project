@@ -210,7 +210,7 @@ class CommandeResource extends Resource
                                 ->title('BL #' . $bl->numero . ' créé')
                                 ->success()
                                 ->actions([
-                                    \Filament\Notifications\Actions\Action::make('open')
+                                    NotificationAction::make('open')
                                         ->label('Ouvrir le document créé')
                                         ->url(\App\Filament\Resources\FactureResource::getUrl('edit', ['record' => $bl]))
                                         ->openUrlInNewTab(false),

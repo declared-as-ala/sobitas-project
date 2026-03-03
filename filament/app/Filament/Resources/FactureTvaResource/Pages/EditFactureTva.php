@@ -124,53 +124,6 @@ class EditFactureTva extends EditRecord
     protected function getHeaderActions(): array
     {
         return array_merge(parent::getHeaderActions(), [
-            Actions\Action::make('recordPayment')
-                ->label('Enregistrer paiement')
-                ->icon('heroicon-o-banknotes')
-                ->color('success')
-                ->form([
-                    Forms\Components\TextInput::make('amount')
-                        ->label('Montant (DT)')
-                        ->numeric()
-                        ->required()
-                        ->minValue(0.001)
-                        ->default(fn () => (float) ($this->record->prix_ttc ?? $this->record->prix_total ?? 0)),
-                    Forms\Components\Select::make('method')
-                        ->label('Méthode')
-                        ->options([
-                            'COD' => 'Espèces / COD',
-                            'Stripe' => 'Stripe',
-                            'PayPal' => 'PayPal',
-                            'Virement' => 'Virement',
-                            'Chèque' => 'Chèque',
-                        ])
-                        ->default('COD')
-                        ->required(),
-                    Forms\Components\TextInput::make('provider_ref')
-                        ->label('Référence (optionnel)')
-                        ->placeholder('ID transaction'),
-                    Forms\Components\DateTimePicker::make('paid_at')
-                        ->label('Date de paiement')
-                        ->default(now()),
-                ])
-                ->action(function (array $data, PaymentService $service) {
-                    $service->recordPayment(
-                        $this->record,
-                        (float) $data['amount'],
-                        $data['method'],
-                        $data['provider_ref'] ?? null,
-                        $data['paid_at'] ?? null
-                    );
-                    Notification::make()->title('Paiement enregistré')->success()->send();
-                    $this->refreshFormData(['status']);
-                }),
-            Actions\Action::make('createCreditNote')
-                ->label('Créer un avoir')
-                ->icon('heroicon-o-document-minus')
-                ->visible(fn () => Route::has('filament.admin.resources.credit-notes.create'))
-                ->url(fn () => Route::has('filament.admin.resources.credit-notes.create')
-                    ? CreditNoteResource::getUrl('create') . '?facture_tva_id=' . $this->record->id
-                    : '#'),
             ActionGroup::make([
                 Actions\Action::make('print')
                     ->label('Imprimer')

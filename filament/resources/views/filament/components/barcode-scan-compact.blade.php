@@ -17,4 +17,7 @@
             class="fi-input block w-full max-w-xs rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-white/10 dark:bg-white/5 text-sm py-1.5"
         />
     </div>
+    <p style="margin-top: 4px; font-size: 0.75rem; color: #6b7280;">
+        Scannez un code-barres puis appuyez sur Entrée pour ajouter automatiquement le produit à la liste.
+    </p>
 </div>

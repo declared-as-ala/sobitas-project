@@ -93,6 +93,7 @@ class AdminPanelProvider extends PanelProvider
                 fn (): string => '
                     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.min.css" />
                 ' . "\n" . view('filament.components.custom-admin-styles')->render()
+                . "\n" . '<style>' . file_get_contents(resource_path('css/filament/topbar.css')) . '</style>'
             )
             ->renderHook(
                 'panels::body.end',
@@ -218,8 +219,8 @@ class AdminPanelProvider extends PanelProvider
                 'success' => Color::Emerald,
                 'warning' => Color::Amber,
             ])
-            // Custom global search (single endpoint, grouped results, typeahead)
+            // Custom global search (single endpoint, grouped results, typeahead) — right side of topbar
             ->globalSearch(false)
-            ->renderHook(PanelsRenderHook::TOPBAR_START, fn (): string => view('filament.components.global-search-wrapper')->render());
+            ->renderHook(PanelsRenderHook::GLOBAL_SEARCH_BEFORE, fn (): string => view('filament.components.global-search-wrapper')->render());
     }
 }

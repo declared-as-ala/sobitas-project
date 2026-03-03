@@ -165,12 +165,12 @@ class GlobalSearchController extends Controller
             })
             ->orderByDesc('created_at')
             ->limit(self::LIMIT_PER_GROUP)
-            ->get(['id', 'numero', 'client_id', 'prix_total', 'date_ticket']);
+            ->get(['id', 'numero', 'client_id', 'prix_ttc', 'date_ticket']);
 
         return $rows->map(fn (Ticket $r) => [
             'id' => $r->id,
             'label' => $r->numero ?? 'Ticket #' . $r->id,
-            'subtitle' => $r->client ? $r->client->name : '' . ($r->prix_total !== null ? ' · ' . number_format((float) $r->prix_total, 2, ',', ' ') . ' DT' : ''),
+            'subtitle' => ($r->client ? $r->client->name : '') . ($r->prix_ttc !== null ? ' · ' . number_format((float) $r->prix_ttc, 2, ',', ' ') . ' DT' : ''),
             'url' => TicketResource::getUrl('edit', ['record' => $r]),
             'icon' => 'heroicon-o-ticket',
         ])->all();

@@ -99,7 +99,7 @@ class TicketResource extends Resource
                             Repeater::make('details')
                                 ->label('')
                                 ->live()
-                                ->afterStateUpdated(function ($get, $set) {
+                                ->afterStateUpdated(function ($set, $get) {
                                     self::recalculateTicketTotals($get, $set);
                                 })
                                 ->schema([
@@ -110,16 +110,35 @@ class TicketResource extends Resource
                                         ->preload()
                                         ->required()
                                         ->live()
+                                        ->columnSpan(7)
                                         ->afterStateUpdated(function ($state, $set) {
                                             if ($state && $product = \App\Models\Product::find($state)) {
                                                 $set('prix_unitaire', (float) ($product->prix ?? 0));
                                             }
                                         }),
-                                    Forms\Components\TextInput::make('qte')->label('Qté')->numeric()->default(1)->minValue(0.001)->required()->live(debounce: 300),
-                                    Forms\Components\TextInput::make('prix_unitaire')->label('P.U')->numeric()->default(0)->prefix('DT')->required()->live(debounce: 300),
-                                    Forms\Components\Placeholder::make('prix_total_display')->label('P.T')->content(fn ($get) => number_format((float) ($get('qte') ?? 0) * (float) ($get('prix_unitaire') ?? 0), 3, '.', ' ') . ' DT'),
+                                    Forms\Components\TextInput::make('qte')
+                                        ->label('Qté')
+                                        ->numeric()
+                                        ->default(1)
+                                        ->minValue(0.001)
+                                        ->required()
+                                        ->live(debounce: 300)
+                                        ->columnSpan(2),
+                                    Forms\Components\TextInput::make('prix_unitaire')
+                                        ->label('P.U')
+                                        ->numeric()
+                                        ->default(0)
+                                        ->prefix('DT')
+                                        ->required()
+                                        ->live(debounce: 300)
+                                        ->columnSpan(2),
+                                    Forms\Components\Placeholder::make('prix_total_display')
+                                        ->label('P.T')
+                                        ->content(fn ($get) => number_format((float) ($get('qte') ?? 0) * (float) ($get('prix_unitaire') ?? 0), 3, '.', ' ') . ' DT')
+                                        ->extraAttributes(['style' => 'text-align: right;'])
+                                        ->columnSpan(1),
                                 ])
-                                ->columns(4)
+                                ->columns(12)
                                 ->defaultItems(0)
                                 ->addActionLabel('Ajouter une ligne')
                                 ->columnSpanFull()
@@ -139,14 +158,14 @@ class TicketResource extends Resource
                             ->prefix('DT')
                             ->default(0)
                             ->live()
-                            ->afterStateUpdated(fn ($get, $set) => self::recalculateTicketTotals($get, $set)),
+                            ->afterStateUpdated(fn ($set, $get) => self::recalculateTicketTotals($get, $set)),
                         Forms\Components\TextInput::make('pourcentage_remise')
                             ->label('Remise %')
                             ->numeric()
                             ->suffix('%')
                             ->default(0)
                             ->live(debounce: 300)
-                            ->afterStateUpdated(fn ($get, $set) => self::recalculateTicketTotals($get, $set)),
+                            ->afterStateUpdated(fn ($set, $get) => self::recalculateTicketTotals($get, $set)),
                         Forms\Components\Placeholder::make('prix_ttc_display')
                             ->label('NET À PAYER')
                             ->content(fn ($get) => 'DT ' . number_format((float) self::computeTicketTotals($get)[2], 3, ',', ' ')),

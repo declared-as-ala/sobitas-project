@@ -15,6 +15,7 @@ use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables;
+use Filament\Notifications\Actions\Action as NotificationAction;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -228,7 +229,7 @@ class QuotationResource extends Resource
                                 ->title('Ticket #' . $ticket->numero . ' créé')
                                 ->success()
                                 ->actions([
-                                    \Filament\Notifications\Actions\Action::make('open')
+                                    NotificationAction::make('open')
                                         ->label('Ouvrir le document créé')
                                         ->url(\App\Filament\Resources\TicketResource::getUrl('edit', ['record' => $ticket]))
                                         ->openUrlInNewTab(false),
@@ -247,7 +248,7 @@ class QuotationResource extends Resource
                                 ->title('Facture TVA #' . $invoice->numero . ' créée')
                                 ->success()
                                 ->actions([
-                                    \Filament\Notifications\Actions\Action::make('open')
+                                    NotificationAction::make('open')
                                         ->label('Ouvrir le document créé')
                                         ->url(\App\Filament\Resources\FactureTvaResource::getUrl('edit', ['record' => $invoice]))
                                         ->openUrlInNewTab(false),
@@ -266,7 +267,7 @@ class QuotationResource extends Resource
                                 ->title('Bon de livraison #' . $bl->numero . ' créé')
                                 ->success()
                                 ->actions([
-                                    \Filament\Notifications\Actions\Action::make('open')
+                                    NotificationAction::make('open')
                                         ->label('Ouvrir le document créé')
                                         ->url(\App\Filament\Resources\FactureResource::getUrl('edit', ['record' => $bl]))
                                         ->openUrlInNewTab(false),
