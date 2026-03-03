@@ -2,20 +2,13 @@
 
 namespace App\Filament\Resources\FactureTvaResource\Pages;
 
-use App\Enums\PaymentStatus;
-use App\Filament\Resources\CreditNoteResource;
 use App\Filament\Resources\FactureTvaResource;
 use App\Filament\Widgets\DocumentTimelineWidget;
 use App\Models\DetailsFactureTva;
 use App\Models\Product;
-use App\Services\PaymentService;
 use Filament\Actions;
-use Filament\Actions\ActionGroup;
-use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
-use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Schema;
 
 class EditFactureTva extends EditRecord
 {
@@ -50,28 +43,24 @@ class EditFactureTva extends EditRecord
         $this->form->fill(array_merge($state, ['details' => $details]));
     }
 
+    public function getTitle(): string
+    {
+        $num = $this->record?->numero ?? '—';
+        return "Facture #{$num}";
+    }
+
     public function getHeading(): string
     {
-        return 'Facture #' . $this->record->numero;
+        return $this->getTitle();
     }
 
     public function getSubheading(): ?string
     {
-        $client = $this->record->client?->name ?? '—';
-        $date = $this->record->created_at?->format('d/m/Y') ?? '—';
-        $total = number_format((float) ($this->record->prix_ttc ?? 0), 3, ',', ' ') . ' TND';
-        $parts = ["Client : {$client}", "Date : {$date}", "Total : {$total}"];
-        if (Schema::hasColumn('facture_tvas', 'facture_id') && $this->record->facture_id) {
-            $parts[] = 'BL : #' . $this->record->facture?->numero;
-        }
-        if (Schema::hasTable('payments')) {
-            $paid = (float) $this->record->payments()->where('status', PaymentStatus::Succeeded)->sum('amount');
-            if ($paid > 0) {
-                $parts[] = 'Encaissé : ' . number_format($paid, 3, ',', ' ') . ' DT';
-            }
-        }
+        $client = $this->record?->client?->name ?? '—';
+        $date = optional($this->record?->created_at)->format('d/m/Y') ?? '—';
+        $total = number_format((float) ($this->record?->prix_ttc ?? 0), 3, '.', ' ') . ' TND';
 
-        return implode(' · ', $parts);
+        return "Client : {$client} · Date : {$date} · Total : {$total}";
     }
 
     protected function mutateFormDataBeforeFill(array $data): array
@@ -123,24 +112,16 @@ class EditFactureTva extends EditRecord
 
     protected function getHeaderActions(): array
     {
-        return array_merge(parent::getHeaderActions(), [
-            Actions\Action::make('print')
-                ->label('Imprimer')
-                ->icon('heroicon-o-printer')
-                ->modalHeading('Aperçu d\'impression')
-                ->modalContent(fn () => view('filament.components.print-modal', [
-                    'printUrl' => route('facture-tvas.print', ['factureTva' => $this->record->id]),
-                    'title' => 'Facture ' . $this->record->numero,
-                ]))
-                ->modalSubmitAction(false),
-            Actions\Action::make('downloadPdf')
-                ->label('Télécharger PDF')
-                ->icon('heroicon-o-arrow-down-tray')
-                ->url(fn () => route('facture-tvas.download', ['factureTva' => $this->record->id]))
-                ->openUrlInNewTab(),
-            ActionGroup::make([
-                Actions\DeleteAction::make(),
-            ])->label('Autres actions')->icon('heroicon-o-ellipsis-vertical'),
-        ]);
+        return [
+            Actions\Action::make('cancel')
+                ->label('Annuler')
+                ->color('gray')
+                ->url($this->getResource()::getUrl('index')),
+
+            Actions\Action::make('save')
+                ->label('Enregistrer')
+                ->color('primary')
+                ->action('save'),
+        ];
     }
 }
