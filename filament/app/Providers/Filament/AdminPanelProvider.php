@@ -67,7 +67,6 @@ use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Navigation\NavigationGroup;
 use Filament\Panel;
 use Filament\PanelProvider;
-use Filament\Support\Assets\Css;
 use Filament\Support\Colors\Color;
 use Filament\View\PanelsRenderHook;
 use Filament\Widgets\AccountWidget;
@@ -89,17 +88,12 @@ class AdminPanelProvider extends PanelProvider
             ->login(Login::class)
             ->profile()
             ->passwordReset()
-            ->assets([
-                Css::make('facture-tva', resource_path('css/filament/facture-tva.css')),
-            ])
             ->renderHook(
                 'panels::head.end',
                 fn (): string => '
                     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.min.css" />
                 ' . "\n" . view('filament.components.custom-admin-styles')->render()
-                . "\n" . '<style>'
-                . file_get_contents(resource_path('css/filament/topbar.css'))
-                . '</style>'
+                . "\n" . '<style>' . file_get_contents(resource_path('css/filament/topbar.css')) . '</style>'
             )
             ->renderHook(
                 'panels::body.end',

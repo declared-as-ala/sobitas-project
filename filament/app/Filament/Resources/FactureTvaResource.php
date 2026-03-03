@@ -6,23 +6,23 @@ use App\Filament\Resources\FactureTvaResource\Pages;
 use App\Models\Client;
 use App\Models\Coordinate;
 use App\Models\FactureTva;
-use App\Models\Product;
+use Filament\Actions;
 use Filament\Forms;
 use Filament\Forms\Components\Repeater;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
-use Illuminate\Support\HtmlString;
+use Filament\Tables;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class FactureTvaResource extends Resource
 {
     protected static ?string $model = FactureTva::class;
-
-    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-document-duplicate';
-    protected static string|\UnitEnum|null $navigationGroup = 'Facturation & Tickets';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-document-duplicate';
+    protected static string | \UnitEnum | null $navigationGroup = 'Facturation & Tickets';
     protected static ?int $navigationSort = 2;
-
     protected static ?string $modelLabel = 'Facture TVA';
     protected static ?string $pluralModelLabel = 'Factures TVA';
     protected static ?string $recordTitleAttribute = 'numero';
@@ -36,307 +36,184 @@ class FactureTvaResource extends Resource
     {
         $coordinate = Coordinate::getCached();
         $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
-
         return $schema->schema([
-            Grid::make(12)->schema([
-                // LEFT
+            Grid::make(3)->schema([
+                /* Left column (2/3): Company compact + Client + Produits */
                 Grid::make(1)->schema([
-                    Section::make('Informations entreprise')
-                        ->extraAttributes(['class' => 'ftva-card'])
+                    Forms\Components\Placeholder::make('company_info')
+                        ->label('')
+                        ->content(fn () => $coordinate ? new \Illuminate\Support\HtmlString(view('filament.components.company-info-compact', ['coordinate' => $coordinate])->render()) : '—'),
+                    Section::make('Client')
                         ->schema([
-                            Forms\Components\Placeholder::make('company_info')
-                                ->label('')
-                                ->content(fn () => new HtmlString(
-                                    view('filament.facture-tva.company-card', [
-                                        'coordinate' => $coordinate,
-                                    ])->render()
-                                )),
-                        ]),
-
-                        Section::make('Client')
-                        ->extraAttributes(['class' => 'ftva-card'])
-                        ->schema([
-                            Grid::make(12)->schema([
-                                Forms\Components\Select::make('client_id')
-                                    ->label('Client *')
-                                    ->relationship('client', 'name')
-                                    ->getOptionLabelFromRecordUsing(fn ($record) => (string) ($record->name ?? ('Client #' . $record->id)))
-                                    ->searchable()
-                                    ->preload()
-                                    ->required()
-                                    ->live() // realtime
-                                    ->columnSpan(12)
-                                    ->afterStateHydrated(function ($state, $set) {
-                                        // ensure address/phone loaded on edit
-                                        if ($state) {
-                                            $client = Client::find($state);
-                                            $set('client_adresse', $client?->adresse ?? '');
-                                            $set('client_phone', $client?->phone_1 ?? '');
-                                        }
-                                    })
-                                    ->afterStateUpdated(function ($state, $set) {
-                                        if ($state) {
-                                            $client = Client::find($state);
-                                            $set('client_adresse', $client?->adresse ?? '');
-                                            $set('client_phone', $client?->phone_1 ?? '');
-                                        } else {
-                                            $set('client_adresse', '');
-                                            $set('client_phone', '');
-                                        }
-                                    }),
-
-                                Forms\Components\TextInput::make('client_adresse')
-                                    ->label('Adresse')
-                                    ->disabled()
-                                    ->dehydrated(false)
-                                    ->columnSpan(6),
-
-                                Forms\Components\TextInput::make('client_phone')
-                                    ->label('N° Tel')
-                                    ->disabled()
-                                    ->dehydrated(false)
-                                    ->columnSpan(6),
-                            ]),
+                            Forms\Components\Select::make('client_id')
+                                ->label('Client')
+                                ->relationship('client', 'name')
+                                ->getOptionLabelFromRecordUsing(fn ($record) => (string) ($record->name ?? 'Client #' . $record->id))
+                                ->searchable()
+                                ->preload()
+                                ->required()
+                                ->live()
+                                ->afterStateUpdated(function ($state, $set) {
+                                    if ($state) {
+                                        $client = Client::find($state);
+                                        $set('client_adresse', $client?->adresse ?? '');
+                                        $set('client_phone', $client?->phone_1 ?? '');
+                                    } else {
+                                        $set('client_adresse', '');
+                                        $set('client_phone', '');
+                                    }
+                                }),
+                            Forms\Components\TextInput::make('client_adresse')->label('Adresse')->disabled()->dehydrated(false),
+                            Forms\Components\TextInput::make('client_phone')->label('N° Tél')->disabled()->dehydrated(false),
                         ])
+                        ->columns(1)
                         ->collapsible(),
-
                     Section::make('Produits')
-                        ->extraAttributes(['class' => 'ftva-card'])
                         ->schema([
-                            Forms\Components\Placeholder::make('barcode_box')
+                            Forms\Components\Placeholder::make('barcode_scan')
                                 ->label('')
-                                ->content(fn () => new HtmlString(view('filament.facture-tva.barcode-row')->render())),
-
+                                ->content(fn () => new \Illuminate\Support\HtmlString(view('filament.components.barcode-scan-compact')->render())),
                             Repeater::make('details')
                                 ->label('')
-                                ->addActionLabel('Ajouter un produit')
-                                ->defaultItems(0)
-                                ->reorderable(false)
-                                ->collapsible(false)
-                                ->live() // makes state updates propagate
-                                ->extraAttributes(['class' => 'ftva-lines ftva-counter'])
-                                ->deleteAction(fn ($action) => $action
-                                    ->icon('heroicon-o-trash')
-                                    ->color('danger')
-                                    ->iconButton()
-                                    ->tooltip('Supprimer')
-                                )
-                                ->afterStateHydrated(function ($state, $set, $get) {
-                                    // recalc on load
-                                    self::recalculateFactureTvaTotals($get, $set);
-                                })
-                                ->afterStateUpdated(function ($state, $set, $get) {
+                                ->live()
+                                ->afterStateUpdated(function ($set, $get) {
                                     self::recalculateFactureTvaTotals($get, $set);
                                 })
                                 ->schema([
-                                    Grid::make(12)->schema([
-                                        // Header line: auto-number bubble (CSS) + product name
-                                        Forms\Components\Placeholder::make('line_title')
-                                            ->label('')
-                                            ->content(function ($get) {
-                                                $name = 'Nouvel article';
-                                                if ($id = $get('produit_id')) {
-                                                    $p = Product::find($id);
-                                                    $name = $p?->designation_fr ?? $name;
-                                                }
-                                                return new HtmlString('<div class="ftva-line-head"><div class="ftva-line-title">' . e($name) . '</div></div>');
-                                            })
-                                            ->columnSpan(12),
+                                    Forms\Components\Select::make('produit_id')
+                                        ->label('Produit')
+                                        ->options(fn () => \App\Models\Product::where('qte', '>', 0)->get()->mapWithKeys(fn ($p) => [$p->id => ($p->designation_fr ?? '') . ' (' . (int) $p->qte . ')'])->all())
+                                        ->searchable()
+                                        ->preload()
+                                        ->required()
+                                        ->live()
+                                        ->columnSpan(7)
+                                        ->afterStateUpdated(function ($state, $set) {
+                                            if ($state && $product = \App\Models\Product::find($state)) {
+                                                $set('prix_unitaire', (float) ($product->prix ?? 0));
+                                            }
+                                        }),
+                                    Forms\Components\TextInput::make('qte')
+                                        ->label('Qté')
+                                        ->numeric()
+                                        ->default(1)
+                                        ->minValue(1)
+                                        ->required()
+                                        ->live(debounce: 300)
+                                        ->columnSpan(1),
+                                    Forms\Components\TextInput::make('prix_unitaire')
+                                        ->label('P.U')
+                                        ->numeric()
+                                        ->default(0)
+                                        ->prefix('DT')
+                                        ->required()
+                                        ->live(debounce: 300)
+                                        ->columnSpan(2),
+                                    Forms\Components\Placeholder::make('prix_ht_display')
+                                        ->label('P.T/HT')
+                                        ->content(fn ($get) => number_format((float) $get('qte') * (float) $get('prix_unitaire'), 3, '.', ' ') . ' DT')
+                                        ->extraAttributes(['style' => 'text-align: right;'])
+                                        ->columnSpan(2),
+                                    Forms\Components\TextInput::make('tva_pct')
+                                        ->label('TVA %')
+                                        ->numeric()
+                                        ->default($defaultTva)
+                                        ->suffix('%')
+                                        ->required()
+                                        ->live(debounce: 300)
+                                        ->columnSpan(1),
+                                    Forms\Components\Placeholder::make('prix_ttc_display')
+                                        ->label('TVA (DT)')
+                                        ->content(fn ($get) => number_format((float) $get('qte') * (float) $get('prix_unitaire') * (float) ($get('tva_pct') ?? $defaultTva) / 100, 3, '.', ' ') . ' DT')
+                                        ->extraAttributes(['style' => 'text-align: right;'])
+                                        ->columnSpan(1),
+                                ])
+                                ->columns(12)
+                                ->defaultItems(1)
+                                ->addActionLabel('Ajouter produit')
+                                ->columnSpanFull()
+                                ->itemLabel(fn (array $state) => isset($state['produit_id']) ? (\App\Models\Product::find($state['produit_id'])?->designation_fr ?? 'Ligne') : 'Ligne'),
+                        ])
+                        ->columnSpanFull(),
+                ])->columnSpan(2),
 
-                                        Forms\Components\Select::make('produit_id')
-                                            ->label('Produit *')
-                                            ->options(function () {
-                                                $options = [];
-
-                                                $products = Product::query()
-                                                    ->orderBy('designation_fr')
-                                                    ->get(['id', 'designation_fr', 'qte']);
-
-                                                foreach ($products as $p) {
-                                                    $label = $p->designation_fr ?: ('Produit #' . $p->id);
-
-                                                    if ($p->qte !== null) {
-                                                        $label .= ' (' . (int) $p->qte . ')';
-                                                    }
-
-                                                    $options[$p->id] = (string) $label;
-                                                }
-
-                                                return $options;
-                                            })
-                                            ->searchable()
-                                            ->preload()
-                                            ->required()
-                                            ->live()
-                                            ->columnSpan(7)
-                                            ->afterStateUpdated(function ($state, $set, $get) {
-                                                if ($state && ($p = Product::find($state))) {
-                                                    $set('prix_unitaire', (float) ($p->prix ?? 0));
-                                                }
-                                                self::recalculateFactureTvaTotals($get, $set);
-                                            }),
-
-                                        Forms\Components\TextInput::make('qte')
-                                            ->label('Qté')
-                                            ->numeric()
-                                            ->default(1)
-                                            ->minValue(1)
-                                            ->required()
-                                            ->live(debounce: 200)
-                                            ->columnSpan(1)
-                                            ->afterStateUpdated(fn ($state, $set, $get) => self::recalculateFactureTvaTotals($get, $set)),
-
-                                        Forms\Components\TextInput::make('prix_unitaire')
-                                            ->label('P.U HT')
-                                            ->numeric()
-                                            ->default(0)
-                                            ->suffix('DT')
-                                            ->required()
-                                            ->live(debounce: 200)
-                                            ->columnSpan(2)
-                                            ->afterStateUpdated(fn ($state, $set, $get) => self::recalculateFactureTvaTotals($get, $set)),
-
-                                        Forms\Components\Placeholder::make('pt_ht')
-                                            ->label('P.T HT')
-                                            ->content(function ($get) {
-                                                $ht = (float) ($get('qte') ?? 0) * (float) ($get('prix_unitaire') ?? 0);
-                                                return number_format($ht, 3, '.', ' ') . ' DT';
-                                            })
-                                            ->extraAttributes(['class' => 'ftva-amount'])
-                                            ->columnSpan(2),
-
-                                        Forms\Components\TextInput::make('tva_pct')
-                                            ->label('TVA')
-                                            ->numeric()
-                                            ->default($defaultTva)
-                                            ->suffix('%')
-                                            ->required()
-                                            ->live(debounce: 200)
-                                            ->columnSpan(2)
-                                            ->afterStateUpdated(fn ($state, $set, $get) => self::recalculateFactureTvaTotals($get, $set)),
-
-                                        Forms\Components\Placeholder::make('total_ttc')
-                                            ->label('Total TTC')
-                                            ->content(function ($get) use ($defaultTva) {
-                                                $qte = (float) ($get('qte') ?? 0);
-                                                $pu  = (float) ($get('prix_unitaire') ?? 0);
-                                                $tva = (float) ($get('tva_pct') ?? $defaultTva);
-                                                $ttc = ($qte * $pu) * (1 + $tva / 100);
-                                                return number_format($ttc, 3, '.', ' ') . ' DT';
-                                            })
-                                            ->extraAttributes(['class' => 'ftva-amount'])
-                                            ->columnSpan(10),
-
-                                        Forms\Components\Placeholder::make('tva_line')
-                                            ->label('')
-                                            ->content(function ($get) use ($defaultTva) {
-                                                $qte = (float) ($get('qte') ?? 0);
-                                                $pu  = (float) ($get('prix_unitaire') ?? 0);
-                                                $tva = (float) ($get('tva_pct') ?? $defaultTva);
-
-                                                $ht = $qte * $pu;
-                                                $tvaAmount = $ht * $tva / 100;
-
-                                                return new HtmlString(
-                                                    '<div class="ftva-line-sub">TVA ' . e((string)round($tva)) . '% : ' .
-                                                    e(number_format($tvaAmount, 3, '.', ' ')) . ' DT</div>'
-                                                );
-                                            })
-                                            ->columnSpan(12),
-                                    ]),
-                                ]),
-                        ]),
-                ])->columnSpan(8),
-
-                // RIGHT (Recap)
-                Section::make('Récapitulatif')
-                    ->extraAttributes(['class' => 'ftva-recap ftva-sticky'])
+                /* Right column (1/3): Totaux sticky */
+                Section::make('Totaux')
                     ->schema([
-                        Forms\Components\Placeholder::make('recap_header')
-                            ->label('')
-                            ->content(fn ($get) => new HtmlString(
-                                '<div class="ftva-recap-head">
-                                    <div class="ftva-recap-title">Récapitulatif</div>
-                                    <div class="ftva-recap-sub">Facture <span>#' . e((string)($get('numero') ?? '—')) . '</span></div>
-                                </div>'
-                            )),
-
-                        Forms\Components\TextInput::make('prix_ht')
-                            ->label('Sous-total HT')
-                            ->suffix('DT')
-                            ->disabled()
-                            ->dehydrated(false)
-                            ->live()
-                            ->default(0),
-
-                        Forms\Components\TextInput::make('remise')
-                            ->label('Remise')
-                            ->suffix('DT')
-                            ->numeric()
-                            ->default(0)
-                            ->live(debounce: 200)
-                            ->afterStateUpdated(fn ($state, $set, $get) => self::recalculateFactureTvaTotals($get, $set)),
-
-                        Forms\Components\TextInput::make('pourcentage_remise')
-                            ->label('Remise %')
-                            ->suffix('%')
-                            ->numeric()
-                            ->default(0)
-                            ->live(debounce: 200),
-
-                        Forms\Components\TextInput::make('prix_ht_apres_remise')
-                            ->label('HT après remise')
-                            ->suffix('DT')
-                            ->disabled()
-                            ->dehydrated(false)
-                            ->live()
-                            ->default(0),
-
-                        Forms\Components\TextInput::make('tva')
-                            ->label('TVA')
-                            ->suffix('DT')
-                            ->disabled()
-                            ->dehydrated(false)
-                            ->live()
-                            ->default(0),
-
-                        Forms\Components\TextInput::make('timbre')
-                            ->label('Timbre')
-                            ->suffix('DT')
-                            ->numeric()
-                            ->default(1)
-                            ->live(debounce: 200)
-                            ->afterStateUpdated(fn ($state, $set, $get) => self::recalculateFactureTvaTotals($get, $set)),
-
-                        Forms\Components\TextInput::make('prix_ttc')
-                            ->label('Total TTC')
-                            ->suffix('DT')
-                            ->disabled()
-                            ->dehydrated(false)
-                            ->live()
-                            ->default(0),
-
-                        Forms\Components\Hidden::make('net_a_payer')->default(0),
-
-                        Forms\Components\Placeholder::make('net_banner')
-                            ->label('')
-                            ->content(fn ($get) => new HtmlString(
-                                '<div class="ftva-net">
-                                    <div class="ftva-net-label">NET À PAYER</div>
-                                    <div class="ftva-net-val">' . e(number_format((float)($get('net_a_payer') ?? 0), 3, '.', ' ')) . ' DT</div>
-                                </div>'
-                            )),
-
-                        // Buttons inside recap like screenshot
-                        Forms\Components\Placeholder::make('recap_buttons')
-                            ->label('')
-                            ->content(fn () => new HtmlString(view('filament.facture-tva.recap-actions')->render())),
+                        Forms\Components\TextInput::make('prix_ht')->label('Sous-total HT')->numeric()->prefix('DT')->disabled()->dehydrated(false)->default(0),
+                        Forms\Components\TextInput::make('remise')->label('Remise')->numeric()->prefix('DT')->default(0)->live()->afterStateUpdated(fn ($state, $get, $set) => self::recalculateFactureTvaTotals($get, $set)),
+                        Forms\Components\Placeholder::make('remise_error')->label('')->content(fn ($get) => (float) ($get('remise') ?? 0) > (float) ($get('prix_ht') ?? 0) ? new \Illuminate\Support\HtmlString('<p class="text-sm text-danger-600 dark:text-danger-400">La remise ne peut pas dépasser le sous-total.</p>') : '')->visible(fn ($get) => (float) ($get('remise') ?? 0) > (float) ($get('prix_ht') ?? 0)),
+                        Forms\Components\TextInput::make('pourcentage_remise')->label('Remise %')->numeric()->suffix('%')->default(0)->live(),
+                        Forms\Components\TextInput::make('prix_ht_apres_remise')->label('HT après remise')->numeric()->prefix('DT')->disabled()->dehydrated(false)->default(0),
+                        Forms\Components\TextInput::make('tva')->label('TVA')->numeric()->prefix('DT')->disabled()->dehydrated(false)->default(0),
+                        Forms\Components\TextInput::make('timbre')->label('Timbre')->numeric()->prefix('DT')->default(0)->live()->afterStateUpdated(fn ($state, $get, $set) => self::recalculateFactureTvaTotals($get, $set)),
+                        Forms\Components\TextInput::make('prix_ttc')->label('Total TTC')->numeric()->prefix('DT')->disabled()->dehydrated(false)->default(0),
+                        Forms\Components\TextInput::make('net_a_payer')->label('NET À PAYER')->numeric()->prefix('DT')->disabled()->dehydrated(false)->default(0)->extraInputAttributes(['class' => 'font-bold text-lg']),
                     ])
-                    ->columnSpan(4),
+                    ->columns(1)
+                    ->columnSpan(1)
+                    ->extraAttributes(['class' => 'doc-totaux-sidebar']),
             ])->columnSpanFull(),
 
             Forms\Components\Hidden::make('numero'),
         ]);
+    }
+
+    public static function table(Table $table): Table
+    {
+        // Root cause fix: facture_tvas.tva stores TVA AMOUNT (TND), not rate. The previous column
+        // displayed it with suffix '%', producing nonsense (e.g. 23978%). We now show TVA % (derived)
+        // and TVA (DT) (amount) separately.
+        return $table
+            ->modifyQueryUsing(fn (Builder $query) => $query->with('client:id,name'))
+            ->columns([
+                Tables\Columns\TextColumn::make('numero')->label('N°')->searchable()->sortable(),
+                Tables\Columns\TextColumn::make('status')
+                    ->label('Statut')
+                    ->badge()
+                    ->formatStateUsing(fn ($state) => $state?->label() ?? (is_string($state) ? $state : '—'))
+                    ->color(fn ($state) => match ($state?->value ?? '') {
+                        'issued' => 'info',
+                        'paid' => 'success',
+                        'partially_paid' => 'warning',
+                        'canceled' => 'danger',
+                        default => 'gray',
+                    })
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('client.name')->label('Client')->searchable()->sortable(),
+                Tables\Columns\TextColumn::make('prix_ttc')->label('Total TTC')->money('TND')->sortable(),
+                Tables\Columns\TextColumn::make('tva_rate_display')
+                    ->label('TVA %')
+                    ->getStateUsing(fn (FactureTva $record) => $record->getTvaRatePercent())
+                    ->formatStateUsing(fn ($state) => $state !== null ? (round($state) == $state ? (int) $state : $state) . '%' : '—')
+                    ->badge()
+                    ->color('gray'),
+                Tables\Columns\TextColumn::make('tva_amount_display')
+                    ->label('TVA (DT)')
+                    ->getStateUsing(fn (FactureTva $record) => $record->getTvaAmount())
+                    ->formatStateUsing(fn ($state) => number_format((float) $state, 3, '.', ' ') . ' DT')
+                    ->sortable(query: function ($query, string $direction) {
+                        return $query->orderBy('tva', $direction);
+                    }),
+                Tables\Columns\TextColumn::make('created_at')->label('Date')->dateTime('d/m/Y')->sortable(),
+            ])
+            ->defaultSort('created_at', 'desc')
+            ->defaultPaginationPageOption(25)
+            ->actions([
+                Actions\EditAction::make(),
+                Actions\Action::make('print')
+                    ->label('Imprimer')
+                    ->icon('heroicon-o-printer')
+                    ->color('gray')
+                    ->modalHeading('Aperçu d\'impression')
+                    ->modalContent(fn (FactureTva $record) => view('filament.components.print-modal', [
+                        'printUrl' => route('facture-tvas.print', ['factureTva' => $record->id]),
+                        'title' => 'Facture ' . $record->numero,
+                    ]))
+                    ->modalSubmitAction(false),
+                Actions\DeleteAction::make(),
+            ])
+            ->bulkActions([Actions\DeleteBulkAction::make()]);
     }
 
     public static function recalculateFactureTvaTotals($get, $set): void
@@ -344,7 +221,6 @@ class FactureTvaResource extends Resource
         $details = $get('details') ?? [];
         $totalHt = 0.0;
         $totalTva = 0.0;
-
         foreach ($details as $d) {
             if (!empty($d['produit_id'])) {
                 $ht = (float) ($d['qte'] ?? 0) * (float) ($d['prix_unitaire'] ?? 0);
@@ -353,23 +229,21 @@ class FactureTvaResource extends Resource
                 $totalTva += $ht * $tvaPct / 100;
             }
         }
-
         $remise = (float) ($get('remise') ?? 0);
-        $htApresRemise = max(0, $totalHt - $remise);
-
-        $tvaApresRemise = $totalHt > 0
-            ? max(0, $totalTva - ($totalTva * $remise / $totalHt))
-            : 0.0;
-
-        $timbre = (float) ($get('timbre') ?? 1);
-        $prixTtc = $htApresRemise + $tvaApresRemise;
-        $net = $prixTtc + $timbre;
-
+        $htApresRemise = $totalHt - $remise;
+        $tvaApresRemise = $totalHt > 0 ? $totalTva - ($totalTva * $remise / $totalHt) : 0.0;
+        $timbre = (float) ($get('timbre') ?? 0);
+        $net = $htApresRemise + $tvaApresRemise + $timbre;
         $set('prix_ht', $totalHt);
         $set('prix_ht_apres_remise', $htApresRemise);
         $set('tva', $tvaApresRemise);
-        $set('prix_ttc', $prixTtc);
+        $set('prix_ttc', $htApresRemise + $tvaApresRemise);
         $set('net_a_payer', $net);
+    }
+
+    public static function getRelations(): array
+    {
+        return [];
     }
 
     public static function getPages(): array
