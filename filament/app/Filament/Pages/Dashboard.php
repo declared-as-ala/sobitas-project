@@ -10,7 +10,6 @@ use App\Filament\Widgets\GeographicChart;
 use App\Filament\Widgets\LatestCommandes;
 use App\Filament\Widgets\MarketplaceKpis;
 use App\Filament\Widgets\MonthlyRevenueComparison;
-use App\Filament\Widgets\MultiMetricChart;
 use App\Filament\Widgets\RevenueChart;
 use App\Filament\Widgets\StatsOverview;
 use App\Filament\Widgets\TopCategoriesChart;
@@ -44,7 +43,6 @@ class Dashboard extends BaseDashboard
             MarketplaceKpis::class,
 
             RevenueChart::class,
-            MultiMetricChart::class,
             TopCategoriesChart::class,
             MonthlyRevenueComparison::class,
             GeographicChart::class,

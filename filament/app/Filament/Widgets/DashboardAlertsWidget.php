@@ -2,16 +2,8 @@
 
 namespace App\Filament\Widgets;
 
-use App\Enums\BlStatus;
-use App\Enums\InvoiceStatus;
 use App\Filament\Pages\Stock\StockReportsPage;
-use App\Filament\Resources\CommandeResource;
-use App\Filament\Resources\FactureResource;
-use App\Filament\Resources\FactureTvaResource;
 use App\Filament\Resources\ProductResource;
-use App\Models\Commande;
-use App\Models\Facture;
-use App\Models\FactureTva;
 use App\Models\Product;
 use Filament\Widgets\Widget;
 use Livewire\Attributes\On;
@@ -76,40 +68,6 @@ class DashboardAlertsWidget extends Widget
             'button_label' => 'Voir stock faible',
             'button_url' => StockReportsPage::getUrl(),
             'type' => 'warning',
-        ];
-
-        // 3) Commandes à préparer / en attente
-        $pendingCommandes = Commande::query()
-            ->whereIn('etat', ['nouvelle_commande', 'en_cours_de_preparation'])
-            ->count();
-        $commandesUrl = CommandeResource::getUrl('index') . '?tableFilters[etat][value]=nouvelle_commande';
-        $alerts['commandes_attente'] = [
-            'icon' => 'heroicon-o-clock',
-            'title' => 'Commandes à préparer',
-            'description' => 'Nouvelles ou en cours de préparation',
-            'metric' => (string) $pendingCommandes,
-            'badge_label' => 'Info',
-            'badge_color' => 'blue',
-            'button_label' => 'Voir les commandes',
-            'button_url' => $commandesUrl,
-            'type' => 'info',
-        ];
-
-        // 4) Factures / BL en brouillon
-        $blDraftCount = Facture::query()->where('status', BlStatus::Draft)->count();
-        $factureDraftCount = FactureTva::query()->where('status', InvoiceStatus::Draft)->count();
-        $draftTotal = $blDraftCount + $factureDraftCount;
-        $blUrl = FactureResource::getUrl('index') . '?tableFilters[status][value]=draft';
-        $alerts['brouillon'] = [
-            'icon' => 'heroicon-o-document-text',
-            'title' => 'Factures / BL en brouillon',
-            'description' => $blDraftCount . ' BL, ' . $factureDraftCount . ' facture(s) TVA',
-            'metric' => (string) $draftTotal,
-            'badge_label' => 'Info',
-            'badge_color' => 'blue',
-            'button_label' => 'Voir les brouillons',
-            'button_url' => $blUrl,
-            'type' => 'info',
         ];
 
         return $alerts;
