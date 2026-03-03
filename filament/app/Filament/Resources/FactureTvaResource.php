@@ -113,7 +113,7 @@ class FactureTvaResource extends Resource
                                     ->reorderable(false)
                                     ->addActionLabel('Ajouter un produit')
                                     ->extraAttributes(['class' => 'ftva-lines'])
-                                    ->afterStateUpdated(function ($state, $set, $get) {
+                                    ->afterStateUpdated(function ($set, $get) {
                                         self::recalculateFactureTvaTotals($get, $set);
                                     })
                                     ->schema([
@@ -121,11 +121,7 @@ class FactureTvaResource extends Resource
                                             // Left: number bubble + title
                                             Forms\Components\Placeholder::make('line_header')
                                                 ->label('')
-                                                ->content(function ($get, $state, $livewire) {
-                                                    $items = $livewire->data['details'] ?? [];
-                                                    $index = 1;
-                                                    // compute index from current state pointer (best-effort)
-                                                    // Filament doesn't give direct index here reliably, so we show bullet style anyway.
+                                                ->content(function ($get) {
                                                     $name = 'Nouvel article';
                                                     if ($id = $get('produit_id')) {
                                                         $p = Product::find($id);
@@ -134,7 +130,7 @@ class FactureTvaResource extends Resource
 
                                                     return new HtmlString(
                                                         '<div class="ftva-line-head">
-                                                            <div class="ftva-line-num">' . e((string)$index) . '</div>
+                                                            <div class="ftva-line-num">•</div>
                                                             <div class="ftva-line-title">' . e($name) . '</div>
                                                         </div>'
                                                     );
