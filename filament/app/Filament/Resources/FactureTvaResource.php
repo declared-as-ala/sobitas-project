@@ -115,7 +115,7 @@ class FactureTvaResource extends Resource
                                 ->collapsible(false)
                                 ->live() // makes state updates propagate
                                 ->extraAttributes(['class' => 'ftva-lines ftva-counter'])
-                                ->deleteAction(fn (Forms\Components\Actions\Action $action) => $action
+                                ->deleteAction(fn ($action) => $action
                                     ->icon('heroicon-o-trash')
                                     ->color('danger')
                                     ->iconButton()
