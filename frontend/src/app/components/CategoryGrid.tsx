@@ -8,6 +8,13 @@ import Image from 'next/image';
 import type { Category } from '@/types';
 import { getStorageUrl } from '@/services/api';
 
+// Placeholder when category has no cover or image fails (404/504) – sports/fitness themed
+const CATEGORY_PLACEHOLDER_SVG =
+  'data:image/svg+xml,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" fill="none"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:%23b91c1c"/><stop offset="100%" style="stop-color:%237f1d1d"/></linearGradient></defs><rect width="400" height="300" fill="url(%23g)"/><g fill="%23fff" opacity="0.15"><path d="M200 120h-24v60h24v-60zm-80 20h-20v40h20v-40zm160 0h-20v40h20v-40zm-100-30l-15 50h20l12-50h-17zm66 0l-12 50h20l15-50h-23z"/></g></svg>'
+  );
+
 interface CategoryGridProps {
   categories?: Category[];
 }
@@ -49,13 +56,19 @@ function CategoryCard({ category }: { category: Category }) {
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 33vw"
               loading="lazy"
               quality={70}
+              unoptimized={imageUrl.includes('admin.protein.tn') || imageUrl.includes('admin.sobitas.tn')}
               onError={() => setImageError(true)}
             />
           ) : (
-            /* Fallback: gradient + shimmer when no cover or image failed. Keeps card visually consistent. */
-            <div
-              className="absolute inset-0 bg-gradient-to-br from-red-600 to-red-800 animate-shimmer-placeholder"
+            /* Fallback: placeholder image (same red gradient style) so the card always shows an image */
+            <Image
+              src={CATEGORY_PLACEHOLDER_SVG}
+              alt=""
+              fill
+              className="object-cover object-center block"
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 33vw"
               aria-hidden="true"
+              unoptimized
             />
           )}
         </div>

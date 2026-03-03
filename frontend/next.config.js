@@ -50,6 +50,13 @@ const nextConfig = {
       },
     ];
   },
+  async rewrites() {
+    // Dev/local: avoid CORS by proxying API and storage through Next.js (browser calls same origin).
+    return [
+      { source: '/api-proxy/:path*', destination: `${API_BACKEND_URL}/:path*` },
+      { source: '/storage-proxy/:path*', destination: `${STORAGE_BACKEND_URL}/:path*` },
+    ];
+  },
   async redirects() {
     return [
       {

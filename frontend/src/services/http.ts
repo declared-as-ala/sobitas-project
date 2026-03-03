@@ -3,10 +3,13 @@
  * Use for GET calls to the backend API to avoid 429 and duplicate requests.
  */
 
-const API_BASE =
-  typeof process !== 'undefined'
-    ? (process.env.NEXT_PUBLIC_API_BASE_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'https://admin.protein.tn/api')
-    : '';
+function getApiBase(): string {
+  if (typeof window !== 'undefined' && /^localhost$|^127\.0\.0\.1$/i.test(window.location.hostname)) {
+    return `${window.location.origin}/api-proxy`;
+  }
+  return process.env.NEXT_PUBLIC_API_BASE_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'https://admin.protein.tn/api';
+}
+const API_BASE = getApiBase();
 
 const MAX_429_RETRIES = 2;
 const RETRY_DELAYS_MS = [400, 900];

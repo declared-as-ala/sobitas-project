@@ -160,6 +160,7 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
               loading="lazy"
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
               quality={75}
+              unoptimized={productData.image.includes('admin.protein.tn') || productData.image.includes('admin.sobitas.tn')}
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 target.style.display = 'none';
