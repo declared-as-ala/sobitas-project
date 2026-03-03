@@ -147,7 +147,17 @@ class FactureTvaResource extends Resource
                                             ->options(fn () => Product::query()
                                                 ->orderBy('designation_fr')
                                                 ->get()
-                                                ->mapWithKeys(fn ($p) => [$p->id => ($p->designation_fr ?? ('Produit #' . $p->id))])
+                                                ->mapWithKeys(function ($p) {
+                                                    $label = ($p->designation_fr ?: ('Produit #' . $p->id));
+                                                    // Append stock quantity if available
+                                                    if (isset($p->qte)) {
+                                                        $label .= ' (' . (int) $p->qte . ')';
+                                                    }
+
+                                                    return [$p->id => (string) $label];
+                                                })
+                                                // Guard against any null/empty labels
+                                                ->filter(fn ($label) => $label !== null && $label !== '')
                                                 ->all()
                                             )
                                             ->searchable()
