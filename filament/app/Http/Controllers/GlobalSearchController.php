@@ -165,7 +165,7 @@ class GlobalSearchController extends Controller
             })
             ->orderByDesc('created_at')
             ->limit(self::LIMIT_PER_GROUP)
-            ->get(['id', 'numero', 'client_id', 'prix_ttc', 'date_ticket']);
+            ->get(['id', 'numero', 'client_id', 'prix_ttc']);
 
         return $rows->map(fn (Ticket $r) => [
             'id' => $r->id,
