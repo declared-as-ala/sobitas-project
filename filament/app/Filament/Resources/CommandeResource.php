@@ -7,6 +7,7 @@ use App\Models\Commande;
 use App\Models\Message;
 use App\Jobs\SendSmsJob;
 use Filament\Actions;
+use Filament\Actions\ActionGroup;
 use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
@@ -196,28 +197,33 @@ class CommandeResource extends Resource
             ])
             ->actions([
                 Actions\EditAction::make(),
-                Actions\Action::make('createBl')
-                    ->label('Créer BL')
-                    ->icon('heroicon-o-document-text')
+                ActionGroup::make([
+                    Actions\Action::make('createBl')
+                        ->label('Convertir en Bon de livraison')
+                        ->icon('heroicon-o-document-text')
+                        ->requiresConfirmation()
+                        ->modalHeading('Créer un bon de livraison')
+                        ->modalSubmitActionLabel('Confirmer')
+                        ->action(function (Commande $record) {
+                            $bl = app(\App\Services\DocumentConversion\OrderToBlService::class)->createBlFromOrder($record);
+                            Notification::make()
+                                ->title('BL #' . $bl->numero . ' créé')
+                                ->success()
+                                ->actions([
+                                    \Filament\Notifications\Actions\Action::make('open')
+                                        ->label('Ouvrir le document créé')
+                                        ->url(\App\Filament\Resources\FactureResource::getUrl('edit', ['record' => $bl]))
+                                        ->openUrlInNewTab(false),
+                                ])
+                                ->send();
+                            return redirect(\App\Filament\Resources\FactureResource::getUrl('edit', ['record' => $bl]));
+                        }),
+                ])
+                    ->icon('heroicon-o-arrow-path')
+                    ->label('')
+                    ->tooltip('Convertir')
                     ->color('success')
-                    ->visible(fn (Commande $record): bool => ! $record->factures()->exists())
-                    ->requiresConfirmation()
-                    ->modalHeading('Créer un bon de livraison')
-                    ->modalSubmitActionLabel('Confirmer')
-                    ->action(function (Commande $record) {
-                        $bl = app(\App\Services\DocumentConversion\OrderToBlService::class)->createBlFromOrder($record);
-                        Notification::make()
-                            ->title('BL #' . $bl->numero . ' créé')
-                            ->success()
-                            ->actions([
-                                \Filament\Notifications\Actions\Action::make('open')
-                                    ->label('Ouvrir le document créé')
-                                    ->url(\App\Filament\Resources\FactureResource::getUrl('edit', ['record' => $bl]))
-                                    ->openUrlInNewTab(false),
-                            ])
-                            ->send();
-                        return redirect(\App\Filament\Resources\FactureResource::getUrl('edit', ['record' => $bl]));
-                    }),
+                    ->visible(fn (Commande $record): bool => ! $record->factures()->exists()),
                 Actions\DeleteAction::make()
                     ->label('Supprimer')
                     ->modalHeading('Supprimer la commande')

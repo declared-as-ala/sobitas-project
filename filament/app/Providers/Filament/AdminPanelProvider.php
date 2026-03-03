@@ -67,6 +67,7 @@ use Filament\Navigation\NavigationGroup;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\View\PanelsRenderHook;
 use Filament\Widgets\AccountWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -96,7 +97,7 @@ class AdminPanelProvider extends PanelProvider
                 'panels::body.end',
                 fn (): string => '
                     <script src="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.min.js"></script>
-                '
+                    ' . "\n" . view('filament.components.spa-navigation-fix')->render()
             )
             // ── PERFORMANCE: Explicit registration instead of filesystem discovery ──
             // discoverResources/discoverPages/discoverWidgets use Symfony Finder
@@ -114,6 +115,7 @@ class AdminPanelProvider extends PanelProvider
                 ContactResource::class,
                 CoordinateResource::class,
                 CouponResource::class,
+                CreditNoteResource::class,
                 FactureResource::class,
                 FactureTvaResource::class,
                 FaqResource::class,
@@ -215,9 +217,8 @@ class AdminPanelProvider extends PanelProvider
                 'success' => Color::Emerald,
                 'warning' => Color::Amber,
             ])
-            // Global search: real-time feel with 300ms debounce; keybindings
-            ->globalSearchDebounce(300)
-            ->globalSearchKeyBindings(['command+k', 'ctrl+k'])
-            ->globalSearchFieldSuffix(fn (): ?string => null);
+            // Custom global search (single endpoint, grouped results, typeahead)
+            ->globalSearch(false)
+            ->renderHook(PanelsRenderHook::TOPBAR_START, fn (): string => view('filament.components.global-search-wrapper')->render());
     }
 }

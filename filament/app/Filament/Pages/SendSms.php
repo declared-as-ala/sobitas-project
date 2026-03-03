@@ -459,7 +459,7 @@ class SendSms extends Page implements HasForms
         if ($count === 0) {
             if ($mode === 'one') {
                 Notification::make()->title('Téléphone requis')->body('Saisissez un numéro valide (8 chiffres, +216 optionnel).')->danger()->send();
-            } else {
+        } else {
                 Notification::make()->title('Aucun destinataire')->body('Sélectionnez au moins un destinataire.')->warning()->send();
             }
             return;
@@ -497,11 +497,11 @@ class SendSms extends Page implements HasForms
                 ->warning()
                 ->send();
         } else {
-            Notification::make()
+        Notification::make()
                 ->title('Envoi terminé')
                 ->body($sent . ' SMS envoyé(s).')
-                ->success()
-                ->send();
+            ->success()
+            ->send();
         }
 
         $this->form->fill(['custom_message' => '', 'one_phone' => '']);

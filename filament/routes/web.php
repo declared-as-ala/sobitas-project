@@ -195,6 +195,8 @@ Route::middleware(['auth'])->group(function () {
 
 // Dashboard export + email preview - accessible via Filament auth
 Route::middleware(['auth'])->group(function () {
+    Route::get('admin/global-search', \App\Http\Controllers\GlobalSearchController::class)
+        ->name('admin.global-search');
     Route::get('email-campaign-preview', \App\Http\Controllers\EmailPreviewController::class)
         ->name('email-campaign.preview');
     Route::get('dashboard/export', [\App\Http\Controllers\DashboardExportController::class, 'export'])

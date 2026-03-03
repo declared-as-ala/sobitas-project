@@ -1,10 +1,32 @@
 {{-- Design system: Facturation ERP-lite — cards, tables, badges, spacing (see docs/DESIGN_SYSTEM.md) --}}
 <style>
-    /* Main content gutter: clear spacing between sidebar and page content (Devis, Commandes, Tickets, Factures) */
+    /* ── Sticky topbar: header stays fixed on scroll, content has top padding ───────────────────── */
+    .fi-topbar {
+        position: sticky;
+        top: 0;
+        z-index: 40;
+        background: var(--fi-body-bg, #fff);
+        box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.06);
+    }
+    .dark .fi-topbar {
+        background: var(--fi-body-bg);
+    }
+    /* Main content: top padding so content does not render under the sticky header */
+    .fi-main-ctn {
+        padding-top: 0;
+    }
     .fi-main-ctn .fi-main {
+        padding-top: 4rem;
         padding-left: 1.5rem;
         padding-right: 1.5rem;
     }
+    /* Ensure dropdowns (e.g. global search, user menu) appear above content */
+    .fi-topbar [x-data],
+    .fi-dropdown-content {
+        z-index: 50;
+    }
+
+    /* Main content gutter: clear spacing between sidebar and page content (Devis, Commandes, Tickets, Factures) */
     @media (min-width: 1024px) {
         .fi-main-ctn.fi-main-ctn-sidebar-open .fi-main {
             padding-left: 2rem;

@@ -51,9 +51,23 @@ else
     echo "✓ Storage symlink already exists"
 fi
 
-# ── Run migrations (non-destructive) ──────────────────────
+# ── Run migrations (retry if DB not ready; suppress connection errors) ─
 echo "Running migrations..."
-php artisan migrate --force 2>/dev/null || echo "⚠ Migration skipped (DB may not be ready yet)"
+migrate_attempt=1
+migrate_max=5
+while [ "$migrate_attempt" -le "$migrate_max" ]; do
+    if php artisan migrate --force 2>/dev/null 1>/dev/null; then
+        echo "✓ Migrations completed"
+        break
+    fi
+    if [ "$migrate_attempt" -eq "$migrate_max" ]; then
+        echo "⚠ Migration skipped after ${migrate_max} attempts (DB may not be ready)"
+        break
+    fi
+    echo "  DB not ready (attempt $migrate_attempt/$migrate_max), retrying in 3s..."
+    sleep 3
+    migrate_attempt=$((migrate_attempt + 1))
+done
 
 # ── Publish Filament assets ────────────────────────────────
 echo "Publishing Filament assets..."

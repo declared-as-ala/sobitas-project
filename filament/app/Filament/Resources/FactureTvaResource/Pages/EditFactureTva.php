@@ -14,6 +14,7 @@ use Filament\Actions\ActionGroup;
 use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 
 class EditFactureTva extends EditRecord
@@ -166,7 +167,10 @@ class EditFactureTva extends EditRecord
             Actions\Action::make('createCreditNote')
                 ->label('Créer un avoir')
                 ->icon('heroicon-o-document-minus')
-                ->url(fn () => CreditNoteResource::getUrl('create') . '?facture_tva_id=' . $this->record->id),
+                ->visible(fn () => Route::has('filament.admin.resources.credit-notes.create'))
+                ->url(fn () => Route::has('filament.admin.resources.credit-notes.create')
+                    ? CreditNoteResource::getUrl('create') . '?facture_tva_id=' . $this->record->id
+                    : '#'),
             ActionGroup::make([
                 Actions\Action::make('print')
                     ->label('Imprimer')
