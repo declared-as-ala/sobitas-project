@@ -144,22 +144,25 @@ class FactureTvaResource extends Resource
 
                                         Forms\Components\Select::make('produit_id')
                                             ->label('Produit *')
-                                            ->options(fn () => Product::query()
-                                                ->orderBy('designation_fr')
-                                                ->get()
-                                                ->mapWithKeys(function ($p) {
-                                                    $label = ($p->designation_fr ?: ('Produit #' . $p->id));
-                                                    // Append stock quantity if available
-                                                    if (isset($p->qte)) {
+                                            ->options(function () {
+                                                $options = [];
+
+                                                $products = Product::query()
+                                                    ->orderBy('designation_fr')
+                                                    ->get(['id', 'designation_fr', 'qte']);
+
+                                                foreach ($products as $p) {
+                                                    $label = $p->designation_fr ?: ('Produit #' . $p->id);
+
+                                                    if ($p->qte !== null) {
                                                         $label .= ' (' . (int) $p->qte . ')';
                                                     }
 
-                                                    return [$p->id => (string) $label];
-                                                })
-                                                // Guard against any null/empty labels
-                                                ->filter(fn ($label) => $label !== null && $label !== '')
-                                                ->all()
-                                            )
+                                                    $options[$p->id] = (string) $label;
+                                                }
+
+                                                return $options;
+                                            })
                                             ->searchable()
                                             ->preload()
                                             ->required()
