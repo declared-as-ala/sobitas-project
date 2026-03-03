@@ -13,6 +13,7 @@ use Filament\Forms\Components\Repeater;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -321,7 +322,7 @@ class FactureTvaResource extends Resource
 
                         Forms\Components\Hidden::make('net_a_payer')->default(0),
 
-                        Forms\Components\View::make('filament.components.facture-tva.recap-actions'),
+                        View::make('filament.components.facture-tva.recap-actions'),
                     ])
                     ->columnSpan(4),
             ])->columnSpanFull(),
