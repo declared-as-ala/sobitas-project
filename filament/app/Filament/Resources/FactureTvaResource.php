@@ -73,18 +73,6 @@ class FactureTvaResource extends Resource
                             Forms\Components\Placeholder::make('barcode_scan')
                                 ->label('')
                                 ->content(fn () => new \Illuminate\Support\HtmlString(view('filament.components.barcode-scan-compact')->render())),
-                            Forms\Components\Placeholder::make('details_header')
-                                ->label('')
-                                ->content(fn () => new \Illuminate\Support\HtmlString('
-                                    <div class="invoice-edit-lines-header">
-                                        <div>Produit</div>
-                                        <div class="invoice-edit-lines-header-col--num">Qté</div>
-                                        <div class="invoice-edit-lines-header-col--money">P.U HT</div>
-                                        <div class="invoice-edit-lines-header-col--num">TVA %</div>
-                                        <div class="invoice-edit-lines-header-col--money">Total HT</div>
-                                        <div class="invoice-edit-lines-header-col--money">Total TTC</div>
-                                    </div>
-                                ')),
                             Repeater::make('details')
                                 ->label('')
                                 ->live()
@@ -92,6 +80,19 @@ class FactureTvaResource extends Resource
                                     self::recalculateFactureTvaTotals($get, $set);
                                 })
                                 ->schema([
+                                    Forms\Components\Placeholder::make('line_title')
+                                        ->label('')
+                                        ->content(function (Forms\Get $get): \Illuminate\Support\HtmlString {
+                                            $product = null;
+                                            if ($id = $get('produit_id')) {
+                                                $product = \App\Models\Product::find($id);
+                                            }
+
+                                            $text = $product?->designation_fr ?? 'Nouvel article';
+
+                                            return new \Illuminate\Support\HtmlString('<div class="invoice-line-title">' . e($text) . '</div>');
+                                        })
+                                        ->columnSpan(12),
                                     Forms\Components\Select::make('produit_id')
                                         ->label('Produit')
                                         ->options(fn () => \App\Models\Product::where('qte', '>', 0)->get()->mapWithKeys(fn ($p) => [$p->id => ($p->designation_fr ?? '') . ' (' . (int) $p->qte . ')'])->all())
@@ -123,7 +124,7 @@ class FactureTvaResource extends Resource
                                         ->columnSpan(2),
                                     Forms\Components\Placeholder::make('prix_ht_display')
                                         ->label('Total HT')
-                                        ->content(fn ($get) => number_format((float) $get('qte') * (float) $get('prix_unitaire'), 3, '.', ' ') . ' DT')
+                                        ->content(fn (Forms\Get $get) => number_format((float) $get('qte') * (float) $get('prix_unitaire'), 3, '.', ' ') . ' DT')
                                         ->extraAttributes(['class' => 'invoice-edit-lines-repeater-totals'])
                                         ->columnSpan(2),
                                     Forms\Components\TextInput::make('tva_pct')
@@ -136,9 +137,30 @@ class FactureTvaResource extends Resource
                                         ->columnSpan(1),
                                     Forms\Components\Placeholder::make('prix_ttc_display')
                                         ->label('Total TTC')
-                                        ->content(fn ($get) => number_format((float) $get('qte') * (float) $get('prix_unitaire') * (1 + (float) ($get('tva_pct') ?? $defaultTva) / 100), 3, '.', ' ') . ' DT')
+                                        ->content(function (Forms\Get $get) use ($defaultTva): string {
+                                            $qte = (float) ($get('qte') ?? 0);
+                                            $pu = (float) ($get('prix_unitaire') ?? 0);
+                                            $tva = (float) ($get('tva_pct') ?? $defaultTva);
+                                            $totalTtc = $qte * $pu * (1 + $tva / 100);
+
+                                            return number_format($totalTtc, 3, '.', ' ') . ' DT';
+                                        })
                                         ->extraAttributes(['class' => 'invoice-edit-lines-repeater-totals'])
                                         ->columnSpan(1),
+                                    Forms\Components\Placeholder::make('tva_line')
+                                        ->label('')
+                                        ->content(function (Forms\Get $get) use ($defaultTva): \Illuminate\Support\HtmlString {
+                                            $qte = (float) ($get('qte') ?? 0);
+                                            $pu = (float) ($get('prix_unitaire') ?? 0);
+                                            $tva = (float) ($get('tva_pct') ?? $defaultTva);
+                                            $ht = $qte * $pu;
+                                            $tvaAmount = $ht * $tva / 100;
+
+                                            $text = 'TVA ' . number_format($tva, 0) . ' % : ' . number_format($tvaAmount, 3, '.', ' ') . ' DT';
+
+                                            return new \Illuminate\Support\HtmlString('<div class="invoice-line-tva">' . e($text) . '</div>');
+                                        })
+                                        ->columnSpan(12),
                                 ])
                                 ->columns(12)
                                 ->defaultItems(1)

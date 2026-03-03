@@ -1,5 +1,5 @@
 /**
- * Facture TVA editor – table-like product lines.
+ * Facture TVA editor – card-like product lines and recap sidebar.
  * Scoped to the Facture TVA resource only.
  */
 
@@ -7,47 +7,22 @@
     margin-top: 0.5rem;
 }
 
-.fi-resource-facture-tva .invoice-edit-lines-header {
-    display: grid;
-    grid-template-columns: 5fr 1fr 2fr 1fr 2fr 2fr;
-    column-gap: 0.75rem;
-    padding: 0.5rem 0.75rem;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: #6b7280;
-    border-bottom: 1px solid #e5e7eb;
-}
-
-.dark .fi-resource-facture-tva .invoice-edit-lines-header {
-    color: #9ca3af;
-    border-color: rgba(148, 163, 184, 0.4);
-}
-
-.fi-resource-facture-tva .invoice-edit-lines-header-col--num,
-.fi-resource-facture-tva .invoice-edit-lines-header-col--money {
-    text-align: right;
-}
-
 .fi-resource-facture-tva .invoice-edit-lines-repeater .fi-fo-repeater-items > div {
-    border: 0;
-    border-bottom: 1px solid #e5e7eb;
-    border-radius: 0;
-    padding: 0.35rem 0.75rem 0.5rem 0.75rem;
-    margin: 0;
+    border-radius: 0.75rem;
+    border: 1px solid #e5e7eb;
+    background: #ffffff;
+    padding: 0.75rem 0.9rem 0.75rem 0.9rem;
+    margin-bottom: 0.75rem;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
 }
 
 .dark .fi-resource-facture-tva .invoice-edit-lines-repeater .fi-fo-repeater-items > div {
     border-color: rgba(148, 163, 184, 0.4);
-}
-
-.fi-resource-facture-tva .invoice-edit-lines-repeater .fi-fo-repeater-items > div:last-child {
-    border-bottom: none;
+    background: rgba(15, 23, 42, 0.85);
 }
 
 .fi-resource-facture-tva .invoice-edit-lines-repeater .fi-fo-field-wrp-label {
-    font-size: 0.7rem;
+    font-size: 0.72rem;
     text-transform: none;
     color: #6b7280;
 }
@@ -68,9 +43,47 @@
 
 .fi-resource-facture-tva .invoice-edit-lines-repeater-totals {
     text-align: right;
+    font-weight: 600;
 }
 
-.fi-resource-facture-tva .invoice-edit-lines-repeater-add {
-    margin-top: 0.5rem;
+.fi-resource-facture-tva .invoice-line-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+    color: #111827;
+}
+
+.dark .fi-resource-facture-tva .invoice-line-title {
+    color: #f9fafb;
+}
+
+.fi-resource-facture-tva .invoice-line-tva {
+    margin-top: 0.35rem;
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.dark .fi-resource-facture-tva .invoice-line-tva {
+    color: #9ca3af;
+}
+
+.fi-resource-facture-tva .doc-totaux-sidebar {
+    border-radius: 1rem;
+    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.18);
+    overflow: hidden;
+}
+
+.fi-resource-facture-tva .doc-totaux-sidebar .fi-section-header {
+    background: linear-gradient(135deg, #1d4ed8, #1e40af);
+    color: #ffffff;
+}
+
+.fi-resource-facture-tva .doc-totaux-sidebar .fi-section-header h2 {
+    color: #ffffff;
+}
+
+.fi-resource-facture-tva .doc-totaux-sidebar .fi-section-content-ctn {
+    padding-top: 0.9rem;
+    padding-bottom: 0.9rem;
 }
 
