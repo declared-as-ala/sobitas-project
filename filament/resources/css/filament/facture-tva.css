@@ -1,62 +1,48 @@
-/* Scope only this resource pages */
+/* Scope: only Facture TVA pages */
 .fi-resource-facture-tva .ftva-card{
   border: 1px solid #eef2f7;
-  border-radius: 14px;
+  border-radius: 16px;
   background: #fff;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
-}
-
-.dark .fi-resource-facture-tva .ftva-card{
-  background: rgba(15, 23, 42, 0.65);
-  border-color: rgba(148, 163, 184, 0.28);
 }
 
 /* Company card */
 .fi-resource-facture-tva .ftva-company{
   display:flex;
   align-items:center;
-  gap:14px;
+  gap:16px;
   padding:14px;
-  margin-bottom:10px;
 }
 .fi-resource-facture-tva .ftva-company-logo{
-  width:88px;
-  height:54px;
-  border-radius: 12px;
+  width:110px;
+  height:64px;
+  border-radius:14px;
+  background:#f8fafc;
+  border:1px solid #eef2f7;
   display:flex;
   align-items:center;
   justify-content:center;
-  background:#f8fafc;
-  border:1px solid #eef2f7;
-  overflow:hidden;
 }
-.fi-resource-facture-tva .ftva-company-logo img{
-  width:100%;
-  height:100%;
-  object-fit:contain;
-}
-.fi-resource-facture-tva .ftva-company-logo-fallback{
-  font-weight:800;
+.fi-resource-facture-tva .ftva-logo-text{
+  font-weight:900;
   color:#ef4444;
   letter-spacing:0.5px;
 }
 .fi-resource-facture-tva .ftva-company-name{
-  font-weight:700;
+  font-weight:800;
   font-size:14px;
   color:#0f172a;
 }
-.dark .fi-resource-facture-tva .ftva-company-name{ color:#f8fafc; }
 .fi-resource-facture-tva .ftva-company-line{
   font-size:12px;
   color:#64748b;
 }
-.dark .fi-resource-facture-tva .ftva-company-line{ color:#94a3b8; }
 
-/* Barcode row */
+/* Barcode */
 .fi-resource-facture-tva .ftva-barcode{
   display:flex;
-  align-items:center;
   justify-content:space-between;
+  align-items:center;
   gap:12px;
   padding:10px 12px;
   border:1px solid #eef2f7;
@@ -64,21 +50,8 @@
   background:#f8fafc;
   margin-bottom:12px;
 }
-.dark .fi-resource-facture-tva .ftva-barcode{
-  background: rgba(2, 6, 23, 0.3);
-  border-color: rgba(148, 163, 184, 0.22);
-}
-.fi-resource-facture-tva .ftva-barcode-title{
-  font-weight:700;
-  font-size:12px;
-  color:#0f172a;
-}
-.dark .fi-resource-facture-tva .ftva-barcode-title{ color:#f8fafc; }
-.fi-resource-facture-tva .ftva-barcode-sub{
-  font-size:11px;
-  color:#64748b;
-}
-.dark .fi-resource-facture-tva .ftva-barcode-sub{ color:#94a3b8; }
+.fi-resource-facture-tva .ftva-barcode-title{ font-weight:800; font-size:12px; color:#0f172a; }
+.fi-resource-facture-tva .ftva-barcode-sub{ font-size:11px; color:#64748b; }
 .fi-resource-facture-tva .ftva-barcode-input{
   width:220px;
   height:34px;
@@ -88,13 +61,8 @@
   background:#fff;
   font-size:12px;
 }
-.dark .fi-resource-facture-tva .ftva-barcode-input{
-  background: rgba(15,23,42,0.7);
-  border-color: rgba(148,163,184,0.28);
-  color:#e2e8f0;
-}
 
-/* Product lines (repeater) */
+/* Repeater cards */
 .fi-resource-facture-tva .ftva-lines .fi-fo-repeater-items > div{
   border-radius: 14px;
   border: 1px solid #eef2f7;
@@ -102,19 +70,24 @@
   padding: 12px;
   margin-bottom: 10px;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
-}
-.dark .fi-resource-facture-tva .ftva-lines .fi-fo-repeater-items > div{
-  background: rgba(15, 23, 42, 0.65);
-  border-color: rgba(148, 163, 184, 0.22);
+  position: relative;
 }
 
+/* AUTO NUMBER like screenshot (1,2,3...) */
+.fi-resource-facture-tva .ftva-counter{
+  counter-reset: ftvaLine;
+}
+.fi-resource-facture-tva .ftva-counter .fi-fo-repeater-items > div{
+  counter-increment: ftvaLine;
+}
 .fi-resource-facture-tva .ftva-line-head{
   display:flex;
   align-items:center;
   gap:10px;
   margin-bottom: 8px;
 }
-.fi-resource-facture-tva .ftva-line-num{
+.fi-resource-facture-tva .ftva-line-head::before{
+  content: counter(ftvaLine);
   width:22px;
   height:22px;
   border-radius:999px;
@@ -122,61 +95,56 @@
   align-items:center;
   justify-content:center;
   font-size:12px;
-  font-weight:700;
+  font-weight:800;
   background:#eaf1ff;
   color:#2563eb;
 }
 .fi-resource-facture-tva .ftva-line-title{
   font-size:13px;
-  font-weight:700;
+  font-weight:800;
   color:#0f172a;
 }
-.dark .fi-resource-facture-tva .ftva-line-title{ color:#f8fafc; }
 
-.fi-resource-facture-tva .ftva-right-amount{
+/* Amount right blue */
+.fi-resource-facture-tva .ftva-amount{
   text-align:right;
-  font-weight:700;
+  font-weight:800;
   color:#2563eb;
 }
 
+/* TVA line small */
 .fi-resource-facture-tva .ftva-line-sub{
   margin-top:6px;
   font-size:12px;
   color:#64748b;
 }
-.dark .fi-resource-facture-tva .ftva-line-sub{ color:#94a3b8; }
 
-/* Recap sidebar */
+/* Recap */
 .fi-resource-facture-tva .ftva-recap{
   padding:0;
   overflow:hidden;
   border-radius: 16px;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.18);
+  border: 1px solid #eef2f7;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
 }
 .fi-resource-facture-tva .ftva-recap .fi-section-content{
-  padding: 12px 12px 14px 12px;
+  padding: 12px;
 }
 .fi-resource-facture-tva .ftva-recap-head{
   padding: 14px 14px 12px 14px;
-  background: linear-gradient(135deg, #4f46e5, #2563eb);
+  background: linear-gradient(135deg, #2f5bff, #3b34f2);
   color:#fff;
-  border-bottom: 1px solid rgba(255,255,255,0.2);
+  border-bottom: 1px solid rgba(255,255,255,0.18);
   margin:-12px -12px 10px -12px;
 }
-.fi-resource-facture-tva .ftva-recap-title{
-  font-weight:800;
-  font-size:14px;
-}
-.fi-resource-facture-tva .ftva-recap-sub{
-  font-size:12px;
-  opacity:0.95;
-}
-.fi-resource-facture-tva .ftva-recap-sub span{ font-weight:700; }
+.fi-resource-facture-tva .ftva-recap-title{ font-weight:900; font-size:14px; }
+.fi-resource-facture-tva .ftva-recap-sub{ font-size:12px; opacity:0.95; }
+.fi-resource-facture-tva .ftva-recap-sub span{ font-weight:900; }
 
-/* NET À PAYER banner */
+/* Net banner */
 .fi-resource-facture-tva .ftva-net{
   margin-top: 10px;
-  background:#2563eb;
+  background: linear-gradient(135deg, #2f5bff, #3b34f2);
   color:#fff;
   border-radius: 12px;
   padding: 12px;
@@ -184,52 +152,39 @@
   align-items:center;
   justify-content:space-between;
 }
-.fi-resource-facture-tva .ftva-net-label{
-  font-weight:800;
-  font-size:12px;
-  letter-spacing:0.4px;
-}
-.fi-resource-facture-tva .ftva-net-val{
-  font-weight:900;
-  font-size:13px;
-}
+.fi-resource-facture-tva .ftva-net-label{ font-weight:900; font-size:12px; }
+.fi-resource-facture-tva .ftva-net-val{ font-weight:900; font-size:13px; }
 
-/* Sticky */
-.fi-resource-facture-tva .ftva-sticky{
-  position: sticky;
-  top: 14px;
-}
-
-/* Recap actions buttons */
+/* Recap buttons */
 .fi-resource-facture-tva .ftva-recap-actions{
   margin-top: 10px;
   display:flex;
   flex-direction:column;
   gap:8px;
 }
-.fi-resource-facture-tva .ftva-recap-btn{
-  border-radius: 999px;
-  padding: 8px 14px;
-  font-size: 12px;
-  font-weight: 600;
-  text-align:center;
-  border: 1px solid transparent;
-  cursor:pointer;
-}
-.fi-resource-facture-tva .ftva-recap-btn-primary{
-  background:#2563eb;
-  color:#fff;
-  border-color:#2563eb;
-}
-.fi-resource-facture-tva .ftva-recap-btn-secondary{
-  background:transparent;
-  color:#0f172a;
-  border-color:#e2e8f0;
+.fi-resource-facture-tva .ftva-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  height:38px;
+  border-radius: 12px;
+  font-weight:800;
+  font-size:12px;
+  border:1px solid transparent;
   text-decoration:none;
 }
-.dark .fi-resource-facture-tva .ftva-recap-btn-secondary{
-  color:#e2e8f0;
-  border-color: rgba(148,163,184,0.5);
+.fi-resource-facture-tva .ftva-btn-primary{
+  background: linear-gradient(135deg, #2f5bff, #3b34f2);
+  color:#fff;
+}
+.fi-resource-facture-tva .ftva-btn-ghost{
+  background:#fff;
+  border-color:#e2e8f0;
+  color:#0f172a;
 }
 
-
+/* Sticky recap */
+.fi-resource-facture-tva .ftva-sticky{
+  position: sticky;
+  top: 14px;
+}
