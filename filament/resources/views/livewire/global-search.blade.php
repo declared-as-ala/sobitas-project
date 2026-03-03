@@ -14,7 +14,7 @@
 >
     <div class="fi-input-wrp relative flex items-center rounded-lg border border-gray-300 bg-white shadow-sm dark:border-white/10 dark:bg-white/5 fi-focused:ring-2 fi-focused:ring-primary-500/50 dark:fi-focused:ring-primary-400/50">
         <span class="fi-input-icon-wrapper flex items-center justify-center text-gray-400 dark:text-gray-500 pl-3">
-            <x-heroicon-o-magnifying-glass class="h-5 w-5" />
+            <x-filament::icon icon="heroicon-o-magnifying-glass" class="h-5 w-5" />
         </span>
         <input
             x-ref="searchInput"
