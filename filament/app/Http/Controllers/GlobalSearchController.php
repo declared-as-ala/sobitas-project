@@ -207,12 +207,12 @@ class GlobalSearchController extends Controller
             })
             ->orderByDesc('created_at')
             ->limit(self::LIMIT_PER_GROUP)
-            ->get(['id', 'numero', 'client_id', 'prix_ttc', 'prix_total']);
+            ->get(['id', 'numero', 'client_id', 'prix_ttc']);
 
         return $rows->map(fn (FactureTva $r) => [
             'id' => $r->id,
             'label' => $r->numero ?? 'Facture #' . $r->id,
-            'subtitle' => trim(($r->client ? $r->client->name : '') . (($r->prix_ttc ?? $r->prix_total) !== null ? ' · ' . number_format((float) ($r->prix_ttc ?? $r->prix_total), 2, ',', ' ') . ' DT' : '')),
+            'subtitle' => trim(($r->client ? $r->client->name : '') . ($r->prix_ttc !== null ? ' · ' . number_format((float) $r->prix_ttc, 2, ',', ' ') . ' DT' : '')),
             'url' => FactureTvaResource::getUrl('edit', ['record' => $r]),
             'icon' => 'heroicon-o-document-duplicate',
         ])->all();
