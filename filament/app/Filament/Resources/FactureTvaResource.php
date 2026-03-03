@@ -69,7 +69,7 @@ class FactureTvaResource extends Resource
                                         ->required()
                                         ->live()
                                         ->columnSpan(12)
-                                        ->afterStateUpdated(function ($state, $set) {
+                                        ->afterStateUpdated(function ($set, $get, $state) {
                                             if ($state) {
                                                 $client = Client::find($state);
                                                 $set('client_adresse', $client?->adresse ?? '');
@@ -99,6 +99,15 @@ class FactureTvaResource extends Resource
                         Section::make('Produits')
                             ->extraAttributes(['class' => 'ftva-card'])
                             ->schema([
+                                // small header badge "X articles"
+                                Forms\Components\Placeholder::make('produits_header_meta')
+                                    ->label('')
+                                    ->content(fn ($get) => new HtmlString(
+                                        '<div style="display:flex;justify-content:flex-end;font-size:0.75rem;color:#6b7280;margin-bottom:4px;">'
+                                        . '<span>' . e((string) max(0, count($get('details') ?? []))) . ' articles</span>'
+                                        . '</div>'
+                                    )),
+
                                 // barcode row (UI only like screenshot)
                                 Forms\Components\Placeholder::make('barcode_row')
                                     ->label('')
@@ -113,7 +122,7 @@ class FactureTvaResource extends Resource
                                     ->reorderable(false)
                                     ->addActionLabel('Ajouter un produit')
                                     ->extraAttributes(['class' => 'ftva-lines'])
-                                    ->afterStateUpdated(function ($set, $get) {
+                                    ->afterStateUpdated(function ($set, $get, $state) {
                                         self::recalculateFactureTvaTotals($get, $set);
                                     })
                                     ->schema([
@@ -121,6 +130,7 @@ class FactureTvaResource extends Resource
                                             // Left: number bubble + title
                                             Forms\Components\Placeholder::make('line_header')
                                                 ->label('')
+                                                ->hiddenLabel()
                                                 ->content(function ($get) {
                                                     $name = 'Nouvel article';
                                                     if ($id = $get('produit_id')) {
@@ -152,10 +162,12 @@ class FactureTvaResource extends Resource
                                                 ->required()
                                                 ->live()
                                                 ->columnSpan(7)
-                                                ->afterStateUpdated(function ($state, $set) {
+                                                ->afterStateUpdated(function ($set, $get, $state) {
                                                     if ($state && $product = Product::find($state)) {
                                                         $set('prix_unitaire', (float) ($product->prix ?? 0));
                                                     }
+
+                                                    self::recalculateFactureTvaTotals($get, $set);
                                                 }),
 
                                             Forms\Components\TextInput::make('qte')
@@ -249,14 +261,22 @@ class FactureTvaResource extends Resource
                             ->suffix('DT')
                             ->default(0)
                             ->live()
-                            ->afterStateUpdated(fn ($state, $get, $set) => self::recalculateFactureTvaTotals($get, $set)),
+                            ->afterStateUpdated(fn ($set, $get, $state) => self::recalculateFactureTvaTotals($get, $set)),
 
                         Forms\Components\TextInput::make('pourcentage_remise')
                             ->label('Remise %')
                             ->numeric()
                             ->suffix('%')
                             ->default(0)
-                            ->live(),
+                            ->live()
+                            ->afterStateUpdated(function ($set, $get, $state) {
+                                $prixHt = (float) ($get('prix_ht') ?? 0);
+                                $percent = (float) ($state ?? 0);
+                                $remiseMontant = $prixHt > 0 ? $prixHt * $percent / 100 : 0;
+                                $set('remise', $remiseMontant);
+
+                                self::recalculateFactureTvaTotals($get, $set);
+                            }),
 
                         Forms\Components\TextInput::make('prix_ht_apres_remise')
                             ->label('HT après remise')
@@ -280,7 +300,7 @@ class FactureTvaResource extends Resource
                             ->suffix('DT')
                             ->default(1)
                             ->live()
-                            ->afterStateUpdated(fn ($state, $get, $set) => self::recalculateFactureTvaTotals($get, $set)),
+                            ->afterStateUpdated(fn ($set, $get, $state) => self::recalculateFactureTvaTotals($get, $set)),
 
                         Forms\Components\TextInput::make('prix_ttc')
                             ->label('Total TTC')
@@ -300,6 +320,8 @@ class FactureTvaResource extends Resource
                             )),
 
                         Forms\Components\Hidden::make('net_a_payer')->default(0),
+
+                        Forms\Components\View::make('filament.components.facture-tva.recap-actions'),
                     ])
                     ->columnSpan(4),
             ])->columnSpanFull(),

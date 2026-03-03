@@ -7,6 +7,8 @@ use App\Filament\Widgets\DocumentTimelineWidget;
 use App\Models\DetailsFactureTva;
 use App\Models\Product;
 use Filament\Actions;
+use Filament\Actions\ActionGroup;
+use Filament\Actions\DeleteAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 
@@ -122,6 +124,18 @@ class EditFactureTva extends EditRecord
                 ->label('Enregistrer')
                 ->color('primary')
                 ->action('save'),
+
+            ActionGroup::make([
+                DeleteAction::make(),
+            ])
+                ->label('Autres actions')
+                ->icon('heroicon-o-ellipsis-vertical'),
         ];
+    }
+
+    protected function getFormActions(): array
+    {
+        // Remove bottom "Save changes / Cancel" bar – header actions only.
+        return [];
     }
 }
