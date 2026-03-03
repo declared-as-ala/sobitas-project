@@ -26,21 +26,16 @@ import type {
 } from '@/types';
 import type { BackendOrderPayload } from '@/lib/orderPayload';
 
-// In browser on localhost: use same-origin proxy to avoid CORS (next.config.js rewrites /api-proxy and /storage-proxy to backend).
+// In browser on localhost: use same-origin API proxy to avoid CORS (next.config.js rewrites /api-proxy to backend).
+// Storage URL is always production so server and client render the same image URLs (avoids hydration mismatch).
 function getApiBaseUrl(): string {
   if (typeof window !== 'undefined' && /^localhost$|^127\.0\.0\.1$/i.test(window.location.hostname)) {
     return `${window.location.origin}/api-proxy`;
   }
   return process.env.NEXT_PUBLIC_API_URL ?? 'https://admin.protein.tn/api';
 }
-function getStorageBaseUrl(): string {
-  if (typeof window !== 'undefined' && /^localhost$|^127\.0\.0\.1$/i.test(window.location.hostname)) {
-    return `${window.location.origin}/storage-proxy`;
-  }
-  return process.env.NEXT_PUBLIC_STORAGE_URL ?? 'https://admin.protein.tn/storage';
-}
 const API_URL = getApiBaseUrl();
-const STORAGE_URL = getStorageBaseUrl();
+const STORAGE_URL = process.env.NEXT_PUBLIC_STORAGE_URL ?? 'https://admin.protein.tn/storage';
 
 // Create axios instance
 const api: AxiosInstance = axios.create({
