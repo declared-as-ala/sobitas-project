@@ -24,6 +24,7 @@ use App\Filament\Resources\CommandeResource;
 use App\Filament\Resources\ContactResource;
 use App\Filament\Resources\CoordinateResource;
 use App\Filament\Resources\CouponResource;
+use App\Filament\Resources\CreditNoteResource;
 use App\Filament\Resources\FactureResource;
 use App\Filament\Resources\FactureTvaResource;
 use App\Filament\Resources\FaqResource;
