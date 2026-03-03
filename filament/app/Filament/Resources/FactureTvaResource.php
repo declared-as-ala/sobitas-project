@@ -53,13 +53,14 @@ class FactureTvaResource extends Resource
                                 )),
                         ]),
 
-                    Section::make('Client')
+                        Section::make('Client')
                         ->extraAttributes(['class' => 'ftva-card'])
                         ->schema([
                             Grid::make(12)->schema([
                                 Forms\Components\Select::make('client_id')
                                     ->label('Client *')
                                     ->relationship('client', 'name')
+                                    ->getOptionLabelFromRecordUsing(fn ($record) => (string) ($record->name ?? ('Client #' . $record->id)))
                                     ->searchable()
                                     ->preload()
                                     ->required()
