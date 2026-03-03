@@ -219,8 +219,7 @@ class AdminPanelProvider extends PanelProvider
                 'success' => Color::Emerald,
                 'warning' => Color::Amber,
             ])
-            // Custom global search (single endpoint, grouped results, typeahead) — right side of topbar
-            ->globalSearch(false)
-            ->renderHook(PanelsRenderHook::GLOBAL_SEARCH_BEFORE, fn (): string => view('filament.components.global-search-wrapper')->render());
+            // Disable Filament built-in global search; navbar search bar removed.
+            ->globalSearch(false);
     }
 }
