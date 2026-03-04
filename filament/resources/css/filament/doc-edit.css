@@ -3,6 +3,19 @@
    No Tailwind utilities — project convention: custom classes only
    ============================================================ */
 
+/* ================================================================
+   DISABLE STICKY HEADER for Facture TVA edit page
+   Filament 4 uses fi-simple-page-header or fi-header for the top bar.
+   We scope with .facture-tva-edit to avoid affecting other pages.
+   ================================================================ */
+.fi-page-edit-facture-tva .fi-header,
+.fi-page-edit-facture-tva .fi-simple-page-header,
+.fi-page-edit-facture-tva [data-testid="page-header"] {
+    position: static !important;
+    top: auto !important;
+    z-index: auto !important;
+}
+
 /* ---- Sticky sidebar (the column with totaux + résumé) ---- */
 .doc-totaux-sidebar {
     position: sticky;

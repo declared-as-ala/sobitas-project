@@ -130,5 +130,14 @@
     </div>
 
     @stack('print-scripts')
+    @if (!request()->query('embed') && empty($forPdf ?? false))
+    <script>
+        // Auto-trigger print dialog when page loads in a new tab
+        window.addEventListener('load', function () {
+            // Small delay ensures styles are applied before print dialog
+            setTimeout(function () { window.print(); }, 400);
+        });
+    </script>
+    @endif
 </body>
 </html>
