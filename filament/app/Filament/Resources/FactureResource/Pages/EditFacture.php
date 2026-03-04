@@ -28,10 +28,6 @@ class EditFacture extends EditRecord
         return 'Bon de livraison #' . $this->record->numero;
     }
 
-    /**
-     * Override subheading: return empty string — we render meta via a custom Blade slot
-     * in the header using CSS chips, kept short and clean.
-     */
     public function getSubheading(): ?string
     {
         $parts = [];
@@ -46,7 +42,7 @@ class EditFacture extends EditRecord
             $parts[] = '📅 ' . $date;
         }
 
-        $total = number_format((float) ($this->record->prix_ttc ?? 0), 3, ',', ' ') . ' DT';
+        $total   = number_format((float) ($this->record->prix_ttc ?? 0), 3, ',', ' ') . ' DT';
         $parts[] = '💰 ' . $total;
 
         if ($this->record->commande_id) {
@@ -64,7 +60,8 @@ class EditFacture extends EditRecord
     {
         $data['client_adresse'] = $this->record->client?->adresse ?? '';
         $data['client_phone']   = $this->record->client?->phone_1 ?? '';
-        $data['details'] = $this->record->details->map(fn ($d) => [
+        $data['client_email']   = $this->record->client?->email ?? '';
+        $data['details']        = $this->record->details->map(fn ($d) => [
             'produit_id'    => $d->produit_id,
             'qte'           => $d->qte ?? $d->quantite ?? 0,
             'prix_unitaire' => $d->prix_unitaire,
@@ -104,7 +101,8 @@ class EditFacture extends EditRecord
     }
 
     /**
-     * Barcode: called via $wire.addProductByBarcode(code) from Alpine
+     * Barcode scan — called via $wire.addProductByBarcode(code) from Alpine.
+     * Note: Keep this method simple (void return) — Alpine calls it fire-and-forget.
      */
     public function addProductByBarcode(string $code): void
     {
@@ -121,7 +119,7 @@ class EditFacture extends EditRecord
         if (! $product) {
             Notification::make()
                 ->title('Code-barres introuvable')
-                ->body('Aucun produit trouvé pour ce code : ' . $code)
+                ->body('Aucun produit trouvé pour : ' . $code)
                 ->danger()
                 ->send();
             return;
@@ -157,74 +155,47 @@ class EditFacture extends EditRecord
     }
 
     // -------------------------------------------------------------------------
-    // Header actions — all in French, correct Filament v4 lifecycle
+    // Header actions — Filament v4 (SPA mode)
+    // IMPORTANT: Save/Cancel are native in getFormActions() (footer).
+    // Do NOT add ->action('save') in header — it does NOT work in SPA mode.
     // -------------------------------------------------------------------------
     protected function getHeaderActions(): array
     {
-        $r = $this->record;
-
         return [
-            // Primary: Save
-            Actions\Action::make('enregistrer')
-                ->label('Enregistrer')
-                ->icon('heroicon-o-check-circle')
-                ->color('primary')
-                ->action('save')
-                ->keyBindings(['mod+s']),
-
-            // Secondary: Cancel
-            Actions\Action::make('annuler')
-                ->label('Annuler')
-                ->icon('heroicon-o-x-circle')
-                ->color('gray')
-                ->url(FactureResource::getUrl('index')),
-
-            // Conversion
+            // Transformer en Facture TVA (with confirmation modal)
             Actions\Action::make('convertToInvoice')
                 ->label('Transformer en facture TVA')
                 ->icon('heroicon-o-document-duplicate')
                 ->color('success')
                 ->visible(fn () => Schema::hasColumn('facture_tvas', 'facture_id') && ! $this->record->factureTvas()->exists())
-                ->modalHeading('Conversion : BL → Facture TVA')
-                ->modalDescription('Cette opération créera une nouvelle facture TVA à partir du bon de livraison.')
-                ->modalSubmitActionLabel('Confirmer la conversion')
+                ->requiresConfirmation()
+                ->modalHeading('Transformer en Facture TVA ?')
+                ->modalDescription('Une nouvelle Facture TVA sera créée avec les mêmes produits et client. Cette action ne supprime pas le BL.')
+                ->modalSubmitActionLabel('Confirmer')
                 ->modalCancelActionLabel('Annuler')
-                ->modalContent(fn () => view('filament.components.convert-wizard-summary', [
-                    'sourceNumber' => $r->numero,
-                    'client'       => $r->client?->name ?? '—',
-                    'date'         => $r->created_at?->format('d/m/Y'),
-                    'itemsCount'   => $r->details->count(),
-                    'totalTtc'     => number_format((float) ($r->prix_ttc ?? 0), 3, ',', ' ') . ' DT',
-                ]))
-                ->action(function (BlToInvoiceService $service): void {
+                ->action(function (BlToInvoiceService $service) {
                     $invoice = $service->createInvoiceFromBl($this->record);
                     Notification::make()
-                        ->title('Conversion réussie')
-                        ->body('Facture TVA #' . $invoice->numero . ' créée avec succès.')
+                        ->title('Facture TVA #' . $invoice->numero . ' créée.')
                         ->success()
                         ->send();
                     $this->redirect(FactureTvaResource::getUrl('edit', ['record' => $invoice]));
                 }),
 
-            // Print
+            // Imprimer — open in new tab (safest in SPA mode, avoids modal dependency)
             Actions\Action::make('imprimer')
                 ->label('Imprimer')
                 ->icon('heroicon-o-printer')
                 ->color('gray')
-                ->modalHeading('Aperçu d\'impression')
-                ->modalContent(fn () => view('filament.components.print-modal', [
-                    'printUrl' => route('factures.print', ['facture' => $this->record->id]),
-                    'title'    => 'Bon de livraison ' . $this->record->numero,
-                ]))
-                ->modalSubmitAction(false)
-                ->modalCancelActionLabel('Fermer'),
+                ->url(fn () => route('factures.print', ['facture' => $this->record->id]))
+                ->openUrlInNewTab(),
 
-            // More actions
+            // More actions dropdown
             ActionGroup::make([
                 Actions\DeleteAction::make()
                     ->label('Supprimer ce document')
-                    ->modalHeading('Supprimer le bon de livraison')
-                    ->modalDescription('Cette action est irréversible. Le stock sera restitué.')
+                    ->modalHeading('Supprimer le bon de livraison ?')
+                    ->modalDescription('Cette action est irréversible. Le stock des produits sera restitué.')
                     ->modalSubmitActionLabel('Oui, supprimer')
                     ->modalCancelActionLabel('Annuler'),
             ])->label('Autres actions')->icon('heroicon-o-ellipsis-vertical'),
@@ -232,7 +203,8 @@ class EditFacture extends EditRecord
     }
 
     /**
-     * Override the default form footer actions with French labels.
+     * Native Filament form footer actions with French labels.
+     * These use the proper Livewire save lifecycle — DO NOT override with custom header buttons.
      */
     protected function getFormActions(): array
     {

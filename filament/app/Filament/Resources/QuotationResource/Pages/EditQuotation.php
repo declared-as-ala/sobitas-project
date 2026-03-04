@@ -43,7 +43,7 @@ class EditQuotation extends EditRecord
             $parts[] = '📅 ' . $date;
         }
 
-        $total  = number_format((float) ($this->record->prix_ttc ?? 0), 3, ',', ' ') . ' DT';
+        $total   = number_format((float) ($this->record->prix_ttc ?? 0), 3, ',', ' ') . ' DT';
         $parts[] = '💰 ' . $total;
 
         $statut = $this->getStatutLabel($this->record->statut ?? null);
@@ -58,6 +58,7 @@ class EditQuotation extends EditRecord
     {
         $data['client_adresse'] = $this->record->client?->adresse ?? '';
         $data['client_phone']   = $this->record->client?->phone_1 ?? '';
+        $data['client_email']   = $this->record->client?->email ?? '';
         $data['details']        = $this->record->details->map(fn ($d) => [
             'produit_id'    => $d->produit_id,
             'qte'           => $d->qte ?? $d->quantite ?? 0,
@@ -98,7 +99,8 @@ class EditQuotation extends EditRecord
     }
 
     /**
-     * Barcode scan handler: called via $wire.addProductByBarcode(code) from Alpine
+     * Barcode scan — called via $wire.addProductByBarcode(code) from Alpine.
+     * Keep simple void return — Alpine calls fire-and-forget.
      */
     public function addProductByBarcode(string $code): void
     {
@@ -114,7 +116,7 @@ class EditQuotation extends EditRecord
         if (! $product) {
             Notification::make()
                 ->title('Code-barres introuvable')
-                ->body('Aucun produit trouvé pour ce code : ' . $code)
+                ->body('Aucun produit trouvé pour : ' . $code)
                 ->danger()
                 ->send();
             return;
@@ -150,65 +152,51 @@ class EditQuotation extends EditRecord
     }
 
     // -------------------------------------------------------------------------
-    // Header actions — all French, proper Filament v4 lifecycle
+    // Header actions — Filament v4 (SPA mode)
+    // IMPORTANT: Save/Cancel are native in getFormActions() (footer).
     // -------------------------------------------------------------------------
     protected function getHeaderActions(): array
     {
         return [
-            // Primary: Save
-            Actions\Action::make('enregistrer')
-                ->label('Enregistrer')
-                ->icon('heroicon-o-check-circle')
-                ->color('primary')
-                ->action('save')
-                ->keyBindings(['mod+s']),
-
-            // Cancel
-            Actions\Action::make('annuler')
-                ->label('Annuler')
-                ->icon('heroicon-o-x-circle')
-                ->color('gray')
-                ->url(QuotationResource::getUrl('index')),
-
-            // Conversion group
+            // Conversion group dropdown
             ActionGroup::make([
                 Actions\Action::make('convertToTicket')
                     ->label('Transformer en Ticket')
                     ->icon('heroicon-o-ticket')
                     ->requiresConfirmation()
-                    ->modalHeading('Convertir en Ticket')
+                    ->modalHeading('Convertir en Ticket ?')
                     ->modalDescription('Un nouveau ticket sera créé à partir de ce devis.')
                     ->modalSubmitActionLabel('Confirmer')
                     ->modalCancelActionLabel('Annuler')
                     ->action(function (QuotationConversionService $service) {
                         $ticket = $service->convertToTicket($this->record);
-                        Notification::make()->title('Ticket #' . $ticket->numero . ' créé avec succès')->success()->send();
+                        Notification::make()->title('Ticket #' . $ticket->numero . ' créé.')->success()->send();
                         $this->redirect(TicketResource::getUrl('edit', ['record' => $ticket]));
                     }),
                 Actions\Action::make('convertToFactureTva')
                     ->label('Transformer en Facture TVA')
                     ->icon('heroicon-o-document-duplicate')
                     ->requiresConfirmation()
-                    ->modalHeading('Convertir en Facture TVA')
-                    ->modalDescription('Une nouvelle facture TVA sera créée à partir de ce devis.')
+                    ->modalHeading('Convertir en Facture TVA ?')
+                    ->modalDescription('Une nouvelle Facture TVA sera créée à partir de ce devis.')
                     ->modalSubmitActionLabel('Confirmer')
                     ->modalCancelActionLabel('Annuler')
                     ->action(function (QuotationConversionService $service) {
                         $invoice = $service->convertToFactureTva($this->record);
-                        Notification::make()->title('Facture TVA #' . $invoice->numero . ' créée avec succès')->success()->send();
+                        Notification::make()->title('Facture TVA #' . $invoice->numero . ' créée.')->success()->send();
                         $this->redirect(FactureTvaResource::getUrl('edit', ['record' => $invoice]));
                     }),
                 Actions\Action::make('convertToBl')
                     ->label('Transformer en Bon de Livraison')
                     ->icon('heroicon-o-document-text')
                     ->requiresConfirmation()
-                    ->modalHeading('Convertir en Bon de Livraison')
-                    ->modalDescription('Un nouveau bon de livraison sera créé à partir de ce devis.')
+                    ->modalHeading('Convertir en Bon de Livraison ?')
+                    ->modalDescription('Un nouveau BL sera créé à partir de ce devis.')
                     ->modalSubmitActionLabel('Confirmer')
                     ->modalCancelActionLabel('Annuler')
                     ->action(function (QuotationConversionService $service) {
                         $bl = $service->convertToBl($this->record);
-                        Notification::make()->title('BL #' . $bl->numero . ' créé avec succès')->success()->send();
+                        Notification::make()->title('BL #' . $bl->numero . ' créé.')->success()->send();
                         $this->redirect(FactureResource::getUrl('edit', ['record' => $bl]));
                     }),
             ])
@@ -217,24 +205,19 @@ class EditQuotation extends EditRecord
             ->color('success')
             ->dropdownPlacement('bottom-start'),
 
-            // Print
+            // Imprimer — new tab (safest in SPA mode)
             Actions\Action::make('imprimer')
                 ->label('Imprimer')
                 ->icon('heroicon-o-printer')
                 ->color('gray')
-                ->modalHeading('Aperçu d\'impression')
-                ->modalContent(fn () => view('filament.components.print-modal', [
-                    'printUrl' => route('quotations.print', ['quotation' => $this->record->id]),
-                    'title'    => 'Devis ' . $this->record->numero,
-                ]))
-                ->modalSubmitAction(false)
-                ->modalCancelActionLabel('Fermer'),
+                ->url(fn () => route('quotations.print', ['quotation' => $this->record->id]))
+                ->openUrlInNewTab(),
 
-            // More
+            // More actions
             ActionGroup::make([
                 Actions\DeleteAction::make()
                     ->label('Supprimer ce devis')
-                    ->modalHeading('Supprimer le devis')
+                    ->modalHeading('Supprimer le devis ?')
                     ->modalDescription('Cette action est irréversible.')
                     ->modalSubmitActionLabel('Oui, supprimer')
                     ->modalCancelActionLabel('Annuler'),
@@ -243,7 +226,7 @@ class EditQuotation extends EditRecord
     }
 
     /**
-     * French form footer actions
+     * Native Filament form footer actions with French labels.
      */
     protected function getFormActions(): array
     {
