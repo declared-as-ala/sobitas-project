@@ -38,6 +38,25 @@ class FactureResource extends Resource
         return ['numero'];
     }
 
+    public static function updateTotals(Forms\Get $get, Forms\Set $set): void
+    {
+        // Calculate regardless of whether we are inside a repeater item or at the root form
+        $details = $get('../../details') ?? $get('details') ?? [];
+        $total   = 0.0;
+        foreach ($details as $d) {
+            if (! empty($d['produit_id'])) {
+                $total += (float) ($d['qte'] ?? 0) * (float) ($d['prix_unitaire'] ?? 0);
+            }
+        }
+        $remise = (float) ($get('../../remise') ?? $get('remise') ?? 0);
+
+        // Try setting on both relative and absolute paths
+        $set('../../prix_ht', $total);
+        $set('../../prix_ttc', $total - $remise);
+        $set('prix_ht', $total);
+        $set('prix_ttc', $total - $remise);
+    }
+
     public static function form(Schema $schema): Schema
     {
         $coordinate = Coordinate::getCached();
@@ -101,19 +120,6 @@ class FactureResource extends Resource
                                 ->content(fn () => new \Illuminate\Support\HtmlString(view('filament.components.barcode-scan-compact')->render())),
                             Repeater::make('details')
                                 ->label('')
-                                ->live()
-                                ->afterStateUpdated(function ($get, $set) {
-                                    $details = $get('details') ?? [];
-                                    $total   = 0.0;
-                                    foreach ($details as $d) {
-                                        if (! empty($d['produit_id'])) {
-                                            $total += (float) ($d['qte'] ?? 0) * (float) ($d['prix_unitaire'] ?? 0);
-                                        }
-                                    }
-                                    $remise = (float) ($get('remise') ?? 0);
-                                    $set('prix_ht', $total);
-                                    $set('prix_ttc', $total - $remise);
-                                })
                                 ->schema([
                                     Forms\Components\Select::make('produit_id')
                                         ->label('Produit')
@@ -123,10 +129,11 @@ class FactureResource extends Resource
                                         ->required()
                                         ->live()
                                         ->placeholder('Sélectionner un produit…')
-                                        ->afterStateUpdated(function ($state, $set) {
+                                        ->afterStateUpdated(function ($state, $set, $get) {
                                             if ($state && $product = \App\Models\Product::find($state)) {
                                                 $set('prix_unitaire', (float) ($product->prix ?? 0));
                                             }
+                                            self::updateTotals($get, $set);
                                         })
                                         ->columnSpan(6),
                                     Forms\Components\TextInput::make('qte')
@@ -136,6 +143,7 @@ class FactureResource extends Resource
                                         ->minValue(1)
                                         ->required()
                                         ->live(debounce: 400)
+                                        ->afterStateUpdated(fn ($get, $set) => self::updateTotals($get, $set))
                                         ->extraInputAttributes(['style' => 'text-align:center'])
                                         ->columnSpan(2),
                                     Forms\Components\TextInput::make('prix_unitaire')
@@ -145,6 +153,7 @@ class FactureResource extends Resource
                                         ->suffix('DT')
                                         ->required()
                                         ->live(debounce: 400)
+                                        ->afterStateUpdated(fn ($get, $set) => self::updateTotals($get, $set))
                                         ->columnSpan(2),
                                     Forms\Components\Placeholder::make('prix_total_display')
                                         ->label('Total Ligne')
@@ -166,6 +175,7 @@ class FactureResource extends Resource
                                     ->modalHeading('Supprimer cette ligne ?')
                                     ->modalSubmitActionLabel('Oui, supprimer')
                                     ->modalCancelActionLabel('Annuler')
+                                    ->after(fn (Forms\Get $get, Forms\Set $set) => self::updateTotals($get, $set))
                                 )
                                 ->itemLabel(fn (array $state) => isset($state['produit_id']) ? (\App\Models\Product::find($state['produit_id'])?->designation_fr ?? 'Ligne') : 'Nouveau produit'),
                         ])
@@ -189,15 +199,7 @@ class FactureResource extends Resource
                                 ->default(0)
                                 ->live()
                                 ->afterStateUpdated(function ($state, $get, $set) {
-                                    $details = $get('details') ?? [];
-                                    $total   = 0.0;
-                                    foreach ($details as $d) {
-                                        if (! empty($d['produit_id'])) {
-                                            $total += (float) ($d['qte'] ?? 0) * (float) ($d['prix_unitaire'] ?? 0);
-                                        }
-                                    }
-                                    $set('prix_ht', $total);
-                                    $set('prix_ttc', $total - (float) ($state ?? 0));
+                                    self::updateTotals($get, $set);
                                 }),
                             Forms\Components\TextInput::make('pourcentage_remise')
                                 ->label('REMISE (%)')
