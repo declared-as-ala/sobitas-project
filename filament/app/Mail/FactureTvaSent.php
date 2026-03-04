@@ -71,9 +71,11 @@ class FactureTvaSent extends Mailable
 
         $numero = (string) ($factureTva->numero ?? $factureTva->id);
         $year = $factureTva->date_facture ? \Carbon\Carbon::parse($factureTva->date_facture)->format('Y') : ($factureTva->created_at?->format('Y') ?? date('Y'));
-        $filename = preg_replace('/[^A-Za-z0-9_\-]/', '-', "FACTURE-TVA-{$year}-{$numero}");
-        $filename = preg_replace('/-+/', '-', trim($filename, '-'));
-        $filename = ($filename !== '' ? $filename : 'document') . '.pdf';
+        
+        // Exact spelling as requested: "Facture_{$year}-{$numero}.pdf" (with underscore)
+        $filename = "Facture_{$year}-{$numero}.pdf";
+        // Clean any weird chars but leave standard structure
+        $filename = preg_replace('/[^A-Za-z0-9_\-\.]/', '-', $filename);
 
         $pdf = null;
         if (class_exists(\Barryvdh\DomPDF\Facade\Pdf::class)) {

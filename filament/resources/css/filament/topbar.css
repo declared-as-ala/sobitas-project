@@ -37,3 +37,9 @@
     z-index: 2000 !important;
 }
 
+/* 4) Modal UI Fix - keep overlays above sticky sidebars and headers */
+.fi-modal-close-overlay,
+.fi-modal-window,
+.fi-modal-container {
+    z-index: 10000 !important;
+}
