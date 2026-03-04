@@ -89,8 +89,8 @@
         .print-section { position: absolute; left: 0; top: 0; width: 100%; z-index: 9999; }
     }
 
-    /* ── Document pages: header scrolls normally (no sticky overlap) ─────────── */
-    .fi-page-header-main-ctn {
+    /* ── Facture TVA edit page only: header scrolls with page (no sticky) ────── */
+    .fi-page-edit-facture-tva .fi-page-header-main-ctn {
         position: static;
         top: auto;
         z-index: auto;
@@ -101,20 +101,20 @@
         padding-left: 0;
         padding-right: 0;
     }
-    .dark .fi-page-header-main-ctn { background: var(--fi-body-bg); }
-    /* Large, obvious header actions */
-    .fi-page-header-main-ctn .fi-header-actions .fi-btn {
+    .dark .fi-page-edit-facture-tva .fi-page-header-main-ctn { background: var(--fi-body-bg); }
+    /* Large, obvious header actions on Facture edit */
+    .fi-page-edit-facture-tva .fi-page-header-main-ctn .fi-header-actions .fi-btn {
         min-height: 44px;
         padding: 0.5rem 1rem;
         font-weight: 600;
         border-radius: 10px;
     }
-    .fi-page-header-main-ctn .fi-header-actions .fi-btn:first-child {
+    .fi-page-edit-facture-tva .fi-page-header-main-ctn .fi-header-actions .fi-btn:first-child {
         background-color: rgb(249 115 22);
         color: #fff;
         border-color: rgb(249 115 22);
     }
-    .fi-page-header-main-ctn .fi-header-actions .fi-btn:first-child:hover {
+    .fi-page-edit-facture-tva .fi-page-header-main-ctn .fi-header-actions .fi-btn:first-child:hover {
         background-color: rgb(234 88 12);
         color: #fff;
     }
@@ -127,6 +127,21 @@
     }
     @media (max-width: 1023px) {
         .doc-totaux-sidebar { position: relative; top: 0; }
+    }
+    /* Net à payer: gros bouton orange (Facture TVA) */
+    .doc-net-a-payer-input.fi-input,
+    .doc-net-a-payer-input.input {
+        font-size: 1.125rem;
+        font-weight: 700;
+        background-color: rgb(255 237 213);
+        border: 2px solid rgb(249 115 22);
+        color: rgb(194 65 12);
+    }
+    .dark .doc-net-a-payer-input.fi-input,
+    .dark .doc-net-a-payer-input.input {
+        background-color: rgb(67 20 7);
+        border-color: rgb(249 115 22);
+        color: rgb(254 215 170);
     }
     /* Tighter spacing on document edit sections */
     .fi-fo-section.doc-section-compact .fi-section-content-ctn {
@@ -144,6 +159,19 @@
     }
     .doc-lines-repeater .fi-fo-field-wrp-label { font-size: 0.75rem; }
     .doc-lines-repeater .fi-input { min-height: 36px; }
+    .doc-line-tva-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 9999px;
+        background: rgb(219 234 254);
+        color: rgb(29 78 216);
+        font-size: 0.8125rem;
+        font-weight: 500;
+    }
+    .dark .doc-line-tva-badge {
+        background: rgb(30 58 138);
+        color: rgb(191 219 254);
+    }
     /* Company compact already in blade */
     .doc-company-compact { max-width: 320px; }
 

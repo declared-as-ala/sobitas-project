@@ -125,5 +125,24 @@ class CreateFactureTva extends CreateRecord
             ]);
             Product::where('id', $row['produit_id'])->decrement('qte', $qte);
         }
+
+        $state = $this->form->getState();
+        $totals = [
+            'prix_ht' => (float) ($state['prix_ht'] ?? 0),
+            'remise' => (float) ($state['remise'] ?? 0),
+            'tva' => (float) ($state['tva'] ?? 0),
+            'timbre' => (float) ($state['timbre'] ?? 0),
+            'prix_ttc' => (float) ($state['prix_ttc'] ?? 0),
+        ];
+        if (\Illuminate\Support\Facades\Schema::hasColumn('facture_tvas', 'prix_ht_apres_remise')) {
+            $totals['prix_ht_apres_remise'] = (float) ($state['prix_ht_apres_remise'] ?? 0);
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('facture_tvas', 'pourcentage_remise')) {
+            $totals['pourcentage_remise'] = (float) ($state['pourcentage_remise'] ?? 0);
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('facture_tvas', 'net_a_payer')) {
+            $totals['net_a_payer'] = (float) ($state['net_a_payer'] ?? 0);
+        }
+        $this->record->update($totals);
     }
 }

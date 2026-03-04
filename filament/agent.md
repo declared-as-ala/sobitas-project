@@ -176,3 +176,58 @@ Place:
 New resources in app/Filament/Resources.
 Global, shared document styles in resources/css/filament/doc-edit.css.
 Reusable bits of UI (e.g. barcode widgets, headers) in resources/views/filament/components.
+
+---
+
+## 10. Facture TVA Edit – Implementation summary (refactor plan)
+
+### Fichiers modifiés / créés
+
+| Fichier | Rôle |
+|---------|------|
+| `app/Filament/Resources/FactureTvaResource.php` | Form: sections Informations société, Client (+ email), Produits (doc-lines-repeater), Totaux, Résumé; recalcul temps réel (pourcentage_remise ↔ remise); Net à payer stylé; N° Document. |
+| `app/Filament/Resources/FactureTvaResource/Pages/EditFactureTva.php` | getPageClasses (header non sticky), mutateFormDataBeforeFill (+ client_email, numero_display, resume_*), afterSave (persistance totaux), getFormActions, getHeaderActions (Envoyer, PDF, Imprimer, menu …). |
+| `app/Filament/Resources/FactureTvaResource/Pages/CreateFactureTva.php` | afterCreate: persistance des totaux sur le record. |
+| `app/Filament/Resources/FactureTvaResource.php` (recalculateFactureTvaTotals) | Sync pourcentage_remise, cap remise, arrondis 3 décimales. |
+| `resources/views/filament/components/custom-admin-styles.blade.php` | Header non sticky scopé à `.fi-page-edit-facture-tva`; styles Net à payer (.doc-net-a-payer-input); badge TVA ligne (.doc-line-tva-badge). |
+| `resources/views/print/invoice-layout.blade.php` | Script: `window.print()` automatique au load quand pas embed ni forPdf. |
+| `app/Mail/FactureTvaSent.php` | Mailable: sujet « Votre facture #… », vue email, pièce jointe PDF (DomPDF). |
+| `resources/views/emails/facture-tva-sent.blade.php` | Vue email (corps court + montant). |
+
+### Résumé des changements
+
+- **Layout / UI:** Deux colonnes (gauche: Informations société, Client avec email, Produits avec scan + repeater; droite: Totaux + Résumé). Net à payer en gros champ orange. Footer: « Enregistrer les modifications » (orange) et « Annuler ».
+- **Header:** Non sticky uniquement sur la page Edit Facture TVA (classe `fi-page-edit-facture-tva`).
+- **Recalcul temps réel:** Remise (montant) et Remise % synchronisés; modification de Remise, Remise %, Timbre déclenche la mise à jour immédiate des totaux (HT, HT après remise, TVA, TTC, Net à payer). Persistance des totaux en base après save (Edit + Create).
+- **Actions header:** Envoyer (vérif client + email, envoi mail avec PDF en pièce jointe, toasts, log); PDF (lien téléchargement, nouvel onglet); Imprimer (nouvel onglet vers route print + `window.print()` auto); menu « … » (Supprimer).
+- **Lignes produits:** Repeater avec classe `doc-lines-repeater` (row cards), select produit large, TVA (DT) en badge bleu, responsive (colonnes empilées sur petit écran).
+- **Impression:** Page print ouvre en nouvel onglet, déclenche `window.print()` au chargement; toolbar masquée en @media print.
+
+### Config mail (.env)
+
+Pour que « Envoyer » envoie bien l’email au client, configurer dans `.env` par exemple :
+
+```env
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.example.com
+MAIL_PORT=587
+MAIL_USERNAME=...
+MAIL_PASSWORD=...
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS=noreply@votredomaine.com
+MAIL_FROM_NAME="${APP_NAME}"
+```
+
+Pour tester sans SMTP réel : `MAIL_MAILER=log` (les emails sont écrits dans `storage/logs/laravel.log`).
+
+### Checklist de test manuel (Facture TVA – Edit)
+
+- [ ] **Header:** En scrollant, le header (titre + meta + boutons) défile avec la page (pas de sticky).
+- [ ] **Envoyer** – Client avec email : clic « Envoyer » → toast succès, email reçu avec PDF en pièce jointe.
+- [ ] **Envoyer** – Client sans email : toast erreur + proposition d’ouvrir le client.
+- [ ] **PDF:** Clic « PDF » → nouvel onglet / téléchargement d’un PDF propre de la facture.
+- [ ] **Imprimer:** Clic « Imprimer » → nouvel onglet → dialogue d’impression s’ouvre automatiquement; toolbar « Aperçu » masquée à l’impression.
+- [ ] **Ajouter produit:** Clic « Ajouter produit » → nouvelle ligne avec Produit, Qté, P.U, TVA %, P.T/HT, TVA (DT); totaux mis à jour.
+- [ ] **Recalcul:** Modifier Remise, Remise %, ou Timbre → Sous-total HT, HT après remise, TVA, Total TTC, Net à payer se mettent à jour immédiatement.
+- [ ] **Enregistrer les modifications:** Sauvegarde puis rechargement → totaux et lignes persistés; PDF/print reflètent les bons montants.
+- [ ] **Annuler:** Retour à la liste sans sauvegarder.
