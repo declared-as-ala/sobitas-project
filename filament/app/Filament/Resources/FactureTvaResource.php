@@ -98,6 +98,7 @@ class FactureTvaResource extends Resource
                                         ->required()
                                         ->live()
                                         ->columnSpan(['default' => 7, 'sm' => 12])
+                                        ->afterStateUpdated(function ($state, $set, $get) {
                                             if ($state && $product = \App\Models\Product::find($state)) {
                                                 $set('prix_unitaire', (float) ($product->prix ?? 0));
                                             }
