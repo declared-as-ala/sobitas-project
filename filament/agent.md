@@ -231,3 +231,43 @@ Pour tester sans SMTP réel : `MAIL_MAILER=log` (les emails sont écrits dans 
 - [ ] **Recalcul:** Modifier Remise, Remise %, ou Timbre → Sous-total HT, HT après remise, TVA, Total TTC, Net à payer se mettent à jour immédiatement.
 - [ ] **Enregistrer les modifications:** Sauvegarde puis rechargement → totaux et lignes persistés; PDF/print reflètent les bons montants.
 - [ ] **Annuler:** Retour à la liste sans sauvegarder.
+
+---
+
+## 11. Facture TVA – Correctifs bugs (plan bugs + UI)
+
+### Fichiers modifiés (cette vague)
+
+| Fichier | Changement |
+|---------|------------|
+| [EditFactureTva.php](filament/app/Filament/Resources/FactureTvaResource/Pages/EditFactureTva.php) | **F:** PDF et Imprimer utilisent `dispatch('open-url-new-tab', url: …)` au lieu de `->url()->openUrlInNewTab()` pour éviter interception SPA et erreur "Component not found". **C:** Envoyer = modal "Envoyer la facture" avec champ email (pré-rempli, requis, validation), puis envoi + PDF en pièce jointe. **D:** `mutateFormDataBeforeFill` remplit maintenant `prix_ht`, `prix_ht_apres_remise`, `tva`, `prix_ttc`, `net_a_payer`, `remise`, `timbre` depuis le record pour afficher les totaux au chargement. |
+| [spa-navigation-fix.blade.php](filament/resources/views/filament/components/spa-navigation-fix.blade.php) | **F:** Listener Livewire `open-url-new-tab` qui exécute `window.open(payload.url, '_blank')` pour ouvrir PDF/print sans passer par le SPA. |
+| [custom-admin-styles.blade.php](filament/resources/views/filament/components/custom-admin-styles.blade.php) | **A:** `position: static !important` et `top: auto !important` sur le header Facture pour forcer le scroll normal. |
+
+### Résumé des correctifs
+
+- **Component not found (F):** PDF et Imprimer ne déclenchent plus de navigation Livewire; un event est dispatché et un script global ouvre l’URL en `window.open`, ce qui évite les requêtes Livewire orphelines.
+- **PDF (B):** Le clic ouvre l’URL de téléchargement dans un nouvel onglet (navigation réelle), le serveur renvoie le PDF avec `Content-Disposition: attachment`.
+- **Envoyer (C):** Ouverture d’un modal avec champ email (pré-rempli client, modifiable, requis + format), puis envoi avec PDF en pièce jointe et toasts.
+- **Net à payer + totaux (D):** Au chargement de la page, les champs calculés (Sous-total HT, HT après remise, TVA, Total TTC, Net à payer) sont remplis depuis le record; la réactivité (remise, %, timbre, lignes) était déjà en place.
+- **Header sticky (A):** Règles CSS renforcées avec `!important` pour la page Edit Facture TVA.
+- **Ajouter produit (E):** Aucun changement de code; le Repeater est correct; la correction F peut résoudre les clics qui ne faisaient rien si l’erreur console bloquait le DOM.
+- **Imprimer (G):** Même mécanisme que PDF (dispatch + `window.open`), nouvel onglet vers la route print avec `window.print()` auto.
+
+### Checklist de tests (après correctifs)
+
+- [ ] Scroll: le header défile avec la page (pas sticky).
+- [ ] PDF: le clic ouvre un nouvel onglet et télécharge bien un fichier PDF.
+- [ ] Envoyer: ouvre le modal "Envoyer la facture", email pré-rempli/modifiable, envoi avec PDF en pièce jointe, toasts succès/erreur.
+- [ ] Ajouter produit: ajoute une ligne et recalcul des totaux.
+- [ ] Changer remise / timbre / TVA: Net à payer et totaux se mettent à jour immédiatement.
+- [ ] Imprimer: ouvre un nouvel onglet et déclenche l’impression.
+- [ ] Au chargement: Sous-total HT, HT après remise, TVA, Total TTC, Net à payer sont renseignés (plus de champs vides).
+- [ ] Aucune erreur "Component not found" (ou autre) dans la console.
+
+### Éviter le bug "Component not found" en prod
+
+- Exécuter `php artisan view:clear` et `php artisan optimize:clear` après déploiement.
+- Publier/mettre à jour les assets Filament si nécessaire (`php artisan filament:assets` ou équivalent).
+- Ne pas mélanger Livewire v2 et v3; vérifier que le panel utilise bien Livewire 3.
+- Tester la page Facture TVA edit après déploiement (modals, PDF, Imprimer, Envoyer).

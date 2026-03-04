@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\FactureTvaResource\Pages;
 
 use App\Enums\PaymentStatus;
-use App\Filament\Resources\ClientResource;
 use App\Filament\Resources\FactureTvaResource;
 use App\Filament\Widgets\DocumentTimelineWidget;
 use App\Mail\FactureTvaSent;
