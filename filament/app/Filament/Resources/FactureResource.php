@@ -42,8 +42,8 @@ class FactureResource extends Resource
     {
         $coordinate = Coordinate::getCached();
         return $schema->schema([
-            \Filament\Schemas\Components\Split::make([
-                \Filament\Schemas\Components\Group::make([
+            Grid::make(3)->schema([
+                Grid::make(1)->schema([
                     Forms\Components\Placeholder::make('company_info')
                         ->label('')
                         ->content(fn () => $coordinate ? new \Illuminate\Support\HtmlString(view('filament.components.company-info-compact', ['coordinate' => $coordinate])->render()) : '—'),
@@ -141,42 +141,33 @@ class FactureResource extends Resource
                         ])
                         ->compact()
                         ->columnSpanFull(),
-                ])->grow(true),
+                ])->columnSpan(2),
 
-                \Filament\Schemas\Components\Group::make([
-                    Section::make('Récapitulatif & Totaux')
-                        ->icon('heroicon-o-calculator')
-                        ->schema([
-                            Forms\Components\TextInput::make('prix_ht')->label('Sous-total')->numeric()->prefix('DT')->disabled()->dehydrated(false)->default(0),
-                            Forms\Components\TextInput::make('remise')->label('Remise')->numeric()->prefix('DT')->default(0)->live()->afterStateUpdated(function ($state, $get, $set) {
-                                $details = $get('details') ?? [];
-                                $total = 0.0;
-                                foreach ($details as $d) {
-                                    if (! empty($d['produit_id'])) {
-                                        $total += (float) ($d['qte'] ?? 0) * (float) ($d['prix_unitaire'] ?? 0);
-                                    }
+                Section::make('Récapitulatif & Totaux')
+                    ->icon('heroicon-o-calculator')
+                    ->schema([
+                        Forms\Components\TextInput::make('prix_ht')->label('Sous-total')->numeric()->prefix('DT')->disabled()->dehydrated(false)->default(0),
+                        Forms\Components\TextInput::make('remise')->label('Remise')->numeric()->prefix('DT')->default(0)->live()->afterStateUpdated(function ($state, $get, $set) {
+                            $details = $get('details') ?? [];
+                            $total = 0.0;
+                            foreach ($details as $d) {
+                                if (! empty($d['produit_id'])) {
+                                    $total += (float) ($d['qte'] ?? 0) * (float) ($d['prix_unitaire'] ?? 0);
                                 }
-                                $set('prix_ht', $total);
-                                $set('prix_ttc', $total - (float) ($state ?? 0));
-                            }),
-                            Forms\Components\TextInput::make('pourcentage_remise')->label('Remise (%)')->numeric()->suffix('%')->default(0)->live(),
-                            Forms\Components\TextInput::make('prix_ttc')->label('NET À PAYER')->numeric()->prefix('DT')->disabled()->dehydrated(false)->default(0)->extraInputAttributes(['class' => 'font-bold text-2xl text-primary-600']),
-                        ])
-                        ->columns(1)
-                        ->compact()
-                        ->extraAttributes(['class' => 'doc-totaux-sidebar']),
-                    
-                    Section::make('Méta Données')
-                        ->icon('heroicon-o-document-magnifying-glass')
-                        ->schema([
-                            Forms\Components\Placeholder::make('numero_display')
-                                ->label('N° Document')
-                                ->content(fn ($record) => $record?->numero ?? 'Nouveau')
-                        ])
-                        ->collapsed()
-                        ->compact(),
-                ])->grow(false),
-            ])->from('md')->columnSpanFull(),
+                            }
+                            $set('prix_ht', $total);
+                            $set('prix_ttc', $total - (float) ($state ?? 0));
+                        }),
+                        Forms\Components\TextInput::make('pourcentage_remise')->label('Remise (%)')->numeric()->suffix('%')->default(0)->live(),
+                        Forms\Components\TextInput::make('prix_ttc')->label('NET À PAYER')->numeric()->prefix('DT')->disabled()->dehydrated(false)->default(0)->extraInputAttributes(['class' => 'font-bold text-2xl text-primary-600']),
+                        Forms\Components\Placeholder::make('numero_display')
+                            ->label('N° Document')
+                            ->content(fn ($record) => $record?->numero ?? 'Nouveau'),
+                    ])
+                    ->columns(1)
+                    ->compact()
+                    ->extraAttributes(['class' => 'doc-totaux-sidebar']),
+            ])->columnSpanFull(),
 
             Forms\Components\Hidden::make('numero'),
             Forms\Components\Hidden::make('timbre')->default(0),
