@@ -129,24 +129,11 @@ class EditFacture extends EditRecord
         $this->form->fill(array_merge($state, ['details' => $details]));
     }
 
-    protected function getFormActions(): array
-    {
-        return [];
-    }
-
     protected function getHeaderActions(): array
     {
         $r = $this->record;
 
         return [
-            Actions\Action::make('save')
-                ->label('Enregistrer')
-                ->color('primary')
-                ->action('save'),
-            Actions\Action::make('cancel')
-                ->label('Annuler')
-                ->color('gray')
-                ->action(fn () => $this->redirect(FactureResource::getUrl('index'))),
             Actions\Action::make('convertToInvoice')
                 ->label('Transformer en facture TVA')
                 ->icon('heroicon-o-document-duplicate')

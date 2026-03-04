@@ -42,14 +42,14 @@ class FactureResource extends Resource
     {
         $coordinate = Coordinate::getCached();
         return $schema->schema([
-            Grid::make(3)
-                ->schema([
-                Grid::make(1)
-                    ->schema([
+            \Filament\Schemas\Components\Split::make([
+                \Filament\Schemas\Components\Group::make([
                     Forms\Components\Placeholder::make('company_info')
                         ->label('')
                         ->content(fn () => $coordinate ? new \Illuminate\Support\HtmlString(view('filament.components.company-info-compact', ['coordinate' => $coordinate])->render()) : '—'),
-                    Section::make('Client')
+                    Section::make('Informations Client')
+                        ->description('Sélectionnez un client pour remplir automatiquement les coordonnées.')
+                        ->icon('heroicon-o-user')
                         ->schema([
                             Forms\Components\Select::make('client_id')
                                 ->label('Client')
@@ -73,8 +73,11 @@ class FactureResource extends Resource
                             Forms\Components\TextInput::make('client_phone')->label('N° Tél')->disabled()->dehydrated(false),
                         ])
                         ->columns(1)
+                        ->compact()
                         ->collapsible(),
-                    Section::make('Produits')
+                    Section::make('Articles et Produits')
+                        ->description('Scannez un code-barres ou ajoutez manuellement des produits au bon de livraison.')
+                        ->icon('heroicon-o-shopping-bag')
                         ->schema([
                             Forms\Components\Placeholder::make('barcode_scan')
                                 ->label('')
@@ -136,30 +139,44 @@ class FactureResource extends Resource
                                 ->extraAttributes(['class' => 'doc-lines-repeater'])
                                 ->itemLabel(fn (array $state) => isset($state['produit_id']) ? (\App\Models\Product::find($state['produit_id'])?->designation_fr ?? 'Ligne') : 'Ligne'),
                         ])
+                        ->compact()
                         ->columnSpanFull(),
-                ])->columnSpan(2),
+                ])->grow(true),
 
-                Section::make('Totaux')
-                    ->schema([
-                        Forms\Components\TextInput::make('prix_ht')->label('Sous-total')->numeric()->prefix('DT')->disabled()->dehydrated(false)->default(0),
-                        Forms\Components\TextInput::make('remise')->label('Remise')->numeric()->prefix('DT')->default(0)->live()->afterStateUpdated(function ($state, $get, $set) {
-                            $details = $get('details') ?? [];
-                            $total = 0.0;
-                            foreach ($details as $d) {
-                                if (! empty($d['produit_id'])) {
-                                    $total += (float) ($d['qte'] ?? 0) * (float) ($d['prix_unitaire'] ?? 0);
+                \Filament\Schemas\Components\Group::make([
+                    Section::make('Récapitulatif & Totaux')
+                        ->icon('heroicon-o-calculator')
+                        ->schema([
+                            Forms\Components\TextInput::make('prix_ht')->label('Sous-total')->numeric()->prefix('DT')->disabled()->dehydrated(false)->default(0),
+                            Forms\Components\TextInput::make('remise')->label('Remise')->numeric()->prefix('DT')->default(0)->live()->afterStateUpdated(function ($state, $get, $set) {
+                                $details = $get('details') ?? [];
+                                $total = 0.0;
+                                foreach ($details as $d) {
+                                    if (! empty($d['produit_id'])) {
+                                        $total += (float) ($d['qte'] ?? 0) * (float) ($d['prix_unitaire'] ?? 0);
+                                    }
                                 }
-                            }
-                            $set('prix_ht', $total);
-                            $set('prix_ttc', $total - (float) ($state ?? 0));
-                        }),
-                        Forms\Components\TextInput::make('pourcentage_remise')->label('Remise %')->numeric()->suffix('%')->default(0)->live(),
-                        Forms\Components\TextInput::make('prix_ttc')->label('NET À PAYER')->numeric()->prefix('DT')->disabled()->dehydrated(false)->default(0)->extraInputAttributes(['class' => 'font-bold text-lg']),
-                    ])
-                    ->columns(1)
-                    ->columnSpan(1)
-                    ->extraAttributes(['class' => 'doc-totaux-sidebar']),
-            ])->columnSpanFull(),
+                                $set('prix_ht', $total);
+                                $set('prix_ttc', $total - (float) ($state ?? 0));
+                            }),
+                            Forms\Components\TextInput::make('pourcentage_remise')->label('Remise (%)')->numeric()->suffix('%')->default(0)->live(),
+                            Forms\Components\TextInput::make('prix_ttc')->label('NET À PAYER')->numeric()->prefix('DT')->disabled()->dehydrated(false)->default(0)->extraInputAttributes(['class' => 'font-bold text-2xl text-primary-600']),
+                        ])
+                        ->columns(1)
+                        ->compact()
+                        ->extraAttributes(['class' => 'doc-totaux-sidebar']),
+                    
+                    Section::make('Méta Données')
+                        ->icon('heroicon-o-document-magnifying-glass')
+                        ->schema([
+                            Forms\Components\Placeholder::make('numero_display')
+                                ->label('N° Document')
+                                ->content(fn ($record) => $record?->numero ?? 'Nouveau')
+                        ])
+                        ->collapsed()
+                        ->compact(),
+                ])->grow(false),
+            ])->from('md')->columnSpanFull(),
 
             Forms\Components\Hidden::make('numero'),
             Forms\Components\Hidden::make('timbre')->default(0),
