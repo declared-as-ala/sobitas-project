@@ -144,7 +144,6 @@ class FactureTvaResource extends Resource
                                 ->addActionAlignment('right')
                                 ->columnSpanFull()
                                 ->itemLabel(fn (array $state) => isset($state['produit_id']) ? (\App\Models\Product::find($state['produit_id'])?->designation_fr ?? 'Ligne') : 'Ligne')
-                                ->extraItemAttributes(['class' => 'pb-2 mb-2 border-b border-gray-100 dark:border-white/5'])
                                 ->extraAttributes(['class' => 'doc-lines-repeater']),
                         ])
                         ->columnSpanFull(),
