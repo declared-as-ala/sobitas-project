@@ -94,6 +94,7 @@ class AdminPanelProvider extends PanelProvider
                     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.min.css" />
                 ' . "\n" . view('filament.components.custom-admin-styles')->render()
                 . "\n" . '<style>' . file_get_contents(resource_path('css/filament/topbar.css')) . '</style>'
+                . "\n" . '<style>' . file_get_contents(resource_path('css/filament/doc-edit.css')) . '</style>'
             )
             ->renderHook(
                 'panels::body.end',

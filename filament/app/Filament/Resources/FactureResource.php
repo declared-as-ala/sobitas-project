@@ -42,8 +42,10 @@ class FactureResource extends Resource
     {
         $coordinate = Coordinate::getCached();
         return $schema->schema([
-            Grid::make(3)->schema([
-                Grid::make(1)->schema([
+            Grid::make(3)
+                ->schema([
+                Grid::make(1)
+                    ->schema([
                     Forms\Components\Placeholder::make('company_info')
                         ->label('')
                         ->content(fn () => $coordinate ? new \Illuminate\Support\HtmlString(view('filament.components.company-info-compact', ['coordinate' => $coordinate])->render()) : '—'),
@@ -104,15 +106,34 @@ class FactureResource extends Resource
                                             if ($state && $product = \App\Models\Product::find($state)) {
                                                 $set('prix_unitaire', (float) ($product->prix ?? 0));
                                             }
-                                        }),
-                                    Forms\Components\TextInput::make('qte')->label('Qté')->numeric()->default(1)->minValue(1)->required()->live(debounce: 300),
-                                    Forms\Components\TextInput::make('prix_unitaire')->label('P.U')->numeric()->default(0)->prefix('DT')->required()->live(debounce: 300),
-                                    Forms\Components\Placeholder::make('prix_total_display')->label('P.T')->content(fn ($get) => number_format((float) $get('qte') * (float) $get('prix_unitaire'), 3, '.', ' ') . ' DT'),
+                                        })
+                                        ->columnSpan(7),
+                                    Forms\Components\TextInput::make('qte')
+                                        ->label('Qté')
+                                        ->numeric()
+                                        ->default(1)
+                                        ->minValue(1)
+                                        ->required()
+                                        ->live(debounce: 300)
+                                        ->columnSpan(2),
+                                    Forms\Components\TextInput::make('prix_unitaire')
+                                        ->label('P.U')
+                                        ->numeric()
+                                        ->default(0)
+                                        ->prefix('DT')
+                                        ->required()
+                                        ->live(debounce: 300)
+                                        ->columnSpan(2),
+                                    Forms\Components\Placeholder::make('prix_total_display')
+                                        ->label('P.T')
+                                        ->content(fn ($get) => number_format((float) $get('qte') * (float) $get('prix_unitaire'), 3, '.', ' ') . ' DT')
+                                        ->columnSpan(1),
                                 ])
-                                ->columns(4)
+                                ->columns(12)
                                 ->defaultItems(1)
-                                ->addActionLabel('Ajouter une ligne')
+                                ->addActionLabel('Ajouter produit')
                                 ->columnSpanFull()
+                                ->extraAttributes(['class' => 'doc-lines-repeater'])
                                 ->itemLabel(fn (array $state) => isset($state['produit_id']) ? (\App\Models\Product::find($state['produit_id'])?->designation_fr ?? 'Ligne') : 'Ligne'),
                         ])
                         ->columnSpanFull(),

@@ -89,23 +89,62 @@ class EditFacture extends EditRecord
         if ($code === '') {
             return;
         }
+
         $product = \App\Models\Product::where(function ($q) use ($code) {
-            $q->where('code_product', $code)->orWhere('code_product', '0' . $code);
+            $q->where('code_product', $code)
+                ->orWhere('code_product', '0' . $code);
         })->first();
+
         if (! $product) {
-            Notification::make()->title('Aucun produit trouvé pour ce code')->warning()->send();
+            Notification::make()
+                ->title('Produit introuvable')
+                ->body('Aucun produit trouvé pour ce code-barres.')
+                ->danger()
+                ->send();
+
             return;
         }
+
         $state = $this->form->getState();
         $details = $state['details'] ?? [];
-        $details[] = ['produit_id' => $product->id, 'qte' => 1, 'prix_unitaire' => (float) ($product->prix ?? 0)];
+
+        $found = false;
+        foreach ($details as $index => $row) {
+            if (! empty($row['produit_id']) && (int) $row['produit_id'] === (int) $product->id) {
+                $currentQty = (int) ($row['qte'] ?? 0);
+                $details[$index]['qte'] = $currentQty > 0 ? $currentQty + 1 : 1;
+                $found = true;
+                break;
+            }
+        }
+
+        if (! $found) {
+            $details[] = [
+                'produit_id' => $product->id,
+                'qte' => 1,
+                'prix_unitaire' => (float) ($product->prix ?? 0),
+            ];
+        }
+
         $this->form->fill(array_merge($state, ['details' => $details]));
+    }
+
+    protected function getFormActions(): array
+    {
+        return [];
     }
 
     protected function getHeaderActions(): array
     {
         $r = $this->record;
-        return array_merge(parent::getHeaderActions(), [
+
+        return [
+            Actions\SaveAction::make()
+                ->label('Enregistrer'),
+            Actions\Action::make('cancel')
+                ->label('Annuler')
+                ->color('gray')
+                ->action(fn () => $this->redirect(FactureResource::getUrl('index'))),
             Actions\Action::make('convertToInvoice')
                 ->label('Transformer en facture TVA')
                 ->icon('heroicon-o-document-duplicate')
@@ -121,7 +160,7 @@ class EditFacture extends EditRecord
                     'itemsCount' => $r->details->count(),
                     'totalTtc' => number_format((float)($r->prix_ttc ?? 0), 3, ',', ' ') . ' DT',
                 ]))
-                ->action(function (BlToInvoiceService $service) {
+                ->action(function (BlToInvoiceService $service): void {
                     $invoice = $service->createInvoiceFromBl($this->record);
                     Notification::make()
                         ->title('Conversion réussie')
@@ -143,6 +182,6 @@ class EditFacture extends EditRecord
             ActionGroup::make([
                 Actions\DeleteAction::make(),
             ])->label('Autres actions')->icon('heroicon-o-ellipsis-vertical'),
-        ]);
+        ];
     }
 }

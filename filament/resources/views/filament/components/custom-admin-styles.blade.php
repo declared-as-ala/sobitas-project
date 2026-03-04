@@ -89,15 +89,15 @@
         .print-section { position: absolute; left: 0; top: 0; width: 100%; z-index: 9999; }
     }
 
-    /* ── Document pages: sticky action bar ───────────────────────────────────── */
+    /* ── Document pages: header scrolls normally (no sticky overlap) ─────────── */
     .fi-page-header-main-ctn {
-        position: sticky;
-        top: 0;
-        z-index: 30;
+        position: static;
+        top: auto;
+        z-index: auto;
         background: var(--fi-body-bg, #fff);
-        box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.06);
+        box-shadow: none;
         padding: 12px 0;
-        margin: -12px 0 12px 0;
+        margin: 0 0 12px 0;
         padding-left: 0;
         padding-right: 0;
     }

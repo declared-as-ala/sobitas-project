@@ -1,0 +1,53 @@
+/* Document edit shared styles (Bons de Livraison, Facture TVA, Tickets) */
+
+/* Product lines: keep selects compact and single-line */
+.doc-lines-repeater .fi-input {
+    max-height: 40px;
+}
+
+.doc-lines-repeater .fi-input,
+.doc-lines-repeater .fi-select,
+.doc-lines-repeater select {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Barcode scan block */
+.bl-barcode {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.bl-barcode-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.bl-barcode-icon {
+    width: 16px;
+    height: 16px;
+}
+
+.bl-barcode-input {
+    flex: 1;
+    max-width: 360px;
+}
+
+.bl-barcode-input .fi-input {
+    width: 100%;
+}
+
+.bl-barcode-helper {
+    margin-top: 4px;
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+

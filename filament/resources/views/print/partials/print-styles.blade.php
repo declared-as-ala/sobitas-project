@@ -2,6 +2,7 @@
 <style>
     @page { size: A4; margin: 12mm; }
     * { box-sizing: border-box; }
+    body { margin: 0; background: #fff; }
     .print-doc-body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13px; line-height: 1.45; color: #1a1a1a; background: #f1f5f9; min-height: 100vh; }
     .print-toolbar { max-width: 210mm; margin: 12px auto 0; padding: 0 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
     .print-toolbar-label { font-size: 13px; color: #64748b; }

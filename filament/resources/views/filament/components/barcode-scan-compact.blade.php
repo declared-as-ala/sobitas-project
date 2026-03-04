@@ -1,23 +1,30 @@
-{{-- Compact barcode input: single line, small, integrated --}}
-<div class="doc-barcode-compact" x-data="{ barcode: '' }" x-init="$nextTick(() => $refs.barcodeInput?.focus())">
-    <div class="flex items-center gap-2">
-        <x-filament::icon icon="heroicon-o-qr-code" class="w-4 h-4 text-gray-500 dark:text-gray-400 shrink-0" />
+{{-- Barcode scan UI - POS style, no Tailwind utilities --}}
+<div
+    class="bl-barcode"
+    x-data="{ barcode: '' }"
+    x-init="$nextTick(() => $refs.barcodeInput && $refs.barcodeInput.focus())"
+>
+    <div class="bl-barcode-title">
+        <x-filament::icon icon="heroicon-o-qr-code" class="bl-barcode-icon" />
+        <span>Scan code-barres</span>
+    </div>
+    <div class="bl-barcode-input">
         <input
             type="text"
-            placeholder="Code-barres puis Entrée"
+            placeholder="Code-barres…"
             x-model="barcode"
             x-ref="barcodeInput"
             @keydown.enter.prevent="
-                if (barcode.trim()) {
+                if (barcode && barcode.trim()) {
                     $wire.addProductByBarcode(barcode.trim());
                     barcode = '';
-                    $nextTick(() => $refs.barcodeInput?.focus());
+                    $nextTick(() => $refs.barcodeInput && $refs.barcodeInput.focus());
                 }
             "
-            class="fi-input block w-full max-w-xs rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-white/10 dark:bg-white/5 text-sm py-1.5"
+            class="fi-input"
         />
+        <p class="bl-barcode-helper">
+            Scannez puis appuyez sur Entrée.
+        </p>
     </div>
-    <p style="margin-top: 4px; font-size: 0.75rem; color: #6b7280;">
-        Scannez un code-barres puis appuyez sur Entrée pour ajouter automatiquement le produit à la liste.
-    </p>
 </div>
