@@ -91,8 +91,8 @@
 
     /* ── Facture TVA edit page only: header scrolls with page (no sticky) ────── */
     .fi-page-edit-facture-tva .fi-page-header-main-ctn {
-        position: static;
-        top: auto;
+        position: static !important;
+        top: auto !important;
         z-index: auto;
         background: var(--fi-body-bg, #fff);
         box-shadow: none;

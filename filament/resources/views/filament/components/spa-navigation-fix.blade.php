@@ -77,5 +77,17 @@
     } else {
         onInitialized();
     }
+
+    /**
+     * Open URL in new tab without Livewire/SPA intercepting (avoids "Component not found" when
+     * downloading PDF or opening print view). Listen for dispatch('open-url-new-tab', url: ...).
+     */
+    document.addEventListener('livewire:initialized', function () {
+        if (typeof window.Livewire === 'undefined') return;
+        window.Livewire.on('open-url-new-tab', function (payload) {
+            var url = (payload && payload.url) ? payload.url : (payload && payload.detail && payload.detail.url) ? payload.detail.url : null;
+            if (url) window.open(url, '_blank', 'noopener');
+        });
+    });
 })();
 </script>
