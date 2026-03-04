@@ -1,24 +1,17 @@
 /* ============================================================
    Document edit shared styles — BL, Facture TVA, Devis, Tickets
-   ALL custom classes; project convention = no Tailwind utilities
+   No Tailwind utilities — project convention: custom classes only
    ============================================================ */
 
-/* ---- Sticky totals sidebar ---- */
+/* ---- Sticky sidebar (the column with totaux + résumé) ---- */
 .doc-totaux-sidebar {
     position: sticky;
-    top: 80px;   /* clear the Filament navbar */
+    top: 80px;
     align-self: flex-start;
 }
 
-/* ---- Product repeater rows ---- */
-.doc-lines-repeater .fi-input,
-.doc-lines-repeater .fi-select-input,
-.doc-lines-repeater input[type="text"],
-.doc-lines-repeater input[type="number"] {
-    max-height: 40px;
-}
-
-/* Prevent product select from wrapping (label truncation) */
+/* ---- Repeater: product rows ---- */
+/* Keep select heights sane (Filament default is too tall in dense layouts) */
 .doc-lines-repeater .fi-select-input,
 .doc-lines-repeater select {
     white-space: nowrap;
@@ -26,87 +19,174 @@
     text-overflow: ellipsis;
 }
 
-/* ---- Ligne total (P.T column) ---- */
+/* ---- PT column: P.T total inside repeater rows — must never wrap ---- */
 .doc-line-total {
     display: inline-block;
     white-space: nowrap;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
-    font-size: 0.9rem;
-    color: var(--fi-color-gray-700, #374151);
-}
-.dark .doc-line-total {
-    color: var(--fi-color-gray-200, #e5e7eb);
+    font-size: 0.875rem;
+    color: #374151;
 }
 
-/* ---- Totals sidebar: read-only display values ---- */
-.doc-total-value {
-    display: block;
-    font-size: 1.05rem;
+.dark .doc-line-total {
+    color: #e5e7eb;
+}
+
+/* ====================================================
+   SIDEBAR: Récapitulatif & Totaux
+   Matches the screenshot left-border-DT layout
+   ==================================================== */
+
+/* Generic row inside totals sidebar (SOUS-TOTAL display) */
+.doc-sidebar-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 6px 10px;
+}
+
+.dark .doc-sidebar-row {
+    background: #1f2937;
+    border-color: #374151;
+}
+
+.doc-sidebar-prefix {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+}
+
+.doc-sidebar-amount {
+    flex: 1;
+    font-size: 1rem;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
+    color: #111827;
     text-align: right;
-    padding: 4px 0;
-    border-bottom: 1px solid rgba(0,0,0,0.07);
-    color: var(--fi-color-gray-700, #374151);
-}
-.dark .doc-total-value {
-    color: var(--fi-color-gray-200, #e5e7eb);
-    border-bottom-color: rgba(255,255,255,0.08);
 }
 
-.doc-total-net {
-    display: block;
-    font-size: 1.5rem;
+.dark .doc-sidebar-amount {
+    color: #f9fafb;
+}
+
+/* ---- NET À PAYER: orange block as in screenshot ---- */
+.doc-total-net-block {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #f97316;
+    /* orange */
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-top: 2px;
+}
+
+.dark .doc-total-net-block {
+    background: #ea580c;
+}
+
+.doc-total-net-prefix {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.85);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+}
+
+.doc-total-net-amount {
+    flex: 1;
+    font-size: 1.35rem;
     font-weight: 800;
     font-variant-numeric: tabular-nums;
+    color: #ffffff;
     text-align: right;
-    padding: 6px 0;
-    color: var(--fi-primary-500, #6d28d9);
-    border-top: 2px solid var(--fi-primary-100, #ede9fe);
-    margin-top: 4px;
-}
-.dark .doc-total-net {
-    color: var(--fi-primary-400, #a78bfa);
-    border-top-color: rgba(109,40,217,0.2);
+    letter-spacing: -0.01em;
 }
 
-/* ---- Barcode scan block ---- */
+/* ---- N° Document badge (monospace chip) ---- */
+.doc-numero-badge {
+    display: inline-block;
+    font-weight: 700;
+    font-family: ui-monospace, "Cascadia Code", monospace;
+    font-size: 0.85rem;
+    color: #374151;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    padding: 2px 8px;
+    letter-spacing: 0.04em;
+}
+
+.dark .doc-numero-badge {
+    color: #f9fafb;
+    background: #1f2937;
+    border-color: #374151;
+}
+
+/* ====================================================
+   SIDEBAR: Résumé Produits — right-aligned value rows
+   ==================================================== */
+.doc-resume-value {
+    display: block;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.95rem;
+    color: #374151;
+    text-align: right;
+}
+
+.dark .doc-resume-value {
+    color: #e5e7eb;
+}
+
+/* ====================================================
+   BARCODE scan block
+   ==================================================== */
 .bl-barcode {
     display: flex;
     flex-direction: row;
     align-items: center;
     gap: 12px;
-    padding: 10px 12px;
+    padding: 8px 12px;
     border-radius: 8px;
-    background: rgba(109, 40, 217, 0.04);
-    border: 1px dashed rgba(109, 40, 217, 0.25);
-    margin-bottom: 10px;
+    background: rgba(249, 115, 22, 0.04);
+    border: 1px solid rgba(249, 115, 22, 0.2);
+    margin-bottom: 8px;
 }
+
 .dark .bl-barcode {
-    background: rgba(167, 139, 250, 0.06);
-    border-color: rgba(167, 139, 250, 0.2);
+    background: rgba(251, 146, 60, 0.06);
+    border-color: rgba(251, 146, 60, 0.15);
 }
 
 .bl-barcode-title {
     display: inline-flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
-    min-width: 80px;
-    font-size: 0.75rem;
+    gap: 3px;
+    min-width: 72px;
+    font-size: 0.7rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--fi-primary-600, #7c3aed);
+    letter-spacing: 0.06em;
+    color: #f97316;
 }
+
 .dark .bl-barcode-title {
-    color: var(--fi-primary-400, #a78bfa);
+    color: #fb923c;
 }
 
 .bl-barcode-icon {
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
 }
 
 .bl-barcode-input {
@@ -116,20 +196,30 @@
 .bl-barcode-input .fi-input,
 .bl-barcode-input input[type="text"] {
     width: 100%;
-    font-size: 1rem;
+    font-size: 0.9rem;
     border-radius: 6px;
-    border-width: 2px;
     transition: box-shadow 0.15s, border-color 0.15s;
 }
+
 .bl-barcode-input .fi-input:focus,
 .bl-barcode-input input[type="text"]:focus {
-    border-color: var(--fi-primary-400, #a78bfa);
-    box-shadow: 0 0 0 3px rgba(109,40,217,0.15);
+    border-color: #f97316;
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
 }
 
 .bl-barcode-helper {
-    margin-top: 5px;
-    font-size: 0.72rem;
+    margin-top: 4px;
+    font-size: 0.7rem;
     color: #9ca3af;
-    letter-spacing: 0.03em;
+}
+
+.bl-barcode-helper kbd {
+    display: inline-block;
+    border: 1px solid #d1d5db;
+    border-radius: 3px;
+    padding: 0 4px;
+    font-size: 0.65rem;
+    background: #f9fafb;
+    color: #374151;
+    font-family: inherit;
 }
