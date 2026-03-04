@@ -40,6 +40,28 @@
 /* 4) Modal UI Fix - keep overlays above sticky sidebars and headers */
 .fi-modal-close-overlay,
 .fi-modal-window,
+.fi-modal-backdrop,
 .fi-modal-container {
     z-index: 10000 !important;
+}
+
+/* Force backdrop to be very dark so page text behind is illegible */
+.fi-modal-close-overlay {
+    background-color: rgba(0, 0, 0, 0.85) !important;
+}
+
+/* Restrict max modal width specifically on edit-facture-tva to look like a clean prompter */
+.fi-page-edit-facture-tva .fi-modal-window {
+    max-width: 32rem !important;
+    /* max-w-lg eq */
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* 5) Toast Notifications on TOP of EVERYTHING */
+.fi-no,
+.fi-no-notification,
+.fi-no-notification-window,
+[x-data="notifications"] {
+    z-index: 99999 !important;
 }

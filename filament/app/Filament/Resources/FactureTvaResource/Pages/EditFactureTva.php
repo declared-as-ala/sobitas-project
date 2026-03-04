@@ -8,6 +8,7 @@ use App\Filament\Widgets\DocumentTimelineWidget;
 use App\Mail\FactureTvaSent;
 use App\Models\DetailsFactureTva;
 use App\Models\Product;
+use App\Services\InvoiceCalculator;
 use Filament\Actions;
 use Filament\Actions\ActionGroup;
 use Filament\Forms;
@@ -65,8 +66,8 @@ class EditFactureTva extends EditRecord
     {
         $client = $this->record->client?->name ?? '—';
         $date = $this->record->created_at?->format('d/m/Y') ?? '—';
-        $total = number_format((float) ($this->record->prix_ttc ?? 0), 3, ',', ' ') . ' TND';
-        $parts = ["Client : {$client}", "Date : {$date}", "Total : {$total}"];
+        $net = number_format((float) ($this->record->net_a_payer ?? $this->record->prix_ttc ?? 0), 3, ',', ' ') . ' TND';
+        $parts = ["Client : {$client}", "Date : {$date}", "Net à payer : {$net}"];
         if (Schema::hasColumn('facture_tvas', 'facture_id') && $this->record->facture_id) {
             $parts[] = 'BL : #' . $this->record->facture?->numero;
         }
@@ -103,40 +104,22 @@ class EditFactureTva extends EditRecord
         $coordinate = \App\Models\Coordinate::getCached();
         $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
         
-        $totalHt = 0.0;
-        $totalTva = 0.0;
-        foreach ($data['details'] as $row) {
-            if (empty($row['produit_id'])) {
-                continue;
-            }
-            $qte = (int) ($row['qte'] ?? 1);
-            $prixUnitaire = (float) ($row['prix_unitaire'] ?? 0);
-            $tvaPct = (float) ($row['tva_pct'] ?? $defaultTva);
-            $ht = $qte * $prixUnitaire;
-            $totalHt += $ht;
-            $totalTva += $ht * $tvaPct / 100;
-        }
-
-        $remise = max(0, (float) ($this->record->remise ?? 0));
-        $remise = min($remise, $totalHt);
-        $timbre = max(0, (float) ($this->record->timbre ?? 0));
+        $remise = (float) ($this->record->remise ?? 0);
+        $timbre = (float) ($this->record->timbre ?? 0);
         
-        $htApresRemise = round($totalHt - $remise, 3);
-        $tvaApresRemise = $totalHt > 0 ? round($totalTva - ($totalTva * $remise / $totalHt), 3) : 0.0;
-        $net = round($htApresRemise + $tvaApresRemise + $timbre, 3);
-        $pourcentageRemise = $totalHt > 0 ? round($remise / $totalHt * 100, 2) : 0;
+        $totals = InvoiceCalculator::calculate($data['details'], $remise, $timbre, $defaultTva);
 
         if (\Illuminate\Support\Facades\Schema::hasColumn('facture_tvas', 'pourcentage_remise')) {
-            $data['pourcentage_remise'] = $pourcentageRemise;
+            $data['pourcentage_remise'] = $totals['pourcentage_remise'];
         }
         
-        $data['remise'] = $remise;
-        $data['timbre'] = $timbre;
-        $data['prix_ht'] = round($totalHt, 3);
-        $data['prix_ht_apres_remise'] = $htApresRemise;
-        $data['tva'] = $tvaApresRemise;
-        $data['prix_ttc'] = round($htApresRemise + $tvaApresRemise, 3);
-        $data['net_a_payer'] = $net;
+        $data['remise'] = $totals['remise'];
+        $data['timbre'] = $totals['timbre'];
+        $data['prix_ht'] = $totals['total_ht_brut'];
+        $data['prix_ht_apres_remise'] = $totals['prix_ht_apres_remise'];
+        $data['tva'] = $totals['tva'];
+        $data['prix_ttc'] = $totals['prix_ttc'];
+        $data['net_a_payer'] = $totals['net_a_payer'];
         
         return $data;
     }
@@ -172,45 +155,26 @@ class EditFactureTva extends EditRecord
         }
 
         $state = $this->form->getState();
-        $totalHt = 0.0;
-        $totalTva = 0.0;
-        
-        foreach ($details as $row) {
-            if (empty($row['produit_id'])) {
-                continue;
-            }
-            $qte = (int) ($row['qte'] ?? 1);
-            $prixUnitaire = (float) ($row['prix_unitaire'] ?? 0);
-            $tvaPct = (float) ($row['tva_pct'] ?? $defaultTva);
-            $ht = $qte * $prixUnitaire;
-            $totalHt += $ht;
-            $totalTva += $ht * $tvaPct / 100;
-        }
-
-        $remise = max(0, (float) ($state['remise'] ?? 0));
-        $remise = min($remise, $totalHt);
-        $timbre = max(0, (float) ($state['timbre'] ?? 0));
-        
-        $htApresRemise = round($totalHt - $remise, 3);
-        $tvaApresRemise = $totalHt > 0 ? round($totalTva - ($totalTva * $remise / $totalHt), 3) : 0.0;
-        $net = round($htApresRemise + $tvaApresRemise + $timbre, 3);
-        $pourcentageRemise = $totalHt > 0 ? round($remise / $totalHt * 100, 2) : 0;
+        $remise = (float) ($state['remise'] ?? 0);
+        $timbre = (float) ($state['timbre'] ?? 0);
+        $calcTotals = InvoiceCalculator::calculate($details, $remise, $timbre, $defaultTva);
 
         $totals = [
-            'prix_ht' => round($totalHt, 3),
-            'remise' => $remise,
-            'tva' => $tvaApresRemise,
-            'timbre' => $timbre,
-            'prix_ttc' => round($htApresRemise + $tvaApresRemise, 3),
+            'prix_ht' => $calcTotals['total_ht_brut'],
+            'remise' => $calcTotals['remise'],
+            'tva' => $calcTotals['tva'],
+            'timbre' => $calcTotals['timbre'],
+            'prix_ttc' => $calcTotals['prix_ttc'],
         ];
+        
         if (\Illuminate\Support\Facades\Schema::hasColumn('facture_tvas', 'prix_ht_apres_remise')) {
-            $totals['prix_ht_apres_remise'] = $htApresRemise;
+            $totals['prix_ht_apres_remise'] = $calcTotals['prix_ht_apres_remise'];
         }
         if (\Illuminate\Support\Facades\Schema::hasColumn('facture_tvas', 'pourcentage_remise')) {
-            $totals['pourcentage_remise'] = $pourcentageRemise;
+            $totals['pourcentage_remise'] = $calcTotals['pourcentage_remise'];
         }
         if (\Illuminate\Support\Facades\Schema::hasColumn('facture_tvas', 'net_a_payer')) {
-            $totals['net_a_payer'] = $net;
+            $totals['net_a_payer'] = $calcTotals['net_a_payer'];
         }
         $this->record->update($totals);
     }

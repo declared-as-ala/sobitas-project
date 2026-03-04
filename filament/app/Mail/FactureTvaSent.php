@@ -26,6 +26,13 @@ class FactureTvaSent extends Mailable
             ->get();
         $coordonnee = \App\Models\Coordinate::first();
         $defaultTva = (float) ($factureTva->tva ?? 19);
+        $calcTotals = \App\Services\InvoiceCalculator::calculate(
+            $details_facture->toArray(),
+            (float) ($factureTva->remise ?? 0),
+            (float) ($factureTva->timbre ?? 0),
+            $defaultTva
+        );
+
         $invoice_rows = $details_facture->map(function ($d, $i) use ($defaultTva) {
             $qte = (int) ($d->qte ?? $d->quantite ?? 0);
             $pu_ht = (float) ($d->prix_unitaire ?? 0);
@@ -58,11 +65,12 @@ class FactureTvaSent extends Mailable
             'status' => $factureTva->status ? $factureTva->status->value : null,
             'status_label' => $factureTva->status ? $factureTva->status->label() : null,
             'totals' => [
-                ['label' => 'Total HT', 'value' => number_format((float) ($factureTva->prix_ht ?? 0), 3, ',', ' ') . ' DT'],
-                ['label' => 'Remise', 'value' => number_format((float) ($factureTva->remise ?? 0), 3, ',', ' ') . ' DT'],
-                ['label' => 'TVA', 'value' => number_format((float) ($factureTva->tva ?? 0), 3, ',', ' ') . ' DT'],
-                ['label' => 'Timbre', 'value' => number_format((float) ($factureTva->timbre ?? 0), 3, ',', ' ') . ' DT'],
-                ['label' => 'TOTAL TTC', 'value' => number_format((float) ($factureTva->prix_ttc ?? 0), 3, ',', ' ') . ' DT', 'class' => 'ttc'],
+                ['label' => 'Total HT', 'value' => number_format($calcTotals['total_ht_brut'], 3, ',', ' ') . ' DT'],
+                ['label' => 'Remise', 'value' => number_format($calcTotals['remise'], 3, ',', ' ') . ' DT'],
+                ['label' => 'TVA', 'value' => number_format($calcTotals['tva'], 3, ',', ' ') . ' DT'],
+                ['label' => 'Timbre', 'value' => number_format($calcTotals['timbre'], 3, ',', ' ') . ' DT'],
+                ['label' => 'TOTAL TTC', 'value' => number_format($calcTotals['prix_ttc'], 3, ',', ' ') . ' DT'],
+                ['label' => 'NET À PAYER', 'value' => number_format($calcTotals['net_a_payer'], 3, ',', ' ') . ' DT', 'class' => 'net-a-payer'],
             ],
             'footerNote' => $coordonnee && ! empty($coordonnee->note) ? $coordonnee->note : null,
             'paymentTerms' => 'Paiement à réception. Virement bancaire ou espèces. Merci de préciser le n° de facture.',

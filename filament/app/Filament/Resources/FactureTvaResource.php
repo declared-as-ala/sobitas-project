@@ -6,6 +6,8 @@ use App\Filament\Resources\FactureTvaResource\Pages;
 use App\Models\Client;
 use App\Models\Coordinate;
 use App\Models\FactureTva;
+use App\Models\FactureTva;
+use App\Services\InvoiceCalculator;
 use Filament\Actions;
 use Filament\Forms;
 use Filament\Forms\Components\Repeater;
@@ -246,7 +248,16 @@ class FactureTvaResource extends Resource
                     })
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('client.name')->label('Client')->searchable()->sortable(),
-                Tables\Columns\TextColumn::make('prix_ttc')->label('Total TTC')->money('TND')->sortable(),
+                Tables\Columns\TextColumn::make('net_a_payer')
+                    ->label('NET À PAYER')
+                    ->money('TND')
+                    ->sortable()
+                    ->weight('bold'),
+                Tables\Columns\TextColumn::make('prix_ttc')
+                    ->label('Total TTC')
+                    ->money('TND')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('tva_rate_display')
                     ->label('TVA %')
                     ->getStateUsing(fn (FactureTva $record) => $record->getTvaRatePercent())
@@ -287,30 +298,20 @@ class FactureTvaResource extends Resource
         // We must reach the root form state using '../../'
         $details = $get('../../details') ?? $get('details') ?? [];
         
-        $totalHt = 0.0;
-        $totalTva = 0.0;
-        foreach ($details as $d) {
-            if (! empty($d['produit_id'])) {
-                $ht = (float) ($d['qte'] ?? 0) * (float) ($d['prix_unitaire'] ?? 0);
-                $tvaPct = (float) ($d['tva_pct'] ?? 19);
-                $totalHt += $ht;
-                $totalTva += $ht * $tvaPct / 100;
-            }
+        $remise = (float) ($get('../../remise') ?? $get('remise') ?? 0);
+        $timbre = (float) ($get('../../timbre') ?? $get('timbre') ?? 0);
+        
+        // Find default TVA from db (optional cache to avoid 100 queries)
+        static $defaultTva = null;
+        if ($defaultTva === null) {
+            $coordinate = Coordinate::getCached();
+            $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
         }
-        
-        // Grab values, again taking care of context scope
-        $remise = max(0, (float) ($get('../../remise') ?? $get('remise') ?? 0));
-        $remise = min($remise, $totalHt);
-        $timbre = max(0, (float) ($get('../../timbre') ?? $get('timbre') ?? 0));
-        
-        $htApresRemise = round($totalHt - $remise, 3);
-        $tvaApresRemise = $totalHt > 0 ? round($totalTva - ($totalTva * $remise / $totalHt), 3) : 0.0;
-        $net = round($htApresRemise + $tvaApresRemise + $timbre, 3);
-        $pourcentageRemise = $totalHt > 0 ? round($remise / $totalHt * 100, 2) : 0;
+
+        $totals = InvoiceCalculator::calculate($details, $remise, $timbre, $defaultTva);
 
         // Set values at the root form state
         $setFn = function($field, $value) use ($get, $set) {
-            // If we are currently inside the repeater, set it two levels up
             if ($get('../../' . $field) !== null || $get('details') === null) {
                 $set('../../' . $field, $value);
             } else {
@@ -318,12 +319,12 @@ class FactureTvaResource extends Resource
             }
         };
 
-        $setFn('prix_ht', round($totalHt, 3));
-        $setFn('prix_ht_apres_remise', $htApresRemise);
-        $setFn('tva', $tvaApresRemise);
-        $setFn('prix_ttc', round($htApresRemise + $tvaApresRemise, 3));
-        $setFn('net_a_payer', $net);
-        $setFn('pourcentage_remise', $pourcentageRemise);
+        $setFn('prix_ht', $totals['total_ht_brut']);
+        $setFn('prix_ht_apres_remise', $totals['prix_ht_apres_remise']);
+        $setFn('tva', $totals['tva']);
+        $setFn('prix_ttc', $totals['prix_ttc']);
+        $setFn('net_a_payer', $totals['net_a_payer']);
+        $setFn('pourcentage_remise', $totals['pourcentage_remise']);
     }
 
     public static function getRelations(): array

@@ -82,10 +82,13 @@
     .invoice-totals-box { width: 100%; max-width: 300px; background: linear-gradient(180deg, var(--invoice-orange-light) 0%, #fff 100%); border: 1px solid #fed7aa; border-radius: 10px; padding: 18px 22px; }
     .invoice-tot-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 12px; color: var(--invoice-gray-700); }
     .invoice-tot-row.invoice-tot-ttc,
-    .invoice-tot-row.ttc { margin-top: 12px; padding-top: 14px; border-top: 2px solid var(--invoice-orange); font-size: 18px; font-weight: 800; color: var(--invoice-gray-900); }
+    .invoice-tot-row.ttc { margin-top: 12px; padding-top: 14px; border-top: 1px dashed var(--invoice-gray-200); font-size: 14px; font-weight: 700; color: var(--invoice-gray-800); }
     .invoice-tot-amt { font-variant-numeric: tabular-nums; font-weight: 600; }
     .invoice-tot-row.invoice-tot-ttc .invoice-tot-amt,
-    .invoice-tot-row.ttc .invoice-tot-amt { font-size: 20px; color: var(--invoice-orange-dark); }
+    .invoice-tot-row.ttc .invoice-tot-amt { font-size: 16px; color: var(--invoice-gray-900); }
+
+    .invoice-tot-row.net-a-payer { margin-top: 12px; padding-top: 14px; border-top: 2px solid var(--invoice-orange); font-size: 18px; font-weight: 800; color: var(--invoice-gray-900); }
+    .invoice-tot-row.net-a-payer .invoice-tot-amt { font-size: 22px; color: var(--invoice-orange-dark); }
 
     /* Somme en lettres */
     .invoice-somme { margin: 0 24px 20px; padding: 12px 16px; background: var(--invoice-gray-50); border-radius: 8px; border-left: 4px solid var(--invoice-orange); font-size: 11px; color: var(--invoice-gray-700); font-style: italic; }
