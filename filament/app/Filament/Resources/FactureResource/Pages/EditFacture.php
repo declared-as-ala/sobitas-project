@@ -139,8 +139,10 @@ class EditFacture extends EditRecord
         $r = $this->record;
 
         return [
-            Actions\SaveAction::make()
-                ->label('Enregistrer'),
+            Actions\Action::make('save')
+                ->label('Enregistrer')
+                ->color('primary')
+                ->action('save'),
             Actions\Action::make('cancel')
                 ->label('Annuler')
                 ->color('gray')
