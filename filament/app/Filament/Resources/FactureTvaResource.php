@@ -97,7 +97,7 @@ class FactureTvaResource extends Resource
                                         ->preload()
                                         ->required()
                                         ->live()
-                                        ->columnSpan(['default' => 12, 'sm' => 4])
+                                        ->columnSpan(['default' => 7, 'sm' => 12])
                                         ->afterStateUpdated(function ($state, $set) {
                                             if ($state && $product = \App\Models\Product::find($state)) {
                                                 $set('prix_unitaire', (float) ($product->prix ?? 0));
@@ -110,7 +110,7 @@ class FactureTvaResource extends Resource
                                         ->minValue(1)
                                         ->required()
                                         ->live(debounce: 300)
-                                        ->columnSpan(['default' => 4, 'sm' => 1]),
+                                        ->columnSpan(['default' => 1, 'sm' => 4]),
                                     Forms\Components\TextInput::make('prix_unitaire')
                                         ->label('P.U')
                                         ->numeric()
@@ -118,12 +118,12 @@ class FactureTvaResource extends Resource
                                         ->prefix('DT')
                                         ->required()
                                         ->live(debounce: 300)
-                                        ->columnSpan(['default' => 8, 'sm' => 2]),
+                                        ->columnSpan(['default' => 2, 'sm' => 4]),
                                     Forms\Components\Placeholder::make('prix_ht_display')
                                         ->label('P.T/HT')
-                                        ->content(fn ($get) => number_format((float) $get('qte') * (float) $get('prix_unitaire'), 3, '.', ' '))
+                                        ->content(fn ($get) => number_format((float) $get('qte') * (float) $get('prix_unitaire'), 3, '.', ' ') . ' DT')
                                         ->extraAttributes(['class' => 'text-right font-medium'])
-                                        ->columnSpan(['default' => 4, 'sm' => 2]),
+                                        ->columnSpan(['default' => 2, 'sm' => 4]),
                                     Forms\Components\TextInput::make('tva_pct')
                                         ->label('TVA %')
                                         ->numeric()
@@ -131,17 +131,16 @@ class FactureTvaResource extends Resource
                                         ->suffix('%')
                                         ->required()
                                         ->live(debounce: 300)
-                                        ->columnSpan(['default' => 4, 'sm' => 1]),
+                                        ->columnSpan(['default' => 1, 'sm' => 4]),
                                     Forms\Components\Placeholder::make('prix_ttc_display')
-                                        ->label('P.T/TTC')
-                                        ->content(fn ($get) => number_format((float) $get('qte') * (float) $get('prix_unitaire') * (1 + (float) ($get('tva_pct') ?? $defaultTva) / 100), 3, '.', ' '))
-                                        ->extraAttributes(['class' => 'doc-line-tva-badge text-right text-primary-600 font-bold'])
-                                        ->columnSpan(['default' => 4, 'sm' => 2]),
+                                        ->label('TVA (DT)')
+                                        ->content(fn ($get) => number_format((float) $get('qte') * (float) $get('prix_unitaire') * (float) ($get('tva_pct') ?? $defaultTva) / 100, 3, '.', ' ') . ' DT')
+                                        ->extraAttributes(['class' => 'doc-line-tva-badge text-right'])
+                                        ->columnSpan(['default' => 1, 'sm' => 4]),
                                 ])
                                 ->columns(12)
                                 ->defaultItems(1)
                                 ->addActionLabel('Ajouter produit')
-                                ->addActionAlignment('right')
                                 ->columnSpanFull()
                                 ->itemLabel(fn (array $state) => isset($state['produit_id']) ? (\App\Models\Product::find($state['produit_id'])?->designation_fr ?? 'Ligne') : 'Ligne')
                                 ->extraAttributes(['class' => 'doc-lines-repeater']),
@@ -154,14 +153,7 @@ class FactureTvaResource extends Resource
                     Section::make('Totaux')
                         ->icon('heroicon-o-calculator')
                         ->schema([
-                            Forms\Components\Hidden::make('prix_ht'),
-                            Forms\Components\Hidden::make('prix_ht_apres_remise'),
-                            Forms\Components\Hidden::make('tva'),
-                            Forms\Components\Hidden::make('prix_ttc'),
-                            Forms\Components\Hidden::make('net_a_payer'),
-                            Forms\Components\Placeholder::make('prix_ht_display')
-                                ->label('')
-                                ->content(fn ($get) => new \Illuminate\Support\HtmlString('<div class="doc-sidebar-row"><span class="doc-sidebar-prefix">Sous-total HT</span><span class="doc-sidebar-amount">' . number_format((float)($get('prix_ht') ?? 0), 3, ',', ' ') . ' DT</span></div>')),
+                            Forms\Components\TextInput::make('prix_ht')->label('Sous-total HT')->numeric()->prefix('DT')->disabled()->dehydrated(false)->default(0),
                             Forms\Components\TextInput::make('remise')->label('Remise')->numeric()->prefix('DT')->default(0)->live()->afterStateUpdated(fn ($state, $get, $set) => self::recalculateFactureTvaTotals($get, $set)),
                             Forms\Components\Placeholder::make('remise_error')->label('')->content(fn ($get) => (float) ($get('remise') ?? 0) > (float) ($get('prix_ht') ?? 0) ? new \Illuminate\Support\HtmlString('<p class="text-sm text-danger-600 dark:text-danger-400">La remise ne peut pas dépasser le sous-total.</p>') : '')->visible(fn ($get) => (float) ($get('remise') ?? 0) > (float) ($get('prix_ht') ?? 0)),
                             Forms\Components\TextInput::make('pourcentage_remise')
@@ -181,20 +173,18 @@ class FactureTvaResource extends Resource
                                     $set('remise', round($totalHt * (float) ($state ?? 0) / 100, 3));
                                     self::recalculateFactureTvaTotals($get, $set);
                                 }),
-                            Forms\Components\Placeholder::make('prix_ht_apres_remise_display')
-                                ->label('')
-                                ->content(fn ($get) => new \Illuminate\Support\HtmlString('<div class="doc-sidebar-row"><span class="doc-sidebar-prefix">HT après remise</span><span class="doc-sidebar-amount">' . number_format((float)($get('prix_ht_apres_remise') ?? 0), 3, ',', ' ') . ' DT</span></div>'))
-                                ->visible(fn ($get) => (float) ($get('remise') ?? 0) > 0),
-                            Forms\Components\Placeholder::make('tva_display')
-                                ->label('')
-                                ->content(fn ($get) => new \Illuminate\Support\HtmlString('<div class="doc-sidebar-row"><span class="doc-sidebar-prefix">TVA</span><span class="doc-sidebar-amount">' . number_format((float)($get('tva') ?? 0), 3, ',', ' ') . ' DT</span></div>')),
+                            Forms\Components\TextInput::make('prix_ht_apres_remise')->label('HT après remise')->numeric()->prefix('DT')->disabled()->dehydrated(false)->default(0),
+                            Forms\Components\TextInput::make('tva')->label('TVA')->numeric()->prefix('DT')->disabled()->dehydrated(false)->default(0),
                             Forms\Components\TextInput::make('timbre')->label('Timbre')->numeric()->prefix('DT')->default(0)->live()->afterStateUpdated(fn ($state, $get, $set) => self::recalculateFactureTvaTotals($get, $set)),
-                            Forms\Components\Placeholder::make('prix_ttc_display')
-                                ->label('')
-                                ->content(fn ($get) => new \Illuminate\Support\HtmlString('<div class="doc-sidebar-row bg-gray-50 dark:bg-white/5"><span class="doc-sidebar-prefix font-bold">Total TTC</span><span class="doc-sidebar-amount font-bold text-gray-900 dark:text-gray-100">' . number_format((float)($get('prix_ttc') ?? 0), 3, ',', ' ') . ' DT</span></div>')),
-                            Forms\Components\Placeholder::make('net_a_payer_display')
-                                ->label('')
-                                ->content(fn ($get) => new \Illuminate\Support\HtmlString('<div class="doc-total-net-block"><span class="doc-total-net-prefix">NET À PAYER</span><span class="doc-total-net-amount">' . number_format((float)($get('net_a_payer') ?? 0), 3, ',', ' ') . ' <small>DT</small></span></div>')),
+                            Forms\Components\TextInput::make('prix_ttc')->label('Total TTC')->numeric()->prefix('DT')->disabled()->dehydrated(false)->default(0),
+                            Forms\Components\TextInput::make('net_a_payer')
+                                ->label('NET À PAYER')
+                                ->numeric()
+                                ->prefix('DT')
+                                ->disabled()
+                                ->dehydrated(false)
+                                ->default(0)
+                                ->extraInputAttributes(['class' => 'doc-net-a-payer-input font-bold text-lg']),
                             Forms\Components\TextInput::make('numero_display')
                                 ->label('N° Document')
                                 ->disabled()

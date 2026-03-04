@@ -61,30 +61,23 @@ class EditFactureTva extends EditRecord
         return 'Facture #' . $this->record->numero;
     }
 
-    public function getSubheading(): \Illuminate\Contracts\Support\Htmlable | string | null
+    public function getSubheading(): ?string
     {
         $client = $this->record->client?->name ?? '—';
         $date = $this->record->created_at?->format('d/m/Y') ?? '—';
         $total = number_format((float) ($this->record->prix_ttc ?? 0), 3, ',', ' ') . ' TND';
-        
-        $html = '<div class="flex flex-wrap items-center gap-2 mt-1">';
-        $html .= '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm font-medium bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-400 ring-1 ring-inset ring-primary-600/20"><x-filament::icon icon="heroicon-m-user" class="h-4 w-4" /> ' . e($client) . '</span>';
-        $html .= '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm font-medium bg-gray-50 text-gray-700 dark:bg-white/10 dark:text-gray-300 ring-1 ring-inset ring-gray-600/20"><x-filament::icon icon="heroicon-m-calendar" class="h-4 w-4" /> ' . $date . '</span>';
-        $html .= '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm font-medium bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-400 ring-1 ring-inset ring-success-600/20"><x-filament::icon icon="heroicon-m-currency-dollar" class="h-4 w-4" /> ' . $total . '</span>';
-        
+        $parts = ["Client : {$client}", "Date : {$date}", "Total : {$total}"];
         if (Schema::hasColumn('facture_tvas', 'facture_id') && $this->record->facture_id) {
-            $html .= '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm font-medium bg-gray-50 text-gray-700 dark:bg-white/10 dark:text-gray-300 ring-1 ring-inset ring-gray-600/20"><x-filament::icon icon="heroicon-m-document-duplicate" class="h-4 w-4" /> BL: #' . $this->record->facture?->numero . '</span>';
+            $parts[] = 'BL : #' . $this->record->facture?->numero;
         }
-        
         if (Schema::hasTable('payments')) {
             $paid = (float) $this->record->payments()->where('status', PaymentStatus::Succeeded)->sum('amount');
             if ($paid > 0) {
-                $html .= '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm font-medium bg-info-50 text-info-700 dark:bg-info-500/10 dark:text-info-400 ring-1 ring-inset ring-info-600/20"><x-filament::icon icon="heroicon-m-check-circle" class="h-4 w-4" /> Encaissé : ' . number_format($paid, 3, ',', ' ') . ' DT</span>';
+                $parts[] = 'Encaissé : ' . number_format($paid, 3, ',', ' ') . ' DT';
             }
         }
-        $html .= '</div>';
 
-        return new \Illuminate\Support\HtmlString($html);
+        return implode(' · ', $parts);
     }
 
     protected function mutateFormDataBeforeFill(array $data): array
@@ -169,28 +162,11 @@ class EditFactureTva extends EditRecord
         $this->record->update($totals);
     }
 
-    protected function getRedirectUrl(): string
-    {
-        return static::getResource()::getUrl('index');
-    }
-
-    protected function getSavedNotification(): ?Notification
-    {
-        return Notification::make()
-            ->success()
-            ->title('Facture enregistrée')
-            ->body('Les modifications ont été sauvegardées avec succès.');
-    }
-
     protected function getFormActions(): array
     {
         return [
-            $this->getSaveFormAction()
-                ->label('Enregistrer les modifications')
-                ->icon('heroicon-o-check'),
-            $this->getCancelFormAction()
-                ->label('Annuler')
-                ->url(static::getResource()::getUrl('index')),
+            $this->getSaveFormAction()->label('Enregistrer les modifications')->icon('heroicon-o-check'),
+            $this->getCancelFormAction()->label('Annuler'),
         ];
     }
 
