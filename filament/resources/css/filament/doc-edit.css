@@ -223,3 +223,12 @@
     color: #374151;
     font-family: inherit;
 }
+
+/* ====================================================
+   Disable sticky header ONLY for Facture TVA edit page
+   ==================================================== */
+.fi-page-edit-facture-tva .fi-header,
+.fi-page-edit-facture-tva .fi-topbar-ctn,
+.fi-page-edit-facture-tva .fi-topbar {
+    position: static !important;
+}
