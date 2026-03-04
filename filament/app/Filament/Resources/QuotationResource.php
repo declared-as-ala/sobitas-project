@@ -61,13 +61,15 @@ class QuotationResource extends Resource
                                 ->getOptionLabelFromRecordUsing(fn ($record) => (string) ($record->name ?? 'Client #' . $record->id))
                                 ->searchable()
                                 ->preload()
+                                ->placeholder('Sélectionnez un client…')
                                 ->createOptionForm([
                                     Forms\Components\TextInput::make('name')->required()->label('Nom'),
-                                    Forms\Components\TextInput::make('phone_1')->label('Téléphone 1'),
+                                    Forms\Components\TextInput::make('phone_1')->label('Téléphone'),
                                     Forms\Components\TextInput::make('email')->email()->label('Email'),
                                     Forms\Components\TextInput::make('adresse')->label('Adresse'),
                                     Forms\Components\TextInput::make('matricule')->label('Matricule fiscal'),
                                 ])
+                                ->createOptionModalHeading('Nouveau Client')
                                 ->required()
                                 ->live()
                                 ->afterStateUpdated(function ($state, $set) {
@@ -80,14 +82,14 @@ class QuotationResource extends Resource
                                         $set('client_phone', '');
                                     }
                                 }),
-                            Forms\Components\TextInput::make('client_adresse')->label('Adresse')->disabled()->dehydrated(false),
-                            Forms\Components\TextInput::make('client_phone')->label('N° Tél')->disabled()->dehydrated(false),
+                            Forms\Components\TextInput::make('client_adresse')->label('Adresse')->disabled()->dehydrated(false)->placeholder('—'),
+                            Forms\Components\TextInput::make('client_phone')->label('N° Téléphone')->disabled()->dehydrated(false)->placeholder('—'),
                         ])
                         ->columns(1)
                         ->compact()
                         ->collapsible(),
                     Section::make('Articles et Produits')
-                        ->description('Scannez un code-barres ou ajoutez manuellement des produits au devis.')
+                        ->description('Scannez un code-barres ou ajoutez manuellement les produits du devis.')
                         ->icon('heroicon-o-shopping-bag')
                         ->schema([
                             Forms\Components\Placeholder::make('barcode_scan')
@@ -95,6 +97,19 @@ class QuotationResource extends Resource
                                 ->content(fn () => new \Illuminate\Support\HtmlString(view('filament.components.barcode-scan-compact')->render())),
                             Repeater::make('details')
                                 ->label('')
+                                ->live()
+                                ->afterStateUpdated(function ($get, $set) {
+                                    $details = $get('details') ?? [];
+                                    $total   = 0.0;
+                                    foreach ($details as $d) {
+                                        if (! empty($d['produit_id'])) {
+                                            $total += (float) ($d['qte'] ?? 0) * (float) ($d['prix_unitaire'] ?? 0);
+                                        }
+                                    }
+                                    $remise = (float) ($get('remise') ?? 0);
+                                    $set('prix_ht', $total);
+                                    $set('prix_ttc', $total - $remise);
+                                })
                                 ->schema([
                                     Forms\Components\Select::make('produit_id')
                                         ->label('Produit')
@@ -103,39 +118,54 @@ class QuotationResource extends Resource
                                         ->preload()
                                         ->required()
                                         ->live()
+                                        ->placeholder('Sélectionner un produit…')
                                         ->afterStateUpdated(function ($state, $set) {
                                             if ($state && $product = \App\Models\Product::find($state)) {
                                                 $set('prix_unitaire', (float) ($product->prix ?? 0));
                                             }
                                         })
-                                        ->columnSpan(7),
+                                        ->columnSpan(6),
                                     Forms\Components\TextInput::make('qte')
                                         ->label('Qté')
                                         ->numeric()
                                         ->default(1)
                                         ->minValue(1)
                                         ->required()
-                                        ->live(debounce: 300)
+                                        ->live(debounce: 400)
+                                        ->extraInputAttributes(['style' => 'text-align:center'])
                                         ->columnSpan(2),
                                     Forms\Components\TextInput::make('prix_unitaire')
-                                        ->label('P.U')
+                                        ->label('Prix Unit.')
                                         ->numeric()
                                         ->default(0)
-                                        ->prefix('DT')
+                                        ->suffix('DT')
                                         ->required()
-                                        ->live(debounce: 300)
+                                        ->live(debounce: 400)
                                         ->columnSpan(2),
                                     Forms\Components\Placeholder::make('prix_total_display')
-                                        ->label('P.T')
-                                        ->content(fn ($get) => number_format((float) $get('qte') * (float) $get('prix_unitaire'), 3, '.', ' ') . ' DT')
-                                        ->columnSpan(1),
+                                        ->label('Total Ligne')
+                                        ->content(fn ($get) => new \Illuminate\Support\HtmlString(
+                                            '<span class="doc-line-total">' .
+                                            number_format((float) $get('qte') * (float) $get('prix_unitaire'), 3, ',', ' ') .
+                                            ' DT</span>'
+                                        ))
+                                        ->columnSpan(2),
                                 ])
                                 ->columns(12)
                                 ->defaultItems(1)
-                                ->addActionLabel('Ajouter une ligne')
+                                ->addActionLabel('＋ Ajouter une ligne')
+                                ->reorderable()
+                                ->reorderableWithButtons()
+                                ->collapsible()
                                 ->columnSpanFull()
                                 ->extraAttributes(['class' => 'doc-lines-repeater'])
-                                ->itemLabel(fn (array $state) => isset($state['produit_id']) ? (\App\Models\Product::find($state['produit_id'])?->designation_fr ?? 'Ligne') : 'Ligne'),
+                                ->deleteAction(fn ($action) => $action
+                                    ->requiresConfirmation()
+                                    ->modalHeading('Supprimer cette ligne ?')
+                                    ->modalSubmitActionLabel('Oui, supprimer')
+                                    ->modalCancelActionLabel('Annuler')
+                                )
+                                ->itemLabel(fn (array $state) => isset($state['produit_id']) ? (\App\Models\Product::find($state['produit_id'])?->designation_fr ?? 'Ligne') : 'Nouvelle ligne'),
                         ])
                         ->compact()
                         ->columnSpanFull(),
@@ -143,41 +173,66 @@ class QuotationResource extends Resource
 
                 Section::make('Récapitulatif & Totaux')
                     ->icon('heroicon-o-calculator')
+                    ->description('Calculé automatiquement')
                     ->schema([
-                        Forms\Components\TextInput::make('prix_ht')->label('Sous-total')->numeric()->prefix('DT')->disabled()->dehydrated(false)->default(0),
-                        Forms\Components\TextInput::make('remise')->label('Remise')->numeric()->prefix('DT')->default(0)->live()->afterStateUpdated(function ($state, $get, $set) {
-                            $details = $get('details') ?? [];
-                            $total = 0.0;
-                            foreach ($details as $d) {
-                                if (! empty($d['produit_id'])) {
-                                    $total += (float) ($d['qte'] ?? 0) * (float) ($d['prix_unitaire'] ?? 0);
+                        Forms\Components\Placeholder::make('prix_ht_display')
+                            ->label('Sous-total HT')
+                            ->content(fn ($get) => new \Illuminate\Support\HtmlString(
+                                '<span class="doc-total-value">' . number_format((float) $get('prix_ht'), 3, ',', ' ') . ' DT</span>'
+                            )),
+                        Forms\Components\TextInput::make('remise')
+                            ->label('Remise (DT)')
+                            ->numeric()
+                            ->suffix('DT')
+                            ->default(0)
+                            ->live()
+                            ->afterStateUpdated(function ($state, $get, $set) {
+                                $details = $get('details') ?? [];
+                                $total   = 0.0;
+                                foreach ($details as $d) {
+                                    if (! empty($d['produit_id'])) {
+                                        $total += (float) ($d['qte'] ?? 0) * (float) ($d['prix_unitaire'] ?? 0);
+                                    }
                                 }
-                            }
-                            $set('prix_ht', $total);
-                            $set('prix_ttc', $total - (float) ($state ?? 0));
-                        }),
-                        Forms\Components\TextInput::make('pourcentage_remise')->label('Remise (%)')->numeric()->suffix('%')->default(0)->live(),
-                        Forms\Components\TextInput::make('prix_ttc')->label('NET À PAYER')->numeric()->prefix('DT')->disabled()->dehydrated(false)->default(0)->extraInputAttributes(['class' => 'font-bold text-2xl text-primary-600']),
+                                $set('prix_ht', $total);
+                                $set('prix_ttc', $total - (float) ($state ?? 0));
+                            }),
+                        Forms\Components\TextInput::make('pourcentage_remise')
+                            ->label('Remise (%)')
+                            ->numeric()
+                            ->suffix('%')
+                            ->default(0)
+                            ->live(),
                         Forms\Components\Select::make('statut')
-                            ->label('Statut')
+                            ->label('Statut du devis')
                             ->options([
-                                'brouillon' => 'Brouillon',
-                                'en_attente' => 'En attente',
-                                'valide' => 'Validé',
-                                'refuse' => 'Refusé',
+                                'brouillon'  => '⬜ Brouillon',
+                                'en_attente' => '🟡 En attente',
+                                'valide'     => '🟢 Validé',
+                                'refuse'     => '🔴 Refusé',
                             ])
                             ->default('brouillon')
                             ->nullable(),
+                        Forms\Components\Placeholder::make('prix_ttc_display')
+                            ->label('NET À PAYER')
+                            ->content(fn ($get) => new \Illuminate\Support\HtmlString(
+                                '<span class="doc-total-net">' . number_format((float) $get('prix_ttc'), 3, ',', ' ') . ' DT</span>'
+                            )),
                         Forms\Components\Placeholder::make('numero_display')
                             ->label('N° Document')
-                            ->content(fn ($record) => $record?->numero ?? 'Nouveau'),
+                            ->content(fn ($record) => new \Illuminate\Support\HtmlString(
+                                '<span style="font-weight:600;font-family:monospace">' . ($record?->numero ?? 'Nouveau') . '</span>'
+                            )),
                     ])
                     ->columns(1)
                     ->compact()
                     ->extraAttributes(['class' => 'doc-totaux-sidebar']),
             ])->columnSpanFull(),
 
+            // Hidden fields
             Forms\Components\Hidden::make('numero'),
+            Forms\Components\Hidden::make('prix_ht'),
+            Forms\Components\Hidden::make('prix_ttc'),
         ]);
     }
 

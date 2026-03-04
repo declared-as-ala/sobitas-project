@@ -1,53 +1,135 @@
-/* Document edit shared styles (Bons de Livraison, Facture TVA, Tickets) */
+/* ============================================================
+   Document edit shared styles — BL, Facture TVA, Devis, Tickets
+   ALL custom classes; project convention = no Tailwind utilities
+   ============================================================ */
 
-/* Product lines: keep selects compact and single-line */
-.doc-lines-repeater .fi-input {
+/* ---- Sticky totals sidebar ---- */
+.doc-totaux-sidebar {
+    position: sticky;
+    top: 80px;   /* clear the Filament navbar */
+    align-self: flex-start;
+}
+
+/* ---- Product repeater rows ---- */
+.doc-lines-repeater .fi-input,
+.doc-lines-repeater .fi-select-input,
+.doc-lines-repeater input[type="text"],
+.doc-lines-repeater input[type="number"] {
     max-height: 40px;
 }
 
-.doc-lines-repeater .fi-input,
-.doc-lines-repeater .fi-select,
+/* Prevent product select from wrapping (label truncation) */
+.doc-lines-repeater .fi-select-input,
 .doc-lines-repeater select {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-/* Barcode scan block */
+/* ---- Ligne total (P.T column) ---- */
+.doc-line-total {
+    display: inline-block;
+    white-space: nowrap;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.9rem;
+    color: var(--fi-color-gray-700, #374151);
+}
+.dark .doc-line-total {
+    color: var(--fi-color-gray-200, #e5e7eb);
+}
+
+/* ---- Totals sidebar: read-only display values ---- */
+.doc-total-value {
+    display: block;
+    font-size: 1.05rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(0,0,0,0.07);
+    color: var(--fi-color-gray-700, #374151);
+}
+.dark .doc-total-value {
+    color: var(--fi-color-gray-200, #e5e7eb);
+    border-bottom-color: rgba(255,255,255,0.08);
+}
+
+.doc-total-net {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    padding: 6px 0;
+    color: var(--fi-primary-500, #6d28d9);
+    border-top: 2px solid var(--fi-primary-100, #ede9fe);
+    margin-top: 4px;
+}
+.dark .doc-total-net {
+    color: var(--fi-primary-400, #a78bfa);
+    border-top-color: rgba(109,40,217,0.2);
+}
+
+/* ---- Barcode scan block ---- */
 .bl-barcode {
     display: flex;
     flex-direction: row;
-    justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
     gap: 12px;
-    margin-bottom: 8px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: rgba(109, 40, 217, 0.04);
+    border: 1px dashed rgba(109, 40, 217, 0.25);
+    margin-bottom: 10px;
+}
+.dark .bl-barcode {
+    background: rgba(167, 139, 250, 0.06);
+    border-color: rgba(167, 139, 250, 0.2);
 }
 
 .bl-barcode-title {
     display: inline-flex;
+    flex-direction: column;
     align-items: center;
-    gap: 6px;
-    font-size: 0.85rem;
-    font-weight: 600;
+    gap: 4px;
+    min-width: 80px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--fi-primary-600, #7c3aed);
+}
+.dark .bl-barcode-title {
+    color: var(--fi-primary-400, #a78bfa);
 }
 
 .bl-barcode-icon {
-    width: 16px;
-    height: 16px;
+    width: 24px;
+    height: 24px;
 }
 
 .bl-barcode-input {
     flex: 1;
-    max-width: 360px;
 }
 
-.bl-barcode-input .fi-input {
+.bl-barcode-input .fi-input,
+.bl-barcode-input input[type="text"] {
     width: 100%;
+    font-size: 1rem;
+    border-radius: 6px;
+    border-width: 2px;
+    transition: box-shadow 0.15s, border-color 0.15s;
+}
+.bl-barcode-input .fi-input:focus,
+.bl-barcode-input input[type="text"]:focus {
+    border-color: var(--fi-primary-400, #a78bfa);
+    box-shadow: 0 0 0 3px rgba(109,40,217,0.15);
 }
 
 .bl-barcode-helper {
-    margin-top: 4px;
-    font-size: 0.75rem;
-    color: #6b7280;
+    margin-top: 5px;
+    font-size: 0.72rem;
+    color: #9ca3af;
+    letter-spacing: 0.03em;
 }
-
