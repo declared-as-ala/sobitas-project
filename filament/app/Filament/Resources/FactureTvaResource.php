@@ -98,10 +98,10 @@ class FactureTvaResource extends Resource
                                         ->required()
                                         ->live()
                                         ->columnSpan(['default' => 7, 'sm' => 12])
-                                        ->afterStateUpdated(function ($state, $set) {
                                             if ($state && $product = \App\Models\Product::find($state)) {
                                                 $set('prix_unitaire', (float) ($product->prix ?? 0));
                                             }
+                                            self::recalculateFactureTvaTotals($get, $set);
                                         }),
                                     Forms\Components\TextInput::make('qte')
                                         ->label('Qté')
@@ -110,6 +110,7 @@ class FactureTvaResource extends Resource
                                         ->minValue(1)
                                         ->required()
                                         ->live(debounce: 300)
+                                        ->afterStateUpdated(fn ($get, $set) => self::recalculateFactureTvaTotals($get, $set))
                                         ->columnSpan(['default' => 1, 'sm' => 4]),
                                     Forms\Components\TextInput::make('prix_unitaire')
                                         ->label('P.U')
@@ -118,6 +119,7 @@ class FactureTvaResource extends Resource
                                         ->prefix('DT')
                                         ->required()
                                         ->live(debounce: 300)
+                                        ->afterStateUpdated(fn ($get, $set) => self::recalculateFactureTvaTotals($get, $set))
                                         ->columnSpan(['default' => 2, 'sm' => 4]),
                                     Forms\Components\Placeholder::make('prix_ht_display')
                                         ->label('P.T/HT')
@@ -131,6 +133,7 @@ class FactureTvaResource extends Resource
                                         ->suffix('%')
                                         ->required()
                                         ->live(debounce: 300)
+                                        ->afterStateUpdated(fn ($get, $set) => self::recalculateFactureTvaTotals($get, $set))
                                         ->columnSpan(['default' => 1, 'sm' => 4]),
                                     Forms\Components\Placeholder::make('prix_ttc_display')
                                         ->label('TVA (DT)')
@@ -279,7 +282,10 @@ class FactureTvaResource extends Resource
 
     public static function recalculateFactureTvaTotals($get, $set): void
     {
-        $details = $get('details') ?? [];
+        // When called from inside the repeater, $get('details') is null.
+        // We must reach the root form state using '../../'
+        $details = $get('../../details') ?? $get('details') ?? [];
+        
         $totalHt = 0.0;
         $totalTva = 0.0;
         foreach ($details as $d) {
@@ -290,18 +296,33 @@ class FactureTvaResource extends Resource
                 $totalTva += $ht * $tvaPct / 100;
             }
         }
-        $remise = max(0, (float) ($get('remise') ?? 0));
+        
+        // Grab values, again taking care of context scope
+        $remise = max(0, (float) ($get('../../remise') ?? $get('remise') ?? 0));
         $remise = min($remise, $totalHt);
+        $timbre = max(0, (float) ($get('../../timbre') ?? $get('timbre') ?? 0));
+        
         $htApresRemise = round($totalHt - $remise, 3);
         $tvaApresRemise = $totalHt > 0 ? round($totalTva - ($totalTva * $remise / $totalHt), 3) : 0.0;
-        $timbre = max(0, (float) ($get('timbre') ?? 0));
         $net = round($htApresRemise + $tvaApresRemise + $timbre, 3);
-        $set('prix_ht', round($totalHt, 3));
-        $set('prix_ht_apres_remise', $htApresRemise);
-        $set('tva', $tvaApresRemise);
-        $set('prix_ttc', round($htApresRemise + $tvaApresRemise, 3));
-        $set('net_a_payer', $net);
-        $set('pourcentage_remise', $totalHt > 0 ? round($remise / $totalHt * 100, 2) : 0);
+        $pourcentageRemise = $totalHt > 0 ? round($remise / $totalHt * 100, 2) : 0;
+
+        // Set values at the root form state
+        $setFn = function($field, $value) use ($get, $set) {
+            // If we are currently inside the repeater, set it two levels up
+            if ($get('../../' . $field) !== null || $get('details') === null) {
+                $set('../../' . $field, $value);
+            } else {
+                $set($field, $value);
+            }
+        };
+
+        $setFn('prix_ht', round($totalHt, 3));
+        $setFn('prix_ht_apres_remise', $htApresRemise);
+        $setFn('tva', $tvaApresRemise);
+        $setFn('prix_ttc', round($htApresRemise + $tvaApresRemise, 3));
+        $setFn('net_a_payer', $net);
+        $setFn('pourcentage_remise', $pourcentageRemise);
     }
 
     public static function getRelations(): array

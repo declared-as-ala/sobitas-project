@@ -99,16 +99,45 @@ class EditFactureTva extends EditRecord
         if (empty($data['details'])) {
             $data['details'] = [['produit_id' => null, 'qte' => 1, 'prix_unitaire' => 0, 'tva_pct' => 19]];
         }
-        if (\Illuminate\Support\Facades\Schema::hasColumn('facture_tvas', 'pourcentage_remise')) {
-            $data['pourcentage_remise'] = $this->record->pourcentage_remise ?? 0;
+        
+        $coordinate = \App\Models\Coordinate::getCached();
+        $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
+        
+        $totalHt = 0.0;
+        $totalTva = 0.0;
+        foreach ($data['details'] as $row) {
+            if (empty($row['produit_id'])) {
+                continue;
+            }
+            $qte = (int) ($row['qte'] ?? 1);
+            $prixUnitaire = (float) ($row['prix_unitaire'] ?? 0);
+            $tvaPct = (float) ($row['tva_pct'] ?? $defaultTva);
+            $ht = $qte * $prixUnitaire;
+            $totalHt += $ht;
+            $totalTva += $ht * $tvaPct / 100;
         }
-        $data['remise'] = (float) ($this->record->remise ?? 0);
-        $data['timbre'] = (float) ($this->record->timbre ?? 0);
-        $data['prix_ht'] = (float) ($this->record->prix_ht ?? 0);
-        $data['prix_ht_apres_remise'] = (float) ($this->record->prix_ht_apres_remise ?? $this->record->prix_ht ?? 0);
-        $data['tva'] = (float) ($this->record->tva ?? 0);
-        $data['prix_ttc'] = (float) ($this->record->prix_ttc ?? 0);
-        $data['net_a_payer'] = (float) ($this->record->net_a_payer ?? $this->record->prix_ttc ?? 0);
+
+        $remise = max(0, (float) ($this->record->remise ?? 0));
+        $remise = min($remise, $totalHt);
+        $timbre = max(0, (float) ($this->record->timbre ?? 0));
+        
+        $htApresRemise = round($totalHt - $remise, 3);
+        $tvaApresRemise = $totalHt > 0 ? round($totalTva - ($totalTva * $remise / $totalHt), 3) : 0.0;
+        $net = round($htApresRemise + $tvaApresRemise + $timbre, 3);
+        $pourcentageRemise = $totalHt > 0 ? round($remise / $totalHt * 100, 2) : 0;
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn('facture_tvas', 'pourcentage_remise')) {
+            $data['pourcentage_remise'] = $pourcentageRemise;
+        }
+        
+        $data['remise'] = $remise;
+        $data['timbre'] = $timbre;
+        $data['prix_ht'] = round($totalHt, 3);
+        $data['prix_ht_apres_remise'] = $htApresRemise;
+        $data['tva'] = $tvaApresRemise;
+        $data['prix_ttc'] = round($htApresRemise + $tvaApresRemise, 3);
+        $data['net_a_payer'] = $net;
+        
         return $data;
     }
 
@@ -143,21 +172,45 @@ class EditFactureTva extends EditRecord
         }
 
         $state = $this->form->getState();
+        $totalHt = 0.0;
+        $totalTva = 0.0;
+        
+        foreach ($details as $row) {
+            if (empty($row['produit_id'])) {
+                continue;
+            }
+            $qte = (int) ($row['qte'] ?? 1);
+            $prixUnitaire = (float) ($row['prix_unitaire'] ?? 0);
+            $tvaPct = (float) ($row['tva_pct'] ?? $defaultTva);
+            $ht = $qte * $prixUnitaire;
+            $totalHt += $ht;
+            $totalTva += $ht * $tvaPct / 100;
+        }
+
+        $remise = max(0, (float) ($state['remise'] ?? 0));
+        $remise = min($remise, $totalHt);
+        $timbre = max(0, (float) ($state['timbre'] ?? 0));
+        
+        $htApresRemise = round($totalHt - $remise, 3);
+        $tvaApresRemise = $totalHt > 0 ? round($totalTva - ($totalTva * $remise / $totalHt), 3) : 0.0;
+        $net = round($htApresRemise + $tvaApresRemise + $timbre, 3);
+        $pourcentageRemise = $totalHt > 0 ? round($remise / $totalHt * 100, 2) : 0;
+
         $totals = [
-            'prix_ht' => (float) ($state['prix_ht'] ?? 0),
-            'remise' => (float) ($state['remise'] ?? 0),
-            'tva' => (float) ($state['tva'] ?? 0),
-            'timbre' => (float) ($state['timbre'] ?? 0),
-            'prix_ttc' => (float) ($state['prix_ttc'] ?? 0),
+            'prix_ht' => round($totalHt, 3),
+            'remise' => $remise,
+            'tva' => $tvaApresRemise,
+            'timbre' => $timbre,
+            'prix_ttc' => round($htApresRemise + $tvaApresRemise, 3),
         ];
-        if (Schema::hasColumn('facture_tvas', 'prix_ht_apres_remise')) {
-            $totals['prix_ht_apres_remise'] = (float) ($state['prix_ht_apres_remise'] ?? 0);
+        if (\Illuminate\Support\Facades\Schema::hasColumn('facture_tvas', 'prix_ht_apres_remise')) {
+            $totals['prix_ht_apres_remise'] = $htApresRemise;
         }
-        if (Schema::hasColumn('facture_tvas', 'pourcentage_remise')) {
-            $totals['pourcentage_remise'] = (float) ($state['pourcentage_remise'] ?? 0);
+        if (\Illuminate\Support\Facades\Schema::hasColumn('facture_tvas', 'pourcentage_remise')) {
+            $totals['pourcentage_remise'] = $pourcentageRemise;
         }
-        if (Schema::hasColumn('facture_tvas', 'net_a_payer')) {
-            $totals['net_a_payer'] = (float) ($state['net_a_payer'] ?? 0);
+        if (\Illuminate\Support\Facades\Schema::hasColumn('facture_tvas', 'net_a_payer')) {
+            $totals['net_a_payer'] = $net;
         }
         $this->record->update($totals);
     }
