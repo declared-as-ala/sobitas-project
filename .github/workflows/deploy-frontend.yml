@@ -55,8 +55,10 @@ jobs:
           file: ./frontend/Dockerfile
           push: true
           build-args: |
-            NEXT_PUBLIC_API_URL=https://admin.protein.tn/api
-            NEXT_PUBLIC_STORAGE_URL=https://admin.protein.tn/storage
+            NEXT_PUBLIC_API_URL=https://protein.tn/api-proxy
+            NEXT_PUBLIC_STORAGE_URL=https://protein.tn/storage-proxy
+            API_BACKEND_URL=https://admin.protein.tn/api
+            STORAGE_BACKEND_URL=https://admin.protein.tn/storage
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}

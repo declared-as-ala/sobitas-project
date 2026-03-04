@@ -8,5 +8,18 @@ backend/storage/**
 # backend/storage/app/**/*.zip
 # backend/storage/app/public/
 
+# Node modules
 node_modules/
+frontend/node_modules/
+filament/node_modules/
+
+# Environment files (root + subdirectories), keep only examples
 .env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Ignore the backend source tree from this repo snapshot
+backend/

@@ -18,6 +18,7 @@ use App\Models\Product;
 use App\Models\Quotation;
 use App\Models\Ticket;
 use App\Models\User;
+use Filament\Facades\Filament;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -28,6 +29,20 @@ class GlobalSearchController extends Controller
 
     public function __invoke(Request $request): JsonResponse
     {
+        $user = $request->user();
+        if (! $user || ! $user instanceof User) {
+            abort(403);
+        }
+
+        try {
+            $panel = Filament::getPanel('admin');
+            if (! $user->canAccessPanel($panel)) {
+                abort(403);
+            }
+        } catch (\Throwable $e) {
+            abort(403);
+        }
+
         $q = $request->input('q', '');
         $q = is_string($q) ? trim($q) : '';
 
