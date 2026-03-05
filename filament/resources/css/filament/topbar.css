@@ -8,8 +8,7 @@
  * Scope: Only Filament structural classes, no Tailwind utilities.
  */
 
-/* 1) Ensure the topbar stays on top of the layout stack */
-.fi-header,
+/* 1) Ensure ONLY the topbar stays sticky at top — NOT the page header */
 .fi-topbar-ctn,
 .fi-topbar {
     position: sticky;
@@ -18,11 +17,18 @@
     overflow: visible;
 }
 
+/* Page header (.fi-header) is intentionally NOT sticky - it scrolls with the page */
+.fi-header {
+    position: relative;
+    z-index: 0;
+    overflow: visible;
+}
+
 /* 2) Keep page headers below the topbar and avoid clipping */
 .fi-page-header-main-ctn,
 .fi-page-header,
 .fi-header-actions {
-    z-index: 20;
+    z-index: 0;
     overflow: visible;
 }
 
@@ -37,17 +43,25 @@
     z-index: 2000 !important;
 }
 
-/* 4) Modal UI Fix - keep overlays above sticky sidebars and headers */
+/* 4) Modal UI Fix - all modal layers MUST be above the topbar (z-1000) */
+/* Use a stacking context that is a sibling of the body's root context */
 .fi-modal-close-overlay,
 .fi-modal-window,
 .fi-modal-backdrop,
 .fi-modal-container {
-    z-index: 10000 !important;
+    z-index: 1001 !important;
 }
 
-/* Force backdrop to be very dark so page text behind is illegible */
+/* Force backdrop to be fully opaque black so NO page text is visible */
 .fi-modal-close-overlay {
-    background-color: rgba(0, 0, 0, 0.85) !important;
+    background-color: rgba(0, 0, 0, 0.92) !important;
+    backdrop-filter: blur(2px) !important;
+}
+
+/* Body scroll lock when any Filament action modal is open */
+body.fi-modal-open,
+body:has(.fi-modal-container) {
+    overflow: hidden !important;
 }
 
 /* Restrict max modal width specifically on edit-facture-tva to look like a clean prompter */

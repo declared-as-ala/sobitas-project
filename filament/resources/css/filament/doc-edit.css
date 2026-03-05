@@ -225,10 +225,21 @@
 }
 
 /* ====================================================
-   Disable sticky header ONLY for Facture TVA edit page
+   Disable sticky header for ALL document edit pages
+   (BL, Facture TVA, Devis, Ticket)
    ==================================================== */
 .fi-page-edit-facture-tva .fi-header,
+.fi-page-edit-facture .fi-header,
+.fi-page-edit-quotation .fi-header,
+.fi-page-edit-ticket .fi-header,
 .fi-page-edit-facture-tva .fi-topbar-ctn,
-.fi-page-edit-facture-tva .fi-topbar {
+.fi-page-edit-facture .fi-topbar-ctn,
+.fi-page-edit-quotation .fi-topbar-ctn,
+.fi-page-edit-ticket .fi-topbar-ctn,
+.fi-page-edit-facture-tva .fi-topbar,
+.fi-page-edit-facture .fi-topbar,
+.fi-page-edit-quotation .fi-topbar,
+.fi-page-edit-ticket .fi-topbar {
     position: static !important;
+    z-index: 0 !important;
 }

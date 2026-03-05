@@ -19,6 +19,11 @@ class EditQuotation extends EditRecord
 {
     protected static string $resource = QuotationResource::class;
 
+    public function getPageClasses(): array
+    {
+        return array_merge(parent::getPageClasses(), ['fi-page-edit-quotation']);
+    }
+
     public function getHeaderWidgets(): array
     {
         return [DocumentTimelineWidget::class];

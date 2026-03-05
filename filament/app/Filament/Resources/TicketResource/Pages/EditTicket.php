@@ -17,6 +17,11 @@ class EditTicket extends EditRecord
 {
     protected static string $resource = TicketResource::class;
 
+    public function getPageClasses(): array
+    {
+        return array_merge(parent::getPageClasses(), ['fi-page-edit-ticket']);
+    }
+
     public function getHeaderWidgets(): array
     {
         return [DocumentTimelineWidget::class];

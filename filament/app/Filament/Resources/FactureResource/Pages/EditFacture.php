@@ -18,6 +18,11 @@ class EditFacture extends EditRecord
 {
     protected static string $resource = FactureResource::class;
 
+    public function getPageClasses(): array
+    {
+        return array_merge(parent::getPageClasses(), ['fi-page-edit-facture']);
+    }
+
     public function getHeaderWidgets(): array
     {
         return [DocumentTimelineWidget::class];
