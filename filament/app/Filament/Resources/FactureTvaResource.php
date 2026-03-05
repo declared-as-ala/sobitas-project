@@ -94,9 +94,25 @@ class FactureTvaResource extends Resource
                                 ->schema([
                                     Forms\Components\Select::make('produit_id')
                                         ->label('Produit')
-                                        ->options(fn () => \App\Models\Product::where('qte', '>', 0)->get()->mapWithKeys(fn ($p) => [$p->id => ($p->designation_fr ?? '') . ' (' . (int) $p->qte . ')'])->all())
                                         ->searchable()
-                                        ->preload()
+                                        ->getSearchResultsUsing(function (string $search): array {
+                                            $query = \App\Models\Product::query()
+                                                ->where('qte', '>', 0)
+                                                ->orderBy('designation_fr');
+                                            if (strlen($search) >= 1) {
+                                                $query->where(function ($q) use ($search) {
+                                                    $q->where('designation_fr', 'like', '%' . $search . '%')
+                                                        ->orWhere('code_product', 'like', '%' . $search . '%');
+                                                });
+                                            }
+                                            return $query->limit(30)->get()
+                                                ->mapWithKeys(fn ($p) => [$p->id => ($p->designation_fr ?? '') . ' (' . (int) $p->qte . ')'])
+                                                ->all();
+                                        })
+                                        ->getOptionLabelUsing(fn ($value): ?string => $value ? (function () use ($value) {
+                                            $p = \App\Models\Product::find($value);
+                                            return $p ? (($p->designation_fr ?? '') . ' (' . (int) $p->qte . ')') : null;
+                                        })() : null)
                                         ->required()
                                         ->live()
                                         ->columnSpan(['default' => 7, 'sm' => 12])

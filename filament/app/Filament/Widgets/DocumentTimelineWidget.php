@@ -14,7 +14,7 @@ class DocumentTimelineWidget extends Widget
 
     protected int | string | array $columnSpan = 'full';
 
-    protected static bool $isLazy = false;
+    protected static bool $isLazy = true;
 
     protected static bool $isDiscovered = false;
 }
