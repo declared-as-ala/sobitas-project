@@ -277,12 +277,8 @@ class FactureTvaResource extends Resource
                     ->label('Imprimer')
                     ->icon('heroicon-o-printer')
                     ->color('gray')
-                    ->modalHeading('Aperçu d\'impression')
-                    ->modalContent(fn (FactureTva $record) => view('filament.components.print-modal', [
-                        'printUrl' => route('facture-tvas.print', ['factureTva' => $record->id]),
-                        'title' => 'Facture ' . $record->numero,
-                    ]))
-                    ->modalSubmitAction(false),
+                    ->url(fn (FactureTva $record) => route('facture-tvas.print', ['factureTva' => $record->id]))
+                    ->openUrlInNewTab(),
                 Actions\DeleteAction::make(),
             ])
             ->bulkActions([Actions\DeleteBulkAction::make()]);

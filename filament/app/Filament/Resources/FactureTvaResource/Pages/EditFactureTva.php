@@ -85,7 +85,10 @@ class EditFactureTva extends EditRecord
         
         $net = number_format($calc['net_a_payer'], 3, ',', ' ') . ' TND';
 
-        $html = '<div class="flex flex-wrap items-center gap-2 mt-2">';
+        $html = '<style>
+            .fi-header { position: relative !important; top: auto !important; z-index: 0 !important; }
+        </style>';
+        $html .= '<div class="flex flex-wrap items-center gap-2 mt-2">';
         $html .= '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 shadow-sm border border-gray-200 dark:border-gray-700">👤 Client : ' . e($client) . '</span>';
         $html .= '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 shadow-sm border border-gray-200 dark:border-gray-700">📅 Date : ' . e($date) . '</span>';
         $html .= '<span class="inline-flex items-center px-4 py-1.5 rounded-full text-[15px] font-bold bg-orange-100 text-orange-800 dark:bg-orange-500/20 dark:text-orange-400 shadow-sm border border-orange-200 dark:border-orange-500/30">💰 Net à payer : ' . e($net) . '</span>';
@@ -266,9 +269,8 @@ class EditFactureTva extends EditRecord
             Actions\Action::make('print')
                 ->label('Imprimer')
                 ->icon('heroicon-o-printer')
-                ->action(function () use ($printUrl) {
-                    $this->dispatch('open-url-new-tab', url: $printUrl);
-                }),
+                ->url($printUrl)
+                ->openUrlInNewTab(),
             ActionGroup::make([
                 Actions\DeleteAction::make(),
             ])->label('')->icon('heroicon-o-ellipsis-vertical'),

@@ -430,12 +430,8 @@ class QuotationResource extends Resource
                     ->label('Imprimer')
                     ->icon('heroicon-o-printer')
                     ->color('gray')
-                    ->modalHeading('Aperçu d\'impression')
-                    ->modalContent(fn (Quotation $record) => view('filament.components.print-modal', [
-                        'printUrl' => route('quotations.print', ['quotation' => $record->id]),
-                        'title' => 'Devis ' . $record->numero,
-                    ]))
-                    ->modalSubmitAction(false),
+                    ->url(fn (Quotation $record) => route('quotations.print', ['quotation' => $record->id]))
+                    ->openUrlInNewTab(),
                 Actions\DeleteAction::make(),
             ])
             ->bulkActions([

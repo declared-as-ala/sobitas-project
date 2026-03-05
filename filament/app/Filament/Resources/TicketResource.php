@@ -257,13 +257,8 @@ class TicketResource extends Resource
                     ->label('Imprimer')
                     ->icon('heroicon-o-printer')
                     ->color('gray')
-                    ->modalHeading('Aperçu d\'impression')
-                    ->modalContent(fn (Ticket $record) => view('filament.components.print-modal', [
-                        'printUrl' => route('tickets.print', ['ticket' => $record->id]),
-                        'title' => 'Ticket ' . $record->numero,
-                        'documentType' => 'ticket',
-                    ]))
-                    ->modalSubmitAction(false),
+                    ->url(fn (Ticket $record) => route('tickets.print', ['ticket' => $record->id]))
+                    ->openUrlInNewTab(),
                 Actions\DeleteAction::make(),
             ])
             ->bulkActions([

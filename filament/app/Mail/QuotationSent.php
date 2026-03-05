@@ -15,8 +15,7 @@ class QuotationSent extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public Quotation $quotation;
-    public string $customMessage;
+    protected array $sharedData;
 
     /**
      * Create a new message instance.
@@ -25,6 +24,28 @@ class QuotationSent extends Mailable
     {
         $this->quotation = $quotation;
         $this->customMessage = $customMessage;
+        
+        $this->quotation->load('client', 'details');
+        $coordonnee = \App\Models\Coordinate::first();
+
+        $this->sharedData = [
+            'facture' => $this->quotation,
+            'details_facture' => $this->quotation->details,
+            'coordonnee' => $coordonnee,
+            'company' => $coordonnee,
+            'documentTitle' => 'Devis',
+            'documentNumber' => $this->quotation->numero ?? '',
+            'documentDate' => $this->quotation->date_quotation ? \Carbon\Carbon::parse($this->quotation->date_quotation)->format('d/m/Y') : ($this->quotation->created_at?->format('d/m/Y') ?? ''),
+            'client' => $this->quotation->client,
+            'totals' => [
+                ['label' => 'Total HT', 'value' => number_format((float)($this->quotation->prix_ht ?? $this->quotation->prix_total ?? 0), 3, ',', ' ') . ' DT'],
+                ['label' => 'TVA', 'value' => number_format((float)($this->quotation->tva ?? 0), 3, ',', ' ') . ' DT'],
+                ['label' => 'Net à payer TTC', 'value' => number_format((float)($this->quotation->net_a_payer ?? $this->quotation->prix_ttc ?? $this->quotation->prix_total ?? 0), 3, ',', ' ') . ' DT', 'class' => 'net-a-payer'],
+            ],
+            'footerNote' => $coordonnee && !empty($coordonnee->note) ? $coordonnee->note : null,
+            'paymentTerms' => 'Valable 30 jours. Paiement à la commande ou à la livraison.',
+            'forPdf' => true,
+        ];
     }
 
     /**
@@ -43,49 +64,21 @@ class QuotationSent extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'emails.quotation-sent',
-            with: [
-                'customMessage' => $this->customMessage,
-                'quotation' => $this->quotation,
-            ]
+            view: 'print.quotation',
+            with: $this->sharedData
         );
     }
 
     /**
      * Get the attachments for the message.
-     * We generate the PDF on the fly using the exact same logic as 'quotations.print'
-     *
-     * @return array<int, \Illuminate\Mail\Mailables\Attachment>
      */
     public function attachments(): array
     {
-        $this->quotation->load('client', 'details');
-        
-        $coordonnee = \App\Models\Coordinate::first();
+        $pdf = Pdf::loadView('print.quotation', $this->sharedData)->output();
 
-        // Exact same payload as the print template to guarantee 1:1 match
-        $data = [
-            'facture' => $this->quotation, // The view uses 'facture' variable name generically
-            'details_facture' => $this->quotation->details, // The view iterates 'details_facture'
-            'coordonnee' => $coordonnee,
-            'company' => $coordonnee,
-            'documentTitle' => 'Devis',
-            'documentNumber' => $this->quotation->numero ?? '',
-            'documentDate' => $this->quotation->date_quotation ? \Carbon\Carbon::parse($this->quotation->date_quotation)->format('d/m/Y') : ($this->quotation->created_at?->format('d/m/Y') ?? ''),
-            'client' => $this->quotation->client,
-            'totals' => [
-                ['label' => 'Total HT', 'value' => number_format((float)($this->quotation->prix_ht ?? $this->quotation->prix_total ?? 0), 3, ',', ' ') . ' DT'],
-                ['label' => 'TVA', 'value' => number_format((float)($this->quotation->tva ?? 0), 3, ',', ' ') . ' DT'],
-                ['label' => 'Net à payer TTC', 'value' => number_format((float)($this->quotation->prix_ttc ?? $this->quotation->prix_total ?? 0), 3, ',', ' ') . ' DT', 'class' => 'ttc'],
-            ],
-            'footerNote' => $coordonnee && !empty($coordonnee->note) ? $coordonnee->note : null,
-            'paymentTerms' => 'Valable 30 jours. Paiement à la commande ou à la livraison.',
-            'forPdf' => true,
-        ];
-
-        $pdf = Pdf::loadView('print.quotation', $data)->output();
-
-        $filename = 'Devis_' . str_replace('/', '-', $this->quotation->numero) . '.pdf';
+        $numero = (string) ($this->quotation->numero ?? $this->quotation->id);
+        $safeNumero = str_replace('/', '-', $numero);
+        $filename = 'Devis_' . $safeNumero . '.pdf';
 
         return [
             Attachment::fromData(fn () => $pdf, $filename)

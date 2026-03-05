@@ -360,12 +360,8 @@ class FactureResource extends Resource
                     ->label('Imprimer')
                     ->icon('heroicon-o-printer')
                     ->color('gray')
-                    ->modalHeading('Aperçu d\'impression')
-                    ->modalContent(fn (Facture $record) => view('filament.components.print-modal', [
-                        'printUrl' => route('factures.print', ['facture' => $record->id]),
-                        'title' => 'Bon de livraison ' . $record->numero,
-                    ]))
-                    ->modalSubmitAction(false),
+                    ->url(fn (Facture $record) => route('factures.print', ['facture' => $record->id]))
+                    ->openUrlInNewTab(),
                 Actions\DeleteAction::make(),
             ])
             ->bulkActions([

@@ -92,7 +92,7 @@ class FactureTvaSent extends Mailable
 
         $mail = $this
             ->subject('Votre facture #' . $numero)
-            ->view('emails.facture-tva-sent', ['factureTva' => $factureTva, 'numero' => $numero]);
+            ->view('print.facture-tva', $data);
 
         if ($pdf !== null) {
             $mail->attachData($pdf->output(), $filename, ['mime' => 'application/pdf']);

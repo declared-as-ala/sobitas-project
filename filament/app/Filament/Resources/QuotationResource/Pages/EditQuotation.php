@@ -53,7 +53,7 @@ class EditQuotation extends EditRecord
         $net = number_format($calc['net_a_payer'], 3, ',', ' ') . ' TND';
 
         $html = '<style>
-            .fi-header { position: relative !important; top: auto !important; z-index: 1 !important; }
+            .fi-header { position: relative !important; top: auto !important; z-index: 0 !important; }
         </style>';
         $html .= '<div class="flex flex-wrap items-center gap-2 mt-2">';
         $html .= '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 shadow-sm border border-gray-200 dark:border-gray-700">👤 Client : ' . e($client) . '</span>';
