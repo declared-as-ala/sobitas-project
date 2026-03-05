@@ -66,7 +66,24 @@ class EditFactureTva extends EditRecord
     {
         $client = $this->record->client?->name ?? '—';
         $date = $this->record->created_at?->format('d/m/Y') ?? '—';
-        $net = number_format((float) ($this->record->net_a_payer ?? $this->record->prix_ttc ?? 0), 3, ',', ' ') . ' TND';
+        
+        // Use the calculator for the header too, ensuring parity with the totals panel
+        $coordinate = \App\Models\Coordinate::getCached();
+        $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
+        $details = $this->record->details->map(fn ($d) => [
+            'qte' => $d->qte ?? $d->quantite ?? 1,
+            'prix_unitaire' => $d->prix_unitaire ?? 0,
+            'tva_pct' => $d->tva ?? $defaultTva,
+        ])->toArray();
+        
+        $calc = InvoiceCalculator::calculate(
+            $details, 
+            (float)($this->record->remise ?? 0), 
+            (float)($this->record->timbre ?? 0), 
+            $defaultTva
+        );
+        
+        $net = number_format($calc['net_a_payer'], 3, ',', ' ') . ' TND';
 
         $html = '<div class="flex flex-wrap items-center gap-2 mt-2">';
         $html .= '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 shadow-sm border border-gray-200 dark:border-gray-700">👤 Client : ' . e($client) . '</span>';

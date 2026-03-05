@@ -184,6 +184,7 @@ class FactureTvaResource extends Resource
                             Forms\Components\TextInput::make('prix_ttc')->label('Total TTC')->numeric()->prefix('DT')->disabled()->dehydrated(false)->default(0),
                             Forms\Components\ViewField::make('net_a_payer_display')
                                 ->label('')
+                                ->hiddenLabel()
                                 ->view('filament.forms.components.net-a-payer-card'),
                             Forms\Components\TextInput::make('numero_display')
                                 ->label('N° Document')
