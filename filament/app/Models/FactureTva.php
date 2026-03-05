@@ -26,6 +26,15 @@ class FactureTva extends Model
         'status' => InvoiceStatus::class,
     ];
 
+    protected static function booted()
+    {
+        static::creating(function ($factureTva) {
+            if (empty($factureTva->status)) {
+                $factureTva->status = InvoiceStatus::Issued;
+            }
+        });
+    }
+
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class, 'client_id');

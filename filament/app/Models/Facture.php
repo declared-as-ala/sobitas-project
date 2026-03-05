@@ -13,7 +13,7 @@ class Facture extends Model
 
     protected $fillable = [
         'numero', 'client_id', 'commande_id', 'status', 'prix_ht', 'prix_ttc', 'remise',
-        'pourcentage_remise', 'timbre',
+        'pourcentage_remise', 'timbre', 'net_a_payer',
     ];
 
     protected $casts = [
@@ -27,6 +27,15 @@ class Facture extends Model
         'net_a_payer' => 'decimal:3',
         'status' => BlStatus::class,
     ];
+
+    protected static function booted()
+    {
+        static::creating(function ($facture) {
+            if (empty($facture->status)) {
+                $facture->status = BlStatus::Issued;
+            }
+        });
+    }
 
     public function client(): BelongsTo
     {

@@ -118,7 +118,7 @@ class EditFactureTva extends EditRecord
         $data['resume_date_display'] = $this->record->date_facture
             ? $this->record->date_facture->format('d/m/Y')
             : ($this->record->created_at?->format('d/m/Y') ?? '');
-        $data['resume_statut_display'] = $this->record->status ? $this->record->status->label() : '';
+        $data['resume_statut_display'] = 'Validée';
         $data['details'] = $this->record->details->map(fn ($d) => [
             'produit_id' => $d->produit_id,
             'qte' => $d->qte ?? $d->quantite ?? 0,

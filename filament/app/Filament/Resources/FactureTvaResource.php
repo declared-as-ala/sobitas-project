@@ -88,7 +88,7 @@ class FactureTvaResource extends Resource
                                 ->label('')
                                 ->live()
                                 ->afterStateUpdated(function ($set, $get) {
-                                    self::recalculateFactureTvaTotals($get, $set);
+                                    self::recalculateFactureTvaTotals($get, $set, false);
                                 })
                                 ->schema([
                                     Forms\Components\Select::make('produit_id')
@@ -103,7 +103,7 @@ class FactureTvaResource extends Resource
                                             if ($state && $product = \App\Models\Product::find($state)) {
                                                 $set('prix_unitaire', (float) ($product->prix ?? 0));
                                             }
-                                            self::recalculateFactureTvaTotals($get, $set);
+                                            self::recalculateFactureTvaTotals($get, $set, true);
                                         }),
                                     Forms\Components\TextInput::make('qte')
                                         ->label('Qté')
@@ -112,7 +112,7 @@ class FactureTvaResource extends Resource
                                         ->minValue(1)
                                         ->required()
                                         ->live(debounce: 300)
-                                        ->afterStateUpdated(fn ($get, $set) => self::recalculateFactureTvaTotals($get, $set))
+                                        ->afterStateUpdated(fn ($get, $set) => self::recalculateFactureTvaTotals($get, $set, true))
                                         ->columnSpan(['default' => 1, 'sm' => 4]),
                                     Forms\Components\TextInput::make('prix_unitaire')
                                         ->label('P.U')
@@ -121,7 +121,7 @@ class FactureTvaResource extends Resource
                                         ->prefix('DT')
                                         ->required()
                                         ->live(debounce: 300)
-                                        ->afterStateUpdated(fn ($get, $set) => self::recalculateFactureTvaTotals($get, $set))
+                                        ->afterStateUpdated(fn ($get, $set) => self::recalculateFactureTvaTotals($get, $set, true))
                                         ->columnSpan(['default' => 2, 'sm' => 4]),
                                     Forms\Components\Placeholder::make('prix_ht_display')
                                         ->label('P.T/HT')
@@ -135,7 +135,7 @@ class FactureTvaResource extends Resource
                                         ->suffix('%')
                                         ->required()
                                         ->live(debounce: 300)
-                                        ->afterStateUpdated(fn ($get, $set) => self::recalculateFactureTvaTotals($get, $set))
+                                        ->afterStateUpdated(fn ($get, $set) => self::recalculateFactureTvaTotals($get, $set, true))
                                         ->columnSpan(['default' => 1, 'sm' => 4]),
                                     Forms\Components\Placeholder::make('prix_ttc_display')
                                         ->label('TVA (DT)')
@@ -148,6 +148,13 @@ class FactureTvaResource extends Resource
                                 ->addActionLabel('Ajouter produit')
                                 ->columnSpanFull()
                                 ->itemLabel(fn (array $state) => isset($state['produit_id']) ? (\App\Models\Product::find($state['produit_id'])?->designation_fr ?? 'Ligne') : 'Ligne')
+                                ->deleteAction(fn ($action) => $action
+                                    ->requiresConfirmation()
+                                    ->modalHeading('Supprimer cette ligne ?')
+                                    ->modalSubmitActionLabel('Oui, supprimer')
+                                    ->modalCancelActionLabel('Annuler')
+                                    ->after(fn (Forms\Get $get, Forms\Set $set) => self::recalculateFactureTvaTotals($get, $set, false))
+                                )
                                 ->extraAttributes(['class' => 'doc-lines-repeater']),
                         ])
                         ->columnSpanFull(),
@@ -159,7 +166,7 @@ class FactureTvaResource extends Resource
                         ->icon('heroicon-o-calculator')
                         ->schema([
                             Forms\Components\TextInput::make('prix_ht')->label('Sous-total HT')->numeric()->prefix('DT')->disabled()->dehydrated(false)->default(0),
-                            Forms\Components\TextInput::make('remise')->label('Remise')->numeric()->prefix('DT')->default(0)->live()->afterStateUpdated(fn ($state, $get, $set) => self::recalculateFactureTvaTotals($get, $set)),
+                            Forms\Components\TextInput::make('remise')->label('Remise')->numeric()->prefix('DT')->default(0)->live()->afterStateUpdated(fn ($state, $get, $set) => self::recalculateFactureTvaTotals($get, $set, false)),
                             Forms\Components\Placeholder::make('remise_error')->label('')->content(fn ($get) => (float) ($get('remise') ?? 0) > (float) ($get('prix_ht') ?? 0) ? new \Illuminate\Support\HtmlString('<p class="text-sm text-danger-600 dark:text-danger-400">La remise ne peut pas dépasser le sous-total.</p>') : '')->visible(fn ($get) => (float) ($get('remise') ?? 0) > (float) ($get('prix_ht') ?? 0)),
                             Forms\Components\TextInput::make('pourcentage_remise')
                                 ->label('Remise %')
@@ -176,11 +183,11 @@ class FactureTvaResource extends Resource
                                         }
                                     }
                                     $set('remise', round($totalHt * (float) ($state ?? 0) / 100, 3));
-                                    self::recalculateFactureTvaTotals($get, $set);
+                                    self::recalculateFactureTvaTotals($get, $set, false);
                                 }),
                             Forms\Components\TextInput::make('prix_ht_apres_remise')->label('HT après remise')->numeric()->prefix('DT')->disabled()->dehydrated(false)->default(0),
                             Forms\Components\TextInput::make('tva')->label('TVA')->numeric()->prefix('DT')->disabled()->dehydrated(false)->default(0),
-                            Forms\Components\TextInput::make('timbre')->label('Timbre')->numeric()->prefix('DT')->default(0)->live()->afterStateUpdated(fn ($state, $get, $set) => self::recalculateFactureTvaTotals($get, $set)),
+                            Forms\Components\TextInput::make('timbre')->label('Timbre')->numeric()->prefix('DT')->default(0)->live()->afterStateUpdated(fn ($state, $get, $set) => self::recalculateFactureTvaTotals($get, $set, false)),
                             Forms\Components\TextInput::make('prix_ttc')->label('Total TTC')->numeric()->prefix('DT')->disabled()->dehydrated(false)->default(0),
                             Forms\Components\ViewField::make('net_a_payer_display')
                                 ->label('')
@@ -235,7 +242,7 @@ class FactureTvaResource extends Resource
                     ->badge()
                     ->formatStateUsing(fn ($state) => $state?->label() ?? (is_string($state) ? $state : '—'))
                     ->color(fn ($state) => match ($state?->value ?? '') {
-                        'issued' => 'info',
+                        'issued' => 'success',
                         'paid' => 'success',
                         'partially_paid' => 'warning',
                         'canceled' => 'danger',
@@ -284,16 +291,13 @@ class FactureTvaResource extends Resource
             ->bulkActions([Actions\DeleteBulkAction::make()]);
     }
 
-    public static function recalculateFactureTvaTotals($get, $set): void
+    public static function recalculateFactureTvaTotals($get, $set, bool $isItem = false): void
     {
-        // When called from inside the repeater, $get('details') is null.
-        // We must reach the root form state using '../../'
-        $details = $get('../../details') ?? $get('details') ?? [];
+        $details = $isItem ? ($get('../../details') ?? []) : ($get('details') ?? []);
         
-        $remise = (float) ($get('../../remise') ?? $get('remise') ?? 0);
-        $timbre = (float) ($get('../../timbre') ?? $get('timbre') ?? 0);
+        $remise = (float) ($isItem ? ($get('../../remise') ?? 0) : ($get('remise') ?? 0));
+        $timbre = (float) ($isItem ? ($get('../../timbre') ?? 0) : ($get('timbre') ?? 0));
         
-        // Find default TVA from db (optional cache to avoid 100 queries)
         static $defaultTva = null;
         if ($defaultTva === null) {
             $coordinate = Coordinate::getCached();
@@ -302,21 +306,14 @@ class FactureTvaResource extends Resource
 
         $totals = InvoiceCalculator::calculate($details, $remise, $timbre, $defaultTva);
 
-        // Set values at the root form state
-        $setFn = function($field, $value) use ($get, $set) {
-            if ($get('../../' . $field) !== null || $get('details') === null) {
-                $set('../../' . $field, $value);
-            } else {
-                $set($field, $value);
-            }
-        };
+        $prefix = $isItem ? '../../' : '';
 
-        $setFn('prix_ht', $totals['total_ht_brut']);
-        $setFn('prix_ht_apres_remise', $totals['prix_ht_apres_remise']);
-        $setFn('tva', $totals['tva']);
-        $setFn('prix_ttc', $totals['prix_ttc']);
-        $setFn('net_a_payer', $totals['net_a_payer']);
-        $setFn('pourcentage_remise', $totals['pourcentage_remise']);
+        $set($prefix . 'prix_ht', $totals['total_ht_brut']);
+        $set($prefix . 'prix_ht_apres_remise', $totals['prix_ht_apres_remise']);
+        $set($prefix . 'tva', $totals['tva']);
+        $set($prefix . 'prix_ttc', $totals['prix_ttc']);
+        $set($prefix . 'net_a_payer', $totals['net_a_payer']);
+        $set($prefix . 'pourcentage_remise', $totals['pourcentage_remise']);
     }
 
     public static function getRelations(): array

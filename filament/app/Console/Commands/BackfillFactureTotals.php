@@ -59,7 +59,8 @@ class BackfillFactureTotals extends Command
                 'remise' => $calcTotals['remise'],
                 'prix_ttc' => $calcTotals['prix_ttc'],
                 'timbre' => $calcTotals['timbre'],
-                // BL usually has tva = 0
+                'net_a_payer' => $calcTotals['net_a_payer'],
+                'status' => 'issued', // Ensure existing ones are valid and no longer drafts
                 'tva' => $calcTotals['tva'],
             ];
 

@@ -42,31 +42,25 @@ class QuotationResource extends Resource
         return ['numero'];
     }
 
-    public static function updateTotals(Forms\Get $get, Forms\Set $set): void
+    public static function updateTotals(Forms\Get $get, Forms\Set $set, bool $isItem = false): void
     {
-        $details = $get('../../details') ?? $get('details') ?? [];
-        $remise = (float) ($get('../../remise') ?? $get('remise') ?? 0);
-        $timbre = (float) ($get('../../timbre') ?? $get('timbre') ?? 0);
+        $details = $isItem ? ($get('../../details') ?? []) : ($get('details') ?? []);
+        $remise = (float) ($isItem ? ($get('../../remise') ?? 0) : ($get('remise') ?? 0));
+        $timbre = (float) ($isItem ? ($get('../../timbre') ?? 0) : ($get('timbre') ?? 0));
         
         $coordinate = Coordinate::getCached();
         $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
         
         $calcTotals = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, $defaultTva);
         
-        // Try setting on both relative and absolute paths
-        $set('../../prix_ht', $calcTotals['total_ht_brut']);
-        $set('../../pourcentage_remise', $calcTotals['pourcentage_remise']);
-        $set('../../prix_ht_apres_remise', $calcTotals['prix_ht_apres_remise']);
-        $set('../../tva', $calcTotals['tva']);
-        $set('../../prix_ttc', $calcTotals['prix_ttc']);
-        $set('../../net_a_payer', $calcTotals['net_a_payer']);
+        $prefix = $isItem ? '../../' : '';
         
-        $set('prix_ht', $calcTotals['total_ht_brut']);
-        $set('pourcentage_remise', $calcTotals['pourcentage_remise']);
-        $set('prix_ht_apres_remise', $calcTotals['prix_ht_apres_remise']);
-        $set('tva', $calcTotals['tva']);
-        $set('prix_ttc', $calcTotals['prix_ttc']);
-        $set('net_a_payer', $calcTotals['net_a_payer']);
+        $set($prefix . 'prix_ht', $calcTotals['total_ht_brut']);
+        $set($prefix . 'pourcentage_remise', $calcTotals['pourcentage_remise']);
+        $set($prefix . 'prix_ht_apres_remise', $calcTotals['prix_ht_apres_remise']);
+        $set($prefix . 'tva', $calcTotals['tva']);
+        $set($prefix . 'prix_ttc', $calcTotals['prix_ttc']);
+        $set($prefix . 'net_a_payer', $calcTotals['net_a_payer']);
     }
 
     public static function form(Schema $schema): Schema
@@ -153,7 +147,7 @@ class QuotationResource extends Resource
                                             if ($state && $product = \App\Models\Product::find($state)) {
                                                 $set('prix_unitaire', (float) ($product->prix ?? 0));
                                             }
-                                            self::updateTotals($get, $set);
+                                            self::updateTotals($get, $set, true);
                                         })
                                         ->columnSpan(6),
                                     Forms\Components\TextInput::make('qte')
@@ -163,6 +157,7 @@ class QuotationResource extends Resource
                                         ->minValue(1)
                                         ->required()
                                         ->live(debounce: 400)
+                                        ->afterStateUpdated(fn ($get, $set) => self::updateTotals($get, $set, true))
                                         ->extraInputAttributes(['style' => 'text-align:center'])
                                         ->columnSpan(2),
                                     Forms\Components\TextInput::make('prix_unitaire')
@@ -174,6 +169,7 @@ class QuotationResource extends Resource
                                         ->extraAttributes(['class' => '[&_.fi-input-suffix]:shrink-0 [&_.fi-input-suffix]:min-w-[35px] [&_.fi-input-suffix]:text-center'])
                                         ->required()
                                         ->live(debounce: 400)
+                                        ->afterStateUpdated(fn ($get, $set) => self::updateTotals($get, $set, true))
                                         ->columnSpan(2),
                                     Forms\Components\Placeholder::make('prix_total_display')
                                         ->label('Total Ligne')
@@ -195,7 +191,7 @@ class QuotationResource extends Resource
                                     ->modalHeading('Supprimer cette ligne ?')
                                     ->modalSubmitActionLabel('Oui, supprimer')
                                     ->modalCancelActionLabel('Annuler')
-                                    ->after(fn (Forms\Get $get, Forms\Set $set) => self::updateTotals($get, $set))
+                                    ->after(fn (Forms\Get $get, Forms\Set $set) => self::updateTotals($get, $set, false))
                                 )
                                 ->itemLabel(fn (array $state) => isset($state['produit_id']) ? (\App\Models\Product::find($state['produit_id'])?->designation_fr ?? 'Ligne') : 'Nouveau produit'),
                         ])
@@ -221,7 +217,7 @@ class QuotationResource extends Resource
                                 ->default(0)
                                 ->live()
                                 ->afterStateUpdated(function ($state, $get, $set) {
-                                    self::updateTotals($get, $set);
+                                    self::updateTotals($get, $set, false);
                                 }),
                             Forms\Components\TextInput::make('pourcentage_remise')
                                 ->label('REMISE (%)')

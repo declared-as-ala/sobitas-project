@@ -88,7 +88,9 @@ class EditFacture extends EditRecord
             'prix_unitaire' => $d->prix_unitaire,
         ])->toArray();
         if (empty($data['details'])) {
-            $data['details'] = [['produit_id' => null, 'qte' => 1, 'prix_unitaire' => 0]];
+            $coordinate = \App\Models\Coordinate::getCached();
+            $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
+            $data['details'] = [['produit_id' => null, 'qte' => 1, 'prix_unitaire' => 0, 'tva_pct' => $defaultTva]];
         }
         return $data;
     }
