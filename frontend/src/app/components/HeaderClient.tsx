@@ -231,7 +231,7 @@ export function HeaderClient() {
           >
             <Link href="/" className="flex items-center justify-start flex-1 min-w-0 max-w-[11rem] sm:max-w-[12rem] -ml-1" aria-label="Protein.tn - Accueil">
               <Image
-                src={/logo.png}
+                src="/logo.png"
                 alt="Protein.tn"
                 width={140}
                 height={48}
@@ -299,7 +299,7 @@ export function HeaderClient() {
             <div className="flex items-center justify-between h-16 gap-4">
               <Link href="/" className="flex-shrink-0" aria-label="Protein.tn - Accueil">
                 <Image
-                  src={/logo.png}
+                  src="/logo.png"
                   alt="Protein.tn"
                   width={200}
                   height={70}
@@ -570,7 +570,7 @@ export function HeaderClient() {
             <SheetTitle className="sr-only">Menu</SheetTitle>
             <Link href="/" onClick={closeMobileMenu} className="block max-w-[120px]">
               <Image
-                src={/logo.png}
+                src="/logo.png"
                 alt="Protein.tn"
                 width={120}
                 height={38}
