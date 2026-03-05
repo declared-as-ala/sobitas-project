@@ -111,10 +111,9 @@
 }
 
 /* -----------------------------------------------------------------------
-   5. Body scroll lock when a modal is open
+   5. Body scroll lock ONLY when a modal is actually open
+   (Use .fi-modal-open only; .fi-modal exists in DOM even when closed and would block scroll)
    ----------------------------------------------------------------------- */
-body:has(.fi-modal-container),
-body:has(.fi-modal.fi-absolute-positioning-context),
 body:has(.fi-modal-open) {
     overflow: hidden !important;
 }
