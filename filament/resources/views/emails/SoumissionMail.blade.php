@@ -357,11 +357,9 @@
     <div class="email-container">
         <!-- Header -->
         <div class="email-header">
-            @if($coordonnee && $coordonnee->logo_facture)
-                <div class="logo-wrapper">
-                    <img src="{{ asset('storage/' . $coordonnee->logo_facture) }}" alt="Logo" class="logo" />
-                </div>
-            @endif
+            <div class="logo-wrapper">
+                <img src="{{ asset('logo.png') }}" alt="SOBITAS PROTEIN.TN" class="logo" />
+            </div>
             <h1>Bon de Livraison</h1>
             <div class="order-info">
                 <div class="order-info-item">

@@ -73,9 +73,7 @@
     <div id="invoice-print" class="invoice-print">
         <header class="m-head">
             <div class="m-head-left">
-                @if ($coordonnee && $coordonnee->logo_facture)
-                    <img src="{{ asset('storage/' . $coordonnee->logo_facture) }}" alt="" class="m-logo">
-                @endif
+                <img src="{{ asset('logo.png') }}" alt="SOBITAS PROTEIN.TN" class="m-logo">
                 <div class="m-company-name">{{ $coordonnee->abbreviation ?? 'SOBITAS' }}</div>
                 @if ($coordonnee)
                     <div class="m-company-meta">

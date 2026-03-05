@@ -285,10 +285,8 @@
                         <div class="row">
                             <div class="col">
 
-                                @if ($coordonnee && $coordonnee->logo_facture)
-                                    <img src="{{ asset('storage/' . $coordonnee->logo_facture) }}" data-holder-rendered="true"
+                                <img src="{{ asset('logo.png') }}" alt="SOBITAS PROTEIN.TN" data-holder-rendered="true"
                                         style="width : 220px" />
-                                @endif
                                 <h4 class="name">
 
                                     {{ $coordonnee->abbreviation ?? 'SOBITAS' }}

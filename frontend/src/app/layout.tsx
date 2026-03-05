@@ -22,12 +22,12 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn'),
   icons: {
     icon: [
-      { url: '/icon.png', sizes: 'any' },
-      { url: '/icon.png', sizes: '192x192', type: 'image/png' },
-      { url: '/icon.png', sizes: '512x512', type: 'image/png' },
+      { url: '/logo.png', sizes: 'any' },
+      { url: '/logo.png', sizes: '192x192', type: 'image/png' },
+      { url: '/logo.png', sizes: '512x512', type: 'image/png' },
     ],
-    apple: '/apple-icon.png',
-    shortcut: '/icon.png',
+    apple: '/logo.png',
+    shortcut: '/logo.png',
   },
   title: {
     default: "Protéine Tunisie | Whey, Créatine & Compléments – SOBITAS",
@@ -73,7 +73,7 @@ export const metadata: Metadata = {
     description: "Protéine Tunisie : whey protein, créatine et compléments alimentaires avec livraison rapide partout en Tunisie sur Protein.tn.",
     images: [
       {
-        url: "/icon.png",
+        url: "/logo.png",
         width: 512,
         height: 512,
         alt: "Protein.tn - Protéine Tunisie par SOBITAS",
@@ -84,7 +84,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Protéine Tunisie | Whey, Créatine & Compléments – SOBITAS",
     description: "Protéine Tunisie : whey protein, créatine et compléments alimentaires avec livraison rapide partout en Tunisie sur Protein.tn.",
-    images: ["/icon.png"],
+    images: ["/logo.png"],
   },
   robots: {
     index: true,

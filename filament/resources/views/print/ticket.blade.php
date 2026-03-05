@@ -123,14 +123,7 @@
 
     <div class="container" id="print-area">
         <div class="receipt_header">
-@php
-                    $ticketLogoUrl = ($company && !empty($company->logo_facture))
-                        ? (filter_var($company->logo_facture, FILTER_VALIDATE_URL) ? $company->logo_facture : \Illuminate\Support\Facades\Storage::url($company->logo_facture))
-                        : asset('logo.png');
-                @endphp
-                @if ($ticketLogoUrl)
-                <img src="{{ $ticketLogoUrl }}" alt="SOBITAS PROTEIN.TN" class="logo" onerror="this.style.display='none'">
-            @endif
+<img src="{{ asset('logo.png') }}" alt="SOBITAS PROTEIN.TN" class="logo" onerror="this.style.display='none'">
             <h1>{{ $company->short_description_ticket ?? ($company->abbreviation ?? 'SOBITAS') }}</h1>
             <h2>
                 Adresse: {{ $company->adresse_fr ?? '' }}

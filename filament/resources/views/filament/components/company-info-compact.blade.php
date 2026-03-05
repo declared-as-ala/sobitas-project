@@ -1,13 +1,6 @@
 {{-- Compact company block for document edit pages: small logo + name + one-line contact, collapsible details --}}
 @php
-    $logoUrl = null;
-    if (!empty($coordinate->logo_facture)) {
-        $logoUrl = filter_var($coordinate->logo_facture, FILTER_VALIDATE_URL)
-            ? $coordinate->logo_facture
-            : \Illuminate\Support\Facades\Storage::url($coordinate->logo_facture);
-    } else {
-        $logoUrl = asset('logo.png');
-    }
+    $logoUrl = asset('logo.png');
     $name = $coordinate->abbreviation ?? 'STE SOBITAS';
     $phone = trim(($coordinate->phone_1 ?? '') . (!empty($coordinate->phone_2) ? ' / ' . $coordinate->phone_2 : ''));
     $adresse = $coordinate->adresse_fr ?? '';

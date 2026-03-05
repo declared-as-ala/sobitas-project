@@ -229,6 +229,8 @@ export interface QuickOrderPayload {
   website?: string;
   /** Code promo (validated via /coupons/apply before submit) */
   couponCode?: string;
+  /** Email (optional but recommended for quick order) */
+  email?: string;
 }
 
 export interface QuickOrderResponse {

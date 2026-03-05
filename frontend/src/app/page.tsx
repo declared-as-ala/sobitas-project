@@ -22,7 +22,7 @@ export async function generateMetadata(): Promise<Metadata> {
     openGraph: {
       title,
       description,
-      images: ['/assets/img/logo/logo.webp'],
+      images: ['/logo.png'],
       url: canonical,
       type: 'website',
     },

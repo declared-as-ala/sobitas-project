@@ -85,7 +85,7 @@ export default function OrderConfirmationPage() {
       return;
     }
 
-    const logoUrl = getStorageUrl('coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp');
+    const logoUrl = typeof window !== 'undefined' ? `${window.location.origin}/logo.png` : '/logo.png';
     
     printWindow.document.write(`
       <!DOCTYPE html>

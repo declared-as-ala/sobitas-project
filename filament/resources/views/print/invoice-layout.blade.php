@@ -33,19 +33,7 @@
         <div class="invoice-sheet-inner">
             <header class="invoice-header">
                 <div class="invoice-company">
-                    @php
-                        $invoiceLogoUrl = null;
-                        if ($company && !empty($company->logo_facture)) {
-                            $invoiceLogoUrl = filter_var($company->logo_facture, FILTER_VALIDATE_URL)
-                                ? $company->logo_facture
-                                : \Illuminate\Support\Facades\Storage::url($company->logo_facture);
-                        } else {
-                            $invoiceLogoUrl = asset('logo.png');
-                        }
-                    @endphp
-                    @if ($invoiceLogoUrl)
-                        <img src="{{ $invoiceLogoUrl }}" alt="SOBITAS PROTEIN.TN" class="invoice-logo" onerror="this.style.display='none'">
-                    @endif
+                    <img src="{{ asset('logo.png') }}" alt="SOBITAS PROTEIN.TN" class="invoice-logo" onerror="this.style.display='none'">
                     <h2 class="invoice-company-name">{{ $company->abbreviation ?? 'STE SOBITAS' }}</h2>
                     @if ($company ?? null)
                         <div class="invoice-company-meta">

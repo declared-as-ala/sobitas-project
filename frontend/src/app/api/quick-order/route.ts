@@ -64,6 +64,7 @@ async function handleQuickOrder(request: NextRequest): Promise<Response> {
       priceSnapshot,
       deliveryFeeSnapshot = 0,
       couponCode,
+      email: bodyEmail,
     } = body;
 
     if (!productId || !Number.isFinite(priceSnapshot) || priceSnapshot < 0) {
@@ -129,11 +130,12 @@ async function handleQuickOrder(request: NextRequest): Promise<Response> {
     const livraisonAdresse1 = useAddressFlow ? addressTrim : 'Livraison';
 
     // Same backend structure as normal checkout (see lib/orderPayload.ts)
+    const livraisonEmailFinal = (bodyEmail ?? '').trim() || livraisonEmail;
     const orderPayload = buildBackendOrderPayload({
       livraison: {
         livraison_nom: nom,
         livraison_prenom: prenom,
-        livraison_email: livraisonEmail,
+        livraison_email: livraisonEmailFinal,
         livraison_phone: phoneTrim,
         livraison_region: livraisonRegion,
         livraison_ville: livraisonVille,

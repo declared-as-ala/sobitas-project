@@ -94,7 +94,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
             >
               <Link href="/" className="block max-w-[140px] opacity-90 hover:opacity-100 transition-opacity duration-300">
                 <Image
-                  src={getStorageUrl('coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp')}
+                  src={/logo.png}
                   alt="Protein.tn - SOBITAS"
                   width={140}
                   height={45}
@@ -228,7 +228,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
           <div className="space-y-6">
             <div className="relative h-8 w-auto mb-6 shrink-0 flex items-center">
               <Image
-                src={getStorageUrl('coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp')}
+                src={/logo.png}
                 alt="Protein.tn"
                 width={150}
                 height={48}

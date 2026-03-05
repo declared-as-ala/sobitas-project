@@ -410,7 +410,7 @@ export default function CheckoutPage() {
       return;
     }
 
-    const logoUrl = getStorageUrl('coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp');
+    const logoUrl = typeof window !== 'undefined' ? `${window.location.origin}/logo.png` : '/logo.png';
     const order = orderData.order;
     const details = orderData.orderDetails;
 
