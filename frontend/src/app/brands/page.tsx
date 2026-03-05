@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     siteName: 'SOBITAS',
     images: [
       {
-        url: 'https://sobitas.tn/logo.png',
+        url: 'https://sobitas.tn/assets/img/logo/logo.webp',
         width: 1200,
         height: 630,
         alt: 'SOBITAS – Marques Compléments Tunisie',
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Marques de Compléments Alimentaires | SOBITAS Tunisie',
     description: 'Optimum Nutrition, Biotech USA et plus. Marques de protéines et compléments en Tunisie.',
-    images: ['https://sobitas.tn/logo.png'],
+    images: ['https://sobitas.tn/assets/img/logo/logo.webp'],
   },
   alternates: {
     canonical: 'https://sobitas.tn/brands',

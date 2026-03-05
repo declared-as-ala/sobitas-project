@@ -58,7 +58,6 @@ export function QuickOrderDrawer({
   const [delegation, setDelegation] = useState('');
   const [localite, setLocalite] = useState('');
   const [codePostal, setCodePostal] = useState('');
-  const [email, setEmail] = useState('');
   const [website, setWebsite] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -98,7 +97,6 @@ export function QuickOrderDrawer({
       setSelectedVariantId(initialVariantId ?? product.aromes?.[0]?.id);
       setResult(null);
       setErrors({});
-      setEmail('');
       setWebsite('');
       trackEvent('quick_order_open', { product_id: product.id });
       document.body.style.overflow = 'hidden';
@@ -231,7 +229,6 @@ export function QuickOrderDrawer({
       deliveryFeeSnapshot: deliveryNote,
       website: website || undefined,
       ...(appliedCoupon?.code && { couponCode: appliedCoupon.code }),
-      email: (email || '').trim() || undefined,
     };
 
     try {
@@ -547,22 +544,6 @@ export function QuickOrderDrawer({
                   {errors.gouvernorat && <p className="text-xs text-red-600 dark:text-red-400">{errors.gouvernorat}</p>}
                   {errors.delegation && <p className="text-xs text-red-600 dark:text-red-400">{errors.delegation}</p>}
                   {errors.localite && <p className="text-xs text-red-600 dark:text-red-400">{errors.localite}</p>}
-
-                  {/* Email (optionnel) */}
-                  <div className="space-y-2">
-                    <Label htmlFor="qo-email" className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      Email
-                    </Label>
-                    <Input
-                      id="qo-email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="votre@email.com (optionnel)"
-                      className="h-12 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-0"
-                      autoComplete="email"
-                    />
-                  </div>
 
                   {/* Code promo */}
                   <section className="pt-2 border-t border-gray-200 dark:border-gray-800" aria-labelledby="qo-coupon-title">

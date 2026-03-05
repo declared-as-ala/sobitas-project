@@ -227,7 +227,7 @@ export function buildOrganizationSchema(baseUrl: string): object {
     '@type': 'Organization',
     name: 'SOBITAS',
     url: base,
-    logo: `${base}/logo.png`,
+    logo: `${base}/icon.png`,
     description:
       'Distributeur officiel de protéines et compléments alimentaires en Tunisie. Whey, créatine, gainer, BCAA à Sousse. Livraison Tunis, Sousse et toute la Tunisie.',
     address: {
@@ -264,7 +264,7 @@ export function buildLocalBusinessSchema(baseUrl: string): object {
     '@type': 'LocalBusiness',
     '@id': `${base}/#localbusiness`,
     name: 'SOBITAS – Protéines & Compléments Alimentaires Tunisie',
-    image: `${base}/logo.png`,
+    image: `${base}/icon.png`,
     url: base,
     telephone: '+21627612500',
     email: 'contact@protein.tn',
@@ -300,7 +300,7 @@ export function buildWebSiteSchema(baseUrl: string): object {
     publisher: {
       '@type': 'Organization',
       name: 'SOBITAS',
-      logo: { '@type': 'ImageObject', url: `${base}/logo.png` },
+      logo: { '@type': 'ImageObject', url: `${base}/icon.png` },
     },
     inLanguage: 'fr-TN',
     potentialAction: {
@@ -388,7 +388,7 @@ export function buildArticleSchema(article: {
     url,
     datePublished: article.created_at || undefined,
     dateModified: article.updated_at || article.created_at || undefined,
-    publisher: { '@type': 'Organization', name: 'SOBITAS', logo: { '@type': 'ImageObject', url: `${base}/logo.png` } },
+    publisher: { '@type': 'Organization', name: 'SOBITAS', logo: { '@type': 'ImageObject', url: `${base}/icon.png` } },
     inLanguage: 'fr-TN',
   };
 }

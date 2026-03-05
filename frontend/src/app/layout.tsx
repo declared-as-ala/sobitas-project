@@ -73,7 +73,7 @@ export const metadata: Metadata = {
     description: "Protéine Tunisie : whey protein, créatine et compléments alimentaires avec livraison rapide partout en Tunisie sur Protein.tn.",
     images: [
       {
-        url: "/logo.png",
+        url: "/icon.png",
         width: 512,
         height: 512,
         alt: "Protein.tn - Protéine Tunisie par SOBITAS",
@@ -84,7 +84,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Protéine Tunisie | Whey, Créatine & Compléments – SOBITAS",
     description: "Protéine Tunisie : whey protein, créatine et compléments alimentaires avec livraison rapide partout en Tunisie sur Protein.tn.",
-    images: ["/logo.png"],
+    images: ["/icon.png"],
   },
   robots: {
     index: true,

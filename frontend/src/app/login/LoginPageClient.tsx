@@ -15,6 +15,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { toast } from 'sonner';
 import { LoadingSpinner } from '@/app/components/LoadingSpinner';
+import { getStorageUrl } from '@/services/api';
 
 function LoginContent() {
   const router = useRouter();
