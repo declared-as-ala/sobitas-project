@@ -56,6 +56,7 @@ use App\Filament\Widgets\OrderFunnelChart;
 use App\Filament\Widgets\TopCategoriesChart;
 use App\Filament\Widgets\GeographicChart;
 use App\Filament\Widgets\DelayedOrdersTable;
+use App\Filament\Widgets\DocumentTimelineWidget;
 use App\Filament\Widgets\LowStockTable;
 use App\Filament\Widgets\TopCustomersTable;
 use App\Filament\Widgets\ReturnsRefundsTable;
@@ -149,6 +150,7 @@ class AdminPanelProvider extends PanelProvider
                 AccountWidget::class,
                 ClientHistoriqueSearchWidget::class,
                 DashboardHeaderWidget::class,
+                DocumentTimelineWidget::class,
                 DashboardAlertsWidget::class,
                 MarketplaceKpis::class,
                 OrderFunnelChart::class,
