@@ -76,6 +76,20 @@
     color: #f9fafb;
 }
 
+/* ---- NET À PAYER highlight card wrapper (Filament ViewField) ---- */
+.fi-fo-net-a-payer {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 0.5rem;
+}
+
+@media (max-width: 640px) {
+    .fi-fo-net-a-payer {
+        padding-inline: 0.25rem;
+    }
+}
+
 /* ---- NET À PAYER: orange block as in screenshot ---- */
 .doc-total-net-block {
     display: flex;
