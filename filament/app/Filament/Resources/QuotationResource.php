@@ -321,7 +321,7 @@ class QuotationResource extends Resource
                         ->compact(),
                 ])->columnSpan(['default' => 12, 'lg' => 4]),
                 
-            ]),
+            ])->columnSpanFull(),
 
             // Hidden fields
             Forms\Components\Hidden::make('numero'),
