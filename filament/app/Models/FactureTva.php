@@ -15,9 +15,14 @@ class FactureTva extends Model
 
     protected $casts = [
         'date_facture' => 'date',
-        'prix_total' => 'float',
-        'tva' => 'float',
-        'timbre' => 'float',
+        'prix_ht' => 'decimal:3',
+        'remise' => 'decimal:3',
+        'pourcentage_remise' => 'decimal:3',
+        'prix_ht_apres_remise' => 'decimal:3',
+        'tva' => 'decimal:3',
+        'timbre' => 'decimal:3',
+        'prix_ttc' => 'decimal:3',
+        'net_a_payer' => 'decimal:3',
         'status' => InvoiceStatus::class,
     ];
 

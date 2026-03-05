@@ -49,27 +49,21 @@ class CreateFactureTva extends CreateRecord
     {
         $state = $this->form->getState();
         $details = $state['details'] ?? [];
-        $totalHt = 0.0;
-        $totalTva = 0.0;
-        foreach ($details as $d) {
-            if (!empty($d['produit_id'])) {
-                $ht = (float) ($d['qte'] ?? 0) * (float) ($d['prix_unitaire'] ?? 0);
-                $tvaPct = (float) ($d['tva_pct'] ?? 19);
-                $totalHt += $ht;
-                $totalTva += $ht * $tvaPct / 100;
-            }
-        }
         $remise = (float) ($state['remise'] ?? 0);
-        $htApresRemise = $totalHt - $remise;
-        $tvaApresRemise = $totalHt > 0 ? $totalTva - ($totalTva * $remise / $totalHt) : 0;
         $timbre = (float) ($state['timbre'] ?? 0);
-        $net = $htApresRemise + $tvaApresRemise + $timbre;
+        
+        $coordinate = Coordinate::getCached();
+        $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
+
+        $calc = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, $defaultTva);
+        
         $this->form->fill(array_merge($state, [
-            'prix_ht' => $totalHt,
-            'prix_ht_apres_remise' => $htApresRemise,
-            'tva' => $tvaApresRemise,
-            'prix_ttc' => $htApresRemise + $tvaApresRemise,
-            'net_a_payer' => $net,
+            'prix_ht' => $calc['total_ht_brut'],
+            'pourcentage_remise' => $calc['pourcentage_remise'],
+            'prix_ht_apres_remise' => $calc['prix_ht_apres_remise'],
+            'tva' => $calc['tva'],
+            'prix_ttc' => $calc['prix_ttc'],
+            'net_a_payer' => $calc['net_a_payer'],
         ]));
     }
 
@@ -79,23 +73,24 @@ class CreateFactureTva extends CreateRecord
         $data['numero'] = date('Y') . '/' . str_pad((string) $nb, 4, '0', STR_PAD_LEFT);
 
         $details = $data['details'] ?? [];
-        $totalHt = 0.0;
-        $totalTva = 0.0;
-        foreach ($details as $d) {
-            if (!empty($d['produit_id'])) {
-                $ht = (float) ($d['qte'] ?? 0) * (float) ($d['prix_unitaire'] ?? 0);
-                $tvaPct = (float) ($d['tva_pct'] ?? 19);
-                $totalHt += $ht;
-                $totalTva += $ht * $tvaPct / 100;
-            }
-        }
         $remise = (float) ($data['remise'] ?? 0);
-        $tvaApresRemise = $totalHt > 0 ? $totalTva - ($totalTva * $remise / $totalHt) : 0;
         $timbre = (float) ($data['timbre'] ?? 0);
-        $data['prix_ht'] = $totalHt;
-        $data['tva'] = $tvaApresRemise;
-        $data['prix_ttc'] = $totalHt - $remise + $tvaApresRemise + $timbre;
-        unset($data['details'], $data['client_adresse'], $data['client_phone'], $data['prix_ht_apres_remise'], $data['net_a_payer'], $data['pourcentage_remise']);
+        
+        $coordinate = Coordinate::getCached();
+        $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
+
+        $calc = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, $defaultTva);
+        
+        $data['prix_ht'] = $calc['total_ht_brut'];
+        $data['remise'] = $calc['remise'];
+        $data['pourcentage_remise'] = $calc['pourcentage_remise'];
+        $data['prix_ht_apres_remise'] = $calc['prix_ht_apres_remise'];
+        $data['tva'] = $calc['tva'];
+        $data['timbre'] = $calc['timbre'];
+        $data['prix_ttc'] = $calc['prix_ttc'];
+        $data['net_a_payer'] = $calc['net_a_payer'];
+        
+        unset($data['details'], $data['client_adresse'], $data['client_phone']);
         return $data;
     }
 
@@ -127,22 +122,21 @@ class CreateFactureTva extends CreateRecord
         }
 
         $state = $this->form->getState();
+        $remise = (float) ($state['remise'] ?? 0);
+        $timbre = (float) ($state['timbre'] ?? 0);
+        $calcTotals = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, $defaultTva);
+        
         $totals = [
-            'prix_ht' => (float) ($state['prix_ht'] ?? 0),
-            'remise' => (float) ($state['remise'] ?? 0),
-            'tva' => (float) ($state['tva'] ?? 0),
-            'timbre' => (float) ($state['timbre'] ?? 0),
-            'prix_ttc' => (float) ($state['prix_ttc'] ?? 0),
+            'prix_ht' => $calcTotals['total_ht_brut'],
+            'remise' => $calcTotals['remise'],
+            'pourcentage_remise' => $calcTotals['pourcentage_remise'],
+            'prix_ht_apres_remise' => $calcTotals['prix_ht_apres_remise'],
+            'tva' => $calcTotals['tva'],
+            'timbre' => $calcTotals['timbre'],
+            'prix_ttc' => $calcTotals['prix_ttc'],
+            'net_a_payer' => $calcTotals['net_a_payer'],
         ];
-        if (\Illuminate\Support\Facades\Schema::hasColumn('facture_tvas', 'prix_ht_apres_remise')) {
-            $totals['prix_ht_apres_remise'] = (float) ($state['prix_ht_apres_remise'] ?? 0);
-        }
-        if (\Illuminate\Support\Facades\Schema::hasColumn('facture_tvas', 'pourcentage_remise')) {
-            $totals['pourcentage_remise'] = (float) ($state['pourcentage_remise'] ?? 0);
-        }
-        if (\Illuminate\Support\Facades\Schema::hasColumn('facture_tvas', 'net_a_payer')) {
-            $totals['net_a_payer'] = (float) ($state['net_a_payer'] ?? 0);
-        }
+        
         $this->record->update($totals);
     }
 }
