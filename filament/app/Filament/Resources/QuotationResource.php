@@ -88,9 +88,13 @@ class QuotationResource extends Resource
                 
                 // Left Column: Company Info
                 Grid::make(1)->schema([
-                    Forms\Components\Placeholder::make('company_info')
-                        ->label('Informations société')
-                        ->content(fn () => $coordinate ? new \Illuminate\Support\HtmlString(view('filament.components.company-info-compact', ['coordinate' => $coordinate])->render()) : '—'),
+                    Section::make('Informations société')
+                        ->icon('heroicon-o-building-office')
+                        ->schema([
+                            Forms\Components\Placeholder::make('company_info')
+                                ->hiddenLabel()
+                                ->content(fn () => $coordinate ? new \Illuminate\Support\HtmlString(view('filament.components.company-info-compact', ['coordinate' => $coordinate])->render()) : '—'),
+                        ])->compact(),
                 ])->columnSpan(['default' => 12, 'md' => 5]),
                     Section::make('Informations Client')
                         ->description('Sélectionnez un client pour remplir automatiquement les coordonnées.')
@@ -161,12 +165,21 @@ class QuotationResource extends Resource
                                 ->schema([
                                     Forms\Components\Select::make('produit_id')
                                         ->label('Produit')
-                                        ->options(fn () => \App\Models\Product::where('qte', '>', 0)->get()->mapWithKeys(fn ($p) => [$p->id => ($p->designation_fr ?? '') . ' (' . (int) $p->qte . ')'])->all())
                                         ->searchable()
-                                        ->preload()
+                                        ->getSearchResultsUsing(fn (string $search): array => \App\Models\Product::where('qte', '>', 0)
+                                            ->where(function ($query) use ($search) {
+                                                $query->where('designation_fr', 'like', "%{$search}%")
+                                                      ->orWhere('code_product', 'like', "%{$search}%");
+                                            })
+                                            ->limit(50)
+                                            ->get()
+                                            ->mapWithKeys(fn ($p) => [$p->id => ($p->designation_fr ?? '') . ' (' . (int) $p->qte . ')'])
+                                            ->toArray()
+                                        )
+                                        ->getOptionLabelUsing(fn ($value): ?string => \App\Models\Product::find($value)?->designation_fr)
                                         ->required()
                                         ->live()
-                                        ->placeholder('Sélectionner un produit…')
+                                        ->placeholder('Rechercher un produit…')
                                         ->afterStateUpdated(function ($state, $set, $get) {
                                             if ($state && $product = \App\Models\Product::find($state)) {
                                                 $set('prix_unitaire', (float) ($product->prix ?? 0));
@@ -321,7 +334,7 @@ class QuotationResource extends Resource
                         ->compact(),
                 ])->columnSpan(['default' => 12, 'lg' => 4]),
                 
-            ])->columnSpanFull(),
+            ]),
 
             // Hidden fields
             Forms\Components\Hidden::make('numero'),
