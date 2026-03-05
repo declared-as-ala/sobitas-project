@@ -33,7 +33,7 @@ class TicketToInvoiceService
             $invoice->source_ticket_id = $ticket->id;
             $invoice->client_id = $ticket->client_id;
             $invoice->numero = $this->numberSequence->nextFacture();
-            $invoice->status = InvoiceStatus::Draft;
+            $invoice->status = InvoiceStatus::Issued;
             if (Schema::hasColumn('facture_tvas', 'date_facture')) {
                 $invoice->date_facture = now()->toDateString();
             }

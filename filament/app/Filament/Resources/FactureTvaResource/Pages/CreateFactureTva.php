@@ -71,6 +71,7 @@ class CreateFactureTva extends CreateRecord
     {
         $nb = FactureTva::whereYear('created_at', date('Y'))->count() + 1;
         $data['numero'] = date('Y') . '/' . str_pad((string) $nb, 4, '0', STR_PAD_LEFT);
+        $data['status'] = \App\Enums\InvoiceStatus::Issued->value;
 
         $details = $data['details'] ?? [];
         $remise = (float) ($data['remise'] ?? 0);

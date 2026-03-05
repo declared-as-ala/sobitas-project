@@ -255,8 +255,8 @@ class DocumentChainService
     {
         $s = $ft->status?->value ?? $ft->status ?? null;
         return match ($s) {
-            'draft' => 'Brouillon',
-            'issued' => 'Émise',
+            'draft' => 'Validée',
+            'issued' => 'Validée',
             'paid' => 'Payée',
             'partially_paid' => 'Partiel',
             'cancelled' => 'Annulée',
