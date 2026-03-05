@@ -27,7 +27,7 @@ class EmailPreviewController extends Controller
         $vars = is_string($varsJson) ? (json_decode($varsJson, true) ?? []) : [];
         $vars = is_array($vars) ? $vars : [];
         $vars = array_merge(DefaultEmailTemplates::getDefaultVariables($template), $vars);
-        $vars['logo_url'] = config('marketing.preview_logo_url', 'https://admin.sobitas.tn/icon.png');
+        $vars['logo_url'] = config('marketing.preview_logo_url', rtrim(config('app.url'), '/') . '/logo.png');
         $vars['unsubscribe_url'] = MarketingService::unsubscribeUrl('email', 'preview@example.com');
 
         $html = DefaultEmailTemplates::renderHtml($template, $vars);

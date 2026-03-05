@@ -123,13 +123,13 @@
 
     <div class="container" id="print-area">
         <div class="receipt_header">
-            @if ($company && !empty($company->logo_facture))
-                @php
-                    $logoUrl = filter_var($company->logo_facture, FILTER_VALIDATE_URL)
-                        ? $company->logo_facture
-                        : \Illuminate\Support\Facades\Storage::url($company->logo_facture);
+@php
+                    $ticketLogoUrl = ($company && !empty($company->logo_facture))
+                        ? (filter_var($company->logo_facture, FILTER_VALIDATE_URL) ? $company->logo_facture : \Illuminate\Support\Facades\Storage::url($company->logo_facture))
+                        : asset('logo.png');
                 @endphp
-                <img src="{{ $logoUrl }}" alt="" class="logo" onerror="this.style.display='none'">
+                @if ($ticketLogoUrl)
+                <img src="{{ $ticketLogoUrl }}" alt="SOBITAS PROTEIN.TN" class="logo" onerror="this.style.display='none'">
             @endif
             <h1>{{ $company->short_description_ticket ?? ($company->abbreviation ?? 'SOBITAS') }}</h1>
             <h2>

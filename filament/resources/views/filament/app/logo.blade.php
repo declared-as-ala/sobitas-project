@@ -1,1 +1,1 @@
-﻿<img src="{{ asset('icon.png') }}" alt="Logo" class="h-full w-auto" />
+<img src="{{ asset('logo.png') }}" alt="SOBITAS PROTEIN.TN" class="h-full w-auto" />

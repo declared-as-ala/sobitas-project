@@ -14,7 +14,7 @@ class MarketingService
 
     public static function logoUrl(): string
     {
-        $default = config('marketing.logo_url', rtrim(config('app.url'), '/') . '/icon.png');
+        $default = config('marketing.logo_url', rtrim(config('app.url'), '/') . '/logo.png');
         return MarketingSetting::get('logo_url', $default);
     }
 

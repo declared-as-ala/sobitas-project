@@ -137,7 +137,7 @@ class DefaultEmailTemplates
     /** Default logo URL (absolute) for emails and iframe preview */
     public static function defaultLogoUrl(): string
     {
-        return config('marketing.logo_url', rtrim(config('app.url'), '/') . '/icon.png');
+        return config('marketing.logo_url', rtrim(config('app.url'), '/') . '/logo.png');
     }
 
     private static function emailResponsiveStyles(): string

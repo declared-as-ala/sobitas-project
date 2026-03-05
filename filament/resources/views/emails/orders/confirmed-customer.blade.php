@@ -1,6 +1,6 @@
 @php
     $details = $commande->details()->with('product:id,designation_fr')->get();
-    $logoUrl = config('marketing.logo_url', 'https://admin.sobitas.tn/icon.png');
+    $logoUrl = config('marketing.logo_url', rtrim(config('app.url'), '/') . '/logo.png');
     $orderUrl = $commande->order_token
         ? config('app.frontend_url') . '/order-confirmation/' . $commande->id . '?token=' . urlencode($commande->order_token)
         : config('app.frontend_url') . '/order-confirmation/' . $commande->id;

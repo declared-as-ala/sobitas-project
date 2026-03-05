@@ -30,13 +30,18 @@
     <div class="print-sheet" id="print-area">
         <header class="print-header">
             <div class="print-company">
-                @if ($company && $company->logo_facture ?? null)
-                    @php
-                        $logoUrl = filter_var($company->logo_facture, FILTER_VALIDATE_URL)
+                @php
+                    $printLogoUrl = null;
+                    if ($company && !empty($company->logo_facture)) {
+                        $printLogoUrl = filter_var($company->logo_facture, FILTER_VALIDATE_URL)
                             ? $company->logo_facture
                             : \Illuminate\Support\Facades\Storage::url($company->logo_facture);
-                    @endphp
-                    <img src="{{ $logoUrl }}" alt="" class="print-logo" onerror="this.style.display='none'">
+                    } else {
+                        $printLogoUrl = asset('logo.png');
+                    }
+                @endphp
+                @if ($printLogoUrl)
+                    <img src="{{ $printLogoUrl }}" alt="SOBITAS PROTEIN.TN" class="print-logo" onerror="this.style.display='none'">
                 @endif
                 <div class="print-company-name">{{ $company->abbreviation ?? 'SOBITAS' }}</div>
                 @if ($company ?? null)

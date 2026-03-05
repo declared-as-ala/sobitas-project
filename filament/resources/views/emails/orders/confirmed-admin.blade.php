@@ -1,6 +1,6 @@
 @php
     $details = $commande->details()->with('product:id,designation_fr')->get();
-    $logoUrl = config('marketing.logo_url', 'https://admin.sobitas.tn/icon.png');
+    $logoUrl = config('marketing.logo_url', rtrim(config('app.url'), '/') . '/logo.png');
     $adminUrl = url(\App\Filament\Resources\CommandeResource::getUrl('edit', ['record' => $commande]));
     $statusLabel = Commande::getStatusLabel($commande->etat ?? 'nouvelle_commande');
     $dateFormatted = $commande->created_at ? $commande->created_at->locale('fr_FR')->isoFormat('D MMMM YYYY à HH:mm') : '';

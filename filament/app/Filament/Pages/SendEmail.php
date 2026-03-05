@@ -514,7 +514,7 @@ class SendEmail extends Page implements HasForms
             return '';
         }
         $vars = array_merge(DefaultEmailTemplates::getDefaultVariables($key), $data['template_vars'] ?? []);
-        $vars['logo_url'] = config('marketing.preview_logo_url', 'https://admin.sobitas.tn/icon.png');
+        $vars['logo_url'] = config('marketing.preview_logo_url', rtrim(config('app.url'), '/') . '/logo.png');
         $vars['unsubscribe_url'] = MarketingService::unsubscribeUrl('email', 'preview@example.com');
         return DefaultEmailTemplates::renderHtml($key, $vars);
     }
