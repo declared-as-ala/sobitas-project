@@ -40,21 +40,31 @@ class FactureResource extends Resource
 
     public static function updateTotals(Forms\Get $get, Forms\Set $set): void
     {
-        // Calculate regardless of whether we are inside a repeater item or at the root form
         $details = $get('../../details') ?? $get('details') ?? [];
-        $total   = 0.0;
-        foreach ($details as $d) {
-            if (! empty($d['produit_id'])) {
-                $total += (float) ($d['qte'] ?? 0) * (float) ($d['prix_unitaire'] ?? 0);
-            }
-        }
         $remise = (float) ($get('../../remise') ?? $get('remise') ?? 0);
-
+        $timbre = (float) ($get('../../timbre') ?? $get('timbre') ?? 0);
+        
+        $coordinate = Coordinate::getCached();
+        $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
+        
+        // For standard Bons de Livraison, TVA is usually explicitly handled or zero, 
+        // InvoiceCalculator takes care of line items natively.
+        $calcTotals = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, $defaultTva);
+        
         // Try setting on both relative and absolute paths
-        $set('../../prix_ht', $total);
-        $set('../../prix_ttc', $total - $remise);
-        $set('prix_ht', $total);
-        $set('prix_ttc', $total - $remise);
+        $set('../../prix_ht', $calcTotals['total_ht_brut']);
+        $set('../../pourcentage_remise', $calcTotals['pourcentage_remise']);
+        $set('../../prix_ht_apres_remise', $calcTotals['prix_ht_apres_remise']);
+        $set('../../tva', $calcTotals['tva']);
+        $set('../../prix_ttc', $calcTotals['prix_ttc']);
+        $set('../../net_a_payer', $calcTotals['net_a_payer']);
+        
+        $set('prix_ht', $calcTotals['total_ht_brut']);
+        $set('pourcentage_remise', $calcTotals['pourcentage_remise']);
+        $set('prix_ht_apres_remise', $calcTotals['prix_ht_apres_remise']);
+        $set('tva', $calcTotals['tva']);
+        $set('prix_ttc', $calcTotals['prix_ttc']);
+        $set('net_a_payer', $calcTotals['net_a_payer']);
     }
 
     public static function form(Schema $schema): Schema
@@ -64,7 +74,7 @@ class FactureResource extends Resource
             Grid::make(3)->schema([
                 Grid::make(1)->schema([
                     Forms\Components\Placeholder::make('company_info')
-                        ->label('')
+                        ->label('Informations société')
                         ->content(fn () => $coordinate ? new \Illuminate\Support\HtmlString(view('filament.components.company-info-compact', ['coordinate' => $coordinate])->render()) : '—'),
                     Section::make('Informations Client')
                         ->description('Sélectionnez un client pour remplir automatiquement les coordonnées.')
@@ -207,11 +217,9 @@ class FactureResource extends Resource
                                 ->suffix('%')
                                 ->default(0)
                                 ->live(),
-                            Forms\Components\Placeholder::make('prix_ttc_display')
-                                ->label('NET À PAYER')
-                                ->content(fn ($get) => new \Illuminate\Support\HtmlString(
-                                    '<div class="doc-total-net-block"><span class="doc-total-net-prefix">DT</span><span class="doc-total-net-amount">' . number_format((float) $get('prix_ttc'), 3, ',', ' ') . '</span></div>'
-                                )),
+                            Forms\Components\ViewField::make('net_a_payer_display')
+                                ->hiddenLabel()
+                                ->view('filament.forms.components.net-a-payer-card'),
                             Forms\Components\Placeholder::make('numero_display')
                                 ->label('N° Document')
                                 ->content(fn ($record) => new \Illuminate\Support\HtmlString(
@@ -248,8 +256,12 @@ class FactureResource extends Resource
             // Hidden fields persisted to DB
             Forms\Components\Hidden::make('numero'),
             Forms\Components\Hidden::make('prix_ht'),
+            Forms\Components\Hidden::make('pourcentage_remise'),
+            Forms\Components\Hidden::make('prix_ht_apres_remise'),
+            Forms\Components\Hidden::make('tva'),
             Forms\Components\Hidden::make('prix_ttc'),
             Forms\Components\Hidden::make('timbre')->default(0),
+            Forms\Components\Hidden::make('net_a_payer'),
         ]);
     }
 
@@ -292,13 +304,21 @@ class FactureResource extends Resource
                     ->label('Client')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('prix_ttc')
-                    ->label('Total TTC')
-                    ->money('TND')
+                Tables\Columns\TextColumn::make('prix_ht')
+                    ->label('Total HT')
+                    ->money('TND', divideBy: 1)
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('net_a_payer')
+                    ->label('Net à Payer')
+                    ->state(function (Facture $record) {
+                        return $record->net_a_payer ?? 0;
+                    })
+                    ->money('TND', divideBy: 1)
                     ->sortable(),
                 Tables\Columns\TextColumn::make('remise')
                     ->label('Remise')
-                    ->money('TND')
+                    ->money('TND', divideBy: 1)
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Date')

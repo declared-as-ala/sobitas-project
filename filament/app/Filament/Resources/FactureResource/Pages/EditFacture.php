@@ -28,32 +28,48 @@ class EditFacture extends EditRecord
         return 'Bon de livraison #' . $this->record->numero;
     }
 
-    public function getSubheading(): ?string
+    public function getSubheading(): ?\Illuminate\Contracts\Support\Htmlable
     {
-        $parts = [];
+        $client = $this->record->client?->name ?? '—';
+        $date = $this->record->created_at?->format('d/m/Y') ?? '—';
+        
+        $coordinate = \App\Models\Coordinate::getCached();
+        $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
+        
+        $details = $this->record->details->map(fn ($d) => [
+            'qte' => $d->qte ?? $d->quantite ?? 1,
+            'prix_unitaire' => $d->prix_unitaire ?? 0,
+            'tva_pct' => 0, // Assuming BL default here, but let InvoiceCalculator handle
+        ])->toArray();
+        
+        $calc = \App\Services\InvoiceCalculator::calculate(
+            $details, 
+            (float)($this->record->remise ?? 0), 
+            (float)($this->record->timbre ?? 0), 
+            $defaultTva
+        );
+        
+        $net = number_format($calc['net_a_payer'], 3, ',', ' ') . ' TND';
 
-        $client = $this->record->client?->name;
-        if ($client) {
-            $parts[] = '👤 ' . $client;
-        }
-
-        $date = $this->record->created_at?->format('d/m/Y');
-        if ($date) {
-            $parts[] = '📅 ' . $date;
-        }
-
-        $total   = number_format((float) ($this->record->prix_ttc ?? 0), 3, ',', ' ') . ' DT';
-        $parts[] = '💰 ' . $total;
-
+        $html = '<style>
+            .fi-header { position: relative !important; top: auto !important; z-index: 1 !important; }
+        </style>';
+        $html .= '<div class="flex flex-wrap items-center gap-2 mt-2">';
+        $html .= '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 shadow-sm border border-gray-200 dark:border-gray-700">👤 Client : ' . e($client) . '</span>';
+        $html .= '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 shadow-sm border border-gray-200 dark:border-gray-700">📅 Date : ' . e($date) . '</span>';
+        $html .= '<span class="inline-flex items-center px-4 py-1.5 rounded-full text-[15px] font-bold bg-orange-100 text-orange-800 dark:bg-orange-500/20 dark:text-orange-400 shadow-sm border border-orange-200 dark:border-orange-500/30">💰 Net à payer : ' . e($net) . '</span>';
+        
         if ($this->record->commande_id) {
-            $parts[] = '📦 Cmd #' . ($this->record->commande?->numero ?? $this->record->commande_id);
+            $html .= '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300">📦 Cmd #' . e($this->record->commande?->numero ?? $this->record->commande_id) . '</span>';
         }
 
         if (Schema::hasColumn('facture_tvas', 'facture_id') && $this->record->factureTvas()->exists()) {
-            $parts[] = '🧾 Fact. TVA #' . $this->record->factureTvas->first()?->numero;
+            $html .= '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300">🧾 Fact. TVA #' . e($this->record->factureTvas->first()?->numero) . '</span>';
         }
 
-        return implode('  ·  ', $parts);
+        $html .= '</div>';
+
+        return new \Illuminate\Support\HtmlString($html);
     }
 
     protected function mutateFormDataBeforeFill(array $data): array
@@ -98,6 +114,26 @@ class EditFacture extends EditRecord
             ]);
             Product::where('id', $row['produit_id'])->decrement('qte', $qte);
         }
+
+        $state = $this->form->getState();
+        $remise = (float) ($state['remise'] ?? 0);
+        $timbre = (float) ($state['timbre'] ?? 0);
+        
+        $coordinate = \App\Models\Coordinate::getCached();
+        $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
+        
+        $calcTotals = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, $defaultTva);
+        
+        $this->record->update([
+            'prix_ht' => $calcTotals['total_ht_brut'],
+            'remise' => $calcTotals['remise'],
+            'pourcentage_remise' => $calcTotals['pourcentage_remise'],
+            'prix_ht_apres_remise' => $calcTotals['prix_ht_apres_remise'],
+            'tva' => $calcTotals['tva'],
+            'timbre' => $calcTotals['timbre'],
+            'prix_ttc' => $calcTotals['prix_ttc'],
+            'net_a_payer' => $calcTotals['net_a_payer'],
+        ]);
     }
 
     /**

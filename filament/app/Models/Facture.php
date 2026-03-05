@@ -17,11 +17,14 @@ class Facture extends Model
     ];
 
     protected $casts = [
-        'prix_ht' => 'float',
-        'prix_ttc' => 'float',
-        'remise' => 'float',
-        'pourcentage_remise' => 'float',
-        'timbre' => 'float',
+        'prix_ht' => 'decimal:3',
+        'remise' => 'decimal:3',
+        'pourcentage_remise' => 'decimal:3',
+        'prix_ht_apres_remise' => 'decimal:3',
+        'tva' => 'decimal:3',
+        'timbre' => 'decimal:3',
+        'prix_ttc' => 'decimal:3',
+        'net_a_payer' => 'decimal:3',
         'status' => BlStatus::class,
     ];
 
