@@ -29,29 +29,51 @@ class EditQuotation extends EditRecord
         return 'Devis #' . $this->record->numero;
     }
 
-    public function getSubheading(): ?string
+    public function getSubheading(): ?\Illuminate\Contracts\Support\Htmlable
     {
-        $parts = [];
+        $client = $this->record->client?->name ?? '—';
+        $date = $this->record->created_at?->format('d/m/Y') ?? '—';
+        
+        $coordinate = \App\Models\Coordinate::getCached();
+        $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
+        
+        $details = $this->record->details->map(fn ($d) => [
+            'qte' => $d->qte ?? $d->quantite ?? 1,
+            'prix_unitaire' => $d->prix_unitaire ?? 0,
+            'tva_pct' => $d->tva ?? $defaultTva,
+        ])->toArray();
+        
+        $calc = \App\Services\InvoiceCalculator::calculate(
+            $details, 
+            (float)($this->record->remise ?? 0), 
+            (float)($this->record->timbre ?? 0), 
+            $defaultTva
+        );
+        
+        $net = number_format($calc['net_a_payer'], 3, ',', ' ') . ' TND';
 
-        $client = $this->record->client?->name;
-        if ($client) {
-            $parts[] = '👤 ' . $client;
-        }
-
-        $date = $this->record->created_at?->format('d/m/Y');
-        if ($date) {
-            $parts[] = '📅 ' . $date;
-        }
-
-        $total   = number_format((float) ($this->record->prix_ttc ?? 0), 3, ',', ' ') . ' DT';
-        $parts[] = '💰 ' . $total;
-
+        $html = '<style>
+            .fi-header { position: relative !important; top: auto !important; z-index: 1 !important; }
+        </style>';
+        $html .= '<div class="flex flex-wrap items-center gap-2 mt-2">';
+        $html .= '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 shadow-sm border border-gray-200 dark:border-gray-700">👤 Client : ' . e($client) . '</span>';
+        $html .= '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 shadow-sm border border-gray-200 dark:border-gray-700">📅 Date : ' . e($date) . '</span>';
+        $html .= '<span class="inline-flex items-center px-4 py-1.5 rounded-full text-[15px] font-bold bg-orange-100 text-orange-800 dark:bg-orange-500/20 dark:text-orange-400 shadow-sm border border-orange-200 dark:border-orange-500/30">💰 Net à payer : ' . e($net) . '</span>';
+        
         $statut = $this->getStatutLabel($this->record->statut ?? null);
         if ($statut) {
-            $parts[] = '📌 ' . $statut;
+            $statusClass = match ($this->record->statut) {
+                'valide' => 'bg-green-100 text-green-800 border-green-200',
+                'refuse' => 'bg-red-100 text-red-800 border-red-200',
+                'en_attente' => 'bg-yellow-100 text-yellow-800 border-yellow-200',
+                default => 'bg-gray-100 text-gray-800 border-gray-200'
+            };
+            $html .= '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border shadow-sm ' . $statusClass . '">' . e($statut) . '</span>';
         }
 
-        return implode('  ·  ', $parts);
+        $html .= '</div>';
+
+        return new \Illuminate\Support\HtmlString($html);
     }
 
     protected function mutateFormDataBeforeFill(array $data): array
@@ -96,6 +118,27 @@ class EditQuotation extends EditRecord
             ]);
             Product::where('id', $row['produit_id'])->decrement('qte', $qte);
         }
+
+        $state = $this->form->getState();
+        $remise = (float) ($state['remise'] ?? 0);
+        $timbre = (float) ($state['timbre'] ?? 0);
+        
+        $coordinate = \App\Models\Coordinate::getCached();
+        $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
+        
+        $calcTotals = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, $defaultTva);
+        
+        $this->record->update([
+            'prix_ht' => $calcTotals['total_ht_brut'],
+            'remise' => $calcTotals['remise'],
+            'pourcentage_remise' => $calcTotals['pourcentage_remise'],
+            'prix_ht_apres_remise' => $calcTotals['prix_ht_apres_remise'],
+            'tva' => $calcTotals['tva'],
+            'timbre' => $calcTotals['timbre'],
+            'prix_ttc' => $calcTotals['prix_ttc'],
+            'net_a_payer' => $calcTotals['net_a_payer'],
+            'prix_total' => $calcTotals['prix_ttc'], // Backwards compatibility if used elsewhere
+        ]);
     }
 
     /**
@@ -204,6 +247,44 @@ class EditQuotation extends EditRecord
             ->icon('heroicon-o-arrow-path')
             ->color('success')
             ->dropdownPlacement('bottom-start'),
+
+            // Envoyer par email (Modal)
+            Actions\Action::make('envoyer_email')
+                ->label('Envoyer')
+                ->icon('heroicon-o-paper-airplane')
+                ->color('primary')
+                ->form([
+                    \Filament\Forms\Components\TextInput::make('email')
+                        ->label('Adresse Email')
+                        ->email()
+                        ->required()
+                        ->default(fn () => $this->record->client?->email ?? ''),
+                    \Filament\Forms\Components\Textarea::make('message')
+                        ->label('Message optionnel')
+                        ->rows(3)
+                        ->default("Bonjour,\n\nVeuillez trouver ci-joint notre devis.\n\nCordialement,")
+                ])
+                ->modalHeading('Envoyer le Devis par Email')
+                ->modalDescription('Le devis sera généré en PDF et envoyé en pièce jointe.')
+                ->modalSubmitActionLabel('Envoyer maintenant')
+                ->action(function (array $data) {
+                    try {
+                        \Illuminate\Support\Facades\Mail::to($data['email'])->send(
+                            new \App\Mail\QuotationSent($this->record, $data['message'])
+                        );
+                        Notification::make()
+                            ->title('Email envoyé avec succès !')
+                            ->success()
+                            ->send();
+                    } catch (\Exception $e) {
+                        \Illuminate\Support\Facades\Log::error('Failed to send quotation', ['error' => $e->getMessage()]);
+                        Notification::make()
+                            ->title('Erreur lors de l\'envoi')
+                            ->body('Vérifiez la configuration SMTP.')
+                            ->danger()
+                            ->send();
+                    }
+                }),
 
             // Imprimer — new tab (safest in SPA mode)
             Actions\Action::make('imprimer')

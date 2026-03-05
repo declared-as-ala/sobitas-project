@@ -45,18 +45,28 @@ class QuotationResource extends Resource
     public static function updateTotals(Forms\Get $get, Forms\Set $set): void
     {
         $details = $get('../../details') ?? $get('details') ?? [];
-        $total   = 0.0;
-        foreach ($details as $d) {
-            if (! empty($d['produit_id'])) {
-                $total += (float) ($d['qte'] ?? 0) * (float) ($d['prix_unitaire'] ?? 0);
-            }
-        }
         $remise = (float) ($get('../../remise') ?? $get('remise') ?? 0);
-
-        $set('../../prix_ht', $total);
-        $set('../../prix_ttc', $total - $remise);
-        $set('prix_ht', $total);
-        $set('prix_ttc', $total - $remise);
+        $timbre = (float) ($get('../../timbre') ?? $get('timbre') ?? 0);
+        
+        $coordinate = Coordinate::getCached();
+        $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
+        
+        $calcTotals = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, $defaultTva);
+        
+        // Try setting on both relative and absolute paths
+        $set('../../prix_ht', $calcTotals['total_ht_brut']);
+        $set('../../pourcentage_remise', $calcTotals['pourcentage_remise']);
+        $set('../../prix_ht_apres_remise', $calcTotals['prix_ht_apres_remise']);
+        $set('../../tva', $calcTotals['tva']);
+        $set('../../prix_ttc', $calcTotals['prix_ttc']);
+        $set('../../net_a_payer', $calcTotals['net_a_payer']);
+        
+        $set('prix_ht', $calcTotals['total_ht_brut']);
+        $set('pourcentage_remise', $calcTotals['pourcentage_remise']);
+        $set('prix_ht_apres_remise', $calcTotals['prix_ht_apres_remise']);
+        $set('tva', $calcTotals['tva']);
+        $set('prix_ttc', $calcTotals['prix_ttc']);
+        $set('net_a_payer', $calcTotals['net_a_payer']);
     }
 
     public static function form(Schema $schema): Schema
@@ -160,6 +170,8 @@ class QuotationResource extends Resource
                                         ->numeric()
                                         ->default(0)
                                         ->suffix('DT')
+                                        ->extraInputAttributes(['class' => 'min-w-[0]'])
+                                        ->extraAttributes(['class' => '[&_.fi-input-suffix]:shrink-0 [&_.fi-input-suffix]:min-w-[35px] [&_.fi-input-suffix]:text-center'])
                                         ->required()
                                         ->live(debounce: 400)
                                         ->columnSpan(2),
@@ -204,6 +216,8 @@ class QuotationResource extends Resource
                                 ->label('REMISE')
                                 ->numeric()
                                 ->prefix('DT')
+                                ->extraInputAttributes(['class' => 'min-w-[0]'])
+                                ->extraAttributes(['class' => '[&_.fi-input-prefix]:shrink-0 [&_.fi-input-prefix]:min-w-[35px] [&_.fi-input-prefix]:text-center'])
                                 ->default(0)
                                 ->live()
                                 ->afterStateUpdated(function ($state, $get, $set) {
@@ -225,11 +239,9 @@ class QuotationResource extends Resource
                                 ])
                                 ->default('brouillon')
                                 ->nullable(),
-                            Forms\Components\Placeholder::make('prix_ttc_display')
-                                ->label('NET À PAYER')
-                                ->content(fn ($get) => new \Illuminate\Support\HtmlString(
-                                    '<div class="doc-total-net-block"><span class="doc-total-net-prefix">DT</span><span class="doc-total-net-amount">' . number_format((float) $get('prix_ttc'), 3, ',', ' ') . '</span></div>'
-                                )),
+                            Forms\Components\ViewField::make('net_a_payer_display')
+                                ->hiddenLabel()
+                                ->view('filament.forms.components.net-a-payer-card'),
                             Forms\Components\Placeholder::make('numero_display')
                                 ->label('N° Document')
                                 ->content(fn ($record) => new \Illuminate\Support\HtmlString(
@@ -266,7 +278,12 @@ class QuotationResource extends Resource
             // Hidden fields
             Forms\Components\Hidden::make('numero'),
             Forms\Components\Hidden::make('prix_ht'),
+            Forms\Components\Hidden::make('pourcentage_remise'),
+            Forms\Components\Hidden::make('prix_ht_apres_remise'),
+            Forms\Components\Hidden::make('tva'),
             Forms\Components\Hidden::make('prix_ttc'),
+            Forms\Components\Hidden::make('timbre')->default(0),
+            Forms\Components\Hidden::make('net_a_payer'),
         ]);
     }
 
@@ -286,13 +303,15 @@ class QuotationResource extends Resource
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('prix_ht')
-                    ->label('HT')
-                    ->money('TND')
+                    ->label('Total HT')
+                    ->money('TND', divideBy: 1)
                     ->sortable()
-                    ->alignEnd(),
-                Tables\Columns\TextColumn::make('prix_ttc')
-                    ->label('TTC')
-                    ->money('TND')
+                    ->alignEnd()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('net_a_payer')
+                    ->label('Net à Payer')
+                    ->state(fn (Quotation $record) => $record->net_a_payer ?? 0)
+                    ->money('TND', divideBy: 1)
                     ->sortable()
                     ->alignEnd(),
                 Tables\Columns\TextColumn::make('created_at')
