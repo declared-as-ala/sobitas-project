@@ -68,18 +68,11 @@ async function doFetch<T>(
   }
 
   if (!res.ok) {
-    // Read the body stream only once, then try to parse JSON from it.
-    let text = '';
+    let body: unknown;
     try {
-      text = await res.text();
+      body = await res.json();
     } catch {
-      // ignore stream errors; we'll fall back to generic message
-    }
-    let body: unknown = text;
-    try {
-      body = text ? JSON.parse(text) : text;
-    } catch {
-      // not JSON, keep raw text
+      body = await res.text();
     }
     throw new ApiError(
       (body as any)?.message ?? `HTTP ${res.status}`,
