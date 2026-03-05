@@ -19,6 +19,27 @@
     text-overflow: ellipsis;
 }
 
+/* ---- Produit select dropdown: prevent clipping (overflow) and stacking (z-index) ---- */
+/* Cause: section/repeater containers or stacking context clip or hide the searchable select listbox */
+/* Scoped to Facture TVA create/edit pages only */
+.fi-page-edit-facture-tva .doc-section-produits .fi-section-content-ctn,
+.fi-page-create-facture-tva .doc-section-produits .fi-section-content-ctn,
+.fi-page-edit-facture-tva .doc-lines-repeater,
+.fi-page-create-facture-tva .doc-lines-repeater,
+.fi-page-edit-facture-tva .doc-lines-repeater .fi-fo-repeater-items,
+.fi-page-create-facture-tva .doc-lines-repeater .fi-fo-repeater-items,
+.fi-page-edit-facture-tva .doc-lines-repeater .fi-fo-repeater-items > div,
+.fi-page-create-facture-tva .doc-lines-repeater .fi-fo-repeater-items > div {
+    overflow: visible !important;
+}
+/* Ensure select dropdown (listbox) appears above cards and sidebar */
+.fi-page-edit-facture-tva .doc-section-produits [role="listbox"],
+.fi-page-create-facture-tva .doc-section-produits [role="listbox"],
+.fi-page-edit-facture-tva .doc-lines-repeater [role="listbox"],
+.fi-page-create-facture-tva .doc-lines-repeater [role="listbox"] {
+    z-index: 100;
+}
+
 /* ---- PT column: P.T total inside repeater rows — must never wrap ---- */
 .doc-line-total {
     display: inline-block;

@@ -80,6 +80,7 @@ class FactureTvaResource extends Resource
                         ->collapsible(),
                     Section::make('Produits')
                         ->icon('heroicon-o-shopping-cart')
+                        ->extraAttributes(['class' => 'doc-section-produits'])
                         ->schema([
                             Forms\Components\Placeholder::make('barcode_scan')
                                 ->label('')
