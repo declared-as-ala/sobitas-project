@@ -69,19 +69,19 @@ class QuotationResource extends Resource
         
         return $schema->schema([
             Grid::make(12)->schema([
-                
-                // --------- ROW 1 --------- 
-                
-                // Left Column: Company Info
+                // --------- ROW 1 ---------
                 Grid::make(1)->schema([
                     Forms\Components\Placeholder::make('company_info')
                         ->label('Informations société')
                         ->content(fn () => $coordinate ? new \Illuminate\Support\HtmlString(view('filament.components.company-info-compact', ['coordinate' => $coordinate])->render()) : '—'),
-                ])->columnSpan(['default' => 12, 'md' => 5]),
-                    Section::make('Informations Client')
-                        ->description('Sélectionnez un client pour remplir automatiquement les coordonnées.')
-                        ->icon('heroicon-o-user')
-                        ->schema([
+                ])
+                    ->columnSpan(['default' => 12, 'md' => 5])
+                    ->extraAttributes(['class' => 'rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 p-6 shadow-sm']),
+                Section::make('Informations Client')
+                    ->description('Sélectionnez un client pour remplir automatiquement les coordonnées.')
+                    ->icon('heroicon-o-user')
+                    ->extraAttributes(['class' => 'rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 shadow-lg p-6'])
+                    ->schema([
                             Forms\Components\Select::make('client_id')
                                 ->label('Client')
                                 ->relationship('client', 'name')
@@ -131,14 +131,12 @@ class QuotationResource extends Resource
                         ->columns(2)
                         ->columnSpan(['default' => 12, 'md' => 7]),
 
-                // --------- ROW 2 --------- 
-
-                // Left Column: Articles et Produits
+                // --------- ROW 2 ---------
                 Section::make('Articles et Produits')
-                        ->description('Scannez un code-barres ou ajoutez manuellement les produits du devis.')
-                        ->icon('heroicon-o-shopping-bag')
-                        ->extraAttributes(['class' => 'doc-section-produits'])
-                        ->schema([
+                    ->description('Scannez un code-barres ou ajoutez manuellement les produits du devis.')
+                    ->icon('heroicon-o-shopping-bag')
+                    ->extraAttributes(['class' => 'doc-section-produits overflow-visible rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 shadow-lg p-6'])
+                    ->schema([
                             Forms\Components\Placeholder::make('barcode_scan')
                                 ->label('')
                                 ->content(fn () => new \Illuminate\Support\HtmlString(view('filament.components.barcode-scan-compact')->render())),
@@ -210,7 +208,7 @@ class QuotationResource extends Resource
                                     Forms\Components\Placeholder::make('prix_total_display')
                                         ->label('Total HT')
                                         ->content(fn ($get) => new \Illuminate\Support\HtmlString(
-                                            '<span class="doc-line-total">' .
+                                            '<span class="inline-block whitespace-nowrap font-bold tabular-nums text-sm text-gray-700 dark:text-gray-200">' .
                                             number_format((float) $get('qte') * (float) $get('prix_unitaire'), 3, ',', ' ') .
                                             ' DT</span>'
                                         ))
@@ -221,7 +219,7 @@ class QuotationResource extends Resource
                                 ->addActionLabel('+ Ajouter une ligne')
                                 ->reorderable()
                                 ->columnSpanFull()
-                                ->extraAttributes(['class' => 'doc-lines-repeater'])
+                                ->extraAttributes(['class' => 'doc-lines-repeater overflow-visible'])
                                 ->deleteAction(fn ($action) => $action
                                     ->requiresConfirmation()
                                     ->modalHeading('Supprimer cette ligne ?')
@@ -293,34 +291,36 @@ class QuotationResource extends Resource
                             Forms\Components\Placeholder::make('numero_display')
                                 ->label('N° Document')
                                 ->content(fn ($record) => new \Illuminate\Support\HtmlString(
-                                    '<span class="doc-numero-badge">' . ($record?->numero ?? 'Nouveau') . '</span>'
+                                    '<span class="inline-block font-bold font-mono text-sm px-3 py-1 rounded border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/10 text-gray-800 dark:text-gray-200">' . ($record?->numero ?? 'Nouveau') . '</span>'
                                 )),
                         ])
-                        ->columns(1)
-                        ->extraAttributes(['class' => 'doc-totaux-sidebar']),
+                        ->columns(1),
 
                     Section::make('Résumé Produits')
                         ->icon('heroicon-o-chart-bar')
+                        ->extraAttributes(['class' => 'rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 shadow-sm p-6'])
                         ->schema([
                             Forms\Components\Placeholder::make('resume_articles')
                                 ->label('Articles')
                                 ->content(fn ($get) => new \Illuminate\Support\HtmlString(
-                                    '<span class="doc-resume-value">' . count(array_filter($get('details') ?? [], fn($d) => !empty($d['produit_id']))) . '</span>'
+                                    '<span class="block font-bold tabular-nums text-right text-gray-900 dark:text-white">' . count(array_filter($get('details') ?? [], fn ($d) => ! empty($d['produit_id']))) . '</span>'
                                 )),
                             Forms\Components\Placeholder::make('resume_qte')
                                 ->label('Quantité totale')
                                 ->content(fn ($get) => new \Illuminate\Support\HtmlString(
-                                    '<span class="doc-resume-value">' . array_sum(array_column(array_filter($get('details') ?? [], fn($d) => !empty($d['produit_id'])), 'qte')) . '</span>'
+                                    '<span class="block font-bold tabular-nums text-right text-gray-900 dark:text-white">' . array_sum(array_column(array_filter($get('details') ?? [], fn ($d) => ! empty($d['produit_id'])), 'qte')) . '</span>'
                                 )),
                             Forms\Components\Placeholder::make('resume_date')
                                 ->label('Date')
                                 ->content(fn ($record) => new \Illuminate\Support\HtmlString(
-                                    '<span class="doc-resume-value">' . ($record?->created_at?->format('d/m/Y') ?? '—') . '</span>'
+                                    '<span class="block font-bold text-right text-gray-900 dark:text-white">' . ($record?->created_at?->format('d/m/Y') ?? '—') . '</span>'
                                 )),
                         ]),
-                ])->columnSpan(['default' => 12, 'lg' => 4]),
-                
-            ]),
+                ])
+                    ->columnSpan(['default' => 12, 'lg' => 4])
+                    ->extraAttributes(['class' => 'space-y-6']),
+            ])
+                ->extraAttributes(['class' => 'w-full max-w-full gap-6']),
 
             // Hidden fields
             Forms\Components\Hidden::make('numero'),

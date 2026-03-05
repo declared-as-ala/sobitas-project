@@ -52,17 +52,6 @@
     z-index: 100;
 }
 
-/* ---- Devis (Quotation) create/edit: full-width layout (no narrow centered form) ---- */
-.fi-page-create-quotation .fi-main,
-.fi-page-edit-quotation .fi-main {
-    max-width: none;
-    width: 100%;
-}
-.fi-page-create-quotation .fi-fo-section,
-.fi-page-edit-quotation .fi-fo-section {
-    max-width: none;
-}
-
 /* ---- PT column: P.T total inside repeater rows — must never wrap ---- */
 .doc-line-total {
     display: inline-block;
