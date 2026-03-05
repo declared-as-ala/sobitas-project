@@ -37,7 +37,7 @@
                         @php
                             $logoUrl = filter_var($company->logo_facture, FILTER_VALIDATE_URL)
                                 ? $company->logo_facture
-                                : \Illuminate\Support\Facades\Storage::url($company->logo_facture);
+                                : \Illuminate\Support\Facades\Storage::disk('public')->url($company->logo_facture);
                         @endphp
                         <img src="{{ $logoUrl }}" alt="{{ $company->abbreviation ?? 'SOBITAS' }}" class="invoice-logo" onerror="this.style.display='none'">
                     @endif

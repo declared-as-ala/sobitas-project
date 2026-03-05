@@ -31,7 +31,17 @@ class CoordinateResource extends Resource
                 Forms\Components\TextInput::make('adresse_fr')->label('Adresse')->maxLength(500),
                 Forms\Components\TextInput::make('registre_commerce')->label('Registre commerce')->maxLength(255),
                 Forms\Components\TextInput::make('matricule')->label('Matricule fiscal')->maxLength(255),
-                Forms\Components\TextInput::make('logo_facture')->label('Logo facture (chemin)')->maxLength(500),
+                Forms\Components\FileUpload::make('logo_facture')
+                    ->label('Logo facture')
+                    ->image()
+                    ->disk('public')
+                    ->directory('coordonnees')
+                    ->visibility('public')
+                    ->imagePreviewHeight('120')
+                    ->maxSize(2048)
+                    ->acceptedFileTypes(['image/png', 'image/jpeg', 'image/webp'])
+                    ->openable()
+                    ->downloadable(),
                 Forms\Components\Textarea::make('note')->columnSpanFull(),
                 Forms\Components\TextInput::make('facebook')->maxLength(500),
                 Forms\Components\TextInput::make('instagram')->maxLength(500),
