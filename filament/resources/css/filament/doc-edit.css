@@ -20,35 +20,43 @@
 }
 
 /* ---- Produit select dropdown: prevent clipping (overflow) and stacking (z-index) ---- */
-/* Cause: section/repeater containers or stacking context clip or hide the searchable select listbox */
-/* Scoped to Facture TVA and Devis (Quotation) create/edit pages */
+/* Cause: section/repeater containers with overflow or stacking context clip/hide the listbox;
+   dropdown then appears squeezed "inside" the input. Fix: overflow visible on parents + z-index on listbox. */
+/* Scoped per page: Facture TVA and Devis (Quotation) only — do not affect other selects. */
+
+/* Facture TVA create/edit */
 .fi-page-edit-facture-tva .doc-section-produits .fi-section-content-ctn,
 .fi-page-create-facture-tva .doc-section-produits .fi-section-content-ctn,
-.fi-page-edit-quotation .doc-section-produits .fi-section-content-ctn,
-.fi-page-create-quotation .doc-section-produits .fi-section-content-ctn,
 .fi-page-edit-facture-tva .doc-lines-repeater,
 .fi-page-create-facture-tva .doc-lines-repeater,
-.fi-page-edit-quotation .doc-lines-repeater,
-.fi-page-create-quotation .doc-lines-repeater,
 .fi-page-edit-facture-tva .doc-lines-repeater .fi-fo-repeater-items,
 .fi-page-create-facture-tva .doc-lines-repeater .fi-fo-repeater-items,
-.fi-page-edit-quotation .doc-lines-repeater .fi-fo-repeater-items,
-.fi-page-create-quotation .doc-lines-repeater .fi-fo-repeater-items,
 .fi-page-edit-facture-tva .doc-lines-repeater .fi-fo-repeater-items > div,
-.fi-page-create-facture-tva .doc-lines-repeater .fi-fo-repeater-items > div,
-.fi-page-edit-quotation .doc-lines-repeater .fi-fo-repeater-items > div,
-.fi-page-create-quotation .doc-lines-repeater .fi-fo-repeater-items > div {
+.fi-page-create-facture-tva .doc-lines-repeater .fi-fo-repeater-items > div {
     overflow: visible !important;
 }
-/* Ensure select dropdown (listbox) appears above cards and sidebar */
 .fi-page-edit-facture-tva .doc-section-produits [role="listbox"],
 .fi-page-create-facture-tva .doc-section-produits [role="listbox"],
-.fi-page-edit-quotation .doc-section-produits [role="listbox"],
-.fi-page-create-quotation .doc-section-produits [role="listbox"],
 .fi-page-edit-facture-tva .doc-lines-repeater [role="listbox"],
-.fi-page-create-facture-tva .doc-lines-repeater [role="listbox"],
-.fi-page-edit-quotation .doc-lines-repeater [role="listbox"],
-.fi-page-create-quotation .doc-lines-repeater [role="listbox"] {
+.fi-page-create-facture-tva .doc-lines-repeater [role="listbox"] {
+    z-index: 100;
+}
+
+/* Devis (Quotation) create/edit — same fix so Produit dropdown opens below input, not inside */
+.fi-page-create-quotation .doc-section-produits .fi-section-content-ctn,
+.fi-page-edit-quotation .doc-section-produits .fi-section-content-ctn,
+.fi-page-create-quotation .doc-lines-repeater,
+.fi-page-edit-quotation .doc-lines-repeater,
+.fi-page-create-quotation .doc-lines-repeater .fi-fo-repeater-items,
+.fi-page-edit-quotation .doc-lines-repeater .fi-fo-repeater-items,
+.fi-page-create-quotation .doc-lines-repeater .fi-fo-repeater-items > div,
+.fi-page-edit-quotation .doc-lines-repeater .fi-fo-repeater-items > div {
+    overflow: visible !important;
+}
+.fi-page-create-quotation .doc-section-produits [role="listbox"],
+.fi-page-edit-quotation .doc-section-produits [role="listbox"],
+.fi-page-create-quotation .doc-lines-repeater [role="listbox"],
+.fi-page-edit-quotation .doc-lines-repeater [role="listbox"] {
     z-index: 100;
 }
 
