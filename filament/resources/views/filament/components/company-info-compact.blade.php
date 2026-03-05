@@ -1,16 +1,17 @@
 {{-- Compact company block for document edit pages: small logo + name + one-line contact, collapsible details --}}
 @php
-    // Use the same static logo as the printed invoice / top-left logo
-    $logoUrl = 'https://admin.protein.tn/storage/coordonnees/March2026/Z2S2Ct4CwucOAWmNFzTy.png';
     $name = $coordinate->abbreviation ?? 'STE SOBITAS';
     $phone = trim(($coordinate->phone_1 ?? '') . (!empty($coordinate->phone_2) ? ' / ' . $coordinate->phone_2 : ''));
     $adresse = $coordinate->adresse_fr ?? '';
 @endphp
 <div class="doc-company-compact rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/5 p-3 text-sm" x-data="{ open: false }">
     <div class="flex items-center gap-3">
-        @if($logoUrl)
-            <img src="{{ $logoUrl }}" alt="SOBITAS PROTEIN.TN" class="h-8 w-auto object-contain shrink-0" />
-        @endif
+        <div class="shrink-0" style="height: 3.5rem; display: flex;">
+            <style> .custom-logo-wrapper img { max-height: 100%; width: auto; object-fit: contain; } </style>
+            <div class="custom-logo-wrapper h-full">
+                @include('filament.app.logo')
+            </div>
+        </div>
         <div class="min-w-0 flex-1">
             <p class="font-semibold text-gray-900 dark:text-white truncate">{{ $name }}</p>
             @if($phone || $adresse)

@@ -11,23 +11,23 @@
     @endphp
 
     <div
-        class="fi-fo-net-a-payer rounded-xl border-2 p-4 shadow-sm
-               bg-orange-50/80 border-orange-200
-               dark:bg-orange-950/25 dark:border-orange-500/40"
+        class="fi-fo-net-a-payer rounded-2xl border-2 p-5 shadow-sm
+               bg-orange-50/80 border-orange-400/60
+               dark:bg-amber-900/20 dark:border-amber-500/50"
         role="status"
         aria-label="Net à payer: {{ $formatted }} TND"
     >
-        <div class="flex flex-col gap-2">
-            <span class="text-[10px] font-semibold uppercase tracking-[0.2em] text-orange-600 dark:text-orange-400">
+        <div class="flex flex-col gap-1">
+            <span class="text-xs font-bold uppercase tracking-widest text-orange-600 dark:text-amber-500">
                 NET À PAYER
             </span>
-            <div class="flex flex-nowrap items-baseline justify-between gap-3 min-w-0">
-                <span class="text-2xl sm:text-3xl font-bold tabular-nums text-gray-900 dark:text-white truncate">
+            <div class="flex items-baseline justify-between gap-3 mt-1">
+                <span class="text-3xl sm:text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white whitespace-nowrap">
                     {{ $formatted }}
                 </span>
-                <span class="shrink-0 text-sm font-medium text-orange-600 dark:text-orange-400">TND</span>
+                <span class="shrink-0 text-lg font-bold text-orange-600/80 dark:text-amber-500/80">TND</span>
             </div>
-            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            <p class="text-[13px] font-medium text-gray-500 dark:text-gray-400 mt-2">
                 Montant final à régler (TTC + timbre)
             </p>
         </div>
