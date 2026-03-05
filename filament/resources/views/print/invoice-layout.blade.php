@@ -1,4 +1,4 @@
-﻿{{--
+{{--
   Shared A4 invoice layout: Facture TVA, Devis, BL (reusable).
   Expects: $documentTitle, $documentNumber, $documentDate, $company (Coordinate),
   $client, $totals (array of [label, value, class?), $footerNote, $paymentTerms,
@@ -55,28 +55,6 @@
                         <dt>N°</dt><dd>{{ $documentNumber ?? '—' }}</dd>
                         <dt>Date</dt><dd>{{ $documentDate ?? '—' }}</dd>
                     </dl>
-                    @if (!empty($status) || !empty($status_label))
-                        @php
-                            $statusVal = $status ?? '';
-                            $badgeClass = match ($statusVal) {
-                                'draft' => 'invoice-status-badge--draft',
-                                'issued' => 'invoice-status-badge--issued',
-                                'paid' => 'invoice-status-badge--paid',
-                                'partially_paid' => 'invoice-status-badge--partially_paid',
-                                'canceled' => 'invoice-status-badge--canceled',
-                                default => 'invoice-status-badge--draft',
-                            };
-                            $badgeLabel = $status_label ?? match ($statusVal) {
-                                'draft' => 'Brouillon',
-                                'issued' => 'Émise',
-                                'paid' => 'Payée',
-                                'partially_paid' => 'Partiellement payée',
-                                'canceled' => 'Annulée',
-                                default => $statusVal,
-                            };
-                        @endphp
-                        <span class="invoice-status-badge {{ $badgeClass }}">{{ $badgeLabel }}</span>
-                    @endif
                 </div>
             </header>
 
