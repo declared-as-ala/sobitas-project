@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\CoordinateResource\Pages;
 use App\Models\Coordinate;
 use Filament\Forms;
+use Filament\Forms\Components\FileUpload;
 use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -41,7 +42,8 @@ class CoordinateResource extends Resource
                     ->maxSize(2048)
                     ->acceptedFileTypes(['image/png', 'image/jpeg', 'image/webp'])
                     ->openable()
-                    ->downloadable(),
+                    ->downloadable()
+                    ->columnSpanFull(),
                 Forms\Components\Textarea::make('note')->columnSpanFull(),
                 Forms\Components\TextInput::make('facebook')->maxLength(500),
                 Forms\Components\TextInput::make('instagram')->maxLength(500),

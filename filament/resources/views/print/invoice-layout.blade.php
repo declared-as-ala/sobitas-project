@@ -34,10 +34,9 @@
             <header class="invoice-header">
                 <div class="invoice-company">
                     @php
-                        // Use a fixed storage image for all invoices, independent of the coordinates table.
-                        $logoUrl = 'https://admin.protein.tn/storage/coordonnees/March2026/Z2S2Ct4CwucOAWmNFzTy.png';
+                        $logoUrl = asset('logo.png');
                     @endphp
-                    <img src="{{ $logoUrl }}" alt="{{ $company->abbreviation ?? 'SOBITAS' }}" class="invoice-logo">
+                    <img src="{{ $logoUrl }}" alt="{{ $company->abbreviation ?? 'SOBITAS' }}" class="invoice-logo" onerror="this.style.display='none'">
                     <h2 class="invoice-company-name">{{ $company->abbreviation ?? 'STE SOBITAS' }}</h2>
                     @if ($company ?? null)
                         <div class="invoice-company-meta">
