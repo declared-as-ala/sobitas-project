@@ -12,6 +12,15 @@ class CreateTicket extends CreateRecord
 {
     protected static string $resource = TicketResource::class;
 
+    protected function getFormActions(): array
+    {
+        return [
+            $this->getCreateFormAction()->label('Créer'),
+            $this->getCreateAnotherFormAction()->label('Créer et ajouter un autre'),
+            $this->getCancelFormAction()->label('Annuler'),
+        ];
+    }
+
     public function addProductByBarcode(string $code): void
     {
         $code = trim($code);

@@ -99,6 +99,14 @@ class EditTicket extends EditRecord
         return $data;
     }
 
+    protected function getFormActions(): array
+    {
+        return [
+            $this->getSaveFormAction()->label('Enregistrer'),
+            $this->getCancelFormAction()->label('Annuler'),
+        ];
+    }
+
     protected function afterSave(): void
     {
         $details = $this->form->getState()['details'] ?? [];

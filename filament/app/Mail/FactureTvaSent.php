@@ -80,10 +80,10 @@ class FactureTvaSent extends Mailable
         $numero = (string) ($factureTva->numero ?? $factureTva->id);
         $year = $factureTva->date_facture ? \Carbon\Carbon::parse($factureTva->date_facture)->format('Y') : ($factureTva->created_at?->format('Y') ?? date('Y'));
         
-        // Exact spelling as requested: "Facture_{$year}-{$numero}.pdf" (with underscore)
-        $filename = "Facture_{$year}-{$numero}.pdf";
-        // Clean any weird chars but leave standard structure
-        $filename = preg_replace('/[^A-Za-z0-9_\-\.]/', '-', $filename);
+        // Ensure proper filename with substituted slash: e.g Facture_2026-0025.pdf
+        // If $numero is already "2026/0025", this replaces '/' with '-'
+        $safeNumero = str_replace('/', '-', $numero);
+        $filename = "Facture_{$safeNumero}.pdf";
 
         $pdf = null;
         if (class_exists(\Barryvdh\DomPDF\Facade\Pdf::class)) {

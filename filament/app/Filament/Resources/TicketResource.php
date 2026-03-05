@@ -27,6 +27,10 @@ class TicketResource extends Resource
 
     protected static ?int $navigationSort = 3;
 
+    protected static ?string $modelLabel = 'ticket';
+
+    protected static ?string $pluralModelLabel = 'tickets';
+
     protected static ?string $recordTitleAttribute = 'numero';
 
     public static function getGloballySearchableAttributes(): array
@@ -42,7 +46,7 @@ class TicketResource extends Resource
             Grid::make(3)->schema([
                 Grid::make(1)->schema([
                     Forms\Components\Placeholder::make('company_info')
-                        ->label('')
+                        ->label('Informations société')
                         ->content(fn () => $coordinate ? new \Illuminate\Support\HtmlString(view('filament.components.company-info-compact', ['coordinate' => $coordinate])->render()) : '—'),
                     Section::make('Client / Commande')
                         ->schema([
@@ -83,7 +87,7 @@ class TicketResource extends Resource
                             Forms\Components\Placeholder::make('add_client_link')
                                 ->label('')
                                 ->content(fn () => new \Illuminate\Support\HtmlString(
-                                    '<a href="' . e(ClientResource::getUrl('create')) . '" target="_blank" rel="noopener" class="fi-btn fi-size-sm fi-btn-color-primary">Ajouter Client</a>'
+                                    '<a href="' . e(ClientResource::getUrl('create')) . '" target="_blank" rel="noopener" class="fi-btn fi-size-sm fi-btn-color-primary">Ajouter un client</a>'
                                 ))
                                 ->visible(fn ($get) => $get('type') === Ticket::TYPE_TICKET_CAISSE),
                             Forms\Components\TextInput::make('client_adresse')->label('Adresse')->disabled()->dehydrated(false)->visible(fn ($get) => $get('type') === Ticket::TYPE_TICKET_CAISSE),
@@ -94,10 +98,10 @@ class TicketResource extends Resource
                     Section::make('Produits')
                         ->schema([
                             Forms\Components\Placeholder::make('barcode_scan')
-                                ->label('')
+                                ->label('Scan code-barres')
                                 ->content(fn () => new \Illuminate\Support\HtmlString(view('filament.components.barcode-scan-compact')->render())),
                             Repeater::make('details')
-                                ->label('')
+                                ->label('Détails')
                                 ->live()
                                 ->afterStateUpdated(function ($set, $get) {
                                     self::recalculateTicketTotals($get, $set);
@@ -110,7 +114,7 @@ class TicketResource extends Resource
                                         ->preload()
                                         ->required()
                                         ->live()
-                                        ->columnSpan(7)
+                                        ->columnSpan(['default' => 12, 'md' => 6])
                                         ->afterStateUpdated(function ($state, $set) {
                                             if ($state && $product = \App\Models\Product::find($state)) {
                                                 $set('prix_unitaire', (float) ($product->prix ?? 0));
@@ -123,22 +127,26 @@ class TicketResource extends Resource
                                         ->minValue(0.001)
                                         ->required()
                                         ->live(debounce: 300)
-                                        ->columnSpan(2),
+                                        ->columnSpan(['default' => 4, 'md' => 2]),
                                     Forms\Components\TextInput::make('prix_unitaire')
                                         ->label('P.U')
                                         ->numeric()
+                                        ->inputMode('decimal')
                                         ->default(0)
-                                        ->prefix('DT')
+                                        ->suffix('DT')
+                                        ->extraInputAttributes(['class' => 'text-right min-w-[0]'])
+                                        ->extraAttributes(['class' => '[&_.fi-input-suffix]:shrink-0 [&_.fi-input-suffix]:min-w-[35px] [&_.fi-input-suffix]:text-center'])
                                         ->required()
                                         ->live(debounce: 300)
-                                        ->columnSpan(2),
+                                        ->columnSpan(['default' => 4, 'md' => 2]),
                                     Forms\Components\Placeholder::make('prix_total_display')
                                         ->label('P.T')
-                                        ->content(fn ($get) => number_format((float) ($get('qte') ?? 0) * (float) ($get('prix_unitaire') ?? 0), 3, '.', ' ') . ' DT')
-                                        ->extraAttributes(['style' => 'text-align: right;'])
-                                        ->columnSpan(1),
+                                        ->content(fn ($get) => new \Illuminate\Support\HtmlString(
+                                            '<div class="text-right whitespace-nowrap font-medium text-gray-900 dark:text-white pt-2">' . number_format((float) ($get('qte') ?? 0) * (float) ($get('prix_unitaire') ?? 0), 3, '.', ' ') . ' DT</div>'
+                                        ))
+                                        ->columnSpan(['default' => 4, 'md' => 2]),
                                 ])
-                                ->columns(12)
+                                ->columns(['default' => 12, 'md' => 12])
                                 ->defaultItems(0)
                                 ->addActionLabel('Ajouter une ligne')
                                 ->columnSpanFull()
