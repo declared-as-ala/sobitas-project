@@ -29,8 +29,10 @@
         selectors.forEach(function (sel) {
             try {
                 document.querySelectorAll(sel).forEach(function (el) {
+                    if (!el.parentNode) return;
+                    if (el.closest && el.closest('.fi-modal')) return;
                     var style = window.getComputedStyle(el);
-                    if (style.position !== 'fixed' || !el.parentNode) return;
+                    if (style.position !== 'fixed') return;
                     var rect = el.getBoundingClientRect();
                     var coversScreen = rect.width >= document.documentElement.clientWidth - 20 && rect.height >= document.documentElement.clientHeight - 20;
                     if (coversScreen) {

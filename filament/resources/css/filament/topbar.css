@@ -59,25 +59,39 @@
 
 /* -----------------------------------------------------------------------
    4. Modal stacking — THE CORRECT HIERARCHY
-   Container → backdrop → dialog window (ascending z-index)
+   Filament uses .fi-modal as outer wrapper (not .fi-modal-container).
+   Container → backdrop → dialog window (ascending z-index).
    ----------------------------------------------------------------------- */
 
-/* Outer wrapper: just a positioned root */
-.fi-modal-container {
+/* Outer wrapper: Filament v4 uses .fi-modal (not .fi-modal-container). Must be above topbar (1000). */
+.fi-modal-container,
+.fi-modal.fi-absolute-positioning-context {
     z-index: 1001 !important;
+    pointer-events: none;
 }
 
 /* Backdrop / close-overlay: dark screen, BELOW the dialog */
 .fi-modal-close-overlay,
 .fi-modal-backdrop {
     z-index: 1002 !important;
+    position: fixed !important;
+    inset: 0 !important;
     background-color: rgba(0, 0, 0, 0.88) !important;
     backdrop-filter: blur(1px) !important;
-    /* Backdrop captures clicks ONLY on empty area, NOT inside .fi-modal-window */
     pointer-events: auto;
 }
 
-/* The actual dialog window: ABOVE the backdrop */
+/* Window container and window: ABOVE the backdrop so modal is clickable */
+.fi-modal-window-ctn {
+    z-index: 1003 !important;
+    position: fixed !important;
+    inset: 0 !important;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .fi-modal-window {
     z-index: 1003 !important;
     pointer-events: auto !important;
@@ -90,14 +104,18 @@
 .fi-modal-window button,
 .fi-modal-window select,
 .fi-modal-window textarea,
-.fi-modal-window label {
+.fi-modal-window label,
+.fi-modal-window [type="submit"],
+.fi-modal-window a {
     pointer-events: auto !important;
 }
 
 /* -----------------------------------------------------------------------
    5. Body scroll lock when a modal is open
    ----------------------------------------------------------------------- */
-body:has(.fi-modal-container) {
+body:has(.fi-modal-container),
+body:has(.fi-modal.fi-absolute-positioning-context),
+body:has(.fi-modal-open) {
     overflow: hidden !important;
 }
 
