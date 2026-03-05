@@ -21,23 +21,46 @@
 
 /* ---- Produit select dropdown: prevent clipping (overflow) and stacking (z-index) ---- */
 /* Cause: section/repeater containers or stacking context clip or hide the searchable select listbox */
-/* Scoped to Facture TVA create/edit pages only */
+/* Scoped to Facture TVA and Devis (Quotation) create/edit pages */
 .fi-page-edit-facture-tva .doc-section-produits .fi-section-content-ctn,
 .fi-page-create-facture-tva .doc-section-produits .fi-section-content-ctn,
+.fi-page-edit-quotation .doc-section-produits .fi-section-content-ctn,
+.fi-page-create-quotation .doc-section-produits .fi-section-content-ctn,
 .fi-page-edit-facture-tva .doc-lines-repeater,
 .fi-page-create-facture-tva .doc-lines-repeater,
+.fi-page-edit-quotation .doc-lines-repeater,
+.fi-page-create-quotation .doc-lines-repeater,
 .fi-page-edit-facture-tva .doc-lines-repeater .fi-fo-repeater-items,
 .fi-page-create-facture-tva .doc-lines-repeater .fi-fo-repeater-items,
+.fi-page-edit-quotation .doc-lines-repeater .fi-fo-repeater-items,
+.fi-page-create-quotation .doc-lines-repeater .fi-fo-repeater-items,
 .fi-page-edit-facture-tva .doc-lines-repeater .fi-fo-repeater-items > div,
-.fi-page-create-facture-tva .doc-lines-repeater .fi-fo-repeater-items > div {
+.fi-page-create-facture-tva .doc-lines-repeater .fi-fo-repeater-items > div,
+.fi-page-edit-quotation .doc-lines-repeater .fi-fo-repeater-items > div,
+.fi-page-create-quotation .doc-lines-repeater .fi-fo-repeater-items > div {
     overflow: visible !important;
 }
 /* Ensure select dropdown (listbox) appears above cards and sidebar */
 .fi-page-edit-facture-tva .doc-section-produits [role="listbox"],
 .fi-page-create-facture-tva .doc-section-produits [role="listbox"],
+.fi-page-edit-quotation .doc-section-produits [role="listbox"],
+.fi-page-create-quotation .doc-section-produits [role="listbox"],
 .fi-page-edit-facture-tva .doc-lines-repeater [role="listbox"],
-.fi-page-create-facture-tva .doc-lines-repeater [role="listbox"] {
+.fi-page-create-facture-tva .doc-lines-repeater [role="listbox"],
+.fi-page-edit-quotation .doc-lines-repeater [role="listbox"],
+.fi-page-create-quotation .doc-lines-repeater [role="listbox"] {
     z-index: 100;
+}
+
+/* ---- Devis (Quotation) create/edit: full-width layout (no narrow centered form) ---- */
+.fi-page-create-quotation .fi-main,
+.fi-page-edit-quotation .fi-main {
+    max-width: none;
+    width: 100%;
+}
+.fi-page-create-quotation .fi-fo-section,
+.fi-page-edit-quotation .fi-fo-section {
+    max-width: none;
 }
 
 /* ---- PT column: P.T total inside repeater rows — must never wrap ---- */

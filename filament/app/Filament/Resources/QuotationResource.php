@@ -67,21 +67,7 @@ class QuotationResource extends Resource
     {
         $coordinate = Coordinate::getCached();
         
-        // CSS Block to force visible overflow on select dropdowns and fix Z-Index issues.
-        $cssOverrides = '<style>
-            .doc-lines-repeater { overflow: visible !important; }
-            .fi-fo-repeater-item { overflow: visible !important; }
-            .fi-select-dropdown { z-index: 9999 !important; }
-            .choices__list--dropdown { z-index: 9999 !important; }
-            /* Premium Prix Unitaire alignment classes */
-            .fi-input-suffix { min-width: 40px !important; text-align: center !important; flex-shrink: 0 !important; }
-        </style>';
-        
         return $schema->schema([
-            Forms\Components\Placeholder::make('css_injector')
-                ->hiddenLabel()
-                ->content(new \Illuminate\Support\HtmlString($cssOverrides)),
-                
             Grid::make(12)->schema([
                 
                 // --------- ROW 1 --------- 
@@ -143,7 +129,6 @@ class QuotationResource extends Resource
                                 ->placeholder('client@email.com'),
                         ])
                         ->columns(2)
-                        ->compact()
                         ->columnSpan(['default' => 12, 'md' => 7]),
 
                 // --------- ROW 2 --------- 
@@ -152,6 +137,7 @@ class QuotationResource extends Resource
                 Section::make('Articles et Produits')
                         ->description('Scannez un code-barres ou ajoutez manuellement les produits du devis.')
                         ->icon('heroicon-o-shopping-bag')
+                        ->extraAttributes(['class' => 'doc-section-produits'])
                         ->schema([
                             Forms\Components\Placeholder::make('barcode_scan')
                                 ->label('')
@@ -161,9 +147,25 @@ class QuotationResource extends Resource
                                 ->schema([
                                     Forms\Components\Select::make('produit_id')
                                         ->label('Produit')
-                                        ->options(fn () => \App\Models\Product::where('qte', '>', 0)->get()->mapWithKeys(fn ($p) => [$p->id => ($p->designation_fr ?? '') . ' (' . (int) $p->qte . ')'])->all())
                                         ->searchable()
-                                        ->preload()
+                                        ->getSearchResultsUsing(function (string $search): array {
+                                            $query = \App\Models\Product::query()
+                                                ->where('qte', '>', 0)
+                                                ->orderBy('designation_fr');
+                                            if (strlen($search) >= 1) {
+                                                $query->where(function ($q) use ($search) {
+                                                    $q->where('designation_fr', 'like', '%' . $search . '%')
+                                                        ->orWhere('code_product', 'like', '%' . $search . '%');
+                                                });
+                                            }
+                                            return $query->limit(30)->get()
+                                                ->mapWithKeys(fn ($p) => [$p->id => ($p->designation_fr ?? '') . ' (' . (int) $p->qte . ')'])
+                                                ->all();
+                                        })
+                                        ->getOptionLabelUsing(fn ($value): ?string => $value ? (function () use ($value) {
+                                            $p = \App\Models\Product::find($value);
+                                            return $p ? (($p->designation_fr ?? '') . ' (' . (int) $p->qte . ')') : null;
+                                        })() : null)
                                         ->required()
                                         ->live()
                                         ->placeholder('Sélectionner un produit…')
@@ -229,7 +231,6 @@ class QuotationResource extends Resource
                                 )
                                 ->itemLabel(fn (array $state) => isset($state['produit_id']) ? (\App\Models\Product::find($state['produit_id'])?->designation_fr ?? 'Ligne') : 'Nouveau produit'),
                         ])
-                        ->compact()
                         ->columnSpan(['default' => 12, 'lg' => 8]),
 
                 // Right Column: Récapitulatif & Totaux
@@ -296,7 +297,6 @@ class QuotationResource extends Resource
                                 )),
                         ])
                         ->columns(1)
-                        ->compact()
                         ->extraAttributes(['class' => 'doc-totaux-sidebar']),
 
                     Section::make('Résumé Produits')
@@ -317,8 +317,7 @@ class QuotationResource extends Resource
                                 ->content(fn ($record) => new \Illuminate\Support\HtmlString(
                                     '<span class="doc-resume-value">' . ($record?->created_at?->format('d/m/Y') ?? '—') . '</span>'
                                 )),
-                        ])
-                        ->compact(),
+                        ]),
                 ])->columnSpan(['default' => 12, 'lg' => 4]),
                 
             ]),
