@@ -66,18 +66,33 @@ class QuotationResource extends Resource
     public static function form(Schema $schema): Schema
     {
         $coordinate = Coordinate::getCached();
-
+        
+        // CSS Block to force visible overflow on select dropdowns and fix Z-Index issues.
+        $cssOverrides = '<style>
+            .doc-lines-repeater { overflow: visible !important; }
+            .fi-fo-repeater-item { overflow: visible !important; }
+            .fi-select-dropdown { z-index: 9999 !important; }
+            .choices__list--dropdown { z-index: 9999 !important; }
+            /* Premium Prix Unitaire alignment classes */
+            .fi-input-suffix { min-width: 40px !important; text-align: center !important; flex-shrink: 0 !important; }
+        </style>';
+        
         return $schema->schema([
+            Forms\Components\Placeholder::make('css_injector')
+                ->hiddenLabel()
+                ->content(new \Illuminate\Support\HtmlString($cssOverrides)),
+                
             Grid::make(12)->schema([
-                // --------- ROW 1: 2 colonnes (société | client) ---------
-                Section::make('Informations société')
-                    ->schema([
-                        Forms\Components\Placeholder::make('company_info')
-                            ->hiddenLabel()
-                            ->content(fn () => $coordinate ? new \Illuminate\Support\HtmlString(view('filament.components.company-info-compact', ['coordinate' => $coordinate])->render()) : '—'),
-                    ])
-                    ->columnSpan(['default' => 12, 'md' => 5]),
-                Section::make('Informations Client')
+                
+                // --------- ROW 1 --------- 
+                
+                // Left Column: Company Info
+                Grid::make(1)->schema([
+                    Forms\Components\Placeholder::make('company_info')
+                        ->label('Informations société')
+                        ->content(fn () => $coordinate ? new \Illuminate\Support\HtmlString(view('filament.components.company-info-compact', ['coordinate' => $coordinate])->render()) : '—'),
+                ])->columnSpan(['default' => 12, 'md' => 5]),
+                    Section::make('Informations Client')
                         ->description('Sélectionnez un client pour remplir automatiquement les coordonnées.')
                         ->icon('heroicon-o-user')
                         ->schema([
@@ -131,9 +146,10 @@ class QuotationResource extends Resource
                         ->compact()
                         ->columnSpan(['default' => 12, 'md' => 7]),
 
-                // --------- ROW 2: gauche 2/3 Articles, droite 1/3 Totaux + Résumé ---------
+                // --------- ROW 2 --------- 
+
+                // Left Column: Articles et Produits
                 Section::make('Articles et Produits')
-                        ->extraAttributes(['class' => 'doc-section-produits'])
                         ->description('Scannez un code-barres ou ajoutez manuellement les produits du devis.')
                         ->icon('heroicon-o-shopping-bag')
                         ->schema([

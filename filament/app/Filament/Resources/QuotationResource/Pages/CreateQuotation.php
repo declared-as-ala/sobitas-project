@@ -13,11 +13,6 @@ class CreateQuotation extends CreateRecord
 {
     protected static string $resource = QuotationResource::class;
 
-    public function getPageClasses(): array
-    {
-        return array_merge(parent::getPageClasses(), ['fi-page-create-quotation']);
-    }
-
     public function addProductByBarcode(string $code): void
     {
         $code = trim($code);
