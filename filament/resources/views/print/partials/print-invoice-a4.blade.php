@@ -42,7 +42,7 @@
     /* Header: company left, doc right */
     .invoice-header { display: grid; grid-template-columns: 1fr auto; gap: 32px; align-items: start; padding: 24px 24px 20px; border-bottom: 1px solid var(--invoice-gray-200); }
     .invoice-company { }
-    .invoice-logo { max-width: 120px; max-height: 40px; object-fit: contain; display: block; margin-bottom: 10px; }
+    .invoice-logo { max-width: 250px; max-height: 100px; object-fit: contain; display: block; margin-bottom: 15px; }
     .invoice-company-name { font-size: 20px; font-weight: 800; color: var(--invoice-gray-900); letter-spacing: -0.02em; margin: 0 0 10px 0; }
     .invoice-company-meta { font-size: 11px; color: var(--invoice-gray-700); line-height: 1.65; }
     .invoice-company-meta a { color: var(--invoice-gray-700); }
