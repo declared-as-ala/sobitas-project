@@ -11,6 +11,7 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Actions;
 use Filament\Tables\Table;
+use Illuminate\Support\HtmlString;
 
 class CoordinateResource extends Resource
 {
@@ -32,6 +33,12 @@ class CoordinateResource extends Resource
                 Forms\Components\TextInput::make('adresse_fr')->label('Adresse')->maxLength(500),
                 Forms\Components\TextInput::make('registre_commerce')->label('Registre commerce')->maxLength(255),
                 Forms\Components\TextInput::make('matricule')->label('Matricule fiscal')->maxLength(255),
+                Forms\Components\Placeholder::make('invoice_logo_preview')
+                    ->label('Logo utilisé sur les factures (aperçu fixe)')
+                    ->content(fn () => new HtmlString(
+                        '<img src="https://admin.protein.tn/storage/coordonnees/March2026/Z2S2Ct4CwucOAWmNFzTy.png" alt="Logo facture" style="max-height: 120px; height: auto; width: auto;">'
+                    ))
+                    ->columnSpanFull(),
                 Forms\Components\FileUpload::make('logo_facture')
                     ->label('Logo facture')
                     ->image()
