@@ -62,23 +62,31 @@ class EditFactureTva extends EditRecord
         return 'Facture #' . $this->record->numero;
     }
 
-    public function getSubheading(): ?string
+    public function getSubheading(): ?\Illuminate\Contracts\Support\Htmlable
     {
         $client = $this->record->client?->name ?? '—';
         $date = $this->record->created_at?->format('d/m/Y') ?? '—';
         $net = number_format((float) ($this->record->net_a_payer ?? $this->record->prix_ttc ?? 0), 3, ',', ' ') . ' TND';
-        $parts = ["Client : {$client}", "Date : {$date}", "Net à payer : {$net}"];
+
+        $html = '<div class="flex flex-wrap items-center gap-2 mt-2">';
+        $html .= '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 shadow-sm border border-gray-200 dark:border-gray-700">👤 Client : ' . e($client) . '</span>';
+        $html .= '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 shadow-sm border border-gray-200 dark:border-gray-700">📅 Date : ' . e($date) . '</span>';
+        $html .= '<span class="inline-flex items-center px-4 py-1.5 rounded-full text-[15px] font-bold bg-orange-100 text-orange-800 dark:bg-orange-500/20 dark:text-orange-400 shadow-sm border border-orange-200 dark:border-orange-500/30">💰 Net à payer : ' . e($net) . '</span>';
+
         if (Schema::hasColumn('facture_tvas', 'facture_id') && $this->record->facture_id) {
-            $parts[] = 'BL : #' . $this->record->facture?->numero;
+            $html .= '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300">BL : #' . e($this->record->facture?->numero) . '</span>';
         }
+
         if (Schema::hasTable('payments')) {
             $paid = (float) $this->record->payments()->where('status', PaymentStatus::Succeeded)->sum('amount');
             if ($paid > 0) {
-                $parts[] = 'Encaissé : ' . number_format($paid, 3, ',', ' ') . ' DT';
+                $html .= '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">Encaissé : ' . number_format($paid, 3, ',', ' ') . ' DT</span>';
             }
         }
 
-        return implode(' · ', $parts);
+        $html .= '</div>';
+
+        return new \Illuminate\Support\HtmlString($html);
     }
 
     protected function mutateFormDataBeforeFill(array $data): array

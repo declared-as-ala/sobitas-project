@@ -182,14 +182,9 @@ class FactureTvaResource extends Resource
                             Forms\Components\TextInput::make('tva')->label('TVA')->numeric()->prefix('DT')->disabled()->dehydrated(false)->default(0),
                             Forms\Components\TextInput::make('timbre')->label('Timbre')->numeric()->prefix('DT')->default(0)->live()->afterStateUpdated(fn ($state, $get, $set) => self::recalculateFactureTvaTotals($get, $set)),
                             Forms\Components\TextInput::make('prix_ttc')->label('Total TTC')->numeric()->prefix('DT')->disabled()->dehydrated(false)->default(0),
-                            Forms\Components\TextInput::make('net_a_payer')
-                                ->label('NET À PAYER')
-                                ->numeric()
-                                ->prefix('DT')
-                                ->disabled()
-                                ->dehydrated(false)
-                                ->default(0)
-                                ->extraInputAttributes(['class' => 'doc-net-a-payer-input font-bold text-lg']),
+                            Forms\Components\ViewField::make('net_a_payer_display')
+                                ->label('')
+                                ->view('filament.forms.components.net-a-payer-card'),
                             Forms\Components\TextInput::make('numero_display')
                                 ->label('N° Document')
                                 ->disabled()
@@ -249,6 +244,7 @@ class FactureTvaResource extends Resource
                 Tables\Columns\TextColumn::make('client.name')->label('Client')->searchable()->sortable(),
                 Tables\Columns\TextColumn::make('net_a_payer')
                     ->label('NET À PAYER')
+                    ->getStateUsing(fn (FactureTva $record) => $record->net_a_payer ?? 0)
                     ->money('TND')
                     ->sortable()
                     ->weight('bold'),
