@@ -34,9 +34,8 @@
             <header class="invoice-header">
                 <div class="invoice-company">
                     @php
-                        // Use the static logo file from filament/public/logo.png for all invoices,
-                        // without relying on the path stored in the coordinates table.
-                        $logoUrl = asset('logo.png');
+                        // Use a fixed storage image for all invoices, independent of the coordinates table.
+                        $logoUrl = 'https://admin.protein.tn/storage/coordonnees/March2026/Z2S2Ct4CwucOAWmNFzTy.png';
                     @endphp
                     <img src="{{ $logoUrl }}" alt="{{ $company->abbreviation ?? 'SOBITAS' }}" class="invoice-logo">
                     <h2 class="invoice-company-name">{{ $company->abbreviation ?? 'STE SOBITAS' }}</h2>
