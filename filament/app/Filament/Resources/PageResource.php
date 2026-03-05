@@ -37,7 +37,7 @@ class PageResource extends Resource
                 ->required()
                 ->maxLength(255)
                 ->live(onBlur: true)
-                ->afterStateUpdated(function ($state, Forms\Set $set, Forms\Get $get) {
+                ->afterStateUpdated(function ($state, $set, $get) {
                 if (blank($get('slug'))) {
                     $set('slug', Str::slug($state));
                 }

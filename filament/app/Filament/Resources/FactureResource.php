@@ -38,7 +38,7 @@ class FactureResource extends Resource
         return ['numero'];
     }
 
-    public static function updateTotals(Forms\Get $get, Forms\Set $set, bool $isItem = false): void
+    public static function updateTotals($get, $set, bool $isItem = false): void
     {
         $details = $isItem ? ($get('../../details') ?? []) : ($get('details') ?? []);
         $remise = (float) ($isItem ? ($get('../../remise') ?? 0) : ($get('remise') ?? 0));
@@ -177,7 +177,7 @@ class FactureResource extends Resource
                                     ->modalHeading('Supprimer cette ligne ?')
                                     ->modalSubmitActionLabel('Oui, supprimer')
                                     ->modalCancelActionLabel('Annuler')
-                                    ->after(fn (Forms\Get $get, Forms\Set $set) => self::updateTotals($get, $set, false))
+                                    ->after(fn ($get, $set) => self::updateTotals($get, $set, false))
                                 )
                                 ->itemLabel(fn (array $state) => isset($state['produit_id']) ? (\App\Models\Product::find($state['produit_id'])?->designation_fr ?? 'Ligne') : 'Nouveau produit'),
                         ])

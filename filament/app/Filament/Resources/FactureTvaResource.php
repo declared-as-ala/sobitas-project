@@ -153,7 +153,7 @@ class FactureTvaResource extends Resource
                                     ->modalHeading('Supprimer cette ligne ?')
                                     ->modalSubmitActionLabel('Oui, supprimer')
                                     ->modalCancelActionLabel('Annuler')
-                                    ->after(fn (Forms\Get $get, Forms\Set $set) => self::recalculateFactureTvaTotals($get, $set, false))
+                                    ->after(fn ($get, $set) => self::recalculateFactureTvaTotals($get, $set, false))
                                 )
                                 ->extraAttributes(['class' => 'doc-lines-repeater']),
                         ])
