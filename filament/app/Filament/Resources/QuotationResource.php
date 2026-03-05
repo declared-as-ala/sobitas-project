@@ -143,8 +143,8 @@ class QuotationResource extends Resource
                                 ->placeholder('client@email.com'),
                         ])
                         ->columns(2)
-                        ->compact(),
-                ])->columnSpan(['default' => 12, 'md' => 7]),
+                        ->compact()
+                        ->columnSpan(['default' => 12, 'md' => 7]),
 
                 // --------- ROW 2 --------- 
 
