@@ -66,12 +66,32 @@ class QuotationResource extends Resource
     public static function form(Schema $schema): Schema
     {
         $coordinate = Coordinate::getCached();
+        
+        // CSS Block to force visible overflow on select dropdowns and fix Z-Index issues.
+        $cssOverrides = '<style>
+            .doc-lines-repeater { overflow: visible !important; }
+            .fi-fo-repeater-item { overflow: visible !important; }
+            .fi-select-dropdown { z-index: 9999 !important; }
+            .choices__list--dropdown { z-index: 9999 !important; }
+            /* Premium Prix Unitaire alignment classes */
+            .fi-input-suffix { min-width: 40px !important; text-align: center !important; flex-shrink: 0 !important; }
+        </style>';
+        
         return $schema->schema([
-            Grid::make(3)->schema([
+            Forms\Components\Placeholder::make('css_injector')
+                ->hiddenLabel()
+                ->content(new \Illuminate\Support\HtmlString($cssOverrides)),
+                
+            Grid::make(12)->schema([
+                
+                // --------- ROW 1 --------- 
+                
+                // Left Column: Company Info
                 Grid::make(1)->schema([
                     Forms\Components\Placeholder::make('company_info')
-                        ->label('')
+                        ->label('Informations société')
                         ->content(fn () => $coordinate ? new \Illuminate\Support\HtmlString(view('filament.components.company-info-compact', ['coordinate' => $coordinate])->render()) : '—'),
+                ])->columnSpan(['default' => 12, 'md' => 5]),
                     Section::make('Informations Client')
                         ->description('Sélectionnez un client pour remplir automatiquement les coordonnées.')
                         ->icon('heroicon-o-user')
@@ -123,9 +143,13 @@ class QuotationResource extends Resource
                                 ->placeholder('client@email.com'),
                         ])
                         ->columns(2)
-                        ->compact()
-                        ->collapsible(),
-                    Section::make('Articles et Produits')
+                        ->compact(),
+                ])->columnSpan(['default' => 12, 'md' => 7]),
+
+                // --------- ROW 2 --------- 
+
+                // Left Column: Articles et Produits
+                Section::make('Articles et Produits')
                         ->description('Scannez un code-barres ou ajoutez manuellement les produits du devis.')
                         ->icon('heroicon-o-shopping-bag')
                         ->schema([
@@ -171,8 +195,18 @@ class QuotationResource extends Resource
                                         ->live(debounce: 400)
                                         ->afterStateUpdated(fn ($get, $set) => self::updateTotals($get, $set, true))
                                         ->columnSpan(2),
+                                    Forms\Components\TextInput::make('tva_pct')
+                                        ->label('TVA %')
+                                        ->numeric()
+                                        ->default($coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19)
+                                        ->suffix('%')
+                                        ->extraAttributes(['class' => '[&_.fi-input-suffix]:shrink-0 [&_.fi-input-suffix]:min-w-[35px] [&_.fi-input-suffix]:text-center'])
+                                        ->required()
+                                        ->live(debounce: 400)
+                                        ->afterStateUpdated(fn ($get, $set) => self::updateTotals($get, $set, true))
+                                        ->columnSpan(2),
                                     Forms\Components\Placeholder::make('prix_total_display')
-                                        ->label('Total Ligne')
+                                        ->label('Total HT')
                                         ->content(fn ($get) => new \Illuminate\Support\HtmlString(
                                             '<span class="doc-line-total">' .
                                             number_format((float) $get('qte') * (float) $get('prix_unitaire'), 3, ',', ' ') .
@@ -196,9 +230,9 @@ class QuotationResource extends Resource
                                 ->itemLabel(fn (array $state) => isset($state['produit_id']) ? (\App\Models\Product::find($state['produit_id'])?->designation_fr ?? 'Ligne') : 'Nouveau produit'),
                         ])
                         ->compact()
-                        ->columnSpanFull(),
-                ])->columnSpan(2),
+                        ->columnSpan(['default' => 12, 'lg' => 8]),
 
+                // Right Column: Récapitulatif & Totaux
                 Grid::make(1)->schema([
                     Section::make('Récapitulatif & Totaux')
                         ->icon('heroicon-o-calculator')
@@ -224,17 +258,34 @@ class QuotationResource extends Resource
                                 ->numeric()
                                 ->suffix('%')
                                 ->default(0)
-                                ->live(),
-                            Forms\Components\Select::make('statut')
-                                ->label('Statut du devis')
-                                ->options([
-                                    'brouillon'  => '⬜ Brouillon',
-                                    'en_attente' => '🟡 En attente',
-                                    'valide'     => '🟢 Validé',
-                                    'refuse'     => '🔴 Refusé',
-                                ])
-                                ->default('brouillon')
-                                ->nullable(),
+                                ->live()
+                                ->afterStateUpdated(function ($state, $get, $set) {
+                                    self::updateTotals($get, $set, false);
+                                }),
+                            // Statut is removed from the form explicitly here.
+                            Forms\Components\TextInput::make('tva')
+                                ->label('TVA (DT)')
+                                ->numeric()
+                                ->prefix('DT')
+                                ->disabled()
+                                ->dehydrated(false)
+                                ->default(0),
+                            Forms\Components\TextInput::make('prix_ttc')
+                                ->label('TOTAL TTC (HT + TVA - Remise)')
+                                ->numeric()
+                                ->prefix('DT')
+                                ->disabled()
+                                ->dehydrated(false)
+                                ->default(0),
+                            Forms\Components\TextInput::make('timbre')
+                                ->label('TIMBRE')
+                                ->numeric()
+                                ->prefix('DT')
+                                ->default(1.000)
+                                ->live()
+                                ->afterStateUpdated(function ($state, $get, $set) {
+                                    self::updateTotals($get, $set, false);
+                                }),
                             Forms\Components\ViewField::make('net_a_payer_display')
                                 ->hiddenLabel()
                                 ->view('filament.forms.components.net-a-payer-card'),
@@ -268,8 +319,9 @@ class QuotationResource extends Resource
                                 )),
                         ])
                         ->compact(),
-                ])->columnSpan(1),
-            ])->columnSpanFull(),
+                ])->columnSpan(['default' => 12, 'lg' => 4]),
+                
+            ]),
 
             // Hidden fields
             Forms\Components\Hidden::make('numero'),

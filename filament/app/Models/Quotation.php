@@ -27,6 +27,15 @@ class Quotation extends Model
         'status' => QuotationStatus::class,
     ];
 
+    protected static function booted()
+    {
+        static::creating(function ($quotation) {
+            if (empty($quotation->status)) {
+                $quotation->status = QuotationStatus::Accepted; // Defaults to Valide directly
+            }
+        });
+    }
+
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class, 'client_id');

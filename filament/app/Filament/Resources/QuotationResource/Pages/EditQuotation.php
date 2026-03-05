@@ -86,13 +86,18 @@ class EditQuotation extends EditRecord
         $data['client_adresse'] = $this->record->client?->adresse ?? '';
         $data['client_phone']   = $this->record->client?->phone_1 ?? '';
         $data['client_email']   = $this->record->client?->email ?? '';
+        
+        $coordinate = \App\Models\Coordinate::getCached();
+        $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
+        
         $data['details']        = $this->record->details->map(fn ($d) => [
             'produit_id'    => $d->produit_id,
             'qte'           => $d->qte ?? $d->quantite ?? 0,
             'prix_unitaire' => $d->prix_unitaire,
+            'tva_pct'       => $d->tva ?? $defaultTva,
         ])->toArray();
         if (empty($data['details'])) {
-            $data['details'] = [['produit_id' => null, 'qte' => 1, 'prix_unitaire' => 0]];
+            $data['details'] = [['produit_id' => null, 'qte' => 1, 'prix_unitaire' => 0, 'tva_pct' => $defaultTva]];
         }
         return $data;
     }
@@ -107,19 +112,25 @@ class EditQuotation extends EditRecord
 
         // Save new lines
         $details = $this->form->getState()['details'] ?? [];
+        $coordinate = \App\Models\Coordinate::getCached();
+        $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
+        
         foreach ($details as $row) {
             if (empty($row['produit_id'])) {
                 continue;
             }
             $qte          = (int) ($row['qte'] ?? 1);
             $prixUnitaire = (float) ($row['prix_unitaire'] ?? 0);
+            $tvaPct       = (float) ($row['tva_pct'] ?? $defaultTva);
+            
             DetailsQuotation::create([
                 'quotation_id'  => $this->record->id,
                 'produit_id'    => $row['produit_id'],
                 'qte'           => $qte,
                 'quantite'      => $qte,
                 'prix_unitaire' => $prixUnitaire,
-                'prix_ttc'      => $qte * $prixUnitaire,
+                'prix_ttc'      => $qte * $prixUnitaire * (1 + ($tvaPct / 100)),
+                'tva'           => $tvaPct
             ]);
             Product::where('id', $row['produit_id'])->decrement('qte', $qte);
         }
@@ -184,10 +195,13 @@ class EditQuotation extends EditRecord
         }
 
         if (! $found) {
+            $coordinate = \App\Models\Coordinate::getCached();
+            $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
             $details[] = [
                 'produit_id'    => $product->id,
                 'qte'           => 1,
                 'prix_unitaire' => (float) ($product->prix ?? 0),
+                'tva_pct'       => $defaultTva,
             ];
         }
 
@@ -197,6 +211,19 @@ class EditQuotation extends EditRecord
             ->send();
 
         $this->form->fill(array_merge($state, ['details' => $details]));
+        
+        $remise = (float) ($state['remise'] ?? 0);
+        $timbre = (float) ($state['timbre'] ?? 0);
+        $calcTotals = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, $coordinate->tva ?? 19);
+        
+        $this->form->fill(array_merge($this->form->getState(), [
+            'prix_ht' => $calcTotals['total_ht_brut'],
+            'pourcentage_remise' => $calcTotals['pourcentage_remise'],
+            'prix_ht_apres_remise' => $calcTotals['prix_ht_apres_remise'],
+            'tva' => $calcTotals['tva'],
+            'prix_ttc' => $calcTotals['prix_ttc'],
+            'net_a_payer' => $calcTotals['net_a_payer'],
+        ]));
     }
 
     // -------------------------------------------------------------------------

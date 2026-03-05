@@ -32,11 +32,15 @@ class CreateQuotation extends CreateRecord
 
         $state = $this->form->getState();
         $details = $state['details'] ?? [];
+        $coordinate = \App\Models\Coordinate::getCached();
+        
         $details[] = [
             'produit_id' => $product->id,
             'qte' => 1,
             'prix_unitaire' => (float) ($product->prix ?? 0),
+            'tva_pct' => $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19,
         ];
+        
         $this->form->fill(array_merge($state, ['details' => $details]));
         $this->recalculateTotals();
     }
@@ -45,16 +49,24 @@ class CreateQuotation extends CreateRecord
     {
         $state = $this->form->getState();
         $details = $state['details'] ?? [];
-        $total = 0.0;
-        foreach ($details as $d) {
-            if (!empty($d['produit_id'])) {
-                $total += (float) ($d['qte'] ?? 0) * (float) ($d['prix_unitaire'] ?? 0);
-            }
-        }
-        $remise = (float) ($state['remise'] ?? 0);
+        
+        $coordinate = \App\Models\Coordinate::getCached();
+        $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
+        
+        $calcTotals = \App\Services\InvoiceCalculator::calculate(
+            $details, 
+            (float) ($state['remise'] ?? 0), 
+            (float) ($state['timbre'] ?? 0), 
+            $defaultTva
+        );
+        
         $this->form->fill(array_merge($state, [
-            'prix_ht' => $total,
-            'prix_ttc' => $total - $remise,
+            'prix_ht' => $calcTotals['total_ht_brut'],
+            'pourcentage_remise' => $calcTotals['pourcentage_remise'],
+            'prix_ht_apres_remise' => $calcTotals['prix_ht_apres_remise'],
+            'tva' => $calcTotals['tva'],
+            'prix_ttc' => $calcTotals['prix_ttc'],
+            'net_a_payer' => $calcTotals['net_a_payer'],
         ]));
     }
 
@@ -64,16 +76,26 @@ class CreateQuotation extends CreateRecord
         $data['numero'] = date('Y') . '/' . str_pad((string) $nb, 4, '0', STR_PAD_LEFT);
 
         $details = $data['details'] ?? [];
-        $total = 0.0;
-        foreach ($details as $d) {
-            if (!empty($d['produit_id'])) {
-                $total += (float) ($d['qte'] ?? 0) * (float) ($d['prix_unitaire'] ?? 0);
-            }
-        }
-        $data['prix_ht'] = $total;
-        $data['prix_ttc'] = $total - (float) ($data['remise'] ?? 0);
-        $data['prix_total'] = $data['prix_ttc'];
-        unset($data['details'], $data['client_adresse'], $data['client_phone'], $data['pourcentage_remise']);
+        
+        $coordinate = \App\Models\Coordinate::getCached();
+        $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
+        
+        $calcTotals = \App\Services\InvoiceCalculator::calculate(
+            $details, 
+            (float) ($data['remise'] ?? 0), 
+            (float) ($data['timbre'] ?? 0), 
+            $defaultTva
+        );
+
+        $data['prix_ht'] = $calcTotals['total_ht_brut'];
+        $data['pourcentage_remise'] = $calcTotals['pourcentage_remise'];
+        $data['prix_ht_apres_remise'] = $calcTotals['prix_ht_apres_remise'];
+        $data['tva'] = $calcTotals['tva'];
+        $data['prix_ttc'] = $calcTotals['prix_ttc'];
+        $data['net_a_payer'] = $calcTotals['net_a_payer'];
+        $data['prix_total'] = $calcTotals['prix_ttc'];
+        
+        unset($data['details'], $data['client_adresse'], $data['client_phone'], $data['css_injector']);
         return $data;
     }
 
