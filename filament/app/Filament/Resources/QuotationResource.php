@@ -86,17 +86,18 @@ class QuotationResource extends Resource
                 
                 // --------- ROW 1 --------- 
                 
-                // Left Column: Company Info
-                Grid::make(1)->schema([
-                    Section::make('Informations société')
-                        ->icon('heroicon-o-building-office')
-                        ->schema([
-                            Forms\Components\Placeholder::make('company_info')
-                                ->hiddenLabel()
-                                ->content(fn () => $coordinate ? new \Illuminate\Support\HtmlString(view('filament.components.company-info-compact', ['coordinate' => $coordinate])->render()) : '—'),
-                        ])->compact(),
-                ])->columnSpan(['default' => 12, 'md' => 5]),
-                    Section::make('Informations Client')
+                // Left Column: Informations société (same card style as Informations Client)
+                Section::make('Informations société')
+                    ->icon('heroicon-o-building-office-2')
+                    ->schema([
+                        Forms\Components\Placeholder::make('company_info')
+                            ->hiddenLabel()
+                            ->content(fn () => $coordinate ? new \Illuminate\Support\HtmlString(view('filament.components.company-info-compact', ['coordinate' => $coordinate])->render()) : '—'),
+                    ])
+                    ->columns(1)
+                    ->compact()
+                    ->columnSpan(['default' => 12, 'md' => 5]),
+                Section::make('Informations Client')
                         ->description('Sélectionnez un client pour remplir automatiquement les coordonnées.')
                         ->icon('heroicon-o-user')
                         ->schema([
@@ -156,6 +157,7 @@ class QuotationResource extends Resource
                 Section::make('Articles et Produits')
                         ->description('Scannez un code-barres ou ajoutez manuellement les produits du devis.')
                         ->icon('heroicon-o-shopping-bag')
+                        ->extraAttributes(['class' => 'doc-section-produits'])
                         ->schema([
                             Forms\Components\Placeholder::make('barcode_scan')
                                 ->label('')
@@ -165,21 +167,12 @@ class QuotationResource extends Resource
                                 ->schema([
                                     Forms\Components\Select::make('produit_id')
                                         ->label('Produit')
+                                        ->options(fn () => \App\Models\Product::where('qte', '>', 0)->get()->mapWithKeys(fn ($p) => [$p->id => ($p->designation_fr ?? '') . ' (' . (int) $p->qte . ')'])->all())
                                         ->searchable()
-                                        ->getSearchResultsUsing(fn (string $search): array => \App\Models\Product::where('qte', '>', 0)
-                                            ->where(function ($query) use ($search) {
-                                                $query->where('designation_fr', 'like', "%{$search}%")
-                                                      ->orWhere('code_product', 'like', "%{$search}%");
-                                            })
-                                            ->limit(50)
-                                            ->get()
-                                            ->mapWithKeys(fn ($p) => [$p->id => ($p->designation_fr ?? '') . ' (' . (int) $p->qte . ')'])
-                                            ->toArray()
-                                        )
-                                        ->getOptionLabelUsing(fn ($value): ?string => \App\Models\Product::find($value)?->designation_fr)
+                                        ->preload()
                                         ->required()
                                         ->live()
-                                        ->placeholder('Rechercher un produit…')
+                                        ->placeholder('Sélectionner un produit…')
                                         ->afterStateUpdated(function ($state, $set, $get) {
                                             if ($state && $product = \App\Models\Product::find($state)) {
                                                 $set('prix_unitaire', (float) ($product->prix ?? 0));
