@@ -1,4 +1,4 @@
-@extends('print.invoice-layout')
+@extends('print.invoice-layout-clean')
 
 @section('print-table')
 <table class="invoice-table">

@@ -6,8 +6,15 @@
 @endphp
 <div class="doc-company-compact rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/5 p-3 text-sm" x-data="{ open: false }">
     <div class="flex items-center gap-3">
-        <div class="shrink-0" style="height: 4.5rem; display: flex;">
-            <style> .custom-logo-wrapper img { max-height: 100%; width: auto; object-fit: contain; } </style>
+        <div class="shrink-0" style="height: 5.75rem; display: flex; align-items: center;">
+            <style>
+                .custom-logo-wrapper img {
+                    max-height: 100%;
+                    width: auto;
+                    object-fit: contain;
+                    display: block;
+                }
+            </style>
             <div class="custom-logo-wrapper h-full">
                 @include('filament.app.logo')
             </div>

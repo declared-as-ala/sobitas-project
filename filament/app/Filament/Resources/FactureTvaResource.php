@@ -45,7 +45,7 @@ class FactureTvaResource extends Resource
                         ->icon('heroicon-o-information-circle')
                         ->schema([
                             Forms\Components\Placeholder::make('company_info')
-                             
+                                ->hiddenLabel()
                                 ->content(fn () => $coordinate ? new \Illuminate\Support\HtmlString(view('filament.components.company-info-compact', ['coordinate' => $coordinate])->render()) : '—'),
                         ])
                         ->columns(1),
