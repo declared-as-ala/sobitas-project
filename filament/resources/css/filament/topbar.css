@@ -1,14 +1,41 @@
 /**
- * Filament v4 – Topbar & profile dropdown visibility fixes.
+ * Filament v4 – Topbar, header, and modal stacking context fixes.
  *
- * Goal:
- * - Keep the topbar (and avatar menu) above all page content.
- * - Prevent the dropdown from being covered or clipped by sticky headers.
+ * ROOT CAUSE OF PREVIOUS BUG:
+ * `.fi-modal-close-overlay` (dark backdrop) and `.fi-modal-window` (dialog box)
+ * were both assigned `z-index: 1001`. Since the backdrop appears AFTER the window
+ * in the DOM, it sits on top in the paint order and absorbs 100% of pointer events,
+ * making the modal impossible to interact with.
  *
- * Scope: Only Filament structural classes, no Tailwind utilities.
+ * CORRECT Z-INDEX HIERARCHY (ascending = "closer to user"):
+ *   0    - page content, .fi-header (scrolls normally)
+ *   1000 - .fi-topbar (sticky nav bar at top)
+ *   1001 - .fi-modal-container (outer wrapper, invisible)
+ *   1002 - .fi-modal-close-overlay / .fi-modal-backdrop (dark screen)
+ *   1003 - .fi-modal-window (the actual dialog — MUST be ABOVE backdrop)
+ *   2000 - floating-ui dropdowns (user menu etc.)
+ *  99999 - toast notifications
  */
 
-/* 1) Ensure ONLY the topbar stays sticky at top — NOT the page header */
+/* -----------------------------------------------------------------------
+   1. Page header — NOT sticky, scrolls with page, no stacking context
+   ----------------------------------------------------------------------- */
+.fi-header {
+    position: relative !important;
+    z-index: 0 !important;
+    overflow: visible;
+}
+
+.fi-page-header-main-ctn,
+.fi-page-header,
+.fi-header-actions {
+    z-index: 0;
+    overflow: visible;
+}
+
+/* -----------------------------------------------------------------------
+   2. Topbar — ONLY thing that should be sticky
+   ----------------------------------------------------------------------- */
 .fi-topbar-ctn,
 .fi-topbar {
     position: sticky;
@@ -17,22 +44,9 @@
     overflow: visible;
 }
 
-/* Page header (.fi-header) is intentionally NOT sticky - it scrolls with the page */
-.fi-header {
-    position: relative;
-    z-index: 0;
-    overflow: visible;
-}
-
-/* 2) Keep page headers below the topbar and avoid clipping */
-.fi-page-header-main-ctn,
-.fi-page-header,
-.fi-header-actions {
-    z-index: 0;
-    overflow: visible;
-}
-
-/* 3) Floating UI portals & dropdown panels (user menu, global search, nav) */
+/* -----------------------------------------------------------------------
+   3. Floating UI portals (user avatar dropdown, global search, nav)
+   ----------------------------------------------------------------------- */
 [data-floating-ui-portal],
 [data-floating-ui-portal] .fi-dropdown-panel,
 .fi-topbar .fi-dropdown-panel,
@@ -43,36 +57,62 @@
     z-index: 2000 !important;
 }
 
-/* 4) Modal UI Fix - all modal layers MUST be above the topbar (z-1000) */
-/* Use a stacking context that is a sibling of the body's root context */
-.fi-modal-close-overlay,
-.fi-modal-window,
-.fi-modal-backdrop,
+/* -----------------------------------------------------------------------
+   4. Modal stacking — THE CORRECT HIERARCHY
+   Container → backdrop → dialog window (ascending z-index)
+   ----------------------------------------------------------------------- */
+
+/* Outer wrapper: just a positioned root */
 .fi-modal-container {
     z-index: 1001 !important;
 }
 
-/* Force backdrop to be fully opaque black so NO page text is visible */
-.fi-modal-close-overlay {
-    background-color: rgba(0, 0, 0, 0.92) !important;
-    backdrop-filter: blur(2px) !important;
+/* Backdrop / close-overlay: dark screen, BELOW the dialog */
+.fi-modal-close-overlay,
+.fi-modal-backdrop {
+    z-index: 1002 !important;
+    background-color: rgba(0, 0, 0, 0.88) !important;
+    backdrop-filter: blur(1px) !important;
+    /* Backdrop captures clicks ONLY on empty area, NOT inside .fi-modal-window */
+    pointer-events: auto;
 }
 
-/* Body scroll lock when any Filament action modal is open */
-body.fi-modal-open,
+/* The actual dialog window: ABOVE the backdrop */
+.fi-modal-window {
+    z-index: 1003 !important;
+    pointer-events: auto !important;
+    position: relative !important;
+}
+
+/* Everything inside the modal window must be fully interactive */
+.fi-modal-window *,
+.fi-modal-window input,
+.fi-modal-window button,
+.fi-modal-window select,
+.fi-modal-window textarea,
+.fi-modal-window label {
+    pointer-events: auto !important;
+}
+
+/* -----------------------------------------------------------------------
+   5. Body scroll lock when a modal is open
+   ----------------------------------------------------------------------- */
 body:has(.fi-modal-container) {
     overflow: hidden !important;
 }
 
-/* Restrict max modal width specifically on edit-facture-tva to look like a clean prompter */
+/* -----------------------------------------------------------------------
+   6. Optional: constrain modal width on facture-tva edit pages
+   ----------------------------------------------------------------------- */
 .fi-page-edit-facture-tva .fi-modal-window {
     max-width: 32rem !important;
-    /* max-w-lg eq */
     margin-left: auto;
     margin-right: auto;
 }
 
-/* 5) Toast Notifications on TOP of EVERYTHING */
+/* -----------------------------------------------------------------------
+   7. Toast Notifications — always on top of everything
+   ----------------------------------------------------------------------- */
 .fi-no,
 .fi-no-notification,
 .fi-no-notification-window,
