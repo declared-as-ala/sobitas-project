@@ -21,7 +21,6 @@
             flex-direction: column;
             width: 100%;
             min-width: 0;
-            overflow: hidden;
             box-sizing: border-box;
             transition: background-color 0.3s ease, border-color 0.3s ease;
         }
@@ -50,24 +49,21 @@
             justify-content: flex-end;
             gap: 0.35rem;
             min-width: 0;
-            overflow: hidden;
         }
         
         .nap-amount-wrap {
             min-width: 0;
             flex: 1;
-            overflow: hidden;
         }
         
         .nap-amount {
             display: block;
-            font-size: clamp(1.1rem, 3.5vw, 1.6rem);
+            font-size: clamp(1rem, 3vw, 1.5rem);
             font-weight: 800;
             line-height: 1.1;
             color: #111827;
             white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            text-align: right;
         }
         :is(.dark .nap-amount) {
             color: #ffffff;
@@ -91,9 +87,7 @@
             margin-top: 0.375rem;
             margin-bottom: 0;
             line-height: 1.2;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            word-wrap: break-word;
         }
         :is(.dark .nap-subtext) {
             color: #9ca3af;
