@@ -63,15 +63,20 @@ class FactureResource extends Resource
     {
         $coordinate = Coordinate::getCached();
         return $schema->schema([
-            Grid::make(3)->schema([
+            Grid::make(12)->schema([
+                // --------- ROW 1 ---------
                 Grid::make(1)->schema([
                     Forms\Components\Placeholder::make('company_info')
                         ->label('Informations société')
                         ->content(fn () => $coordinate ? new \Illuminate\Support\HtmlString(view('filament.components.company-info-compact', ['coordinate' => $coordinate])->render()) : '—'),
-                    Section::make('Informations Client')
-                        ->description('Sélectionnez un client pour remplir automatiquement les coordonnées.')
-                        ->icon('heroicon-o-user')
-                        ->schema([
+                ])
+                    ->columnSpan(['default' => 12, 'md' => 5])
+                    ->extraAttributes(['class' => 'rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 p-6 shadow-sm']),
+                Section::make('Informations Client')
+                    ->description('Sélectionnez un client pour remplir automatiquement les coordonnées.')
+                    ->icon('heroicon-o-user')
+                    ->extraAttributes(['class' => 'rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 shadow-lg p-6'])
+                    ->schema([
                             Forms\Components\Select::make('client_id')
                                 ->label('Client')
                                 ->relationship('client', 'name')
@@ -111,12 +116,14 @@ class FactureResource extends Resource
                                 ->placeholder('client@email.com'),
                         ])
                         ->columns(2)
-                        ->compact()
-                        ->collapsible(),
-                    Section::make('Articles et Produits')
-                        ->description('Scannez un code-barres ou ajoutez manuellement les produits.')
-                        ->icon('heroicon-o-shopping-bag')
-                        ->schema([
+                        ->columnSpan(['default' => 12, 'md' => 7]),
+
+                // --------- ROW 2 ---------
+                Section::make('Articles et Produits')
+                    ->description('Scannez un code-barres ou ajoutez manuellement les produits.')
+                    ->icon('heroicon-o-shopping-bag')
+                    ->extraAttributes(['class' => 'doc-section-produits overflow-visible rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 shadow-lg p-6'])
+                    ->schema([
                             Forms\Components\Placeholder::make('barcode_scan')
                                 ->label('')
                                 ->content(fn () => new \Illuminate\Support\HtmlString(view('filament.components.barcode-scan-compact')->render())),
@@ -125,9 +132,25 @@ class FactureResource extends Resource
                                 ->schema([
                                     Forms\Components\Select::make('produit_id')
                                         ->label('Produit')
-                                        ->options(fn () => \App\Models\Product::where('qte', '>', 0)->get()->mapWithKeys(fn ($p) => [$p->id => ($p->designation_fr ?? '') . ' (' . (int) $p->qte . ')'])->all())
                                         ->searchable()
-                                        ->preload()
+                                        ->getSearchResultsUsing(function (string $search): array {
+                                            $query = \App\Models\Product::query()
+                                                ->where('qte', '>', 0)
+                                                ->orderBy('designation_fr');
+                                            if (strlen($search) >= 1) {
+                                                $query->where(function ($q) use ($search) {
+                                                    $q->where('designation_fr', 'like', '%' . $search . '%')
+                                                        ->orWhere('code_product', 'like', '%' . $search . '%');
+                                                });
+                                            }
+                                            return $query->limit(30)->get()
+                                                ->mapWithKeys(fn ($p) => [$p->id => ($p->designation_fr ?? '') . ' (' . (int) $p->qte . ')'])
+                                                ->all();
+                                        })
+                                        ->getOptionLabelUsing(fn ($value): ?string => $value ? (function () use ($value) {
+                                            $p = \App\Models\Product::find($value);
+                                            return $p ? (($p->designation_fr ?? '') . ' (' . (int) $p->qte . ')') : null;
+                                        })() : null)
                                         ->required()
                                         ->live()
                                         ->placeholder('Sélectionner un produit…')
@@ -153,6 +176,8 @@ class FactureResource extends Resource
                                         ->numeric()
                                         ->default(0)
                                         ->suffix('DT')
+                                        ->extraInputAttributes(['class' => 'min-w-[0]'])
+                                        ->extraAttributes(['class' => '[&_.fi-input-suffix]:shrink-0 [&_.fi-input-suffix]:min-w-[35px] [&_.fi-input-suffix]:text-center'])
                                         ->required()
                                         ->live(debounce: 400)
                                         ->afterStateUpdated(fn ($get, $set) => self::updateTotals($get, $set, true))
@@ -160,7 +185,7 @@ class FactureResource extends Resource
                                     Forms\Components\Placeholder::make('prix_total_display')
                                         ->label('Total Ligne')
                                         ->content(fn ($get) => new \Illuminate\Support\HtmlString(
-                                            '<span class="doc-line-total">' .
+                                            '<span class="inline-block whitespace-nowrap font-bold tabular-nums text-sm text-gray-700 dark:text-gray-200">' .
                                             number_format((float) $get('qte') * (float) $get('prix_unitaire'), 3, ',', ' ') .
                                             ' DT</span>'
                                         ))
@@ -171,7 +196,7 @@ class FactureResource extends Resource
                                 ->addActionLabel('+ Ajouter produit')
                                 ->reorderable()
                                 ->columnSpanFull()
-                                ->extraAttributes(['class' => 'doc-lines-repeater'])
+                                ->extraAttributes(['class' => 'doc-lines-repeater overflow-visible'])
                                 ->deleteAction(fn ($action) => $action
                                     ->requiresConfirmation()
                                     ->modalHeading('Supprimer cette ligne ?')
@@ -181,10 +206,9 @@ class FactureResource extends Resource
                                 )
                                 ->itemLabel(fn (array $state) => isset($state['produit_id']) ? (\App\Models\Product::find($state['produit_id'])?->designation_fr ?? 'Ligne') : 'Nouveau produit'),
                         ])
-                        ->compact()
-                        ->columnSpanFull(),
-                ])->columnSpan(2),
+                        ->columnSpan(['default' => 12, 'lg' => 8]),
 
+                // Right Column: Récapitulatif & Totaux
                 Grid::make(1)->schema([
                     Section::make('Récapitulatif & Totaux')
                         ->icon('heroicon-o-calculator')
@@ -198,6 +222,8 @@ class FactureResource extends Resource
                                 ->label('REMISE')
                                 ->numeric()
                                 ->prefix('DT')
+                                ->extraInputAttributes(['class' => 'min-w-[0]'])
+                                ->extraAttributes(['class' => '[&_.fi-input-prefix]:shrink-0 [&_.fi-input-prefix]:min-w-[35px] [&_.fi-input-prefix]:text-center'])
                                 ->default(0)
                                 ->live()
                                 ->afterStateUpdated(function ($state, $get, $set) {
@@ -208,42 +234,46 @@ class FactureResource extends Resource
                                 ->numeric()
                                 ->suffix('%')
                                 ->default(0)
-                                ->live(),
+                                ->live()
+                                ->afterStateUpdated(function ($state, $get, $set) {
+                                    self::updateTotals($get, $set, false);
+                                }),
                             Forms\Components\ViewField::make('net_a_payer_display')
                                 ->hiddenLabel()
                                 ->view('filament.forms.components.net-a-payer-card'),
                             Forms\Components\Placeholder::make('numero_display')
                                 ->label('N° Document')
                                 ->content(fn ($record) => new \Illuminate\Support\HtmlString(
-                                    '<span class="doc-numero-badge">' . ($record?->numero ?? 'Nouveau') . '</span>'
+                                    '<span class="inline-block font-bold font-mono text-sm px-3 py-1 rounded border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/10 text-gray-800 dark:text-gray-200">' . ($record?->numero ?? 'Nouveau') . '</span>'
                                 )),
                         ])
-                        ->columns(1)
-                        ->compact()
-                        ->extraAttributes(['class' => 'doc-totaux-sidebar']),
+                        ->columns(1),
 
                     Section::make('Résumé Produits')
                         ->icon('heroicon-o-chart-bar')
+                        ->extraAttributes(['class' => 'rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 shadow-sm p-6'])
                         ->schema([
                             Forms\Components\Placeholder::make('resume_articles')
                                 ->label('Articles')
                                 ->content(fn ($get) => new \Illuminate\Support\HtmlString(
-                                    '<span class="doc-resume-value">' . count(array_filter($get('details') ?? [], fn($d) => !empty($d['produit_id']))) . '</span>'
+                                    '<span class="block font-bold tabular-nums text-right text-gray-900 dark:text-white">' . count(array_filter($get('details') ?? [], fn($d) => !empty($d['produit_id']))) . '</span>'
                                 )),
                             Forms\Components\Placeholder::make('resume_qte')
                                 ->label('Quantité totale')
                                 ->content(fn ($get) => new \Illuminate\Support\HtmlString(
-                                    '<span class="doc-resume-value">' . array_sum(array_column(array_filter($get('details') ?? [], fn($d) => !empty($d['produit_id'])), 'qte')) . '</span>'
+                                    '<span class="block font-bold tabular-nums text-right text-gray-900 dark:text-white">' . array_sum(array_column(array_filter($get('details') ?? [], fn($d) => !empty($d['produit_id'])), 'qte')) . '</span>'
                                 )),
                             Forms\Components\Placeholder::make('resume_date')
                                 ->label('Date')
                                 ->content(fn ($record) => new \Illuminate\Support\HtmlString(
-                                    '<span class="doc-resume-value">' . ($record?->created_at?->format('d/m/Y') ?? '—') . '</span>'
+                                    '<span class="block font-bold text-right text-gray-900 dark:text-white">' . ($record?->created_at?->format('d/m/Y') ?? '—') . '</span>'
                                 )),
-                        ])
-                        ->compact(),
-                ])->columnSpan(1),
-            ])->columnSpanFull(),
+                        ]),
+                ])
+                    ->columnSpan(['default' => 12, 'lg' => 4])
+                    ->extraAttributes(['class' => 'space-y-6']),
+            ])
+                ->extraAttributes(['class' => 'w-full max-w-full gap-6']),
 
             // Hidden fields persisted to DB
             Forms\Components\Hidden::make('numero'),
