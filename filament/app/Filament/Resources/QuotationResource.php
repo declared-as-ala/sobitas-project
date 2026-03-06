@@ -313,15 +313,12 @@ class QuotationResource extends Resource
                 ])->columnSpan(1),
             ])->columnSpanFull(),
             
-            // Hidden fields
+            // Hidden fields — only fields that have NO visible counterpart above
             Forms\Components\Hidden::make('numero'),
-            Forms\Components\Hidden::make('prix_ht'),
-            Forms\Components\Hidden::make('pourcentage_remise'),
-            Forms\Components\Hidden::make('prix_ht_apres_remise'),
-            Forms\Components\Hidden::make('tva'),
-            Forms\Components\Hidden::make('prix_ttc'),
-            Forms\Components\Hidden::make('timbre')->default(1.000),
             Forms\Components\Hidden::make('net_a_payer'),
+            // NOTE: prix_ht, prix_ht_apres_remise, tva, timbre, prix_ttc, pourcentage_remise, remise
+            // are now rendered as Placeholder/TextInput in the Totaux section — duplicating them
+            // here as Hidden fields causes a state-resolution loop and memory exhaustion.
         ]);
     }
 
