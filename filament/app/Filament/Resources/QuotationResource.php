@@ -145,6 +145,16 @@ class QuotationResource extends Resource
                                     Forms\Components\Select::make('produit_id')
                                         ->label('Produit')
                                         ->searchable()
+                                        ->options(function () {
+                                            return \App\Models\Product::query()
+                                                ->orderBy('designation_fr')
+                                                ->limit(50)
+                                                ->get()
+                                                ->mapWithKeys(fn ($p) => [
+                                                    $p->id => ($p->designation_fr ?? '') . ' (' . (int) $p->qte . ' en stock)'
+                                                ])
+                                                ->all();
+                                        })
                                         ->getSearchResultsUsing(function (string $search): array {
                                             return \App\Models\Product::query()
                                                 ->where(function ($q) use ($search) {
@@ -152,7 +162,7 @@ class QuotationResource extends Resource
                                                         ->orWhere('code_product', 'like', '%' . $search . '%');
                                                 })
                                                 ->orderBy('designation_fr')
-                                                ->limit(30)
+                                                ->limit(50)
                                                 ->get()
                                                 ->mapWithKeys(fn ($p) => [
                                                     $p->id => ($p->designation_fr ?? '') . ' (' . (int) $p->qte . ' en stock)'
