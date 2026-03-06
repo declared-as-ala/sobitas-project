@@ -228,8 +228,8 @@ class QuotationResource extends Resource
                 ])->columnSpan(['default' => 3, 'lg' => 2]),
 
                 // Right Column (Sidebar)
-                Forms\Components\Group::make()->schema([
-                    Forms\Components\Section::make('Totaux')
+                \Filament\Schemas\Components\Group::make()->schema([
+                    \Filament\Schemas\Components\Section::make('Totaux')
                         ->schema([
                             Forms\Components\TextInput::make('prix_ht')
                                 ->label('Sous-total HT')
@@ -294,7 +294,7 @@ class QuotationResource extends Resource
                                 ->formatStateUsing(fn ($record) => $record?->numero ?? 'Nouveau')
                         ])->columns(1),
 
-                    Forms\Components\Section::make('Résumé')
+                    \Filament\Schemas\Components\Section::make('Résumé')
                         ->schema([
                             Forms\Components\Placeholder::make('resume_articles')
                                 ->label('Articles')
