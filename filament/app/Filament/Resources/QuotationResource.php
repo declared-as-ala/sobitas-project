@@ -68,17 +68,17 @@ class QuotationResource extends Resource
         $coordinate = Coordinate::getCached();
         
         return $schema->schema([
-            Grid::make(['default' => 3])->schema([
+            \Filament\Schemas\Components\Grid::make(['default' => 3])->schema([
                 // Left Column (Main)
-                Forms\Components\Group::make()->schema([
-                    Forms\Components\Section::make('Informations société')
+                \Filament\Schemas\Components\Group::make()->schema([
+                    \Filament\Schemas\Components\Section::make('Informations société')
                         ->schema([
                             Forms\Components\Placeholder::make('company_info')
                                 ->hiddenLabel()
                                 ->content(fn () => $coordinate ? new \Illuminate\Support\HtmlString(view('filament.components.company-info-compact', ['coordinate' => $coordinate])->render()) : '—'),
                         ]),
                         
-                    Forms\Components\Section::make('Client')
+                    \Filament\Schemas\Components\Section::make('Client')
                         ->schema([
                             Forms\Components\Select::make('client_id')
                                 ->label('Client')
@@ -125,13 +125,13 @@ class QuotationResource extends Resource
                         ])
                         ->columns(2),
 
-                    Forms\Components\Section::make('Produits')
+                    \Filament\Schemas\Components\Section::make('Produits')
                         ->extraAttributes(['class' => 'overflow-visible', 'style' => 'overflow: visible !important;'])
                         ->schema([
                             Forms\Components\Placeholder::make('barcode_scan')
                                 ->hiddenLabel()
                                 ->content(fn () => new \Illuminate\Support\HtmlString(view('filament.components.barcode-scan-compact')->render())),
-                            Repeater::make('details')
+                            \Filament\Forms\Components\Repeater::make('details')
                                 ->hiddenLabel()
                                 ->schema([
                                     Forms\Components\Select::make('produit_id')
