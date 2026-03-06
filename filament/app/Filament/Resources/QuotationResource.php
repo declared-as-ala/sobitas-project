@@ -180,7 +180,7 @@ class QuotationResource extends Resource
                                             self::updateTotals($get, $set, true);
                                         }),
                                     
-                                    Forms\Components\Grid::make(10)->schema([
+                                    Grid::make(10)->schema([
                                         Forms\Components\TextInput::make('qte')
                                             ->label('Qté *')
                                             ->numeric()
