@@ -11,46 +11,54 @@
 }
 
 /* ---- Repeater: product rows ---- */
-/* Keep select heights sane (Filament default is too tall in dense layouts) */
+/* NOTE: do NOT set overflow:hidden on select inputs — it clips the dropdown */
 .doc-lines-repeater .fi-select-input,
 .doc-lines-repeater select {
     white-space: nowrap;
-    overflow: hidden;
     text-overflow: ellipsis;
 }
 
-/* ---- Produit select dropdown: prevent clipping (overflow) and stacking (z-index) ---- */
-/* Cause: section/repeater containers or stacking context clip or hide the searchable select listbox */
-/* Scoped to Facture TVA and Devis (Quotation) create/edit pages */
-.fi-page-edit-facture-tva .doc-section-produits .fi-section-content-ctn,
-.fi-page-create-facture-tva .doc-section-produits .fi-section-content-ctn,
-.fi-page-edit-quotation .doc-section-produits .fi-section-content-ctn,
-.fi-page-create-quotation .doc-section-produits .fi-section-content-ctn,
-.fi-page-edit-facture-tva .doc-lines-repeater,
-.fi-page-create-facture-tva .doc-lines-repeater,
-.fi-page-edit-quotation .doc-lines-repeater,
-.fi-page-create-quotation .doc-lines-repeater,
-.fi-page-edit-facture-tva .doc-lines-repeater .fi-fo-repeater-items,
-.fi-page-create-facture-tva .doc-lines-repeater .fi-fo-repeater-items,
-.fi-page-edit-quotation .doc-lines-repeater .fi-fo-repeater-items,
-.fi-page-create-quotation .doc-lines-repeater .fi-fo-repeater-items,
-.fi-page-edit-facture-tva .doc-lines-repeater .fi-fo-repeater-items>div,
-.fi-page-create-facture-tva .doc-lines-repeater .fi-fo-repeater-items>div,
-.fi-page-edit-quotation .doc-lines-repeater .fi-fo-repeater-items>div,
-.fi-page-create-quotation .doc-lines-repeater .fi-fo-repeater-items>div {
+/* ============================================================
+   CRITICAL FIX: Select searchable dropdown clipping
+   Root cause: overflow:hidden on repeater/section containers
+   clips the Alpine Combobox floating listbox.
+   Solution: force overflow:visible on ALL ancestor containers
+   and give the listbox a high z-index so it floats above.
+   Applied globally to all document-edit pages.
+   ============================================================ */
+
+/* All doc-lines-repeater elements must be overflow:visible */
+.doc-lines-repeater,
+.doc-lines-repeater .fi-fo-repeater-items,
+.doc-lines-repeater .fi-fo-repeater-items>div,
+.doc-lines-repeater .fi-fo-field-wrp,
+.doc-lines-repeater .fi-fo-field-wrp>div,
+.doc-lines-repeater .fi-fo-select-wrp,
+.doc-lines-repeater [x-data] {
     overflow: visible !important;
 }
 
-/* Ensure select dropdown (listbox) appears above cards and sidebar */
-.fi-page-edit-facture-tva .doc-section-produits [role="listbox"],
-.fi-page-create-facture-tva .doc-section-produits [role="listbox"],
-.fi-page-edit-quotation .doc-section-produits [role="listbox"],
-.fi-page-create-quotation .doc-section-produits [role="listbox"],
-.fi-page-edit-facture-tva .doc-lines-repeater [role="listbox"],
-.fi-page-create-facture-tva .doc-lines-repeater [role="listbox"],
-.fi-page-edit-quotation .doc-lines-repeater [role="listbox"],
-.fi-page-create-quotation .doc-lines-repeater [role="listbox"] {
-    z-index: 100;
+/* Section content wrapper must not clip the dropdown */
+.doc-section-produits .fi-section-content-ctn,
+.doc-section-produits .fi-section-content,
+.doc-section-produits .fi-fo-field-wrp,
+.doc-section-produits [x-data] {
+    overflow: visible !important;
+}
+
+/* Make the floating listbox (Alpine Combobox) appear above all cards */
+/* Filament 4 renders the dropdown with [role="listbox"] inside the Alpine x-data scope */
+.doc-lines-repeater [role="listbox"],
+.doc-section-produits [role="listbox"] {
+    z-index: 200 !important;
+    position: absolute;
+}
+
+/* Fallback: any Alpine Combobox options panel in the repeater */
+.doc-lines-repeater [x-ref="panel"],
+.doc-section-produits [x-ref="panel"] {
+    z-index: 200 !important;
+    position: absolute;
 }
 
 /* ---- Page Edit Devis : layout pleine largeur (pas de max-width qui compresse) ---- */
