@@ -92,6 +92,9 @@ jobs:
               echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u declared-as-ala --password-stdin
             fi
 
+            echo "🧹 Docker cleanup (free disk space before pull)..."
+            docker image prune -af || true
+
             echo "📦 Pull latest image..."
             docker pull ghcr.io/declared-as-ala/sobitas-backend-v2:latest
 
