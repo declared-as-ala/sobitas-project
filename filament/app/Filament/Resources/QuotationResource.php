@@ -172,7 +172,7 @@ class QuotationResource extends Resource
                                         ->required()
                                         ->live()
                                         ->placeholder('Sélectionner un produit…')
-                                        ->columnSpan(['default' => 7, 'sm' => 12])
+                                        ->columnSpan(['default' => 12])
                                         ->afterStateUpdated(function ($state, $set, $get) {
                                             if ($state && $product = \App\Models\Product::find($state)) {
                                                 $set('prix_unitaire', (float) ($product->prix ?? 0));
@@ -180,51 +180,49 @@ class QuotationResource extends Resource
                                             self::updateTotals($get, $set, true);
                                         }),
                                     
-                                    Forms\Components\TextInput::make('qte')
-                                        ->label('Qté')
-                                        ->numeric()
-                                        ->default(1)
-                                        ->minValue(1)
-                                        ->required()
-                                        ->live(debounce: 300)
-                                        ->afterStateUpdated(fn ($get, $set) => self::updateTotals($get, $set, true))
-                                        ->columnSpan(['default' => 1, 'sm' => 4]),
-                                        
-                                    Forms\Components\TextInput::make('prix_unitaire')
-                                        ->label('P.U')
-                                        ->numeric()
-                                        ->default(0)
-                                        ->prefix('DT')
-                                        ->required()
-                                        ->live(debounce: 300)
-                                        ->afterStateUpdated(fn ($get, $set) => self::updateTotals($get, $set, true))
-                                        ->columnSpan(['default' => 2, 'sm' => 4]),
+                                    Forms\Components\Grid::make(10)->schema([
+                                        Forms\Components\TextInput::make('qte')
+                                            ->label('Qté *')
+                                            ->numeric()
+                                            ->default(1)
+                                            ->minValue(1)
+                                            ->required()
+                                            ->live(debounce: 300)
+                                            ->afterStateUpdated(fn ($get, $set) => self::updateTotals($get, $set, true))
+                                            ->columnSpan(['default' => 2]),
+                                            
+                                        Forms\Components\TextInput::make('prix_unitaire')
+                                            ->label('P.U HT *')
+                                            ->numeric()
+                                            ->default(0)
+                                            ->required()
+                                            ->live(debounce: 300)
+                                            ->afterStateUpdated(fn ($get, $set) => self::updateTotals($get, $set, true))
+                                            ->columnSpan(['default' => 3]),
 
-                                    Forms\Components\Placeholder::make('prix_total_display')
-                                        ->label('P.T/HT')
-                                        ->content(fn ($get) => number_format((float) $get('qte') * (float) $get('prix_unitaire'), 3, '.', ' ') . ' DT')
-                                        ->extraAttributes(['class' => 'text-right font-medium'])
-                                        ->columnSpan(['default' => 2, 'sm' => 4]),
+                                        Forms\Components\TextInput::make('tva_pct')
+                                            ->label('TVA % *')
+                                            ->numeric()
+                                            ->default($defaultTva)
+                                            ->required()
+                                            ->live(debounce: 300)
+                                            ->afterStateUpdated(fn ($get, $set) => self::updateTotals($get, $set, true))
+                                            ->columnSpan(['default' => 2]),
 
-                                    Forms\Components\TextInput::make('tva_pct')
-                                        ->label('TVA %')
-                                        ->numeric()
-                                        ->default($defaultTva)
-                                        ->suffix('%')
-                                        ->required()
-                                        ->live(debounce: 300)
-                                        ->afterStateUpdated(fn ($get, $set) => self::updateTotals($get, $set, true))
-                                        ->columnSpan(['default' => 1, 'sm' => 4]),
-                                        
-                                    Forms\Components\Placeholder::make('tva_montant_display')
-                                        ->label('TVA (DT)')
-                                        ->content(fn ($get) => number_format((float) $get('qte') * (float) $get('prix_unitaire') * ((float) ($get('tva_pct') ?? $defaultTva) / 100), 3, '.', ' ') . ' DT')
-                                        ->extraAttributes(['class' => 'doc-line-tva-badge text-right'])
-                                        ->columnSpan(['default' => 1, 'sm' => 4]),
+                                        Forms\Components\Placeholder::make('prix_total_display')
+                                            ->label('Total HT')
+                                            ->content(fn ($get) => new \Illuminate\Support\HtmlString('<div class="doc-line-total text-right bg-gray-50 px-2 py-0.5 rounded">' . number_format((float) $get('qte') * (float) $get('prix_unitaire'), 3, '.', ' ') . ' DT</div>'))
+                                            ->columnSpan(['default' => 2]),
+                                            
+                                        Forms\Components\Placeholder::make('tva_montant_display')
+                                            ->label('TVA (DT)')
+                                            ->content(fn ($get) => new \Illuminate\Support\HtmlString('<div class="doc-line-tva-badge text-right text-gray-500 bg-gray-50 px-2 py-0.5 rounded">' . number_format((float) $get('qte') * (float) $get('prix_unitaire') * ((float) ($get('tva_pct') ?? $defaultTva) / 100), 3, '.', ' ') . ' DT</div>'))
+                                            ->columnSpan(['default' => 1]),
+                                    ]),
                                 ])
-                                ->columns(12)
+                                ->columns(1)
                                 ->defaultItems(1)
-                                ->addActionLabel('Ajouter produit')
+                                ->addActionLabel('Ajouter un produit')
                                 ->columnSpanFull()
                                 ->itemLabel(fn (array $state) => isset($state['produit_id']) ? (\App\Models\Product::find($state['produit_id'])?->designation_fr ?? 'Ligne') : 'Ligne')
                                 ->reorderable()
@@ -245,27 +243,10 @@ class QuotationResource extends Resource
                     Section::make('Totaux')
                         ->icon('heroicon-o-calculator')
                         ->schema([
-                            Forms\Components\TextInput::make('prix_ht')
+                            Forms\Components\Placeholder::make('prix_ht')
                                 ->label('Sous-total HT')
-                                ->numeric()
-                                ->prefix('DT')
-                                ->disabled()
-                                ->dehydrated(false)
-                                ->default(0),
-                                
-                            Forms\Components\TextInput::make('remise')
-                                ->label('Remise')
-                                ->numeric()
-                                ->prefix('DT')
-                                ->default(0)
-                                ->live(debounce: 300)
-                                ->afterStateUpdated(fn ($get, $set) => self::updateTotals($get, $set, false)),
-                                
-                            Forms\Components\Placeholder::make('remise_error')
-                                ->label('')
-                                ->content(fn ($get) => (float) ($get('remise') ?? 0) > (float) ($get('prix_ht') ?? 0) ? new \Illuminate\Support\HtmlString('<p class="text-sm text-danger-600 dark:text-danger-400">La remise ne peut pas dépasser le sous-total.</p>') : '')
-                                ->visible(fn ($get) => (float) ($get('remise') ?? 0) > (float) ($get('prix_ht') ?? 0)),
-                                
+                                ->content(fn ($get) => new \Illuminate\Support\HtmlString('<div class="doc-resume-value">' . number_format((float) ($get('prix_ht') ?: 0), 3, ',', ' ') . ' DT</div>')),
+
                             Forms\Components\TextInput::make('pourcentage_remise')
                                 ->label('Remise %')
                                 ->numeric()
@@ -273,52 +254,34 @@ class QuotationResource extends Resource
                                 ->default(0)
                                 ->live(debounce: 300)
                                 ->afterStateUpdated(function ($state, $get, $set) {
-                                    $details = $get('details') ?? [];
-                                    $totalHt = 0.0;
-                                    foreach ($details as $d) {
-                                        if (! empty($d['produit_id'])) {
-                                            $totalHt += (float) ($d['qte'] ?? 0) * (float) ($d['prix_unitaire'] ?? 0);
-                                        }
-                                    }
-                                    $set('remise', round($totalHt * (float) ($state ?? 0) / 100, 3));
+                                    $ht = (float) ($get('prix_ht') ?? 0);
+                                    $pct = (float) ($state ?? 0);
+                                    $set('remise', round($ht * ($pct / 100), 3));
                                     self::updateTotals($get, $set, false);
                                 }),
-                                
-                            Forms\Components\TextInput::make('prix_ht_apres_remise')
+
+                            Forms\Components\Hidden::make('remise'),
+
+                            Forms\Components\Placeholder::make('prix_ht_apres_remise')
                                 ->label('HT après remise')
-                                ->numeric()
-                                ->prefix('DT')
-                                ->disabled()
-                                ->dehydrated(false)
-                                ->default(0),
+                                ->content(fn ($get) => new \Illuminate\Support\HtmlString('<div class="doc-resume-value">' . number_format((float) ($get('prix_ht_apres_remise') ?: 0), 3, ',', ' ') . ' DT</div>')),
                                 
-                            Forms\Components\TextInput::make('tva')
+                            Forms\Components\Placeholder::make('tva')
                                 ->label('TVA')
-                                ->numeric()
-                                ->prefix('DT')
-                                ->disabled()
-                                ->dehydrated(false)
-                                ->default(0),
+                                ->content(fn ($get) => new \Illuminate\Support\HtmlString('<div class="doc-resume-value">' . number_format((float) ($get('tva') ?: 0), 3, ',', ' ') . ' DT</div>')),
                                 
-                            Forms\Components\TextInput::make('timbre')
+                            Forms\Components\Placeholder::make('timbre')
                                 ->label('Timbre')
-                                ->numeric()
-                                ->prefix('DT')
-                                ->default(1.000)
-                                ->live(debounce: 300)
-                                ->afterStateUpdated(fn ($get, $set) => self::updateTotals($get, $set, false)),
-                                
-                            Forms\Components\TextInput::make('prix_ttc')
+                                ->content(fn ($get) => new \Illuminate\Support\HtmlString('<div class="doc-resume-value">' . number_format((float) ($get('timbre') ?: 0), 3, ',', ' ') . ' DT</div>')),
+
+                            Forms\Components\Placeholder::make('prix_ttc')
                                 ->label('Total TTC')
-                                ->numeric()
-                                ->prefix('DT')
-                                ->disabled()
-                                ->dehydrated(false)
-                                ->default(0),
+                                ->content(fn ($get) => new \Illuminate\Support\HtmlString('<div class="doc-resume-value text-base font-bold text-gray-900">' . number_format((float) ($get('prix_ttc') ?: 0), 3, ',', ' ') . ' DT</div>')),
 
                             Forms\Components\ViewField::make('net_a_payer_display')
                                 ->hiddenLabel()
-                                ->view('filament.forms.components.net-a-payer-card'),
+                                ->view('filament.forms.components.net-a-payer-card')
+                                ->columnSpanFull(),
 
                             Forms\Components\TextInput::make('numero_fake')
                                 ->label('N° Document')
@@ -343,7 +306,7 @@ class QuotationResource extends Resource
                                 ->content(fn ($record) => $record?->created_at?->format('d/m/Y') ?? date('d/m/Y')),
                             Forms\Components\Placeholder::make('resume_statut')
                                 ->label('Statut')
-                                ->content(fn () => 'Validée'),
+                                ->content(fn () => new \Illuminate\Support\HtmlString('<span class="inline-flex items-center gap-1.5 py-0.5 px-2 rounded-md text-xs font-medium text-success-700 bg-success-50 ring-1 ring-inset ring-success-600/20 dark:bg-success-400/10 dark:text-success-400 dark:ring-success-400/20"><svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>Validée</span>')),
                         ])
                         ->columns(1)
                         ->collapsible(),
