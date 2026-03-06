@@ -225,7 +225,7 @@ class QuotationResource extends Resource
                                 ->itemLabel(fn (array $state) => isset($state['produit_id']) ? (\App\Models\Product::find($state['produit_id'])?->designation_fr ?? 'Ligne') : 'Nouveau produit')
                                 ->extraAttributes(['class' => 'overflow-visible', 'style' => 'overflow: visible !important;']),
                         ]),
-                ])->columnSpan(7),
+                ])->columnSpan(6),
 
                 // Right Column (Sidebar)
                 \Filament\Schemas\Components\Group::make()->schema([
@@ -309,7 +309,7 @@ class QuotationResource extends Resource
                                 ->label('Statut')
                                 ->content(fn () => 'Validée'),
                         ])->columns(1),
-                ])->columnSpan(5),
+                ])->columnSpan(6),
             ]),
             
             // Hidden fields
