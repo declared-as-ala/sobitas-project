@@ -39,6 +39,14 @@
         box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06);
         padding: 20px 24px;
     }
+    /* ⚠️ CRITICAL: doc-section-produits must NOT clip the select dropdown.
+       box-shadow alone doesn't cause a stacking context, but transform/filter do.
+       Adding overflow:visible here to ensure the dropdown escapes. */
+    .doc-section-produits .fi-section-content-ctn,
+    .doc-section-produits .fi-section-content,
+    .doc-section-produits > div {
+        overflow: visible !important;
+    }
     .fi-ta-table {
         border-radius: 12px;
         overflow: hidden;
