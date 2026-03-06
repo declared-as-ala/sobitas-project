@@ -15,73 +15,83 @@
             background-color: #fff7ed; /* orange-50 */
             border: 2px solid #fed7aa; /* orange-200 */
             border-radius: 0.75rem;
-            padding: 1.25rem;
+            padding: 1rem 1.25rem;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
             display: flex;
             flex-direction: column;
             width: 100%;
+            min-width: 0;
+            overflow: hidden;
+            box-sizing: border-box;
             transition: background-color 0.3s ease, border-color 0.3s ease;
         }
         :is(.dark .nap-card) {
-            background-color: rgba(124, 45, 18, 0.25); /* transparent soft orange dark */
+            background-color: rgba(124, 45, 18, 0.25);
             border-color: rgba(234, 88, 12, 0.4);
         }
         
         .nap-label {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.15em;
-            color: #ea580c; /* orange-600 */
+            letter-spacing: 0.12em;
+            color: #ea580c;
             text-align: left;
             margin-bottom: 0.5rem;
+            white-space: nowrap;
         }
         :is(.dark .nap-label) {
-            color: #fb923c; /* orange-400 */
+            color: #fb923c;
         }
         
         .nap-amount-container {
             display: flex;
             align-items: baseline;
             justify-content: flex-end;
-            gap: 0.5rem;
+            gap: 0.35rem;
+            min-width: 0;
+            overflow: hidden;
         }
         
         .nap-amount {
-            font-size: 2rem;
+            font-size: clamp(1.1rem, 3.5vw, 1.6rem);
             font-weight: 800;
             line-height: 1.1;
-            color: #111827; /* gray-900 */
+            color: #111827;
             white-space: nowrap;
-        }
-        @media (min-width: 640px) {
-            .nap-amount {
-                font-size: 2.25rem;
-            }
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
+            flex-shrink: 1;
         }
         :is(.dark .nap-amount) {
             color: #ffffff;
         }
         
         .nap-currency {
-            font-size: 1.125rem;
-            font-weight: 600;
-            color: #ea580c; /* orange-600 */
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #ea580c;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
         :is(.dark .nap-currency) {
-            color: #fb923c; /* orange-400 */
+            color: #fb923c;
         }
         
         .nap-subtext {
-            font-size: 0.8rem;
-            color: #6b7280; /* gray-500 */
+            font-size: 0.72rem;
+            color: #6b7280;
             text-align: right;
             margin-top: 0.375rem;
             margin-bottom: 0;
             line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         :is(.dark .nap-subtext) {
-            color: #9ca3af; /* gray-400 */
+            color: #9ca3af;
         }
     </style>
 
@@ -98,3 +108,4 @@
         </p>
     </div>
 </x-dynamic-component>
+
