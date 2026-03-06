@@ -52,6 +52,13 @@
     z-index: 100;
 }
 
+/* ---- Page Edit Devis : layout pleine largeur (pas de max-width qui compresse) ---- */
+.fi-page-edit-quotation .fi-main,
+.fi-page-edit-quotation [data-slot="form"] {
+    max-width: none !important;
+    width: 100%;
+}
+
 /* ---- PT column: P.T total inside repeater rows — must never wrap ---- */
 .doc-line-total {
     display: inline-block;

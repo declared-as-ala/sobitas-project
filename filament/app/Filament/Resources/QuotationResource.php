@@ -225,7 +225,7 @@ class QuotationResource extends Resource
                                 ->itemLabel(fn (array $state) => isset($state['produit_id']) ? (\App\Models\Product::find($state['produit_id'])?->designation_fr ?? 'Ligne') : 'Nouveau produit')
                                 ->extraAttributes(['class' => 'overflow-visible', 'style' => 'overflow: visible !important;']),
                         ]),
-                ])->columnSpan(6),
+                ])->columnSpan(['default' => 12, 'lg' => 8]),
 
                 // Right Column (Sidebar)
                 \Filament\Schemas\Components\Group::make()->schema([
@@ -236,7 +236,9 @@ class QuotationResource extends Resource
                                 ->prefix('DT')
                                 ->disabled()
                                 ->dehydrated(false)
-                                ->default(0),
+                                ->default(0)
+                                ->extraInputAttributes(['class' => 'min-w-0'])
+                                ->extraAttributes(['class' => '[&_.fi-input-prefix]:shrink-0 [&_.fi-input-prefix]:whitespace-nowrap']),
                                 
                             Forms\Components\TextInput::make('remise')
                                 ->label('Remise')
@@ -244,7 +246,9 @@ class QuotationResource extends Resource
                                 ->default(0)
                                 ->numeric()
                                 ->live(debounce: 400)
-                                ->afterStateUpdated(fn ($get, $set) => self::updateTotals($get, $set, false)),
+                                ->afterStateUpdated(fn ($get, $set) => self::updateTotals($get, $set, false))
+                                ->extraInputAttributes(['class' => 'min-w-0'])
+                                ->extraAttributes(['class' => '[&_.fi-input-prefix]:shrink-0 [&_.fi-input-prefix]:whitespace-nowrap']),
                                 
                             Forms\Components\TextInput::make('pourcentage_remise')
                                 ->label('Remise %')
@@ -259,14 +263,18 @@ class QuotationResource extends Resource
                                 ->prefix('DT')
                                 ->disabled()
                                 ->dehydrated(false)
-                                ->default(0),
+                                ->default(0)
+                                ->extraInputAttributes(['class' => 'min-w-0'])
+                                ->extraAttributes(['class' => '[&_.fi-input-prefix]:shrink-0 [&_.fi-input-prefix]:whitespace-nowrap']),
                                 
                             Forms\Components\TextInput::make('tva')
                                 ->label('TVA')
                                 ->prefix('DT')
                                 ->disabled()
                                 ->dehydrated(false)
-                                ->default(0),
+                                ->default(0)
+                                ->extraInputAttributes(['class' => 'min-w-0'])
+                                ->extraAttributes(['class' => '[&_.fi-input-prefix]:shrink-0 [&_.fi-input-prefix]:whitespace-nowrap']),
                                 
                             Forms\Components\TextInput::make('timbre')
                                 ->label('Timbre')
@@ -274,14 +282,18 @@ class QuotationResource extends Resource
                                 ->default(1.000)
                                 ->numeric()
                                 ->live(debounce: 400)
-                                ->afterStateUpdated(fn ($get, $set) => self::updateTotals($get, $set, false)),
+                                ->afterStateUpdated(fn ($get, $set) => self::updateTotals($get, $set, false))
+                                ->extraInputAttributes(['class' => 'min-w-0'])
+                                ->extraAttributes(['class' => '[&_.fi-input-prefix]:shrink-0 [&_.fi-input-prefix]:whitespace-nowrap']),
                                 
                             Forms\Components\TextInput::make('prix_ttc')
                                 ->label('Total TTC')
                                 ->prefix('DT')
                                 ->disabled()
                                 ->dehydrated(false)
-                                ->default(0),
+                                ->default(0)
+                                ->extraInputAttributes(['class' => 'min-w-0'])
+                                ->extraAttributes(['class' => '[&_.fi-input-prefix]:shrink-0 [&_.fi-input-prefix]:whitespace-nowrap']),
 
                             Forms\Components\ViewField::make('net_a_payer_display')
                                 ->hiddenLabel()
@@ -292,6 +304,7 @@ class QuotationResource extends Resource
                                 ->disabled()
                                 ->dehydrated(false)
                                 ->formatStateUsing(fn ($record) => $record?->numero ?? 'Nouveau')
+                                ->extraInputAttributes(['class' => 'min-w-0'])
                         ])->columns(1),
 
                     \Filament\Schemas\Components\Section::make('Résumé')
@@ -309,8 +322,8 @@ class QuotationResource extends Resource
                                 ->label('Statut')
                                 ->content(fn () => 'Validée'),
                         ])->columns(1),
-                ])->columnSpan(6),
-            ]),
+                ])->columnSpan(['default' => 12, 'lg' => 4]),
+            ])->extraAttributes(['class' => 'w-full max-w-full']),
             
             // Hidden fields
             Forms\Components\Hidden::make('numero'),

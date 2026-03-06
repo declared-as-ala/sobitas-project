@@ -53,7 +53,14 @@
             overflow: hidden;
         }
         
+        .nap-amount-wrap {
+            min-width: 0;
+            flex: 1;
+            overflow: hidden;
+        }
+        
         .nap-amount {
+            display: block;
             font-size: clamp(1.1rem, 3.5vw, 1.6rem);
             font-weight: 800;
             line-height: 1.1;
@@ -61,8 +68,6 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            min-width: 0;
-            flex-shrink: 1;
         }
         :is(.dark .nap-amount) {
             color: #ffffff;
@@ -100,7 +105,9 @@
             NET À PAYER
         </div>
         <div class="nap-amount-container">
-            <span class="nap-amount">{{ $formatted }}</span>
+            <span class="nap-amount-wrap">
+                <span class="nap-amount">{{ $formatted }}</span>
+            </span>
             <span class="nap-currency">TND</span>
         </div>
         <p class="nap-subtext">
