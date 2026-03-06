@@ -64,17 +64,17 @@ class FactureResource extends Resource
         $coordinate = Coordinate::getCached();
         
         return $schema->schema([
-            Grid::make(['default' => 3])->schema([
+            Forms\Components\Grid::make(['default' => 3])->schema([
                 // Left Column (Main)
-                Group::make()->schema([
-                    Section::make('Informations société')
+                Forms\Components\Group::make()->schema([
+                    Forms\Components\Section::make('Informations société')
                         ->schema([
                             Forms\Components\Placeholder::make('company_info')
                                 ->hiddenLabel()
                                 ->content(fn () => $coordinate ? new \Illuminate\Support\HtmlString(view('filament.components.company-info-compact', ['coordinate' => $coordinate])->render()) : '—'),
                         ]),
                         
-                    Section::make('Client')
+                    Forms\Components\Section::make('Client')
                         ->schema([
                             Forms\Components\Select::make('client_id')
                                 ->label('Client')
@@ -113,13 +113,13 @@ class FactureResource extends Resource
                         ])
                         ->columns(2),
 
-                    Section::make('Produits')
+                    Forms\Components\Section::make('Produits')
                         ->extraAttributes(['class' => 'overflow-visible', 'style' => 'overflow: visible !important;'])
                         ->schema([
                             Forms\Components\Placeholder::make('barcode_scan')
                                 ->hiddenLabel()
                                 ->content(fn () => new \Illuminate\Support\HtmlString(view('filament.components.barcode-scan-compact')->render())),
-                            Repeater::make('details')
+                            Forms\Components\Repeater::make('details')
                                 ->hiddenLabel()
                                 ->schema([
                                     Forms\Components\Select::make('produit_id')
@@ -216,8 +216,8 @@ class FactureResource extends Resource
                 ])->columnSpan(['default' => 3, 'lg' => 2]),
 
                 // Right Column (Sidebar)
-                Group::make()->schema([
-                    Section::make('Totaux')
+                Forms\Components\Group::make()->schema([
+                    Forms\Components\Section::make('Totaux')
                         ->schema([
                             Forms\Components\TextInput::make('prix_ht')
                                 ->label('Sous-total HT')
@@ -282,7 +282,7 @@ class FactureResource extends Resource
                                 ->formatStateUsing(fn ($record) => $record?->numero ?? 'Nouveau')
                         ])->columns(1),
 
-                    Section::make('Résumé')
+                    Forms\Components\Section::make('Résumé')
                         ->schema([
                             Forms\Components\Placeholder::make('resume_articles')
                                 ->label('Articles')
