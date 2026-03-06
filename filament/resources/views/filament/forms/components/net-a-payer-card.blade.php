@@ -7,67 +7,106 @@
         if (is_callable($get)) {
             $state = $get('net_a_payer') ?? $state;
         }
-        $formatted = number_format((float) $state, 3, ',', ' ');
+        $formatted = number_format((float) $state, 3, '.', ' ');
     @endphp
 
     <style>
-        .nap-solid-card {
-            background-color: #f97316; /* Solid orange matching mockup */
-            border-radius: 0.375rem;
-            padding: 0.75rem 1rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            width: 100%;
-            box-sizing: border-box;
-            color: white;
-            box-shadow: 0 4px 6px -1px rgba(249, 115, 22, 0.2);
-        }
-        :is(.dark .nap-solid-card) {
-            background-color: #ea580c;
-        }
-        
-        .nap-left-col {
+        .nap-card {
+            background-color: #fff7ed; /* orange-50 */
+            border: 2px solid #fed7aa; /* orange-200 */
+            border-radius: 0.75rem;
+            padding: 1rem 1.25rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
             display: flex;
             flex-direction: column;
-            align-items: flex-start;
+            width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+        :is(.dark .nap-card) {
+            background-color: rgba(124, 45, 18, 0.25);
+            border-color: rgba(234, 88, 12, 0.4);
         }
         
-        .nap-solid-label {
-            font-size: 0.75rem;
+        .nap-label {
+            font-size: 0.7rem;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: rgba(255, 255, 255, 0.9);
-            margin-bottom: 0px;
-        }
-        
-        .nap-solid-currency {
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: rgba(255, 255, 255, 0.8);
-            margin-top: 2px;
-        }
-        
-        .nap-solid-amount {
-            font-size: 1.4rem;
-            font-weight: 800;
-            letter-spacing: -0.01em;
-            line-height: 1;
-            color: white;
+            letter-spacing: 0.12em;
+            color: #ea580c;
+            text-align: left;
+            margin-bottom: 0.5rem;
             white-space: nowrap;
+        }
+        :is(.dark .nap-label) {
+            color: #fb923c;
+        }
+        
+        .nap-amount-container {
+            display: flex;
+            align-items: baseline;
+            justify-content: flex-end;
+            gap: 0.35rem;
+            min-width: 0;
+        }
+        
+        .nap-amount-wrap {
+            min-width: 0;
+            flex: 1;
+        }
+        
+        .nap-amount {
+            display: block;
+            font-size: clamp(1rem, 3vw, 1.5rem);
+            font-weight: 800;
+            line-height: 1.1;
+            color: #111827;
+            white-space: nowrap;
+            text-align: right;
+        }
+        :is(.dark .nap-amount) {
+            color: #ffffff;
+        }
+        
+        .nap-currency {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #ea580c;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        :is(.dark .nap-currency) {
+            color: #fb923c;
+        }
+        
+        .nap-subtext {
+            font-size: 0.72rem;
+            color: #6b7280;
+            text-align: right;
+            margin-top: 0.375rem;
+            margin-bottom: 0;
+            line-height: 1.2;
+            word-wrap: break-word;
+        }
+        :is(.dark .nap-subtext) {
+            color: #9ca3af;
         }
     </style>
 
-    <div class="nap-solid-card" role="status" aria-label="Net à payer: {{ $formatted }} DT">
-        <div class="nap-left-col">
-            <div class="nap-solid-label">
-                NET À PAYER
-            </div>
-            <div class="nap-solid-currency">TND</div>
+    <div class="nap-card" role="status" aria-label="Net à payer: {{ $formatted }} TND">
+        <div class="nap-label">
+            NET À PAYER
         </div>
-        <div>
-            <span class="nap-solid-amount">{{ $formatted }} DT</span>
+        <div class="nap-amount-container">
+            <span class="nap-amount-wrap">
+                <span class="nap-amount">{{ $formatted }}</span>
+            </span>
+            <span class="nap-currency">TND</span>
         </div>
+        <p class="nap-subtext">
+            Montant final à régler (TTC + timbre)
+        </p>
     </div>
 </x-dynamic-component>
+

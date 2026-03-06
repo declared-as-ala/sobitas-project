@@ -19,42 +19,6 @@
     text-overflow: ellipsis;
 }
 
-/* Fix product dropdown stacking inside repeater */
-.doc-lines-repeater .fi-fo-repeater-item {
-    position: relative;
-    z-index: 10;
-}
-
-.doc-lines-repeater .fi-fo-repeater-item:focus-within {
-    z-index: 50;
-}
-
-/* ---- Repeater: Dashed "Ajouter un produit" button ---- */
-.doc-lines-repeater button[type="button"][wire\:click*="addRepeaterItem"] {
-    border: 1px dashed #d1d5db !important;
-    background: transparent !important;
-    color: #4b5563 !important;
-    padding: 0.75rem !important;
-    border-radius: 0.5rem !important;
-    width: 100% !important;
-    justify-content: center !important;
-}
-
-.doc-lines-repeater button[type="button"][wire\:click*="addRepeaterItem"]:hover {
-    border-color: #9ca3af !important;
-    background: #f9fafb !important;
-}
-
-.dark .doc-lines-repeater button[type="button"][wire\:click*="addRepeaterItem"] {
-    border-color: #4b5563 !important;
-    color: #9ca3af !important;
-}
-
-.dark .doc-lines-repeater button[type="button"][wire\:click*="addRepeaterItem"]:hover {
-    border-color: #6b7280 !important;
-    background: #1f2937 !important;
-}
-
 /* ---- Produit select dropdown: prevent clipping (overflow) and stacking (z-index) ---- */
 /* Cause: section/repeater containers or stacking context clip or hide the searchable select listbox */
 /* Scoped to Facture TVA and Devis (Quotation) create/edit pages */
