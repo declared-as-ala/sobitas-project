@@ -126,22 +126,22 @@ class FactureResource extends Resource
                                         ->label('Produit')
                                         ->searchable()
                                         ->getSearchResultsUsing(function (string $search): array {
-                                            $query = \App\Models\Product::query()
-                                                ->where('qte', '>', 0)
-                                                ->orderBy('designation_fr');
-                                            if (strlen($search) >= 1) {
-                                                $query->where(function ($q) use ($search) {
+                                            return \App\Models\Product::query()
+                                                ->where(function ($q) use ($search) {
                                                     $q->where('designation_fr', 'like', '%' . $search . '%')
                                                         ->orWhere('code_product', 'like', '%' . $search . '%');
-                                                });
-                                            }
-                                            return $query->limit(30)->get()
-                                                ->mapWithKeys(fn ($p) => [$p->id => ($p->designation_fr ?? '') . ' (' . (int) $p->qte . ')'])
+                                                })
+                                                ->orderBy('designation_fr')
+                                                ->limit(30)
+                                                ->get()
+                                                ->mapWithKeys(fn ($p) => [
+                                                    $p->id => ($p->designation_fr ?? '') . ' (' . (int) $p->qte . ' en stock)'
+                                                ])
                                                 ->all();
                                         })
                                         ->getOptionLabelUsing(fn ($value): ?string => $value ? (function () use ($value) {
                                             $p = \App\Models\Product::find($value);
-                                            return $p ? (($p->designation_fr ?? '') . ' (' . (int) $p->qte . ')') : null;
+                                            return $p ? (($p->designation_fr ?? '') . ' (' . (int) $p->qte . ' en stock)') : null;
                                         })() : null)
                                         ->required()
                                         ->live()

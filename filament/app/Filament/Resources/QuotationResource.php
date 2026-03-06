@@ -145,7 +145,6 @@ class QuotationResource extends Resource
                                     Forms\Components\Select::make('produit_id')
                                         ->label('Produit')
                                         ->searchable()
-                                        ->minItemsForSearch(0)
                                         ->getSearchResultsUsing(function (string $search): array {
                                             return \App\Models\Product::query()
                                                 ->where(function ($q) use ($search) {
