@@ -83,47 +83,53 @@ class QuotationResource extends Resource
                     Section::make('Client')
                         ->icon('heroicon-o-user')
                         ->schema([
-                            Forms\Components\Select::make('client_id')
-                                ->label('Client')
-                                ->relationship('client', 'name')
-                                ->getOptionLabelFromRecordUsing(fn ($record) => (string) ($record->name ?? 'Client #' . $record->id))
-                                ->searchable()
-                                ->preload()
-                                ->placeholder('Sélectionner un client')
-                                ->createOptionForm([
-                                    Forms\Components\TextInput::make('name')->required()->label('Nom'),
-                                    Forms\Components\TextInput::make('phone_1')->label('Téléphone'),
-                                    Forms\Components\TextInput::make('email')->email()->label('Email'),
-                                    Forms\Components\TextInput::make('adresse')->label('Adresse'),
-                                    Forms\Components\TextInput::make('matricule')->label('Matricule fiscal'),
-                                ])
-                                ->createOptionModalHeading('Nouveau Client')
-                                ->required()
-                                ->live()
-                                ->afterStateUpdated(function ($state, $set) {
-                                    if ($state) {
-                                        $client = Client::find($state);
-                                        $set('client_adresse', $client?->adresse ?? '');
-                                        $set('client_phone', $client?->phone_1 ?? '');
-                                        $set('client_email', $client?->email ?? '');
-                                    } else {
-                                        $set('client_adresse', '');
-                                        $set('client_phone', '');
-                                        $set('client_email', '');
-                                    }
-                                }),
-                            Forms\Components\TextInput::make('client_adresse')
-                                ->label('Adresse')
-                                ->disabled()
-                                ->dehydrated(false),
-                            Forms\Components\TextInput::make('client_phone')
-                                ->label('N° Tél')
-                                ->disabled()
-                                ->dehydrated(false),
-                            Forms\Components\TextInput::make('client_email')
-                                ->label('Email')
-                                ->disabled()
-                                ->dehydrated(false),
+                            Grid::make(2)->schema([
+                                Forms\Components\Select::make('client_id')
+                                    ->label('Client')
+                                    ->relationship('client', 'name')
+                                    ->getOptionLabelFromRecordUsing(fn ($record) => (string) ($record->name ?? 'Client #' . $record->id))
+                                    ->searchable()
+                                    ->preload()
+                                    ->placeholder('Sélectionner un client')
+                                    ->createOptionForm([
+                                        Forms\Components\TextInput::make('name')->required()->label('Nom'),
+                                        Forms\Components\TextInput::make('phone_1')->label('Téléphone'),
+                                        Forms\Components\TextInput::make('email')->email()->label('Email'),
+                                        Forms\Components\TextInput::make('adresse')->label('Adresse'),
+                                        Forms\Components\TextInput::make('matricule')->label('Matricule fiscal'),
+                                    ])
+                                    ->createOptionModalHeading('Nouveau Client')
+                                    ->required()
+                                    ->live()
+                                    ->columnSpanFull()
+                                    ->afterStateUpdated(function ($state, $set) {
+                                        if ($state) {
+                                            $client = Client::find($state);
+                                            $set('client_adresse', $client?->adresse ?? '');
+                                            $set('client_phone', $client?->phone_1 ?? '');
+                                            $set('client_email', $client?->email ?? '');
+                                        } else {
+                                            $set('client_adresse', '');
+                                            $set('client_phone', '');
+                                            $set('client_email', '');
+                                        }
+                                    }),
+                                Forms\Components\TextInput::make('client_adresse')
+                                    ->label('Adresse')
+                                    ->disabled()
+                                    ->dehydrated(false)
+                                    ->columnSpanFull(),
+                                Forms\Components\TextInput::make('client_phone')
+                                    ->label('N° Tél')
+                                    ->disabled()
+                                    ->dehydrated(false)
+                                    ->columnSpan(1),
+                                Forms\Components\TextInput::make('client_email')
+                                    ->label('Email')
+                                    ->disabled()
+                                    ->dehydrated(false)
+                                    ->columnSpan(1),
+                            ]),
                         ])
                         ->columns(1)
                         ->collapsible(),

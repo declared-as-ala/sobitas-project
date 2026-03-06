@@ -29,9 +29,32 @@ class EditQuotation extends EditRecord
         return [DocumentTimelineWidget::class];
     }
 
-    public function getHeading(): string
+    public function getHeading(): string|\Illuminate\Contracts\Support\Htmlable
     {
-        return 'Devis #' . $this->record->numero;
+        $numero = $this->record->numero;
+        $statut = $this->getStatutLabel($this->record->statut ?? null);
+        
+        $badgeHtml = '';
+        if ($statut) {
+            $statusClass = match ($this->record->statut) {
+                'valide' => 'bg-green-100 text-green-800 border-green-200',
+                'refuse' => 'bg-red-100 text-red-800 border-red-200',
+                'en_attente' => 'bg-yellow-100 text-yellow-800 border-yellow-200',
+                default => 'bg-gray-100 text-gray-800 border-gray-200'
+            };
+            
+            // Add a small checkmark icon for 'valide'
+            $iconHtml = '';
+            if ($this->record->statut === 'valide') {
+                $iconHtml = '<svg class="w-3.5 h-3.5 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>';
+            }
+            
+            $badgeHtml = '<span class="ml-3 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ' . $statusClass . '">' . $iconHtml . e($statut) . '</span>';
+        }
+
+        return new \Illuminate\Support\HtmlString(
+            '<div class="flex items-center">Devis #' . e($numero) . $badgeHtml . '</div>'
+        );
     }
 
     public function getSubheading(): ?\Illuminate\Contracts\Support\Htmlable
@@ -55,27 +78,22 @@ class EditQuotation extends EditRecord
             $defaultTva
         );
         
-        $net = number_format($calc['net_a_payer'], 3, ',', ' ') . ' TND';
+        $net = number_format($calc['net_a_payer'], 3, ',', ' ') . ' DT';
 
         $html = '<style>
             .fi-header { position: relative !important; top: auto !important; z-index: 0 !important; }
         </style>';
-        $html .= '<div class="flex flex-wrap items-center gap-2 mt-2">';
-        $html .= '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 shadow-sm border border-gray-200 dark:border-gray-700">👤 Client : ' . e($client) . '</span>';
-        $html .= '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 shadow-sm border border-gray-200 dark:border-gray-700">📅 Date : ' . e($date) . '</span>';
-        $html .= '<span class="inline-flex items-center px-4 py-1.5 rounded-full text-[15px] font-bold bg-orange-100 text-orange-800 dark:bg-orange-500/20 dark:text-orange-400 shadow-sm border border-orange-200 dark:border-orange-500/30">💰 Net à payer : ' . e($net) . '</span>';
+        $html .= '<div class="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-500 dark:text-gray-400 font-medium">';
         
-        $statut = $this->getStatutLabel($this->record->statut ?? null);
-        if ($statut) {
-            $statusClass = match ($this->record->statut) {
-                'valide' => 'bg-green-100 text-green-800 border-green-200',
-                'refuse' => 'bg-red-100 text-red-800 border-red-200',
-                'en_attente' => 'bg-yellow-100 text-yellow-800 border-yellow-200',
-                default => 'bg-gray-100 text-gray-800 border-gray-200'
-            };
-            $html .= '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border shadow-sm ' . $statusClass . '">' . e($statut) . '</span>';
-        }
-
+        // Client Icon + Name
+        $html .= '<span class="inline-flex items-center gap-1.5"><svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>' . e($client) . '</span>';
+        
+        // Date Icon + Value
+        $html .= '<span class="inline-flex items-center gap-1.5"><svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>' . e($date) . '</span>';
+        
+        // Net à payer
+        $html .= '<span class="inline-flex items-center gap-1.5 text-orange-600 dark:text-orange-500"><svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> Net à payer : <strong>' . e($net) . '</strong></span>';
+        
         $html .= '</div>';
 
         return new \Illuminate\Support\HtmlString($html);
@@ -284,7 +302,7 @@ class EditQuotation extends EditRecord
             Actions\Action::make('envoyer_email')
                 ->label('Envoyer')
                 ->icon('heroicon-o-paper-airplane')
-                ->color('primary')
+                ->color('warning')
                 ->form([
                     \Filament\Forms\Components\TextInput::make('email')
                         ->label('Adresse Email')
@@ -334,7 +352,7 @@ class EditQuotation extends EditRecord
                     ->modalDescription('Cette action est irréversible.')
                     ->modalSubmitActionLabel('Oui, supprimer')
                     ->modalCancelActionLabel('Annuler'),
-            ])->label('Autres actions')->icon('heroicon-o-ellipsis-vertical'),
+            ])->label('Autres actions')->icon('heroicon-o-ellipsis-horizontal'),
         ];
     }
 
@@ -344,8 +362,8 @@ class EditQuotation extends EditRecord
     protected function getFormActions(): array
     {
         return [
-            $this->getSaveFormAction()->label('Enregistrer')->icon('heroicon-o-check-circle'),
-            $this->getCancelFormAction()->label('Annuler')->icon('heroicon-o-x-circle'),
+            $this->getSaveFormAction()->label('Enregistrer')->icon('heroicon-o-check-circle')->color('warning'),
+            $this->getCancelFormAction()->label('Annuler')->icon('heroicon-o-x-circle')->color('gray'),
         ];
     }
 
