@@ -70,15 +70,15 @@ class QuotationResource extends Resource
         return $schema->schema([
             Grid::make(['default' => 3])->schema([
                 // Left Column (Main)
-                Group::make()->schema([
-                    Section::make('Informations société')
+                Forms\Components\Group::make()->schema([
+                    Forms\Components\Section::make('Informations société')
                         ->schema([
                             Forms\Components\Placeholder::make('company_info')
                                 ->hiddenLabel()
                                 ->content(fn () => $coordinate ? new \Illuminate\Support\HtmlString(view('filament.components.company-info-compact', ['coordinate' => $coordinate])->render()) : '—'),
                         ]),
                         
-                    Section::make('Client')
+                    Forms\Components\Section::make('Client')
                         ->schema([
                             Forms\Components\Select::make('client_id')
                                 ->label('Client')
@@ -125,7 +125,7 @@ class QuotationResource extends Resource
                         ])
                         ->columns(2),
 
-                    Section::make('Produits')
+                    Forms\Components\Section::make('Produits')
                         ->extraAttributes(['class' => 'overflow-visible', 'style' => 'overflow: visible !important;'])
                         ->schema([
                             Forms\Components\Placeholder::make('barcode_scan')
