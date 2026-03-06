@@ -68,7 +68,7 @@ class QuotationResource extends Resource
         $coordinate = Coordinate::getCached();
         
         return $schema->schema([
-            \Filament\Schemas\Components\Grid::make(3)->schema([
+            \Filament\Schemas\Components\Grid::make(12)->schema([
                 // Left Column (Main)
                 \Filament\Schemas\Components\Group::make()->schema([
                     \Filament\Schemas\Components\Section::make('Informations société')
@@ -225,7 +225,7 @@ class QuotationResource extends Resource
                                 ->itemLabel(fn (array $state) => isset($state['produit_id']) ? (\App\Models\Product::find($state['produit_id'])?->designation_fr ?? 'Ligne') : 'Nouveau produit')
                                 ->extraAttributes(['class' => 'overflow-visible', 'style' => 'overflow: visible !important;']),
                         ]),
-                ])->columnSpan(2),
+                ])->columnSpan(7),
 
                 // Right Column (Sidebar)
                 \Filament\Schemas\Components\Group::make()->schema([
@@ -309,7 +309,7 @@ class QuotationResource extends Resource
                                 ->label('Statut')
                                 ->content(fn () => 'Validée'),
                         ])->columns(1),
-                ])->columnSpan(1),
+                ])->columnSpan(5),
             ]),
             
             // Hidden fields
