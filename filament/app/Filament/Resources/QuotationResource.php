@@ -238,12 +238,14 @@ class QuotationResource extends Resource
                         ->columnSpanFull(),
                 ])->columnSpan(2),
 
-                // Right Column (Sidebar): Totaux + Résumé
+                 // Right Column (Sidebar): Totaux + Résumé
                 Grid::make(1)->schema([
                     Section::make('Totaux')
                         ->icon('heroicon-o-calculator')
                         ->schema([
-                            Forms\Components\Placeholder::make('prix_ht')
+                            // IMPORTANT: Placeholder names MUST differ from data field names.
+                            // Using same name causes $get() to resolve itself → infinite loop → OOM.
+                            Forms\Components\Placeholder::make('prix_ht_display')
                                 ->label('Sous-total HT')
                                 ->content(fn ($get) => new \Illuminate\Support\HtmlString('<div class="doc-resume-value">' . number_format((float) ($get('prix_ht') ?: 0), 3, ',', ' ') . ' DT</div>')),
 
@@ -260,21 +262,19 @@ class QuotationResource extends Resource
                                     self::updateTotals($get, $set, false);
                                 }),
 
-                            Forms\Components\Hidden::make('remise'),
-
-                            Forms\Components\Placeholder::make('prix_ht_apres_remise')
+                            Forms\Components\Placeholder::make('prix_ht_apres_remise_display')
                                 ->label('HT après remise')
                                 ->content(fn ($get) => new \Illuminate\Support\HtmlString('<div class="doc-resume-value">' . number_format((float) ($get('prix_ht_apres_remise') ?: 0), 3, ',', ' ') . ' DT</div>')),
                                 
-                            Forms\Components\Placeholder::make('tva')
+                            Forms\Components\Placeholder::make('tva_display')
                                 ->label('TVA')
                                 ->content(fn ($get) => new \Illuminate\Support\HtmlString('<div class="doc-resume-value">' . number_format((float) ($get('tva') ?: 0), 3, ',', ' ') . ' DT</div>')),
                                 
-                            Forms\Components\Placeholder::make('timbre')
+                            Forms\Components\Placeholder::make('timbre_display')
                                 ->label('Timbre')
                                 ->content(fn ($get) => new \Illuminate\Support\HtmlString('<div class="doc-resume-value">' . number_format((float) ($get('timbre') ?: 0), 3, ',', ' ') . ' DT</div>')),
 
-                            Forms\Components\Placeholder::make('prix_ttc')
+                            Forms\Components\Placeholder::make('prix_ttc_display')
                                 ->label('Total TTC')
                                 ->content(fn ($get) => new \Illuminate\Support\HtmlString('<div class="doc-resume-value text-base font-bold text-gray-900">' . number_format((float) ($get('prix_ttc') ?: 0), 3, ',', ' ') . ' DT</div>')),
 
@@ -313,12 +313,16 @@ class QuotationResource extends Resource
                 ])->columnSpan(1),
             ])->columnSpanFull(),
             
-            // Hidden fields — only fields that have NO visible counterpart above
+            // Hidden fields — persist data to DB, read by the *_display Placeholders above
             Forms\Components\Hidden::make('numero'),
+            Forms\Components\Hidden::make('prix_ht'),
+            Forms\Components\Hidden::make('pourcentage_remise'),
+            Forms\Components\Hidden::make('prix_ht_apres_remise'),
+            Forms\Components\Hidden::make('tva'),
+            Forms\Components\Hidden::make('prix_ttc'),
+            Forms\Components\Hidden::make('timbre')->default(1.000),
+            Forms\Components\Hidden::make('remise'),
             Forms\Components\Hidden::make('net_a_payer'),
-            // NOTE: prix_ht, prix_ht_apres_remise, tva, timbre, prix_ttc, pourcentage_remise, remise
-            // are now rendered as Placeholder/TextInput in the Totaux section — duplicating them
-            // here as Hidden fields causes a state-resolution loop and memory exhaustion.
         ]);
     }
 
