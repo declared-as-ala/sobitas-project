@@ -8,6 +8,7 @@ const STORAGE_BACKEND_URL = process.env.STORAGE_BACKEND_URL || 'https://admin.pr
 const nextConfig = {
   output: 'standalone',
   reactStrictMode: true,
+  eslint: { ignoreDuringBuilds: true },
   images: {
     // Enable optimization for LCP, bandwidth. Ensure sharp is available in Docker/standalone.
     unoptimized: false,

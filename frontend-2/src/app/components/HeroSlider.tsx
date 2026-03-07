@@ -131,6 +131,26 @@ export const HeroSlider = memo(function HeroSlider({ slides, staticImages }: Her
             sizes="100vw"
           />
         </div>
+
+        {/* Gradient overlay for readability */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" aria-hidden="true" />
+
+        {/* Content overlay: CTA button (same as carousel hero) */}
+        <div className="relative h-full w-full max-w-7xl mx-auto pl-14 pr-14 sm:pl-6 sm:pr-6 lg:px-8 flex items-center">
+          <div className="max-w-2xl lg:max-w-3xl">
+            <div className="flex flex-wrap gap-2 sm:gap-3 md:gap-4">
+              <Button
+                size="lg"
+                className="rounded-xl bg-red-600 hover:bg-red-700 text-white px-6 sm:px-8 md:px-10 lg:px-12 h-12 sm:h-14 md:h-16 text-sm sm:text-base md:text-lg lg:text-xl min-h-[56px] sm:min-h-[64px] md:min-h-[72px] min-w-[140px] sm:min-w-[160px] md:min-w-[180px] shadow-lg hover:shadow-xl transition-colors font-bold"
+                asChild
+              >
+                <LinkWithLoading href="/shop" aria-label="Découvrir nos produits" loadingMessage="Chargement...">
+                  Découvrir nos produits
+                </LinkWithLoading>
+              </Button>
+            </div>
+          </div>
+        </div>
       </section>
     );
   }

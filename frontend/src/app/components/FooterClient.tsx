@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Facebook, Instagram, Linkedin, Mail, Phone, MapPin, Sparkles, Loader2, MessageCircle } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
@@ -95,12 +96,13 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
               className="flex justify-start"
             >
               <Link href="/" className="block max-w-[200px] sm:max-w-[220px] opacity-90 hover:opacity-100 transition-opacity duration-300">
-                <img
+                <Image
                   src={getStorageUrl(LOGO_STORAGE_PATH)}
                   alt="Protein.tn - SOBITAS"
                   width={200}
                   height={65}
                   className="w-full h-auto object-contain object-left"
+                  sizes="(max-width: 480px) 160px, (max-width: 768px) 200px, 220px"
                   loading="lazy"
                 />
               </Link>
@@ -228,7 +230,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
           {/* Contact Info & Social */}
           <div className="space-y-6">
             <div className="relative h-12 w-auto mb-6 shrink-0 flex items-center">
-              <img
+              <Image
                 src={getStorageUrl(LOGO_STORAGE_PATH)}
                 alt="Protein.tn"
                 width={200}
