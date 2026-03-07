@@ -29,6 +29,9 @@ import { getPriceDisplay } from '@/util/productPrice';
 import { useDebounce } from '@/util/debounce';
 import type { Product } from '@/types';
 
+/** Logo from frontend public folder (header & footer, web + mobile) */
+const LOGO_SRC = '/logo-sobitas.png';
+
 const SCROLL_THRESHOLD = 24;
 const MOBILE_NAV_SCROLL_THRESHOLD = 20;
 const MOBILE_NAV_SCROLL_DELTA = 12;
@@ -231,7 +234,7 @@ export function HeaderClient() {
           >
             <Link href="/" className="flex items-center justify-start flex-1 min-w-0 max-w-[14rem] sm:max-w-[16rem] -ml-1" aria-label="Protein.tn - Accueil">
               <img
-                src="/logo-sobitas.png"
+                src={LOGO_SRC}
                 alt="Protein.tn"
                 width={180}
                 height={60}
@@ -298,7 +301,7 @@ export function HeaderClient() {
             <div className="flex items-center justify-between h-[72px] gap-4">
               <Link href="/" className="flex-shrink-0 flex items-center" aria-label="Protein.tn - Accueil">
                 <img
-                  src="/logo-sobitas.png"
+                  src={LOGO_SRC}
                   alt="Protein.tn"
                   width={240}
                   height={80}
@@ -569,7 +572,7 @@ export function HeaderClient() {
             <SheetTitle className="sr-only">Menu</SheetTitle>
             <Link href="/" onClick={closeMobileMenu} className="block max-w-[160px]">
               <img
-                src="/logo-sobitas.png"
+                src={LOGO_SRC}
                 alt="Protein.tn"
                 width={160}
                 height={52}

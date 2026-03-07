@@ -10,6 +10,9 @@ import { subscribeNewsletter, getCmsPages } from '@/services/api';
 import { toast } from 'sonner';
 import type { CmsPage } from '@/services/api';
 
+/** Logo from frontend public folder (header & footer, web + mobile) */
+const LOGO_SRC = '/logo-sobitas.png';
+
 interface FooterClientProps {
   pages?: CmsPage[];
 }
@@ -93,7 +96,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
             >
               <Link href="/" className="block max-w-[200px] sm:max-w-[220px] opacity-90 hover:opacity-100 transition-opacity duration-300">
                 <img
-                  src="/logo-sobitas.png"
+                  src={LOGO_SRC}
                   alt="Protein.tn - SOBITAS"
                   width={200}
                   height={65}
@@ -226,7 +229,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
           <div className="space-y-6">
             <div className="relative h-12 w-auto mb-6 shrink-0 flex items-center">
               <img
-                src="/logo-sobitas.png"
+                src={LOGO_SRC}
                 alt="Protein.tn"
                 width={200}
                 height={64}

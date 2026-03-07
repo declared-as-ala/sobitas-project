@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Jobs\SendSmsJob;
 use App\Mail\SoumissionMail;
 use App\Models\Commande;
 use App\Models\CommandeDetail;
@@ -12,6 +11,7 @@ use App\Models\CouponRedemption;
 use App\Models\Product;
 use App\Services\ClientService;
 use App\Services\CouponService;
+use App\Services\SmsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -220,17 +220,30 @@ class CommandeController extends Controller
             return $new_facture;
         });
 
-        // ── Queue SMS notification (non-blocking) ────────
-        if ($new_facture->phone && ($new_facture->nom || $new_facture->livraison_nom)) {
-            $msg = Message::getCached();
-            if ($msg && $msg->msg_passez_commande) {
-                $text = $msg->msg_passez_commande;
-                $nom = $new_facture->nom ?: $new_facture->livraison_nom ?: '';
-                $prenom = $new_facture->prenom ?: $new_facture->livraison_prenom ?: '';
-                $sms = str_replace(['[nom]', '[prenom]', '[num_commande]'], [$nom, $prenom, $new_facture->numero], $text);
-
-                SendSmsJob::dispatch($new_facture->phone, $sms);
+        // ── Send SMS immediately (same as backend: synchronous, no queue) ────────
+        try {
+            $phone = $new_facture->phone ?? $new_facture->livraison_phone ?? null;
+            if ($phone && ! empty(trim((string) $phone))) {
+                $msg = Message::getCached();
+                if ($msg && ! empty(trim((string) ($msg->msg_passez_commande ?? '')))) {
+                    $nom = (string) ($new_facture->nom ?: $new_facture->livraison_nom ?: '');
+                    $prenom = (string) ($new_facture->prenom ?: $new_facture->livraison_prenom ?: '');
+                    $numero = (string) ($new_facture->numero ?? '');
+                    $sms = str_replace(
+                        ['[nom]', '[prenom]', '[num_commande]'],
+                        [$nom, $prenom, $numero],
+                        $msg->msg_passez_commande
+                    );
+                    if (! empty(trim($sms))) {
+                        app(SmsService::class)->send_sms($phone, $sms);
+                    }
+                }
             }
+        } catch (\Exception $e) {
+            Log::error('Failed to send order SMS', [
+                'commande_id' => $new_facture->id,
+                'error'       => $e->getMessage(),
+            ]);
         }
 
         // ── Send emails immediately (same logic as backend: SoumissionMail to admin + client) ─────
