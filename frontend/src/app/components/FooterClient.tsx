@@ -6,7 +6,7 @@ import { Facebook, Instagram, Linkedin, Mail, Phone, MapPin, Sparkles, Loader2, 
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { motion } from 'motion/react';
-import { subscribeNewsletter, getStorageUrl, getCmsPages } from '@/services/api';
+import { subscribeNewsletter, getCmsPages } from '@/services/api';
 import { toast } from 'sonner';
 import type { CmsPage } from '@/services/api';
 
@@ -93,7 +93,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
             >
               <Link href="/" className="block max-w-[140px] opacity-90 hover:opacity-100 transition-opacity duration-300">
                 <img
-                  src={getStorageUrl('coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp')}
+                  src="/logo-sobitas.png"
                   alt="Protein.tn - SOBITAS"
                   width={140}
                   height={45}
@@ -226,7 +226,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
           <div className="space-y-6">
             <div className="relative h-8 w-auto mb-6 shrink-0 flex items-center">
               <img
-                src={getStorageUrl('coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp')}
+                src="/logo-sobitas.png"
                 alt="Protein.tn"
                 width={150}
                 height={48}

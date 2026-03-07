@@ -231,7 +231,7 @@ export function HeaderClient() {
           >
             <Link href="/" className="flex items-center justify-start flex-1 min-w-0 max-w-[11rem] sm:max-w-[12rem] -ml-1" aria-label="Protein.tn - Accueil">
               <img
-                src={getStorageUrl('coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp')}
+                src="/logo-sobitas.png"
                 alt="Protein.tn"
                 width={140}
                 height={48}
@@ -298,7 +298,7 @@ export function HeaderClient() {
             <div className="flex items-center justify-between h-16 gap-4">
               <Link href="/" className="flex-shrink-0 flex items-center" aria-label="Protein.tn - Accueil">
                 <img
-                  src={getStorageUrl('coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp')}
+                  src="/logo-sobitas.png"
                   alt="Protein.tn"
                   width={200}
                   height={70}
@@ -569,7 +569,7 @@ export function HeaderClient() {
             <SheetTitle className="sr-only">Menu</SheetTitle>
             <Link href="/" onClick={closeMobileMenu} className="block max-w-[120px]">
               <img
-                src={getStorageUrl('coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp')}
+                src="/logo-sobitas.png"
                 alt="Protein.tn"
                 width={120}
                 height={38}
