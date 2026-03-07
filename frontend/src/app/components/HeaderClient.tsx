@@ -568,13 +568,12 @@ export function HeaderClient() {
           <SheetHeader className="px-5 py-4 border-b border-gray-200 dark:border-gray-800 shrink-0">
             <SheetTitle className="sr-only">Menu</SheetTitle>
             <Link href="/" onClick={closeMobileMenu} className="block max-w-[120px]">
-              <Image
+              <img
                 src={getStorageUrl('coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp')}
                 alt="Protein.tn"
                 width={120}
                 height={38}
                 className="h-8 w-auto object-contain"
-                unoptimized
               />
             </Link>
           </SheetHeader>
