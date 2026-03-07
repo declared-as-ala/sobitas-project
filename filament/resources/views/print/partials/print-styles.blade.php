@@ -16,7 +16,7 @@
 
     .print-sheet { width: 210mm; min-height: 297mm; margin: 16px auto; padding: 20px 24px; background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.06); }
     .print-header { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 2px solid #e2e8f0; }
-    .print-logo { max-width: 160px; height: 56px; max-height: 56px; object-fit: contain; display: block; }
+    .print-logo { max-width: 220px; height: 80px; max-height: 80px; object-fit: contain; display: block; }
 .print-company-name { font-size: 18px; font-weight: 700; color: #0f172a; }
 .print-company .print-company-name { margin-top: 8px; }
     .print-company-meta { font-size: 12px; color: #475569; line-height: 1.6; margin-top: 8px; }
