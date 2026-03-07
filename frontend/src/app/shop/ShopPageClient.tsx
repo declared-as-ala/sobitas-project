@@ -23,6 +23,7 @@ import type { Product, Category, Brand } from '@/types';
 import { searchProducts, getProductsByCategory, getProductsBySubCategory, getProductsByBrand } from '@/services/api';
 import { getStorageUrl } from '@/services/api';
 import { getEffectivePrice } from '@/util/productPrice';
+import { isInStock } from '@/util/cartStock';
 
 const SKELETON_MIN_MS = 300;
 
@@ -546,11 +547,7 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
 
     // In stock filter
     if (inStockOnly) {
-      filtered = filtered.filter(product => {
-        // rupture === 1 means in stock, undefined also means in stock
-        const isInStock = (product as any).rupture === 1 || (product as any).rupture === undefined;
-        return isInStock;
-      });
+      filtered = filtered.filter(product => isInStock(product as any));
     }
 
     return filtered;

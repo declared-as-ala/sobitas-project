@@ -13,7 +13,7 @@ import { useFavorites } from '@/contexts/FavoritesContext';
 import { getStorageUrl } from '@/services/api';
 import { toast } from 'sonner';
 import { getPriceDisplay } from '@/util/productPrice';
-import { getStockDisponible } from '@/util/cartStock';
+import { getStockDisponible, isInStock } from '@/util/cartStock';
 import { useState, useMemo, memo, useCallback } from 'react';
 type Product = ApiProduct | {
   id: number;
@@ -75,7 +75,6 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
         : 0;
     const isNew = product.new_product === 1;
     const isBestSeller = product.best_seller === 1;
-    const isInStock = (product as any).rupture === 1 || (product as any).rupture === undefined;
     return {
       name,
       slug,
@@ -85,7 +84,7 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
       discount,
       isNew,
       isBestSeller,
-      isInStock,
+      isInStock: isInStock(product as any),
     };
   }, [product]);
 

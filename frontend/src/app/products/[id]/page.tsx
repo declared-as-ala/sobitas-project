@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { getProductDetails, getSimilarProducts } from '@/services/api';
 import { getStorageUrl } from '@/services/api';
+import { isInStock } from '@/util/cartStock';
 import { ProductDetailClient } from './ProductDetailClient';
 import { ProductDetailFallbackClient } from '@/app/shop/ProductDetailFallbackClient';
 import type { Product } from '@/types';
@@ -47,7 +48,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 function buildProductJsonLd(product: Product, baseUrl: string) {
   const imageUrl = product.cover ? getStorageUrl(product.cover) : '';
   const price = product.promo ?? product.prix;
-  const inStock = (product as { rupture?: number }).rupture !== 1;
+  const inStock = isInStock(product);
   return {
     '@context': 'https://schema.org',
     '@type': 'Product',

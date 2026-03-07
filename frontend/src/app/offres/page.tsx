@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import { getAllProducts } from '@/services/api';
 import { hasValidPromo } from '@/util/productPrice';
+import { isInStock } from '@/util/cartStock';
 import { OffresPageClient } from './OffresPageClient';
 import type { Product } from '@/types';
 

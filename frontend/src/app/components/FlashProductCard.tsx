@@ -10,7 +10,7 @@ import { getStorageUrl } from '@/services/api';
 import { useCart } from '@/app/contexts/CartContext';
 import { toast } from 'sonner';
 import { getPriceDisplay } from '@/util/productPrice';
-import { getStockDisponible } from '@/util/cartStock';
+import { getStockDisponible, isInStock } from '@/util/cartStock';
 import { useState, useMemo, memo, useCallback } from 'react';
 
 type FlashProduct = {
@@ -48,14 +48,13 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
       priceDisplay.hasPromo && priceDisplay.oldPrice != null && priceDisplay.oldPrice > 0
         ? Math.round(((priceDisplay.oldPrice - priceDisplay.finalPrice) / priceDisplay.oldPrice) * 100)
         : 0;
-    const isInStock = (product as any).rupture === 1 || (product as any).rupture === undefined;
     return {
       name,
       slug,
       image,
       priceDisplay,
       discount,
-      isInStock,
+      isInStock: isInStock(product as any),
     };
   }, [product]);
 

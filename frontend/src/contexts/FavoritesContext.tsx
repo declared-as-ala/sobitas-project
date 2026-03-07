@@ -11,7 +11,7 @@ export interface FavoriteProduct {
   cover?: string;
   prix?: number;
   promo?: number | null;
-  rupture?: number;
+  rupture?: number | boolean;
 }
 
 interface FavoritesContextValue {

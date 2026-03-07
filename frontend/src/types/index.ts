@@ -23,7 +23,7 @@ export interface Product {
   pack?: number;
   note?: number;
   publier?: number;
-  rupture?: number;
+  rupture?: number | boolean;
   meta?: string;
   meta_description_fr?: string;
   content_seo?: string;
@@ -35,6 +35,7 @@ export interface Product {
   brand?: Brand;
   reviews?: Review[];
   qte?: number;
+  low_stock_threshold?: number;
   nutrition_values?: string | null;
   questions?: string | null;
   code_product?: string | null;
@@ -212,6 +213,8 @@ export interface QuickOrderPayload {
   /** Required: first name / family name */
   nom: string;
   prenom: string;
+  /** Required: customer email */
+  email: string;
   phone: string;
   /** New flow: gouvernorat + délégation + localité (like checkout). If set, address is not required. */
   gouvernorat?: string;

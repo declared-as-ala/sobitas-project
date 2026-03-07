@@ -12,6 +12,7 @@ import { submitQuickOrder, getProductDetails, getStorageUrl, applyCoupon, remove
 import type { QuickOrderPayload, QuickOrderResponse } from '@/types';
 import type { QuickOrderProduct } from '@/contexts/QuickOrderContext';
 import { getPriceDisplay } from '@/util/productPrice';
+import { isInStock } from '@/util/cartStock';
 import { Loader2, CheckCircle2, Zap, X, Minus, Plus, Tag } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/app/components/ui/utils';
@@ -53,6 +54,7 @@ export function QuickOrderDrawer({
   const [isLoadingAromes, setIsLoadingAromes] = useState(false);
   const [nom, setNom] = useState('');
   const [prenom, setPrenom] = useState('');
+  const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [gouvernorat, setGouvernorat] = useState('');
   const [delegation, setDelegation] = useState('');
@@ -80,7 +82,7 @@ export function QuickOrderDrawer({
   const subtotal = unitPrice * quantity;
   const deliveryNote = 0;
   const total = appliedCoupon?.totals ? appliedCoupon.totals.total_ttc : subtotal + deliveryNote;
-  const inStock = product.rupture === 1 || product.rupture === undefined;
+  const inStock = isInStock(product);
   const discount = priceDisplay.hasPromo && priceDisplay.oldPrice != null && priceDisplay.oldPrice > 0
     ? Math.round(((priceDisplay.oldPrice - unitPrice) / priceDisplay.oldPrice) * 100)
     : 0;
@@ -122,12 +124,14 @@ export function QuickOrderDrawer({
   }, [open, product?.id, product?.slug, initialQty, initialVariantId, product?.aromes]);
 
   const hasFormData = () =>
-    [nom, prenom, phone, gouvernorat, delegation, localite].some((v) => (v || '').trim() !== '');
+    [nom, prenom, email, phone, gouvernorat, delegation, localite].some((v) => (v || '').trim() !== '');
 
   const validate = (): boolean => {
     const e: Record<string, string> = {};
     if (!(nom || '').trim()) e.nom = 'Nom requis';
     if (!(prenom || '').trim()) e.prenom = 'Prénom requis';
+    if (!(email || '').trim()) e.email = 'Email requis';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) e.email = 'Email invalide';
     if (!(phone || '').trim()) e.phone = 'Téléphone requis';
     else {
       const digits = phone.replace(/\s/g, '').replace(/^\+216/, '');
@@ -220,6 +224,7 @@ export function QuickOrderDrawer({
       qty: quantity,
       nom: nom.trim(),
       prenom: prenom.trim(),
+      email: email.trim(),
       phone: phone.trim().replace(/\s/g, ''),
       gouvernorat: gouvernorat.trim(),
       delegation: delegation.trim(),
@@ -465,7 +470,7 @@ export function QuickOrderDrawer({
                     )}
                   </div>
 
-                  {/* Nom, Prénom, Téléphone (required) – order: Nom & Prénom before Téléphone */}
+                  {/* Nom, Prénom, Email, Téléphone (required) – order: Nom & Prénom, then Email, then Téléphone */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="qo-nom" className="text-sm font-medium text-gray-900 dark:text-gray-100">
@@ -497,6 +502,22 @@ export function QuickOrderDrawer({
                       />
                       {errors.prenom && <p className="text-xs text-red-600 dark:text-red-400">{errors.prenom}</p>}
                     </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="qo-email" className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      Email *
+                    </Label>
+                    <Input
+                      id="qo-email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="exemple@email.com"
+                      className="h-12 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-0"
+                      autoComplete="email"
+                      aria-invalid={!!errors.email}
+                    />
+                    {errors.email && <p className="text-xs text-red-600 dark:text-red-400">{errors.email}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="qo-phone" className="text-sm font-medium text-gray-900 dark:text-gray-100">

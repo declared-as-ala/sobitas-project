@@ -54,6 +54,7 @@ async function handleQuickOrder(request: NextRequest): Promise<Response> {
       qty,
       nom: bodyNom,
       prenom: bodyPrenom,
+      email: bodyEmail,
       phone,
       gouvernorat,
       delegation,
@@ -86,6 +87,19 @@ async function handleQuickOrder(request: NextRequest): Promise<Response> {
     if (!nom) {
       return NextResponse.json(
         { error: 'Nom requis.' },
+        { status: 400 }
+      );
+    }
+    const emailTrim = (bodyEmail ?? '').trim();
+    if (!emailTrim) {
+      return NextResponse.json(
+        { error: 'Email requis.' },
+        { status: 400 }
+      );
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrim)) {
+      return NextResponse.json(
+        { error: 'Email invalide.' },
         { status: 400 }
       );
     }
@@ -123,7 +137,7 @@ async function handleQuickOrder(request: NextRequest): Promise<Response> {
       }
     }
 
-    const livraisonEmail = `quickorder-${Date.now()}@protein.tn`;
+    const livraisonEmail = emailTrim;
     const livraisonRegion = useAddressFlow ? cityTrim : govTrim;
     const livraisonVille = useAddressFlow ? cityTrim : [delTrim, locTrim].filter(Boolean).join(', ');
     const livraisonAdresse1 = useAddressFlow ? addressTrim : 'Livraison';

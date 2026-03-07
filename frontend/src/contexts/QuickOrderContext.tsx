@@ -18,7 +18,7 @@ export interface QuickOrderProduct {
   prix: number;
   promo?: number | null;
   promo_expiration_date?: string | null;
-  rupture?: number;
+  rupture?: number | boolean;
   aromes?: { id: number; designation_fr: string }[];
 }
 

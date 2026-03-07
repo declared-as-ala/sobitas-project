@@ -137,6 +137,8 @@ export function HomePageClient({ accueil, slides }: HomePageClientProps) {
       new_product: product.new_product,
       best_seller: product.best_seller,
       note: product.note,
+      qte: product.qte,
+      rupture: product.rupture,
       review_count: normalizedCount > 0 ? normalizedCount : null,
       reviews_count: normalizedCount > 0 ? normalizedCount : null,
       reviews: Array.isArray(reviewsArray) && reviewsArray.length > 0 ? reviewsArray : undefined,

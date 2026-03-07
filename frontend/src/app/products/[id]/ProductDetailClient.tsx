@@ -28,6 +28,7 @@ import { toast } from 'sonner';
 import {
   getStockDisponible,
   getMaxAddable,
+  getProductStockStatus,
 } from '@/util/cartStock';
 import { cn } from '@/app/components/ui/utils';
 
@@ -87,9 +88,19 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
     }
   }, []);
 
-  // Stock disponible (qte from API or rupture-based)
+  // Single source of truth for stock (matches API: rupture true/1 = out of stock, qte <= 0 = out of stock)
+  const stockStatus = getProductStockStatus(product as any);
   const stockDisponible = getStockDisponible(product as any);
   const inCartQty = getCartQty(product.id);
+
+  if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
+    console.debug('[ProductDetail] stock', {
+      qte: product.qte,
+      rupture: product.rupture,
+      low_stock_threshold: (product as any).low_stock_threshold,
+      stockStatus,
+    });
+  }
 
   // Update product and reviews when initialProduct changes
   useEffect(() => {
@@ -260,7 +271,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
 
   /** Cart logic. "Commander maintenant" uses shared Quick Order modal. */
   const handleAddToCart = () => {
-    if (stockDisponible <= 0) {
+    if (stockStatus.isOutOfStock || stockDisponible <= 0) {
       toast.error('Rupture de stock - Ce produit n\'est pas disponible');
       return;
     }
@@ -505,11 +516,24 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
           <div className="lg:col-span-6 min-w-0 space-y-3 sm:space-y-4">
             {/* Mobile Layout: Image First then badges, title, etc. */}
             <div className="lg:hidden space-y-4 sm:space-y-5">
-              {/* Badges at top (En Stock, -X% OFF) */}
+              {/* Badges at top (stock from API: rupture + qte + low_stock_threshold) */}
               <div className="flex items-center gap-2 sm:gap-3 flex-wrap px-1">
-                <Badge variant="outline" className="bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800 text-xs sm:text-sm px-2.5 py-1">
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    stockStatus.isOutOfStock
+                      ? 'bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800'
+                      : stockStatus.isLowStock
+                        ? 'bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
+                        : 'bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800',
+                    'text-xs sm:text-sm px-2.5 py-1'
+                  )}
+                >
                   <CheckCircle2 className="h-3 w-3 mr-1" />
-                  {product.rupture === 1 ? 'En Stock' : 'Rupture de stock'}
+                  {stockStatus.stockLabel}
+                  {stockStatus.isLowStock && stockStatus.qte > 0 && (
+                    <span className="ml-1">({stockStatus.qte})</span>
+                  )}
                 </Badge>
                 {discount > 0 && (
                   <Badge className="bg-red-600 text-white text-xs sm:text-sm px-2.5 py-1">-{discount}% OFF</Badge>
@@ -773,11 +797,24 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
               animate={{ opacity: 1, x: 0 }}
               className="hidden lg:block space-y-4 min-w-0"
             >
-                {/* Badges */}
+                {/* Badges (stock from API: rupture + qte + low_stock_threshold) */}
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Badge variant="outline" className="bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800 text-xs px-2.5 py-1">
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      stockStatus.isOutOfStock
+                        ? 'bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800'
+                        : stockStatus.isLowStock
+                          ? 'bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
+                          : 'bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800',
+                      'text-xs px-2.5 py-1'
+                    )}
+                  >
                     <CheckCircle2 className="h-3 w-3 mr-1" />
-                    {product.rupture === 1 ? 'En Stock' : 'Rupture de stock'}
+                    {stockStatus.stockLabel}
+                    {stockStatus.isLowStock && stockStatus.qte > 0 && (
+                      <span className="ml-1">({stockStatus.qte})</span>
+                    )}
                   </Badge>
                   {discount > 0 && (
                     <Badge className="bg-red-600 text-white text-xs px-2.5 py-1">-{discount}% OFF</Badge>
@@ -861,16 +898,16 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     size="default"
                     className="w-full min-h-[42px] h-auto py-2.5 text-sm bg-red-600 hover:bg-red-700 text-white font-bold"
                     onClick={handleAddToCart}
-                    disabled={stockDisponible <= 0}
+                    disabled={stockStatus.isOutOfStock}
                   >
                     <ShoppingCart className="h-4 w-4 mr-2" />
-                    {stockDisponible <= 0 ? 'Rupture de stock' : 'Ajouter au panier'}
+                    {stockStatus.isOutOfStock ? 'Rupture de stock' : 'Ajouter au panier'}
                   </Button>
                   <Button
                     size="default"
                     className="w-full min-h-[42px] h-auto py-2.5 text-sm bg-amber-500 hover:bg-amber-600 !text-white font-semibold shadow-md hover:shadow-lg transition-shadow [&_svg]:!text-white"
                     onClick={handleQuickOrderClick}
-                    disabled={stockDisponible <= 0}
+                    disabled={stockStatus.isOutOfStock}
                   >
                     <Zap className="h-4 w-4 mr-2" />
                     Commander maintenant
@@ -1278,17 +1315,17 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
             size="default"
             className="w-full min-h-[42px] h-auto py-2.5 text-sm bg-red-600 hover:bg-red-700 text-white font-bold shrink-0"
             onClick={handleAddToCart}
-            disabled={stockDisponible <= 0}
+            disabled={stockStatus.isOutOfStock}
             aria-label="Ajouter au panier"
           >
             <ShoppingCart className="h-4 w-4 mr-2 shrink-0" />
-            {stockDisponible <= 0 ? 'Rupture' : 'Ajouter au panier'}
+            {stockStatus.isOutOfStock ? 'Rupture' : 'Ajouter au panier'}
           </Button>
           <Button
             size="default"
             className="w-full min-h-[42px] h-auto py-2.5 text-sm bg-amber-500 hover:bg-amber-600 !text-white font-semibold shrink-0 shadow-md hover:shadow-lg transition-shadow [&_svg]:!text-white"
             onClick={handleQuickOrderClick}
-            disabled={stockDisponible <= 0}
+            disabled={stockStatus.isOutOfStock}
             aria-label="Commander maintenant"
           >
             <Zap className="h-4 w-4 mr-2 shrink-0" />
