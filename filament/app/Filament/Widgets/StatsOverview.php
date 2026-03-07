@@ -18,11 +18,24 @@ class StatsOverview extends BaseWidget
 {
     public string $preset = '30_days';
 
+    /**
+     * Sync with global dashboard filter (no argument: read from session).
+     * Livewire cannot inject primitive $preset when event is dispatched without payload.
+     */
     #[On('dashboardFilterUpdated')]
-    public function updateFilter(string $preset): void
+    public function updateFilter(): void
     {
-        $this->preset = $preset;
-        // The component will re-render and getStats will be called
+        $sessionPreset = session('dashboard.filter.preset', '30d');
+        $this->preset = match ($sessionPreset) {
+            '7d' => '7_days',
+            '30d' => '30_days',
+            '90d' => '90_days',
+            'mtd' => 'this_month',
+            'last_month' => 'last_month',
+            'ytd' => '90_days',
+            'all' => '90_days',
+            default => '30_days',
+        };
     }
 
     protected static ?int $sort = -97;
@@ -34,8 +47,19 @@ class StatsOverview extends BaseWidget
 
     protected function getStats(): array
     {
-        // Cache for 2 minutes — dashboard stats don't need real-time precision
-        // Use preset in cache key so different filters have different cached results
+        // Sync preset from session so initial load respects global dashboard filter
+        $sessionPreset = session('dashboard.filter.preset', '30d');
+        $this->preset = match ($sessionPreset) {
+            '7d' => '7_days',
+            '30d' => '30_days',
+            '90d' => '90_days',
+            'mtd' => 'this_month',
+            'last_month' => 'last_month',
+            'ytd' => '90_days',
+            'all' => '90_days',
+            default => '30_days',
+        };
+
         return Cache::remember("dashboard:stats_overview:{$this->preset}", 120, function () {
             return $this->buildStats($this->preset);
         });

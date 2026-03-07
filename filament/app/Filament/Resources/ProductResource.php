@@ -171,8 +171,8 @@ class ProductResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            // Eager load relationships displayed in columns to prevent N+1
-            ->modifyQueryUsing(fn (Builder $query) => $query->with(['sousCategorie', 'brand']))
+            // Eager load only columns needed for list (avoids loading full relation rows)
+            ->modifyQueryUsing(fn (Builder $query) => $query->with(['sousCategorie:id,designation_fr', 'brand:id,designation_fr']))
             ->columns([
                 Tables\Columns\ImageColumn::make('cover')
                     ->label('Image')
@@ -235,8 +235,7 @@ class ProductResource extends Resource
                 Tables\Filters\SelectFilter::make('brand_id')
                     ->label('Marque')
                     ->relationship('brand', 'designation_fr')
-                    ->searchable()
-                    ->preload(),
+                    ->searchable(),
             ])
             ->actions([
                 Actions\EditAction::make(),

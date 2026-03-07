@@ -298,8 +298,7 @@ class FactureResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            // Eager load client to prevent N+1 on client.name column
-            ->modifyQueryUsing(fn (Builder $query) => $query->with('client:id,name'))
+            ->modifyQueryUsing(fn (Builder $query) => $query->with('client:id,name', 'factureTvas:id,facture_id'))
             ->columns([
                 Tables\Columns\TextColumn::make('numero')
                     ->label('N°')

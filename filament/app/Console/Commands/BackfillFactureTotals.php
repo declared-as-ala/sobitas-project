@@ -21,7 +21,7 @@ class BackfillFactureTotals extends Command
      *
      * @var string
      */
-    protected $description = 'Recalculates and backfills missing totals (like net_a_payer) for old Bon de Livraison (Facture) records.';
+    protected $description = 'Recalculates and backfills missing totals (net_a_payer, prix_ttc, tva, etc.) for Bon de Livraison records, including BLs created from order conversion that have net_a_payer=0.';
 
     /**
      * Execute the console command.

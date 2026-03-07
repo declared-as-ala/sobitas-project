@@ -5,11 +5,14 @@ namespace App\Filament\Pages;
 use App\Filament\Support\DashboardHeaderActions;
 use App\Filament\Widgets\DashboardAlertsWidget;
 use App\Filament\Widgets\DashboardHeaderWidget;
-use App\Filament\Widgets\QuickActionsWidget;
 use App\Filament\Widgets\GeographicChart;
 use App\Filament\Widgets\LatestCommandes;
 use App\Filament\Widgets\MarketplaceKpis;
 use App\Filament\Widgets\MonthlyRevenueComparison;
+use App\Filament\Widgets\OrdersStatusPieChart;
+use App\Filament\Widgets\ProductsStockPieChart;
+use App\Filament\Widgets\QuickActionsWidget;
+use App\Filament\Widgets\RevenueByCategoryPieChart;
 use App\Filament\Widgets\RevenueChart;
 use App\Filament\Widgets\StatsOverview;
 use App\Filament\Widgets\TopCategoriesChart;
@@ -46,6 +49,11 @@ class Dashboard extends BaseDashboard
             TopCategoriesChart::class,
             MonthlyRevenueComparison::class,
             GeographicChart::class,
+
+            // Section Analyses — camemberts (7j/30j/90j via filtre global)
+            OrdersStatusPieChart::class,
+            RevenueByCategoryPieChart::class,
+            ProductsStockPieChart::class,
 
             LatestCommandes::class,
             TopProductsWidget::class,

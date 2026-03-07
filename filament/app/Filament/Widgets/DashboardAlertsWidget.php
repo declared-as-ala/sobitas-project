@@ -6,6 +6,7 @@ use App\Filament\Pages\Stock\StockReportsPage;
 use App\Filament\Resources\ProductResource;
 use App\Models\Product;
 use Filament\Widgets\Widget;
+use Illuminate\Support\Facades\Cache;
 use Livewire\Attributes\On;
 
 class DashboardAlertsWidget extends Widget
@@ -39,6 +40,16 @@ class DashboardAlertsWidget extends Widget
      * @return array<string, array{icon: string, title: string, description: string, metric: string, badge_label: string, badge_color: string, button_label: string, button_url: string, type: string}>
      */
     public function getAlerts(): array
+    {
+        return Cache::remember('dashboard:alerts_widget', 60, function () {
+            return $this->buildAlerts();
+        });
+    }
+
+    /**
+     * @return array<string, array{icon: string, title: string, description: string, metric: string, badge_label: string, badge_color: string, button_label: string, button_url: string, type: string}>
+     */
+    private function buildAlerts(): array
     {
         $alerts = [];
 

@@ -5,8 +5,10 @@ namespace App\Services\DocumentConversion;
 use App\Enums\BlStatus;
 use App\Models\AuditLog;
 use App\Models\Commande;
+use App\Models\Coordinate;
 use App\Models\DetailsFacture;
 use App\Models\Facture;
+use App\Services\InvoiceCalculator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -20,21 +22,50 @@ class OrderToBlService
     /**
      * Create a BL (Facture) from an order. Optionally pass quantities per line (indexed by order detail id or produit_id).
      * Stock is NOT decremented here (already decremented at order creation).
+     * Totals (net_a_payer, prix_ttc, tva, etc.) are computed via InvoiceCalculator and persisted so the list shows correct values.
      */
     public function createBlFromOrder(Commande $order, ?array $quantities = null): Facture
     {
         return DB::transaction(function () use ($order, $quantities) {
             $order->load('details.product', 'client');
 
+            $coordinate = Coordinate::getCached();
+            $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
+            $remise = (float) ($order->remise ?? 0);
+            $timbre = 0;
+
+            $details = [];
+            foreach ($order->details as $line) {
+                if (! $line->produit_id) {
+                    continue;
+                }
+                $qte = $quantities[$line->id] ?? $quantities[$line->produit_id] ?? $line->qte;
+                $qte = (int) $qte;
+                if ($qte <= 0) {
+                    continue;
+                }
+                $details[] = [
+                    'produit_id' => $line->produit_id,
+                    'qte' => $qte,
+                    'prix_unitaire' => (float) $line->prix_unitaire,
+                    'tva_pct' => $defaultTva,
+                ];
+            }
+            $totals = InvoiceCalculator::calculate($details, $remise, $timbre, $defaultTva);
+
             $bl = new Facture();
             $bl->commande_id = $order->id;
-            $bl->client_id = $order->user_id ?? null; // Commande uses user_id for client
+            $bl->client_id = $order->client_id ?? $order->user_id ?? null;
             $bl->numero = $this->numberSequence->nextBl();
             $bl->status = BlStatus::Draft;
-            $bl->prix_ht = (float) $order->prix_ht;
-            $bl->prix_ttc = (float) $order->prix_ttc;
-            $bl->remise = (float) ($order->remise ?? 0);
-            $bl->timbre = 0;
+            $bl->prix_ht = $totals['total_ht_brut'];
+            $bl->remise = $totals['remise'];
+            $bl->pourcentage_remise = $totals['pourcentage_remise'];
+            $bl->prix_ht_apres_remise = $totals['prix_ht_apres_remise'];
+            $bl->tva = $totals['tva'];
+            $bl->timbre = $totals['timbre'];
+            $bl->prix_ttc = $totals['prix_ttc'];
+            $bl->net_a_payer = $totals['net_a_payer'];
             $bl->save();
 
             foreach ($order->details as $line) {
@@ -52,6 +83,9 @@ class OrderToBlService
                 $detail->produit_id = $line->produit_id;
                 $detail->qte = $qte;
                 $detail->prix_unitaire = $pu;
+                if (Schema::hasColumn('details_factures', 'prix_ttc')) {
+                    $detail->prix_ttc = $qte * $pu;
+                }
                 $detail->save();
             }
 

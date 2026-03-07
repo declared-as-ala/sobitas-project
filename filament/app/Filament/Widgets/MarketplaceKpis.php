@@ -7,6 +7,7 @@ use App\Services\DateRangeFilterService;
 use Carbon\Carbon;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
+use Illuminate\Support\Facades\Cache;
 use Livewire\Attributes\On;
 
 class MarketplaceKpis extends BaseWidget
@@ -26,6 +27,14 @@ class MarketplaceKpis extends BaseWidget
     }
 
     protected function getStats(): array
+    {
+        $cacheKey = 'dashboard:marketplace_kpis:' . md5(json_encode($this->getCurrentPeriod()) . (session('dashboard.filter.compare', true) ? '1' : '0'));
+        return Cache::remember($cacheKey, 60, function () {
+            return $this->buildStats();
+        });
+    }
+
+    private function buildStats(): array
     {
         $period = $this->getCurrentPeriod();
         $service = new DashboardMetricsService($period);

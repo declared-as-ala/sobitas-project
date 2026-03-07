@@ -13,8 +13,6 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\Tabs;
-use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -61,49 +59,118 @@ class CommandeResource extends Resource
     {
         return $schema->schema([
             Grid::make(3)->schema([
-                Tabs::make('Commande')->tabs([
-                    Tab::make('Client')->schema([
-                        Grid::make(2)->schema([
+                // Colonne gauche (~65–70 %) : Client, Livraison, Détails commande
+                Grid::make(1)->schema([
+                    Section::make('Client')
+                        ->icon('heroicon-o-user')
+                        ->schema([
                             Forms\Components\TextInput::make('nom')->label('Nom'),
                             Forms\Components\TextInput::make('prenom')->label('Prénom'),
                             Forms\Components\TextInput::make('email')->label('Email')->email(),
                             Forms\Components\TextInput::make('phone')->label('Téléphone'),
                             Forms\Components\TextInput::make('region')->label('Région'),
                             Forms\Components\TextInput::make('ville')->label('Ville'),
-                            Forms\Components\TextInput::make('adresse1')->label('Adresse'),
+                            Forms\Components\TextInput::make('adresse1')->label('Adresse')->columnSpanFull(),
                             Forms\Components\TextInput::make('code_postale')->label('Code postal'),
-                        ]),
-                    ]),
-                    Tab::make('Livraison')->schema([
-                        Grid::make(2)->schema([
-                            Forms\Components\TextInput::make('livraison_nom')->label('Nom livraison'),
-                            Forms\Components\TextInput::make('livraison_prenom')->label('Prénom livraison'),
-                            Forms\Components\TextInput::make('livraison_phone')->label('Tél. livraison'),
-                            Forms\Components\TextInput::make('livraison_email')->label('Email livraison'),
-                            Forms\Components\TextInput::make('livraison_region')->label('Région livraison'),
-                            Forms\Components\TextInput::make('livraison_ville')->label('Ville livraison'),
-                            Forms\Components\TextInput::make('livraison_adresse1')->label('Adresse livraison'),
-                            Forms\Components\TextInput::make('livraison_code_postale')->label('Code postal livraison'),
-                        ]),
-                    ]),
-                    Tab::make('Statut')->schema([
-                        Grid::make(2)->schema([
-                            Forms\Components\TextInput::make('numero')->label('Numéro')->disabled()->dehydrated(false),
-                            Forms\Components\Select::make('etat')->label('État')->options(Commande::getStatusOptions())->required(),
-                        ]),
-                    ]),
+                        ])
+                        ->columns(2)
+                        ->collapsible(),
+
+                    Section::make('Livraison')
+                        ->icon('heroicon-o-truck')
+                        ->schema([
+                            Forms\Components\TextInput::make('livraison_nom')->label('Nom'),
+                            Forms\Components\TextInput::make('livraison_prenom')->label('Prénom'),
+                            Forms\Components\TextInput::make('livraison_phone')->label('Téléphone'),
+                            Forms\Components\TextInput::make('livraison_email')->label('Email')->email(),
+                            Forms\Components\TextInput::make('livraison_region')->label('Région'),
+                            Forms\Components\TextInput::make('livraison_ville')->label('Ville'),
+                            Forms\Components\TextInput::make('livraison_adresse1')->label('Adresse')->columnSpanFull(),
+                            Forms\Components\TextInput::make('livraison_code_postale')->label('Code postal'),
+                        ])
+                        ->columns(2)
+                        ->collapsible(),
+
+                    Section::make('Détails de la commande')
+                        ->icon('heroicon-o-shopping-cart')
+                        ->schema([
+                            Forms\Components\Repeater::make('details')
+                                ->label('')
+                                ->relationship()
+                                ->schema([
+                                    Forms\Components\Select::make('produit_id')
+                                        ->label('Produit')
+                                        ->required()
+                                        ->searchable()
+                                        ->options(function () {
+                                            return \App\Models\Product::query()
+                                                ->orderBy('designation_fr')
+                                                ->limit(100)
+                                                ->get()
+                                                ->mapWithKeys(fn ($p) => [$p->id => $p->designation_fr ?? ''])
+                                                ->all();
+                                        })
+                                        ->getSearchResultsUsing(function (string $search): array {
+                                            return \App\Models\Product::query()
+                                                ->where(function ($q) use ($search) {
+                                                    $q->where('designation_fr', 'like', '%' . $search . '%')
+                                                        ->orWhere('code_product', 'like', '%' . $search . '%');
+                                                })
+                                                ->orderBy('designation_fr')
+                                                ->limit(50)
+                                                ->get()
+                                                ->mapWithKeys(fn ($p) => [$p->id => $p->designation_fr ?? ''])
+                                                ->all();
+                                        })
+                                        ->getOptionLabelUsing(fn ($value): ?string => $value ? (\App\Models\Product::find($value)?->designation_fr ?? null) : null)
+                                        ->live()
+                                        ->afterStateUpdated(function ($state, $set) {
+                                            if ($state && $p = \App\Models\Product::find($state)) {
+                                                $set('prix_unitaire', (float) ($p->prix ?? 0));
+                                            }
+                                        })
+                                        ->columnSpan(['default' => 2, 'sm' => 12]),
+                                    Forms\Components\TextInput::make('qte')
+                                        ->label('Quantité')
+                                        ->numeric()
+                                        ->default(1)
+                                        ->minValue(1)
+                                        ->required()
+                                        ->columnSpan(['default' => 1, 'sm' => 2]),
+                                    Forms\Components\TextInput::make('prix_unitaire')
+                                        ->label('Prix unitaire')
+                                        ->numeric()
+                                        ->prefix('DT')
+                                        ->required()
+                                        ->columnSpan(['default' => 1, 'sm' => 2]),
+                                    Forms\Components\Placeholder::make('total_ligne')
+                                        ->label('Total')
+                                        ->content(fn ($get) => number_format((float) ($get('qte') ?? 0) * (float) ($get('prix_unitaire') ?? 0), 3, ',', ' ') . ' DT')
+                                        ->columnSpan(['default' => 1, 'sm' => 2]),
+                                ])
+                                ->columns(12)
+                                ->defaultItems(0)
+                                ->addActionLabel('Ajouter un produit')
+                                ->deleteAction(fn ($action) => $action->requiresConfirmation()->modalHeading('Supprimer cette ligne ?')->modalSubmitActionLabel('Oui, supprimer')),
+                        ])
+                        ->columnSpanFull(),
                 ])->columnSpan(2),
 
-                Section::make('Totaux & Note')
-                    ->schema([
-                        Forms\Components\TextInput::make('prix_ht')->label('Prix HT')->numeric()->prefix('DT')->disabled()->dehydrated(false),
-                        Forms\Components\TextInput::make('prix_ttc')->label('Total TTC')->numeric()->prefix('DT')->disabled()->dehydrated(false)->extraInputAttributes(['class' => 'font-semibold']),
-                        Forms\Components\TextInput::make('frais_livraison')->label('Frais livraison')->numeric()->prefix('DT'),
-                        Forms\Components\Textarea::make('note')->label('Note')->rows(3),
-                    ])
-                    ->columns(1)
-                    ->columnSpan(1)
-                    ->extraAttributes(['class' => 'doc-totaux-sidebar']),
+                // Colonne droite (~30–35 %) : Totaux & Note
+                Grid::make(1)->schema([
+                    Section::make('Totaux & Note')
+                        ->icon('heroicon-o-calculator')
+                        ->schema([
+                            Forms\Components\TextInput::make('numero')->label('N° commande')->disabled()->dehydrated(false),
+                            Forms\Components\Select::make('etat')->label('État')->options(Commande::getStatusOptions())->required(),
+                            Forms\Components\TextInput::make('prix_ht')->label('Prix HT')->numeric()->prefix('DT')->disabled()->dehydrated(false),
+                            Forms\Components\TextInput::make('prix_ttc')->label('Total TTC')->numeric()->prefix('DT')->disabled()->dehydrated(false)->extraInputAttributes(['class' => 'font-semibold']),
+                            Forms\Components\TextInput::make('frais_livraison')->label('Frais livraison')->numeric()->prefix('DT')->default(0),
+                            Forms\Components\Textarea::make('note')->label('Note')->rows(4),
+                        ])
+                        ->columns(1)
+                        ->extraAttributes(['class' => 'doc-totaux-sidebar']),
+                ])->columnSpan(1),
             ])->columnSpanFull(),
         ]);
     }
