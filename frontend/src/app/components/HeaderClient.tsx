@@ -71,6 +71,17 @@ export function HeaderClient() {
   const { isAuthenticated, user, logout } = useAuth();
   const cartItemsCount = getTotalItems();
 
+  const [logoPath, setLogoPath] = useState<string | null>(null);
+
+  // Logo from coordonnees API (https://admin.protein.tn/api/coordonnees)
+  useEffect(() => {
+    getCoordinates()
+      .then((data) => {
+        if (data?.logo) setLogoPath(data.logo);
+      })
+      .catch(() => {});
+  }, []);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [isSearching, setIsSearching] = useState(false);
