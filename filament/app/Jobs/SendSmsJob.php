@@ -8,6 +8,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 
 class SendSmsJob implements ShouldQueue
 {
@@ -27,6 +28,14 @@ class SendSmsJob implements ShouldQueue
 
     public function handle(): void
     {
-        (new SmsService())->send_sms($this->phoneNumber, $this->message);
+        try {
+            (new SmsService())->send_sms($this->phoneNumber, $this->message);
+        } catch (\Throwable $e) {
+            Log::error('SendSmsJob failed', [
+                'phone_last4' => strlen($this->phoneNumber) >= 4 ? substr($this->phoneNumber, -4) : '****',
+                'error'       => $e->getMessage(),
+            ]);
+            throw $e;
+        }
     }
 }

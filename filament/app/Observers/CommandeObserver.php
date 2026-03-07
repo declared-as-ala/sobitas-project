@@ -3,10 +3,13 @@
 namespace App\Observers;
 
 use App\Filament\Resources\CommandeResource;
+use App\Jobs\SendSmsJob;
 use App\Models\Commande;
+use App\Models\Message;
 use App\Models\User;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
+use Illuminate\Support\Facades\Log;
 
 class CommandeObserver
 {
@@ -36,5 +39,47 @@ class CommandeObserver
                 ])
                 ->sendToDatabase($user);
         }
+    }
+
+    /**
+     * When order status (etat) changes, send SMS to client with status update (unless cancelled).
+     */
+    public function updated(Commande $commande): void
+    {
+        if (! $commande->wasChanged('etat')) {
+            return;
+        }
+
+        if ($commande->etat === 'annuler') {
+            return;
+        }
+
+        $phone = $commande->livraison_phone ?? $commande->phone ?? null;
+        if (empty(trim((string) $phone))) {
+            return;
+        }
+
+        $msg = Message::getCached();
+        if (! $msg || empty(trim((string) $msg->msg_etat_commande))) {
+            return;
+        }
+
+        $sms = str_replace(
+            ['[nom]', '[prenom]', '[num_commande]', '[etat]'],
+            [
+                $commande->nom ?? '',
+                $commande->prenom ?? '',
+                $commande->numero ?? '',
+                Commande::getStatusLabel($commande->etat),
+            ],
+            $msg->msg_etat_commande
+        );
+
+        SendSmsJob::dispatch($phone, $sms);
+
+        Log::info('Order status SMS dispatched', [
+            'commande_id' => $commande->id,
+            'etat'        => $commande->etat,
+        ]);
     }
 }

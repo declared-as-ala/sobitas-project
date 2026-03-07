@@ -4,6 +4,7 @@
 @php
     $facture = $data['commande'];
     $details_facture = $data['details'];
+    $logoUrl = config('marketing.logo_url', rtrim(config('app.url'), '/') . '/logo.png');
 @endphp
 
 <head>
@@ -358,7 +359,7 @@
         <!-- Header -->
         <div class="email-header">
             <div class="logo-wrapper">
-                <img src="{{ asset('logo.png') }}" alt="SOBITAS PROTEIN.TN" class="logo" />
+                <img src="{{ $logoUrl }}" alt="SOBITAS PROTEIN.TN" class="logo" />
             </div>
             <h1>Bon de Livraison</h1>
             <div class="order-info">
