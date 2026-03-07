@@ -25,12 +25,15 @@ class QuotationSent extends Mailable
         $this->quotation = $quotation;
         $this->customMessage = $customMessage;
         
-        $this->quotation->load('client', 'details');
+        $this->quotation->load('client', 'details.product:id,designation_fr');
         $coordonnee = \App\Models\Coordinate::first();
+        $defaultTva = $coordonnee && isset($coordonnee->tva) ? (float) $coordonnee->tva : 19;
+        $devis_lines = \App\Services\DevisCalculator::lines($this->quotation->details, $defaultTva)['lines'];
 
         $this->sharedData = [
             'facture' => $this->quotation,
             'details_facture' => $this->quotation->details,
+            'devis_lines' => $devis_lines,
             'coordonnee' => $coordonnee,
             'company' => $coordonnee,
             'documentTitle' => 'Devis',
@@ -74,7 +77,7 @@ class QuotationSent extends Mailable
      */
     public function attachments(): array
     {
-        $pdf = Pdf::loadView('print.quotation', $this->sharedData)->output();
+        $pdf = Pdf::loadView('print.devis', $this->sharedData)->output();
 
         $numero = (string) ($this->quotation->numero ?? $this->quotation->id);
         $safeNumero = str_replace('/', '-', $numero);

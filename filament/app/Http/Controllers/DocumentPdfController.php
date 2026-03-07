@@ -169,10 +169,13 @@ class DocumentPdfController extends Controller
                 ->with('product:id,designation_fr')
                 ->get();
             $coordonnee = \App\Models\Coordinate::first();
+            $defaultTva = $coordonnee && isset($coordonnee->tva) ? (float) $coordonnee->tva : 19;
+            $devis_lines = \App\Services\DevisCalculator::lines($details_facture, $defaultTva)['lines'];
 
             $data = [
                 'facture' => $quotation,
                 'details_facture' => $details_facture,
+                'devis_lines' => $devis_lines,
                 'coordonnee' => $coordonnee,
                 'company' => $coordonnee,
                 'documentTitle' => 'Devis',
