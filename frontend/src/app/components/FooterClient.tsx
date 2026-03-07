@@ -19,11 +19,21 @@ interface FooterClientProps {
 }
 
 export function FooterClient({ pages: pagesProp }: FooterClientProps) {
+  const [logoPath, setLogoPath] = useState<string | null>(null);
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [shouldLoadMap, setShouldLoadMap] = useState(false);
   const [pages, setPages] = useState<CmsPage[]>(pagesProp ?? []);
   const mapRef = useRef<HTMLDivElement>(null);
+
+  // Logo from coordonnees API (https://admin.protein.tn/api/coordonnees)
+  useEffect(() => {
+    getCoordinates()
+      .then((data) => {
+        if (data?.logo) setLogoPath(data.logo);
+      })
+      .catch(() => {});
+  }, []);
 
   // Fetch CMS pages when not provided (e.g. when used inside Client Components)
   useEffect(() => {
