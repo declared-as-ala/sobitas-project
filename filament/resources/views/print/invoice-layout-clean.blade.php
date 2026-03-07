@@ -32,19 +32,7 @@
             <div class="invoice-header">
                 @php
                     /** @var \App\Models\Coordinate|null $company */
-                    $logoUrl = null;
-                    if ($company && !empty($company->logo_facture)) {
-                        $logoUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($company->logo_facture);
-                        if (str_starts_with($logoUrl, '/')) {
-                            $logoUrl = rtrim(config('app.url'), '/') . $logoUrl;
-                        }
-                    }
-                    if (!$logoUrl && $company && !empty($company->logo)) {
-                        $logoUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($company->logo);
-                        if (str_starts_with($logoUrl, '/')) {
-                            $logoUrl = rtrim(config('app.url'), '/') . $logoUrl;
-                        }
-                    }
+                    $logoUrl = asset('logo.png');
                     $statusValue = $status ?? null;
                     $statusLabel = $status_label ?? null;
                     $statusClass = match ($statusValue) {
@@ -57,9 +45,8 @@
                 @endphp
 
                 <div class="invoice-company">
-                    <img src="{{ $logoUrl }}" alt="SOBITAS" class="invoice-logo">
-
-                    <h2 class="invoice-company-name">{{ $company->abbreviation ?? 'STE SOBITAS' }}</h2>
+                    <img src="{{ $logoUrl }}" alt="{{ $company->abbreviation ?? 'SOBITAS' }}" class="invoice-logo" onerror="this.style.display='none'; var f=document.getElementById('invoice-logo-fallback'); if(f) f.style.display='block';">
+                    <span id="invoice-logo-fallback" class="invoice-company-name" style="display:none">{{ $company->abbreviation ?? 'STE SOBITAS' }}</span>
 
                     <div class="invoice-company-meta">
                         @if(!empty($company->adresse_fr))

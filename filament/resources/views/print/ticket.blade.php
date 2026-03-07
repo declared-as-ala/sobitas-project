@@ -2,19 +2,7 @@
     $company = $coordonnee ?? $company ?? null;
     $documentDate = $ticket->date_ticket ? \Carbon\Carbon::parse($ticket->date_ticket)->format('d/m/Y') : ($ticket->created_at?->format('d/m/Y') ?? '');
     $documentTime = $ticket->created_at?->format('H:i') ?? '';
-    $ticketLogoUrl = null;
-    if ($company && !empty($company->logo_facture)) {
-        $ticketLogoUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($company->logo_facture);
-        if (str_starts_with($ticketLogoUrl, '/')) {
-            $ticketLogoUrl = rtrim(config('app.url'), '/') . $ticketLogoUrl;
-        }
-    }
-    if (!$ticketLogoUrl && $company && !empty($company->logo)) {
-        $ticketLogoUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($company->logo);
-        if (str_starts_with($ticketLogoUrl, '/')) {
-            $ticketLogoUrl = rtrim(config('app.url'), '/') . $ticketLogoUrl;
-        }
-    }
+    $ticketLogoUrl = asset('logo.png');
 @endphp
 <!DOCTYPE html>
 <html lang="fr">
@@ -141,12 +129,8 @@
 
     <div class="container" id="print-area">
         <div class="receipt_header">
-            @if($ticketLogoUrl ?? null)
-                <img src="{{ $ticketLogoUrl }}" alt="{{ $company->abbreviation ?? 'SOBITAS' }}" class="logo" onerror="this.style.display='none'; var f=document.getElementById('ticket-logo-fallback'); if(f) f.style.display='block';">
-                <span id="ticket-logo-fallback" class="logo-fallback" style="display:none">{{ $company->abbreviation ?? 'STE SOBITAS' }}</span>
-            @else
-                <span class="logo-fallback">{{ $company->abbreviation ?? 'STE SOBITAS' }}</span>
-            @endif
+            <img src="{{ $ticketLogoUrl }}" alt="{{ $company->abbreviation ?? 'SOBITAS' }}" class="logo" onerror="this.style.display='none'; var f=document.getElementById('ticket-logo-fallback'); if(f) f.style.display='block';">
+            <span id="ticket-logo-fallback" class="logo-fallback" style="display:none">{{ $company->abbreviation ?? 'STE SOBITAS' }}</span>
             <h1>{{ $company->short_description_ticket ?? ($company->abbreviation ?? 'SOBITAS') }}</h1>
             <h2>
                 Adresse: {{ $company->adresse_fr ?? '' }}
