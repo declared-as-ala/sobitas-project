@@ -148,7 +148,6 @@ class QuotationResource extends Resource
                                         ->options(function () {
                                             return \App\Models\Product::query()
                                                 ->orderBy('designation_fr')
-                                                ->limit(50)
                                                 ->get()
                                                 ->mapWithKeys(fn ($p) => [
                                                     $p->id => ($p->designation_fr ?? '') . ' (' . (int) $p->qte . ' en stock)'
