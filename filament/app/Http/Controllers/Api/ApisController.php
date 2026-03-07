@@ -108,7 +108,7 @@ class ApisController extends Controller
     private function productListQuery()
     {
         return Product::where('publier', 1)
-            ->select(self::PRODUCT_LIST_COLUMNS)
+            ->select(self::PRODUCT_FULL_LIST_COLUMNS)
             ->withCount(['reviews' => fn ($q) => $q->where('publier', 1)]);
     }
 

@@ -1,0 +1,298 @@
+@import '../styles/fonts.css';
+@import '../styles/theme.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Hide scrollbar for horizontal scroll on mobile */
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100%;
+    position: relative;
+  }
+
+  /**
+  * Default typography styles for HTML elements (h1-h4, p, label, button, input).
+  * These are in @layer base, so Tailwind utility classes (like text-sm, text-lg) automatically override them.
+  */
+
+  html {
+    font-size: var(--font-size);
+  }
+
+  h1 {
+    font-size: var(--text-2xl);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h2 {
+    font-size: var(--text-xl);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h3 {
+    font-size: var(--text-lg);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h4 {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  label {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  button {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  input {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-normal);
+    line-height: 1.5;
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+  }
+
+  textarea {
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+  }
+}
+
+/* Premium Animations */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+/* Category card fallback: light shimmer so placeholder is not flat */
+@keyframes shimmer-placeholder {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.88;
+  }
+}
+.animate-shimmer-placeholder {
+  animation: shimmer-placeholder 2.5s ease-in-out infinite;
+}
+
+/* Hide scrollbar for horizontal scroll */
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Reduce animations on mobile for better performance */
+@media (max-width: 768px) {
+  * {
+    animation-duration: 0.2s !important;
+    transition-duration: 0.2s !important;
+  }
+  
+  /* Disable heavy transforms on mobile */
+  .group-hover\:scale-110 {
+    transform: none !important;
+  }
+}
+
+/* Respect user's motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Toast: top-center so it doesn't cover cart; compact on mobile */
+.sonner-toaster {
+  --width: 22rem;
+}
+@media (max-width: 640px) {
+  .sonner-toaster [data-sonner-toast] {
+    max-width: min(90vw, 22rem) !important;
+    width: auto !important;
+  }
+}
+
+/* Hide browser default search reset buttons */
+input[type="search"]::-webkit-search-decoration,
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-results-button,
+input[type="search"]::-webkit-search-results-decoration {
+  display: none;
+  -webkit-appearance: none;
+}
+
+/* Checkout: viewport (no 100vh on mobile; use dvh/svh to avoid Safari toolbar jumps). */
+.checkout-viewport-root {
+  min-height: 100vh;
+  min-height: var(--app-height, 100dvh);
+}
+@supports (height: 100svh) {
+  .checkout-viewport-root {
+    min-height: var(--app-height, 100svh);
+  }
+}
+@media (min-width: 1024px) {
+  .checkout-viewport-root {
+    min-height: 100vh;
+  }
+}
+
+/* Checkout layout: form (left) + summary (right) */
+.checkout-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.checkout-form,
+.checkout-summary {
+  min-width: 0;
+}
+
+.checkout-summary-inner {
+  position: static;
+}
+
+@media (min-width: 1024px) {
+  .checkout-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(360px, 420px);
+    gap: 2rem;
+  }
+
+  .checkout-summary-inner {
+    position: sticky;
+    top: 1rem;
+  }
+}
+
+/* Checkout CTA footer: fixed bottom, safe-area, 72–88px height, button 52–56px. */
+.checkout-cta-footer {
+  /* position, left, right, bottom, z-index in component */
+}
+.checkout-cta-footer .checkout-cta-button {
+  min-height: 52px;
+}
+
+/* Hide CTA when keyboard is open: slide down so layout never breaks (iOS/Android). */
+.checkout-cta-footer--keyboard-open {
+  transform: translateY(110%);
+  pointer-events: none;
+}
+
+/* When keyboard open, reduce main padding so content doesn't sit on a huge gap. */
+.checkout-viewport-root.isKeyboardOpen .checkout-main {
+  padding-bottom: 1.5rem;
+}
+@media (min-width: 1024px) {
+  .checkout-viewport-root.isKeyboardOpen .checkout-main {
+    padding-bottom: 3rem;
+  }
+}
+
+/* Checkout coupon block inside summary (responsive row/stack) */
+.checkout-coupon-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.checkout-coupon-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.checkout-coupon-button {
+  flex: 0 0 auto;
+  width: 8.75rem; /* ~140px */
+}
+
+@media (max-width: 768px) {
+  .checkout-coupon-row {
+    flex-direction: column;
+  }
+
+  .checkout-coupon-button {
+    width: 100%;
+  }
+}
+
+/* Blog article content: links as orange text only, no box */
+.article-content a {
+  @apply font-medium no-underline
+    text-orange-600 dark:text-orange-400
+    hover:text-orange-700 dark:hover:text-orange-300 hover:underline
+    transition-colors duration-150;
+}
+
+/* Product cards: line-clamp fallback for title ellipsis (webkit required for line-clamp) */
+@layer utilities {
+  .line-clamp-2-fallback {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .line-clamp-3-fallback {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}

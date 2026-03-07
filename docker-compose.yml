@@ -167,6 +167,20 @@ services:
     networks:
       - sobitas-net
 
+  # ---- Frontend-2 (Next.js from GHCR) - backend https://admin.sobitas.tn ----
+  frontend-2:
+    image: ghcr.io/declared-as-ala/sobitas-frontend-2:latest
+    container_name: sobitas-frontend-2
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: https://admin.sobitas.tn/api
+      NEXT_PUBLIC_STORAGE_URL: https://admin.sobitas.tn/storage
+    ports:
+      - "3002:3000"
+    networks:
+      - sobitas-net
+
 volumes:
   mysql-data:
   redis-data:
