@@ -32,15 +32,17 @@ class ProductsOutOfStock extends Command
         try {
             DB::beginTransaction();
 
-            // Update all products sets qte = 0 and rupture = 0 (false = out of stock)
-            $affected = DB::table('products')->update([
-                'qte' => 0,
-                'rupture' => 0,
-            ]);
+            // Update ONLY products marked as out of stock (rupture = 0) that have a stock > 0
+            $affected = DB::table('products')
+                ->where('rupture', 0)
+                ->where('qte', '>', 0)
+                ->update([
+                    'qte' => 0,
+                ]);
 
             DB::commit();
 
-            $message = "Opération réussie : {$affected} produits ont été passés hors stock (qte = 0).";
+            $message = "{$affected} products updated to stock = 0.";
             
             $this->info($message);
             Log::info("Command products:out-of-stock executed. " . $message);
