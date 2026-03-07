@@ -94,6 +94,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                           className="object-contain p-1.5"
                           sizes="64px"
                           loading="lazy"
+                          unoptimized
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">

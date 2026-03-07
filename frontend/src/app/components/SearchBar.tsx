@@ -11,7 +11,7 @@ import { Button } from '@/app/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/app/components/ui/sheet';
 import { useDebounce } from '@/util/debounce';
 import { searchProducts } from '@/services/api';
-import { getStorageUrl } from '@/services/api';
+import { getStorageUrl, isStorageImageUrl } from '@/services/api';
 import { getPriceDisplay } from '@/util/productPrice';
 import type { Product } from '@/types';
 import { cn } from '@/app/components/ui/utils';
@@ -88,6 +88,7 @@ function SearchResults({
                 fill
                 className="object-cover"
                 sizes="48px"
+                unoptimized
               />
             ) : (
               <div className="h-full w-full bg-muted-foreground/20" aria-hidden />

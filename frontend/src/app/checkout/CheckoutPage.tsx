@@ -636,6 +636,7 @@ export default function CheckoutPage() {
                                   fill
                                   className="object-contain p-1"
                                   sizes="80px"
+                                  unoptimized
                                 />
                               </div>
                             )}
@@ -1083,6 +1084,7 @@ export default function CheckoutPage() {
                                 fill
                                 className="object-contain p-1"
                                 sizes="64px"
+                                unoptimized
                               />
                             </div>
                           )}

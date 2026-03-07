@@ -123,6 +123,7 @@ export default function OrderDetailPage() {
                                 fill
                                 className="object-contain p-2"
                                 sizes="64px"
+                                unoptimized
                               />
                             </div>
                           )}

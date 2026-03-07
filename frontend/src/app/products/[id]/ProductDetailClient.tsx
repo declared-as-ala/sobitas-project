@@ -489,6 +489,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     sizes="(max-width: 1024px) 100vw, 58vw"
                     priority
                     fetchPriority="high"
+                    unoptimized
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
                       target.style.display = 'none';
@@ -561,6 +562,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 50vw"
                       priority
                       fetchPriority="high"
+                      unoptimized
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
                         target.style.display = 'none';

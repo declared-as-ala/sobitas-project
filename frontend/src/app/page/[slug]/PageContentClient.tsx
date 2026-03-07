@@ -41,6 +41,7 @@ export function PageContentClient({ page }: PageContentClientProps) {
                 className="object-cover"
                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, (max-width: 1400px) 85vw, 1600px"
                 priority
+                unoptimized
               />
             </div>
           )}

@@ -305,6 +305,7 @@ export function HeaderClient() {
                   height={70}
                   className="h-10 lg:h-14 xl:h-16 w-auto object-contain brightness-0 invert"
                   priority
+                  unoptimized
                 />
               </Link>
 
@@ -575,6 +576,7 @@ export function HeaderClient() {
                 width={120}
                 height={38}
                 className="h-8 w-auto object-contain"
+                unoptimized
               />
             </Link>
           </SheetHeader>

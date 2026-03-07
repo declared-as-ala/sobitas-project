@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
-import { getStorageUrl } from '@/services/api';
+import { getStorageUrl, isStorageImageUrl } from '@/services/api';
 import type { Slide } from '@/types';
 
 // Breakpoint: show mobile slides below this width, web slides at or above
@@ -53,6 +53,7 @@ const SlideImage = memo(({
         sizes="100vw"
         quality={75}
         loading="lazy"
+        unoptimized={isStorageImageUrl(src)}
       />
     );
   }
@@ -68,6 +69,7 @@ const SlideImage = memo(({
       className={className || imageClass}
       sizes="(max-width: 768px) 100vw, 100vw"
       quality={75}
+      unoptimized={isStorageImageUrl(src)}
     />
   );
 });
@@ -233,8 +235,8 @@ export const HeroSlider = memo(function HeroSlider({ slides }: HeroSliderProps) 
                 className="bg-red-600 hover:bg-red-700 text-white px-6 sm:px-8 md:px-10 lg:px-12 h-12 sm:h-14 md:h-16 text-sm sm:text-base md:text-lg lg:text-xl min-h-[56px] sm:min-h-[64px] md:min-h-[72px] min-w-[140px] sm:min-w-[160px] md:min-w-[180px] shadow-lg hover:shadow-xl transition-colors font-semibold"
                 asChild
               >
-                <LinkWithLoading href={currentSlideData.lien} aria-label="Découvrir nos produits" loadingMessage="Chargement...">
-                  Découvrir
+                <LinkWithLoading href="/shop" aria-label="Découvrir nos produits" loadingMessage="Chargement...">
+                  Découvrir nos produits
                 </LinkWithLoading>
               </Button>
             </div>

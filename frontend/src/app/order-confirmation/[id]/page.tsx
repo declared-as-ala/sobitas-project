@@ -506,6 +506,7 @@ export default function OrderConfirmationPage() {
                             fill
                             className="object-contain p-2"
                             sizes="80px"
+                            unoptimized
                           />
                         </div>
                       )}

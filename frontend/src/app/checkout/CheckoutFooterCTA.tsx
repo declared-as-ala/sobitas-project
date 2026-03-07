@@ -69,7 +69,7 @@ export function CheckoutFooterCTA({
                       <div key={item.product.id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
                         {productImage && (
                           <div className="relative w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden bg-white dark:bg-gray-700">
-                            <Image src={productImage} alt={productName} fill className="object-contain p-1" sizes="48px" />
+                            <Image src={productImage} alt={productName} fill className="object-contain p-1" sizes="48px" unoptimized />
                           </div>
                         )}
                         <div className="flex-1 min-w-0">

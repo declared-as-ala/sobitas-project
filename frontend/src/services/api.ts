@@ -136,6 +136,11 @@ export const getStorageUrl = (path?: string, cacheBust?: string | number): strin
   return finalUrl;
 };
 
+/** True if the URL is from our storage (storage-proxy or admin backend). Use to set unoptimized on next/image. */
+export const isStorageImageUrl = (url: string): boolean =>
+  typeof url === 'string' &&
+  (url.includes('storage-proxy') || url.includes('admin.protein.tn') || url.includes('admin.sobitas.tn'));
+
 // ==================== PUBLIC API ENDPOINTS ====================
 
 // Homepage & Accueil

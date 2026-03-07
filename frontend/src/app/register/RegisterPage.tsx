@@ -103,6 +103,7 @@ export default function RegisterPage() {
                     className="h-10 w-auto object-contain"
                     style={{ maxWidth: '140px', height: 'auto' }}
                     priority
+                    unoptimized
                   />
                 </Link>
               </div>

@@ -665,6 +665,7 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
                     className="object-contain"
                     sizes="(max-width: 640px) 80px, (max-width: 1024px) 112px, 144px"
                     priority
+                    unoptimized
                   />
                 </div>
               )}

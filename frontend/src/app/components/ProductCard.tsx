@@ -10,7 +10,7 @@ import { Badge } from '@/app/components/ui/badge';
 import type { Product as ApiProduct } from '@/types';
 import { useCart } from '@/app/contexts/CartContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
-import { getStorageUrl } from '@/services/api';
+import { getStorageUrl, isStorageImageUrl } from '@/services/api';
 import { toast } from 'sonner';
 import { getPriceDisplay } from '@/util/productPrice';
 import { getStockDisponible, isInStock } from '@/util/cartStock';
@@ -159,7 +159,7 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
               loading="lazy"
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
               quality={75}
-              unoptimized={productData.image.includes('admin.protein.tn') || productData.image.includes('admin.sobitas.tn')}
+              unoptimized={isStorageImageUrl(productData.image)}
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 target.style.display = 'none';

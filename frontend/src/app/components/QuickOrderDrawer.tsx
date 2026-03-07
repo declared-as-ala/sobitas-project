@@ -375,6 +375,7 @@ export function QuickOrderDrawer({
                           fill
                           className="object-contain"
                           sizes="80px"
+                          unoptimized
                         />
                       </div>
                     ) : null}

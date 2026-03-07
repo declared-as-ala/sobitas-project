@@ -101,6 +101,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
                   className="w-full h-auto object-contain object-left"
                   sizes="(max-width: 480px) 100px, (max-width: 768px) 120px, 140px"
                   loading="lazy"
+                  unoptimized
                 />
               </Link>
             </motion.div>
@@ -235,6 +236,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
                 className="h-8 w-auto object-contain"
                 style={{ width: 'auto', height: 'auto' }}
                 priority
+                unoptimized
               />
             </div>
             <p className="text-sm text-gray-400 leading-relaxed">
