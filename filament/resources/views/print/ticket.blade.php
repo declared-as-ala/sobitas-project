@@ -2,7 +2,12 @@
     $company = $coordonnee ?? $company ?? null;
     $documentDate = $ticket->date_ticket ? \Carbon\Carbon::parse($ticket->date_ticket)->format('d/m/Y') : ($ticket->created_at?->format('d/m/Y') ?? '');
     $documentTime = $ticket->created_at?->format('H:i') ?? '';
-    $ticketLogoUrl = asset('logo.png');
+    $logoPath = public_path('logo.png');
+    if (is_file($logoPath)) {
+        $ticketLogoUrl = 'data:' . (mime_content_type($logoPath) ?: 'image/png') . ';base64,' . base64_encode(file_get_contents($logoPath));
+    } else {
+        $ticketLogoUrl = asset('logo.png');
+    }
 @endphp
 <!DOCTYPE html>
 <html lang="fr">

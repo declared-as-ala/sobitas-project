@@ -32,7 +32,12 @@
             <div class="invoice-header">
                 @php
                     /** @var \App\Models\Coordinate|null $company */
-                    $logoUrl = asset('logo.png');
+                    $logoPath = public_path('logo.png');
+                    if (is_file($logoPath)) {
+                        $logoUrl = 'data:' . (mime_content_type($logoPath) ?: 'image/png') . ';base64,' . base64_encode(file_get_contents($logoPath));
+                    } else {
+                        $logoUrl = asset('logo.png');
+                    }
                     $statusValue = $status ?? null;
                     $statusLabel = $status_label ?? null;
                     $statusClass = match ($statusValue) {

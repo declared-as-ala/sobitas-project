@@ -28,7 +28,12 @@
     @endif
 
     @php
-        $logoUrl = asset('logo.png');
+        $logoPath = public_path('logo.png');
+        if (is_file($logoPath)) {
+            $logoUrl = 'data:' . (mime_content_type($logoPath) ?: 'image/png') . ';base64,' . base64_encode(file_get_contents($logoPath));
+        } else {
+            $logoUrl = asset('logo.png');
+        }
     @endphp
     <div class="print-sheet" id="print-area">
         <header class="print-header">
