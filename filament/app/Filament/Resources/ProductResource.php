@@ -75,11 +75,11 @@ class ProductResource extends Resource
                             ->default(0)
                             ->minValue(0)
                             ->reactive()
-                            ->disabled(fn ($get) => $get('rupture') === false)
+                            ->disabled(fn ($get) => $get('rupture') === true)
                             ->afterStateUpdated(function ($state, callable $set): void {
-                                $set('rupture', (int) $state > 0);
+                                $set('rupture', (int) $state <= 0);
                             })
-                            ->helperText('Le stock sera automatiquement mis à 0 si le produit est marqué hors stock.'),
+                            ->helperText('Si le produit est en rupture, la quantité est désactivée.'),
                     ]),
                     Grid::make(3)->schema([
                         Forms\Components\TextInput::make('promo')
@@ -125,15 +125,15 @@ class ProductResource extends Resource
                             ->label('Publié')
                             ->default(true),
                         Forms\Components\Toggle::make('rupture')
-                            ->label('En stock')
-                            ->default(true)
+                            ->label('En rupture')
+                            ->default(false)
                             ->reactive()
                             ->afterStateUpdated(function ($state, callable $set): void {
-                                if ($state === false) {
+                                if ($state === true) {
                                     $set('qte', 0);
                                 }
                             })
-                            ->helperText('Si désactivé, la quantité en stock sera mise à 0.'),
+                            ->helperText('Si activé, le produit est en rupture et la quantité sera mise à 0.'),
                         Forms\Components\Toggle::make('new_product')
                             ->label('Nouveau'),
                         Forms\Components\Toggle::make('best_seller')

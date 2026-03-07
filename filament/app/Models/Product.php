@@ -36,10 +36,10 @@ class Product extends Model
     ];
 
     /**
-     * Single source of truth: keep qte and rupture (en stock / n'est pas en stock) in sync.
-     * - qte <= 0 → rupture = false (n'est pas en stock), qte clamped to 0
-     * - qte > 0 → rupture = true (en stock)
-     * - rupture set to false → qte = 0
+     * qte = source of truth; rupture = derived out-of-stock flag (1 = out of stock, 0 = in stock).
+     * On save: clamp qte to 0 if negative; set rupture from qte only:
+     * - qte > 0 => rupture = false (in stock)
+     * - qte <= 0 or null => rupture = true (out of stock)
      */
     protected static function booted(): void
     {
@@ -50,15 +50,11 @@ class Product extends Model
                 $qte = 0;
             }
 
-            if ($product->isDirty('rupture') && $product->rupture === false) {
-                $product->qte = 0;
-            }
-
             $qte = (int) $product->qte;
-            if ($qte <= 0) {
-                $product->qte = 0;
+            if ($qte > 0) {
                 $product->rupture = false;
             } else {
+                $product->qte = 0;
                 $product->rupture = true;
             }
         });
@@ -122,23 +118,24 @@ class Product extends Model
     }
 
     // ── Stock helpers (storefront + admin) ──────────────
+    // qte = source of truth; rupture = derived out-of-stock flag (1 = out of stock, 0 = in stock).
 
     public function getStockThresholdAttribute(): int
     {
         return (int) ($this->attributes['low_stock_threshold'] ?? 10);
     }
 
-    /** in_stock | low_stock | out_of_stock | inconsistent (rupture true = en stock in this codebase) */
+    /** in_stock | low_stock | out_of_stock | inconsistent (rupture 0 = in stock, rupture 1 = out of stock) */
     public function getStockStatusAttribute(): string
     {
         $qte = (int) $this->qte;
         $rupture = (bool) $this->rupture;
         $threshold = $this->stock_threshold;
 
-        if (!$rupture && $qte > 0) {
+        if ($qte > 0 && $rupture) {
             return 'inconsistent';
         }
-        if ($rupture && $qte <= 0) {
+        if ($qte <= 0 && ! $rupture) {
             return 'inconsistent';
         }
         if ($qte <= 0) {
@@ -150,10 +147,10 @@ class Product extends Model
         return 'in_stock';
     }
 
-    /** Safe for storefront: true when en stock (rupture = true) and qte > 0 */
+    /** Safe for storefront: true when in stock (rupture = false) and qte > 0 */
     public function getIsAvailableAttribute(): bool
     {
-        return (bool) $this->rupture && (int) $this->qte > 0;
+        return (int) $this->qte > 0 && (bool) $this->rupture === false;
     }
 
     /**
@@ -179,7 +176,7 @@ class Product extends Model
 
     public function scopeInStock($query)
     {
-        return $query->where('rupture', 1);
+        return $query->where('qte', '>', 0)->where('rupture', 0);
     }
 
     public function scopeNewProducts($query)
@@ -213,7 +210,7 @@ class Product extends Model
     {
         return $query->where(function ($q) {
             $q->where('qte', '<=', 0)
-              ->orWhere('rupture', 0);
+              ->orWhere('rupture', 1);
         });
     }
 }

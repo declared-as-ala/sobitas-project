@@ -87,15 +87,15 @@ class StockReportService
 
     /**
      * KPI counts: rupture, low_stock, in_stock (normal).
-     * rupture = qte <= 0 OR rupture = 0 (this codebase: rupture 0 = out of stock)
+     * rupture = out of stock = qte <= 0 OR rupture = 1. in_stock = qte > 0 AND rupture = 0.
      */
     public function getKpiCounts(): array
     {
         return Cache::remember('stock_report:kpis', self::CACHE_TTL, function () {
             $rows = DB::table('products')->selectRaw("
-                SUM(CASE WHEN qte <= 0 OR rupture = 0 THEN 1 ELSE 0 END) as rupture,
+                SUM(CASE WHEN qte <= 0 OR rupture = 1 THEN 1 ELSE 0 END) as rupture,
                 SUM(CASE WHEN qte > 0 AND qte < COALESCE(NULLIF(low_stock_threshold, 0), 10) THEN 1 ELSE 0 END) as low_stock,
-                SUM(CASE WHEN qte > 0 AND qte >= COALESCE(NULLIF(low_stock_threshold, 0), 10) AND (rupture = 1 OR rupture IS NULL) THEN 1 ELSE 0 END) as in_stock
+                SUM(CASE WHEN qte > 0 AND qte >= COALESCE(NULLIF(low_stock_threshold, 0), 10) AND rupture = 0 THEN 1 ELSE 0 END) as in_stock
             ")->first();
 
             return [

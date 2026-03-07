@@ -40,11 +40,11 @@ class StockAlertsPage extends Page implements HasTable
                     ->with(['sousCategorie', 'brand'])
                     ->where(function (Builder $q) {
                         $q->where('qte', '<=', 0)
-                            ->orWhere('rupture', 0)
+                            ->orWhereNull('qte')
                             ->orWhereRaw('(qte > 0 AND qte < 10)')
-                            ->orWhereRaw('(qte > 0 AND rupture = 0) OR (qte <= 0 AND (rupture = 1 OR rupture IS NULL))');
+                            ->orWhereRaw('(qte > 0 AND rupture = 1)');
                     })
-                    ->orderByRaw('CASE WHEN qte <= 0 THEN 0 WHEN rupture = 0 AND qte > 0 THEN 1 ELSE 2 END, qte ASC')
+                    ->orderByRaw('CASE WHEN qte <= 0 OR qte IS NULL THEN 0 WHEN rupture = 1 AND qte > 0 THEN 1 ELSE 2 END, qte ASC')
             )
             ->columns([
                 Tables\Columns\ImageColumn::make('cover')
@@ -85,11 +85,11 @@ class StockAlertsPage extends Page implements HasTable
     {
         $qte = (int) $record->qte;
         $rupture = (bool) $record->rupture;
+        if ($rupture === true && $qte > 0) {
+            return 'Incohérence';
+        }
         if ($qte <= 0) {
             return 'Rupture';
-        }
-        if ($rupture === false && $qte > 0) {
-            return 'Incohérence';
         }
         $threshold = (int) $record->stock_threshold;
         if ($qte < $threshold) {
@@ -104,7 +104,7 @@ class StockAlertsPage extends Page implements HasTable
         if ($qte <= 0) {
             return 'danger';
         }
-        if ((bool) $record->rupture === false) {
+        if ((bool) $record->rupture === true && $qte > 0) {
             return 'danger';
         }
         return 'warning';

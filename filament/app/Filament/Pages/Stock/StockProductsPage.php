@@ -116,18 +116,16 @@ class StockProductsPage extends Page implements HasTable
                         }
                         if ($v === 'out_of_stock') {
                             return $query->where(function ($q) {
-                                $q->where('qte', '<=', 0)->orWhere('rupture', 0);
+                                $q->where('qte', '<=', 0)->orWhereNull('qte');
                             });
                         }
                         if ($v === 'low_stock') {
                             return $query->where('qte', '>', 0)->where('qte', '<', 10);
                         }
                         if ($v === 'inconsistent') {
-                            return $query->whereRaw('(qte > 0 AND rupture = 0) OR (qte <= 0 AND (rupture = 1 OR rupture IS NULL))');
+                            return $query->whereRaw('(qte > 0 AND rupture = 1)');
                         }
-                        return $query->where('qte', '>', 0)->where(function ($q) {
-                            $q->where('rupture', 1)->orWhereNull('rupture');
-                        });
+                        return $query->where('qte', '>', 0)->where('rupture', 0);
                     }),
                 Tables\Filters\SelectFilter::make('brand_id')
                     ->label('Marque')

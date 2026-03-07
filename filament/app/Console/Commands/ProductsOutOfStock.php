@@ -20,7 +20,7 @@ class ProductsOutOfStock extends Command
      *
      * @var string
      */
-    protected $description = 'Set all products to out of stock (qte = 0, rupture = 0)';
+    protected $description = 'Set all products to out of stock (qte = 0, rupture = 1)';
 
     /**
      * Execute the console command.
@@ -32,12 +32,12 @@ class ProductsOutOfStock extends Command
         try {
             DB::beginTransaction();
 
-            // Update ONLY products marked as out of stock (rupture = 0) that have a stock > 0
+            // Update only products that currently have stock (qte > 0) to out of stock: qte = 0, rupture = 1
             $affected = DB::table('products')
-                ->where('rupture', 0)
                 ->where('qte', '>', 0)
                 ->update([
                     'qte' => 0,
+                    'rupture' => 1,
                 ]);
 
             DB::commit();

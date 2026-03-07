@@ -263,6 +263,9 @@ class ApisController extends Controller
             ->get();
     }
 
+    /**
+     * Product detail by slug. qte and rupture are returned as stored; rupture is derived from qte on save (Product::booted).
+     */
     public function productDetails(string $slug): JsonResponse
     {
         $product = Product::where('slug', $slug)
@@ -285,7 +288,7 @@ class ApisController extends Controller
 
     /**
      * All products — used for shop page with client-side filtering.
-     * OPTIMIZED: Reduced queries, removed unnecessary pagination, optimized serialization.
+     * qte and rupture are returned as stored; rupture is derived from qte on save (Product::booted).
      */
     public function allProducts(Request $request): JsonResponse
     {
@@ -750,7 +753,7 @@ class ApisController extends Controller
 
         $products = Product::where('sous_categorie_id', $sous_category->id)
             ->where('publier', 1)
-            ->where('rupture', 1)
+            ->where('qte', '>', 0)
             ->select(self::PRODUCT_LIST_COLUMNS)
             ->withCount(['reviews' => fn ($q) => $q->where('publier', 1)])
             ->limit(4)
@@ -760,7 +763,7 @@ class ApisController extends Controller
             $existingIds = $products->pluck('id');
 
             $extra = Product::where('publier', 1)
-                ->where('rupture', 1)
+                ->where('qte', '>', 0)
                 ->whereNotIn('id', $existingIds)
                 ->whereHas('sousCategorie', fn ($q) => $q->where('categorie_id', $sous_category->categorie_id))
                 ->select(self::PRODUCT_LIST_COLUMNS)
