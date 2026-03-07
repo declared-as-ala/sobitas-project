@@ -1,6 +1,7 @@
 node_modules
 .next
 .git
+tsconfig.tsbuildinfo
 .gitignore
 .env*.local
 .env.development
