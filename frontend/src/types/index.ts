@@ -287,6 +287,8 @@ export interface Coordinate {
   adresse?: string;
   phone?: string;
   email?: string;
+  logo?: string | null;
+  logo_footer?: string | null;
   [key: string]: any;
 }
 

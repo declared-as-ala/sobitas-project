@@ -23,14 +23,14 @@ import {
 } from '@/app/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/app/components/ui/sheet';
 import { cn } from '@/app/components/ui/utils';
-import { getStorageUrl } from '@/services/api';
+import { getStorageUrl, getCoordinates } from '@/services/api';
 import { searchProducts } from '@/services/api';
 import { getPriceDisplay } from '@/util/productPrice';
 import { useDebounce } from '@/util/debounce';
 import type { Product } from '@/types';
 
-/** Logo path from storage (same as frontend-2: coordonnees) */
-const LOGO_STORAGE_PATH = 'coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp';
+/** Fallback logo path when coordonnees API has no logo */
+const LOGO_STORAGE_PATH_FALLBACK = 'coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp';
 
 const SCROLL_THRESHOLD = 24;
 const MOBILE_NAV_SCROLL_THRESHOLD = 20;
@@ -234,7 +234,7 @@ export function HeaderClient() {
           >
             <Link href="/" className="flex items-center justify-start flex-1 min-w-0 max-w-[14rem] sm:max-w-[16rem] -ml-1" aria-label="Protein.tn - Accueil">
               <img
-                src={getStorageUrl(LOGO_STORAGE_PATH)}
+                src={getStorageUrl(logoPath || LOGO_STORAGE_PATH_FALLBACK)}
                 alt="Protein.tn"
                 width={180}
                 height={60}
@@ -301,7 +301,7 @@ export function HeaderClient() {
             <div className="flex items-center justify-between h-[72px] gap-4">
               <Link href="/" className="flex-shrink-0 flex items-center" aria-label="Protein.tn - Accueil">
                 <img
-                  src={getStorageUrl(LOGO_STORAGE_PATH)}
+                  src={getStorageUrl(logoPath || LOGO_STORAGE_PATH_FALLBACK)}
                   alt="Protein.tn"
                   width={240}
                   height={80}
@@ -572,7 +572,7 @@ export function HeaderClient() {
             <SheetTitle className="sr-only">Menu</SheetTitle>
             <Link href="/" onClick={closeMobileMenu} className="block max-w-[160px]">
               <img
-                src={getStorageUrl(LOGO_STORAGE_PATH)}
+                src={getStorageUrl(logoPath || LOGO_STORAGE_PATH_FALLBACK)}
                 alt="Protein.tn"
                 width={160}
                 height={52}
