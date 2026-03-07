@@ -76,10 +76,11 @@ class ProductResource extends Resource
                             ->minValue(0)
                             ->reactive()
                             ->disabled(fn ($get) => $get('rupture') === true)
+                            ->dehydrated(true)
                             ->afterStateUpdated(function ($state, callable $set): void {
                                 $set('rupture', (int) $state <= 0);
                             })
-                            ->helperText('Si le produit est en rupture, la quantité est désactivée.'),
+                            ->helperText('Si le produit est en rupture, la quantité est désactivée (valeur 0 enregistrée).'),
                     ]),
                     Grid::make(3)->schema([
                         Forms\Components\TextInput::make('promo')
