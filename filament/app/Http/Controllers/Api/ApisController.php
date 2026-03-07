@@ -50,6 +50,13 @@ class ApisController extends Controller
         'promo_expiration_date', 'sous_categorie_id', 'brand_id', 'qte', 'rupture',
     ];
 
+    /** Same as backend ApisController::PRODUCT_LISTING — used for /api/all_products (no pagination). */
+    private const PRODUCT_LISTING = [
+        'id', 'slug', 'designation_fr', 'cover', 'new_product', 'best_seller', 'note',
+        'alt_cover', 'description_cover', 'prix', 'pack', 'promo', 'promo_expiration_date',
+        'qte', 'rupture', 'brand_id', 'sous_categorie_id',
+    ];
+
     // Article list columns — exclude description_fr (can be huge HTML)
     private const ARTICLE_LIST_COLUMNS = [
         'id', 'slug', 'designation_fr', 'cover', 'publier', 'created_at',
@@ -287,61 +294,47 @@ class ApisController extends Controller
     }
 
     /**
-     * All products — used for shop page with client-side filtering.
-     * qte and rupture are returned as stored; rupture is derived from qte on save (Product::booted).
+     * All products — no pagination, exactly like backend folder.
+     * qte and rupture are returned as stored (qte = source of truth, rupture = out-of-stock flag).
      */
     public function allProducts(Request $request): JsonResponse
     {
-        $perPage = $this->resolvePerPage($request);
+        $query = Product::where('publier', 1)->select(self::PRODUCT_LISTING);
 
-        // ── Optimized: Single query with eager loading ──
-        $productsPaginator = Product::where('publier', 1)
-            ->select(self::PRODUCT_FULL_LIST_COLUMNS)
-            ->with(['aromes:id,designation_fr', 'tags:id,designation_fr'])
-            ->latest('created_at')
-            ->paginate($perPage);
+        if ($search = trim((string) $request->get('search', ''))) {
+            $query->where(function ($q) use ($search) {
+                $q->where('designation_fr', 'like', '%' . $search . '%')
+                    ->orWhere('slug', 'like', '%' . $search . '%');
+            });
+        }
+        if ($request->filled('brand_id')) {
+            $query->where('brand_id', $request->get('brand_id'));
+        }
+        if ($request->filled('min_price')) {
+            $query->where('prix', '>=', (float) $request->get('min_price'));
+        }
+        if ($request->filled('max_price')) {
+            $query->where('prix', '<=', (float) $request->get('max_price'));
+        }
 
-        $products = $productsPaginator->getCollection();
-        
-        // ── Optimized: Get unique IDs in single pass ──
-        $brandIds = $products->pluck('brand_id')->filter()->unique()->values();
-        $sousCategoryIds = $products->pluck('sous_categorie_id')->filter()->unique()->values();
+        $sort = $request->get('sort');
+        if ($sort === 'price_asc') {
+            $query->orderBy('prix');
+        } elseif ($sort === 'price_desc') {
+            $query->orderByDesc('prix');
+        } else {
+            $query->latest('created_at');
+        }
 
-        // ── Optimized: Load brands and categories in parallel (if possible) ──
-        $brands = $brandIds->isNotEmpty()
-            ? Brand::whereIn('id', $brandIds)
-                ->select('id', 'designation_fr', 'logo')
-                ->orderBy('designation_fr')
-                ->get()
-            : collect();
+        $products = $query->get();
+        $brandIds = $products->pluck('brand_id')->filter()->unique()->values()->all();
+        $brands = Brand::whereIn('id', $brandIds)->get();
+        $categories = Categ::select('id', 'slug', 'designation_fr', 'cover')->get();
 
-        // ── Optimized: Get category IDs more efficiently ──
-        $categoryIds = $sousCategoryIds->isNotEmpty()
-            ? SousCategory::whereIn('id', $sousCategoryIds)
-                ->select('categorie_id')
-                ->distinct()
-                ->pluck('categorie_id')
-                ->filter()
-                ->values()
-            : collect();
-
-        // ── Optimized: Categories don't need pagination (just for filtering) ──
-        $categories = $categoryIds->isNotEmpty()
-            ? Categ::whereIn('id', $categoryIds)
-                ->select('id', 'designation_fr', 'slug')
-                ->orderBy('designation_fr')
-                ->get()
-            : collect();
-
-        // ── CRITICAL FIX: Return JsonResponse directly (faster serialization) ──
-        // Laravel's response()->json() is optimized for JSON serialization
-        // This avoids the overhead of array-to-JSON conversion in middleware
         return response()->json([
-            'products'   => $productsPaginator->items(),
-            'brands'     => $brands->values()->all(),
-            'categories' => $categories->values()->all(),
-            'products_meta'   => $this->paginationMeta($productsPaginator),
-            'products_links'  => $this->paginationLinks($productsPaginator),
+            'products'   => $products,
+            'brands'     => $brands,
+            'categories' => $categories,
         ]);
     }
 

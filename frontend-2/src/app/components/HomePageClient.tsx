@@ -53,7 +53,9 @@ const ScrollToTop = dynamic(() => import('@/app/components/ScrollToTop').then(mo
 
 interface HomePageClientProps {
   accueil: AccueilData | null | undefined;
-  slides: any[];
+  slides?: any[];
+  /** When true, hero uses static images (MobileSlider.png / WEBSlider.png) with no API and no arrows */
+  staticHero?: boolean;
 }
 
 function getReviewCountFromProduct(p: { reviews?: { stars?: number; publier?: number }[]; avis?: { stars?: number; publier?: number }[] }): number {
@@ -62,7 +64,7 @@ function getReviewCountFromProduct(p: { reviews?: { stars?: number; publier?: nu
   return arr.filter((r: any) => typeof r?.stars === 'number' && (r.publier === undefined || r.publier === 1)).length;
 }
 
-export function HomePageClient({ accueil, slides }: HomePageClientProps) {
+export function HomePageClient({ accueil, slides = [], staticHero }: HomePageClientProps) {
   // Provide default empty structure if accueil is undefined/null
   const safeAccueil: AccueilData = accueil || {
     categories: [],
@@ -184,7 +186,7 @@ export function HomePageClient({ accueil, slides }: HomePageClientProps) {
 
       <main>
         {/* Above the fold - Critical content - Hero must render first */}
-        <HeroSlider slides={slides} />
+        <HeroSlider slides={slides} staticImages={staticHero} />
         {/* SEO: single visible H1 for main query "proteine tunisie" + internal link creatine */}
         <section className="text-center py-4 px-4 bg-white dark:bg-gray-950" aria-label="Titre principal">
           <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">

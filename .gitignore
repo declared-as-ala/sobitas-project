@@ -1,5 +1,5 @@
-backend/storage/
-backend/storage/**
+# backend/storage/
+# backend/storage/**
 
 # if you need storage but not public, use:
 # backend/storage/logs/
@@ -22,4 +22,4 @@ filament/node_modules/
 !**/.env.example
 
 # Ignore the backend source tree from this repo snapshot
-backend/
+# backend/

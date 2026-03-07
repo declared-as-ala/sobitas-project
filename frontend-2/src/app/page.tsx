@@ -1,6 +1,5 @@
 import { Metadata } from 'next';
-import { getAccueil, getSlides } from '@/services/api';
-import { getStorageUrl } from '@/services/api';
+import { getAccueil } from '@/services/api';
 import { buildCanonicalUrl } from '@/util/canonical';
 import { HomePageClient } from './components/HomePageClient';
 import type { AccueilData } from '@/types';
@@ -42,16 +41,12 @@ export function generateViewport() {
   };
 }
 
-async function getHomeData(): Promise<{ accueil: AccueilData; slides: any[] }> {
+async function getHomeData(): Promise<{ accueil: AccueilData }> {
   try {
-    const [accueil, slides] = await Promise.all([
-      getAccueil(),
-      getSlides(),
-    ]);
-    return { accueil, slides };
+    const accueil = await getAccueil();
+    return { accueil };
   } catch (error) {
     console.error('Error fetching home data:', error);
-    // Return empty data structure on error
     return {
       accueil: {
         categories: [],
@@ -61,32 +56,19 @@ async function getHomeData(): Promise<{ accueil: AccueilData; slides: any[] }> {
         packs: [],
         best_sellers: [],
       },
-      slides: [],
     };
   }
 }
 
-/** First LCP candidate: hero image. Preload so the browser discovers it earlier. */
-function getFirstSlideImageUrl(slides: any[]): string | null {
-  if (!slides?.length) return null;
-  const withImage = slides.filter((s: any) => s && (s.cover || s.image || s.image_path || s.url));
-  const sorted = [...withImage].sort((a: any, b: any) => (a.ordre ?? a.order ?? 0) - (b.ordre ?? b.order ?? 0));
-  const first = sorted[0] || withImage[0];
-  if (!first) return null;
-  const path = first.cover || first.image || first.image_path || first.url;
-  return path ? getStorageUrl(path) : null;
-}
-
 export default async function Home() {
-  const { accueil, slides } = await getHomeData();
-  const firstHeroImageUrl = getFirstSlideImageUrl(slides);
+  const { accueil } = await getHomeData();
 
   return (
     <>
-      {firstHeroImageUrl && (
-        <link rel="preload" as="image" href={firstHeroImageUrl} fetchPriority="high" />
-      )}
-      <HomePageClient accueil={accueil} slides={slides} />
+      {/* Preload static hero images for LCP: mobile and web */}
+      <link rel="preload" as="image" href="/MobileSlider.png" fetchPriority="high" media="(max-width: 767px)" />
+      <link rel="preload" as="image" href="/WEBSlider.png" fetchPriority="high" media="(min-width: 768px)" />
+      <HomePageClient accueil={accueil} staticHero />
     </>
   );
 }

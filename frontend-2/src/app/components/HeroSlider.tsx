@@ -24,8 +24,14 @@ const fallbackSlides = [
   },
 ];
 
+// Static hero images (no API, no arrows): one for mobile, one for web
+const STATIC_HERO_MOBILE = '/MobileSlider.png';
+const STATIC_HERO_WEB = '/WEBSlider.png';
+
 interface HeroSliderProps {
   slides?: Slide[] | any[];
+  /** When true, show static images only (MobileSlider.png / WEBSlider.png), no arrows or dots */
+  staticImages?: boolean;
 }
 
 // Optimized slide image component - optimized for production performance
@@ -88,11 +94,46 @@ function useIsMobile() {
   return isMobile;
 }
 
-export const HeroSlider = memo(function HeroSlider({ slides }: HeroSliderProps) {
+export const HeroSlider = memo(function HeroSlider({ slides, staticImages }: HeroSliderProps) {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const isMobile = useIsMobile();
+
+  // Static hero: one image for mobile, one for web; no arrows, no dots, no carousel
+  if (staticImages) {
+    return (
+      <section
+        className="relative w-full overflow-hidden bg-gray-900 min-h-[100dvh] h-[100dvh] sm:h-[65vh] sm:min-h-0 md:h-[75vh] md:min-h-[380px] lg:h-[85vh] xl:h-[90vh]"
+        aria-label="Bannière accueil"
+      >
+        {/* Mobile: visible only below md */}
+        <div className="absolute inset-0 md:hidden">
+          <Image
+            src={STATIC_HERO_MOBILE}
+            alt="Sobitas – Join Our Family, Raise Your Strength"
+            fill
+            priority
+            fetchPriority="high"
+            className="object-cover object-center"
+            sizes="100vw"
+          />
+        </div>
+        {/* Web: visible from md up */}
+        <div className="absolute inset-0 hidden md:block">
+          <Image
+            src={STATIC_HERO_WEB}
+            alt="Sobitas – Join Our Family, Raise Your Strength"
+            fill
+            priority
+            fetchPriority="high"
+            className="object-cover object-center sm:object-contain"
+            sizes="100vw"
+          />
+        </div>
+      </section>
+    );
+  }
 
   // Transform API slides: use getStorageUrl, sort by ordre, filter by type (mobile vs web)
   const slidesToUse = useMemo(() => {
