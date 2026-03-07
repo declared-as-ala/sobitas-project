@@ -15,7 +15,6 @@ use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables;
-use Filament\Notifications\Actions\Action as NotificationAction;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -454,12 +453,6 @@ class QuotationResource extends Resource
                             \Filament\Notifications\Notification::make()
                                 ->title('Ticket #' . $ticket->numero . ' créé')
                                 ->success()
-                                ->actions([
-                                    NotificationAction::make('open')
-                                        ->label('Ouvrir le document créé')
-                                        ->url(\App\Filament\Resources\TicketResource::getUrl('edit', ['record' => $ticket]))
-                                        ->openUrlInNewTab(false),
-                                ])
                                 ->send();
                         }),
                     Actions\Action::make('convertToFactureTva')
@@ -473,12 +466,6 @@ class QuotationResource extends Resource
                             \Filament\Notifications\Notification::make()
                                 ->title('Facture TVA #' . $invoice->numero . ' créée')
                                 ->success()
-                                ->actions([
-                                    NotificationAction::make('open')
-                                        ->label('Ouvrir le document créé')
-                                        ->url(\App\Filament\Resources\FactureTvaResource::getUrl('edit', ['record' => $invoice]))
-                                        ->openUrlInNewTab(false),
-                                ])
                                 ->send();
                         }),
                     Actions\Action::make('convertToBl')
@@ -492,12 +479,6 @@ class QuotationResource extends Resource
                             \Filament\Notifications\Notification::make()
                                 ->title('Bon de livraison #' . $bl->numero . ' créé')
                                 ->success()
-                                ->actions([
-                                    NotificationAction::make('open')
-                                        ->label('Ouvrir le document créé')
-                                        ->url(\App\Filament\Resources\FactureResource::getUrl('edit', ['record' => $bl]))
-                                        ->openUrlInNewTab(false),
-                                ])
                                 ->send();
                         }),
                 ])

@@ -2,9 +2,7 @@
 
 namespace App\Observers;
 
-use App\Filament\Resources\UserResource;
 use App\Models\User;
-use Filament\Notifications\Actions\Action as NotificationAction;
 use Filament\Notifications\Notification;
 
 class UserObserver
@@ -19,7 +17,6 @@ class UserObserver
             return;
         }
 
-        $url = UserResource::getUrl('edit', ['record' => $newUser]);
         $title = 'Nouvel utilisateur';
         $body = $newUser->name . ' (' . $newUser->email . ')';
 
@@ -28,11 +25,6 @@ class UserObserver
                 ->title($title)
                 ->body($body)
                 ->warning()
-                ->actions([
-                    NotificationAction::make('open')
-                        ->label('Ouvrir')
-                        ->url($url),
-                ])
                 ->sendToDatabase($user);
         }
     }

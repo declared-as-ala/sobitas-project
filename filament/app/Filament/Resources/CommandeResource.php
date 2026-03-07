@@ -209,12 +209,6 @@ class CommandeResource extends Resource
                             Notification::make()
                                 ->title('BL #' . $bl->numero . ' créé')
                                 ->success()
-                                ->actions([
-                                    NotificationAction::make('open')
-                                        ->label('Ouvrir le document créé')
-                                        ->url(\App\Filament\Resources\FactureResource::getUrl('edit', ['record' => $bl]))
-                                        ->openUrlInNewTab(false),
-                                ])
                                 ->send();
                             return redirect(\App\Filament\Resources\FactureResource::getUrl('edit', ['record' => $bl]));
                         }),

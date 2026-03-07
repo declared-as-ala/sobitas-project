@@ -2,10 +2,8 @@
 
 namespace App\Observers;
 
-use App\Filament\Resources\ReviewResource;
 use App\Models\Review;
 use App\Models\User;
-use Filament\Notifications\Actions\Action as NotificationAction;
 use Filament\Notifications\Notification;
 
 class ReviewObserver
@@ -20,7 +18,6 @@ class ReviewObserver
             return;
         }
 
-        $url = ReviewResource::getUrl('edit', ['record' => $review]);
         $title = 'Nouvel avis';
         $body = 'Avis #' . $review->id;
         if ($review->relationLoaded('product') && $review->product) {
@@ -35,11 +32,6 @@ class ReviewObserver
                 ->title($title)
                 ->body($body)
                 ->info()
-                ->actions([
-                    NotificationAction::make('open')
-                        ->label('Ouvrir')
-                        ->url($url),
-                ])
                 ->sendToDatabase($user);
         }
     }
