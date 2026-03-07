@@ -62,24 +62,6 @@ class ClientResource extends Resource
                         ->label('Accepte SMS')
                         ->default(true),
                 ])->columns(2),
-            Section::make('Fidélité')
-                ->schema([
-                    Forms\Components\Toggle::make('loyalty_enabled')
-                        ->label('Loyalty 20% activé')
-                        ->default(false),
-                    Forms\Components\TextInput::make('loyalty_percent')
-                        ->label('Pourcentage fidélité')
-                        ->numeric()
-                        ->minValue(0)
-                        ->maxValue(100)
-                        ->default(20)
-                        ->suffix('%'),
-                    Forms\Components\Textarea::make('loyalty_note')
-                        ->label('Note fidélité')
-                        ->maxLength(255)
-                        ->rows(2)
-                        ->columnSpanFull(),
-                ])->columns(2)->collapsible(),
         ]);
     }
 
@@ -105,9 +87,6 @@ class ClientResource extends Resource
                     ->toggleable(),
                 Tables\Columns\IconColumn::make('sms')
                     ->label('SMS')
-                    ->boolean(),
-                Tables\Columns\IconColumn::make('loyalty_enabled')
-                    ->label('Fidélité')
                     ->boolean(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Créé le')

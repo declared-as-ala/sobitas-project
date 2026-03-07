@@ -195,22 +195,12 @@
                             <td></td>
                             <td>{{ number_format((float)($ticket->prix_ttc ?? $ticket->prix_total ?? 0), 3, ',', '') }}</td>
                         </tr>
-                        @if ($ticket->client && $ticket->client->loyalty_enabled)
-                        <tr>
-                            <td>Loyalty</td>
-                            <td></td>
-                            <td>-{{ (int)($ticket->client->loyalty_percent ?? 20) }}%</td>
-                        </tr>
-                        @endif
                     </tfoot>
                 </table>
             </div>
         </div>
 
         <div class="receipt_footer">
-            @if ($ticket->client && $ticket->client->loyalty_enabled)
-            <p style="text-align:center;font-size:12px;margin-top:8px;">Client fidèle</p>
-            @endif
             <h4>{{ $company->footer_ticket ?? (($company->abbreviation ?? 'SOBITAS') . ' vous remercie de votre visite') }}</h4>
             <h3>Notre Site web <br>{{ strtoupper($company->site_web ?? 'WWW.PROTEIN.TN') }}</h3>
         </div>
