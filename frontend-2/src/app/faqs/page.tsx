@@ -10,7 +10,8 @@ export const metadata: Metadata = {
 
 async function getFAQsData() {
   try {
-    const faqs = await getFAQs();
+    const raw = await getFAQs();
+    const faqs = Array.isArray(raw) ? raw : [];
     return { faqs };
   } catch (error) {
     console.error('Error fetching FAQs:', error);
@@ -20,7 +21,8 @@ async function getFAQsData() {
 
 export default async function FAQsPage() {
   const { faqs } = await getFAQsData();
-  const faqSchema = buildFAQPageSchema(faqs);
+  const safeFaqs = Array.isArray(faqs) ? faqs : [];
+  const faqSchema = buildFAQPageSchema(safeFaqs);
   if (faqSchema) validateStructuredData(faqSchema, 'FAQPage');
 
   return (
@@ -28,7 +30,7 @@ export default async function FAQsPage() {
       {faqSchema && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       )}
-      <FAQsPageClient faqs={faqs} />
+      <FAQsPageClient faqs={safeFaqs} />
     </>
   );
 }

@@ -398,6 +398,7 @@ export function buildArticleSchema(article: {
  * FAQPage schema. Match visible questions/answers (e.g. from getFAQs() or product FAQs).
  */
 export function buildFAQPageSchema(faqs: FAQ[]): object | null {
+  if (!Array.isArray(faqs)) return null;
   const list = faqs.filter((f) => f.question && f.reponse);
   if (!list.length) return null;
   return {

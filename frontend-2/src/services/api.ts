@@ -699,10 +699,16 @@ export const getPageBySlug = async (slug: string): Promise<Page> => {
   }
 };
 
-// FAQs
+// FAQs (backend returns paginated { data: [...] }, so normalize to array)
 export const getFAQs = async (): Promise<FAQ[]> => {
-  const response = await api.get<FAQ[]>('/faqs');
-  return response.data;
+  const response = await api.get<{ data?: FAQ[] } | FAQ[]>('/faqs');
+  const raw = response.data;
+  const list = Array.isArray(raw) ? raw : (raw && typeof raw === 'object' && 'data' in raw ? (raw as { data: FAQ[] }).data : []);
+  if (!Array.isArray(list)) return [];
+  return list.map((f) => ({
+    ...f,
+    reponse: f.reponse ?? (f as FAQ & { answer?: string }).answer,
+  }));
 };
 
 // SEO
