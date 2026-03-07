@@ -45,9 +45,14 @@ class TicketResource extends Resource
         return $schema->schema([
             Grid::make(3)->schema([
                 Grid::make(1)->schema([
-                    Forms\Components\Placeholder::make('company_info')
-                        ->label('Informations société')
-                        ->content(fn () => $coordinate ? new \Illuminate\Support\HtmlString(view('filament.components.company-info-compact', ['coordinate' => $coordinate])->render()) : '—'),
+                    Section::make('Informations société')
+                        ->schema([
+                            Forms\Components\Placeholder::make('company_info')
+                                ->label('')
+                                ->content(fn () => $coordinate ? new \Illuminate\Support\HtmlString(view('filament.components.company-info-compact', ['coordinate' => $coordinate])->render()) : '—'),
+                        ])
+                        ->columns(1)
+                        ->collapsible(),
                     Section::make('Client / Commande')
                         ->schema([
                             Forms\Components\Select::make('type')
@@ -114,7 +119,7 @@ class TicketResource extends Resource
                                         ->preload()
                                         ->required()
                                         ->live()
-                                        ->columnSpan(['default' => 12, 'md' => 6])
+                                        ->columnSpan(['default' => 12, 'md' => 5])
                                         ->afterStateUpdated(function ($state, $set) {
                                             if ($state && $product = \App\Models\Product::find($state)) {
                                                 $set('prix_unitaire', (float) ($product->prix ?? 0));
@@ -129,20 +134,20 @@ class TicketResource extends Resource
                                         ->live(debounce: 300)
                                         ->columnSpan(['default' => 4, 'md' => 2]),
                                     Forms\Components\TextInput::make('prix_unitaire')
-                                        ->label('P.U')
+                                        ->label('P.U*')
                                         ->numeric()
                                         ->inputMode('decimal')
                                         ->default(0)
-                                        ->suffix('DT')
-                                        ->extraInputAttributes(['class' => 'text-right min-w-[0]'])
-                                        ->extraAttributes(['class' => '[&_.fi-input-suffix]:shrink-0 [&_.fi-input-suffix]:min-w-[35px] [&_.fi-input-suffix]:text-center'])
+                                        ->suffix(' DT')
+                                        ->extraInputAttributes(['class' => 'text-right tabular-nums min-w-[4.5rem]'])
+                                        ->extraAttributes(['class' => 'fi-ticket-pu-field [&_.fi-input-suffix]:shrink-0 [&_.fi-input-suffix]:whitespace-nowrap [&_.fi-input-suffix]:pl-1'])
                                         ->required()
                                         ->live(debounce: 300)
-                                        ->columnSpan(['default' => 4, 'md' => 2]),
+                                        ->columnSpan(['default' => 4, 'md' => 3]),
                                     Forms\Components\Placeholder::make('prix_total_display')
-                                        ->label('P.T')
+                                        ->label('Total ligne')
                                         ->content(fn ($get) => new \Illuminate\Support\HtmlString(
-                                            '<div class="text-right whitespace-nowrap font-medium text-gray-900 dark:text-white pt-2">' . number_format((float) ($get('qte') ?? 0) * (float) ($get('prix_unitaire') ?? 0), 3, '.', ' ') . ' DT</div>'
+                                            '<div class="text-right whitespace-nowrap font-semibold text-gray-900 dark:text-white pt-2">' . number_format((float) ($get('qte') ?? 0) * (float) ($get('prix_unitaire') ?? 0), 3, ',', ' ') . ' DT</div>'
                                         ))
                                         ->columnSpan(['default' => 4, 'md' => 2]),
                                 ])
@@ -174,9 +179,10 @@ class TicketResource extends Resource
                             ->default(0)
                             ->live(debounce: 300)
                             ->afterStateUpdated(fn ($set, $get) => self::recalculateTicketTotals($get, $set)),
-                        Forms\Components\Placeholder::make('prix_ttc_display')
-                            ->label('NET À PAYER')
-                            ->content(fn ($get) => 'DT ' . number_format((float) self::computeTicketTotals($get)[2], 3, ',', ' ')),
+                        Forms\Components\ViewField::make('net_a_payer_display')
+                            ->label('')
+                            ->hiddenLabel()
+                            ->view('filament.forms.components.ticket-net-a-payer-card'),
                         Forms\Components\Hidden::make('prix_ht')->default(0)->dehydrated(true),
                         Forms\Components\Hidden::make('prix_ttc')->default(0)->dehydrated(true),
                     ])
