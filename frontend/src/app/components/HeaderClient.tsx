@@ -229,13 +229,13 @@ export function HeaderClient() {
               scrolled ? 'h-12 py-2' : 'h-14 py-2.5'
             )}
           >
-            <Link href="/" className="flex items-center justify-start flex-1 min-w-0 max-w-[11rem] sm:max-w-[12rem] -ml-1" aria-label="Protein.tn - Accueil">
+            <Link href="/" className="flex items-center justify-start flex-1 min-w-0 max-w-[14rem] sm:max-w-[16rem] -ml-1" aria-label="Protein.tn - Accueil">
               <img
                 src="/logo-sobitas.png"
                 alt="Protein.tn"
-                width={140}
-                height={48}
-                className="h-9 min-h-[36px] w-auto max-w-full object-contain object-left drop-shadow-sm transition-all duration-300"
+                width={180}
+                height={60}
+                className="h-11 min-h-[44px] sm:h-12 w-auto max-w-full object-contain object-left drop-shadow-sm transition-all duration-300"
                 fetchPriority="high"
               />
             </Link>
@@ -295,14 +295,14 @@ export function HeaderClient() {
 
         <div className="hidden md:block bg-red-600 dark:bg-red-700">
           <div className="max-w-7xl mx-auto px-4 lg:px-8">
-            <div className="flex items-center justify-between h-16 gap-4">
+            <div className="flex items-center justify-between h-[72px] gap-4">
               <Link href="/" className="flex-shrink-0 flex items-center" aria-label="Protein.tn - Accueil">
                 <img
                   src="/logo-sobitas.png"
                   alt="Protein.tn"
-                  width={200}
-                  height={70}
-                  className="h-10 lg:h-14 xl:h-16 w-auto object-contain brightness-0 invert"
+                  width={240}
+                  height={80}
+                  className="h-12 lg:h-16 xl:h-[72px] w-auto object-contain brightness-0 invert"
                   fetchPriority="high"
                 />
               </Link>
@@ -567,13 +567,13 @@ export function HeaderClient() {
         >
           <SheetHeader className="px-5 py-4 border-b border-gray-200 dark:border-gray-800 shrink-0">
             <SheetTitle className="sr-only">Menu</SheetTitle>
-            <Link href="/" onClick={closeMobileMenu} className="block max-w-[120px]">
+            <Link href="/" onClick={closeMobileMenu} className="block max-w-[160px]">
               <img
                 src="/logo-sobitas.png"
                 alt="Protein.tn"
-                width={120}
-                height={38}
-                className="h-8 w-auto object-contain"
+                width={160}
+                height={52}
+                className="h-10 w-auto object-contain"
               />
             </Link>
           </SheetHeader>

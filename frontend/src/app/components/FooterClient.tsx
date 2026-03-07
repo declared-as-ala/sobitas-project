@@ -91,12 +91,12 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
               transition={{ duration: 0.4, ease: 'easeOut' }}
               className="flex justify-start"
             >
-              <Link href="/" className="block max-w-[140px] opacity-90 hover:opacity-100 transition-opacity duration-300">
+              <Link href="/" className="block max-w-[200px] sm:max-w-[220px] opacity-90 hover:opacity-100 transition-opacity duration-300">
                 <img
                   src="/logo-sobitas.png"
                   alt="Protein.tn - SOBITAS"
-                  width={140}
-                  height={45}
+                  width={200}
+                  height={65}
                   className="w-full h-auto object-contain object-left"
                   loading="lazy"
                 />
@@ -224,13 +224,13 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
         <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
           {/* Contact Info & Social */}
           <div className="space-y-6">
-            <div className="relative h-8 w-auto mb-6 shrink-0 flex items-center">
+            <div className="relative h-12 w-auto mb-6 shrink-0 flex items-center">
               <img
                 src="/logo-sobitas.png"
                 alt="Protein.tn"
-                width={150}
-                height={48}
-                className="h-8 w-auto object-contain"
+                width={200}
+                height={64}
+                className="h-12 w-auto object-contain"
               />
             </div>
             <p className="text-sm text-gray-400 leading-relaxed">

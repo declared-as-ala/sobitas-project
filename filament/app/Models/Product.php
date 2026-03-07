@@ -155,13 +155,14 @@ class Product extends Model
 
     /**
      * Effective unit price for storefront/API: promo if active, else prix.
+     * Promo is used when promo > 0 and (no expiration or expiration in the future).
      * Server-side only — never trust client-sent prix_unitaire.
      */
     public function getEffectiveUnitPrice(): float
     {
         $promo = (float) ($this->promo ?? 0);
         $prix = (float) ($this->prix ?? 0);
-        if ($promo > 0 && $this->promo_expiration_date && $this->promo_expiration_date->isFuture()) {
+        if ($promo > 0 && (! $this->promo_expiration_date || $this->promo_expiration_date->isFuture())) {
             return $promo;
         }
         return $prix;
