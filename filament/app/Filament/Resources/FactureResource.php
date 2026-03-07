@@ -128,6 +128,7 @@ class FactureResource extends Resource
                                         ->options(function () {
                                             return \App\Models\Product::query()
                                                 ->orderBy('designation_fr')
+                                                ->limit(100)
                                                 ->get()
                                                 ->mapWithKeys(fn ($p) => [
                                                     $p->id => ($p->designation_fr ?? '') . ' (' . (int) $p->qte . ' en stock)'
@@ -141,7 +142,7 @@ class FactureResource extends Resource
                                                         ->orWhere('code_product', 'like', '%' . $search . '%');
                                                 })
                                                 ->orderBy('designation_fr')
-                                                ->limit(50)
+                                                ->limit(250)
                                                 ->get()
                                                 ->mapWithKeys(fn ($p) => [
                                                     $p->id => ($p->designation_fr ?? '') . ' (' . (int) $p->qte . ' en stock)'
