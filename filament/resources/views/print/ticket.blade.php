@@ -2,6 +2,19 @@
     $company = $coordonnee ?? $company ?? null;
     $documentDate = $ticket->date_ticket ? \Carbon\Carbon::parse($ticket->date_ticket)->format('d/m/Y') : ($ticket->created_at?->format('d/m/Y') ?? '');
     $documentTime = $ticket->created_at?->format('H:i') ?? '';
+    $ticketLogoUrl = null;
+    if ($company && !empty($company->logo_facture)) {
+        $ticketLogoUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($company->logo_facture);
+        if (str_starts_with($ticketLogoUrl, '/')) {
+            $ticketLogoUrl = rtrim(config('app.url'), '/') . $ticketLogoUrl;
+        }
+    }
+    if (!$ticketLogoUrl && $company && !empty($company->logo)) {
+        $ticketLogoUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($company->logo);
+        if (str_starts_with($ticketLogoUrl, '/')) {
+            $ticketLogoUrl = rtrim(config('app.url'), '/') . $ticketLogoUrl;
+        }
+    }
 @endphp
 <!DOCTYPE html>
 <html lang="fr">
@@ -30,10 +43,13 @@
         }
         .receipt_header .logo {
             width: 220px;
-            max-width: 100%;
+            max-height: 56px;
+            height: 56px;
+            object-fit: contain;
             margin: 0 auto;
             display: block;
         }
+        .receipt_header .logo-fallback { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
         .receipt_header h1 {
             font-size: 20px;
             margin-bottom: 5px;
@@ -110,6 +126,8 @@
             body { background: #fff; padding: 0; display: block; }
             .no-print { display: none !important; }
             .container { box-shadow: none; margin: 0; }
+            .receipt_header { padding-bottom: 20px; }
+            tbody td { padding: 3px 0; font-size: 11px; }
         }
     </style>
 </head>
@@ -123,7 +141,12 @@
 
     <div class="container" id="print-area">
         <div class="receipt_header">
-<img src="{{ asset('logo.png') }}" alt="SOBITAS PROTEIN.TN" class="logo" onerror="this.style.display='none'">
+            @if($ticketLogoUrl ?? null)
+                <img src="{{ $ticketLogoUrl }}" alt="{{ $company->abbreviation ?? 'SOBITAS' }}" class="logo" onerror="this.style.display='none'; var f=document.getElementById('ticket-logo-fallback'); if(f) f.style.display='block';">
+                <span id="ticket-logo-fallback" class="logo-fallback" style="display:none">{{ $company->abbreviation ?? 'STE SOBITAS' }}</span>
+            @else
+                <span class="logo-fallback">{{ $company->abbreviation ?? 'STE SOBITAS' }}</span>
+            @endif
             <h1>{{ $company->short_description_ticket ?? ($company->abbreviation ?? 'SOBITAS') }}</h1>
             <h2>
                 Adresse: {{ $company->adresse_fr ?? '' }}

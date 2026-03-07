@@ -121,7 +121,7 @@ Route::middleware(['auth'])->group(function () {
             'invoice_rows' => $invoice_rows,
             'coordonnee' => $coordonnee,
             'company' => $coordonnee,
-            'documentTitle' => 'Facture TVA',
+            'documentTitle' => 'Facture',
             'documentNumber' => $factureTva->numero ?? '',
             'documentDate' => $factureTva->date_facture ? \Carbon\Carbon::parse($factureTva->date_facture)->format('d/m/Y') : ($factureTva->created_at?->format('d/m/Y') ?? ''),
             'client' => $factureTva->client,

@@ -1,6 +1,6 @@
 {{-- Print A4 design system - professional, high contrast, repeat header --}}
 <style>
-    @page { size: A4; margin: 12mm; }
+    @page { size: A4; margin: 8mm 10mm; }
     * { box-sizing: border-box; }
     body { margin: 0; background: #fff; }
     .print-doc-body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13px; line-height: 1.45; color: #1a1a1a; background: #f1f5f9; min-height: 100vh; }
@@ -16,8 +16,9 @@
 
     .print-sheet { width: 210mm; min-height: 297mm; margin: 16px auto; padding: 20px 24px; background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.06); }
     .print-header { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 2px solid #e2e8f0; }
-    .print-logo { max-width: 160px; max-height: 48px; object-fit: contain; }
-    .print-company-name { font-size: 18px; font-weight: 700; color: #0f172a; margin-top: 8px; }
+    .print-logo { max-width: 160px; height: 56px; max-height: 56px; object-fit: contain; display: block; }
+.print-company-name { font-size: 18px; font-weight: 700; color: #0f172a; }
+.print-company .print-company-name { margin-top: 8px; }
     .print-company-meta { font-size: 12px; color: #475569; line-height: 1.6; margin-top: 8px; }
     .print-doc-info { text-align: right; }
     .print-doc-title { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; color: #0f172a; margin: 0 0 6px 0; }

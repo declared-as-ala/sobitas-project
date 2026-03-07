@@ -32,7 +32,19 @@
             <div class="invoice-header">
                 @php
                     /** @var \App\Models\Coordinate|null $company */
-                    $logoUrl = 'https://admin.protein.tn/storage/coordonnees/March2026/Z2S2Ct4CwucOAWmNFzTy.png';
+                    $logoUrl = null;
+                    if ($company && !empty($company->logo_facture)) {
+                        $logoUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($company->logo_facture);
+                        if (str_starts_with($logoUrl, '/')) {
+                            $logoUrl = rtrim(config('app.url'), '/') . $logoUrl;
+                        }
+                    }
+                    if (!$logoUrl && $company && !empty($company->logo)) {
+                        $logoUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($company->logo);
+                        if (str_starts_with($logoUrl, '/')) {
+                            $logoUrl = rtrim(config('app.url'), '/') . $logoUrl;
+                        }
+                    }
                     $statusValue = $status ?? null;
                     $statusLabel = $status_label ?? null;
                     $statusClass = match ($statusValue) {
@@ -73,7 +85,7 @@
                 </div>
 
                 <div class="invoice-doc-block">
-                    <h1 class="invoice-doc-title">{{ strtoupper($documentTitle ?? 'FACTURE TVA') }}</h1>
+                    <h1 class="invoice-doc-title">{{ strtoupper($documentTitle ?? 'FACTURE') }}</h1>
                     <dl class="invoice-doc-meta">
                         @if(!empty($documentNumber))
                             <dt>N°</dt>

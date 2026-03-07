@@ -15,7 +15,7 @@
 
     @page {
         size: A4;
-        margin: 12mm;
+        margin: 8mm 10mm;
     }
 
     * { box-sizing: border-box; }
@@ -34,13 +34,13 @@
 
     /* Sheet */
     .invoice-sheet { width: 210mm; min-height: 297mm; margin: 16px auto; padding: 0; background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.06); overflow: hidden; }
-    .invoice-sheet-inner { padding: 20px 24px 24px; }
+    .invoice-sheet-inner { padding: 12px 14px 14px; }
 
     /* Header band (orange accent) */
     .invoice-header-band { height: 6px; background: linear-gradient(90deg, var(--invoice-orange), var(--invoice-orange-dark)); }
 
     /* Header: company left, doc right */
-    .invoice-header { display: grid; grid-template-columns: 1fr auto; gap: 32px; align-items: start; padding: 24px 24px 20px; border-bottom: 1px solid var(--invoice-gray-200); }
+    .invoice-header { display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: start; padding: 12px 0 10px; border-bottom: 1px solid var(--invoice-gray-200); }
     .invoice-company { }
     .invoice-logo { max-width: 400px; max-height: 150px; object-fit: contain; display: block; margin-bottom: 20px; }
     .invoice-company-name { font-size: 20px; font-weight: 800; color: var(--invoice-gray-900); letter-spacing: -0.02em; margin: 0 0 10px 0; }
@@ -49,7 +49,7 @@
     .invoice-company-legal { font-size: 10px; color: var(--invoice-gray-500); margin-top: 8px; }
 
     .invoice-doc-block { text-align: right; min-width: 200px; }
-    .invoice-doc-title { font-size: 28px; font-weight: 800; letter-spacing: -0.03em; color: var(--invoice-gray-900); margin: 0 0 12px 0; line-height: 1.1; }
+    .invoice-doc-title { font-size: 22px; font-weight: 800; letter-spacing: -0.03em; color: var(--invoice-gray-900); margin: 0 0 8px 0; line-height: 1.1; }
     .invoice-doc-meta { font-size: 13px; color: var(--invoice-gray-700); }
     .invoice-doc-meta dt { display: inline; font-weight: 600; }
     .invoice-doc-meta dd { display: inline; margin: 0 0 0 6px; }
@@ -62,25 +62,25 @@
     .invoice-status-badge--canceled { background: #fee2e2; color: #b91c1c; }
 
     /* Client card */
-    .invoice-client { background: var(--invoice-gray-50); border: 1px solid var(--invoice-gray-200); border-radius: 10px; padding: 16px 20px; margin: 20px 24px; }
+    .invoice-client { background: var(--invoice-gray-50); border: 1px solid var(--invoice-gray-200); border-radius: 8px; padding: 8px 12px; margin: 10px 0; }
     .invoice-client-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--invoice-gray-500); margin-bottom: 6px; }
-    .invoice-client-name { font-size: 15px; font-weight: 700; color: var(--invoice-gray-900); margin-bottom: 8px; }
-    .invoice-client-details { font-size: 11px; color: var(--invoice-gray-700); line-height: 1.6; }
+    .invoice-client-name { font-size: 12px; font-weight: 700; color: var(--invoice-gray-900); margin-bottom: 4px; }
+    .invoice-client-details { font-size: 10px; color: var(--invoice-gray-700); line-height: 1.35; }
 
     /* Table */
-    .invoice-table-wrap { margin: 20px 24px; border: 1px solid var(--invoice-gray-200); border-radius: 10px; overflow: hidden; }
-    .invoice-table { width: 100%; border-collapse: collapse; font-size: 11px; }
-    .invoice-table thead th { background: var(--invoice-gray-100); color: var(--invoice-gray-700); font-weight: 600; padding: 12px 14px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid var(--invoice-gray-200); text-align: left; }
+    .invoice-table-wrap { margin: 10px 0; border: 1px solid var(--invoice-gray-200); border-radius: 8px; overflow: hidden; }
+    .invoice-table { width: 100%; border-collapse: collapse; font-size: 10px; line-height: 1.15; }
+    .invoice-table thead th { background: var(--invoice-gray-100); color: var(--invoice-gray-700); font-weight: 600; padding: 4px 6px; font-size: 9px; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 2px solid var(--invoice-gray-200); text-align: left; }
     .invoice-table thead th.num { text-align: right; }
-    .invoice-table tbody td { padding: 10px 14px; border-bottom: 1px solid var(--invoice-gray-100); vertical-align: top; }
+    .invoice-table tbody td { padding: 3px 6px; border-bottom: 1px solid var(--invoice-gray-100); vertical-align: top; }
     .invoice-table tbody tr:nth-child(even) { background: #fafbfc; }
     .invoice-table tbody td.num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 500; }
-    .invoice-table tbody td.designation { font-weight: 500; color: var(--invoice-gray-900); word-wrap: break-word; max-width: 220px; }
+    .invoice-table tbody td.designation { font-weight: 500; color: var(--invoice-gray-900); word-break: break-word; max-width: 0; line-height: 1.2; }
 
     /* Totals box (right, soft orange tint) */
-    .invoice-totals-wrap { display: flex; justify-content: flex-end; margin: 20px 24px 24px; }
-    .invoice-totals-box { width: 100%; max-width: 300px; background: linear-gradient(180deg, var(--invoice-orange-light) 0%, #fff 100%); border: 1px solid #fed7aa; border-radius: 10px; padding: 18px 22px; }
-    .invoice-tot-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 12px; color: var(--invoice-gray-700); }
+    .invoice-totals-wrap { display: flex; justify-content: flex-end; margin: 10px 0 12px; }
+    .invoice-totals-box { width: 100%; max-width: 260px; background: linear-gradient(180deg, var(--invoice-orange-light) 0%, #fff 100%); border: 1px solid #fed7aa; border-radius: 8px; padding: 8px 12px; }
+    .invoice-tot-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-size: 11px; color: var(--invoice-gray-700); }
     .invoice-tot-row.invoice-tot-ttc,
     .invoice-tot-row.ttc { margin-top: 12px; padding-top: 14px; border-top: 1px dashed var(--invoice-gray-200); font-size: 14px; font-weight: 700; color: var(--invoice-gray-800); }
     .invoice-tot-amt { font-variant-numeric: tabular-nums; font-weight: 600; }
@@ -113,7 +113,7 @@
         .invoice-table-wrap { margin: 12px 0; }
         .invoice-table thead { display: table-header-group; }
         .invoice-table thead th { background: var(--invoice-gray-100) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        .invoice-table tbody tr { break-inside: avoid; page-break-inside: avoid; }
+        .invoice-table tbody tr { break-inside: auto; page-break-inside: auto; }
         .invoice-table tbody tr:nth-child(even) { background: #f8fafc !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         .invoice-totals-wrap { break-inside: avoid; page-break-inside: avoid; margin: 12px 0; }
         .invoice-totals-box { -webkit-print-color-adjust: exact; print-color-adjust: exact; }

@@ -27,11 +27,30 @@
     </div>
     @endif
 
+    @php
+        $logoUrl = null;
+        if ($company && !empty($company->logo_facture)) {
+            $logoUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($company->logo_facture);
+            if (str_starts_with($logoUrl, '/')) {
+                $logoUrl = rtrim(config('app.url'), '/') . $logoUrl;
+            }
+        }
+        if (!$logoUrl && $company && !empty($company->logo)) {
+            $logoUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($company->logo);
+            if (str_starts_with($logoUrl, '/')) {
+                $logoUrl = rtrim(config('app.url'), '/') . $logoUrl;
+            }
+        }
+    @endphp
     <div class="print-sheet" id="print-area">
         <header class="print-header">
             <div class="print-company">
-                <img src="{{ asset('logo.png') }}" alt="SOBITAS PROTEIN.TN" class="print-logo" onerror="this.style.display='none'">
-                <div class="print-company-name">{{ $company->abbreviation ?? 'SOBITAS' }}</div>
+                @if($logoUrl)
+                    <img src="{{ $logoUrl }}" alt="{{ $company->abbreviation ?? 'SOBITAS' }}" class="print-logo" onerror="this.style.display='none'; var f=document.getElementById('print-logo-fallback'); if(f) f.style.display='block';">
+                    <span class="print-company-name" id="print-logo-fallback" style="display:none">{{ $company->abbreviation ?? 'STE SOBITAS' }}</span>
+                @else
+                    <div class="print-company-name">{{ $company->abbreviation ?? 'STE SOBITAS' }}</div>
+                @endif
                 @if ($company ?? null)
                     <div class="print-company-meta">
                         @if ($company->adresse_fr ?? null) {{ $company->adresse_fr }}<br> @endif
