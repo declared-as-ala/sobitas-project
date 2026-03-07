@@ -5,7 +5,7 @@ namespace App\Observers;
 use App\Filament\Resources\CommandeResource;
 use App\Models\Commande;
 use App\Models\User;
-use Filament\Notifications\Actions\Action as NotificationAction;
+use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 
 class CommandeObserver
@@ -30,7 +30,7 @@ class CommandeObserver
                 ->body($body)
                 ->success()
                 ->actions([
-                    NotificationAction::make('open')
+                    Action::make('open')
                         ->label('Ouvrir')
                         ->url($url),
                 ])
