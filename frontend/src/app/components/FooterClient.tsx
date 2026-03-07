@@ -93,15 +93,13 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
               className="flex justify-start"
             >
               <Link href="/" className="block max-w-[140px] opacity-90 hover:opacity-100 transition-opacity duration-300">
-                <Image
+                <img
                   src={getStorageUrl('coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp')}
                   alt="Protein.tn - SOBITAS"
                   width={140}
                   height={45}
                   className="w-full h-auto object-contain object-left"
-                  sizes="(max-width: 480px) 100px, (max-width: 768px) 120px, 140px"
                   loading="lazy"
-                  unoptimized
                 />
               </Link>
             </motion.div>
@@ -228,15 +226,12 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
           {/* Contact Info & Social */}
           <div className="space-y-6">
             <div className="relative h-8 w-auto mb-6 shrink-0 flex items-center">
-              <Image
+              <img
                 src={getStorageUrl('coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp')}
                 alt="Protein.tn"
                 width={150}
                 height={48}
                 className="h-8 w-auto object-contain"
-                style={{ width: 'auto', height: 'auto' }}
-                priority
-                unoptimized
               />
             </div>
             <p className="text-sm text-gray-400 leading-relaxed">

@@ -230,14 +230,13 @@ export function HeaderClient() {
             )}
           >
             <Link href="/" className="flex items-center justify-start flex-1 min-w-0 max-w-[11rem] sm:max-w-[12rem] -ml-1" aria-label="Protein.tn - Accueil">
-              <Image
+              <img
                 src={getStorageUrl('coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp')}
                 alt="Protein.tn"
                 width={140}
                 height={48}
                 className="h-9 min-h-[36px] w-auto max-w-full object-contain object-left drop-shadow-sm transition-all duration-300"
-                style={{ width: 'auto', height: 'auto' }}
-                priority
+                fetchPriority="high"
               />
             </Link>
 
@@ -297,15 +296,14 @@ export function HeaderClient() {
         <div className="hidden md:block bg-red-600 dark:bg-red-700">
           <div className="max-w-7xl mx-auto px-4 lg:px-8">
             <div className="flex items-center justify-between h-16 gap-4">
-              <Link href="/" className="flex-shrink-0" aria-label="Protein.tn - Accueil">
-                <Image
+              <Link href="/" className="flex-shrink-0 flex items-center" aria-label="Protein.tn - Accueil">
+                <img
                   src={getStorageUrl('coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp')}
                   alt="Protein.tn"
                   width={200}
                   height={70}
                   className="h-10 lg:h-14 xl:h-16 w-auto object-contain brightness-0 invert"
-                  priority
-                  unoptimized
+                  fetchPriority="high"
                 />
               </Link>
 
