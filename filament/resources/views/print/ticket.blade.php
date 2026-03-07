@@ -35,9 +35,9 @@
             text-align: center;
         }
         .receipt_header .logo {
-            width: 280px;
-            max-height: 88px;
-            height: 88px;
+            width: 320px;
+            max-height: 110px;
+            height: 110px;
             object-fit: contain;
             margin: 0 auto;
             display: block;
