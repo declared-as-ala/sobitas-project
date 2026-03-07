@@ -14,7 +14,7 @@ class BackfillFactureTotals extends Command
      *
      * @var string
      */
-    protected $signature = 'facture:backfill-totals';
+    protected $signature = 'facture:backfill-totals {--only-zero : Only update records where net_a_payer is 0 or null}';
 
     /**
      * The console command description.
@@ -29,7 +29,13 @@ class BackfillFactureTotals extends Command
     public function handle()
     {
         $this->info('Starting backfill of Facture (Bon de Livraison) totals...');
-        $factures = Facture::with('details')->get();
+        $query = Facture::with('details');
+        if ($this->option('only-zero')) {
+            $query->where(function ($q) {
+                $q->whereNull('net_a_payer')->orWhere('net_a_payer', 0);
+            });
+        }
+        $factures = $query->get();
         $count = 0;
         
         $coordinate = \App\Models\Coordinate::first();
@@ -44,35 +50,24 @@ class BackfillFactureTotals extends Command
                 'produit_id' => $d->produit_id,
                 'qte' => $d->qte ?? $d->quantite ?? 1,
                 'prix_unitaire' => $d->prix_unitaire ?? 0,
-                // Assumed BL lines inherit global TVA if applicable, usually 0 for typical BLs if not billing
-                'tva_pct' => 0, 
+                'tva_pct' => $globalDefaultTva,
             ])->toArray();
 
             $remise = (float) ($facture->remise ?? 0);
             $timbre = (float) ($facture->timbre ?? 0);
-            $tvaRate = 0; // Using zero to keep BL just as HT/TTC equivalent unless TVA is explicitly forced
 
-            $calcTotals = InvoiceCalculator::calculate($detailsArray, $remise, $timbre, $tvaRate);
+            $calcTotals = InvoiceCalculator::calculate($detailsArray, $remise, $timbre, $globalDefaultTva);
 
             $updateData = [
                 'prix_ht' => $calcTotals['total_ht_brut'],
                 'remise' => $calcTotals['remise'],
-                'prix_ttc' => $calcTotals['prix_ttc'],
-                'timbre' => $calcTotals['timbre'],
-                'net_a_payer' => $calcTotals['net_a_payer'],
-                'status' => 'issued', // Ensure existing ones are valid and no longer drafts
+                'pourcentage_remise' => $calcTotals['pourcentage_remise'],
+                'prix_ht_apres_remise' => $calcTotals['prix_ht_apres_remise'],
                 'tva' => $calcTotals['tva'],
+                'timbre' => $calcTotals['timbre'],
+                'prix_ttc' => $calcTotals['prix_ttc'],
+                'net_a_payer' => $calcTotals['net_a_payer'],
             ];
-
-            if (Schema::hasColumn('factures', 'prix_ht_apres_remise')) {
-                $updateData['prix_ht_apres_remise'] = $calcTotals['prix_ht_apres_remise'];
-            }
-            if (Schema::hasColumn('factures', 'pourcentage_remise')) {
-                $updateData['pourcentage_remise'] = $calcTotals['pourcentage_remise'];
-            }
-            if (Schema::hasColumn('factures', 'net_a_payer')) {
-                $updateData['net_a_payer'] = $calcTotals['net_a_payer'];
-            }
 
             $facture->update($updateData);
             $count++;

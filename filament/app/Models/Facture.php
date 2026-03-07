@@ -13,7 +13,7 @@ class Facture extends Model
 
     protected $fillable = [
         'numero', 'client_id', 'commande_id', 'status', 'prix_ht', 'prix_ttc', 'remise',
-        'pourcentage_remise', 'timbre', 'net_a_payer',
+        'pourcentage_remise', 'prix_ht_apres_remise', 'tva', 'timbre', 'net_a_payer',
     ];
 
     protected $casts = [

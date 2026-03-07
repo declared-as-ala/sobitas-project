@@ -14,7 +14,7 @@ class BackfillFactureTvaTotals extends Command
      *
      * @var string
      */
-    protected $signature = 'facture-tva:backfill-totals';
+    protected $signature = 'facture-tva:backfill-totals {--only-zero : Only update records where net_a_payer is 0 or null}';
 
     /**
      * The console command description.
@@ -29,7 +29,13 @@ class BackfillFactureTvaTotals extends Command
     public function handle()
     {
         $this->info('Starting backfill of Facture TVA totals...');
-        $factures = FactureTva::with('details')->get();
+        $query = FactureTva::with('details');
+        if ($this->option('only-zero')) {
+            $query->where(function ($q) {
+                $q->whereNull('net_a_payer')->orWhere('net_a_payer', 0);
+            });
+        }
+        $factures = $query->get();
         $count = 0;
         $coordinate = \App\Models\Coordinate::first();
         $globalDefaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
@@ -44,9 +50,8 @@ class BackfillFactureTvaTotals extends Command
 
             $remise = (float) ($facture->remise ?? 0);
             $timbre = (float) ($facture->timbre ?? 0);
-            $defaultTva = (float) ($facture->tva ?? $globalDefaultTva);
 
-            $calcTotals = InvoiceCalculator::calculate($detailsArray, $remise, $timbre, $defaultTva);
+            $calcTotals = InvoiceCalculator::calculate($detailsArray, $remise, $timbre, $globalDefaultTva);
 
             $updateData = [
                 'prix_ht' => $calcTotals['total_ht_brut'],

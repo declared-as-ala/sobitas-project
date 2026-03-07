@@ -15,6 +15,7 @@ use App\Models\Facture;
 use App\Models\FactureTva;
 use App\Models\Quotation;
 use App\Models\Ticket;
+use App\Services\InvoiceCalculator;
 use App\Services\NumberSequenceService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -140,6 +141,7 @@ class QuotationConversionService
 
     /**
      * Convert a quotation to a Facture TVA. Same client + lines; remise/timbre/TVA from quotation or default.
+     * Uses InvoiceCalculator so net_a_payer and all totals are persisted (list view shows correct values).
      */
     public function convertToFactureTva(Quotation $quotation): FactureTva
     {
@@ -148,6 +150,22 @@ class QuotationConversionService
 
             $coordinate = Coordinate::getCached();
             $defaultTvaPct = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
+            $remise = (float) ($quotation->remise ?? 0);
+            $timbre = (float) ($quotation->timbre ?? 0);
+
+            $details = [];
+            foreach ($quotation->details as $line) {
+                if (! $line->produit_id) {
+                    continue;
+                }
+                $details[] = [
+                    'produit_id' => $line->produit_id,
+                    'qte' => (int) ($line->qte ?? $line->quantite ?? 1),
+                    'prix_unitaire' => (float) ($line->prix_unitaire ?? 0),
+                    'tva_pct' => (float) ($line->tva ?? $defaultTvaPct),
+                ];
+            }
+            $totals = InvoiceCalculator::calculate($details, $remise, $timbre, $defaultTvaPct);
 
             $invoice = new FactureTva();
             $invoice->client_id = $quotation->client_id;
@@ -158,27 +176,18 @@ class QuotationConversionService
             if (Schema::hasColumn('facture_tvas', 'date_facture')) {
                 $invoice->date_facture = now()->toDateString();
             }
-            $invoice->remise = (float) ($quotation->remise ?? 0);
-            $invoice->timbre = (float) ($quotation->timbre ?? 0);
-
-            $totalHt = 0.0;
-            $totalTva = 0.0;
-            foreach ($quotation->details as $line) {
-                if (! $line->produit_id) {
-                    continue;
-                }
-                $qte = (int) ($line->qte ?? $line->quantite ?? 1);
-                $pu = (float) ($line->prix_unitaire ?? 0);
-                $lineHt = $qte * $pu;
-                $tvaAmount = $lineHt * $defaultTvaPct / 100;
-                $totalHt += $lineHt;
-                $totalTva += $tvaAmount;
+            $invoice->prix_ht = $totals['total_ht_brut'];
+            $invoice->remise = $totals['remise'];
+            $invoice->timbre = $totals['timbre'];
+            $invoice->prix_ht_apres_remise = $totals['prix_ht_apres_remise'];
+            $invoice->tva = $totals['tva'];
+            $invoice->prix_ttc = $totals['prix_ttc'];
+            $invoice->net_a_payer = $totals['net_a_payer'];
+            if (Schema::hasColumn('facture_tvas', 'pourcentage_remise')) {
+                $invoice->pourcentage_remise = $totals['pourcentage_remise'];
             }
-            $invoice->prix_ht = $totalHt;
-            $invoice->tva = $totalTva;
-            $invoice->prix_ttc = $totalHt + $totalTva - (float) $invoice->remise + (float) $invoice->timbre;
             if (Schema::hasColumn('facture_tvas', 'prix_total')) {
-                $invoice->prix_total = $invoice->prix_ttc;
+                $invoice->prix_total = $totals['prix_ttc'];
             }
             $invoice->save();
 
@@ -189,14 +198,15 @@ class QuotationConversionService
                 $qte = (int) ($line->qte ?? $line->quantite ?? 1);
                 $pu = (float) $line->prix_unitaire;
                 $lineHt = $qte * $pu;
-                $tvaAmount = $lineHt * $defaultTvaPct / 100;
+                $tvaPct = (float) ($line->tva ?? $defaultTvaPct);
+                $tvaAmount = $lineHt * $tvaPct / 100;
                 DetailsFactureTva::create([
                     'facture_tva_id' => $invoice->id,
                     'produit_id' => $line->produit_id,
                     'qte' => $qte,
                     'prix_unitaire' => $pu,
                     'prix_ht' => $lineHt,
-                    'tva' => $defaultTvaPct,
+                    'tva' => $tvaPct,
                     'prix_ttc' => $lineHt + $tvaAmount,
                 ]);
             }
@@ -212,21 +222,45 @@ class QuotationConversionService
 
     /**
      * Convert a quotation to a Bon de livraison (Facture BL). Same client + lines; commande_id null.
+     * Uses InvoiceCalculator so net_a_payer and all totals are persisted (list view shows correct values).
      */
     public function convertToBl(Quotation $quotation): Facture
     {
         return DB::transaction(function () use ($quotation) {
             $quotation->load('details.product');
 
+            $coordinate = Coordinate::getCached();
+            $defaultTvaPct = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
+            $remise = (float) ($quotation->remise ?? 0);
+            $timbre = (float) ($quotation->timbre ?? 0);
+
+            $details = [];
+            foreach ($quotation->details as $line) {
+                if (! $line->produit_id) {
+                    continue;
+                }
+                $details[] = [
+                    'produit_id' => $line->produit_id,
+                    'qte' => (int) ($line->qte ?? $line->quantite ?? 1),
+                    'prix_unitaire' => (float) ($line->prix_unitaire ?? 0),
+                    'tva_pct' => (float) ($line->tva ?? $defaultTvaPct),
+                ];
+            }
+            $totals = InvoiceCalculator::calculate($details, $remise, $timbre, $defaultTvaPct);
+
             $bl = new Facture();
             $bl->commande_id = null;
             $bl->client_id = $quotation->client_id;
             $bl->numero = $this->numberSequence->nextBl();
             $bl->status = BlStatus::Draft;
-            $bl->prix_ht = (float) ($quotation->prix_ht ?? $quotation->prix_total ?? 0);
-            $bl->prix_ttc = (float) ($quotation->prix_ttc ?? $quotation->prix_total ?? 0);
-            $bl->remise = (float) ($quotation->remise ?? 0);
-            $bl->timbre = (float) ($quotation->timbre ?? 0);
+            $bl->prix_ht = $totals['total_ht_brut'];
+            $bl->remise = $totals['remise'];
+            $bl->pourcentage_remise = $totals['pourcentage_remise'];
+            $bl->prix_ht_apres_remise = $totals['prix_ht_apres_remise'];
+            $bl->tva = $totals['tva'];
+            $bl->timbre = $totals['timbre'];
+            $bl->prix_ttc = $totals['prix_ttc'];
+            $bl->net_a_payer = $totals['net_a_payer'];
             $bl->save();
 
             foreach ($quotation->details as $line) {
@@ -240,6 +274,9 @@ class QuotationConversionService
                 $detail->produit_id = $line->produit_id;
                 $detail->qte = $qte;
                 $detail->prix_unitaire = $pu;
+                if (Schema::hasColumn('details_factures', 'prix_ttc')) {
+                    $detail->prix_ttc = $qte * $pu;
+                }
                 $detail->save();
             }
 
