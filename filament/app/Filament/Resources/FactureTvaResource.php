@@ -51,6 +51,7 @@ class FactureTvaResource extends Resource
                         ->columns(1),
                     Section::make('Client')
                         ->icon('heroicon-o-user')
+                        ->extraAttributes(['class' => 'doc-section-client'])
                         ->schema([
                             Forms\Components\Select::make('client_id')
                                 ->label('Client')

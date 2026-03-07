@@ -82,16 +82,35 @@ class EditFacture extends EditRecord
         $data['client_adresse'] = $this->record->client?->adresse ?? '';
         $data['client_phone']   = $this->record->client?->phone_1 ?? '';
         $data['client_email']   = $this->record->client?->email ?? '';
-        $data['details']        = $this->record->details->map(fn ($d) => [
+
+        $coordinate = \App\Models\Coordinate::getCached();
+        $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
+
+        $data['details'] = $this->record->details->map(fn ($d) => [
             'produit_id'    => $d->produit_id,
             'qte'           => $d->qte ?? $d->quantite ?? 0,
             'prix_unitaire' => $d->prix_unitaire,
+            'tva_pct'       => $defaultTva,
         ])->toArray();
         if (empty($data['details'])) {
-            $coordinate = \App\Models\Coordinate::getCached();
-            $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
             $data['details'] = [['produit_id' => null, 'qte' => 1, 'prix_unitaire' => 0, 'tva_pct' => $defaultTva]];
         }
+
+        $remise = (float) ($this->record->remise ?? 0);
+        $timbre = (float) ($this->record->timbre ?? 0);
+        $totals = \App\Services\InvoiceCalculator::calculate($data['details'], $remise, $timbre, $defaultTva);
+
+        $data['prix_ht'] = $totals['total_ht_brut'];
+        $data['pourcentage_remise'] = $totals['pourcentage_remise'];
+        $data['prix_ht_apres_remise'] = $totals['prix_ht_apres_remise'];
+        $data['tva'] = $totals['tva'];
+        $data['prix_ttc'] = $totals['prix_ttc'];
+        $data['net_a_payer'] = $totals['net_a_payer'];
+        $data['remise'] = $totals['remise'];
+        $data['timbre'] = $totals['timbre'];
+        $data['resume_date_display'] = $this->record->created_at?->format('d/m/Y') ?? '';
+        $data['resume_statut_display'] = 'Validée';
+
         return $data;
     }
 
@@ -182,10 +201,13 @@ class EditFacture extends EditRecord
         }
 
         if (! $found) {
+            $coordinate = \App\Models\Coordinate::getCached();
+            $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
             $details[] = [
                 'produit_id'    => $product->id,
                 'qte'           => 1,
                 'prix_unitaire' => (float) ($product->prix ?? 0),
+                'tva_pct'       => $defaultTva,
             ];
         }
 
@@ -194,7 +216,22 @@ class EditFacture extends EditRecord
             ->success()
             ->send();
 
-        $this->form->fill(array_merge($state, ['details' => $details]));
+        $newState = array_merge($state, ['details' => $details]);
+        $this->form->fill($newState);
+
+        $coordinate = \App\Models\Coordinate::getCached();
+        $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
+        $remise = (float) ($newState['remise'] ?? 0);
+        $timbre = (float) ($newState['timbre'] ?? 0);
+        $calc = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, $defaultTva);
+        $this->form->fill(array_merge($newState, [
+            'prix_ht' => $calc['total_ht_brut'],
+            'pourcentage_remise' => $calc['pourcentage_remise'],
+            'prix_ht_apres_remise' => $calc['prix_ht_apres_remise'],
+            'tva' => $calc['tva'],
+            'prix_ttc' => $calc['prix_ttc'],
+            'net_a_payer' => $calc['net_a_payer'],
+        ]));
     }
 
     // -------------------------------------------------------------------------
@@ -252,8 +289,8 @@ class EditFacture extends EditRecord
     protected function getFormActions(): array
     {
         return [
-            $this->getSaveFormAction()->label('Enregistrer')->icon('heroicon-o-check-circle'),
-            $this->getCancelFormAction()->label('Annuler')->icon('heroicon-o-x-circle'),
+            $this->getSaveFormAction()->label('Enregistrer les modifications')->icon('heroicon-o-check'),
+            $this->getCancelFormAction()->label('Annuler'),
         ];
     }
 }

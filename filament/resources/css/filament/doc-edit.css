@@ -288,6 +288,24 @@
 }
 
 /* ====================================================
+   Client select: prevent vertical/broken text (BL, Devis, etc.)
+   Root cause: narrow container or flex can make the selected
+   label wrap letter-by-letter. Force single-line display.
+   Use .doc-section-client when set on the Client Section.
+   ==================================================== */
+.doc-section-client .fi-fo-select-wrp .fi-select-input,
+.doc-section-client .fi-select-input {
+    white-space: nowrap !important;
+    text-overflow: ellipsis;
+    min-width: 12rem;
+    overflow: hidden;
+}
+.doc-section-client .fi-fo-select-wrp {
+    min-width: 0;
+    overflow: visible;
+}
+
+/* ====================================================
    Disable sticky header for ALL document edit pages
    (BL, Facture TVA, Devis, Ticket)
    ==================================================== */
