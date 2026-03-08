@@ -32,8 +32,6 @@ class Dashboard extends BaseDashboard
      */
     public function mount(): void
     {
-        parent::mount();
-
         $period = request()->query('period');
         if ($period !== null && $period !== '') {
             session(['dashboard.filter.preset' => $period]);
