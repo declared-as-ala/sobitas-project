@@ -21,6 +21,8 @@ trait DashboardHeaderActions
     {
         session(['dashboard.filter.preset' => $value]);
         $this->dispatch('dashboardFilterUpdated');
+        // Keep period in URL so it persists after refresh / navigation
+        $this->redirect(request()->fullUrlWithQuery(['period' => $value]), navigate: true);
     }
 
     public function refreshStats(): void
@@ -29,10 +31,9 @@ trait DashboardHeaderActions
 
         try {
             session(['dashboard.filter.preset' => $this->preset]);
-
             $this->dispatch('dashboardFilterUpdated');
-
-            $this->dispatch('$refresh');
+            // Do NOT dispatch $refresh — it can re-mount widgets and reset the filter.
+            // Widgets listening to dashboardFilterUpdated will refresh their data.
 
             \Filament\Notifications\Notification::make()
                 ->title('Actualisation réussie')

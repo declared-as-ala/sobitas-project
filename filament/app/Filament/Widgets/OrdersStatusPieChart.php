@@ -48,6 +48,7 @@ class OrdersStatusPieChart extends ChartWidget
             ->orderByDesc('cnt')
             ->get();
 
+        $total = $rows->sum('cnt');
         $labels = [];
         $data = [];
         $colors = [
@@ -60,8 +61,10 @@ class OrdersStatusPieChart extends ChartWidget
         ];
 
         foreach ($rows as $row) {
-            $labels[] = Commande::getStatusLabel($row->etat ?? '');
-            $data[] = (int) $row->cnt;
+            $cnt = (int) $row->cnt;
+            $pct = $total > 0 ? round(($cnt / $total) * 100, 1) : 0;
+            $labels[] = Commande::getStatusLabel($row->etat ?? '') . ' — ' . $cnt . ' (' . $pct . ' %)';
+            $data[] = $cnt;
         }
 
         $backgrounds = [];

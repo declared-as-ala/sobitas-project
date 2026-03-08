@@ -2,38 +2,50 @@
 
 namespace App\Filament\Widgets;
 
+use App\Services\DateRangeFilterService;
 use Carbon\Carbon;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Livewire\Attributes\On;
 
 class TopProductsWidget extends ChartWidget
 {
-    protected ?string $heading = 'Top 5 Produits (30 jours)';
-
     protected static ?int $sort = 3;
 
     protected ?string $maxHeight = '250px';
 
-    protected ?string $pollingInterval = null; // Disable polling — data cached 5min
+    protected ?string $pollingInterval = null;
 
-    /**
-     * BEFORE: 3 aggregate queries + N+1 Product::find() in a loop.
-     * AFTER: 1 single UNION + JOIN query that returns product names directly.
-     */
+    #[On('dashboardFilterUpdated')]
+    public function refresh(): void
+    {
+    }
+
+    protected function getHeading(): ?string
+    {
+        $period = $this->getCurrentPeriod();
+        $label = $period['label'] ?? 'Période';
+
+        return "Top 5 Produits ({$label})";
+    }
+
     protected function getData(): array
     {
-        return Cache::remember('dashboard:top_products', 300, function () {
-            return $this->buildChartData();
+        $period = $this->getCurrentPeriod();
+        $cacheKey = "dashboard:top_products:{$period['start']->format('Ymd')}_{$period['end']->format('Ymd')}";
+
+        return Cache::remember($cacheKey, 300, function () use ($period) {
+            return $this->buildChartData($period);
         });
     }
 
-    private function buildChartData(): array
+    private function buildChartData(array $period): array
     {
-        $start = Carbon::now()->subDays(30)->startOfDay();
+        $start = $period['start'];
+        $end = $period['end'];
 
         try {
-            // Single query: UNION all sales sources, JOIN products, GROUP BY, LIMIT 5
             $topProducts = DB::select("
                 SELECT
                     p.id,
@@ -43,27 +55,27 @@ class TopProductsWidget extends ChartWidget
                     SELECT df.produit_id, df.prix_ttc
                     FROM details_factures df
                     INNER JOIN factures f ON df.facture_id = f.id
-                    WHERE f.created_at >= ?
+                    WHERE f.created_at BETWEEN ? AND ?
 
                     UNION ALL
 
                     SELECT dft.produit_id, dft.prix_ttc
                     FROM details_facture_tvas dft
                     INNER JOIN facture_tvas ft ON dft.facture_tva_id = ft.id
-                    WHERE ft.created_at >= ?
+                    WHERE ft.created_at BETWEEN ? AND ?
 
                     UNION ALL
 
                     SELECT dt.produit_id, dt.prix_ttc
                     FROM details_tickets dt
                     INNER JOIN tickets t ON dt.ticket_id = t.id
-                    WHERE t.created_at >= ?
+                    WHERE t.created_at BETWEEN ? AND ?
                 ) AS sales
                 INNER JOIN products p ON p.id = sales.produit_id
                 GROUP BY p.id, p.designation_fr
                 ORDER BY revenue DESC
                 LIMIT 5
-            ", [$start, $start, $start]);
+            ", [$start, $end, $start, $end, $start, $end]);
         } catch (\Exception $e) {
             return ['datasets' => [['data' => []]], 'labels' => []];
         }
@@ -77,6 +89,15 @@ class TopProductsWidget extends ChartWidget
             ],
             'labels' => array_column($topProducts, 'name'),
         ];
+    }
+
+    private function getCurrentPeriod(): array
+    {
+        $preset = session('dashboard.filter.preset', '30d');
+        $customStart = session('dashboard.filter.custom_start') ? Carbon::parse(session('dashboard.filter.custom_start')) : null;
+        $customEnd = session('dashboard.filter.custom_end') ? Carbon::parse(session('dashboard.filter.custom_end')) : null;
+
+        return DateRangeFilterService::getPeriod($preset, $customStart, $customEnd);
     }
 
     protected function getType(): string

@@ -2,7 +2,6 @@
 
 namespace App\Filament\Pages;
 
-use App\Filament\Support\DashboardHeaderActions;
 use App\Filament\Widgets\DashboardAlertsWidget;
 use App\Filament\Widgets\DashboardHeaderWidget;
 use App\Filament\Widgets\GeographicChart;
@@ -12,6 +11,7 @@ use App\Filament\Widgets\MonthlyRevenueComparison;
 use App\Filament\Widgets\OrdersStatusPieChart;
 use App\Filament\Widgets\ProductsStockPieChart;
 use App\Filament\Widgets\QuickActionsWidget;
+use App\Filament\Widgets\TopCategoriesListWidget;
 use App\Filament\Widgets\RevenueByCategoryPieChart;
 use App\Filament\Widgets\RevenueChart;
 use App\Filament\Widgets\StatsOverview;
@@ -22,11 +22,27 @@ use Filament\Pages\Dashboard as BaseDashboard;
 
 class Dashboard extends BaseDashboard
 {
-    use DashboardHeaderActions;
-
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-presentation-chart-line';
 
     protected static ?string $title = 'Tableau de bord Marketplace';
+
+    /**
+     * Sync period from URL to session so all widgets use the same filter.
+     * Ensures URL is the source of truth when present (persists after refresh/Actualiser).
+     */
+    public function mount(): void
+    {
+        parent::mount();
+
+        $period = request()->query('period');
+        if ($period !== null && $period !== '') {
+            session(['dashboard.filter.preset' => $period]);
+        }
+        if (! request()->has('period')) {
+            $preset = session('dashboard.filter.preset', '30d');
+            $this->redirect(request()->fullUrlWithQuery(['period' => $preset]), navigate: true);
+        }
+    }
 
     public function getHeaderWidgets(): array
     {
@@ -50,9 +66,10 @@ class Dashboard extends BaseDashboard
             MonthlyRevenueComparison::class,
             GeographicChart::class,
 
-            // Section Analyses — camemberts (7j/30j/90j via filtre global)
+            // Section Analyses — camemberts + listes (7j/30j/90j via filtre global)
             OrdersStatusPieChart::class,
             RevenueByCategoryPieChart::class,
+            TopCategoriesListWidget::class,
             ProductsStockPieChart::class,
 
             LatestCommandes::class,
