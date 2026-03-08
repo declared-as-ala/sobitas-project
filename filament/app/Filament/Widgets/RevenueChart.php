@@ -28,7 +28,7 @@ class RevenueChart extends ChartWidget
     {
     }
 
-    protected function getHeading(): ?string
+    public function getHeading(): ?string
     {
         $period = $this->getCurrentPeriod();
         $label = $period['label'] ?? 'Période';
