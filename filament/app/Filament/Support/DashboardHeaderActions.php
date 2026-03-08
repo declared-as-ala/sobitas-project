@@ -21,8 +21,9 @@ trait DashboardHeaderActions
     {
         session(['dashboard.filter.preset' => $value]);
         $this->dispatch('dashboardFilterUpdated');
-        // Keep period in URL so it persists after refresh / navigation
-        $this->redirect(request()->fullUrlWithQuery(['period' => $value]), navigate: true);
+        // Update URL in browser without a full redirect (avoids 405 when redirect is followed as POST)
+        $url = request()->fullUrlWithQuery(['period' => $value]);
+        $this->js('window.history.replaceState({}, "", ' . json_encode($url) . ')');
     }
 
     public function refreshStats(): void
