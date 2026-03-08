@@ -114,16 +114,18 @@ class TicketResource extends Resource
                                 ->schema([
                                     Forms\Components\Select::make('produit_id')
                                         ->label('Produit')
-                                        ->options(fn () => \App\Models\Product::orderBy('designation_fr')->get()->mapWithKeys(fn ($p) => [$p->id => ($p->designation_fr ?? '') . ($p->code_product ? ' (' . $p->code_product . ')' : '')])->all())
                                         ->searchable()
-                                        ->preload()
+                                        ->getSearchResultsUsing(fn (string $search): array => \App\Models\Product::getSearchOptionsForFilament($search, 30))
+                                        ->getOptionLabelUsing(fn ($value): ?string => \App\Models\Product::getOptionLabelForId($value))
                                         ->required()
                                         ->live()
+                                        ->placeholder('Tapez pour rechercher…')
                                         ->columnSpan(['default' => 12, 'md' => 5])
-                                        ->afterStateUpdated(function ($state, $set) {
-                                            if ($state && $product = \App\Models\Product::find($state)) {
-                                                $set('prix_unitaire', (float) ($product->prix ?? 0));
+                                        ->afterStateUpdated(function ($state, $set, $get) {
+                                            if ($state && $product = \App\Models\Product::query()->select(\App\Models\Product::getSelectSearchColumns())->find($state)) {
+                                                $set('prix_unitaire', $product->getEffectiveUnitPrice());
                                             }
+                                            self::recalculateTicketTotals($get, $set);
                                         }),
                                     Forms\Components\TextInput::make('qte')
                                         ->label('Qté')
@@ -155,7 +157,7 @@ class TicketResource extends Resource
                                 ->defaultItems(0)
                                 ->addActionLabel('Ajouter une ligne')
                                 ->columnSpanFull()
-                                ->itemLabel(fn (array $state) => isset($state['produit_id']) ? (\App\Models\Product::find($state['produit_id'])?->designation_fr ?? 'Ligne') : 'Ligne'),
+                                ->itemLabel(fn (array $state) => isset($state['produit_id']) ? (\App\Models\Product::query()->select('id', 'designation_fr')->find($state['produit_id'])?->designation_fr ?? 'Ligne') : 'Ligne'),
                         ])
                         ->columnSpanFull(),
                 ])->columnSpan(2),

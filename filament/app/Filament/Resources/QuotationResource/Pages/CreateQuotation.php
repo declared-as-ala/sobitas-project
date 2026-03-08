@@ -37,7 +37,7 @@ class CreateQuotation extends CreateRecord
         $details[] = [
             'produit_id' => $product->id,
             'qte' => 1,
-            'prix_unitaire' => (float) ($product->prix ?? 0),
+            'prix_unitaire' => $product->getEffectivePriceHt(),
             'tva_pct' => $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19,
         ];
         

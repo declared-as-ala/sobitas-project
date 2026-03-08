@@ -60,7 +60,6 @@ class ApisController extends Controller
     // Article list columns — exclude description_fr (can be huge HTML)
     private const ARTICLE_LIST_COLUMNS = [
         'id', 'slug', 'designation_fr', 'cover', 'publier', 'created_at',
-        'meta_title', 'meta_description',
     ];
 
     private function resolvePerPage(Request $request, int $default = self::DEFAULT_PER_PAGE): int

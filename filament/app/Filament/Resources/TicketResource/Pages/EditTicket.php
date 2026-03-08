@@ -62,7 +62,7 @@ class EditTicket extends EditRecord
         $details[] = [
             'produit_id' => $product->id,
             'qte' => 1,
-            'prix_unitaire' => (float) ($product->prix ?? 0),
+            'prix_unitaire' => $product->getEffectiveUnitPrice(),
         ];
         $this->form->fill(array_merge($state, ['details' => $details]));
         $this->recalculateTotals();

@@ -21,10 +21,17 @@ class DetailsRelationManager extends RelationManager
         return $schema->schema([
             Forms\Components\Select::make('produit_id')
                 ->label('Produit')
-                ->relationship('product', 'designation_fr')
-                ->required()
                 ->searchable()
-                ->preload(),
+                ->getSearchResultsUsing(fn (string $search): array => \App\Models\Product::getSearchOptionsForFilament($search, 30))
+                ->getOptionLabelUsing(fn ($value): ?string => \App\Models\Product::getOptionLabelForId($value))
+                ->required()
+                ->live()
+                ->placeholder('Tapez pour rechercher…')
+                ->afterStateUpdated(function ($state, $set) {
+                    if ($state && $product = \App\Models\Product::query()->select(\App\Models\Product::getSelectSearchColumns())->find($state)) {
+                        $set('prix_unitaire', $product->getEffectiveUnitPrice());
+                    }
+                }),
             Forms\Components\TextInput::make('qte')
                 ->label('Quantité')
                 ->numeric()

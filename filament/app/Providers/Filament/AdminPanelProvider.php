@@ -44,6 +44,9 @@ use App\Filament\Resources\UserResource;
 use App\Filament\Widgets\LatestCommandes;
 use App\Filament\Widgets\MonthlyRevenueComparison;
 use App\Filament\Widgets\OrderStatusChart;
+use App\Filament\Widgets\OrdersStatusPieChart;
+use App\Filament\Widgets\ProductsStockPieChart;
+use App\Filament\Widgets\RevenueByCategoryPieChart;
 use App\Filament\Widgets\RevenueChart;
 use App\Filament\Widgets\StatsOverview;
 use App\Filament\Widgets\TopProductsWidget;
@@ -165,6 +168,9 @@ class AdminPanelProvider extends PanelProvider
                 LatestCommandes::class,
                 StockKpisWidget::class,
                 StockMovementChartWidget::class,
+                OrdersStatusPieChart::class,
+                RevenueByCategoryPieChart::class,
+                ProductsStockPieChart::class,
             ])
             ->unsavedChangesAlerts()
             ->brandLogo(fn () => view('filament.app.logo'))

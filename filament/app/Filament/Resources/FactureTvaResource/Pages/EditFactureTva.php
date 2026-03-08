@@ -51,7 +51,7 @@ class EditFactureTva extends EditRecord
         $details[] = [
             'produit_id' => $product->id,
             'qte' => 1,
-            'prix_unitaire' => (float) ($product->prix ?? 0),
+            'prix_unitaire' => $product->getEffectivePriceHt(),
             'tva_pct' => $this->record->details->first()?->tva ?? 19,
         ];
         $this->form->fill(array_merge($state, ['details' => $details]));

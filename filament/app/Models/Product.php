@@ -154,18 +154,125 @@ class Product extends Model
     }
 
     /**
-     * Effective unit price for storefront/API: promo if active, else prix.
-     * Promo is used when promo > 0 and (no expiration or expiration in the future).
-     * Server-side only — never trust client-sent prix_unitaire.
+     * Whether the product has an active (non-expired) promo.
+     * Promo is active when: promo is set and > 0, and (no expiration or expiration >= today).
+     */
+    public function hasActivePromo(): bool
+    {
+        $promo = (float) ($this->promo ?? 0);
+        if ($promo <= 0) {
+            return false;
+        }
+        if (! $this->promo_expiration_date) {
+            return true;
+        }
+        // Expiration date >= today (inclusive): still valid for the whole day
+        return $this->promo_expiration_date->format('Y-m-d') >= now()->format('Y-m-d');
+    }
+
+    /**
+     * Effective unit price TTC for storefront/API and admin (Ticket, Commande): promo if active, else prix.
+     * Source of truth for "selling price" when document works in TTC.
      */
     public function getEffectiveUnitPrice(): float
     {
-        $promo = (float) ($this->promo ?? 0);
-        $prix = (float) ($this->prix ?? 0);
-        if ($promo > 0 && (! $this->promo_expiration_date || $this->promo_expiration_date->isFuture())) {
-            return $promo;
+        if ($this->hasActivePromo()) {
+            return (float) ($this->promo ?? 0);
         }
-        return $prix;
+
+        return (float) ($this->prix ?? 0);
+    }
+
+    /**
+     * Effective unit price HT for admin documents (Devis, Facture, BL) that work in HT + TVA.
+     * Uses promo_ht when promo active, else prix_ht; fallback to promo/prix if HT not set.
+     */
+    public function getEffectivePriceHt(): float
+    {
+        if ($this->hasActivePromo()) {
+            $ht = (float) ($this->promo_ht ?? 0);
+            if ($ht > 0) {
+                return $ht;
+            }
+
+            return (float) ($this->promo ?? 0);
+        }
+        $ht = (float) ($this->prix_ht ?? 0);
+        if ($ht > 0) {
+            return $ht;
+        }
+
+        return (float) ($this->prix ?? 0);
+    }
+
+    /**
+     * Label for select options: designation + effective price (and "promo") + stock.
+     */
+    public function getEffectivePriceLabel(): string
+    {
+        $name = $this->designation_fr ?? '';
+        $price = $this->getEffectiveUnitPrice();
+        $suffix = $this->hasActivePromo() ? ' (promo)' : '';
+        $stock = (int) ($this->qte ?? 0);
+
+        return $name . ' — ' . number_format($price, 3, ',', ' ') . ' DT' . $suffix . ' — ' . $stock . ' en stock';
+    }
+
+    // ── Filament select search (performance: minimal columns, no N+1) ─────
+
+    /** Columns needed for search results and option label (no images, no description). */
+    public static function getSelectSearchColumns(): array
+    {
+        return ['id', 'designation_fr', 'qte', 'prix', 'promo', 'promo_expiration_date', 'prix_ht', 'promo_ht'];
+    }
+
+    /**
+     * Optimized query for Filament product select: minimal columns, filtered, ordered, limited.
+     * Use with getSearchOptionsForFilament() for searchable dropdowns.
+     */
+    public static function scopeForSelectSearch($query, string $search = '', int $limit = 30)
+    {
+        $query->select(self::getSelectSearchColumns())
+            ->orderBy('designation_fr')
+            ->limit($limit);
+
+        if ($search !== '') {
+            $term = '%' . $search . '%';
+            $query->where(function ($q) use ($term) {
+                $q->where('designation_fr', 'like', $term)
+                    ->orWhere('code_product', 'like', $term);
+            });
+        }
+
+        return $query;
+    }
+
+    /**
+     * Returns [id => label] for Filament Select getSearchResultsUsing.
+     * Single query, limit 30, no N+1. Label uses only loaded attributes.
+     */
+    public static function getSearchOptionsForFilament(string $search = '', int $limit = 30): array
+    {
+        return self::query()
+            ->forSelectSearch($search, $limit)
+            ->get()
+            ->mapWithKeys(fn (Product $p) => [$p->id => $p->getEffectivePriceLabel()])
+            ->all();
+    }
+
+    /**
+     * Single-product label for getOptionLabelUsing (one lightweight query by id).
+     */
+    public static function getOptionLabelForId(mixed $id): ?string
+    {
+        $id = $id ? (int) $id : null;
+        if (! $id) {
+            return null;
+        }
+
+        $p = self::query()->select(self::getSelectSearchColumns())->find($id);
+
+        return $p?->getEffectivePriceLabel();
     }
 
     // ── Scopes ──────────────────────────────────────────

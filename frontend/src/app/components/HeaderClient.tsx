@@ -23,14 +23,13 @@ import {
 } from '@/app/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/app/components/ui/sheet';
 import { cn } from '@/app/components/ui/utils';
-import { getStorageUrl, getCoordinates } from '@/services/api';
+import { getStorageUrl } from '@/services/api';
 import { searchProducts } from '@/services/api';
 import { getPriceDisplay } from '@/util/productPrice';
 import { useDebounce } from '@/util/debounce';
 import type { Product } from '@/types';
 
-/** Fallback logo path when coordonnees API has no logo */
-const LOGO_STORAGE_PATH_FALLBACK = 'coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp';
+const LOGO_STORAGE_PATH = 'coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp';
 
 const SCROLL_THRESHOLD = 24;
 const MOBILE_NAV_SCROLL_THRESHOLD = 20;
@@ -70,17 +69,6 @@ export function HeaderClient() {
   const { count: favoritesCount } = useFavorites();
   const { isAuthenticated, user, logout } = useAuth();
   const cartItemsCount = getTotalItems();
-
-  const [logoPath, setLogoPath] = useState<string | null>(null);
-
-  // Logo from coordonnees API (https://admin.protein.tn/api/coordonnees)
-  useEffect(() => {
-    getCoordinates()
-      .then((data) => {
-        if (data?.logo) setLogoPath(data.logo);
-      })
-      .catch(() => {});
-  }, []);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Product[]>([]);
@@ -243,14 +231,15 @@ export function HeaderClient() {
               scrolled ? 'h-12 py-2' : 'h-14 py-2.5'
             )}
           >
-            <Link href="/" className="flex items-center justify-start flex-1 min-w-0 max-w-[14rem] sm:max-w-[16rem] -ml-1" aria-label="Protein.tn - Accueil">
-              <img
-                src={getStorageUrl(logoPath || LOGO_STORAGE_PATH_FALLBACK)}
+            <Link href="/" className="flex items-center justify-start flex-1 min-w-0 max-w-[11rem] sm:max-w-[12rem] -ml-1" aria-label="Protein.tn - Accueil">
+              <Image
+                src={getStorageUrl(LOGO_STORAGE_PATH)}
                 alt="Protein.tn"
-                width={180}
-                height={60}
-                className="h-11 min-h-[44px] sm:h-12 w-auto max-w-full object-contain object-left drop-shadow-sm transition-all duration-300"
-                fetchPriority="high"
+                width={140}
+                height={48}
+                className="h-9 min-h-[36px] w-auto max-w-full object-contain object-left drop-shadow-sm transition-all duration-300"
+                style={{ width: 'auto', height: 'auto' }}
+                priority
               />
             </Link>
 
@@ -309,15 +298,15 @@ export function HeaderClient() {
 
         <div className="hidden md:block bg-red-600 dark:bg-red-700">
           <div className="max-w-7xl mx-auto px-4 lg:px-8">
-            <div className="flex items-center justify-between h-[72px] gap-4">
-              <Link href="/" className="flex-shrink-0 flex items-center" aria-label="Protein.tn - Accueil">
-                <img
-                  src={getStorageUrl(logoPath || LOGO_STORAGE_PATH_FALLBACK)}
+            <div className="flex items-center justify-between h-16 gap-4">
+              <Link href="/" className="flex-shrink-0" aria-label="Protein.tn - Accueil">
+                <Image
+                  src={getStorageUrl(LOGO_STORAGE_PATH)}
                   alt="Protein.tn"
-                  width={240}
-                  height={80}
-                  className="h-12 lg:h-16 xl:h-[72px] w-auto object-contain brightness-0 invert"
-                  fetchPriority="high"
+                  width={200}
+                  height={70}
+                  className="h-10 lg:h-14 xl:h-16 w-auto object-contain brightness-0 invert"
+                  priority
                 />
               </Link>
 
@@ -581,13 +570,13 @@ export function HeaderClient() {
         >
           <SheetHeader className="px-5 py-4 border-b border-gray-200 dark:border-gray-800 shrink-0">
             <SheetTitle className="sr-only">Menu</SheetTitle>
-            <Link href="/" onClick={closeMobileMenu} className="block max-w-[160px]">
-              <img
-                src={getStorageUrl(logoPath || LOGO_STORAGE_PATH_FALLBACK)}
+            <Link href="/" onClick={closeMobileMenu} className="block max-w-[120px]">
+              <Image
+                src={getStorageUrl(LOGO_STORAGE_PATH)}
                 alt="Protein.tn"
-                width={160}
-                height={52}
-                className="h-10 w-auto object-contain"
+                width={120}
+                height={38}
+                className="h-8 w-auto object-contain"
               />
             </Link>
           </SheetHeader>

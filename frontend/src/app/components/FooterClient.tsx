@@ -7,33 +7,22 @@ import { Facebook, Instagram, Linkedin, Mail, Phone, MapPin, Sparkles, Loader2, 
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { motion } from 'motion/react';
-import { subscribeNewsletter, getStorageUrl, getCmsPages, getCoordinates } from '@/services/api';
+import { subscribeNewsletter, getStorageUrl, getCmsPages } from '@/services/api';
 import { toast } from 'sonner';
 import type { CmsPage } from '@/services/api';
 
-/** Fallback logo path when coordonnees API has no logo */
-const LOGO_STORAGE_PATH_FALLBACK = 'coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp';
+const LOGO_STORAGE_PATH = 'coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp';
 
 interface FooterClientProps {
   pages?: CmsPage[];
 }
 
 export function FooterClient({ pages: pagesProp }: FooterClientProps) {
-  const [logoPath, setLogoPath] = useState<string | null>(null);
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [shouldLoadMap, setShouldLoadMap] = useState(false);
   const [pages, setPages] = useState<CmsPage[]>(pagesProp ?? []);
   const mapRef = useRef<HTMLDivElement>(null);
-
-  // Logo from coordonnees API (https://admin.protein.tn/api/coordonnees)
-  useEffect(() => {
-    getCoordinates()
-      .then((data) => {
-        if (data?.logo) setLogoPath(data.logo);
-      })
-      .catch(() => {});
-  }, []);
 
   // Fetch CMS pages when not provided (e.g. when used inside Client Components)
   useEffect(() => {
@@ -105,14 +94,14 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
               transition={{ duration: 0.4, ease: 'easeOut' }}
               className="flex justify-start"
             >
-              <Link href="/" className="block max-w-[200px] sm:max-w-[220px] opacity-90 hover:opacity-100 transition-opacity duration-300">
+              <Link href="/" className="block max-w-[140px] opacity-90 hover:opacity-100 transition-opacity duration-300">
                 <Image
-                  src={getStorageUrl(logoPath || LOGO_STORAGE_PATH_FALLBACK)}
+                  src={getStorageUrl(LOGO_STORAGE_PATH)}
                   alt="Protein.tn - SOBITAS"
-                  width={200}
-                  height={65}
+                  width={140}
+                  height={45}
                   className="w-full h-auto object-contain object-left"
-                  sizes="(max-width: 480px) 160px, (max-width: 768px) 200px, 220px"
+                  sizes="(max-width: 480px) 100px, (max-width: 768px) 120px, 140px"
                   loading="lazy"
                 />
               </Link>
@@ -239,13 +228,15 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
         <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
           {/* Contact Info & Social */}
           <div className="space-y-6">
-            <div className="relative h-12 w-auto mb-6 shrink-0 flex items-center">
+            <div className="relative h-8 w-auto mb-6 shrink-0 flex items-center">
               <Image
-                src={getStorageUrl(logoPath || LOGO_STORAGE_PATH_FALLBACK)}
+                src={getStorageUrl(LOGO_STORAGE_PATH)}
                 alt="Protein.tn"
-                width={200}
-                height={64}
-                className="h-12 w-auto object-contain"
+                width={150}
+                height={48}
+                className="h-8 w-auto object-contain"
+                style={{ width: 'auto', height: 'auto' }}
+                priority
               />
             </div>
             <p className="text-sm text-gray-400 leading-relaxed">

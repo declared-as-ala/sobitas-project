@@ -145,41 +145,15 @@ class QuotationResource extends Resource
                                     Forms\Components\Select::make('produit_id')
                                         ->label('Produit')
                                         ->searchable()
-                                        ->options(function () {
-                                            return \App\Models\Product::query()
-                                                ->orderBy('designation_fr')
-                                                ->limit(100)
-                                                ->get()
-                                                ->mapWithKeys(fn ($p) => [
-                                                    $p->id => ($p->designation_fr ?? '') . ' (' . (int) $p->qte . ' en stock)'
-                                                ])
-                                                ->all();
-                                        })
-                                        ->getSearchResultsUsing(function (string $search): array {
-                                            return \App\Models\Product::query()
-                                                ->where(function ($q) use ($search) {
-                                                    $q->where('designation_fr', 'like', '%' . $search . '%')
-                                                        ->orWhere('code_product', 'like', '%' . $search . '%');
-                                                })
-                                                ->orderBy('designation_fr')
-                                                ->limit(250)
-                                                ->get()
-                                                ->mapWithKeys(fn ($p) => [
-                                                    $p->id => ($p->designation_fr ?? '') . ' (' . (int) $p->qte . ' en stock)'
-                                                ])
-                                                ->all();
-                                        })
-                                        ->getOptionLabelUsing(fn ($value): ?string => $value ? (function () use ($value) {
-                                            $p = \App\Models\Product::find($value);
-                                            return $p ? (($p->designation_fr ?? '') . ' (' . (int) $p->qte . ' en stock)') : null;
-                                        })() : null)
+                                        ->getSearchResultsUsing(fn (string $search): array => \App\Models\Product::getSearchOptionsForFilament($search, 30))
+                                        ->getOptionLabelUsing(fn ($value): ?string => \App\Models\Product::getOptionLabelForId($value))
                                         ->required()
                                         ->live()
-                                        ->placeholder('Sélectionner un produit…')
+                                        ->placeholder('Tapez pour rechercher…')
                                         ->columnSpan(['default' => 7, 'sm' => 12])
                                         ->afterStateUpdated(function ($state, $set, $get) {
-                                            if ($state && $product = \App\Models\Product::find($state)) {
-                                                $set('prix_unitaire', (float) ($product->prix ?? 0));
+                                            if ($state && $product = \App\Models\Product::query()->select(\App\Models\Product::getSelectSearchColumns())->find($state)) {
+                                                $set('prix_unitaire', $product->getEffectivePriceHt());
                                             }
                                             self::updateTotals($get, $set, true);
                                         }),
@@ -230,7 +204,7 @@ class QuotationResource extends Resource
                                 ->defaultItems(1)
                                 ->addActionLabel('Ajouter produit')
                                 ->columnSpanFull()
-                                ->itemLabel(fn (array $state) => isset($state['produit_id']) ? (\App\Models\Product::find($state['produit_id'])?->designation_fr ?? 'Ligne') : 'Ligne')
+                                ->itemLabel(fn (array $state) => isset($state['produit_id']) ? (\App\Models\Product::query()->select('id', 'designation_fr')->find($state['produit_id'])?->designation_fr ?? 'Ligne') : 'Ligne')
                                 ->reorderable()
                                 ->deleteAction(fn ($action) => $action
                                     ->requiresConfirmation()

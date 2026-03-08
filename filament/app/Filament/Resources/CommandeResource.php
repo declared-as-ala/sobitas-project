@@ -102,31 +102,13 @@ class CommandeResource extends Resource
                                         ->label('Produit')
                                         ->required()
                                         ->searchable()
-                                        ->options(function () {
-                                            return \App\Models\Product::query()
-                                                ->orderBy('designation_fr')
-                                                ->limit(100)
-                                                ->get()
-                                                ->mapWithKeys(fn ($p) => [$p->id => $p->designation_fr ?? ''])
-                                                ->all();
-                                        })
-                                        ->getSearchResultsUsing(function (string $search): array {
-                                            return \App\Models\Product::query()
-                                                ->where(function ($q) use ($search) {
-                                                    $q->where('designation_fr', 'like', '%' . $search . '%')
-                                                        ->orWhere('code_product', 'like', '%' . $search . '%');
-                                                })
-                                                ->orderBy('designation_fr')
-                                                ->limit(50)
-                                                ->get()
-                                                ->mapWithKeys(fn ($p) => [$p->id => $p->designation_fr ?? ''])
-                                                ->all();
-                                        })
-                                        ->getOptionLabelUsing(fn ($value): ?string => $value ? (\App\Models\Product::find($value)?->designation_fr ?? null) : null)
+                                        ->getSearchResultsUsing(fn (string $search): array => \App\Models\Product::getSearchOptionsForFilament($search, 30))
+                                        ->getOptionLabelUsing(fn ($value): ?string => \App\Models\Product::getOptionLabelForId($value))
                                         ->live()
+                                        ->placeholder('Tapez pour rechercher…')
                                         ->afterStateUpdated(function ($state, $set) {
-                                            if ($state && $p = \App\Models\Product::find($state)) {
-                                                $set('prix_unitaire', (float) ($p->prix ?? 0));
+                                            if ($state && $p = \App\Models\Product::query()->select(\App\Models\Product::getSelectSearchColumns())->find($state)) {
+                                                $set('prix_unitaire', $p->getEffectiveUnitPrice());
                                             }
                                         })
                                         ->columnSpan(['default' => 2, 'sm' => 12]),
