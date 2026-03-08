@@ -37,19 +37,27 @@ class HistoriqueClient extends Page
 
     public ?string $tel = null;
 
+    public ?string $name = null;
+
     public bool $searching = false;
 
     /** @var Collection<int, Client> */
     public Collection $clients;
 
-    public function mount(?string $tel = null): void
+    public function mount(?string $tel = null, ?string $name = null): void
     {
         $this->tel = $tel ?? request()->query('tel');
+        $this->name = $name ?? request()->query('name');
         $this->clients = collect();
         $this->searching = false;
-        if ($this->tel !== null && trim((string) $this->tel) !== '') {
+        if ($this->hasSearchCriteria()) {
             $this->search();
         }
+    }
+
+    public function hasSearchCriteria(): bool
+    {
+        return (trim((string) $this->tel) !== '') || (trim((string) $this->name) !== '');
     }
 
     /**
@@ -69,25 +77,31 @@ class HistoriqueClient extends Page
 
     public function search(): void
     {
-        $raw = trim((string) $this->tel);
-        if ($raw === '') {
+        $telRaw = trim((string) $this->tel);
+        $nameRaw = trim((string) $this->name);
+        if ($telRaw === '' && $nameRaw === '') {
             $this->clients = collect();
             return;
         }
 
         $this->searching = true;
-        $normalized = self::normalizePhone($raw);
-
         $query = Client::query()->orderBy('name');
 
-        $searchTerm = ($normalized !== '' && strlen($normalized) >= 8) ? $normalized : $raw;
-        $query->where(function ($q) use ($searchTerm, $normalized) {
-            $q->where('phone_1', 'like', '%' . $searchTerm . '%')
-                ->orWhere('phone_2', 'like', '%' . $searchTerm . '%');
-            // Match normalized (last 8 digits) so +216 / spaces in DB still match
-            if ($normalized !== '' && strlen($normalized) >= 8) {
-                $q->orWhereRaw("RIGHT(REPLACE(REPLACE(REPLACE(COALESCE(phone_1,''), ' ', ''), '+', ''), '-', ''), 8) = ?", [$normalized])
-                    ->orWhereRaw("RIGHT(REPLACE(REPLACE(REPLACE(COALESCE(phone_2,''), ' ', ''), '+', ''), '-', ''), 8) = ?", [$normalized]);
+        $query->where(function ($q) use ($telRaw, $nameRaw) {
+            if ($telRaw !== '') {
+                $normalized = self::normalizePhone($telRaw);
+                $searchTerm = ($normalized !== '' && strlen($normalized) >= 8) ? $normalized : $telRaw;
+                $q->where(function ($q2) use ($searchTerm, $normalized) {
+                    $q2->where('phone_1', 'like', '%' . $searchTerm . '%')
+                        ->orWhere('phone_2', 'like', '%' . $searchTerm . '%');
+                    if ($normalized !== '' && strlen($normalized) >= 8) {
+                        $q2->orWhereRaw("RIGHT(REPLACE(REPLACE(REPLACE(COALESCE(phone_1,''), ' ', ''), '+', ''), '-', ''), 8) = ?", [$normalized])
+                            ->orWhereRaw("RIGHT(REPLACE(REPLACE(REPLACE(COALESCE(phone_2,''), ' ', ''), '+', ''), '-', ''), 8) = ?", [$normalized]);
+                    }
+                });
+            }
+            if ($nameRaw !== '') {
+                $q->where('name', 'like', '%' . str_replace(['%', '_'], ['\%', '\_'], $nameRaw) . '%');
             }
         });
 
@@ -107,7 +121,10 @@ class HistoriqueClient extends Page
 
     public static function getUrl(array $parameters = [], bool $isAbsolute = true, ?string $panel = null, ?\Illuminate\Database\Eloquent\Model $tenant = null): string
     {
-        $params = isset($parameters['tel']) ? ['tel' => $parameters['tel']] : [];
+        $params = array_filter([
+            'tel' => $parameters['tel'] ?? null,
+            'name' => $parameters['name'] ?? null,
+        ], fn ($v) => $v !== null && trim((string) $v) !== '');
         return parent::getUrl($params, $isAbsolute, $panel, $tenant);
     }
 

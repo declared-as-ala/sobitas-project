@@ -17,27 +17,35 @@ class ClientHistoriqueSearchWidget extends Widget
 
     public ?string $tel = null;
 
+    public ?string $name = null;
+
     public function searchHistorique(): void
     {
         $tel = trim((string) $this->tel);
-        if ($tel === '') {
+        $name = trim((string) $this->name);
+        if ($tel === '' && $name === '') {
             \Filament\Notifications\Notification::make()
-                ->title('Saisissez un numéro de téléphone')
+                ->title('Saisissez un numéro de téléphone ou un nom')
                 ->warning()
                 ->send();
             return;
         }
 
-        $this->redirect(HistoriqueClient::getUrl(['tel' => $tel]));
+        $params = array_filter([
+            'tel' => $tel !== '' ? $tel : null,
+            'name' => $name !== '' ? $name : null,
+        ]);
+        $this->redirect(HistoriqueClient::getUrl($params));
     }
 
     public function clearHistorique(): void
     {
         $this->tel = null;
+        $this->name = null;
     }
 
-    public function hasValidPhone(): bool
+    public function hasSearchCriteria(): bool
     {
-        return trim((string) $this->tel) !== '';
+        return trim((string) $this->tel) !== '' || trim((string) $this->name) !== '';
     }
 }

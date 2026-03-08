@@ -27,6 +27,18 @@
                         />
                         <p class="hc-search-hint">Format Tunisie : 8 chiffres (ex. 21004711). Préfixe +216 optionnel.</p>
                     </div>
+                    <div class="hc-search-input-wrap">
+                        <label class="hc-search-label" for="hc-name">Nom</label>
+                        <input
+                            type="text"
+                            id="hc-name"
+                            wire:model="name"
+                            wire:loading.attr="readonly"
+                            class="hc-search-input"
+                            placeholder="Ex: Mohamed, Société XYZ"
+                            autocomplete="name"
+                        />
+                    </div>
                     <button type="submit" wire:loading.attr="disabled" class="hc-search-btn">
                         <x-filament::loading-indicator wire:loading wire:target="search" class="size-5 shrink-0" />
                         <x-filament::icon icon="heroicon-o-magnifying-glass" class="size-5 shrink-0" wire:loading.remove wire:target="search" />
@@ -37,11 +49,11 @@
             </form>
         </div>
 
-        @if($tel !== null && trim((string) $tel) !== '')
+        @if($this->hasSearchCriteria())
             @if($clients->isEmpty())
                 <div class="hc-no-results">
-                    <p>Aucun client trouvé pour ce numéro.</p>
-                    <p>Vérifiez le numéro (8 chiffres) ou essayez sans espaces.</p>
+                    <p>Aucun client trouvé pour ce numéro ou ce nom.</p>
+                    <p>Vérifiez le numéro (8 chiffres), le nom, ou essayez sans espaces.</p>
                 </div>
             @else
                 @foreach($clients as $client)
