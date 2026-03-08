@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Filament\Widgets\TopCategoriesListWidget;
 use App\Models\Commande;
 use App\Models\Review;
 use App\Models\User;
@@ -11,6 +12,7 @@ use App\Observers\UserObserver;
 use Filament\Facades\Filament;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
+use Livewire\Livewire;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -27,6 +29,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Ensure Livewire can resolve the widget (avoids "Unable to find component" after deploy/cache)
+        Livewire::component(TopCategoriesListWidget::class);
+
         // Set custom password reset URL for Filament panel
         ResetPassword::createUrlUsing(function ($notifiable, $token) {
             $panel = Filament::getPanel('admin');

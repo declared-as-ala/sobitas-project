@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Support\DashboardHeaderActions;
 use App\Filament\Widgets\DashboardAlertsWidget;
 use App\Filament\Widgets\DashboardHeaderWidget;
 use App\Filament\Widgets\GeographicChart;
@@ -22,6 +23,7 @@ use Filament\Pages\Dashboard as BaseDashboard;
 
 class Dashboard extends BaseDashboard
 {
+    use DashboardHeaderActions;
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-presentation-chart-line';
 
     protected static ?string $title = 'Tableau de bord Marketplace';
@@ -35,10 +37,12 @@ class Dashboard extends BaseDashboard
         $period = request()->query('period');
         if ($period !== null && $period !== '') {
             session(['dashboard.filter.preset' => $period]);
+            $this->preset = $period;
+        } else {
+            $this->preset = session('dashboard.filter.preset', '30d');
         }
         if (! request()->has('period')) {
-            $preset = session('dashboard.filter.preset', '30d');
-            $this->redirect(request()->fullUrlWithQuery(['period' => $preset]), navigate: true);
+            $this->redirect(request()->fullUrlWithQuery(['period' => $this->preset]), navigate: true);
         }
     }
 
