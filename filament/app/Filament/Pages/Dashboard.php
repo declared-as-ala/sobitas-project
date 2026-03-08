@@ -42,7 +42,7 @@ class Dashboard extends BaseDashboard
             $this->preset = session('dashboard.filter.preset', '30d');
         }
         if (! request()->has('period')) {
-            $this->redirect(request()->fullUrlWithQuery(['period' => $this->preset]), navigate: true);
+            $this->redirect($this->getDashboardUrlWithPeriod($this->preset), navigate: true);
         }
     }
 

@@ -3,6 +3,7 @@
 namespace App\Filament\Support;
 
 use App\Services\DateRangeFilterService;
+use Filament\Facades\Filament;
 
 trait DashboardHeaderActions
 {
@@ -17,12 +18,23 @@ trait DashboardHeaderActions
         return DateRangeFilterService::getPresets();
     }
 
+    /**
+     * Build dashboard URL with period query param. Never use request()->fullUrlWithQuery()
+     * in Livewire context (request is POST /livewire/update), or the address bar would
+     * become /livewire/update?period=... and refresh would 405.
+     */
+    protected function getDashboardUrlWithPeriod(string $period): string
+    {
+        $base = Filament::getPanel('admin')->getUrl();
+
+        return rtrim($base, '/') . '?' . http_build_query(['period' => $period]);
+    }
+
     public function updatedPreset($value): void
     {
         session(['dashboard.filter.preset' => $value]);
         $this->dispatch('dashboardFilterUpdated');
-        // Update URL in browser without a full redirect (avoids 405 when redirect is followed as POST)
-        $url = request()->fullUrlWithQuery(['period' => $value]);
+        $url = $this->getDashboardUrlWithPeriod((string) $value);
         $this->js('window.history.replaceState({}, "", ' . json_encode($url) . ')');
     }
 
