@@ -30,4 +30,16 @@ class DashboardHeaderWidget extends Widget
             $this->preset = session('dashboard.filter.preset', '30d');
         }
     }
+
+    /**
+     * Keep dropdown in sync with session on every request so the selected period never "disappears"
+     * after changing the filter or refreshing.
+     */
+    public function hydrate(): void
+    {
+        $fromSession = session('dashboard.filter.preset');
+        if ($fromSession !== null && $fromSession !== '') {
+            $this->preset = $fromSession;
+        }
+    }
 }

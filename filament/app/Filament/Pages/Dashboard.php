@@ -9,10 +9,7 @@ use App\Filament\Widgets\GeographicChart;
 use App\Filament\Widgets\LatestCommandes;
 use App\Filament\Widgets\MarketplaceKpis;
 use App\Filament\Widgets\MonthlyRevenueComparison;
-use App\Filament\Widgets\OrdersStatusPieChart;
-use App\Filament\Widgets\ProductsStockPieChart;
 use App\Filament\Widgets\QuickActionsWidget;
-use App\Filament\Widgets\TopCategoriesListWidget;
 use App\Filament\Widgets\RevenueByCategoryPieChart;
 use App\Filament\Widgets\RevenueChart;
 use App\Filament\Widgets\StatsOverview;
@@ -24,6 +21,12 @@ use Filament\Pages\Dashboard as BaseDashboard;
 class Dashboard extends BaseDashboard
 {
     use DashboardHeaderActions;
+
+    /** Keep preset in sync with ?period= in the URL so refresh and bookmarking work. */
+    protected $queryString = [
+        'preset' => ['as' => 'period', 'except' => '30d'],
+    ];
+
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-presentation-chart-line';
 
     protected static ?string $title = 'Tableau de bord Marketplace';
@@ -68,11 +71,8 @@ class Dashboard extends BaseDashboard
             MonthlyRevenueComparison::class,
             GeographicChart::class,
 
-            // Section Analyses — camemberts + listes (7j/30j/90j via filtre global)
-            OrdersStatusPieChart::class,
+            // Section Analyses (7j/30j/90j via filtre global)
             RevenueByCategoryPieChart::class,
-            TopCategoriesListWidget::class,
-            ProductsStockPieChart::class,
 
             LatestCommandes::class,
             TopProductsWidget::class,
