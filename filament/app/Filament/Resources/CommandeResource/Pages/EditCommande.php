@@ -4,9 +4,11 @@ namespace App\Filament\Resources\CommandeResource\Pages;
 
 use App\Filament\Resources\CommandeResource;
 use App\Filament\Resources\ClientResource;
+use App\Filament\Resources\FactureTvaResource;
 use App\Filament\Resources\TicketResource;
 use App\Filament\Widgets\DocumentTimelineWidget;
 use App\Models\Commande;
+use App\Services\DocumentConversion\CommandeToInvoiceService;
 use App\Services\DocumentConversion\OrderToTicketBlService;
 use Filament\Actions;
 use Filament\Actions\ActionGroup;
@@ -54,6 +56,18 @@ class EditCommande extends EditRecord
     {
         $r = $this->record;
         return array_merge(parent::getHeaderActions(), [
+            Actions\Action::make('saveTop')
+                ->label('Sauvegarder les modifications')
+                ->icon('heroicon-o-check')
+                ->color('primary')
+                ->action(function (): void {
+                    $this->save();
+                }),
+            Actions\Action::make('cancelTop')
+                ->label('Annuler')
+                ->icon('heroicon-o-x-mark')
+                ->color('gray')
+                ->url(CommandeResource::getUrl('index')),
             Actions\Action::make('viewClient')
                 ->label('Voir client')
                 ->icon('heroicon-o-user')
@@ -61,12 +75,12 @@ class EditCommande extends EditRecord
                 ->url(fn () => ClientResource::getUrl('edit', ['record' => $this->record->user_id]))
                 ->openUrlInNewTab(),
             Actions\Action::make('createBlTicket')
-                ->label('Créer Bon de livraison (Ticket)')
+                ->label('Créer Bon de livraison')
                 ->icon('heroicon-o-document-text')
                 ->color('success')
                 ->visible(fn () => ! $this->record->ticketsBl()->exists())
                 ->modalHeading('Créer un Bon de livraison pour cette commande')
-                ->modalDescription('Un ticket de type "Bon de livraison" sera créé avec les lignes de la commande.')
+                ->modalDescription('Un bon de livraison sera créé avec les lignes de la commande.')
                 ->modalSubmitActionLabel('Créer le BL')
                 ->modalContent(fn () => view('filament.components.convert-wizard-summary', [
                     'sourceNumber' => $r->numero,
@@ -79,10 +93,34 @@ class EditCommande extends EditRecord
                     $bl = $service->createBlFromOrder($this->record);
                     Notification::make()
                         ->title('Bon de livraison créé')
-                        ->body('BL #' . $bl->numero . ' (Ticket) a été créé. Redirection…')
+                        ->body('BL #' . $bl->numero . ' a été créé. Redirection…')
                         ->success()
                         ->send();
                     $this->redirect(TicketResource::getUrl('edit', ['record' => $bl]));
+                }),
+            Actions\Action::make('createInvoice')
+                ->label('Créer Facture TVA')
+                ->icon('heroicon-o-document-duplicate')
+                ->color('warning')
+                ->visible(fn () => ! $this->record->factureTvas()->exists())
+                ->modalHeading('Créer une facture TVA pour cette commande')
+                ->modalDescription('Une facture TVA liée à cette commande sera créée sans l’ajouter une seconde fois au chiffre d’affaires.')
+                ->modalSubmitActionLabel('Créer la facture')
+                ->modalContent(fn () => view('filament.components.convert-wizard-summary', [
+                    'sourceNumber' => $r->numero,
+                    'client' => $r->getFullNameAttribute() ?: trim(($r->nom ?? '') . ' ' . ($r->prenom ?? '')) ?: '—',
+                    'date' => $r->created_at?->format('d/m/Y'),
+                    'itemsCount' => $r->details->count(),
+                    'totalTtc' => number_format((float) ($r->prix_ttc ?? 0), 3, ',', ' ') . ' DT',
+                ]))
+                ->action(function (CommandeToInvoiceService $service) {
+                    $invoice = $service->createInvoiceFromCommande($this->record);
+                    Notification::make()
+                        ->title('Facture TVA créée')
+                        ->body('Facture #' . $invoice->numero . ' créée. Redirection…')
+                        ->success()
+                        ->send();
+                    $this->redirect(FactureTvaResource::getUrl('edit', ['record' => $invoice]));
                 }),
             ActionGroup::make([
                 Actions\DeleteAction::make()->label('Supprimer la commande'),
@@ -92,10 +130,7 @@ class EditCommande extends EditRecord
 
     protected function getFormActions(): array
     {
-        return [
-            $this->getSaveFormAction()->label('Sauvegarder les modifications')->icon('heroicon-o-check'),
-            $this->getCancelFormAction()->label('Annuler')->url(CommandeResource::getUrl('index')),
-        ];
+        return [];
     }
 
     protected function afterSave(): void

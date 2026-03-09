@@ -37,7 +37,7 @@ class RevenueChart extends ChartWidget
     }
 
     /**
-     * CA Policy 1: Ticket caisse + Commande expidee + Facture TVA standalone only.
+     * CA Policy: Ticket caisse + Bon de livraison + Facture TVA standalone only.
      */
     protected function getData(): array
     {
@@ -55,13 +55,16 @@ class RevenueChart extends ChartWidget
         $endDate = $period['end'];
 
         $ticketsData = $this->getDailyTotals('tickets', $startDate, $endDate, "type = '" . Ticket::TYPE_TICKET_CAISSE . "'");
-        $commandesData = $this->getDailyTotals('commandes', $startDate, $endDate, "etat = 'expidee'");
+        $blsData = $this->getDailyTotals('factures', $startDate, $endDate);
         $invoicesQuery = DB::table('facture_tvas')->whereBetween('created_at', [$startDate, $endDate]);
         if (Schema::hasColumn('facture_tvas', 'source_ticket_id')) {
             $invoicesQuery->whereNull('source_ticket_id');
         }
         if (Schema::hasColumn('facture_tvas', 'commande_id')) {
             $invoicesQuery->whereNull('commande_id');
+        }
+        if (Schema::hasColumn('facture_tvas', 'facture_id')) {
+            $invoicesQuery->whereNull('facture_id');
         }
         $invoicesData = $invoicesQuery
             ->select(DB::raw('DATE(created_at) as day'), DB::raw('ROUND(SUM(prix_ht), 2) as total'))
@@ -88,8 +91,8 @@ class RevenueChart extends ChartWidget
                     'fill' => true,
                 ],
                 [
-                    'label' => 'Commandes expédiées',
-                    'data' => $this->mapToOrderedArray($days, $commandesData),
+                    'label' => 'Bons de livraison',
+                    'data' => $this->mapToOrderedArray($days, $blsData),
                     'borderColor' => '#ef4444',
                     'backgroundColor' => 'rgba(239, 68, 68, 0.1)',
                     'fill' => true,

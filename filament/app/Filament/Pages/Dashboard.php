@@ -10,7 +10,7 @@ use App\Filament\Widgets\LatestCommandes;
 use App\Filament\Widgets\MarketplaceKpis;
 use App\Filament\Widgets\MonthlyRevenueComparison;
 use App\Filament\Widgets\QuickActionsWidget;
-use App\Filament\Widgets\RevenueByCategoryPieChart;
+use App\Filament\Widgets\RevenueBySourcePieChart;
 use App\Filament\Widgets\RevenueChart;
 use App\Filament\Widgets\StatsOverview;
 use App\Filament\Widgets\TopCategoriesChart;
@@ -72,7 +72,7 @@ class Dashboard extends BaseDashboard
             GeographicChart::class,
 
             // Section Analyses (7j/30j/90j via filtre global)
-            RevenueByCategoryPieChart::class,
+            RevenueBySourcePieChart::class,
 
             LatestCommandes::class,
             TopProductsWidget::class,

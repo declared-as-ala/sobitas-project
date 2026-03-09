@@ -70,10 +70,10 @@ class FactureTva extends Model
         return $this->hasMany(CreditNote::class, 'facture_tva_id');
     }
 
-    /** Facture TVA is "linked" (on request) when it has a source ticket or commande — does NOT add to CA. */
+    /** Facture TVA is "linked" when it has a source ticket, commande, or BL — does NOT add to CA. */
     public function isLinked(): bool
     {
-        return $this->source_ticket_id !== null || $this->commande_id !== null;
+        return $this->source_ticket_id !== null || $this->commande_id !== null || $this->facture_id !== null;
     }
 
     /**

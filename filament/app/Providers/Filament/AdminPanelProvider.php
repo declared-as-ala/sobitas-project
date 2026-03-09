@@ -47,6 +47,7 @@ use App\Filament\Widgets\OrderStatusChart;
 use App\Filament\Widgets\OrdersStatusPieChart;
 use App\Filament\Widgets\ProductsStockPieChart;
 use App\Filament\Widgets\RevenueByCategoryPieChart;
+use App\Filament\Widgets\RevenueBySourcePieChart;
 use App\Filament\Widgets\RevenueChart;
 use App\Filament\Widgets\StatsOverview;
 use App\Filament\Widgets\TopProductsWidget;
@@ -170,6 +171,7 @@ class AdminPanelProvider extends PanelProvider
                 StockMovementChartWidget::class,
                 OrdersStatusPieChart::class,
                 RevenueByCategoryPieChart::class,
+                RevenueBySourcePieChart::class,
                 ProductsStockPieChart::class,
             ])
             ->unsavedChangesAlerts()

@@ -40,26 +40,12 @@ class MarketplaceKpis extends BaseWidget
         $service = new DashboardMetricsService($period);
         $compare = session('dashboard.filter.compare', true);
 
-        // GMV
-        $gmv = $service->getGMV($compare);
-        $gmvStat = Stat::make('GMV', number_format($gmv['current'], 2, '.', ' ') . ' DT')
-            ->description($compare ? $this->formatChange($gmv['change']) : 'Total commandes')
-            ->descriptionIcon($compare ? $this->getChangeIcon($gmv['change']) : 'heroicon-m-banknotes')
-            ->color($this->getChangeColor($gmv['change']));
-
         // Orders Count
         $orders = $service->getOrdersCount($compare);
         $ordersStat = Stat::make('Commandes', $orders['current'])
             ->description($compare ? $this->formatChange($orders['change']) : 'Total période')
             ->descriptionIcon($compare ? $this->getChangeIcon($orders['change']) : 'heroicon-m-shopping-cart')
             ->color($this->getChangeColor($orders['change']));
-
-        // AOV
-        $aov = $service->getAOV($compare);
-        $aovStat = Stat::make('Panier Moyen', number_format($aov['current'], 2, '.', ' ') . ' DT')
-            ->description($compare ? $this->formatChange($aov['change']) : 'AOV moyen')
-            ->descriptionIcon($compare ? $this->getChangeIcon($aov['change']) : 'heroicon-m-calculator')
-            ->color($this->getChangeColor($aov['change']));
 
         // Customer Metrics
         $customers = $service->getCustomerMetrics($compare);
@@ -72,9 +58,7 @@ class MarketplaceKpis extends BaseWidget
             ->color($this->getChangeColor($customers['change_new'] ?? 0));
 
         return [
-            $gmvStat,
             $ordersStat,
-            $aovStat,
             $customerStat,
         ];
     }
