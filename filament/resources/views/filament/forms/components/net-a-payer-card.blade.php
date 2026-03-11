@@ -105,7 +105,7 @@
             <span class="nap-currency">TND</span>
         </div>
         <p class="nap-subtext">
-            Montant final à régler (TTC + timbre)
+            Montant final à régler (HT + timbre)
         </p>
     </div>
 </x-dynamic-component>

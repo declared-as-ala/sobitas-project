@@ -44,10 +44,8 @@ class FactureResource extends Resource
         $remise = (float) ($isItem ? ($get('../../remise') ?? 0) : ($get('remise') ?? 0));
         $timbre = (float) ($isItem ? ($get('../../timbre') ?? 0) : ($get('timbre') ?? 0));
         
-        $coordinate = Coordinate::getCached();
-        $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
-        
-        $calcTotals = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, $defaultTva);
+        // BL is HT only: no TVA
+        $calcTotals = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, 0);
         
         $prefix = $isItem ? '../../' : '';
         
@@ -161,20 +159,6 @@ class FactureResource extends Resource
                                         ->content(fn ($get) => number_format((float) $get('qte') * (float) $get('prix_unitaire'), 3, '.', ' ') . ' DT')
                                         ->extraAttributes(['class' => 'text-right font-medium whitespace-nowrap'])
                                         ->columnSpan(['default' => 2, 'sm' => 4]),
-                                    Forms\Components\TextInput::make('tva_pct')
-                                        ->label('TVA %')
-                                        ->numeric()
-                                        ->default($defaultTva)
-                                        ->suffix('%')
-                                        ->required()
-                                        ->live(debounce: 300)
-                                        ->afterStateUpdated(fn ($get, $set) => self::updateTotals($get, $set, true))
-                                        ->columnSpan(['default' => 1, 'sm' => 4]),
-                                    Forms\Components\Placeholder::make('tva_montant_display')
-                                        ->label('TVA (DT)')
-                                        ->content(fn ($get) => number_format((float) $get('qte') * (float) $get('prix_unitaire') * (float) ($get('tva_pct') ?? $defaultTva) / 100, 3, '.', ' ') . ' DT')
-                                        ->extraAttributes(['class' => 'doc-line-tva-badge text-right whitespace-nowrap'])
-                                        ->columnSpan(['default' => 1, 'sm' => 4]),
                                 ])
                                 ->columns(12)
                                 ->defaultItems(1)
@@ -220,9 +204,7 @@ class FactureResource extends Resource
                                     self::updateTotals($get, $set, false);
                                 }),
                             Forms\Components\TextInput::make('prix_ht_apres_remise')->label('HT après remise')->numeric()->prefix('DT')->disabled()->dehydrated(false)->default(0),
-                            Forms\Components\TextInput::make('tva')->label('TVA')->numeric()->prefix('DT')->disabled()->dehydrated(false)->default(0),
                             Forms\Components\TextInput::make('timbre')->label('Timbre')->numeric()->prefix('DT')->default(0)->live(debounce: 300)->afterStateUpdated(fn ($get, $set) => self::updateTotals($get, $set, false)),
-                            Forms\Components\TextInput::make('prix_ttc')->label('Total TTC')->numeric()->prefix('DT')->disabled()->dehydrated(false)->default(0),
                             Forms\Components\ViewField::make('net_a_payer_display')
                                 ->label('')
                                 ->hiddenLabel()
@@ -278,21 +260,6 @@ class FactureResource extends Resource
                     ->label('N°')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('facture_tva_badge')
-                    ->label('Facture TVA')
-                    ->state(function (Facture $record): ?string {
-                        $invoice = $record->factureTvas()->first();
-                        return $invoice ? ('Facture TVA #' . $invoice->numero) : null;
-                    })
-                    ->url(fn (Facture $record): ?string => $record->factureTvas()->exists()
-                        ? FactureTvaResource::getUrl('edit', ['record' => $record->factureTvas()->first()])
-                        : null)
-                    ->badge()
-                    ->color('success')
-                    ->icon('heroicon-o-document-check')
-                    ->placeholder('—')
-                    ->toggleable()
-                    ->sortable(false),
                 Tables\Columns\TextColumn::make('client.name')
                     ->label('Client')
                     ->searchable()

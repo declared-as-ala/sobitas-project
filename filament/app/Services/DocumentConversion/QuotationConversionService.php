@@ -222,15 +222,13 @@ class QuotationConversionService
 
     /**
      * Convert a quotation to a Bon de livraison (Facture BL). Same client + lines; commande_id null.
-     * Uses InvoiceCalculator so net_a_payer and all totals are persisted (list view shows correct values).
+     * BL is HT only: no TVA. Uses InvoiceCalculator with defaultTva=0.
      */
     public function convertToBl(Quotation $quotation): Facture
     {
         return DB::transaction(function () use ($quotation) {
             $quotation->load('details.product');
 
-            $coordinate = Coordinate::getCached();
-            $defaultTvaPct = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
             $remise = (float) ($quotation->remise ?? 0);
             $timbre = (float) ($quotation->timbre ?? 0);
 
@@ -243,10 +241,10 @@ class QuotationConversionService
                     'produit_id' => $line->produit_id,
                     'qte' => (int) ($line->qte ?? $line->quantite ?? 1),
                     'prix_unitaire' => (float) ($line->prix_unitaire ?? 0),
-                    'tva_pct' => (float) ($line->tva ?? $defaultTvaPct),
+                    'tva_pct' => 0,
                 ];
             }
-            $totals = InvoiceCalculator::calculate($details, $remise, $timbre, $defaultTvaPct);
+            $totals = InvoiceCalculator::calculate($details, $remise, $timbre, 0);
 
             $bl = new Facture();
             $bl->commande_id = null;

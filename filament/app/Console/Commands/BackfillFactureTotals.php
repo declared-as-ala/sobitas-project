@@ -37,26 +37,20 @@ class BackfillFactureTotals extends Command
         }
         $factures = $query->get();
         $count = 0;
-        
-        $coordinate = \App\Models\Coordinate::first();
-        // Assuming BL doesn't use TVA by default but we check configurations
-        $globalDefaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
 
-        // Bon de Livraison generally does not use TVA natively, but if it has it in config, we respect it
-        // Depending on specific business logic, BL total might be TTC or HT. InvoiceCalculator handles both.
-
+        // BL is HT only: no TVA (defaultTva = 0)
         foreach ($factures as $facture) {
             $detailsArray = $facture->details->map(fn ($d) => [
                 'produit_id' => $d->produit_id,
                 'qte' => $d->qte ?? $d->quantite ?? 1,
                 'prix_unitaire' => $d->prix_unitaire ?? 0,
-                'tva_pct' => $globalDefaultTva,
+                'tva_pct' => 0,
             ])->toArray();
 
             $remise = (float) ($facture->remise ?? 0);
             $timbre = (float) ($facture->timbre ?? 0);
 
-            $calcTotals = InvoiceCalculator::calculate($detailsArray, $remise, $timbre, $globalDefaultTva);
+            $calcTotals = InvoiceCalculator::calculate($detailsArray, $remise, $timbre, 0);
 
             $updateData = [
                 'prix_ht' => $calcTotals['total_ht_brut'],

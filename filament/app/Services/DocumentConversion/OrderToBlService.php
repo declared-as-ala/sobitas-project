@@ -5,7 +5,6 @@ namespace App\Services\DocumentConversion;
 use App\Enums\BlStatus;
 use App\Models\AuditLog;
 use App\Models\Commande;
-use App\Models\Coordinate;
 use App\Models\DetailsFacture;
 use App\Models\Facture;
 use App\Services\InvoiceCalculator;
@@ -29,8 +28,6 @@ class OrderToBlService
         return DB::transaction(function () use ($order, $quantities) {
             $order->load('details.product', 'client');
 
-            $coordinate = Coordinate::getCached();
-            $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
             $remise = (float) ($order->remise ?? 0);
             $timbre = 0;
 
@@ -48,14 +45,14 @@ class OrderToBlService
                     'produit_id' => $line->produit_id,
                     'qte' => $qte,
                     'prix_unitaire' => (float) $line->prix_unitaire,
-                    'tva_pct' => $defaultTva,
+                    'tva_pct' => 0,
                 ];
             }
-            $totals = InvoiceCalculator::calculate($details, $remise, $timbre, $defaultTva);
+            $totals = InvoiceCalculator::calculate($details, $remise, $timbre, 0);
 
             $bl = new Facture();
             $bl->commande_id = $order->id;
-            $bl->client_id = $order->client_id ?? $order->user_id ?? null;
+            $bl->client_id = $order->user_id ?? $order->client_id ?? null;
             $bl->numero = $this->numberSequence->nextBl();
             $bl->status = BlStatus::Draft;
             $bl->prix_ht = $totals['total_ht_brut'];

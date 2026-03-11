@@ -51,11 +51,8 @@ class CreateFacture extends CreateRecord
         $details = $state['details'] ?? [];
         $remise = (float) ($state['remise'] ?? 0);
         $timbre = (float) ($state['timbre'] ?? 0);
-        
-        $coordinate = \App\Models\Coordinate::getCached();
-        $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
-        
-        $calc = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, $defaultTva);
+
+        $calc = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, 0);
         
         $this->form->fill(array_merge($state, [
             'prix_ht' => $calc['total_ht_brut'],
@@ -118,11 +115,8 @@ class CreateFacture extends CreateRecord
         $state = $this->form->getState();
         $remise = (float) ($state['remise'] ?? 0);
         $timbre = (float) ($state['timbre'] ?? 0);
-        
-        $coordinate = \App\Models\Coordinate::getCached();
-        $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
-        
-        $calcTotals = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, $defaultTva);
+
+        $calcTotals = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, 0);
         
         $this->record->update([
             'prix_ht' => $calcTotals['total_ht_brut'],
