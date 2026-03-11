@@ -205,7 +205,13 @@ class FactureResource extends Resource
                                     self::updateTotals($get, $set, false);
                                 }),
                             Forms\Components\TextInput::make('prix_ht_apres_remise')->label('HT après remise')->numeric()->prefix('DT')->disabled()->dehydrated(false)->default(0),
-                            Forms\Components\TextInput::make('frais_livraison')->label('Frais de livraison')->numeric()->prefix('DT')->default(0)->disabled()->dehydrated(true),
+                            Forms\Components\TextInput::make('frais_livraison')
+                                ->label('Frais de livraison')
+                                ->numeric()
+                                ->prefix('DT')
+                                ->default(0)
+                                ->live(debounce: 300)
+                                ->afterStateUpdated(fn ($get, $set) => self::updateTotals($get, $set, false)),
                             Forms\Components\TextInput::make('timbre')->label('Timbre')->numeric()->prefix('DT')->default(0)->live(debounce: 300)->afterStateUpdated(fn ($get, $set) => self::updateTotals($get, $set, false)),
                             Forms\Components\ViewField::make('net_a_payer_display')
                                 ->label('')
