@@ -20,6 +20,10 @@ import { cn } from '@/app/components/ui/utils';
 const WHATSAPP_NUMBER = '21627612500';
 const WHATSAPP_BASE = `https://wa.me/${WHATSAPP_NUMBER}`;
 
+/** Same as checkout: free shipping from 300 TND, else 10 TND */
+const FREE_SHIPPING_THRESHOLD = 300;
+const SHIPPING_FEE = 10;
+
 export interface QuickOrderDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -80,8 +84,8 @@ export function QuickOrderDrawer({
   const priceDisplay = getPriceDisplay(product);
   const unitPrice = priceDisplay.finalPrice;
   const subtotal = unitPrice * quantity;
-  const deliveryNote = 0;
-  const total = appliedCoupon?.totals ? appliedCoupon.totals.total_ttc : subtotal + deliveryNote;
+  const fraisLivraison = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
+  const total = appliedCoupon?.totals ? appliedCoupon.totals.total_ttc : subtotal + fraisLivraison;
   const inStock = isInStock(product);
   const discount = priceDisplay.hasPromo && priceDisplay.oldPrice != null && priceDisplay.oldPrice > 0
     ? Math.round(((priceDisplay.oldPrice - unitPrice) / priceDisplay.oldPrice) * 100)
@@ -166,7 +170,7 @@ export function QuickOrderDrawer({
       const result = await applyCoupon({
         code,
         subtotal_ht: subtotal,
-        frais_livraison: deliveryNote,
+        frais_livraison: fraisLivraison,
         ...(phone.trim() && { phone: phone.trim().replace(/\s/g, '') }),
       });
       if (result.success && result.totals != null) {
@@ -198,7 +202,7 @@ export function QuickOrderDrawer({
 
   const handleRemoveCoupon = async () => {
     try {
-      await removeCoupon({ subtotal_ht: subtotal, frais_livraison: deliveryNote });
+      await removeCoupon({ subtotal_ht: subtotal, frais_livraison: fraisLivraison });
       setAppliedCoupon(null);
       setCouponInput('');
       setCouponMessage('Code promo retiré');
@@ -231,7 +235,7 @@ export function QuickOrderDrawer({
       localite: localite.trim(),
       codePostal: codePostal.trim() || undefined,
       priceSnapshot: unitPrice,
-      deliveryFeeSnapshot: deliveryNote,
+      deliveryFeeSnapshot: fraisLivraison,
       website: website || undefined,
       ...(appliedCoupon?.code && { couponCode: appliedCoupon.code }),
     };
@@ -630,20 +634,33 @@ export function QuickOrderDrawer({
             </div>
           </div>
 
-          {/* Sticky footer: total + trust + primary button (only when form visible) */}
+          {/* Sticky footer: recap like checkout (Sous-total, Expédition, Total) + trust + primary button */}
           {!result && (
             <div className="shrink-0 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 rounded-b-2xl md:rounded-b-2xl">
-              <div className="space-y-1 mb-2">
+              <div className="space-y-2 mb-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600 dark:text-gray-400">Sous-total</span>
+                  <span className="font-medium text-gray-900 dark:text-white">{subtotal.toFixed(0)} DT</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600 dark:text-gray-400">Expédition</span>
+                  <span className={(appliedCoupon?.free_shipping ? 0 : fraisLivraison) === 0 ? 'text-green-600 dark:text-green-400 font-medium' : 'font-medium text-gray-900 dark:text-white'}>
+                    {(appliedCoupon?.free_shipping ? 0 : fraisLivraison) === 0 ? 'Gratuite' : `${(appliedCoupon?.free_shipping ? 0 : fraisLivraison)} DT`}
+                  </span>
+                </div>
                 {appliedCoupon && appliedCoupon.discount_ht > 0 && (
                   <div className="flex items-center justify-between gap-3 text-sm">
                     <span className="text-gray-600 dark:text-gray-400">Remise ({appliedCoupon.code})</span>
                     <span className="font-medium text-green-600 dark:text-green-400">-{appliedCoupon.discount_ttc.toFixed(2)} DT</span>
                   </div>
                 )}
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-sm font-semibold text-gray-900 dark:text-white">Total : {total.toFixed(0)} DT</span>
-                  {deliveryNote > 0 && !appliedCoupon?.free_shipping && <span className="text-sm text-gray-600 dark:text-gray-400">+ Livraison : {deliveryNote.toFixed(0)} DT</span>}
+                <div className="flex justify-between text-base font-bold pt-2 border-t border-gray-200 dark:border-gray-700">
+                  <span className="text-gray-900 dark:text-white">Total</span>
+                  <span className="text-red-600 dark:text-red-400">{total.toFixed(0)} DT</span>
                 </div>
+                {subtotal < FREE_SHIPPING_THRESHOLD && fraisLivraison > 0 && !appliedCoupon?.free_shipping && (
+                  <p className="text-xs text-green-700 dark:text-green-300">Ajoutez {(FREE_SHIPPING_THRESHOLD - subtotal).toFixed(0)} DT pour la livraison gratuite</p>
+                )}
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-500 mb-3">
                 Paiement à la livraison · Livraison 24–72h · Produits authentiques
