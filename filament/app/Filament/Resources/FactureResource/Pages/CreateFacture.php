@@ -50,7 +50,7 @@ class CreateFacture extends CreateRecord
         $state = $this->form->getState();
         $details = $state['details'] ?? [];
         $remise = (float) ($state['remise'] ?? 0);
-        $timbre = (float) ($state['timbre'] ?? 0);
+        $timbre = 0.0;
         $fraisLivraison = (float) ($state['frais_livraison'] ?? 0);
 
         $calc = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, 0, $fraisLivraison);
@@ -73,7 +73,7 @@ class CreateFacture extends CreateRecord
 
         $details = $data['details'] ?? [];
         $remise = (float) ($data['remise'] ?? 0);
-        $timbre = (float) ($data['timbre'] ?? 0);
+        $timbre = 0.0;
         $fraisLivraison = (float) ($data['frais_livraison'] ?? 0);
 
         $calc = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, 0, $fraisLivraison);
@@ -114,7 +114,7 @@ class CreateFacture extends CreateRecord
 
         $state = $this->form->getState();
         $remise = (float) ($state['remise'] ?? 0);
-        $timbre = (float) ($state['timbre'] ?? 0);
+        $timbre = 0.0;
         $fraisLivraison = (float) ($state['frais_livraison'] ?? 0);
 
         $calcTotals = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, 0, $fraisLivraison);

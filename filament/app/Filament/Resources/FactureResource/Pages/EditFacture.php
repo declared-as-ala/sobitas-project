@@ -46,7 +46,7 @@ class EditFacture extends EditRecord
         $calc = \App\Services\InvoiceCalculator::calculate(
             $details,
             (float)($this->record->remise ?? 0),
-            (float)($this->record->timbre ?? 0),
+            0.0,
             0,
             (float)($this->record->frais_livraison ?? 0)
         );
@@ -90,7 +90,7 @@ class EditFacture extends EditRecord
         }
 
         $remise = (float) ($this->record->remise ?? 0);
-        $timbre = (float) ($this->record->timbre ?? 0);
+        $timbre = 0.0;
         $fraisLivraison = (float) ($this->record->frais_livraison ?? 0);
         $totals = \App\Services\InvoiceCalculator::calculate($data['details'], $remise, $timbre, 0, $fraisLivraison);
 
@@ -138,7 +138,7 @@ class EditFacture extends EditRecord
 
         $state = $this->form->getState();
         $remise = (float) ($state['remise'] ?? 0);
-        $timbre = (float) ($state['timbre'] ?? 0);
+        $timbre = 0.0;
         $fraisLivraison = (float) ($state['frais_livraison'] ?? 0);
 
         $calcTotals = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, 0, $fraisLivraison);
@@ -211,7 +211,7 @@ class EditFacture extends EditRecord
         $this->form->fill($newState);
 
         $remise = (float) ($newState['remise'] ?? 0);
-        $timbre = (float) ($newState['timbre'] ?? 0);
+        $timbre = 0.0;
         $fraisLivraison = (float) ($newState['frais_livraison'] ?? 0);
         $calc = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, 0, $fraisLivraison);
         $this->form->fill(array_merge($newState, [

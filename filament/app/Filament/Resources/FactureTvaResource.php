@@ -237,7 +237,7 @@ class FactureTvaResource extends Resource
         // displayed it with suffix '%', producing nonsense (e.g. 23978%). We now show TVA % (derived)
         // and TVA (DT) (amount) separately.
         return $table
-            ->modifyQueryUsing(fn (Builder $query) => $query->with('client:id,name')->select(['facture_tvas.id', 'facture_tvas.numero', 'facture_tvas.status', 'facture_tvas.client_id', 'facture_tvas.prix_ht', 'facture_tvas.tva', 'facture_tvas.remise', 'facture_tvas.timbre', 'facture_tvas.prix_ttc', 'facture_tvas.net_a_payer', 'facture_tvas.created_at', 'facture_tvas.date_facture']))
+            ->modifyQueryUsing(fn (Builder $query) => $query->with('client:id,name')->select(['facture_tvas.id', 'facture_tvas.numero', 'facture_tvas.status', 'facture_tvas.client_id', 'facture_tvas.prix_ht', 'facture_tvas.tva', 'facture_tvas.remise', 'facture_tvas.timbre', 'facture_tvas.prix_ttc', 'facture_tvas.net_a_payer', 'facture_tvas.created_at']))
             ->columns([
                 Tables\Columns\TextColumn::make('numero')->label('N°')->searchable()->sortable(),
                 Tables\Columns\TextColumn::make('status')

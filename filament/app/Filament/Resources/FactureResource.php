@@ -42,7 +42,8 @@ class FactureResource extends Resource
     {
         $details = $isItem ? ($get('../../details') ?? []) : ($get('details') ?? []);
         $remise = (float) ($isItem ? ($get('../../remise') ?? 0) : ($get('remise') ?? 0));
-        $timbre = (float) ($isItem ? ($get('../../timbre') ?? 0) : ($get('timbre') ?? 0));
+        // BL: no timbre — always 0
+        $timbre = 0.0;
         $fraisLivraison = (float) ($isItem ? ($get('../../frais_livraison') ?? 0) : ($get('frais_livraison') ?? 0));
 
         // BL is HT only: no TVA; net_a_payer includes frais_livraison
@@ -212,7 +213,7 @@ class FactureResource extends Resource
                                 ->default(0)
                                 ->live(debounce: 300)
                                 ->afterStateUpdated(fn ($get, $set) => self::updateTotals($get, $set, false)),
-                            Forms\Components\TextInput::make('timbre')->label('Timbre')->numeric()->prefix('DT')->default(0)->live(debounce: 300)->afterStateUpdated(fn ($get, $set) => self::updateTotals($get, $set, false)),
+                            // Timbre is not used for BL, kept at 0 silently
                             Forms\Components\ViewField::make('net_a_payer_display')
                                 ->label('')
                                 ->hiddenLabel()
