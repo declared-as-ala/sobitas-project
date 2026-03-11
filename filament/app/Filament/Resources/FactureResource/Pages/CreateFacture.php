@@ -51,9 +51,10 @@ class CreateFacture extends CreateRecord
         $details = $state['details'] ?? [];
         $remise = (float) ($state['remise'] ?? 0);
         $timbre = (float) ($state['timbre'] ?? 0);
+        $fraisLivraison = (float) ($state['frais_livraison'] ?? 0);
 
-        $calc = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, 0);
-        
+        $calc = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, 0, $fraisLivraison);
+
         $this->form->fill(array_merge($state, [
             'prix_ht' => $calc['total_ht_brut'],
             'pourcentage_remise' => $calc['pourcentage_remise'],
@@ -73,11 +74,9 @@ class CreateFacture extends CreateRecord
         $details = $data['details'] ?? [];
         $remise = (float) ($data['remise'] ?? 0);
         $timbre = (float) ($data['timbre'] ?? 0);
+        $fraisLivraison = (float) ($data['frais_livraison'] ?? 0);
 
-        $coordinate = \App\Models\Coordinate::getCached();
-        $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
-
-        $calc = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, $defaultTva);
+        $calc = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, 0, $fraisLivraison);
 
         $data['prix_ht'] = $calc['total_ht_brut'];
         $data['remise'] = $calc['remise'];
@@ -85,6 +84,7 @@ class CreateFacture extends CreateRecord
         $data['prix_ht_apres_remise'] = $calc['prix_ht_apres_remise'];
         $data['tva'] = $calc['tva'];
         $data['timbre'] = $calc['timbre'];
+        $data['frais_livraison'] = $calc['frais_livraison'];
         $data['prix_ttc'] = $calc['prix_ttc'];
         $data['net_a_payer'] = $calc['net_a_payer'];
 
@@ -115,9 +115,10 @@ class CreateFacture extends CreateRecord
         $state = $this->form->getState();
         $remise = (float) ($state['remise'] ?? 0);
         $timbre = (float) ($state['timbre'] ?? 0);
+        $fraisLivraison = (float) ($state['frais_livraison'] ?? 0);
 
-        $calcTotals = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, 0);
-        
+        $calcTotals = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, 0, $fraisLivraison);
+
         $this->record->update([
             'prix_ht' => $calcTotals['total_ht_brut'],
             'remise' => $calcTotals['remise'],
@@ -125,6 +126,7 @@ class CreateFacture extends CreateRecord
             'prix_ht_apres_remise' => $calcTotals['prix_ht_apres_remise'],
             'tva' => $calcTotals['tva'],
             'timbre' => $calcTotals['timbre'],
+            'frais_livraison' => $calcTotals['frais_livraison'],
             'prix_ttc' => $calcTotals['prix_ttc'],
             'net_a_payer' => $calcTotals['net_a_payer'],
         ]);

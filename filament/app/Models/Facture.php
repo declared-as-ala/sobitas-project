@@ -13,7 +13,7 @@ class Facture extends Model
 
     protected $fillable = [
         'numero', 'client_id', 'commande_id', 'status', 'prix_ht', 'prix_ttc', 'remise',
-        'pourcentage_remise', 'prix_ht_apres_remise', 'tva', 'timbre', 'net_a_payer',
+        'pourcentage_remise', 'prix_ht_apres_remise', 'tva', 'timbre', 'frais_livraison', 'net_a_payer',
     ];
 
     protected $casts = [
@@ -23,6 +23,7 @@ class Facture extends Model
         'prix_ht_apres_remise' => 'decimal:3',
         'tva' => 'decimal:3',
         'timbre' => 'decimal:3',
+        'frais_livraison' => 'decimal:3',
         'prix_ttc' => 'decimal:3',
         'net_a_payer' => 'decimal:3',
         'status' => BlStatus::class,

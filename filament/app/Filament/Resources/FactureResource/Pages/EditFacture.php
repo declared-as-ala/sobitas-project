@@ -47,9 +47,10 @@ class EditFacture extends EditRecord
             $details,
             (float)($this->record->remise ?? 0),
             (float)($this->record->timbre ?? 0),
-            0
+            0,
+            (float)($this->record->frais_livraison ?? 0)
         );
-        
+
         $net = number_format($calc['net_a_payer'], 3, ',', ' ') . ' TND';
 
         $html = '<style>
@@ -90,7 +91,8 @@ class EditFacture extends EditRecord
 
         $remise = (float) ($this->record->remise ?? 0);
         $timbre = (float) ($this->record->timbre ?? 0);
-        $totals = \App\Services\InvoiceCalculator::calculate($data['details'], $remise, $timbre, 0);
+        $fraisLivraison = (float) ($this->record->frais_livraison ?? 0);
+        $totals = \App\Services\InvoiceCalculator::calculate($data['details'], $remise, $timbre, 0, $fraisLivraison);
 
         $data['prix_ht'] = $totals['total_ht_brut'];
         $data['pourcentage_remise'] = $totals['pourcentage_remise'];
@@ -100,6 +102,7 @@ class EditFacture extends EditRecord
         $data['net_a_payer'] = $totals['net_a_payer'];
         $data['remise'] = $totals['remise'];
         $data['timbre'] = $totals['timbre'];
+        $data['frais_livraison'] = $this->record->frais_livraison ?? 0;
         $data['resume_date_display'] = $this->record->created_at?->format('d/m/Y') ?? '';
         $data['resume_statut_display'] = 'Validée';
 
@@ -136,12 +139,10 @@ class EditFacture extends EditRecord
         $state = $this->form->getState();
         $remise = (float) ($state['remise'] ?? 0);
         $timbre = (float) ($state['timbre'] ?? 0);
-        
-        $coordinate = \App\Models\Coordinate::getCached();
-        $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
-        
-        $calcTotals = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, $defaultTva);
-        
+        $fraisLivraison = (float) ($state['frais_livraison'] ?? 0);
+
+        $calcTotals = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, 0, $fraisLivraison);
+
         $this->record->update([
             'prix_ht' => $calcTotals['total_ht_brut'],
             'remise' => $calcTotals['remise'],
@@ -149,6 +150,7 @@ class EditFacture extends EditRecord
             'prix_ht_apres_remise' => $calcTotals['prix_ht_apres_remise'],
             'tva' => $calcTotals['tva'],
             'timbre' => $calcTotals['timbre'],
+            'frais_livraison' => $calcTotals['frais_livraison'],
             'prix_ttc' => $calcTotals['prix_ttc'],
             'net_a_payer' => $calcTotals['net_a_payer'],
         ]);
@@ -210,7 +212,8 @@ class EditFacture extends EditRecord
 
         $remise = (float) ($newState['remise'] ?? 0);
         $timbre = (float) ($newState['timbre'] ?? 0);
-        $calc = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, 0);
+        $fraisLivraison = (float) ($newState['frais_livraison'] ?? 0);
+        $calc = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, 0, $fraisLivraison);
         $this->form->fill(array_merge($newState, [
             'prix_ht' => $calc['total_ht_brut'],
             'pourcentage_remise' => $calc['pourcentage_remise'],

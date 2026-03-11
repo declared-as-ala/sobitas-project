@@ -12,7 +12,7 @@
             <th style="width:42%">Désignation</th>
             <th class="num" style="width:14%">Qté</th>
             <th class="num" style="width:18%">P.U HT</th>
-            <th class="num" style="width:21%">Total TTC</th>
+            <th class="num" style="width:21%">Total HT</th>
         </tr>
     </thead>
     <tbody>

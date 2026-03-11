@@ -60,7 +60,8 @@ Route::middleware(['auth'])->group(function () {
             'totals' => [
                 ['label' => 'Total HT', 'value' => number_format((float)($facture->prix_ht ?? 0), 3, ',', ' ') . ' DT'],
                 ['label' => 'Remise', 'value' => number_format((float)($facture->remise ?? 0), 3, ',', ' ') . ' DT'],
-                ['label' => 'Net à payer TTC', 'value' => number_format((float)($facture->prix_ttc ?? 0), 3, ',', ' ') . ' DT', 'class' => 'ttc'],
+                ['label' => 'Frais de livraison', 'value' => number_format((float)($facture->frais_livraison ?? 0), 3, ',', ' ') . ' DT'],
+                ['label' => 'Net à payer', 'value' => number_format((float)($facture->net_a_payer ?? 0), 3, ',', ' ') . ' DT', 'class' => 'ttc'],
             ],
             'footerNote' => $coordonnee && !empty($coordonnee->note) ? $coordonnee->note : null,
             'paymentTerms' => 'Paiement à la livraison ou par virement.',

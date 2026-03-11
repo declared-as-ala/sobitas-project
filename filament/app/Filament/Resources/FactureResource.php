@@ -43,12 +43,13 @@ class FactureResource extends Resource
         $details = $isItem ? ($get('../../details') ?? []) : ($get('details') ?? []);
         $remise = (float) ($isItem ? ($get('../../remise') ?? 0) : ($get('remise') ?? 0));
         $timbre = (float) ($isItem ? ($get('../../timbre') ?? 0) : ($get('timbre') ?? 0));
-        
-        // BL is HT only: no TVA
-        $calcTotals = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, 0);
-        
+        $fraisLivraison = (float) ($isItem ? ($get('../../frais_livraison') ?? 0) : ($get('frais_livraison') ?? 0));
+
+        // BL is HT only: no TVA; net_a_payer includes frais_livraison
+        $calcTotals = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, 0, $fraisLivraison);
+
         $prefix = $isItem ? '../../' : '';
-        
+
         $set($prefix . 'prix_ht', $calcTotals['total_ht_brut']);
         $set($prefix . 'pourcentage_remise', $calcTotals['pourcentage_remise']);
         $set($prefix . 'prix_ht_apres_remise', $calcTotals['prix_ht_apres_remise']);
@@ -204,6 +205,7 @@ class FactureResource extends Resource
                                     self::updateTotals($get, $set, false);
                                 }),
                             Forms\Components\TextInput::make('prix_ht_apres_remise')->label('HT après remise')->numeric()->prefix('DT')->disabled()->dehydrated(false)->default(0),
+                            Forms\Components\TextInput::make('frais_livraison')->label('Frais de livraison')->numeric()->prefix('DT')->default(0)->disabled()->dehydrated(true),
                             Forms\Components\TextInput::make('timbre')->label('Timbre')->numeric()->prefix('DT')->default(0)->live(debounce: 300)->afterStateUpdated(fn ($get, $set) => self::updateTotals($get, $set, false)),
                             Forms\Components\ViewField::make('net_a_payer_display')
                                 ->label('')
