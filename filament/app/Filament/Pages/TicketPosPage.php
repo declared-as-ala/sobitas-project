@@ -77,7 +77,7 @@ class TicketPosPage extends Page
         }
 
         if (empty($this->lines)) {
-            $this->lines = [self::emptyLine()];
+            $this->lines = [];
         }
     }
 
