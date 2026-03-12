@@ -23,6 +23,10 @@ class EditFactureTva extends EditRecord
 {
     protected static string $resource = FactureTvaResource::class;
 
+    public function getMaxContentWidth(): \Filament\Support\Enums\MaxWidth | string | null
+    {
+        return \Filament\Support\Enums\MaxWidth::Full;
+    }
     public function getHeaderWidgets(): array
     {
         return [DocumentTimelineWidget::class];

@@ -38,130 +38,102 @@ class FactureTvaResource extends Resource
         $coordinate = Coordinate::getCached();
         $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
         return $schema->schema([
-            Grid::make(3)->schema([
-                /* Left column (2/3): Informations société + Client + Produits */
-                Grid::make(1)->schema([
-                    Section::make('Informations société')
-                        ->icon('heroicon-o-information-circle')
-                        ->schema([
-                            Forms\Components\Placeholder::make('company_info')
-                                ->hiddenLabel()
-                                ->content(fn () => $coordinate ? new \Illuminate\Support\HtmlString(view('filament.components.company-info-compact', ['coordinate' => $coordinate])->render()) : '—'),
-                        ])
-                        ->columns(1),
-                    Section::make('Client')
-                        ->icon('heroicon-o-user')
-                        ->extraAttributes(['class' => 'doc-section-client'])
-                        ->schema([
-                            Forms\Components\Select::make('client_id')
-                                ->label('Client')
-                                ->relationship('client', 'name')
-                                ->getOptionLabelFromRecordUsing(fn ($record) => (string) ($record->name ?? 'Client #' . $record->id))
-                                ->searchable()
-                                ->preload()
-                                ->required()
-                                ->live()
-                                ->afterStateUpdated(function ($state, $set) {
-                                    if ($state) {
-                                        $client = Client::find($state);
-                                        $set('client_adresse', $client?->adresse ?? '');
-                                        $set('client_phone', $client?->phone_1 ?? '');
-                                        $set('client_email', $client?->email ?? '');
-                                    } else {
-                                        $set('client_adresse', '');
-                                        $set('client_phone', '');
-                                        $set('client_email', '');
-                                    }
-                                }),
-                            Forms\Components\TextInput::make('client_adresse')->label('Adresse')->disabled()->dehydrated(false),
-                            Forms\Components\TextInput::make('client_phone')->label('N° Tél')->disabled()->dehydrated(false),
-                            Forms\Components\TextInput::make('client_email')->label('Email')->email()->disabled()->dehydrated(false),
-                        ])
-                        ->columns(1)
-                        ->collapsible(),
-                    Section::make('Produits')
-                        ->icon('heroicon-o-shopping-cart')
-                        ->extraAttributes(['class' => 'doc-section-produits'])
-                        ->schema([
-                            Forms\Components\Placeholder::make('barcode_scan')
-                                ->label('')
-                                ->content(fn () => new \Illuminate\Support\HtmlString(view('filament.components.barcode-scan-compact')->render())),
-                            Forms\Components\Placeholder::make('barcode_scan')
-                                ->label('')
-                                ->content(fn () => new \Illuminate\Support\HtmlString(view('filament.components.barcode-scan-compact')->render())),
-                            Forms\Components\ViewField::make('details')
-                                ->hiddenLabel()
-                                ->view('filament.forms.components.instant-invoice-details')
-                                ->columnSpanFull(),
-                        ])
-                        ->columnSpanFull(),
-                ])->columnSpan(2),
+            Forms\Components\Placeholder::make('css_injector')
+                ->hiddenLabel()
+                ->content(fn () => new \Illuminate\Support\HtmlString('<style>' . file_get_contents(resource_path('css/filament/facture-pos.css')) . '</style>')),
 
-                /* Right column (1/3): Totaux + Résumé */
-                Grid::make(1)->schema([
-                    Section::make('Totaux')
-                        ->icon('heroicon-o-calculator')
-                        ->schema([
-                            Forms\Components\TextInput::make('prix_ht')->label('Sous-total HT')->numeric()->prefix('DT')->disabled()->dehydrated(false)->default(0),
-                            Forms\Components\TextInput::make('remise')->label('Remise')->numeric()->prefix('DT')->default(0)->live()->afterStateUpdated(fn ($state, $get, $set) => self::recalculateFactureTvaTotals($get, $set, false)),
-                            Forms\Components\Placeholder::make('remise_error')->label('')->content(fn ($get) => (float) ($get('remise') ?? 0) > (float) ($get('prix_ht') ?? 0) ? new \Illuminate\Support\HtmlString('<p class="text-sm text-danger-600 dark:text-danger-400">La remise ne peut pas dépasser le sous-total.</p>') : '')->visible(fn ($get) => (float) ($get('remise') ?? 0) > (float) ($get('prix_ht') ?? 0)),
-                            Forms\Components\TextInput::make('pourcentage_remise')
-                                ->label('Remise %')
-                                ->numeric()
-                                ->suffix('%')
-                                ->default(0)
-                                ->live(debounce: 300)
-                                ->afterStateUpdated(function ($state, $get, $set) {
-                                    $details = $get('details') ?? [];
-                                    $totalHt = 0.0;
-                                    foreach ($details as $d) {
-                                        if (! empty($d['produit_id'])) {
-                                            $totalHt += (float) ($d['qte'] ?? 0) * (float) ($d['prix_unitaire'] ?? 0);
-                                        }
-                                    }
-                                    $set('remise', round($totalHt * (float) ($state ?? 0) / 100, 3));
-                                    self::recalculateFactureTvaTotals($get, $set, false);
-                                }),
-                            Forms\Components\TextInput::make('prix_ht_apres_remise')->label('HT après remise')->numeric()->prefix('DT')->disabled()->dehydrated(false)->default(0),
-                            Forms\Components\TextInput::make('tva')->label('TVA')->numeric()->prefix('DT')->disabled()->dehydrated(false)->default(0),
-                            Forms\Components\TextInput::make('timbre')->label('Timbre')->numeric()->prefix('DT')->default(0)->live()->afterStateUpdated(fn ($state, $get, $set) => self::recalculateFactureTvaTotals($get, $set, false)),
-                            Forms\Components\TextInput::make('prix_ttc')->label('Total TTC')->numeric()->prefix('DT')->disabled()->dehydrated(false)->default(0),
-                            Forms\Components\ViewField::make('net_a_payer_display')
-                                ->label('')
-                                ->hiddenLabel()
-                                ->view('filament.forms.components.net-a-payer-card'),
-                            Forms\Components\TextInput::make('numero_display')
-                                ->label('N° Document')
-                                ->disabled()
-                                ->dehydrated(false),
-                        ])
-                        ->columns(1)
-                        ->extraAttributes(['class' => 'doc-totaux-sidebar']),
-                    Section::make('Résumé')
-                        ->icon('heroicon-o-document-text')
-                        ->schema([
-                            Forms\Components\Placeholder::make('resume_articles')
-                                ->label('Articles')
-                                ->content(fn ($get) => (string) count(array_filter($get('details') ?? [], fn ($d) => ! empty($d['produit_id'])))),
-                            Forms\Components\Placeholder::make('resume_quantite')
-                                ->label('Quantité totale')
-                                ->content(fn ($get) => (string) array_sum(array_map(fn ($d) => (int) ($d['qte'] ?? 0), $get('details') ?? []))),
-                            Forms\Components\Placeholder::make('resume_date')
-                                ->label('Date')
-                                ->content(fn ($get) => $get('resume_date_display') ?? '—'),
-                            Forms\Components\Placeholder::make('resume_statut')
-                                ->label('Statut')
-                                ->content(fn ($get) => $get('resume_statut_display') ?? '—')
-                                ->visible(fn ($get) => (string) ($get('resume_statut_display') ?? '') !== ''),
-                            Forms\Components\Hidden::make('resume_date_display')->dehydrated(false),
-                            Forms\Components\Hidden::make('resume_statut_display')->dehydrated(false),
-                        ])
-                        ->columns(1)
-                        ->collapsible(),
-                ])->columnSpan(1),
-            ])->columnSpanFull(),
+            Grid::make(12)
+                ->extraAttributes(['class' => 'facture-pos-page'])
+                ->schema([
+                /* TOP ZONE: Left (Company) | Right (Client) */
+                Forms\Components\Group::make()->schema([
+                    Forms\Components\ViewField::make('company_info')
+                        ->hiddenLabel()
+                        ->view('filament.components.company-info-pos'),
+                ])->columnSpan(['default' => 12, 'lg' => 6])->extraAttributes(['class' => 'pos-company-block']),
+                
+                Forms\Components\Group::make()->schema([
+                    Forms\Components\Select::make('client_id')
+                        ->label('Client')
+                        ->relationship('client', 'name')
+                        ->getOptionLabelFromRecordUsing(fn ($record) => (string) ($record->name ?? 'Client #' . $record->id) . ($record->phone_1 ? ' - ' . $record->phone_1 : ''))
+                        ->getSearchResultsUsing(fn (string $search): array => Client::where('name', 'like', "%{$search}%")
+                            ->orWhere('phone_1', 'like', "%{$search}%")
+                            ->orWhere('mf', 'like', "%{$search}%")
+                            ->limit(50)
+                            ->get()
+                            ->mapWithKeys(fn ($client) => [$client->id => $client->name . ($client->phone_1 ? ' - ' . $client->phone_1 : '')])
+                            ->toArray()
+                        )
+                        ->searchable()
+                        ->preload()
+                        ->required()
+                        ->live()
+                        ->afterStateUpdated(function ($state, $set) {
+                            if ($state) {
+                                $client = Client::find($state);
+                                $set('client_adresse', $client?->adresse ?? '');
+                                $set('client_phone', $client?->phone_1 ?? '');
+                                $set('client_email', $client?->email ?? '');
+                            } else {
+                                $set('client_adresse', '');
+                                $set('client_phone', '');
+                                $set('client_email', '');
+                            }
+                        }),
+                    Forms\Components\TextInput::make('client_adresse')->label('Adresse')->disabled()->dehydrated(false),
+                    Grid::make(2)->schema([
+                        Forms\Components\TextInput::make('client_phone')->label('N° Tél')->disabled()->dehydrated(false),
+                        Forms\Components\TextInput::make('client_email')->label('Email')->email()->disabled()->dehydrated(false),
+                    ]),
+                ])->columnSpan(['default' => 12, 'lg' => 6])->extraAttributes(['class' => 'pos-client-block']),
+
+                /* MIDDLE ZONE: Products Table & Scanning */
+                Forms\Components\Group::make()->schema([
+                    Forms\Components\ViewField::make('details')
+                        ->hiddenLabel()
+                        ->view('filament.forms.components.instant-invoice-details')
+                ])->columnSpanFull()->extraAttributes(['class' => 'mt-6']),
+
+                /* BOTTOM RIGHT ZONE: Totals */
+                Forms\Components\Group::make()->schema([
+                    Forms\Components\TextInput::make('prix_ht')->label('Montant Total HT')->numeric()->disabled()->dehydrated(false)->default(0),
+                    Forms\Components\TextInput::make('remise')->label('Montant Remise')->numeric()->default(0)->live()->afterStateUpdated(fn ($state, $get, $set) => self::recalculateFactureTvaTotals($get, $set, false)),
+                    Forms\Components\TextInput::make('pourcentage_remise')
+                        ->label('Pourcentage Remise %')
+                        ->numeric()
+                        ->default(0)
+                        ->live(debounce: 300)
+                        ->afterStateUpdated(function ($state, $get, $set) {
+                            $details = $get('details') ?? [];
+                            $totalHt = 0.0;
+                            foreach ($details as $d) {
+                                if (! empty($d['produit_id'])) {
+                                    $totalHt += (float) ($d['qte'] ?? 0) * (float) ($d['prix_unitaire'] ?? 0);
+                                }
+                            }
+                            $set('remise', round($totalHt * (float) ($state ?? 0) / 100, 3));
+                            self::recalculateFactureTvaTotals($get, $set, false);
+                        }),
+                    Forms\Components\TextInput::make('tva')->label('Montant Totale TVA')->numeric()->disabled()->dehydrated(false)->default(0),
+                    Forms\Components\TextInput::make('prix_ttc')->label('Montant Totale TTC')->numeric()->disabled()->dehydrated(false)->default(0),
+                    Forms\Components\TextInput::make('timbre')->label('Timbre Fiscal')->numeric()->default(1.000)->live()->afterStateUpdated(fn ($state, $get, $set) => self::recalculateFactureTvaTotals($get, $set, false)),
+                    
+                    Forms\Components\ViewField::make('net_a_payer_display')
+                        ->label('')
+                        ->hiddenLabel()
+                        ->view('filament.forms.components.net-a-payer-card'),
+                        
+                    Forms\Components\Hidden::make('prix_ht_apres_remise')->dehydrated(false),
+                ])
+                ->columnSpan(['default' => 12, 'lg' => 4])
+                ->columnStart(['lg' => 9])
+                ->extraAttributes(['class' => 'pos-totals-panel mt-6']),
+            ]),
 
             Forms\Components\Hidden::make('numero'),
+            Forms\Components\Hidden::make('resume_date_display')->dehydrated(false),
+            Forms\Components\Hidden::make('resume_statut_display')->dehydrated(false),
         ]);
     }
 

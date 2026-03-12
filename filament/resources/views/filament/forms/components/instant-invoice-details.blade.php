@@ -149,9 +149,26 @@ function instantInvoiceComponent() {
         produits: @json(json_decode($productsJson)),
 
         init() {
+            // Custom Matcher for Product Search (by code, designation, etc)
+            let matchCustom = (params, data) => {
+                if ($.trim(params.term) === '') return data;
+                if (typeof data.text === 'undefined') return null;
+                if (data.text.toLowerCase().indexOf(params.term.toLowerCase()) > -1) {
+                    return data;
+                }
+                return null;
+            };
+
             // Apply Select2 to all initialized selects
             for(let i=0; i<this.maxRows; i++) {
-                $('#inv-prod-'+i).select2();
+                $('#inv-prod-'+i).select2({
+                    matcher: matchCustom,
+                    language: {
+                        noResults: function() {
+                            return "Aucun Résultat";
+                        }
+                    }
+                });
                 // We need to attach onchange listener back to alpine component because select2 breaks native alpine @change bindings sometimes without explicitly calling it
                 $('#inv-prod-'+i).on('change', () => {
                     this.selectProduct(i);

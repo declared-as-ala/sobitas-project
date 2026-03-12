@@ -100,7 +100,7 @@
         </div>
         <div class="nap-amount-container">
             <span class="nap-amount-wrap">
-                <span class="nap-amount">{{ $formatted }}</span>
+                <span class="nap-amount nap-text">{{ $formatted }}</span>
             </span>
             <span class="nap-currency">TND</span>
         </div>
