@@ -42,7 +42,13 @@ class DocumentPdfController extends Controller
             $details_facture = DetailsFacture::where('facture_id', $facture->id)
                 ->with('product:id,designation_fr,cover')
                 ->get();
-            $coordonnee = \App\Models\Coordinate::first();
+            $totalHt = $details_facture->sum(fn($d) => ($d->qte ?? $d->quantite ?? 1) * ($d->prix_unitaire ?? $d->prix_ht ?? 0));
+            $remise = (float) ($facture->remise ?? 0);
+            $frais = (float) ($facture->frais_livraison ?? 0);
+            // Assuming no TVA for BL based on current logic, so TTC = HT. 
+            // If the system has prix_ttc per line, we sum that. If not, it falls back to HT.
+            $totalTtc = $details_facture->sum(fn($d) => ($d->qte ?? $d->quantite ?? 1) * ($d->prix_ttc ?? $d->prix_unitaire ?? $d->prix_ht ?? 0));
+            $netAPayer = max($totalTtc - $remise + $frais, 0);
 
             $data = [
                 'facture' => $facture,
@@ -53,12 +59,11 @@ class DocumentPdfController extends Controller
                 'documentNumber' => $facture->numero,
                 'documentDate' => $facture->created_at?->format('d/m/Y'),
                 'client' => $facture->client,
-                'totals' => [
-                    ['label' => 'Total HT', 'value' => number_format((float) ($facture->prix_ht ?? 0), 3, ',', ' ') . ' DT'],
-                    ['label' => 'Remise', 'value' => number_format((float) ($facture->remise ?? 0), 3, ',', ' ') . ' DT'],
-                    ['label' => 'Frais de livraison', 'value' => number_format((float) ($facture->frais_livraison ?? 0), 3, ',', ' ') . ' DT'],
-                    ['label' => 'Net à payer', 'value' => number_format((float) ($facture->net_a_payer ?? 0), 3, ',', ' ') . ' DT', 'class' => 'ttc'],
-                ],
+                'calc_total_ht' => $totalHt,
+                'calc_remise' => $remise,
+                'calc_frais' => $frais,
+                'calc_net_a_payer' => $netAPayer,
+                'calc_pourcentage_remise' => (float) ($facture->pourcentage_remise ?? 0),
                 'footerNote' => $coordonnee && ! empty($coordonnee->note) ? $coordonnee->note : null,
                 'paymentTerms' => 'Paiement à la livraison ou par virement.',
                 'forPdf' => true,

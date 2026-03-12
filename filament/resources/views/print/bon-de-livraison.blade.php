@@ -1,5 +1,9 @@
 @extends('print.layout-backend')
 
+@php
+    $fmt = fn($n) => number_format((float)$n, 3, '.', ' ');
+@endphp
+
 @section('client-info')
 <div class="row contacts">
     <div class="col invoice-to">
@@ -53,84 +57,61 @@
                 <td class="text-center">{{ $i }}</td>
                 <td>{{ collect(explode('-', $designation))->map(fn($v) => trim($v))->implode(' - ') }}</td>
                 <td class="text-center">{{ $qte }}</td>
-                <td class="text-right">{{ number_format((float) $pu, 3, '.', '') }}</td>
-                <td class="text-right">{{ number_format((float) $pttc, 3, '.', '') }}</td>
+                <td class="text-right">{{ $fmt($pu) }}</td>
+                <td class="text-right">{{ $fmt($pttc) }}</td>
             </tr>
             @php $i++; @endphp
         @endforeach
     </tbody>
     <tfoot>
-        <!-- Montant Total HT -->
-        <tr>
-            <td colspan="3"></td>
-            <th colspan="1">Montant Total HT</th>
-            <th class="text-right">
-                @php
-                    $totalHt = 0;
-                    if(isset($totals)) {
-                        $htTotal = collect($totals)->firstWhere('label', 'Total HT');
-                        if($htTotal) $totalHt = str_replace([' DT', ','], ['', '.'], $htTotal['value']);
-                    } elseif(isset($facture)) {
-                        $totalHt = $facture->prix_ht ?? 0;
-                    }
-                @endphp
-                {{ number_format((float)$totalHt, 3, '.', '') }}
-            </th>
-        </tr>
-
-        <!-- Remise / Frais de Livraison (only show if > 0 or if available) -->
         @php
-            $remise = 0;
-            $frais = 0;
-            $totalTtc = 0;
-            
-            if(isset($totals)) {
-                $remiseTotal = collect($totals)->firstWhere('label', 'Remise');
-                if($remiseTotal) $remise = (float) str_replace([' DT', ','], ['', '.'], $remiseTotal['value']);
-                
-                $fraisTotal = collect($totals)->firstWhere('label', 'Frais de livraison');
-                if($fraisTotal) $frais = (float) str_replace([' DT', ','], ['', '.'], $fraisTotal['value']);
-                
-                $ttcTotal = collect($totals)->firstWhere('label', 'Net à payer');
-                if($ttcTotal) $totalTtc = (float) str_replace([' DT', ','], ['', '.'], $ttcTotal['value']);
-            } elseif(isset($facture)) {
-                $remise = (float) ($facture->remise ?? 0);
-                $frais = (float) ($facture->frais_livraison ?? 0);
-                $totalTtc = (float) ($facture->prix_ttc ?? $facture->net_a_payer ?? 0);
-            }
+            $totalHt = $calc_total_ht ?? $facture->prix_ht ?? 0;
+            $remise = $calc_remise ?? $facture->remise ?? 0;
+            $frais = $calc_frais ?? $facture->frais_livraison ?? 0;
+            $pourcentageRemise = $calc_pourcentage_remise ?? $facture->pourcentage_remise ?? 0;
+            $netAPayer = $calc_net_a_payer ?? $facture->net_a_payer ?? $facture->prix_ttc ?? $totalHt;
         @endphp
 
+        <!-- Montant Total HT -->
+        <tr>
+            <td colspan="2"></td>
+            <th colspan="2">Montant Total HT</th>
+            <th class="text-right">{{ $fmt($totalHt) }}</th>
+        </tr>
+
+        <!-- Montant Remise (optional) -->
         @if($remise > 0)
             <tr>
-                <td colspan="3"></td>
-                <th colspan="1">Montant Remise</th>
-                <th class="text-right">{{ number_format($remise, 3, '.', '') }}</th>
+                <td colspan="2"></td>
+                <th colspan="2">Montant Remise</th>
+                <th class="text-right">{{ $fmt($remise) }}</th>
             </tr>
         @endif
         
+        <!-- Pourcentage Remise % (optional) -->
+        @if($pourcentageRemise > 0)
+            <tr>
+                <td colspan="2"></td>
+                <th colspan="2">Pourcentage Remise %</th>
+                <th class="text-right">{{ number_format((float) $pourcentageRemise, 1, '.', '') }} %</th>
+            </tr>
+        @endif
+        
+        <!-- Frais Livraison (optional) -->
         @if($frais > 0)
             <tr>
-                <td colspan="3"></td>
-                <th colspan="1">Frais Livraison</th>
-                <th class="text-right">{{ number_format($frais, 3, '.', '') }}</th>
+                <td colspan="2"></td>
+                <th colspan="2">Frais Livraison</th>
+                <th class="text-right">{{ $fmt($frais) }}</th>
             </tr>
         @endif
         
-        <!-- Placeholder for Percentage if needed -->
-        @if(isset($facture) && isset($facture->pourcentage_remise) && $facture->pourcentage_remise > 0)
-            <tr>
-                <td colspan="3"></td>
-                <th colspan="1">Pourcentage Remise %</th>
-                <th class="text-right">{{ number_format((float) $facture->pourcentage_remise, 1, '.', '') }} %</th>
-            </tr>
-        @endif
-
         <!-- Montant Totale TTC -->
         <tr>
-            <td colspan="3"></td>
-            <th class="bt" colspan="1">Montant Totale TTC</th>
-            <th class="text-right">
-                {{ number_format((float) $totalTtc, 3, '.', '') }}
+            <td colspan="2"></td>
+            <th class="bt" colspan="2" style="background-color: #fcece3;">Montant Totale TTC</th>
+            <th class="text-right bt" style="background-color: #fcece3;">
+                {{ $fmt($netAPayer) }}
             </th>
         </tr>
     </tfoot>
@@ -193,9 +174,11 @@
     }
     
     document.addEventListener('DOMContentLoaded', function() {
-        var total = "{{ number_format((float) $totalTtc, 3, '.', '') }}";
+        var total = "{{ $fmt($calc_net_a_payer ?? $facture->net_a_payer ?? $facture->prix_ttc ?? $calc_total_ht ?? $facture->prix_ht ?? 0) }}";
+        // Convert to properly read float string for inWords without spaces
+        total = total.replace(/\s+/g, '');
         var el = document.getElementById("words_{{ $documentNumber ?? 'doc' }}");
-        if(el && total) {
+        if(el && total && parseFloat(total) > 0) {
             el.innerHTML = inWords(total);
         }
     });
