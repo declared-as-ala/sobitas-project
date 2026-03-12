@@ -16,7 +16,7 @@ class TicketPosPage extends Page
 
     protected static bool $shouldRegisterNavigation = false;
 
-    protected static string $view = 'filament.pages.ticket-pos';
+    protected string $view = 'filament.pages.ticket-pos';
 
     // ── State ──────────────────────────────────────────────────────────────
     public ?int $ticketId = null;
