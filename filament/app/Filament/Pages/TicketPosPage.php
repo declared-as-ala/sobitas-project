@@ -14,6 +14,8 @@ use App\Filament\Resources\TicketResource;
 class TicketPosPage extends Page
 {
     protected static string $resource = TicketResource::class;
+    protected static ?string $title = 'Tikets pages';
+    protected static ?string $navigationLabel = 'Tikets pages';
     protected static string | \BackedEnum | null $navigationIcon = null;
 
     protected static bool $shouldRegisterNavigation = false;

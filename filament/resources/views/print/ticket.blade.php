@@ -179,7 +179,7 @@
         @if (!request()->query('embed') && empty($forPdf ?? false))
         <div class="toolbar hidden-print hide_print ">
             <div class="text-right" style="text-align: right; margin: 10px;">
-                <button id="printInvoice" class="btn btn-info" onclick="print()"><i class="fa fa-print"></i>
+                <button id="printInvoice" class="btn btn-info" onclick="window.print()"><i class="fa fa-print"></i>
                     Imprimer</button>
                 <button class="btn btn-info" onclick="window.close()"><i class="fa fa-close"></i>
                     Retour</button>
@@ -298,9 +298,6 @@
                     window.print();
                 }
             });
-            function print() {
-                window.print();
-            }
         </script>
 
     </body>

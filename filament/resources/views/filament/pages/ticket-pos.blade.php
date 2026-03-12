@@ -7,11 +7,16 @@
         : asset('logo.png');
     $clients = \App\Models\Client::orderBy('name')->get(['id','name','adresse','phone_1']);
     $products = \App\Models\Product::query()
-        ->select('id','designation_fr','prix','promo','promo_expiration_date')
+        ->select('id','designation_fr','prix','promo','promo_expiration_date','qte','code_product')
         ->orderBy('designation_fr')
         ->get();
     $productMap = $products->mapWithKeys(fn($p) => [$p->id => $p->designation_fr])->all();
 @endphp
+
+<!-- Select2 requirements -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <style>
 /* ── POS reset ── */
@@ -92,14 +97,28 @@
 
 .pos-field select,
 .pos-field input[type="text"],
-.pos-field input[type="number"] {
+.pos-field input[type="number"],
+.select2-container--default .select2-selection--single {
     border: 1px solid #ccc;
     border-radius: 3px;
     padding: 5px 8px;
     font-size: 13px;
     width: 100%;
     background: #fff;
+    height: 32px;
 }
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 20px;
+    padding-left: 0;
+}
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 30px;
+}
+.select2-dropdown {
+    font-size: 13px;
+    border-color: #ccc;
+}
+
 
 .pos-field select { max-width: 400px; }
 
@@ -176,6 +195,19 @@
     width: 100%;
     background: #fff;
 }
+.pos-table td .select2-container--default .select2-selection--single {
+    height: 28px;
+    padding: 2px 4px;
+    border-color: #ddd;
+    font-size: 12px;
+}
+.pos-table td .select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 22px;
+}
+.pos-table td .select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 26px;
+}
+
 
 .pos-table tbody td input[readonly],
 .pos-table tbody td input[disabled] {
@@ -318,14 +350,28 @@
 
         {{-- RIGHT: Client block --}}
         <div class="pos-client-block">
-            <div class="pos-field">
+            <div class="pos-field" wire:ignore>
                 <label>Client (optionnel)</label>
-                <select wire:model.live="client_id">
-                    <option value="">— Choisir —</option>
-                    @foreach($clients as $c)
-                        <option value="{{ $c->id }}" {{ $client_id == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
-                    @endforeach
-                </select>
+                <div x-data="{
+                    init() {
+                        $(this.$refs.select).select2({ width: '100%' });
+                        $(this.$refs.select).on('change', (e) => {
+                            $wire.set('client_id', e.target.value);
+                        });
+                        Livewire.hook('morph.updated', () => {
+                            $(this.$refs.select).select2({ width: '100%' });
+                        });
+                    }
+                }">
+                    <select x-ref="select" style="width:100%">
+                        <option value="">— Choisir —</option>
+                        @foreach($clients as $c)
+                            <option value="{{ $c->id }}" {{ $client_id == $c->id ? 'selected' : '' }}>
+                                {{ $c->name }}  ({{ $c->phone_1 }})
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
             </div>
 
             <div class="pos-field">
@@ -370,16 +416,27 @@
                     $lineTotal = (float)($line['qte'] ?? 0) * (float)($line['prix_unitaire'] ?? 0);
                 @endphp
                 <tr wire:key="line-{{ $i }}">
-                    <td>
-                        <select wire:change="lineProductChanged({{ $i }}, $event.target.value)"
-                                id="pos-prod-{{ $i }}">
-                            <option value="">— Choisir un produit —</option>
-                            @foreach($products as $p)
-                                <option value="{{ $p->id }}" {{ (int)($line['produit_id'] ?? 0) === $p->id ? 'selected' : '' }}>
-                                    {{ $p->designation_fr }}
-                                </option>
-                            @endforeach
-                        </select>
+                    <td wire:ignore>
+                        <div x-data="{
+                            init() {
+                                $(this.$refs.select).select2({ width: '100%' });
+                                $(this.$refs.select).on('change', (e) => {
+                                    $wire.call('lineProductChanged', {{ $i }}, e.target.value);
+                                });
+                                Livewire.hook('morph.updated', () => {
+                                    $(this.$refs.select).select2({ width: '100%' });
+                                });
+                            }
+                        }">
+                            <select x-ref="select" id="pos-prod-{{ $i }}" style="width:100%">
+                                <option value="">— Choisir un produit —</option>
+                                @foreach($products as $p)
+                                    <option value="{{ $p->id }}" {{ (int)($line['produit_id'] ?? 0) === $p->id ? 'selected' : '' }}>
+                                        {{ $p->designation_fr }} ( {{ $p->qte ?? 0 }} ) - {{ $p->code_product }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
                     </td>
                     <td class="td-num" style="text-align:center">
                         <input type="number"
@@ -411,7 +468,7 @@
         </table>
     </div>
 
-    <button type="button" class="pos-btn-add" wire:click="addLine">++ Ajouter</button>
+    <button type="button" class="pos-btn-add" wire:click="addLine">Ajouter un produit</button>
 
     {{-- ── TOTALS ── --}}
     <div class="pos-totals-wrap">
