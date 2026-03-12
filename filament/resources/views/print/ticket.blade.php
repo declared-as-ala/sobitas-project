@@ -1,160 +1,331 @@
-@extends('print.layout-backend')
-
 @php
-    $documentTitle = $documentTitle ?? 'TICKET';
-    $documentNumber = $ticket->numero ?? '—';
-    $documentDate = $ticket->date_ticket ? \Carbon\Carbon::parse($ticket->date_ticket)->format('d/m/Y') : ($ticket->created_at?->format('d/m/Y') ?? '');
-@endphp
+    $company = $coordonnee ?? $company ?? null;
+    $documentDate = $ticket->date_ticket
+        ? \Carbon\Carbon::parse($ticket->date_ticket)->format('d/m/Y')
+        : ($ticket->created_at?->format('d/m/Y') ?? '');
+    $documentTime = $ticket->created_at?->format('H:i') ?? '';
 
-@section('client-info')
-<div class="row contacts">
-    <div class="col invoice-to">
-        <h5 class="text-gray-light">INFORMATIONS DU CLIENT</h5>
-        <hr class="custom-hr">
-        
-        @if(isset($ticket) && $ticket->client)
-            <div class="to"><b>Nom :</b> {{ $ticket->client->name ?? ($ticket->client->raison_sociale ?? '') }}</div>
-            @if(!empty($ticket->client->adresse))
-                <div class="address"><b>Adresse :</b> {{ $ticket->client->adresse }}</div>
-            @endif
-            @if(!empty($ticket->client->phone))
-                <div class="address"><b>Numéro de téléphone :</b> {{ $ticket->client->phone }}</div>
-            @endif
-        @else
-            <div class="to"><b>Client :</b> Client de passage</div>
-        @endif
-    </div>
-</div>
-@endsection
+    $logoPath = public_path('logo.png');
+    $logoUrl = is_file($logoPath)
+        ? 'data:' . (mime_content_type($logoPath) ?: 'image/png') . ';base64,' . base64_encode(file_get_contents($logoPath))
+        : asset('logo.png');
 
-@section('document-body')
-<table cellspacing="0" cellpadding="0">
-    <thead>
-        <tr>
-            <th style="width: 5%;" class="text-center">#</th>
-            <th style="width: 45%;">PRODUIT</th>
-            <th style="width: 15%;" class="text-center">QUANTITÉ</th>
-            <th style="width: 35%;" class="text-right">TOTAL TTC</th>
-        </tr>
-    </thead>
-    <tbody>
-        @php $i = 1; @endphp
-        @foreach($details_ticket ?? [] as $d)
-            @php
-                $bg = ($i % 2 == 0) ? 'background-color: #f5f5f5 !important;' : '';
-                $qte = (float)($d->qte ?? $d->quantite ?? 0);
-                $lineTotal = $d->prix_ttc ?? ($qte * (float)($d->prix_unitaire ?? 0));
-            @endphp
-            <tr style="{{ $bg }}">
-                <td class="text-center">{{ $i }}</td>
-                <td>{{ $d->product->designation_fr ?? '—' }}</td>
-                <td class="text-center">{{ number_format($qte, 0, '.', '') }}</td>
-                <td class="text-right">{{ number_format((float)$lineTotal, 3, '.', '') }}</td>
-            </tr>
-            @php $i++; @endphp
-        @endforeach
-    </tbody>
-    <tfoot>
-        <tr>
-            <td colspan="2"></td>
-            <th colspan="1">Montant Total HT</th>
-            <th class="text-right">
-                {{ number_format((float)($ticket->prix_ht ?? 0), 3, '.', '') }}
-            </th>
-        </tr>
-
-        @if(isset($ticket) && ($ticket->remise ?? 0) > 0)
-            <tr>
-                <td colspan="2"></td>
-                <th colspan="1">Montant Remise</th>
-                <th class="text-right">{{ number_format((float)$ticket->remise, 3, '.', '') }}</th>
-            </tr>
-        @endif
-        
-        @if(isset($ticket) && ($ticket->pourcentage_remise ?? 0) > 0)
-            <tr>
-                <td colspan="2"></td>
-                <th colspan="1">Pourcentage Remise %</th>
-                <th class="text-right">{{ number_format((float) $ticket->pourcentage_remise, 1, '.', '') }} %</th>
-            </tr>
-        @endif
-
-        <tr>
-            <td colspan="2"></td>
-            <th class="bt" colspan="1">Montant Totale TTC</th>
-            <th class="text-right">
-                {{ number_format((float)($ticket->prix_ttc ?? $ticket->prix_total ?? 0), 3, '.', '') }}
-            </th>
-        </tr>
-    </tfoot>
-</table>
-@endsection
-
-@section('notices')
-<div class="notices">
-    <div>Note :</div>
-    <div class="notice">
-        Arrête le présent ticket à la somme de : 
-        <span id="words_{{ $documentNumber ?? 'doc' }}"></span> DT
-    </div>
-</div>
-
-@if(isset($footerNote))
-    <div class="notices" style="border-left-color: #777; margin-top: 10px;">
-        <div class="notice">{{ $footerNote }}</div>
-    </div>
-@elseif(isset($company) && ($company->footer_ticket ?? null))
-    <div class="notices" style="border-left-color: #777; margin-top: 10px;">
-        <div class="notice">{{ $company->footer_ticket }} <br> Notre Site web : {{ strtoupper($company->site_web ?? 'WWW.PROTEIN.TN') }}</div>
-    </div>
-@endif
-@endsection
-
-@section('scripts')
-<script>
-    function inWords(num) {
-        var a = ['', 'un ', 'deux ', 'trois ', 'quatre ', 'cinq ', 'six ', 'sept ', 'huit ', 'neuf ', 'dix ', 'onze ', 'douze ', 'treize ', 'quatorze ', 'quinze ', 'seize ', 'dix-sept ', 'dix-huit ', 'dix-neuf '];
-        var b = ['', '', 'vingt ', 'trente ', 'quarante ', 'cinquante ', 'soixante ', 'soixante-dix ', 'quatre-vingt ', 'quatre-vingt-dix '];
-        
-        if ((num = num.toString()).length > 9) return 'overflow';
-        
-        let tab = num.split('.');
-        let n = ('000000000' + tab[0]).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
-        
-        if (!n) return '';
-        
-        var str = '';
-        str += (n[1] != 0) ? (a[Number(n[1])] || b[n[1][0]] + a[n[1][1]]) : '';
-        str += (n[2] != 0) ? (str != '' ? '' : '') + (a[Number(n[2])] || b[n[2][0]] + a[n[2][1]]) + 'mille ' : '';
-        str += (n[3] != 0) ? (str != '' ? '' : '') + (a[Number(n[3])] || b[n[3][0]] + a[n[3][1]]) + 'cents ' : '';
-        str += (n[4] != 0) ? (str != '' ? '' : '') + (a[Number(n[4])] || b[n[4][0]] + a[n[4][1]]) : '';
-        str += (n[5] != 0) ? (str != '' ? '' : '') + (a[Number(n[5])] || b[n[5][0]] + a[n[5][1]]) : '';
-        
-        // Handle specific syntax cleaning
-        str = str.replace('un mille', 'mille');
-        str = str.replace('un cents', 'cent');
-        str = str.replace('cents ', 'cent ');
-        if (str.trim().endsWith('cent') && tab[0].endsWith('00')) str += 's'; // simple plural rule for cent
-        
-        let result = str.trim();
-        if (result == '') result = 'zéro';
-        
-        result += ' dinars';
-        
-        if (tab.length > 1) {
-            let nb = tab[1].padEnd(3, '0');
-            return result + ' et ' + Number(nb) + ' millimes';
-        }
-        
-        return result;
+    $subTotal = 0;
+    foreach ($details_ticket ?? [] as $d) {
+        $qte        = (float) ($d->qte ?? $d->quantite ?? 0);
+        $lineTotal  = $d->prix_ttc ?? ($qte * (float) ($d->prix_unitaire ?? 0));
+        $subTotal  += (float) $lineTotal;
     }
-    
-    document.addEventListener('DOMContentLoaded', function() {
-        var total = "{{ number_format((float) ($ticket->prix_ttc ?? $ticket->prix_total ?? 0), 3, '.', '') }}";
-        var el = document.getElementById("words_{{ $documentNumber ?? 'doc' }}");
-        if(el && total && total > 0) {
-            el.innerHTML = inWords(total);
+    $remise    = (float) ($ticket->remise ?? 0);
+    $pctRemise = (float) ($ticket->pourcentage_remise ?? 0);
+    $netTotal  = (float) ($ticket->prix_ttc ?? $ticket->prix_total ?? max($subTotal - $remise, 0));
+@endphp
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticket {{ $ticket->numero ?? '' }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-    });
-</script>
-@endsection
+
+        body {
+            background: #f1f5f9;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            color: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 16px 0;
+        }
+
+        .no-print {
+            margin-bottom: 12px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            font-size: 13px;
+            padding: 6px 16px;
+            border: 0;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .btn-primary { background: #ff4a00; color: #fff; }
+        .btn-secondary { background: #64748b; color: #fff; }
+
+        /* ── Receipt wrapper ── */
+        .receipt {
+            width: 80mm;
+            background: #fff;
+            padding: 8px 10px 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.18);
+        }
+
+        /* Header */
+        .receipt-header {
+            text-align: center;
+            padding-bottom: 8px;
+            border-bottom: 1px dashed #888;
+            margin-bottom: 8px;
+        }
+
+        .receipt-header img.logo {
+            max-width: 160px;
+            max-height: 90px;
+            object-fit: contain;
+            display: block;
+            margin: 0 auto 4px;
+        }
+
+        .receipt-header .company-name {
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .receipt-header .company-info {
+            font-size: 10px;
+            line-height: 1.5;
+            color: #333;
+        }
+
+        /* Meta */
+        .receipt-meta {
+            font-size: 11px;
+            text-align: center;
+            margin-bottom: 8px;
+            line-height: 1.6;
+        }
+
+        .receipt-meta .ticket-no {
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        /* Separator */
+        .sep {
+            border: none;
+            border-top: 1px dashed #888;
+            margin: 6px 0;
+        }
+
+        /* Items */
+        .items {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 4px;
+        }
+
+        .items thead th {
+            font-size: 10px;
+            text-transform: uppercase;
+            border-bottom: 1px solid #ccc;
+            padding: 3px 2px;
+            text-align: left;
+        }
+
+        .items thead th:last-child { text-align: right; }
+
+        .items tbody td {
+            font-size: 11px;
+            padding: 3px 2px;
+            vertical-align: top;
+        }
+
+        .items tbody td:last-child {
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .item-detail {
+            font-size: 10px;
+            color: #444;
+        }
+
+        /* Totals */
+        .totals {
+            width: 100%;
+            margin-top: 4px;
+            border-top: 1px dashed #888;
+            padding-top: 6px;
+        }
+
+        .totals table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .totals td {
+            font-size: 11px;
+            padding: 2px 2px;
+        }
+
+        .totals td:last-child { text-align: right; }
+
+        .totals .grand-total td {
+            font-size: 13px;
+            font-weight: 700;
+            border-top: 1px solid #000;
+            padding-top: 4px;
+        }
+
+        /* Footer */
+        .receipt-footer {
+            text-align: center;
+            font-size: 10px;
+            color: #444;
+            margin-top: 10px;
+            border-top: 1px dashed #888;
+            padding-top: 8px;
+            line-height: 1.6;
+        }
+
+        /* Print overrides */
+        @media print {
+            body {
+                background: #fff;
+                padding: 0;
+                display: block;
+            }
+
+            .no-print { display: none !important; }
+
+            .receipt {
+                box-shadow: none;
+                width: 80mm;
+                padding: 4px 6px 10px;
+            }
+
+            @page {
+                size: 80mm auto;
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    @if (!request()->query('embed') && empty($forPdf ?? false))
+    <div class="no-print">
+        <button type="button" onclick="window.print()" class="btn btn-primary">🖨️ Imprimer</button>
+        <button type="button" onclick="window.close()" class="btn btn-secondary">Fermer</button>
+    </div>
+    @endif
+
+    <div class="receipt" id="print-area">
+
+        {{-- ── HEADER ── --}}
+        <div class="receipt-header">
+            <img src="{{ $logoUrl }}"
+                 alt="{{ $company->abbreviation ?? 'SOBITAS' }}"
+                 class="logo"
+                 onerror="this.style.display='none'">
+
+            <div class="company-name">{{ $company->abbreviation ?? $company->designation ?? 'SOBITAS' }}</div>
+
+            <div class="company-info">
+                @if($company?->adresse_fr)
+                    {{ $company->adresse_fr }}<br>
+                @endif
+                @if($company?->phone_1)
+                    Tél : {{ $company->phone_1 }}@if($company?->phone_2) / {{ $company->phone_2 }}@endif<br>
+                @endif
+                @if($company?->rc)
+                    RC : {{ $company->rc }} &nbsp;|&nbsp; MF : {{ $company->matricule ?? $company->mf ?? '' }}<br>
+                @endif
+            </div>
+        </div>
+
+        {{-- ── META ── --}}
+        <div class="receipt-meta">
+            <div class="ticket-no">Ticket N° {{ $ticket->numero ?? '—' }}</div>
+            <div>{{ $documentDate }}@if($documentTime)  {{ $documentTime }}@endif</div>
+            @if($ticket->client)
+                <div>Client : {{ $ticket->client->name ?? $ticket->client->raison_sociale ?? '—' }}</div>
+                @if($ticket->client->phone ?? $ticket->client->phone_1 ?? null)
+                    <div>Tél : {{ $ticket->client->phone ?? $ticket->client->phone_1 }}</div>
+                @endif
+            @endif
+        </div>
+
+        <hr class="sep">
+
+        {{-- ── ITEMS ── --}}
+        <table class="items">
+            <thead>
+                <tr>
+                    <th style="width:55%">Produit</th>
+                    <th style="width:20%; text-align:center">Qté</th>
+                    <th style="width:25%">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach ($details_ticket ?? [] as $d)
+                @php
+                    $qte       = (float) ($d->qte ?? $d->quantite ?? 0);
+                    $pu        = (float) ($d->prix_unitaire ?? 0);
+                    $lineTotal = (float) ($d->prix_ttc ?? ($qte * $pu));
+                @endphp
+                <tr>
+                    <td>{{ $d->product->designation_fr ?? '—' }}</td>
+                    <td style="text-align:center">{{ number_format($qte, 0) }}</td>
+                    <td>{{ number_format($lineTotal, 3, '.', '') }}</td>
+                </tr>
+                @if($pu > 0)
+                <tr>
+                    <td colspan="3" class="item-detail">
+                        &nbsp;&nbsp;{{ number_format($qte, 0) }} x {{ number_format($pu, 3, '.', '') }}
+                    </td>
+                </tr>
+                @endif
+                @endforeach
+            </tbody>
+        </table>
+
+        {{-- ── TOTALS ── --}}
+        <div class="totals">
+            <table>
+                <tr>
+                    <td>Sous-total HT</td>
+                    <td>{{ number_format((float)($ticket->prix_ht ?? $subTotal), 3, '.', '') }}</td>
+                </tr>
+                @if($remise > 0)
+                <tr>
+                    <td>Remise</td>
+                    <td>- {{ number_format($remise, 3, '.', '') }}</td>
+                </tr>
+                @endif
+                @if($pctRemise > 0)
+                <tr>
+                    <td>Remise %</td>
+                    <td>{{ number_format($pctRemise, 1) }} %</td>
+                </tr>
+                @endif
+                <tr class="grand-total">
+                    <td>NET À PAYER</td>
+                    <td>{{ number_format($netTotal, 3, '.', '') }} DT</td>
+                </tr>
+            </table>
+        </div>
+
+        {{-- ── FOOTER ── --}}
+        <div class="receipt-footer">
+            {{ $company?->footer_ticket ?? 'Merci pour votre visite !' }}<br>
+            @if($company?->site_web)
+                {{ strtoupper($company->site_web) }}<br>
+            @endif
+            Retour / échange sous 48h avec ticket.
+        </div>
+
+    </div>
+
+</body>
+</html>

@@ -72,12 +72,14 @@ class TicketResource extends Resource
                                 ->hidden(fn ($get) => $get('type') !== Ticket::TYPE_BON_LIVRAISON)
                                 ->dehydrated(true),
                             Forms\Components\Select::make('client_id')
-                                ->label('Client')
+                                ->label('Client (optionnel)')
                                 ->relationship('client', 'name')
                                 ->getOptionLabelFromRecordUsing(fn ($record) => (string) ($record->name ?? 'Client #' . $record->id))
                                 ->searchable()
                                 ->preload()
-                                ->required(fn ($get) => $get('type') === Ticket::TYPE_TICKET_CAISSE)
+                                ->nullable()
+                                ->rules(['nullable', 'exists:clients,id'])
+                                ->placeholder('— Aucun client (comptoir) —')
                                 ->hidden(fn ($get) => $get('type') !== Ticket::TYPE_TICKET_CAISSE)
                                 ->live()
                                 ->afterStateUpdated(function ($state, $set) {

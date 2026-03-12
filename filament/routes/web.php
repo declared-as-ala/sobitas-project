@@ -82,10 +82,14 @@ Route::middleware(['auth'])->group(function () {
         $coordonnee = \App\Models\Coordinate::getCached();
 
         return view('print.ticket', [
-            'ticket' => $ticket,
+            'ticket'         => $ticket,
             'details_ticket' => $details_ticket,
-            'coordonnee' => $coordonnee,
-            'company' => $coordonnee,
+            'coordonnee'     => $coordonnee,
+            'company'        => $coordonnee,
+            'documentDate'   => $ticket->date_ticket
+                ? \Carbon\Carbon::parse($ticket->date_ticket)->format('d/m/Y')
+                : ($ticket->created_at?->format('d/m/Y') ?? ''),
+            'documentTime'   => $ticket->created_at?->format('H:i') ?? '',
         ]);
     })->name('tickets.print');
 
