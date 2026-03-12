@@ -6,10 +6,11 @@
                     ->orderBy('designation_fr')
                     ->get();
     $max = 100;
-@endphp
-
-@php
-    $logoExists = file_exists(public_path('logo.png'));
+    // Embed logo as base64 so it always works (no 404, no asset path issues)
+    $logoPath = public_path('logo.png');
+    $logoSrc  = is_file($logoPath)
+        ? 'data:' . (mime_content_type($logoPath) ?: 'image/png') . ';base64,' . base64_encode(file_get_contents($logoPath))
+        : null;
 @endphp
 
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
@@ -18,16 +19,22 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <style>
-/* Force full width on ALL Filament wrappers */
-.fi-simple-layout,.fi-simple-main,
-.fi-layout,.fi-layout-sidebar,
-.fi-main,.fi-main-ctn,
-.fi-page,.fi-resource-page,
-.fi-page-content,.fi-content,
-[class*="fi-"][class*="-ctn"],
-.fi-body .fi-main > .fi-main-ctn { max-width: 100% !important; padding-left: 0 !important; padding-right: 0 !important; }
-.fi-page-header { display: none !important; }
-.fi-form-actions { display: none !important; }
+/* ── Force FULL WIDTH on every Filament v4 container ─────────── */
+.fi-page,
+.fi-page > .fi-page-content,
+.fi-page .fi-main-ctn,
+.fi-resource-page,
+.fi-resource-page > .fi-page-content,
+.fi-main > .fi-main-ctn,
+.fi-layout .fi-main-ctn,
+.fi-simple-layout,
+.fi-simple-main { max-width: 100% !important; width: 100% !important;
+                  padding-left: 4px !important; padding-right: 4px !important; }
+
+.fi-page-header    { display: none !important; }
+.fi-form-actions   { display: none !important; }
+/* Hide the Filament form label wrapper around our ViewField */
+[wire\:key] > .fi-fo-field-wrp-label { display: none !important; }
 
 .bl-wrap{font-family:'Inter',Arial,sans-serif;padding:16px 24px;background:#f9fafb;min-height:100vh}
 .bl-form{background:#fff;border-radius:12px;box-shadow:0 1px 8px rgba(0,0,0,.08);padding:24px}
@@ -93,8 +100,8 @@
         {{-- TOP ROW --}}
         <div class="bl-top">
             <div class="bl-company">
-                @if($logoExists)
-                    <img src="{{ asset('logo.png') }}" alt="Sobitas" style="height:80px;object-fit:contain;margin-bottom:8px;display:block">
+                @if($logoSrc)
+                    <img src="{{ $logoSrc }}" alt="Sobitas" style="height:80px;object-fit:contain;margin-bottom:8px;display:block">
                 @endif
                 @if($coordinate)
                     <h4>{{ $coordinate->abbreviation ?? $coordinate->name_fr ?? '' }}</h4>

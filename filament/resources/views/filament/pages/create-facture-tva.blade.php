@@ -8,7 +8,9 @@
     $max        = 100;
     $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
     $logoPath   = public_path('logo.png');
-    $logoExists = file_exists($logoPath);
+    $logoSrc    = is_file($logoPath)
+        ? 'data:' . (mime_content_type($logoPath) ?: 'image/png') . ';base64,' . base64_encode(file_get_contents($logoPath))
+        : null;
 @endphp
 
 {{-- Select2 CSS --}}
@@ -105,7 +107,7 @@
         <div class="ftva-top">
             {{-- Company Info --}}
             <div class="ftva-company">
-                <img src="{{ asset('logo.png') }}" alt="Sobitas" onerror="this.style.display='none'">
+                <img src="{{ $logoSrc ?? asset('logo.png') }}" alt="Sobitas" onerror="this.style.display='none'">
                 @if($coordinate)
                     <h4>{{ $coordinate->abbreviation ?? $coordinate->name_fr ?? '' }}</h4>
                     <p>{{ $coordinate->phone_1 }} @if($coordinate->phone_2) / {{ $coordinate->phone_2 }} @endif</p>
