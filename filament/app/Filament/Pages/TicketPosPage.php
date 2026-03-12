@@ -284,8 +284,8 @@ class TicketPosPage extends Page
         ];
     }
 
-    public static function getUrl(array $parameters = [], bool $isAbsolute = true, ?string $panel = null, ?\Illuminate\Database\Eloquent\Model $tenant = null): string
+    public static function getUrl(array $parameters = [], bool $isAbsolute = true, ?string $panel = null, ?\Illuminate\Database\Eloquent\Model $tenant = null, bool $shouldGuessMissingParameters = false): string
     {
-        return route('filament.admin.pages.ticket-pos', $parameters, $isAbsolute);
+        return route('filament.admin.resources.tickets.pos', $parameters, $isAbsolute);
     }
 }
