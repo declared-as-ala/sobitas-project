@@ -18,8 +18,14 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <style>
-/* ── POS PAGE RESET ─────────────────────────────────────────── */
-.fi-simple-layout, .fi-simple-main { max-width: 100% !important; padding: 0 !important; }
+/* Force full width on ALL Filament wrappers */
+.fi-simple-layout,.fi-simple-main,
+.fi-layout,.fi-layout-sidebar,
+.fi-main,.fi-main-ctn,
+.fi-page,.fi-resource-page,
+.fi-page-content,.fi-content,
+[class*="fi-"][class*="-ctn"],
+.fi-body .fi-main > .fi-main-ctn { max-width: 100% !important; padding-left: 0 !important; padding-right: 0 !important; }
 .fi-page-header { display: none !important; }
 .fi-form-actions { display: none !important; }
 

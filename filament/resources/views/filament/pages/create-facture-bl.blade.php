@@ -8,15 +8,26 @@
     $max = 100;
 @endphp
 
+@php
+    $logoExists = file_exists(public_path('logo.png'));
+@endphp
+
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <style>
-.fi-simple-layout,.fi-simple-main{max-width:100%!important;padding:0!important}
-.fi-page-header{display:none!important}
-.fi-form-actions{display:none!important}
+/* Force full width on ALL Filament wrappers */
+.fi-simple-layout,.fi-simple-main,
+.fi-layout,.fi-layout-sidebar,
+.fi-main,.fi-main-ctn,
+.fi-page,.fi-resource-page,
+.fi-page-content,.fi-content,
+[class*="fi-"][class*="-ctn"],
+.fi-body .fi-main > .fi-main-ctn { max-width: 100% !important; padding-left: 0 !important; padding-right: 0 !important; }
+.fi-page-header { display: none !important; }
+.fi-form-actions { display: none !important; }
 
 .bl-wrap{font-family:'Inter',Arial,sans-serif;padding:16px 24px;background:#f9fafb;min-height:100vh}
 .bl-form{background:#fff;border-radius:12px;box-shadow:0 1px 8px rgba(0,0,0,.08);padding:24px}
@@ -82,7 +93,9 @@
         {{-- TOP ROW --}}
         <div class="bl-top">
             <div class="bl-company">
-                <img src="{{ asset('logo.png') }}" alt="Sobitas" onerror="this.style.display='none'">
+                @if($logoExists)
+                    <img src="{{ asset('logo.png') }}" alt="Sobitas" style="height:80px;object-fit:contain;margin-bottom:8px;display:block">
+                @endif
                 @if($coordinate)
                     <h4>{{ $coordinate->abbreviation ?? $coordinate->name_fr ?? '' }}</h4>
                     <p>{{ $coordinate->phone_1 }} @if($coordinate->phone_2) / {{ $coordinate->phone_2 }} @endif</p>
