@@ -1,6 +1,6 @@
 @php
     $coordinate = \App\Models\Coordinate::getCached();
-    $clients    = \App\Models\Client::orderBy('name')->get(['id','name','adresse','phone_1','mf','email']);
+    $clients    = \App\Models\Client::orderBy('name')->get(['id','name','adresse','phone_1']);
     $products   = \App\Models\Product::where('qte', '>', 0)
                     ->select('id','code_product','designation_fr','prix','qte')
                     ->orderBy('designation_fr')
@@ -122,9 +122,7 @@
                             @foreach($clients as $c)
                                 <option value="{{ $c->id }}"
                                     data-adresse="{{ $c->adresse }}"
-                                    data-phone="{{ $c->phone_1 }}"
-                                    data-email="{{ $c->email ?? '' }}"
-                                    data-mf="{{ $c->mf ?? '' }}">
+                                    data-phone="{{ $c->phone_1 }}">
                                     {{ $c->name }} ({{ $c->phone_1 }})
                                 </option>
                             @endforeach
@@ -137,10 +135,6 @@
                     <div class="form-field">
                         <label style="font-size:12px;color:#64748b;">N°Tél</label>
                         <input class="fc-input" id="ftva_phone" disabled value="">
-                    </div>
-                    <div class="form-field">
-                        <label style="font-size:12px;color:#64748b;">Email</label>
-                        <input class="fc-input" id="ftva_email" disabled value="">
                     </div>
                 </div>
 
