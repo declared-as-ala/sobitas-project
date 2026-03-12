@@ -1,0 +1,73 @@
+/* Auth page background and layout */
+.fi-auth-page.auth-page-layout {
+    min-height: 100vh;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2.5rem 1.5rem;
+    background-image: url('/images/auth/gym-bg.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.fi-auth-page.auth-page-layout::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(3px);
+    z-index: 0;
+}
+
+/* Login card */
+.fi-auth-page .auth-card {
+    position: relative;
+    z-index: 1;
+    max-width: 440px;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.98);
+    border-radius: 16px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.32);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    padding: 2.5rem 2.25rem 2.25rem;
+}
+
+/* Logo */
+.fi-auth-page .auth-logo-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.75rem;
+}
+
+.fi-auth-page .auth-logo {
+    display: block;
+    width: 260px;
+    max-width: 70vw;
+    height: auto;
+    image-rendering: auto;
+}
+
+/* Form spacing */
+.fi-auth-page .auth-card form {
+    display: block;
+}
+
+@media (max-width: 640px) {
+    .fi-auth-page.auth-page-layout {
+        padding: 1.75rem 1.25rem;
+    }
+
+    .fi-auth-page .auth-card {
+        padding: 2rem 1.5rem 1.75rem;
+        border-radius: 14px;
+    }
+
+    .fi-auth-page .auth-logo {
+        width: 220px;
+        max-width: 75vw;
+    }
+}
+

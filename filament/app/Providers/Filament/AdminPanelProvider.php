@@ -100,6 +100,7 @@ class AdminPanelProvider extends PanelProvider
                 ' . "\n" . view('filament.components.custom-admin-styles')->render()
                 . "\n" . '<style>' . file_get_contents(resource_path('css/filament/topbar.css')) . '</style>'
                 . "\n" . '<style>' . file_get_contents(resource_path('css/filament/doc-edit.css')) . '</style>'
+                . "\n" . '<style>' . file_get_contents(resource_path('css/filament/auth.css')) . '</style>'
             )
             ->renderHook(
                 'panels::body.end',
