@@ -13,6 +13,11 @@ class CreateQuotation extends CreateRecord
 {
     protected static string $resource = QuotationResource::class;
 
+    public function getMaxContentWidth(): \Filament\Support\Enums\Width | string | null
+    {
+        return \Filament\Support\Enums\Width::Full;
+    }
+
     public function addProductByBarcode(string $code): void
     {
         $code = trim($code);

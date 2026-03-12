@@ -19,6 +19,11 @@ class EditQuotation extends EditRecord
 {
     protected static string $resource = QuotationResource::class;
 
+    public function getMaxContentWidth(): \Filament\Support\Enums\Width | string | null
+    {
+        return \Filament\Support\Enums\Width::Full;
+    }
+
     public function getPageClasses(): array
     {
         return array_merge(parent::getPageClasses(), ['fi-page-edit-quotation']);
