@@ -86,79 +86,13 @@ class FactureTvaResource extends Resource
                             Forms\Components\Placeholder::make('barcode_scan')
                                 ->label('')
                                 ->content(fn () => new \Illuminate\Support\HtmlString(view('filament.components.barcode-scan-compact')->render())),
-                            Repeater::make('details')
+                            Forms\Components\Placeholder::make('barcode_scan')
                                 ->label('')
-                                ->live()
-                                ->afterStateUpdated(function ($set, $get) {
-                                    self::recalculateFactureTvaTotals($get, $set, false);
-                                })
-                                ->schema([
-                                    Forms\Components\Select::make('produit_id')
-                                        ->label('Produit')
-                                        ->searchable()
-                                        ->getSearchResultsUsing(fn (string $search): array => \App\Models\Product::getSearchOptionsForFilament($search, 30))
-                                        ->getOptionLabelUsing(fn ($value): ?string => \App\Models\Product::getOptionLabelForId($value))
-                                        ->required()
-                                        ->live()
-                                        ->placeholder('Tapez pour rechercher…')
-                                        ->columnSpan(['default' => 7, 'sm' => 12])
-                                        ->afterStateUpdated(function ($state, $set, $get) {
-                                            if ($state && $product = \App\Models\Product::query()->select(\App\Models\Product::getSelectSearchColumns())->find($state)) {
-                                                $set('prix_unitaire', $product->getEffectivePriceHt());
-                                            }
-                                            self::recalculateFactureTvaTotals($get, $set, true);
-                                        }),
-                                    Forms\Components\TextInput::make('qte')
-                                        ->label('Qté')
-                                        ->numeric()
-                                        ->default(1)
-                                        ->minValue(1)
-                                        ->required()
-                                        ->live(debounce: 300)
-                                        ->afterStateUpdated(fn ($get, $set) => self::recalculateFactureTvaTotals($get, $set, true))
-                                        ->columnSpan(['default' => 1, 'sm' => 4]),
-                                    Forms\Components\TextInput::make('prix_unitaire')
-                                        ->label('P.U')
-                                        ->numeric()
-                                        ->default(0)
-                                        ->prefix('DT')
-                                        ->required()
-                                        ->live(debounce: 300)
-                                        ->afterStateUpdated(fn ($get, $set) => self::recalculateFactureTvaTotals($get, $set, true))
-                                        ->columnSpan(['default' => 2, 'sm' => 4]),
-                                    Forms\Components\Placeholder::make('prix_ht_display')
-                                        ->label('P.T/HT')
-                                        ->content(fn ($get) => number_format((float) $get('qte') * (float) $get('prix_unitaire'), 3, '.', ' ') . ' DT')
-                                        ->extraAttributes(['class' => 'text-right font-medium'])
-                                        ->columnSpan(['default' => 2, 'sm' => 4]),
-                                    Forms\Components\TextInput::make('tva_pct')
-                                        ->label('TVA %')
-                                        ->numeric()
-                                        ->default($defaultTva)
-                                        ->suffix('%')
-                                        ->required()
-                                        ->live(debounce: 300)
-                                        ->afterStateUpdated(fn ($get, $set) => self::recalculateFactureTvaTotals($get, $set, true))
-                                        ->columnSpan(['default' => 1, 'sm' => 4]),
-                                    Forms\Components\Placeholder::make('prix_ttc_display')
-                                        ->label('TVA (DT)')
-                                        ->content(fn ($get) => number_format((float) $get('qte') * (float) $get('prix_unitaire') * (float) ($get('tva_pct') ?? $defaultTva) / 100, 3, '.', ' ') . ' DT')
-                                        ->extraAttributes(['class' => 'doc-line-tva-badge text-right'])
-                                        ->columnSpan(['default' => 1, 'sm' => 4]),
-                                ])
-                                ->columns(12)
-                                ->defaultItems(1)
-                                ->addActionLabel('Ajouter produit')
-                                ->columnSpanFull()
-                                ->itemLabel(fn (array $state) => isset($state['produit_id']) ? (\App\Models\Product::query()->select('id', 'designation_fr')->find($state['produit_id'])?->designation_fr ?? 'Ligne') : 'Ligne')
-                                ->deleteAction(fn ($action) => $action
-                                    ->requiresConfirmation()
-                                    ->modalHeading('Supprimer cette ligne ?')
-                                    ->modalSubmitActionLabel('Oui, supprimer')
-                                    ->modalCancelActionLabel('Annuler')
-                                    ->after(fn ($get, $set) => self::recalculateFactureTvaTotals($get, $set, false))
-                                )
-                                ->extraAttributes(['class' => 'doc-lines-repeater']),
+                                ->content(fn () => new \Illuminate\Support\HtmlString(view('filament.components.barcode-scan-compact')->render())),
+                            Forms\Components\ViewField::make('details')
+                                ->hiddenLabel()
+                                ->view('filament.forms.components.instant-invoice-details')
+                                ->columnSpanFull(),
                         ])
                         ->columnSpanFull(),
                 ])->columnSpan(2),
