@@ -46,6 +46,7 @@ Route::middleware(['auth'])->group(function () {
         $details_facture = DetailsFacture::where('facture_id', $facture->id)
             ->with('product:id,designation_fr,cover')
             ->get();
+        $coordonnee = \App\Models\Coordinate::first();
         $totalHt = $details_facture->sum(fn($d) => ($d->qte ?? $d->quantite ?? 1) * ($d->prix_unitaire ?? $d->prix_ht ?? 0));
         $remise = (float) ($facture->remise ?? 0);
         $frais = (float) ($facture->frais_livraison ?? 0);
