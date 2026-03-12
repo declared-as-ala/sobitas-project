@@ -75,11 +75,25 @@ Route::middleware(['auth'])->group(function () {
             ->get();
         $coordonnee = \App\Models\Coordinate::getCached();
 
+        $totals = [
+            ['label' => 'Total', 'value' => number_format((float)($ticket->prix_ht ?? 0), 3, ',', ' ') . ' DT'],
+            ['label' => 'Remise', 'value' => number_format((float)($ticket->remise ?? 0), 3, ',', ' ') . ' DT'],
+            ['label' => 'Pourcentage remise %', 'value' => number_format((float)($ticket->pourcentage_remise ?? 0), 1, ',', ' ') . ' %'],
+            ['label' => 'Total HT', 'value' => number_format((float)($ticket->prix_ttc ?? $ticket->prix_total ?? 0), 3, ',', ' ') . ' DT', 'class' => 'ttc'],
+        ];
+
         return view('print.ticket', [
             'ticket' => $ticket,
             'details_ticket' => $details_ticket,
             'coordonnee' => $coordonnee,
             'company' => $coordonnee,
+            'documentTitle' => 'Ticket',
+            'documentNumber' => $ticket->numero ?? '',
+            'documentDate' => $ticket->date_ticket ? \Carbon\Carbon::parse($ticket->date_ticket)->format('d/m/Y') : ($ticket->created_at?->format('d/m/Y') ?? ''),
+            'client' => $ticket->client,
+            'totals' => $totals,
+            'footerNote' => $coordonnee && !empty($coordonnee->footer_ticket) ? $coordonnee->footer_ticket : null,
+            'paymentTerms' => null,
         ]);
     })->name('tickets.print');
 
