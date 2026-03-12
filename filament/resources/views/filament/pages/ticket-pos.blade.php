@@ -460,7 +460,12 @@
                     <td style="text-align:center">
                         <button type="button"
                                 class="pos-btn-del"
-                                wire:click="removeLine({{ $i }})">🗑</button>
+                                wire:click="removeLine({{ $i }})"
+                                wire:loading.attr="disabled"
+                                wire:target="removeLine({{ $i }})">
+                            <span wire:loading.remove wire:target="removeLine({{ $i }})">🗑</span>
+                            <span wire:loading wire:target="removeLine({{ $i }})">⏳</span>
+                        </button>
                     </td>
                 </tr>
                 @endforeach
@@ -468,7 +473,10 @@
         </table>
     </div>
 
-    <button type="button" class="pos-btn-add" wire:click="addLine">Ajouter un produit</button>
+    <button type="button" class="pos-btn-add" wire:click="addLine" wire:loading.attr="disabled" wire:target="addLine">
+        <span wire:loading.remove wire:target="addLine">Ajouter un produit</span>
+        <span wire:loading wire:target="addLine">Ajout...</span>
+    </button>
 
     {{-- ── TOTALS ── --}}
     <div class="pos-totals-wrap">
@@ -502,9 +510,9 @@
 
     {{-- ── FOOTER: Save button ── --}}
     <div class="pos-footer">
-        <button type="button" class="pos-btn-save" wire:click="save" wire:loading.attr="disabled">
-            <span wire:loading.remove>Enregistrer</span>
-            <span wire:loading>Enregistrement…</span>
+        <button type="button" class="pos-btn-save" wire:click="save" wire:loading.attr="disabled" wire:target="save">
+            <span wire:loading.remove wire:target="save">Enregistrer</span>
+            <span wire:loading wire:target="save">Enregistrement…</span>
         </button>
     </div>
 
