@@ -1,7 +1,7 @@
-@extends('print.shared.a4-base')
+@extends('print.invoice-layout-clean')
 
 @section('print-table')
-<table class="print-table">
+<table class="invoice-table">
     <thead>
         <tr>
             <th style="width:4%">#</th>

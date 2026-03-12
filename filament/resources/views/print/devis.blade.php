@@ -1,4 +1,8 @@
-@extends('print.shared.a4-base')
+@extends('print.layout')
+
+@push('print-head')
+@include('print.partials.print-compact-a4')
+@endpush
 
 @section('print-table')
 <table class="print-table">
