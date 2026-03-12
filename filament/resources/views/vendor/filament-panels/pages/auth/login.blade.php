@@ -17,12 +17,13 @@
 
         <x-filament-panels::form
             wire:submit="authenticate"
+            id="form"
         >
             {{ $this->form }}
 
-            <x-filament-panels::form.actions
-                :actions="$this->getFormActions()"
-            />
+            <x-filament::button type="submit" form="form" class="w-full">
+                Se connecter
+            </x-filament::button>
         </x-filament-panels::form>
     </div>
 </x-filament-panels::page.simple>

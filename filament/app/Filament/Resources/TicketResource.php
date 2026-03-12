@@ -232,7 +232,7 @@ class TicketResource extends Resource
             ->defaultPaginationPageOption(25)
             ->actions([
                 Actions\EditAction::make()
-                    ->url(fn (Ticket $record) => TicketPosPage::getUrl(['ticketId' => $record->id])),
+                    ->url(fn (Ticket $record) => \App\Filament\Pages\TicketPosPage::getUrl(['ticketId' => $record->id])),
                 Actions\Action::make('print')
                     ->label('Imprimer')
                     ->icon('heroicon-o-printer')
