@@ -45,32 +45,8 @@ class TicketResource extends Resource
         return $schema->schema([
             Grid::make(3)->schema([
                 Grid::make(1)->schema([
-                    Section::make('Informations société')
-                        ->schema([
-                            Forms\Components\Placeholder::make('company_info')
-                                ->label('')
-                                ->content(fn () => $coordinate ? new \Illuminate\Support\HtmlString(view('filament.components.company-info-compact', ['coordinate' => $coordinate])->render()) : '—'),
-                        ])
-                        ->columns(1)
-                        ->collapsible(),
                     Section::make('Client / Commande')
                         ->schema([
-                            Forms\Components\Select::make('type')
-                                ->label('Type de ticket')
-                                ->options(Ticket::typeOptions())
-                                ->default(Ticket::TYPE_TICKET_CAISSE)
-                                ->required()
-                                ->live()
-                                ->native(false),
-                            Forms\Components\Select::make('commande_id')
-                                ->label('Commande (BL)')
-                                ->relationship('commande', 'numero', fn ($q) => $q->where('etat', '!=', 'annuler')->orderByDesc('created_at'))
-                                ->getOptionLabelFromRecordUsing(fn ($r) => $r->numero . ' — ' . trim(($r->nom ?? '') . ' ' . ($r->prenom ?? '')) . ' — ' . number_format((float) ($r->prix_ttc ?? 0), 2, ',', ' ') . ' DT')
-                                ->searchable()
-                                ->preload()
-                                ->required(fn ($get) => $get('type') === Ticket::TYPE_BON_LIVRAISON)
-                                ->hidden(fn ($get) => $get('type') !== Ticket::TYPE_BON_LIVRAISON)
-                                ->dehydrated(true),
                             Forms\Components\Select::make('client_id')
                                 ->label('Client (optionnel)')
                                 ->relationship('client', 'name')
@@ -80,7 +56,6 @@ class TicketResource extends Resource
                                 ->nullable()
                                 ->rules(['nullable', 'exists:clients,id'])
                                 ->placeholder('— Aucun client (comptoir) —')
-                                ->hidden(fn ($get) => $get('type') !== Ticket::TYPE_TICKET_CAISSE)
                                 ->live()
                                 ->afterStateUpdated(function ($state, $set) {
                                     if ($state && $client = Client::find($state)) {
@@ -91,14 +66,8 @@ class TicketResource extends Resource
                                         $set('client_phone', '');
                                     }
                                 }),
-                            Forms\Components\Placeholder::make('add_client_link')
-                                ->label('')
-                                ->content(fn () => new \Illuminate\Support\HtmlString(
-                                    '<a href="' . e(ClientResource::getUrl('create')) . '" target="_blank" rel="noopener" class="fi-btn fi-size-sm fi-btn-color-primary">Ajouter un client</a>'
-                                ))
-                                ->visible(fn ($get) => $get('type') === Ticket::TYPE_TICKET_CAISSE),
-                            Forms\Components\TextInput::make('client_adresse')->label('Adresse')->disabled()->dehydrated(false)->visible(fn ($get) => $get('type') === Ticket::TYPE_TICKET_CAISSE),
-                            Forms\Components\TextInput::make('client_phone')->label('N° Tél')->disabled()->dehydrated(false)->visible(fn ($get) => $get('type') === Ticket::TYPE_TICKET_CAISSE),
+                            Forms\Components\TextInput::make('client_adresse')->label('Adresse')->disabled()->dehydrated(false),
+                            Forms\Components\TextInput::make('client_phone')->label('N° Tél')->disabled()->dehydrated(false),
                         ])
                         ->columns(1)
                         ->collapsible(),
@@ -262,7 +231,8 @@ class TicketResource extends Resource
             ->defaultSort('created_at', 'desc')
             ->defaultPaginationPageOption(25)
             ->actions([
-                Actions\EditAction::make(),
+                Actions\EditAction::make()
+                    ->url(fn (Ticket $record) => TicketPosPage::getUrl(['ticketId' => $record->id])),
                 Actions\Action::make('print')
                     ->label('Imprimer')
                     ->icon('heroicon-o-printer')
@@ -287,6 +257,7 @@ class TicketResource extends Resource
             'index'  => Pages\ListTickets::route('/'),
             'create' => Pages\CreateTicket::route('/create'),
             'edit'   => Pages\EditTicket::route('/{record}/edit'),
+            'pos'    => \App\Filament\Pages\TicketPosPage::route('/pos/{ticketId?}'),
         ];
     }
 }

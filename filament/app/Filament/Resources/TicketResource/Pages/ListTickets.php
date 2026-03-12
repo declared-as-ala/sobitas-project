@@ -13,7 +13,9 @@ class ListTickets extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make()->label('Nouveau ticket'),
+            Actions\Action::make('create')
+                ->label('Nouveau ticket')
+                ->url(\App\Filament\Pages\TicketPosPage::getUrl()),
         ];
     }
 }

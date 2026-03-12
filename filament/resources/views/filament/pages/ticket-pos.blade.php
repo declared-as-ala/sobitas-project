@@ -314,22 +314,11 @@
         {{-- LEFT: Company info --}}
         <div class="pos-company">
             <img src="{{ $logoUrl }}" alt="Logo" class="pos-logo" onerror="this.style.display='none'">
-            @if($this->coordonnee)
-                <div class="pos-company-name">{{ $this->coordonnee->abbreviation ?? $this->coordonnee->designation ?? 'STE SOBITAS' }}</div>
-                <div class="pos-company-info">
-                    @if($this->coordonnee->phone_1){{ $this->coordonnee->phone_1 }}@if($this->coordonnee->phone_2) / {{ $this->coordonnee->phone_2 }}@endif<br>@endif
-                    @if($this->coordonnee->adresse_fr){{ $this->coordonnee->adresse_fr }}<br>@endif
-                </div>
-            @endif
         </div>
 
         {{-- RIGHT: Client block --}}
         <div class="pos-client-block">
-            <a href="{{ route('filament.admin.resources.clients.create') }}"
-               target="_blank"
-               class="pos-add-client-btn">+ Ajouter Client(e)</a>
-
-            <div class="pos-field" style="padding-right: 140px">
+            <div class="pos-field">
                 <label>Client (optionnel)</label>
                 <select wire:model.live="client_id">
                     <option value="">— Choisir —</option>

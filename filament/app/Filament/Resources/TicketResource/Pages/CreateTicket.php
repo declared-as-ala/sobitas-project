@@ -12,6 +12,12 @@ class CreateTicket extends CreateRecord
 {
     protected static string $resource = TicketResource::class;
 
+    public function mount(): void
+    {
+        parent::mount();
+        $this->redirect(\App\Filament\Pages\TicketPosPage::getUrl());
+    }
+
     protected function getFormActions(): array
     {
         return [
