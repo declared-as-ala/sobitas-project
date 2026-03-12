@@ -14,9 +14,9 @@ class CreateFactureTva extends CreateRecord
 {
     protected static string $resource = FactureTvaResource::class;
 
-    public function getMaxContentWidth(): \Filament\Support\Enums\MaxWidth | string | null
+    public function getMaxContentWidth(): \Filament\Support\Enums\Width | string | null
     {
-        return \Filament\Support\Enums\MaxWidth::Full;
+        return \Filament\Support\Enums\Width::Full;
     }
 
     public function addProductByBarcode(string $code): void
