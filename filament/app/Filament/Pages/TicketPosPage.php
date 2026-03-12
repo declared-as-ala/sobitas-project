@@ -12,7 +12,7 @@ use Filament\Pages\Page;
 
 class TicketPosPage extends Page
 {
-    protected static ?string $navigationIcon = null;
+    protected static string | \BackedEnum | null $navigationIcon = null;
 
     protected static bool $shouldRegisterNavigation = false;
 
