@@ -8,10 +8,12 @@ use App\Models\DetailsTicket;
 use App\Models\Product;
 use App\Models\Ticket;
 use Filament\Notifications\Notification;
-use Filament\Pages\Page;
+use Filament\Resources\Pages\Page;
+use App\Filament\Resources\TicketResource;
 
 class TicketPosPage extends Page
 {
+    protected static string $resource = TicketResource::class;
     protected static string | \BackedEnum | null $navigationIcon = null;
 
     protected static bool $shouldRegisterNavigation = false;
