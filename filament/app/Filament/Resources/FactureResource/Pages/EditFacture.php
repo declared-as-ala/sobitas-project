@@ -23,6 +23,11 @@ class EditFacture extends EditRecord
         return array_merge(parent::getPageClasses(), ['fi-page-edit-facture']);
     }
 
+    public function getMaxContentWidth(): \Filament\Support\Enums\Width | string | null
+    {
+        return \Filament\Support\Enums\Width::Full;
+    }
+
     public function getHeaderWidgets(): array
     {
         return [DocumentTimelineWidget::class];
