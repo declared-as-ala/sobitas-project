@@ -46,13 +46,13 @@ class FactureTvaResource extends Resource
                 ->extraAttributes(['class' => 'facture-pos-page'])
                 ->schema([
                 /* TOP ZONE: Left (Company) | Right (Client) */
-                Forms\Components\Group::make()->schema([
+                \Filament\Schemas\Components\Group::make()->schema([
                     Forms\Components\ViewField::make('company_info')
                         ->hiddenLabel()
                         ->view('filament.components.company-info-pos'),
                 ])->columnSpan(['default' => 12, 'lg' => 6])->extraAttributes(['class' => 'pos-company-block']),
                 
-                Forms\Components\Group::make()->schema([
+                \Filament\Schemas\Components\Group::make()->schema([
                     Forms\Components\Select::make('client_id')
                         ->label('Client')
                         ->relationship('client', 'name')
@@ -89,14 +89,14 @@ class FactureTvaResource extends Resource
                 ])->columnSpan(['default' => 12, 'lg' => 6])->extraAttributes(['class' => 'pos-client-block']),
 
                 /* MIDDLE ZONE: Products Table & Scanning */
-                Forms\Components\Group::make()->schema([
+                \Filament\Schemas\Components\Group::make()->schema([
                     Forms\Components\ViewField::make('details')
                         ->hiddenLabel()
                         ->view('filament.forms.components.instant-invoice-details')
                 ])->columnSpanFull()->extraAttributes(['class' => 'mt-6']),
 
                 /* BOTTOM RIGHT ZONE: Totals */
-                Forms\Components\Group::make()->schema([
+                \Filament\Schemas\Components\Group::make()->schema([
                     Forms\Components\TextInput::make('prix_ht')->label('Montant Total HT')->numeric()->disabled()->dehydrated(false)->default(0),
                     Forms\Components\TextInput::make('remise')->label('Montant Remise')->numeric()->default(0)->live()->afterStateUpdated(fn ($state, $get, $set) => self::recalculateFactureTvaTotals($get, $set, false)),
                     Forms\Components\TextInput::make('pourcentage_remise')
