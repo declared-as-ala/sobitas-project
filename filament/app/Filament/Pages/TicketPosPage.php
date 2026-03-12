@@ -93,108 +93,10 @@ class TicketPosPage extends Page
         }
     }
 
-    // ── Barcode scan ─────────────────────────────────────────────────────────
-    public function scanBarcode(): void
-    {
-        $code = trim($this->barcode);
-        $this->barcode = '';
-
-        if ($code === '') {
-            return;
-        }
-
-        $product = Product::where(function ($q) use ($code) {
-            $q->where('code_product', $code)
-              ->orWhere('code_product', '0' . $code);
-        })->first();
-
-        if (! $product) {
-            Notification::make()
-                ->title('Aucun produit trouvé pour ce code')
-                ->warning()
-                ->send();
-            return;
-        }
-
-        // Look for existing line with same produit_id and increment qty
-        foreach ($this->lines as $i => $line) {
-            if ((int) ($line['produit_id'] ?? 0) === $product->id) {
-                $this->lines[$i]['qte'] += 1;
-                $this->recalcTotals();
-                $this->dispatch('barcode-focus');
-                return;
-            }
-        }
-
-        // Add new line
-        $this->lines[] = [
-            'produit_id'    => $product->id,
-            'designation'   => $product->designation_fr ?? '—',
-            'qte'           => 1,
-            'prix_unitaire' => $product->getEffectiveUnitPrice(),
-        ];
-
-        $this->recalcTotals();
-        $this->dispatch('barcode-focus');
-    }
-
     // ── AJAX: get product label for select ───────────────────────────────────
     public function getProductOptions(string $search = ''): array
     {
         return Product::getSearchOptionsForFilament($search, 30);
-    }
-
-    // ── Line updates ──────────────────────────────────────────────────────────
-    public function updatedLines(): void
-    {
-        // Sync designation when produit_id changes via select
-        foreach ($this->lines as $i => $line) {
-            if (! empty($line['produit_id']) && empty($line['designation'])) {
-                $p = Product::select('id', 'designation_fr', 'prix', 'promo', 'promo_expiration_date')
-                    ->find($line['produit_id']);
-                if ($p) {
-                    $this->lines[$i]['designation']   = $p->designation_fr ?? '';
-                    $this->lines[$i]['prix_unitaire'] = $p->getEffectiveUnitPrice();
-                }
-            }
-        }
-        $this->recalcTotals();
-    }
-
-    public function lineProductChanged(int $index, ?int $produitId): void
-    {
-        if ($produitId && $p = Product::select('id', 'designation_fr', 'prix', 'promo', 'promo_expiration_date')
-            ->find($produitId)) {
-            $this->lines[$index]['produit_id']    = $p->id;
-            $this->lines[$index]['designation']   = $p->designation_fr ?? '';
-            $this->lines[$index]['prix_unitaire'] = $p->getEffectiveUnitPrice();
-        }
-        $this->recalcTotals();
-    }
-
-    public function addLine(): void
-    {
-        $this->lines[] = self::emptyLine();
-    }
-
-    public function removeLine(int $index): void
-    {
-        array_splice($this->lines, $index, 1);
-        if (empty($this->lines)) {
-            $this->lines = [self::emptyLine()];
-        }
-        $this->recalcTotals();
-    }
-
-    public function updatedRemise(): void
-    {
-        $this->recalcTotals();
-    }
-
-    public function updatedPourcentageRemise(): void
-    {
-        $this->pourcentage_remise = max(0, (float) $this->pourcentage_remise);
-        $this->recalcTotals();
     }
 
     // ── Save ─────────────────────────────────────────────────────────────────
@@ -256,34 +158,6 @@ class TicketPosPage extends Page
             ->send();
 
         $this->redirect(route('filament.admin.resources.tickets.index'));
-    }
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
-    private function recalcTotals(): void
-    {
-        $total = 0.0;
-        foreach ($this->lines as $line) {
-            if (! empty($line['produit_id'])) {
-                $total += (float) ($line['qte'] ?? 0) * (float) ($line['prix_unitaire'] ?? 0);
-            }
-        }
-        $remiseAmount = (float) $this->remise;
-        if ($this->pourcentage_remise > 0 && $total > 0) {
-            $remiseAmount = $total * $this->pourcentage_remise / 100;
-            $this->remise = round($remiseAmount, 3);
-        }
-        $this->prix_ht  = round($total, 3);
-        $this->prix_ttc = round(max(0, $total - $remiseAmount), 3);
-    }
-
-    private static function emptyLine(): array
-    {
-        return [
-            'produit_id'    => null,
-            'designation'   => '',
-            'qte'           => 1,
-            'prix_unitaire' => 0,
-        ];
     }
 
     public static function getUrl(array $parameters = [], bool $isAbsolute = true, ?string $panel = null, ?\Illuminate\Database\Eloquent\Model $tenant = null, bool $shouldGuessMissingParameters = false): string
