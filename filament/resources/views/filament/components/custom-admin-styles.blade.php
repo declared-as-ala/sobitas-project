@@ -258,4 +258,90 @@
     .convert-wizard-dl dt { color: rgb(107 114 128); }
     .convert-wizard-dl dd { margin: 0; }
     .convert-wizard-hint { margin-top: 16px; font-size: 0.8125rem; color: rgb(107 114 128); }
+
+    /* ── Auth / Login page: big card + gym/protein background ─────────────────── */
+    .fi-authentication-page {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 1.5rem;
+        /* Gym / protein visual from Unsplash with dark overlay */
+        background-image:
+            linear-gradient(135deg, rgba(15, 23, 42, 0.88), rgba(15, 23, 42, 0.88)),
+            url('https://images.unsplash.com/photo-1517832207067-4db24a2ae47c?auto=format&fit=crop&w=1600&q=80');
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+    }
+    .dark .fi-authentication-page {
+        background-image:
+            linear-gradient(135deg, rgba(15, 23, 42, 0.92), rgba(15, 23, 42, 0.92)),
+            url('https://images.unsplash.com/photo-1517832207067-4db24a2ae47c?auto=format&fit=crop&w=1600&q=80');
+    }
+    .fi-authentication-page .fi-simple-main,
+    .fi-authentication-page .fi-auth-card {
+        width: 100%;
+        max-width: 520px;
+        border-radius: 18px;
+        box-shadow:
+            0 24px 60px rgba(15, 23, 42, 0.55),
+            0 0 0 1px rgba(15, 23, 42, 0.35);
+        backdrop-filter: blur(18px);
+        background-color: rgba(15, 23, 42, 0.92);
+    }
+    .fi-authentication-page .fi-simple-main > div,
+    .fi-authentication-page .fi-auth-card > div {
+        padding: 2.25rem 2.5rem;
+    }
+    .fi-authentication-page .fi-logo {
+        width: 160px;
+        height: auto;
+        margin-bottom: 1.25rem;
+    }
+    .fi-authentication-page h1,
+    .fi-authentication-page .fi-heading {
+        font-size: 1.75rem;
+        font-weight: 800;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        color: #f97316;
+        margin-bottom: 0.75rem;
+    }
+    .fi-authentication-page p,
+    .fi-authentication-page .fi-subheading {
+        color: rgb(209 213 219);
+        font-size: 0.95rem;
+        margin-bottom: 1.5rem;
+    }
+    .fi-authentication-page .fi-fo-field-wrp-label {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: rgb(148 163 184);
+    }
+    .fi-authentication-page .fi-input,
+    .fi-authentication-page .fi-btn {
+        min-height: 48px;
+        border-radius: 10px;
+        font-size: 0.98rem;
+    }
+    .fi-authentication-page .fi-btn-primary {
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+    @media (min-width: 1024px) {
+        .fi-authentication-page {
+            padding: 3rem 2rem;
+        }
+        .fi-authentication-page .fi-simple-main,
+        .fi-authentication-page .fi-auth-card {
+            max-width: 620px;
+        }
+        .fi-authentication-page h1,
+        .fi-authentication-page .fi-heading {
+            font-size: 2rem;
+        }
+    }
 </style>
