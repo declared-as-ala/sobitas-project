@@ -15,7 +15,7 @@ use Illuminate\Validation\Rule;
  *
  * Registered in AdminPanelProvider via ->profile(EditProfile::class)
  */
-class EditProfile extends \Filament\Livewire\Auth\EditProfile
+class EditProfile extends \Filament\Pages\Auth\EditProfile
 {
     /**
      * Override the email form component to add unique validation
