@@ -247,8 +247,57 @@ var blMax = {{ $max }};
 $(document).ready(function () {
     $('#bl_client_id').select2({ placeholder: '— Choisir un client —', allowClear: true, width: '100%' });
     for (let i = 1; i <= blMax; i++) { blInitSelect2(i); }
-    blCalculate();
+    
+    // Hydrate existing data if in Edit mode using Livewire's form data
+    @php
+        $formData = method_exists($getLivewire(), 'getRecord') && $getLivewire()->getRecord() ? $getLivewire()->data : [];
+    @endphp
+    var initData = @json($formData);
+    
+    if (initData && initData.client_id) {
+        blHydrate(initData);
+    } else {
+        blCalculate();
+    }
 });
+
+function blHydrate(data) {
+    if (data.client_id) {
+        $('#bl_client_id').val(data.client_id).trigger('change');
+    }
+    
+    if (data.details && Array.isArray(data.details)) {
+        let i = 1;
+        data.details.forEach(item => {
+            if (item.produit_id && i <= blMax) {
+                var r = document.getElementById('bl-row-' + i);
+                if (r) r.style.display = '';
+                
+                // Set the Select2 value without triggering its full onchange yet to avoid recalculation loops
+                var $sel = $('#bl_prod_' + i);
+                $sel.val(item.produit_id).trigger('change.select2');
+                
+                document.getElementById('bl_qte_' + i).value = item.qte || 1;
+                document.getElementById('bl_pu_' + i).value = item.prix_unitaire || 0;
+                
+                // Get constraints from the selected option
+                var opt = $sel.find('option:selected');
+                if (opt.length) {
+                    document.getElementById('bl_qte_' + i).max = opt.attr('data-qte') || 9999;
+                }
+                
+                i++;
+            }
+        });
+    }
+
+    if (data.remise) document.getElementById('bl_remise').value = data.remise;
+    if (data.pourcentage_remise) document.getElementById('bl_pourcent_remise').value = data.pourcentage_remise;
+    if (data.frais_livraison) document.getElementById('bl_frais_livraison').value = data.frais_livraison;
+    
+    blCalculate();
+}
+
 
 function blInitSelect2(i) {
     $('#bl_prod_' + i).select2({ placeholder: '— Choisir —', allowClear: true, width: '100%', language: { noResults: function() { return 'Aucun résultat'; } } });

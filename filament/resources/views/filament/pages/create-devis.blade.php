@@ -253,8 +253,56 @@ var dvDefaultTva = {{ $defaultTva }};
 $(document).ready(function () {
     $('#dv_client_id').select2({ placeholder: '— Choisir un client —', allowClear: true, width: '100%' });
     for (let i = 1; i <= dvMax; i++) { dvInitSelect2(i); }
-    dvCalculate();
+    
+    // Hydrate existing data if in Edit mode using Livewire's form data
+    @php
+        $formData = method_exists($getLivewire(), 'getRecord') && $getLivewire()->getRecord() ? $getLivewire()->data : [];
+    @endphp
+    var initData = @json($formData);
+    
+    if (initData && initData.client_id) {
+        dvHydrate(initData);
+    } else {
+        dvCalculate();
+    }
 });
+
+function dvHydrate(data) {
+    if (data.client_id) {
+        $('#dv_client_id').val(data.client_id).trigger('change');
+    }
+    
+    if (data.details && Array.isArray(data.details)) {
+        let i = 1;
+        data.details.forEach(item => {
+            if (item.produit_id && i <= dvMax) {
+                var r = document.getElementById('dv-row-' + i);
+                if (r) r.style.display = '';
+                
+                var $sel = $('#dv_prod_' + i);
+                $sel.val(item.produit_id).trigger('change.select2');
+                
+                document.getElementById('dv_qte_' + i).value = item.qte || 1;
+                document.getElementById('dv_pu_' + i).value = item.prix_unitaire || 0;
+                document.getElementById('dv_tva_' + i).value = item.tva_pct || dvDefaultTva;
+                
+                var opt = $sel.find('option:selected');
+                if (opt.length) {
+                    document.getElementById('dv_qte_' + i).max = opt.attr('data-qte') || 9999;
+                }
+                
+                i++;
+            }
+        });
+    }
+
+    if (data.remise) document.getElementById('dv_remise').value = data.remise;
+    if (data.pourcentage_remise) document.getElementById('dv_pourcent_remise').value = data.pourcentage_remise;
+    if (data.timbre) document.getElementById('dv_timbre').value = data.timbre;
+    
+    dvCalculate();
+}
+
 
 function dvInitSelect2(i) {
     $('#dv_prod_' + i).select2({ placeholder: '— Choisir —', allowClear: true, width: '100%', language: { noResults: function() { return 'Aucun résultat'; } } });
