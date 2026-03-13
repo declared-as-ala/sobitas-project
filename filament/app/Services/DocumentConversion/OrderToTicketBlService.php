@@ -35,6 +35,14 @@ class OrderToTicketBlService
             $bl->numero = $year . '/' . str_pad((string) $nb, 4, '0', STR_PAD_LEFT);
             $remise = (float) ($order->remise ?? 0);
             $fraisLivraison = (float) ($order->frais_livraison ?? 0);
+            // Fallback for legacy commandes: recover frais from prix_ttc - prix_ht
+            if ($fraisLivraison <= 0) {
+                $derivedFrais = (float)($order->prix_ttc ?? 0) - (float)($order->prix_ht ?? 0);
+                if ($derivedFrais > 0.001) {
+                    $fraisLivraison = round($derivedFrais, 3);
+                }
+            }
+
 
             $details = [];
             foreach ($order->details as $line) {
