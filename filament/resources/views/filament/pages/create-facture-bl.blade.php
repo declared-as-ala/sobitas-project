@@ -143,31 +143,10 @@ body:has(.bl-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !importa
                     </div>
                 </div>
 
-                {{-- BILLING DETAILS (Editable) --}}
-                <div id="bl-billing-details" style="margin-top:16px; padding-top:12px; border-top:1px dashed #e2e8f0;">
-                    <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:8px;">Informations de Facturation</label>
-                    <div style="display:flex; gap:12px; margin-bottom:8px;">
-                        <input class="bl-input" id="bl_nom" placeholder="Nom et prénom..." style="flex:1;">
-                        <input class="bl-input" id="bl_phone_billing" placeholder="Téléphone..." style="width:120px;">
-                    </div>
-                    <div style="margin-bottom:8px;">
-                        <input class="bl-input" id="bl_email" type="email" placeholder="Email..." style="width:100%;">
-                    </div>
-                    <div style="margin-bottom:8px;">
-                        <input class="bl-input" id="bl_adresse1" placeholder="Adresse de facturation..." style="width:100%;">
-                    </div>
-                    <div style="display:flex; gap:12px;">
-                        <input class="bl-input" id="bl_ville" placeholder="Ville..." style="flex:1;">
-                        <input class="bl-input" id="bl_region" placeholder="Région..." style="flex:1;">
-                        <input class="bl-input" id="bl_cp" placeholder="Code Postal..." style="width:90px;">
-                    </div>
-                </div>
-
                 {{-- SHIPPING DETAILS (Editable) --}}
                 <div id="bl-shipping-details" style="margin-top:16px; padding-top:12px; border-top:1px dashed #e2e8f0;">
                     <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:8px;">
-                        Informations de Livraison
-                        <button type="button" onclick="blCopyFactToLiv()" style="font-size:11px;color:#337ab7;background:none;border:none;cursor:pointer;float:right;">Copier facturation →</button>
+                        INFORMATIONS DE LIVRAISON / COORDONNÉES DE LIVRAISON
                     </label>
                     <div style="display:flex; gap:12px; margin-bottom:8px;">
                         <input class="bl-input" id="bl_livraison_nom" placeholder="Nom et prénom..." style="flex:1;">
@@ -338,17 +317,7 @@ function blHydrate(data) {
     if (data.pourcentage_remise) document.getElementById('bl_pourcent_remise').value = data.pourcentage_remise;
     if (data.frais_livraison) document.getElementById('bl_frais_livraison').value = data.frais_livraison;
 
-    // Hydrate Billing details
-    if (data.nom !== undefined) document.getElementById('bl_nom').value = data.nom || '';
-    // If phone field is used for display elsewhere, use it, but we use bl_phone_billing
-    if (data.phone !== undefined) document.getElementById('bl_phone_billing').value = data.phone || '';
-    if (data.email !== undefined) document.getElementById('bl_email').value = data.email || '';
-    if (data.adresse1 !== undefined) document.getElementById('bl_adresse1').value = data.adresse1 || '';
-    if (data.ville !== undefined) document.getElementById('bl_ville').value = data.ville || '';
-    if (data.region !== undefined) document.getElementById('bl_region').value = data.region || '';
-    if (data.code_postale !== undefined) document.getElementById('bl_cp').value = data.code_postale || '';
-    
-    // Hydrate Shipping details
+    // Only Hydrate Shipping details now
     if (data.livraison_nom !== undefined) document.getElementById('bl_livraison_nom').value = data.livraison_nom || '';
     if (data.livraison_phone !== undefined) document.getElementById('bl_livraison_phone').value = data.livraison_phone || '';
     if (data.livraison_email !== undefined) document.getElementById('bl_livraison_email').value = data.livraison_email || '';
@@ -379,24 +348,14 @@ function blSelectClient() {
     var cp      = opt.getAttribute('data-cp') ?? '';
     var nom     = opt.text.split('(')[0].trim();
 
-    document.getElementById('bl_nom').value = nom;
-    document.getElementById('bl_phone_billing').value = phone;
-    document.getElementById('bl_email').value = email;
-    document.getElementById('bl_adresse1').value = adresse;
-    document.getElementById('bl_ville').value = ville;
-    document.getElementById('bl_cp').value = cp;
-
-    blCopyFactToLiv();
-}
-
-function blCopyFactToLiv() {
-    document.getElementById('bl_livraison_nom').value = document.getElementById('bl_nom').value;
-    document.getElementById('bl_livraison_phone').value = document.getElementById('bl_phone_billing').value;
-    document.getElementById('bl_livraison_email').value = document.getElementById('bl_email').value;
-    document.getElementById('bl_livraison_adresse1').value = document.getElementById('bl_adresse1').value;
-    document.getElementById('bl_livraison_ville').value = document.getElementById('bl_ville').value;
-    document.getElementById('bl_livraison_region').value = document.getElementById('bl_region').value;
-    document.getElementById('bl_livraison_cp').value = document.getElementById('bl_cp').value;
+    // Populate Livraison fields directly from client record since billing is hidden
+    document.getElementById('bl_livraison_nom').value = nom;
+    document.getElementById('bl_livraison_phone').value = phone;
+    document.getElementById('bl_livraison_email').value = email;
+    document.getElementById('bl_livraison_adresse1').value = adresse;
+    document.getElementById('bl_livraison_ville').value = ville;
+    document.getElementById('bl_livraison_region').value = ''; // No direct region on client by default here
+    document.getElementById('bl_livraison_cp').value = cp;
 }
 $('#bl_client_id').on('change', function() { blSelectClient(); });
 
@@ -561,14 +520,14 @@ function blSave() {
     @this.set('data.prix_ttc', parseFloat(net));
     @this.set('data.timbre', 0);
 
-    // Save Billing Details
-    @this.set('data.nom', document.getElementById('bl_nom')?.value || null);
-    @this.set('data.phone', document.getElementById('bl_phone_billing')?.value || null);
-    @this.set('data.email', document.getElementById('bl_email')?.value || null);
-    @this.set('data.adresse1', document.getElementById('bl_adresse1')?.value || null);
-    @this.set('data.ville', document.getElementById('bl_ville')?.value || null);
-    @this.set('data.region', document.getElementById('bl_region')?.value || null);
-    @this.set('data.code_postale', document.getElementById('bl_cp')?.value || null);
+    // Save existing nulls/overwrites to Facturation to ensure its clean
+    @this.set('data.nom', null);
+    @this.set('data.phone', null);
+    @this.set('data.email', null);
+    @this.set('data.adresse1', null);
+    @this.set('data.ville', null);
+    @this.set('data.region', null);
+    @this.set('data.code_postale', null);
 
     // Save Shipping Details
     @this.set('data.livraison_nom', document.getElementById('bl_livraison_nom')?.value || null);

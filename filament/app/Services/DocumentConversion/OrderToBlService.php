@@ -140,16 +140,16 @@ class OrderToBlService
             $bl->prix_ttc = $totals['prix_ttc'];
             $bl->net_a_payer = max(0, $totals['net_a_payer']);
 
-            // Map billing fields
-            $bl->nom = $order->nom;
-            $bl->prenom = $order->prenom;
-            $bl->email = $order->email;
-            $bl->phone = $order->phone;
-            $bl->adresse1 = $order->adresse1;
-            $bl->adresse2 = $order->adresse2;
-            $bl->ville = $order->ville;
-            $bl->region = $order->region;
-            $bl->code_postale = $order->code_postale;
+            // Do not map billing fields to BL, only keep livraison fields as requested
+            $bl->nom = null;
+            $bl->prenom = null;
+            $bl->email = null;
+            $bl->phone = null;
+            $bl->adresse1 = null;
+            $bl->adresse2 = null;
+            $bl->ville = null;
+            $bl->region = null;
+            $bl->code_postale = null;
 
             // Map shipping fields
             $bl->livraison_nom = $order->livraison_nom;
