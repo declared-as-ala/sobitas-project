@@ -9,8 +9,8 @@ class Login extends \Filament\Auth\Pages\Login
         parent::mount();
 
         $this->form->fill([
-            'email' => 'admin@filamentphp.com',
-            'password' => 'demo.Filament@2021!',
+            'email' => 'contact@sobitas.tn',
+            'password' => '',
             'remember' => true,
         ]);
     }

@@ -21,7 +21,7 @@
     content: '';
     position: fixed;
     inset: 0;
-    background: linear-gradient(135deg, rgba(0,0,0,0.75) 0%, rgba(15,8,2,0.65) 100%);
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.75) 0%, rgba(15, 8, 2, 0.65) 100%);
     z-index: 0;
     pointer-events: none;
 }
@@ -46,7 +46,7 @@
     max-width: 460px !important;
     background: rgba(255, 255, 255, 0.97) !important;
     border-radius: 20px !important;
-    box-shadow: 0 32px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.12) !important;
+    box-shadow: 0 32px 80px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.12) !important;
     padding: 2.5rem 2.25rem !important;
     backdrop-filter: blur(4px) !important;
 }
@@ -64,13 +64,13 @@
 .fi-simple-layout [data-slot="logo"] img,
 .fi-simple-layout .fi-brand-logo img,
 .fi-simple-layout header img {
-    width: 320px !important;
-    max-width: 80vw !important;
+    width: 420px !important;
+    max-width: 85vw !important;
     height: auto !important;
     display: block !important;
     margin: 0 auto 1.5rem auto !important;
     object-fit: contain !important;
-    filter: drop-shadow(0 4px 14px rgba(0,0,0,0.18)) !important;
+    filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.18)) !important;
 }
 
 /* Heading centered */
@@ -99,6 +99,6 @@
     .fi-simple-layout [data-slot="logo"] img,
     .fi-simple-layout .fi-brand-logo img,
     .fi-simple-layout header img {
-        width: 220px !important;
+        width: 280px !important;
     }
 }
