@@ -151,16 +151,29 @@ class OrderToBlService
             $bl->region = null;
             $bl->code_postale = null;
 
-            // Map shipping fields
-            $bl->livraison_nom = $order->livraison_nom;
-            $bl->livraison_prenom = $order->livraison_prenom;
-            $bl->livraison_email = $order->livraison_email;
-            $bl->livraison_phone = $order->livraison_phone;
-            $bl->livraison_adresse1 = $order->livraison_adresse1;
-            $bl->livraison_adresse2 = $order->livraison_adresse2;
-            $bl->livraison_ville = $order->livraison_ville;
-            $bl->livraison_region = $order->livraison_region;
-            $bl->livraison_code_postale = $order->livraison_code_postale;
+            $client = $order->client;
+            
+            // Map shipping fields with smart fallbacks
+            $safeName = $order->livraison_nom ?: $order->nom ?: ($client->nom_prenom ?? trim(($client->nom ?? '') . ' ' . ($client->prenom ?? '')) ?: ($client->name ?? ''));
+            $bl->livraison_nom = $safeName;
+            $bl->livraison_prenom = $order->livraison_prenom ?: $order->prenom ?: '';
+            $bl->livraison_email = $order->livraison_email ?: $order->email ?: ($client->email ?? '');
+            $bl->livraison_phone = $order->livraison_phone ?: $order->phone ?: ($client->phone ?? $client->phone_1 ?? '');
+            
+            $addr = trim(($order->livraison_adresse1 ?? '') . ' ' . ($order->livraison_adresse2 ?? ''));
+            $addrFallback = trim(($order->adresse1 ?? '') . ' ' . ($order->adresse2 ?? ''));
+            $bl->livraison_adresse1 = $addr ?: $addrFallback ?: ($client->adresse ?? '');
+            $bl->livraison_adresse2 = null;
+            
+            $bl->livraison_ville = $order->livraison_ville ?: $order->ville ?: ($client->ville ?? '');
+            $bl->livraison_region = $order->livraison_region ?: $order->region ?: ($client->region ?? '');
+            $bl->livraison_code_postale = $order->livraison_code_postale ?: $order->code_postale ?: ($client->code_postale ?? '');
+
+            \Illuminate\Support\Facades\Log::info('BL created from commande', [
+                'commande_id' => $order->id, 
+                'bl_id' => $bl->id ?? 'pending', 
+                'livraison' => $bl->only(['livraison_nom', 'livraison_prenom', 'livraison_email', 'livraison_phone', 'livraison_adresse1', 'livraison_ville', 'livraison_region', 'livraison_code_postale'])
+            ]);
 
             $bl->save();
 

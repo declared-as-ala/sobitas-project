@@ -84,7 +84,7 @@ class EditCommande extends EditRecord
                 ->label('Créer Bon de livraison')
                 ->icon('heroicon-o-document-text')
                 ->color('success')
-                ->visible(fn () => ! $this->record->ticketsBl()->exists())
+                ->visible(fn () => ! $this->record->factures()->exists())
                 ->modalHeading('Créer un Bon de livraison pour cette commande')
                 ->modalDescription('Un bon de livraison sera créé avec les lignes de la commande.')
                 ->modalSubmitActionLabel('Créer le BL')
@@ -95,13 +95,13 @@ class EditCommande extends EditRecord
                     'itemsCount' => $r->details->count(),
                     'totalTtc' => number_format((float) ($r->prix_ttc ?? 0), 3, ',', ' ') . ' DT',
                 ]))
-                ->action(function (OrderToTicketBlService $service) {
+                ->action(function (\App\Services\DocumentConversion\OrderToBlService $service) {
                     $bl = $service->createBlFromOrder($this->record);
                     Notification::make()
-                        ->title('Conversion réussie — ouverture de l’impression pour le Bon de livraison')
+                        ->title('Conversion réussie — téléchargement du Bon de livraison en cours')
                         ->success()
                         ->send();
-                    $this->redirect(route('tickets.print', ['ticket' => $bl->id]));
+                    $this->redirect(route('factures.download', ['facture' => $bl->id]));
                 }),
             Actions\Action::make('createInvoice')
                 ->label('Créer Facture TVA')
