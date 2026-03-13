@@ -97,14 +97,12 @@
             <th class="text-right">{{ $fmt($totalHt) }}</th>
         </tr>
 
-        <!-- Montant Remise (optional) -->
-        @if($remise > 0)
-            <tr>
-                <td colspan="2"></td>
-                <th colspan="2">Montant Remise</th>
-                <th class="text-right">{{ $fmt($remise) }}</th>
-            </tr>
-        @endif
+        <!-- Montant Remise -->
+        <tr>
+            <td colspan="2"></td>
+            <th colspan="2">Montant Remise</th>
+            <th class="text-right">{{ $fmt($remise) }}</th>
+        </tr>
         
         <!-- Pourcentage Remise % (optional) -->
         @if($pourcentageRemise > 0)
@@ -115,14 +113,12 @@
             </tr>
         @endif
         
-        <!-- Frais Livraison (optional) -->
-        @if($frais > 0)
-            <tr>
-                <td colspan="2"></td>
-                <th colspan="2">Frais Livraison</th>
-                <th class="text-right">{{ $fmt($frais) }}</th>
-            </tr>
-        @endif
+        <!-- Frais Livraison -->
+        <tr>
+            <td colspan="2"></td>
+            <th colspan="2">Frais Livraison</th>
+            <th class="text-right">{{ $fmt($frais) }}</th>
+        </tr>
         
         <!-- Net à payer -->
         <tr>
