@@ -52,4 +52,31 @@ class CreateCommande extends CreateRecord
 
         return $data;
     }
+
+    protected function afterCreate(): void
+    {
+        $details = $this->form->getState()['details'] ?? [];
+        $prixHt = 0.0;
+        foreach ($details as $row) {
+            if (empty($row['produit_id'])) {
+                continue;
+            }
+            $qte          = (float) ($row['qte'] ?? 1);
+            $prixUnitaire = (float) ($row['prix_unitaire'] ?? 0);
+            
+            \App\Models\CommandeDetail::create([
+                'commande_id'   => $this->record->id,
+                'produit_id'    => $row['produit_id'],
+                'qte'           => $qte,
+                'prix_unitaire' => $prixUnitaire,
+            ]);
+            $prixHt += $qte * $prixUnitaire;
+        }
+
+        $frais = (float) ($this->form->getState()['frais_livraison'] ?? 0);
+        $this->record->update([
+            'prix_ht' => round($prixHt, 3),
+            'prix_ttc' => round($prixHt + $frais, 3),
+        ]);
+    }
 }

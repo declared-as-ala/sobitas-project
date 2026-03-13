@@ -58,102 +58,33 @@ class CommandeResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            Grid::make(3)->schema([
-                // Colonne gauche (~65–70 %) : Client, Livraison, Détails commande
-                Grid::make(1)->schema([
-                    Section::make('Client')
-                        ->icon('heroicon-o-user')
-                        ->schema([
-                            Forms\Components\TextInput::make('nom')->label('Nom'),
-                            Forms\Components\TextInput::make('prenom')->label('Prénom'),
-                            Forms\Components\TextInput::make('email')->label('Email')->email(),
-                            Forms\Components\TextInput::make('phone')->label('Téléphone'),
-                            Forms\Components\TextInput::make('region')->label('Région'),
-                            Forms\Components\TextInput::make('ville')->label('Ville'),
-                            Forms\Components\TextInput::make('adresse1')->label('Adresse')->columnSpanFull(),
-                            Forms\Components\TextInput::make('code_postale')->label('Code postal'),
-                        ])
-                        ->columns(2)
-                        ->collapsible(),
+            Forms\Components\ViewField::make('commande_view')
+                ->view('filament.pages.commande-form')
+                ->columnSpanFull(),
 
-                    Section::make('Livraison')
-                        ->icon('heroicon-o-truck')
-                        ->schema([
-                            Forms\Components\TextInput::make('livraison_nom')->label('Nom'),
-                            Forms\Components\TextInput::make('livraison_prenom')->label('Prénom'),
-                            Forms\Components\TextInput::make('livraison_phone')->label('Téléphone'),
-                            Forms\Components\TextInput::make('livraison_email')->label('Email')->email(),
-                            Forms\Components\TextInput::make('livraison_region')->label('Région'),
-                            Forms\Components\TextInput::make('livraison_ville')->label('Ville'),
-                            Forms\Components\TextInput::make('livraison_adresse1')->label('Adresse')->columnSpanFull(),
-                            Forms\Components\TextInput::make('livraison_code_postale')->label('Code postal'),
-                        ])
-                        ->columns(2)
-                        ->collapsible(),
+            // Hidden fields to capture State pushed from Javascript
+            Forms\Components\Hidden::make('details')->default([]),
+            Forms\Components\Hidden::make('user_id'),
+            Forms\Components\Hidden::make('nom'),
+            Forms\Components\Hidden::make('prenom'),
+            Forms\Components\Hidden::make('email'),
+            Forms\Components\Hidden::make('phone'),
+            Forms\Components\Hidden::make('region'),
+            Forms\Components\Hidden::make('code_postale'),
+            Forms\Components\Hidden::make('adresse1'),
 
-                    Section::make('Détails de la commande')
-                        ->icon('heroicon-o-shopping-cart')
-                        ->schema([
-                            Forms\Components\Repeater::make('details')
-                                ->label('')
-                                ->relationship()
-                                ->schema([
-                                    Forms\Components\Select::make('produit_id')
-                                        ->label('Produit')
-                                        ->required()
-                                        ->searchable()
-                                        ->getSearchResultsUsing(fn (string $search): array => \App\Models\Product::getSearchOptionsForFilament($search, 30))
-                                        ->getOptionLabelUsing(fn ($value): ?string => \App\Models\Product::getOptionLabelForId($value))
-                                        ->live()
-                                        ->placeholder('Tapez pour rechercher…')
-                                        ->afterStateUpdated(function ($state, $set) {
-                                            if ($state && $p = \App\Models\Product::query()->select(\App\Models\Product::getSelectSearchColumns())->find($state)) {
-                                                $set('prix_unitaire', $p->getEffectiveUnitPrice());
-                                            }
-                                        })
-                                        ->columnSpan(['default' => 2, 'sm' => 12]),
-                                    Forms\Components\TextInput::make('qte')
-                                        ->label('Quantité')
-                                        ->numeric()
-                                        ->default(1)
-                                        ->minValue(1)
-                                        ->required()
-                                        ->columnSpan(['default' => 1, 'sm' => 2]),
-                                    Forms\Components\TextInput::make('prix_unitaire')
-                                        ->label('Prix unitaire')
-                                        ->numeric()
-                                        ->prefix('DT')
-                                        ->required()
-                                        ->columnSpan(['default' => 1, 'sm' => 2]),
-                                    Forms\Components\Placeholder::make('total_ligne')
-                                        ->label('Total')
-                                        ->content(fn ($get) => number_format((float) ($get('qte') ?? 0) * (float) ($get('prix_unitaire') ?? 0), 3, ',', ' ') . ' DT')
-                                        ->columnSpan(['default' => 1, 'sm' => 2]),
-                                ])
-                                ->columns(12)
-                                ->defaultItems(0)
-                                ->addActionLabel('Ajouter un produit')
-                                ->deleteAction(fn ($action) => $action->requiresConfirmation()->modalHeading('Supprimer cette ligne ?')->modalSubmitActionLabel('Oui, supprimer')),
-                        ])
-                        ->columnSpanFull(),
-                ])->columnSpan(2),
+            Forms\Components\Hidden::make('livraison_nom'),
+            Forms\Components\Hidden::make('livraison_prenom'),
+            Forms\Components\Hidden::make('livraison_email'),
+            Forms\Components\Hidden::make('livraison_phone'),
+            Forms\Components\Hidden::make('livraison_region'),
+            Forms\Components\Hidden::make('livraison_code_postale'),
+            Forms\Components\Hidden::make('livraison_adresse1'),
 
-                // Colonne droite (~30–35 %) : Totaux & Note
-                Grid::make(1)->schema([
-                    Section::make('Totaux & Note')
-                        ->icon('heroicon-o-calculator')
-                        ->schema([
-                            Forms\Components\TextInput::make('numero')->label('N° commande')->disabled()->dehydrated(false),
-                            Forms\Components\Select::make('etat')->label('État')->options(Commande::getStatusOptions())->required(),
-                            Forms\Components\TextInput::make('prix_ht')->label('Prix HT')->numeric()->prefix('DT')->disabled()->dehydrated(false),
-                            Forms\Components\TextInput::make('prix_ttc')->label('Total TTC')->numeric()->prefix('DT')->disabled()->dehydrated(false)->extraInputAttributes(['class' => 'font-semibold']),
-                            Forms\Components\TextInput::make('frais_livraison')->label('Frais livraison')->numeric()->prefix('DT')->default(0),
-                            Forms\Components\Textarea::make('note')->label('Note')->rows(4),
-                        ])
-                        ->columns(1)
-                        ->extraAttributes(['class' => 'doc-totaux-sidebar']),
-                ])->columnSpan(1),
-            ])->columnSpanFull(),
+            Forms\Components\Hidden::make('etat')->default(Commande::STATUS_NEW),
+            Forms\Components\Hidden::make('frais_livraison')->default(0),
+            Forms\Components\Hidden::make('prix_ttc')->default(0),
+            Forms\Components\Hidden::make('prix_ht')->default(0),
         ]);
     }
 

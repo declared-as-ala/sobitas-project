@@ -126,6 +126,19 @@ class EditCommande extends EditRecord
         ]);
     }
 
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        $data['details'] = $this->record->details->map(fn ($d) => [
+            'produit_id'    => $d->produit_id,
+            'qte'           => $d->qte ?? $d->quantite ?? 1,
+            'prix_unitaire' => $d->prix_unitaire,
+        ])->toArray();
+        if (empty($data['details'])) {
+            $data['details'] = [['produit_id' => null, 'qte' => 1, 'prix_unitaire' => 0]];
+        }
+        return $data;
+    }
+
     protected function getFormActions(): array
     {
         return [];
@@ -133,13 +146,27 @@ class EditCommande extends EditRecord
 
     protected function afterSave(): void
     {
-        $this->record->refresh();
-        $this->record->load('details');
+        $details = $this->form->getState()['details'] ?? [];
+        $this->record->details()->delete();
+
         $prixHt = 0.0;
-        foreach ($this->record->details as $d) {
-            $prixHt += (float) ($d->qte ?? 0) * (float) ($d->prix_unitaire ?? 0);
+        foreach ($details as $row) {
+            if (empty($row['produit_id'])) {
+                continue;
+            }
+            $qte          = (float) ($row['qte'] ?? 1);
+            $prixUnitaire = (float) ($row['prix_unitaire'] ?? 0);
+            
+            \App\Models\CommandeDetail::create([
+                'commande_id'   => $this->record->id,
+                'produit_id'    => $row['produit_id'],
+                'qte'           => $qte,
+                'prix_unitaire' => $prixUnitaire,
+            ]);
+            $prixHt += $qte * $prixUnitaire;
         }
-        $frais = (float) ($this->record->frais_livraison ?? 0);
+
+        $frais = (float) ($this->form->getState()['frais_livraison'] ?? 0);
         $this->record->update([
             'prix_ht' => round($prixHt, 3),
             'prix_ttc' => round($prixHt + $frais, 3),
