@@ -5,7 +5,6 @@ namespace App\Providers\Filament;
 
 use App\Filament\Pages\Auth\EditProfile;
 use App\Filament\Pages\Auth\Login;
-use App\Filament\Pages\Auth\RequestPasswordReset;
 use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\HistoriqueClient;
 use App\Filament\Pages\SendEmail;
@@ -94,7 +93,7 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->login(Login::class)
-            ->passwordReset(RequestPasswordReset::class)
+            ->passwordReset()
             ->profile(EditProfile::class)
             ->renderHook(
                 'panels::head.end',
