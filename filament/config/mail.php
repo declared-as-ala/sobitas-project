@@ -13,27 +13,28 @@ return [
     |
     */
 
-    'default' => env('MAIL_MAILER', 'smtp'),
+    'default' => 'smtp',
 
     /*
     |--------------------------------------------------------------------------
     | Mailer Configurations
     |--------------------------------------------------------------------------
     |
-    | Read from .env so the same config works for all environments.
+    | Hardcoded to match backend .env so Filament campaign emails use the same
+    | SMTP as order emails (no dependency on Filament container env).
     |
     */
 
     'mailers' => [
         'smtp' => [
-            'transport'  => 'smtp',
-            'host'       => env('MAIL_HOST', 'smtp.gmail.com'),
-            'port'       => env('MAIL_PORT', 587),
-            'encryption' => env('MAIL_ENCRYPTION', 'tls'),
-            'username'   => env('MAIL_USERNAME'),
-            'password'   => env('MAIL_PASSWORD'),
-            'timeout'    => null,
-            'auth_mode'  => null,
+            'transport' => 'smtp',
+            'host' => 'smtp.gmail.com',
+            'port' => 587,
+            'encryption' => 'tls',
+            'username' => 'bitoutawalid@gmail.com',
+            'password' => 'xwpfxykujdlorutz',
+            'timeout' => null,
+            'auth_mode' => null,
         ],
 
         'ses' => [
@@ -82,8 +83,8 @@ return [
     */
 
     'from' => [
-        'address' => env('MAIL_FROM_ADDRESS', env('MAIL_USERNAME')),
-        'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Example')),
+        'address' => env('MAIL_FROM_ADDRESS', 'bitoutawalid@gmail.com'),
+        'name'    => env('MAIL_FROM_NAME', 'Sobitas'),
     ],
 
     /*

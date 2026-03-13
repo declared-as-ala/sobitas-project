@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
-use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable implements FilamentUser
@@ -47,13 +48,54 @@ class User extends Authenticatable implements FilamentUser
     }
 
     /**
-     * Send the password reset notification.
-     *
-     * @param  string  $token
-     * @return void
+     * Send the password reset notification using the SAME direct Mail::send()
+     * path as order confirmation emails — bypasses the Notification system
+     * to guarantee delivery via the hardcoded SMTP config.
      */
-    public function sendPasswordResetNotification($token)
+    public function sendPasswordResetNotification($token): void
     {
-        $this->notify(new ResetPassword($token));
+        // Build the reset URL pointing to the Filament panel's reset-password page
+        $resetUrl = url(route('filament.admin.auth.password-reset.reset', [
+            'token' => $token,
+            'email' => $this->getEmailForPasswordReset(),
+        ], false));
+
+        $user     = $this;
+        $fromAddr = config('mail.from.address', 'bitoutawalid@gmail.com');
+        $fromName = config('mail.from.name', 'Sobitas');
+
+        Log::info('PasswordReset: attempting to send reset email', [
+            'to'         => $user->email,
+            'from'       => $fromAddr,
+            'mailer'     => config('mail.default'),
+            'smtp_host'  => config('mail.mailers.smtp.host'),
+            'reset_url'  => $resetUrl,
+        ]);
+
+        try {
+            Mail::send([], [], function ($message) use ($user, $resetUrl, $fromAddr, $fromName) {
+                $message
+                    ->to($user->email, $user->name)
+                    ->from($fromAddr, $fromName)
+                    ->subject('Réinitialisation de votre mot de passe — Sobitas')
+                    ->html(
+                        view('mail.password-reset', [
+                            'resetUrl' => $resetUrl,
+                            'user'     => $user,
+                            'expiry'   => config('auth.passwords.users.expire', 60),
+                        ])->render()
+                    );
+            });
+
+            Log::info('PasswordReset: email sent successfully', ['to' => $user->email]);
+        } catch (\Throwable $e) {
+            Log::error('PasswordReset: FAILED to send reset email', [
+                'to'    => $user->email,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            // Re-throw so Filament shows an error instead of fake success
+            throw $e;
+        }
     }
 }
