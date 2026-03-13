@@ -380,6 +380,18 @@
 
 <div class="pos-wrap" id="pos-ticket-root" wire:ignore>
 
+    {{-- ── PRINT BUTTON (edit mode only) ── --}}
+    @if($ticketId)
+    <div style="display:flex; justify-content:flex-end; margin-bottom:16px;">
+        <a href="{{ route('tickets.print', ['ticket' => $ticketId]) }}" target="_blank"
+           style="display:inline-flex; align-items:center; gap:8px; background:#f97316; color:#fff; border:none; border-radius:8px; padding:10px 22px; font-size:14px; font-weight:700; cursor:pointer; text-decoration:none; box-shadow:0 4px 6px -1px rgba(249,115,22,.3); transition:all .2s;"
+           onmouseover="this.style.background='#ea580c'" onmouseout="this.style.background='#f97316'">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6v-8z"/></svg>
+            Imprimer
+        </a>
+    </div>
+    @endif
+
     {{-- ── TOP ROW ── --}}
     <div class="pos-top">
 
