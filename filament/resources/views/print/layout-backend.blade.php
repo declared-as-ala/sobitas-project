@@ -23,7 +23,7 @@
         .invoice {
             position: relative;
             background-color: #FFF;
-            min-height: 0;
+            min-height: 297mm;
             padding: 15px;
         }
 

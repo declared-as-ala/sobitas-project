@@ -136,19 +136,16 @@
 @endsection
 
 @section('notices')
-<div class="notices">
-    <div>Note :</div>
+<div class="notices" style="page-break-inside: avoid; break-inside: avoid;">
+    <div><b>Note :</b></div>
     <div class="notice">
-        Arrête la présente facture à la somme de : 
+        Arrête la présente facture à la somme de :
         <span id="words_{{ $documentNumber ?? 'doc' }}"></span> DT
     </div>
+    @if(isset($footerNote) && $footerNote)
+        <div class="notice" style="margin-top: 4px; color: #555;">{{ $footerNote }}</div>
+    @endif
 </div>
-
-@if(isset($footerNote) && $footerNote)
-    <div class="notices" style="border-left-color: #777; margin-top: 10px;">
-        <div class="notice">{{ $footerNote }}</div>
-    </div>
-@endif
 @endsection
 
 @section('scripts')
