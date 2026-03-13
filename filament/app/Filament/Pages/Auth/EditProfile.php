@@ -3,8 +3,7 @@
 namespace App\Filament\Pages\Auth;
 
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Form;
-use Illuminate\Validation\Rule;
+use Filament\Schemas\Components\Component;
 
 /**
  * Custom EditProfile page for Filament v4.
@@ -21,7 +20,7 @@ class EditProfile extends \Filament\Auth\Pages\EditProfile
      * Override the email form component to add unique validation
      * that ignores the currently authenticated user.
      */
-    protected function getEmailFormComponent(): \Filament\Forms\Components\Component
+    protected function getEmailFormComponent(): Component
     {
         $user = $this->getUser();
 
