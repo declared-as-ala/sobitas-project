@@ -92,11 +92,10 @@ class EditCommande extends EditRecord
                 ->action(function (OrderToTicketBlService $service) {
                     $bl = $service->createBlFromOrder($this->record);
                     Notification::make()
-                        ->title('Bon de livraison créé')
-                        ->body('BL #' . $bl->numero . ' a été créé. Redirection…')
+                        ->title('Conversion réussie — ouverture de l’impression pour le Bon de livraison')
                         ->success()
                         ->send();
-                    $this->redirect(TicketResource::getUrl('edit', ['record' => $bl]));
+                    $this->redirect(route('tickets.print', ['ticket' => $bl->id]));
                 }),
             Actions\Action::make('createInvoice')
                 ->label('Créer Facture TVA')
@@ -116,11 +115,10 @@ class EditCommande extends EditRecord
                 ->action(function (CommandeToInvoiceService $service) {
                     $invoice = $service->createInvoiceFromCommande($this->record);
                     Notification::make()
-                        ->title('Facture TVA créée')
-                        ->body('Facture #' . $invoice->numero . ' créée. Redirection…')
+                        ->title('Conversion réussie — ouverture de l’impression pour la Facture TVA')
                         ->success()
                         ->send();
-                    $this->redirect(FactureTvaResource::getUrl('edit', ['record' => $invoice]));
+                    $this->redirect(route('facture-tvas.print', ['factureTva' => $invoice->id]));
                 }),
             ActionGroup::make([
                 Actions\DeleteAction::make()->label('Supprimer la commande'),

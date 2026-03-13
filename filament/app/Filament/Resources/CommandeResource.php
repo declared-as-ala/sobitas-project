@@ -256,10 +256,10 @@ class CommandeResource extends Resource
                         ->action(function (Commande $record) {
                             $bl = app(\App\Services\DocumentConversion\OrderToBlService::class)->createBlFromOrder($record);
                             Notification::make()
-                                ->title('BL #' . $bl->numero . ' créé')
+                                ->title('Conversion réussie — ouverture de l’impression pour le BL #' . $bl->numero)
                                 ->success()
                                 ->send();
-                            return redirect(\App\Filament\Resources\FactureResource::getUrl('edit', ['record' => $bl]));
+                            return redirect(route('factures.print', ['facture' => $bl->id]));
                         }),
                 ])
                     ->icon('heroicon-o-arrow-path')

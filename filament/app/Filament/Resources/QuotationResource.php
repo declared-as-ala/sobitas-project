@@ -170,9 +170,10 @@ class QuotationResource extends Resource
                         ->action(function (Quotation $record) {
                             $ticket = app(\App\Services\DocumentConversion\QuotationConversionService::class)->convertToTicket($record);
                             \Filament\Notifications\Notification::make()
-                                ->title('Ticket #' . $ticket->numero . ' créé')
+                                ->title('Conversion réussie — ouverture de l’impression pour le Ticket #' . $ticket->numero)
                                 ->success()
                                 ->send();
+                            return redirect(route('tickets.print', ['ticket' => $ticket->id]));
                         }),
                     Actions\Action::make('convertToFactureTva')
                         ->label('en Facture TVA')
@@ -183,9 +184,10 @@ class QuotationResource extends Resource
                         ->action(function (Quotation $record) {
                             $invoice = app(\App\Services\DocumentConversion\QuotationConversionService::class)->convertToFactureTva($record);
                             \Filament\Notifications\Notification::make()
-                                ->title('Facture TVA #' . $invoice->numero . ' créée')
+                                ->title('Conversion réussie — ouverture de l’impression pour la Facture TVA #' . $invoice->numero)
                                 ->success()
                                 ->send();
+                            return redirect(route('facture-tvas.print', ['factureTva' => $invoice->id]));
                         }),
                     Actions\Action::make('convertToBl')
                         ->label('en Bon de livraison')
@@ -196,9 +198,10 @@ class QuotationResource extends Resource
                         ->action(function (Quotation $record) {
                             $bl = app(\App\Services\DocumentConversion\QuotationConversionService::class)->convertToBl($record);
                             \Filament\Notifications\Notification::make()
-                                ->title('Bon de livraison #' . $bl->numero . ' créé')
+                                ->title('Conversion réussie — ouverture de l’impression pour le BL #' . $bl->numero)
                                 ->success()
                                 ->send();
+                            return redirect(route('factures.print', ['facture' => $bl->id]));
                         }),
                 ])
                     ->label('Transformer')

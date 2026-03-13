@@ -250,8 +250,8 @@ class EditQuotation extends EditRecord
                     ->modalCancelActionLabel('Annuler')
                     ->action(function (QuotationConversionService $service) {
                         $ticket = $service->convertToTicket($this->record);
-                        Notification::make()->title('Ticket #' . $ticket->numero . ' créé.')->success()->send();
-                        $this->redirect(TicketResource::getUrl('edit', ['record' => $ticket]));
+                        Notification::make()->title('Conversion réussie — ouverture de l’impression.')->success()->send();
+                        $this->redirect(route('tickets.print', ['ticket' => $ticket->id]));
                     }),
                 Actions\Action::make('convertToFactureTva')
                     ->label('Transformer en Facture TVA')
@@ -263,8 +263,8 @@ class EditQuotation extends EditRecord
                     ->modalCancelActionLabel('Annuler')
                     ->action(function (QuotationConversionService $service) {
                         $invoice = $service->convertToFactureTva($this->record);
-                        Notification::make()->title('Facture TVA #' . $invoice->numero . ' créée.')->success()->send();
-                        $this->redirect(FactureTvaResource::getUrl('edit', ['record' => $invoice]));
+                        Notification::make()->title('Conversion réussie — ouverture de l’impression.')->success()->send();
+                        $this->redirect(route('facture-tvas.print', ['factureTva' => $invoice->id]));
                     }),
                 Actions\Action::make('convertToBl')
                     ->label('Transformer en Bon de Livraison')
@@ -276,8 +276,8 @@ class EditQuotation extends EditRecord
                     ->modalCancelActionLabel('Annuler')
                     ->action(function (QuotationConversionService $service) {
                         $bl = $service->convertToBl($this->record);
-                        Notification::make()->title('BL #' . $bl->numero . ' créé.')->success()->send();
-                        $this->redirect(FactureResource::getUrl('edit', ['record' => $bl]));
+                        Notification::make()->title('Conversion réussie — ouverture de l’impression.')->success()->send();
+                        $this->redirect(route('factures.print', ['facture' => $bl->id]));
                     }),
             ])
             ->label('Transformer en…')
