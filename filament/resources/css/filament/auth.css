@@ -1,92 +1,86 @@
-/* ── Login page: full gym background ── */
-body:has(.fi-auth-page) {
-    margin: 0;
-    padding: 0;
+/* ══════════════════════════════════════════════
+   LOGIN PAGE — Full-screen gym background
+   Real Filament v4 selectors from DOM inspection
+   ══════════════════════════════════════════════ */
+
+/* Full-page wrapper */
+.fi-simple-layout {
+    min-height: 100vh !important;
+    background-size: cover !important;
+    background-position: center center !important;
+    background-repeat: no-repeat !important;
+    background-attachment: fixed !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    position: relative !important;
 }
 
-.fi-auth-page {
-    min-height: 100vh;
+/* Dark gradient overlay on top of the photo */
+.fi-simple-layout::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(0,0,0,0.75) 0%, rgba(15,8,2,0.65) 100%);
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* The inner main container (holds the card) */
+.fi-simple-main-ctn {
     position: relative;
+    z-index: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 2rem 1.5rem;
-    background-image: url('/images/auth/gym-bg.jpg');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-attachment: fixed;
+    min-height: 100vh;
+    width: 100%;
+    padding: 2rem 1.25rem;
 }
 
-/* Dark overlay */
-.fi-auth-page::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, rgba(0, 0, 0, 0.72) 0%, rgba(20, 10, 5, 0.65) 100%);
-    z-index: 0;
-}
-
-/* Center the Filament form container */
-.fi-auth-page>* {
-    position: relative;
-    z-index: 1;
-}
-
-/* Override Filament's inner max-width container on auth pages */
-.fi-auth-page .fi-simple-page {
+/* The card itself */
+.fi-simple-main {
     position: relative;
     z-index: 1;
     width: 100%;
-    max-width: 460px;
-    background: rgba(255, 255, 255, 0.97);
-    border-radius: 20px;
-    box-shadow: 0 32px 80px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.15);
-    padding: 2.75rem 2.5rem 2.5rem;
-    backdrop-filter: blur(2px);
+    max-width: 460px !important;
+    background: rgba(255, 255, 255, 0.97) !important;
+    border-radius: 20px !important;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.12) !important;
+    padding: 2.5rem 2.25rem !important;
+    backdrop-filter: blur(4px) !important;
 }
 
 /* ── BIG Logo ── */
-.fi-auth-page .fi-logo,
-.fi-auth-page [data-slot="logo"],
-.fi-auth-page .fi-brand-logo {
+.fi-simple-layout .fi-logo,
+.fi-simple-layout [data-slot="logo"],
+.fi-simple-layout .fi-brand-logo {
     display: flex !important;
     justify-content: center !important;
-    margin-bottom: 2rem !important;
+    margin-bottom: 1.75rem !important;
 }
 
-.fi-auth-page .fi-logo img,
-.fi-auth-page [data-slot="logo"] img,
-.fi-auth-page .fi-brand-logo img {
-    width: 340px !important;
-    max-width: 85vw !important;
+.fi-simple-layout .fi-logo img,
+.fi-simple-layout [data-slot="logo"] img,
+.fi-simple-layout .fi-brand-logo img,
+.fi-simple-layout header img {
+    width: 320px !important;
+    max-width: 80vw !important;
     height: auto !important;
     display: block !important;
-    margin: 0 auto !important;
+    margin: 0 auto 1.5rem auto !important;
     object-fit: contain !important;
-    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15)) !important;
+    filter: drop-shadow(0 4px 14px rgba(0,0,0,0.18)) !important;
 }
 
-/* Heading inside login */
-.fi-auth-page h1 {
-    font-size: 1.4rem;
-    font-weight: 700;
-    text-align: center;
-    color: #1e293b;
-    margin-bottom: 0.25rem;
+/* Heading centered */
+.fi-simple-layout .fi-auth-heading,
+.fi-simple-layout h1 {
+    text-align: center !important;
 }
 
-.fi-auth-page .fi-auth-heading {
-    text-align: center;
-}
-
-/* Form fields */
-.fi-auth-page .fi-fo-field-wrp {
-    margin-bottom: 1.25rem;
-}
-
-/* Submit button */
-.fi-auth-page .fi-btn-color-primary {
+/* Submit button full width */
+.fi-simple-layout .fi-btn[type="submit"] {
     width: 100%;
     justify-content: center;
     font-size: 1rem;
@@ -96,14 +90,15 @@ body:has(.fi-auth-page) {
 }
 
 @media (max-width: 500px) {
-    .fi-auth-page .fi-simple-page {
-        padding: 2rem 1.5rem 1.75rem;
-        border-radius: 16px;
+    .fi-simple-main {
+        padding: 2rem 1.5rem !important;
+        border-radius: 16px !important;
     }
 
-    .fi-auth-page .fi-logo img,
-    .fi-auth-page [data-slot="logo"] img,
-    .fi-auth-page .fi-brand-logo img {
-        width: 260px !important;
+    .fi-simple-layout .fi-logo img,
+    .fi-simple-layout [data-slot="logo"] img,
+    .fi-simple-layout .fi-brand-logo img,
+    .fi-simple-layout header img {
+        width: 220px !important;
     }
 }
