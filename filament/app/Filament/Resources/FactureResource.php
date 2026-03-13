@@ -79,6 +79,11 @@ class FactureResource extends Resource
             Forms\Components\Hidden::make('prix_ttc'),
             Forms\Components\Hidden::make('timbre')->default(0),
             Forms\Components\Hidden::make('net_a_payer'),
+            Forms\Components\Hidden::make('livraison_nom'),
+            Forms\Components\Hidden::make('livraison_phone'),
+            Forms\Components\Hidden::make('livraison_adresse1'),
+            Forms\Components\Hidden::make('livraison_ville'),
+            Forms\Components\Hidden::make('livraison_region'),
         ]);
     }
 

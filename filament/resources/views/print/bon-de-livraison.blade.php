@@ -11,10 +11,10 @@
         <hr class="custom-hr">
         
         @php
-            // For Bon de Livraison, prioritize factures' shipping info over billing over client info
             $showName = '';
             $showAddress = '';
             $showPhone = '';
+            $showEmail = '';
 
             if (isset($facture)) {
                 $f = $facture;
@@ -23,16 +23,38 @@
                     $showName = $client->nom_prenom ?? ($client->nom . ' ' . $client->prenom) ?? $client->name ?? '';
                 }
 
-                $showAddress = trim(($f->livraison_adresse1 ?? $f->adresse1 ?? '') . ' ' . ($f->livraison_ville ?? $f->ville ?? ''));
-                if (empty(trim($showAddress)) && isset($client)) {
-                    $showAddress = trim(($client->adresse ?? '') . ' ' . ($client->ville ?? ''));
+                $addrParts = array_filter([
+                    $f->livraison_adresse1 ?? $f->adresse1 ?? '',
+                    $f->livraison_adresse2 ?? $f->adresse2 ?? '',
+                    $f->livraison_ville ?? $f->ville ?? '',
+                    $f->livraison_region ?? $f->region ?? '',
+                    $f->livraison_code_postale ?? $f->code_postale ?? ''
+                ]);
+                $showAddress = implode(', ', $addrParts);
+                
+                if (empty($showAddress) && isset($client)) {
+                    $clientParts = array_filter([
+                        $client->adresse ?? '',
+                        $client->ville ?? '',
+                        $client->region ?? '',
+                        $client->code_postale ?? ''
+                    ]);
+                    $showAddress = implode(', ', $clientParts);
                 }
 
                 $showPhone = $f->livraison_phone ?? $f->phone ?? ($client->phone ?? $client->phone_1 ?? '');
+                $showEmail = $f->livraison_email ?? $f->email ?? ($client->email ?? '');
             } elseif(isset($client) && $client) {
                 $showName = $client->nom_prenom ?? ($client->nom . ' ' . $client->prenom) ?? $client->name ?? '';
-                $showAddress = trim(($client->adresse ?? '') . ' ' . ($client->ville ?? ''));
+                $clientParts = array_filter([
+                    $client->adresse ?? '',
+                    $client->ville ?? '',
+                    $client->region ?? '',
+                    $client->code_postale ?? ''
+                ]);
+                $showAddress = implode(', ', $clientParts);
                 $showPhone = $client->phone ?? $client->phone_1 ?? '';
+                $showEmail = $client->email ?? '';
             }
         @endphp
 
@@ -44,6 +66,10 @@
         
         @if($showPhone)
             <div class="address"><b>Numéro de téléphone :</b> {{ $showPhone }}</div>
+        @endif
+
+        @if($showEmail)
+            <div class="address"><b>Email :</b> {{ $showEmail }}</div>
         @endif
     </div>
 </div>

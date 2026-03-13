@@ -137,6 +137,23 @@ body:has(.bl-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !importa
                     <div class="form-field">
                         <label style="font-size:12px;color:#64748b;">N°Tél</label>
                         <input class="bl-input" id="bl_phone" disabled value="">
+                    </div>
+                </div>
+
+                {{-- SHIPPING DETAILS (Editable) --}}
+                <div id="bl-shipping-details" style="margin-top:16px; padding-top:12px; border-top:1px dashed #e2e8f0;">
+                    <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:8px;">Coordonnées de Livraison</label>
+                    <div style="display:flex; gap:12px; margin-bottom:8px;">
+                        <input class="bl-input" id="bl_livraison_nom" placeholder="Nom complet..." style="flex:1;">
+                        <input class="bl-input" id="bl_livraison_phone" placeholder="Téléphone..." style="width:120px;">
+                    </div>
+                    <div style="margin-bottom:8px;">
+                        <input class="bl-input" id="bl_livraison_adresse1" placeholder="Adresse de livraison..." style="width:100%;">
+                    </div>
+                    <div style="display:flex; gap:12px;">
+                        <input class="bl-input" id="bl_livraison_ville" placeholder="Ville..." style="flex:1;">
+                        <input class="bl-input" id="bl_livraison_region" placeholder="Région..." style="flex:1;">
+                    </div>
                 </div>
                 <div id="bl-add-client">
                     <div style="margin-bottom:8px;text-align:right;">
@@ -290,6 +307,13 @@ function blHydrate(data) {
     if (data.remise) document.getElementById('bl_remise').value = data.remise;
     if (data.pourcentage_remise) document.getElementById('bl_pourcent_remise').value = data.pourcentage_remise;
     if (data.frais_livraison) document.getElementById('bl_frais_livraison').value = data.frais_livraison;
+    
+    // Hydrate Shipping details
+    if (data.livraison_nom !== undefined) document.getElementById('bl_livraison_nom').value = data.livraison_nom || '';
+    if (data.livraison_phone !== undefined) document.getElementById('bl_livraison_phone').value = data.livraison_phone || '';
+    if (data.livraison_adresse1 !== undefined) document.getElementById('bl_livraison_adresse1').value = data.livraison_adresse1 || '';
+    if (data.livraison_ville !== undefined) document.getElementById('bl_livraison_ville').value = data.livraison_ville || '';
+    if (data.livraison_region !== undefined) document.getElementById('bl_livraison_region').value = data.livraison_region || '';
     
     blCalculate();
 }
@@ -463,6 +487,18 @@ function blSave() {
     @this.set('data.pourcentage_remise', parseFloat(pct));
     @this.set('data.prix_ht', parseFloat(prixHt));
     @this.set('data.frais_livraison', parseFloat(frais));
+    @this.set('data.net_a_payer', parseFloat(net));
+    @this.set('data.prix_ht_apres_remise', parseFloat(document.getElementById('bl_apres_remise')?.value || prixHt));
+    @this.set('data.tva', 0);
+    @this.set('data.prix_ttc', parseFloat(net));
+    @this.set('data.timbre', 0);
+
+    // Save Shipping Details
+    @this.set('data.livraison_nom', document.getElementById('bl_livraison_nom')?.value || null);
+    @this.set('data.livraison_phone', document.getElementById('bl_livraison_phone')?.value || null);
+    @this.set('data.livraison_adresse1', document.getElementById('bl_livraison_adresse1')?.value || null);
+    @this.set('data.livraison_ville', document.getElementById('bl_livraison_ville')?.value || null);
+    @this.set('data.livraison_region', document.getElementById('bl_livraison_region')?.value || null);
     @this.set('data.net_a_payer', parseFloat(net));
     @this.set('data.prix_ht_apres_remise', parseFloat(document.getElementById('bl_apres_remise')?.value || prixHt));
     @this.set('data.tva', 0);
