@@ -2,44 +2,7 @@
 
 namespace App\Filament\Pages\Auth;
 
-use Filament\Forms\Components\Component;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Form;
-use Filament\Pages\Auth\EditProfile as BaseEditProfile;
-
-class EditProfile extends BaseEditProfile
-{
-    /**
-     * @return array<int | string, string | Form>
-     */
-    protected function getForms(): array
-    {
-        return [
-            'form' => $this->getProfileForm(),
-        ];
-    }
-
-    protected function getProfileForm(): Form
-    {
-        return $this->makeForm()
-            ->schema([
-                $this->getNameFormComponent(),
-                $this->getEmailFormComponent(),
-                $this->getPasswordFormComponent(),
-                $this->getPasswordConfirmationFormComponent(),
-            ])
-            ->operation('edit')
-            ->model($this->getUser())
-            ->statePath('data');
-    }
-
-    protected function getEmailFormComponent(): Component
-    {
-        return TextInput::make('email')
-            ->label(__('filament-panels::pages/auth/edit-profile.form.email.label'))
-            ->email()
-            ->required()
-            ->maxLength(255)
-            ->unique(ignoreRecord: true);
-    }
-}
+// NOTE: This file is no longer registered in AdminPanelProvider.
+// Filament v4 uses its built-in profile page via ->profile() without arguments.
+// The base class Filament\Pages\Auth\EditProfile does not exist in Filament v4.
+// This file is kept for reference only and should not be autoloaded.

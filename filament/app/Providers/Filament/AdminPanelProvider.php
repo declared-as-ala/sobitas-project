@@ -2,7 +2,7 @@
 
 namespace App\Providers\Filament;
 
-use App\Filament\Pages\Auth\EditProfile;
+
 use App\Filament\Pages\Auth\Login;
 use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\HistoriqueClient;
@@ -93,7 +93,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->login(Login::class)
             ->passwordReset()
-            ->profile(EditProfile::class)
+            ->profile()
             ->renderHook(
                 'panels::head.end',
                 function (): string {
