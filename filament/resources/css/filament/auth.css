@@ -64,8 +64,8 @@
 .fi-simple-layout [data-slot="logo"] img,
 .fi-simple-layout .fi-brand-logo img,
 .fi-simple-layout header img {
-    width: 420px !important;
-    max-width: 85vw !important;
+    width: 600px !important;
+    max-width: 90vw !important;
     height: auto !important;
     display: block !important;
     margin: 0 auto 1.5rem auto !important;
@@ -99,6 +99,6 @@
     .fi-simple-layout [data-slot="logo"] img,
     .fi-simple-layout .fi-brand-logo img,
     .fi-simple-layout header img {
-        width: 280px !important;
+        width: 350px !important;
     }
 }
