@@ -34,6 +34,7 @@ class OrderToTicketBlService
             $nb = Ticket::whereYear('created_at', $year)->count() + 1;
             $bl->numero = $year . '/' . str_pad((string) $nb, 4, '0', STR_PAD_LEFT);
             $remise = (float) ($order->remise ?? 0);
+            $fraisLivraison = (float) ($order->frais_livraison ?? 0);
 
             $details = [];
             foreach ($order->details as $line) {
@@ -53,11 +54,12 @@ class OrderToTicketBlService
                 ];
             }
 
-            $totals = InvoiceCalculator::calculate($details, $remise, 0, 0, 0, true);
+            $totals = InvoiceCalculator::calculate($details, $remise, 0, 0, $fraisLivraison, true);
 
             $bl->prix_ht = $totals['total_ht_brut'];
             $bl->prix_ttc = $totals['net_a_payer'];
             $bl->remise = $totals['remise'];
+            $bl->frais_livraison = $fraisLivraison;
             $bl->timbre = 0;
             $bl->save();
 
