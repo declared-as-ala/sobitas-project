@@ -67,6 +67,7 @@ class QuotationResource extends Resource
         return $schema->schema([
             Forms\Components\ViewField::make('dv_pos_view')
                 ->hiddenLabel()
+                ->columnSpanFull()
                 ->view('filament.pages.create-devis'),
 
             Forms\Components\Hidden::make('numero'),
