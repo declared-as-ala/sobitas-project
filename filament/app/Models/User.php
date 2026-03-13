@@ -54,11 +54,11 @@ class User extends Authenticatable implements FilamentUser
      */
     public function sendPasswordResetNotification($token): void
     {
-        // Build the reset URL pointing to the Filament panel's reset-password page
-        $resetUrl = url(route('filament.admin.auth.password-reset.reset', [
-            'token' => $token,
-            'email' => $this->getEmailForPasswordReset(),
-        ], false));
+        // Use Filament panel's URL builder — generates a SIGNED URL.
+        // The previous manual route() call was NOT signed, causing 403.
+        $resetUrl = \Filament\Facades\Filament::getPanel('admin')
+            ->getResetPasswordUrl($token, $this->getEmailForPasswordReset());
+
 
         $user     = $this;
         $fromAddr = config('mail.from.address', 'bitoutawalid@gmail.com');
