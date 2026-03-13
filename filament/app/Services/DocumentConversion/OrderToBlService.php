@@ -124,6 +124,29 @@ class OrderToBlService
             $bl->frais_livraison = $totals['frais_livraison'];
             $bl->prix_ttc = $totals['prix_ttc'];
             $bl->net_a_payer = max(0, $totals['net_a_payer']);
+
+            // Map billing fields
+            $bl->nom = $order->nom;
+            $bl->prenom = $order->prenom;
+            $bl->email = $order->email;
+            $bl->phone = $order->phone;
+            $bl->adresse1 = $order->adresse1;
+            $bl->adresse2 = $order->adresse2;
+            $bl->ville = $order->ville;
+            $bl->region = $order->region;
+            $bl->code_postale = $order->code_postale;
+
+            // Map shipping fields
+            $bl->livraison_nom = $order->livraison_nom;
+            $bl->livraison_prenom = $order->livraison_prenom;
+            $bl->livraison_email = $order->livraison_email;
+            $bl->livraison_phone = $order->livraison_phone;
+            $bl->livraison_adresse1 = $order->livraison_adresse1;
+            $bl->livraison_adresse2 = $order->livraison_adresse2;
+            $bl->livraison_ville = $order->livraison_ville;
+            $bl->livraison_region = $order->livraison_region;
+            $bl->livraison_code_postale = $order->livraison_code_postale;
+
             $bl->save();
 
             foreach ($order->details as $line) {

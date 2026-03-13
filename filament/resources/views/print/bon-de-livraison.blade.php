@@ -7,25 +7,43 @@
 @section('client-info')
 <div class="row contacts">
     <div class="col invoice-to">
-        <h5 class="text-gray-light">INFORMATIONS DU CLIENT</h5>
+        <h5 class="text-gray-light">INFORMATIONS DU CLIENT / CORDONÉES DE LIVRAISON</h5>
         <hr class="custom-hr">
         
-        @if(isset($client) && $client)
-            <div class="to"><b>Nom :</b> {{ $client->nom_prenom ?? ($client->nom . ' ' . $client->prenom) ?? '' }}</div>
-            @if($client->adresse || $client->ville)
-                <div class="address"><b>Adresse :</b> {{ trim(($client->adresse ?? '') . ' ' . ($client->ville ?? '')) }}</div>
-            @endif
-            @if($client->phone)
-                <div class="address"><b>Numéro de téléphone :</b> {{ $client->phone }}</div>
-            @endif
-        @elseif(isset($facture))
-            <div class="to"><b>Nom :</b> {{ $facture->nom_prenom ?? ($facture->nom . ' ' . $facture->prenom) ?? '' }}</div>
-            @if($facture->adresse1 || $facture->ville)
-                <div class="address"><b>Adresse :</b> {{ trim(($facture->adresse1 ?? '') . ' ' . ($facture->ville ?? '')) }}</div>
-            @endif
-            @if($facture->phone)
-                <div class="address"><b>Numéro de téléphone :</b> {{ $facture->phone }}</div>
-            @endif
+        @php
+            // For Bon de Livraison, prioritize factures' shipping info over billing over client info
+            $showName = '';
+            $showAddress = '';
+            $showPhone = '';
+
+            if (isset($facture)) {
+                $f = $facture;
+                $showName = trim(($f->livraison_nom ?? $f->nom ?? '') . ' ' . ($f->livraison_prenom ?? $f->prenom ?? ''));
+                if (empty($showName) && isset($client)) {
+                    $showName = $client->nom_prenom ?? ($client->nom . ' ' . $client->prenom) ?? $client->name ?? '';
+                }
+
+                $showAddress = trim(($f->livraison_adresse1 ?? $f->adresse1 ?? '') . ' ' . ($f->livraison_ville ?? $f->ville ?? ''));
+                if (empty(trim($showAddress)) && isset($client)) {
+                    $showAddress = trim(($client->adresse ?? '') . ' ' . ($client->ville ?? ''));
+                }
+
+                $showPhone = $f->livraison_phone ?? $f->phone ?? ($client->phone ?? $client->phone_1 ?? '');
+            } elseif(isset($client) && $client) {
+                $showName = $client->nom_prenom ?? ($client->nom . ' ' . $client->prenom) ?? $client->name ?? '';
+                $showAddress = trim(($client->adresse ?? '') . ' ' . ($client->ville ?? ''));
+                $showPhone = $client->phone ?? $client->phone_1 ?? '';
+            }
+        @endphp
+
+        <div class="to"><b>Nom :</b> {{ $showName }}</div>
+        
+        @if($showAddress)
+            <div class="address"><b>Adresse :</b> {{ $showAddress }}</div>
+        @endif
+        
+        @if($showPhone)
+            <div class="address"><b>Numéro de téléphone :</b> {{ $showPhone }}</div>
         @endif
     </div>
 </div>

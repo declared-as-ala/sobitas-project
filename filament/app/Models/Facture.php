@@ -14,6 +14,9 @@ class Facture extends Model
     protected $fillable = [
         'numero', 'client_id', 'commande_id', 'status', 'prix_ht', 'prix_ttc', 'remise',
         'pourcentage_remise', 'prix_ht_apres_remise', 'tva', 'timbre', 'frais_livraison', 'net_a_payer',
+        'nom', 'prenom', 'email', 'phone', 'adresse1', 'adresse2', 'ville', 'region', 'code_postale',
+        'livraison_nom', 'livraison_prenom', 'livraison_email', 'livraison_phone', 
+        'livraison_adresse1', 'livraison_adresse2', 'livraison_ville', 'livraison_region', 'livraison_code_postale'
     ];
 
     protected $casts = [

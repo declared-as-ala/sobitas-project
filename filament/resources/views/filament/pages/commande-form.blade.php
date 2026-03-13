@@ -1,6 +1,6 @@
 @php
     $coordinate = \App\Models\Coordinate::getCached();
-    $clients    = \App\Models\Client::orderBy('name')->get(['id','name','adresse','email','phone_1','ville','code_postal']);
+    $clients    = \App\Models\Client::orderBy('name')->get(['id','name','adresse','email','phone_1','ville','code_postale']);
     $products   = \App\Models\Product::select('id','code_product','designation_fr','prix','qte')
                     ->orderBy('designation_fr')
                     ->get();
@@ -121,7 +121,7 @@ body:has(.commande-edit-page) [wire\:key] > .fi-fo-field-wrp-label { display: no
                                     data-phone="{{ $c->phone_1 }}"
                                     data-email="{{ $c->email }}"
                                     data-region="{{ $c->ville }}"
-                                    data-cp="{{ $c->code_postal }}">
+                                    data-cp="{{ $c->code_postale }}">
                                 {{ $c->name }} ({{ $c->phone_1 }})
                             </option>
                         @endforeach
