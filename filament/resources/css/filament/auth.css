@@ -43,18 +43,18 @@
     position: relative;
     z-index: 1;
     width: 100%;
-    max-width: 650px !important;
-    /* Increased from 460px to fit 600px logo */
+    max-width: 850px !important;
+    /* Massive width to fit the huge logo */
     background: rgba(255, 255, 255, 0.97) !important;
-    border-radius: 20px !important;
-    box-shadow: 0 32px 80px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.12) !important;
-    padding: 3rem 2.5rem !important;
-    backdrop-filter: blur(4px) !important;
+    border-radius: 24px !important;
+    box-shadow: 0 40px 100px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.12) !important;
+    padding: 3.5rem 3rem !important;
+    backdrop-filter: blur(6px) !important;
 }
 
 .fi-simple-layout header {
-    margin-top: 1rem !important;
-    margin-bottom: 2rem !important;
+    margin-top: 1.5rem !important;
+    margin-bottom: 2.5rem !important;
 }
 
 /* ── BIG Logo ── */
@@ -63,48 +63,55 @@
 .fi-simple-layout .fi-brand-logo {
     display: flex !important;
     justify-content: center !important;
-    margin-bottom: 1.75rem !important;
+    margin-bottom: 2rem !important;
 }
 
 .fi-simple-layout .fi-logo img,
 .fi-simple-layout [data-slot="logo"] img,
 .fi-simple-layout .fi-brand-logo img,
 .fi-simple-layout header img {
-    width: 600px !important;
-    max-width: 90vw !important;
+    width: 15000px !important;
+    /* "So much much bigger" */
+    max-width: 95vw !important;
     height: auto !important;
     display: block !important;
     margin: 0 auto 1.5rem auto !important;
     object-fit: contain !important;
-    filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.18)) !important;
+    filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.2)) !important;
 }
 
 /* Heading centered */
 .fi-simple-layout .fi-auth-heading,
 .fi-simple-layout h1 {
     text-align: center !important;
+    font-size: 1.75rem !important;
+    font-weight: 800 !important;
 }
 
 /* Submit button full width */
 .fi-simple-layout .fi-btn[type="submit"] {
     width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+    display: flex;
     justify-content: center;
-    font-size: 1rem;
+    font-size: 1.1rem;
     font-weight: 700;
-    padding: 0.75rem 1.5rem;
-    border-radius: 10px;
+    padding: 0.85rem 1.5rem;
+    border-radius: 12px;
 }
 
-@media (max-width: 500px) {
+@media (max-width: 850px) {
     .fi-simple-main {
-        padding: 2rem 1.5rem !important;
+        padding: 2.5rem 1.5rem !important;
         border-radius: 16px !important;
+        max-width: 95vw !important;
     }
 
     .fi-simple-layout .fi-logo img,
     .fi-simple-layout [data-slot="logo"] img,
     .fi-simple-layout .fi-brand-logo img,
     .fi-simple-layout header img {
-        width: 350px !important;
+        width: 100% !important;
     }
 }
