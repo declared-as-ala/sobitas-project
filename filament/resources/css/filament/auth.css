@@ -1,73 +1,109 @@
-/* Auth page background and layout */
-.fi-auth-page.auth-page-layout {
+/* ── Login page: full gym background ── */
+body:has(.fi-auth-page) {
+    margin: 0;
+    padding: 0;
+}
+
+.fi-auth-page {
     min-height: 100vh;
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 2.5rem 1.5rem;
+    padding: 2rem 1.5rem;
     background-image: url('/images/auth/gym-bg.jpg');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
+    background-attachment: fixed;
 }
 
-.fi-auth-page.auth-page-layout::before {
+/* Dark overlay */
+.fi-auth-page::before {
     content: '';
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.45);
-    backdrop-filter: blur(3px);
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.72) 0%, rgba(20, 10, 5, 0.65) 100%);
     z-index: 0;
 }
 
-/* Login card */
-.fi-auth-page .auth-card {
+/* Center the Filament form container */
+.fi-auth-page>* {
     position: relative;
     z-index: 1;
-    max-width: 440px;
+}
+
+/* Override Filament's inner max-width container on auth pages */
+.fi-auth-page .fi-simple-page {
+    position: relative;
+    z-index: 1;
     width: 100%;
-    background: rgba(255, 255, 255, 0.98);
-    border-radius: 16px;
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.32);
-    border: 1px solid rgba(255, 255, 255, 0.6);
-    padding: 2.5rem 2.25rem 2.25rem;
+    max-width: 460px;
+    background: rgba(255, 255, 255, 0.97);
+    border-radius: 20px;
+    box-shadow: 0 32px 80px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.15);
+    padding: 2.75rem 2.5rem 2.5rem;
+    backdrop-filter: blur(2px);
 }
 
-/* Logo */
-.fi-auth-page .auth-logo-wrapper {
-    display: flex;
-    align-items: center;
+/* ── BIG Logo ── */
+.fi-auth-page .fi-logo,
+.fi-auth-page [data-slot="logo"],
+.fi-auth-page .fi-brand-logo {
+    display: flex !important;
+    justify-content: center !important;
+    margin-bottom: 2rem !important;
+}
+
+.fi-auth-page .fi-logo img,
+.fi-auth-page [data-slot="logo"] img,
+.fi-auth-page .fi-brand-logo img {
+    width: 340px !important;
+    max-width: 85vw !important;
+    height: auto !important;
+    display: block !important;
+    margin: 0 auto !important;
+    object-fit: contain !important;
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15)) !important;
+}
+
+/* Heading inside login */
+.fi-auth-page h1 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    text-align: center;
+    color: #1e293b;
+    margin-bottom: 0.25rem;
+}
+
+.fi-auth-page .fi-auth-heading {
+    text-align: center;
+}
+
+/* Form fields */
+.fi-auth-page .fi-fo-field-wrp {
+    margin-bottom: 1.25rem;
+}
+
+/* Submit button */
+.fi-auth-page .fi-btn-color-primary {
+    width: 100%;
     justify-content: center;
-    margin-bottom: 1.75rem;
+    font-size: 1rem;
+    font-weight: 700;
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
 }
 
-.fi-auth-page .auth-logo {
-    display: block;
-    width: 260px;
-    max-width: 70vw;
-    height: auto;
-    image-rendering: auto;
-}
-
-/* Form spacing */
-.fi-auth-page .auth-card form {
-    display: block;
-}
-
-@media (max-width: 640px) {
-    .fi-auth-page.auth-page-layout {
-        padding: 1.75rem 1.25rem;
-    }
-
-    .fi-auth-page .auth-card {
+@media (max-width: 500px) {
+    .fi-auth-page .fi-simple-page {
         padding: 2rem 1.5rem 1.75rem;
-        border-radius: 14px;
+        border-radius: 16px;
     }
 
-    .fi-auth-page .auth-logo {
-        width: 220px;
-        max-width: 75vw;
+    .fi-auth-page .fi-logo img,
+    .fi-auth-page [data-slot="logo"] img,
+    .fi-auth-page .fi-brand-logo img {
+        width: 260px !important;
     }
 }
-
