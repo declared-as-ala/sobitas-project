@@ -137,11 +137,6 @@ body:has(.bl-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !importa
                     <div class="form-field">
                         <label style="font-size:12px;color:#64748b;">N°Tél</label>
                         <input class="bl-input" id="bl_phone" disabled value="">
-                    </div>
-                    <div class="form-field">
-                        <label style="font-size:12px;color:#64748b;">Frais Livraison (TND)</label>
-                        <input class="bl-input" style="background:#fff;" id="bl_frais_livraison" type="number" step="0.001" value="0" onchange="blCalculate()" oninput="blCalculate()">
-                    </div>
                 </div>
                 <div id="bl-add-client">
                     <div style="margin-bottom:8px;text-align:right;">
@@ -224,7 +219,8 @@ body:has(.bl-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !importa
                     </tr>
                     <tr>
                         <td>Frais Livraison</td>
-                        <td><input class="tot-input" id="bl_frais_display" disabled value="0.000"></td>
+                        <td><input class="tot-input" id="bl_frais_livraison" value="0.000" step="0.001" type="number"
+                                   onkeyup="blCalculate()" onchange="blCalculate()"></td>
                     </tr>
                     <tr class="bl-net-row">
                         <td>Net à payer</td>
@@ -385,7 +381,6 @@ function blCalculate(typeRemise) {
     var net   = totalHt - totRemise + frais;
 
     document.getElementById('bl_p_ht').value       = totalHt.toFixed(3);
-    document.getElementById('bl_frais_display').value = frais.toFixed(3);
     document.getElementById('bl_net').value         = net.toFixed(3);
 }
 
