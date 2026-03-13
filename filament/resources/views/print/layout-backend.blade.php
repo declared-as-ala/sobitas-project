@@ -23,7 +23,7 @@
         .invoice {
             position: relative;
             background-color: #FFF;
-            min-height: 680px;
+            min-height: 0;
             padding: 15px;
         }
 
@@ -84,7 +84,7 @@
         }
 
         .invoice main {
-            padding-bottom: 50px;
+            padding-bottom: 10px;
         }
 
         .invoice main .notices {
@@ -112,7 +112,7 @@
 
         .invoice table th {
             white-space: nowrap;
-            font-size: 10pt;
+            font-size: 9pt;
         }
 
         .invoice table tbody tr:last-child td {
@@ -156,7 +156,7 @@
             color: #fff !important;
             font-weight: 600 !important;
             text-transform: uppercase !important;
-            padding: 8px !important;
+            padding: 5px 6px !important;
             text-align: left;
             border: 1px solid #ff4a00 !important;
         }
@@ -167,8 +167,8 @@
         .table1 td {
             border-right: 1px solid #b4b4b4;
             border-left: 1px solid #b4b4b4;
-            padding: 8px !important;
-            font-size: 10pt;
+            padding: 4px 6px !important;
+            font-size: 9pt;
         }
 
         .table1 td.text-center { text-align: center; }
@@ -230,6 +230,9 @@
         }
 
         @media print {
+            @page {
+                margin: 8mm;
+            }
             body {
                 background-color: #fff;
                 margin: 0;
@@ -241,14 +244,31 @@
             }
             .invoice {
                 overflow: hidden !important;
-                padding: 10mm;
+                padding: 0;
             }
             .invoice footer {
                 position: fixed;
-                bottom: 0px;
+                bottom: 0;
             }
             header, .client-info-block, .table1 {
                 page-break-inside: avoid;
+                break-inside: avoid;
+            }
+            thead {
+                display: table-header-group;
+            }
+            tfoot {
+                display: table-footer-group;
+            }
+            tr {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+            .notices {
+                page-break-inside: avoid;
+                break-inside: avoid;
+                page-break-before: auto;
+                break-before: auto;
             }
             thead th {
                 -webkit-print-color-adjust: exact;
@@ -258,9 +278,9 @@
                 -webkit-print-color-adjust: exact;
                 color-adjust: exact;
             }
-            .notices {
-                -webkit-print-color-adjust: exact;
-                color-adjust: exact;
+            /* Suppress printed URL */
+            a[href]:after {
+                content: "" !important;
             }
         }
     </style>
@@ -280,7 +300,7 @@
                 <header>
                     <div class="row">
                         <div class="col">
-                            <img src="{{ $logoUrl }}" alt="SOBITAS Logo" style="height: 200px; max-width: 380px; object-fit: contain; margin-bottom: 10px;" />
+                            <img src="{{ $logoUrl }}" alt="SOBITAS Logo" style="height: 80px; max-width: 240px; object-fit: contain; margin-bottom: 6px;" />
                             
                             <div class="header-info">
                                 @if(isset($coordonnee))
