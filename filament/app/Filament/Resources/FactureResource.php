@@ -64,6 +64,7 @@ class FactureResource extends Resource
         return $schema->schema([
             Forms\Components\ViewField::make('bl_pos_view')
                 ->hiddenLabel()
+                ->columnSpanFull()
                 ->view('filament.pages.create-facture-bl'),
 
             Forms\Components\Hidden::make('numero'),

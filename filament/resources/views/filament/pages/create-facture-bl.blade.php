@@ -19,24 +19,27 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <style>
-/* ── Force FULL WIDTH on every Filament v4 container ─────────── */
-.fi-page,
-.fi-page > .fi-page-content,
-.fi-page .fi-main-ctn,
-.fi-resource-page,
-.fi-resource-page > .fi-page-content,
-.fi-main > .fi-main-ctn,
-.fi-layout .fi-main-ctn,
-.fi-simple-layout,
-.fi-simple-main { max-width: 100% !important; width: 100% !important;
-                  padding-left: 4px !important; padding-right: 4px !important; }
+/* ── Force FULL WIDTH on Bon de Livraison Pages using the .bl-page wrapper ─────────── */
+body:has(.bl-page) .fi-main-ctn,
+body:has(.bl-page) .fi-page,
+body:has(.bl-page) .fi-resource-page,
+body:has(.bl-page) form,
+body:has(.bl-page) .fi-fo-component-ctn,
+body:has(.bl-page) .fi-fo-view,
+body:has(.bl-page) .fi-fo-view > div {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+}
 
-.fi-page-header    { display: none !important; }
-.fi-form-actions   { display: none !important; }
+body:has(.bl-page) .fi-page-header { display: none !important; }
+body:has(.bl-page) .fi-form-actions { display: none !important; }
 /* Hide the Filament form label wrapper around our ViewField */
-[wire\:key] > .fi-fo-field-wrp-label { display: none !important; }
+body:has(.bl-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !important; }
 
 .bl-wrap{font-family:'Inter',Arial,sans-serif;padding:16px 24px;background:#f9fafb;min-height:100vh}
+
 .bl-form{background:#fff;border-radius:12px;box-shadow:0 1px 8px rgba(0,0,0,.08);padding:24px}
 
 .bl-top{display:flex;gap:24px;margin-bottom:20px;align-items:flex-start}
@@ -95,6 +98,7 @@
 .btn-save:hover{background:#1d4ed8}
 </style>
 
+<div class="bl-page">
 <div class="bl-wrap">
     <div class="bl-form">
         {{-- TOP ROW --}}
@@ -234,6 +238,7 @@
             <button type="button" class="btn-save" onclick="blSave()">💾 Enregistrer</button>
         </div>
     </div>
+</div>
 </div>
 
 <script>
