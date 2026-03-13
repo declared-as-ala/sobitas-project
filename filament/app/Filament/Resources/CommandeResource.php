@@ -70,6 +70,7 @@ class CommandeResource extends Resource
             Forms\Components\Hidden::make('email'),
             Forms\Components\Hidden::make('phone'),
             Forms\Components\Hidden::make('region'),
+            Forms\Components\Hidden::make('ville'),
             Forms\Components\Hidden::make('code_postale'),
             Forms\Components\Hidden::make('adresse1'),
 
@@ -78,6 +79,7 @@ class CommandeResource extends Resource
             Forms\Components\Hidden::make('livraison_email'),
             Forms\Components\Hidden::make('livraison_phone'),
             Forms\Components\Hidden::make('livraison_region'),
+            Forms\Components\Hidden::make('livraison_ville'),
             Forms\Components\Hidden::make('livraison_code_postale'),
             Forms\Components\Hidden::make('livraison_adresse1'),
 

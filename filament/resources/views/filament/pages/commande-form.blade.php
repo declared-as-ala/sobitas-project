@@ -168,7 +168,8 @@ body:has(.commande-edit-page) .fi-form-actions { display: none !important; }
                         <div><b>Email:</b> <input class="form-control" id="cmd_email" type="email" value="{{ $data['email'] ?? '' }}" placeholder="Email"></div>
                         <div><b>Téléphone:</b> <input class="form-control" id="cmd_phone" value="{{ $data['phone'] ?? '' }}" placeholder="Téléphone"></div>
                         <div><b>Adresse:</b> <input class="form-control" id="cmd_adresse" value="{{ $data['adresse1'] ?? '' }}" placeholder="Adresse"></div>
-                        <div><b>Ville / Région:</b> <input class="form-control" id="cmd_region" value="{{ $data['region'] ?? '' }}" placeholder="Ville / Région"></div>
+                        <div><b>Ville:</b> <input class="form-control" id="cmd_ville" value="{{ $data['ville'] ?? '' }}" placeholder="Ville"></div>
+                        <div><b>Région (Gouvernorat):</b> <input class="form-control" id="cmd_region" value="{{ $data['region'] ?? '' }}" placeholder="Région"></div>
                         <div><b>Code Postal:</b> <input class="form-control" id="cmd_cp" value="{{ $data['code_postale'] ?? '' }}" placeholder="Code Postal"></div>
                     </div>
                     <div class="col-md-6">
@@ -184,7 +185,8 @@ body:has(.commande-edit-page) .fi-form-actions { display: none !important; }
                         <div><b>Email:</b> <input class="form-control" id="cmd_l_email" type="email" value="{{ $data['livraison_email'] ?? '' }}" placeholder="Email"></div>
                         <div><b>Téléphone:</b> <input class="form-control" id="cmd_l_phone" value="{{ $data['livraison_phone'] ?? '' }}" placeholder="Téléphone"></div>
                         <div><b>Adresse:</b> <input class="form-control" id="cmd_l_adresse" value="{{ $data['livraison_adresse1'] ?? '' }}" placeholder="Adresse"></div>
-                        <div><b>Ville / Région:</b> <input class="form-control" id="cmd_l_region" value="{{ $data['livraison_region'] ?? '' }}" placeholder="Ville / Région"></div>
+                        <div><b>Ville:</b> <input class="form-control" id="cmd_l_ville" value="{{ $data['livraison_ville'] ?? '' }}" placeholder="Ville"></div>
+                        <div><b>Région (Gouvernorat):</b> <input class="form-control" id="cmd_l_region" value="{{ $data['livraison_region'] ?? '' }}" placeholder="Région"></div>
                         <div><b>Code Postal:</b> <input class="form-control" id="cmd_l_cp" value="{{ $data['livraison_code_postale'] ?? '' }}" placeholder="Code Postal"></div>
                     </div>
                 </div>
@@ -342,7 +344,8 @@ function selectClient() {
     document.getElementById('cmd_email').value  = email;
     document.getElementById('cmd_phone').value  = tel;
     document.getElementById('cmd_adresse').value= adresse;
-    document.getElementById('cmd_region').value = ville;
+    document.getElementById('cmd_ville').value  = ville;
+    document.getElementById('cmd_region').value = cp ? '' : ''; // Assume region isn't readily available in client, leave as user input or map appropriately if needed
     document.getElementById('cmd_cp').value     = cp;
 
     // Auto-copy to livraison
@@ -355,6 +358,7 @@ function cmdCopyFactToLiv() {
     document.getElementById('cmd_l_email').value  = document.getElementById('cmd_email').value;
     document.getElementById('cmd_l_phone').value  = document.getElementById('cmd_phone').value;
     document.getElementById('cmd_l_adresse').value= document.getElementById('cmd_adresse').value;
+    document.getElementById('cmd_l_ville').value  = document.getElementById('cmd_ville').value;
     document.getElementById('cmd_l_region').value = document.getElementById('cmd_region').value;
     document.getElementById('cmd_l_cp').value     = document.getElementById('cmd_cp').value;
 }
@@ -433,6 +437,7 @@ function cmdSave() {
     @this.set('data.prenom', document.getElementById('cmd_prenom').value);
     @this.set('data.email',  document.getElementById('cmd_email').value);
     @this.set('data.phone',  document.getElementById('cmd_phone').value);
+    @this.set('data.ville',  document.getElementById('cmd_ville').value);
     @this.set('data.region', document.getElementById('cmd_region').value);
     @this.set('data.code_postale', document.getElementById('cmd_cp').value);
     @this.set('data.adresse1',     document.getElementById('cmd_adresse').value);
@@ -442,6 +447,7 @@ function cmdSave() {
     @this.set('data.livraison_email',       document.getElementById('cmd_l_email').value);
     @this.set('data.livraison_phone',       document.getElementById('cmd_l_phone').value);
     @this.set('data.livraison_adresse1',    document.getElementById('cmd_l_adresse').value);
+    @this.set('data.livraison_ville',       document.getElementById('cmd_l_ville').value);
     @this.set('data.livraison_region',      document.getElementById('cmd_l_region').value);
     @this.set('data.livraison_code_postale',document.getElementById('cmd_l_cp').value);
 

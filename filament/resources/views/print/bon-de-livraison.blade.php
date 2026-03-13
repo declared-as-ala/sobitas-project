@@ -5,72 +5,70 @@
 @endphp
 
 @section('client-info')
-<div class="row contacts">
-    <div class="col invoice-to">
-        <h5 class="text-gray-light">INFORMATIONS DU CLIENT / CORDONÉES DE LIVRAISON</h5>
-        <hr class="custom-hr">
-        
-        @php
-            $showName = '';
-            $showAddress = '';
-            $showPhone = '';
-            $showEmail = '';
+<div class="row contacts" style="display: flex; gap: 20px;">
+    @php
+        $billName = ''; $billAddress = ''; $billPhone = ''; $billEmail = '';
+        $shipName = ''; $shipAddress = ''; $shipPhone = ''; $shipEmail = '';
 
-            if (isset($facture)) {
-                $f = $facture;
-                $showName = trim(($f->livraison_nom ?? $f->nom ?? '') . ' ' . ($f->livraison_prenom ?? $f->prenom ?? ''));
-                if (empty($showName) && isset($client)) {
-                    $showName = $client->nom_prenom ?? ($client->nom . ' ' . $client->prenom) ?? $client->name ?? '';
-                }
-
-                $addrParts = array_filter([
-                    $f->livraison_adresse1 ?? $f->adresse1 ?? '',
-                    $f->livraison_adresse2 ?? $f->adresse2 ?? '',
-                    $f->livraison_ville ?? $f->ville ?? '',
-                    $f->livraison_region ?? $f->region ?? '',
-                    $f->livraison_code_postale ?? $f->code_postale ?? ''
-                ]);
-                $showAddress = implode(', ', $addrParts);
-                
-                if (empty($showAddress) && isset($client)) {
-                    $clientParts = array_filter([
-                        $client->adresse ?? '',
-                        $client->ville ?? '',
-                        $client->region ?? '',
-                        $client->code_postale ?? ''
-                    ]);
-                    $showAddress = implode(', ', $clientParts);
-                }
-
-                $showPhone = $f->livraison_phone ?? $f->phone ?? ($client->phone ?? $client->phone_1 ?? '');
-                $showEmail = $f->livraison_email ?? $f->email ?? ($client->email ?? '');
-            } elseif(isset($client) && $client) {
-                $showName = $client->nom_prenom ?? ($client->nom . ' ' . $client->prenom) ?? $client->name ?? '';
-                $clientParts = array_filter([
-                    $client->adresse ?? '',
-                    $client->ville ?? '',
-                    $client->region ?? '',
-                    $client->code_postale ?? ''
-                ]);
-                $showAddress = implode(', ', $clientParts);
-                $showPhone = $client->phone ?? $client->phone_1 ?? '';
-                $showEmail = $client->email ?? '';
+        if (isset($facture)) {
+            $f = $facture;
+            // 1. BILLING INFO (Fallback to Client)
+            $billName = trim(($f->nom ?? '') . ' ' . ($f->prenom ?? ''));
+            if (empty($billName) && isset($client)) {
+                $billName = $client->nom_prenom ?? ($client->nom . ' ' . $client->prenom) ?? $client->name ?? '';
             }
-        @endphp
 
-        <div class="to"><b>Nom :</b> {{ $showName }}</div>
-        
-        @if($showAddress)
-            <div class="address"><b>Adresse :</b> {{ $showAddress }}</div>
-        @endif
-        
-        @if($showPhone)
-            <div class="address"><b>Numéro de téléphone :</b> {{ $showPhone }}</div>
-        @endif
+            $billAddrParts = array_filter([$f->adresse1 ?? '', $f->adresse2 ?? '', $f->ville ?? '', $f->region ?? '', $f->code_postale ?? '']);
+            $billAddress = implode(', ', $billAddrParts);
+            if (empty($billAddress) && isset($client)) {
+                $clientParts = array_filter([$client->adresse ?? '', $client->ville ?? '', $client->region ?? '', $client->code_postale ?? '']);
+                $billAddress = implode(', ', $clientParts);
+            }
 
-        @if($showEmail)
-            <div class="address"><b>Email :</b> {{ $showEmail }}</div>
-        @endif
+            $billPhone = $f->phone ?? ($client->phone ?? $client->phone_1 ?? '');
+            $billEmail = $f->email ?? ($client->email ?? '');
+
+            // 2. SHIPPING INFO (Fallback to Billing)
+            $shipName = trim(($f->livraison_nom ?? '') . ' ' . ($f->livraison_prenom ?? ''));
+            if (empty($shipName)) $shipName = $billName;
+
+            $shipAddrParts = array_filter([$f->livraison_adresse1 ?? '', $f->livraison_adresse2 ?? '', $f->livraison_ville ?? '', $f->livraison_region ?? '', $f->livraison_code_postale ?? '']);
+            $shipAddress = implode(', ', $shipAddrParts);
+            if (empty($shipAddress)) $shipAddress = $billAddress;
+
+            $shipPhone = $f->livraison_phone ?? $billPhone;
+            $shipEmail = $f->livraison_email ?? $billEmail;
+
+        } elseif(isset($client) && $client) {
+            $billName = $client->nom_prenom ?? ($client->nom . ' ' . $client->prenom) ?? $client->name ?? '';
+            $clientParts = array_filter([$client->adresse ?? '', $client->ville ?? '', $client->region ?? '', $client->code_postale ?? '']);
+            $billAddress = implode(', ', $clientParts);
+            $billPhone = $client->phone ?? $client->phone_1 ?? '';
+            $billEmail = $client->email ?? '';
+            
+            $shipName = $billName;
+            $shipAddress = $billAddress;
+            $shipPhone = $billPhone;
+            $shipEmail = $billEmail;
+        }
+    @endphp
+
+    <div class="col invoice-to" style="flex: 1;">
+        <h5 class="text-gray-light">INFORMATIONS DE FACTURATION</h5>
+        <hr class="custom-hr">
+        <div class="to"><b>Nom :</b> {{ $billName }}</div>
+        @if($billAddress)<div class="address"><b>Adresse :</b> {{ $billAddress }}</div>@endif
+        @if($billPhone)<div class="address"><b>Numéro de téléphone :</b> {{ $billPhone }}</div>@endif
+        @if($billEmail)<div class="address"><b>Email :</b> {{ $billEmail }}</div>@endif
+    </div>
+
+    <div class="col invoice-to" style="flex: 1;">
+        <h5 class="text-gray-light">INFORMATIONS DE LIVRAISON</h5>
+        <hr class="custom-hr">
+        <div class="to"><b>Nom :</b> {{ $shipName }}</div>
+        @if($shipAddress)<div class="address"><b>Adresse :</b> {{ $shipAddress }}</div>@endif
+        @if($shipPhone)<div class="address"><b>Numéro de téléphone :</b> {{ $shipPhone }}</div>@endif
+        @if($shipEmail)<div class="address"><b>Email :</b> {{ $shipEmail }}</div>@endif
     </div>
 </div>
 @endsection
