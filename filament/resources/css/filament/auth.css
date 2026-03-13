@@ -66,40 +66,45 @@
 
 }
 
-/* header spacing */
+/* header spacing — login/auth pages only */
 .fi-simple-layout header {
     margin-bottom: 2rem !important;
 }
 
-/* logo container */
+/* logo container — login/auth pages only */
 .fi-simple-layout .fi-logo,
 .fi-simple-layout .fi-brand-logo,
-.fi-simple-layout [data-slot="logo"],
-.fi-simple-layout header {
-
+.fi-simple-layout [data-slot="logo"] {
     display: flex !important;
     justify-content: center !important;
     align-items: center !important;
 }
 
-/* LOGO */
+/* LOGO — login/auth pages only (320px wide) */
 .fi-simple-layout .fi-logo img,
 .fi-simple-layout .fi-brand-logo img,
-.fi-simple-layout [data-slot="logo"] img,
-.fi-simple-layout header img {
-
+.fi-simple-layout [data-slot="logo"] img {
     width: 320px !important;
     max-width: 100% !important;
-
     height: auto !important;
-
     display: block !important;
-
     margin: 0 auto 1.5rem auto !important;
-
     object-fit: contain !important;
-
     filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.2));
+}
+
+/* Dashboard sidebar logo — keep small/normal */
+.fi-sidebar .fi-logo img,
+.fi-sidebar .fi-brand-logo img,
+.fi-sidebar [data-slot="logo"] img,
+.fi-topbar .fi-logo img,
+.fi-topbar .fi-brand-logo img {
+    width: auto !important;
+    max-width: 160px !important;
+    max-height: 60px !important;
+    height: auto !important;
+    margin: 0 !important;
+    filter: none !important;
 }
 
 /* Heading */
