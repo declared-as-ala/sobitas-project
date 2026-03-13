@@ -54,6 +54,19 @@ class OrderToTicketBlService
                 ];
             }
 
+            // Safer Fallback for legacy commandes: 
+            // Derive delivery fee from Order TTC minus the actual sum of line items.
+            if ($fraisLivraison <= 0 && ($order->prix_ttc ?? 0) > 0) {
+                $sumLinesHt = 0;
+                foreach ($details as $d) {
+                    $sumLinesHt += $d['qte'] * $d['prix_unitaire'];
+                }
+                $derivedFrais = (float) $order->prix_ttc - $sumLinesHt - $remise;
+                if ($derivedFrais > 0.001) {
+                    $fraisLivraison = round($derivedFrais, 3);
+                }
+            }
+
             $totals = InvoiceCalculator::calculate($details, $remise, 0, 0, $fraisLivraison, true);
 
             $bl->prix_ht = $totals['total_ht_brut'];

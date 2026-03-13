@@ -108,6 +108,21 @@ class OrderToBlService
                     'tva_pct' => 0,
                 ];
             }
+
+            // Safer Fallback for legacy commandes: 
+            // Derive delivery fee from Order TTC minus the actual sum of line items.
+            // This safely bypasses any corrupted or zero $order->prix_ht in the DB.
+            if ($fraisLivraison <= 0 && ($order->prix_ttc ?? 0) > 0) {
+                $sumLinesHt = 0;
+                foreach ($details as $d) {
+                    $sumLinesHt += $d['qte'] * $d['prix_unitaire'];
+                }
+                $derivedFrais = (float) $order->prix_ttc - $sumLinesHt - $remise;
+                if ($derivedFrais > 0.001) {
+                    $fraisLivraison = round($derivedFrais, 3);
+                }
+            }
+
             $totals = InvoiceCalculator::calculate($details, $remise, $timbre, 0, $fraisLivraison, true);
 
             $bl = new Facture();
