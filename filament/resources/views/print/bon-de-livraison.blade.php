@@ -4,8 +4,8 @@
     $fmt = fn($n) => number_format((float)$n, 3, '.', ' ');
 @endphp
 
-@section('client-info')
-<div class="row contacts">
+@section('client-info-header')
+<div class="client-info-block" style="text-align: left; margin-top: 20px; font-size: 10pt; line-height: 1.4;">
     @php
         $shipName = ''; $shipStreet = ''; $shipCity = ''; $shipRegion = ''; $shipCp = '';
         $shipPhone = ''; $shipEmail = '';
@@ -13,7 +13,7 @@
         if (isset($facture)) {
             $f = $facture;
             $clientName = isset($client) ? ($client->nom_prenom ?? trim(($client->nom ?? '') . ' ' . ($client->prenom ?? '')) ?: ($client->name ?? '')) : '';
-            $cmd = $f->commande; // Ensure we check the parent order if the facture lost data historically
+            $cmd = $f->commande;
             
             $safeLivNom = trim(($f->livraison_nom ?? '') . ' ' . ($f->livraison_prenom ?? '')) ?: trim(($cmd->livraison_nom ?? '') . ' ' . ($cmd->livraison_prenom ?? ''));
             $shipName = $safeLivNom ?: trim(($f->nom ?? '') . ' ' . ($f->prenom ?? '')) ?: trim(($cmd->nom ?? '') . ' ' . ($cmd->prenom ?? '')) ?: $clientName;
@@ -38,17 +38,17 @@
         }
     @endphp
 
-    <div class="col invoice-to">
-        <h5 class="text-gray-light">INFORMATIONS DU CLIENT / COORDONNÉES DE LIVRAISON</h5>
-        <hr class="custom-hr">
-        <div class="to"><b>Nom et prénom :</b> {{ $shipName ?: '—' }}</div>
-        <div class="address"><b>Email :</b> {{ $shipEmail ?: '—' }}</div>
-        <div class="address"><b>Téléphone :</b> {{ $shipPhone ?: '—' }}</div>
-        <div class="address"><b>Adresse :</b> {{ $shipStreet ?: '—' }}</div>
-        <div class="address"><b>Ville :</b> {{ $shipCity ?: '—' }}</div>
-        <div class="address"><b>Région (Gouvernorat) :</b> {{ $shipRegion ?: '—' }}</div>
-        <div class="address"><b>Code postal :</b> {{ $shipCp ?: '—' }}</div>
-    </div>
+    <h5 class="text-gray-light" style="margin-bottom: 5px; font-size: 10pt; border-bottom: 1px solid #eee; padding-bottom: 5px;">
+        INFORMATIONS DU CLIENT / COORDONNÉES DE LIVRAISON
+    </h5>
+    
+    <div><b>Nom et prénom :</b> {{ $shipName ?: '—' }}</div>
+    <div><b>Email :</b> {{ $shipEmail ?: '—' }}</div>
+    <div><b>Téléphone :</b> {{ $shipPhone ?: '—' }}</div>
+    <div><b>Adresse :</b> {{ $shipStreet ?: '—' }}</div>
+    <div><b>Ville :</b> {{ $shipCity ?: '—' }}</div>
+    <div><b>Région (Gouvernorat) :</b> {{ $shipRegion ?: '—' }}</div>
+    <div><b>Code postal :</b> {{ $shipCp ?: '—' }}</div>
 </div>
 @endsection
 

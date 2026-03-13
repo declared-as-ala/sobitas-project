@@ -232,6 +232,7 @@
         @media print {
             body {
                 background-color: #fff;
+                margin: 0;
             }
             #invoice {
                 padding: 0;
@@ -240,11 +241,14 @@
             }
             .invoice {
                 overflow: hidden !important;
-                padding: 0;
+                padding: 10mm;
             }
             .invoice footer {
                 position: fixed;
                 bottom: 0px;
+            }
+            header, .client-info-block, .table1 {
+                page-break-inside: avoid;
             }
             thead th {
                 -webkit-print-color-adjust: exact;
@@ -311,6 +315,8 @@
                             <h1 class="invoice-id">{{ mb_strtoupper($documentTitle ?? 'DOCUMENT') }}</h1>
                             <div class="date"><b>Date :</b> {{ $documentDate ?? date('d/m/Y') }}</div>
                             <div class="number"><b>Numéro:</b> {{ $documentNumber ?? '' }}</div>
+                            
+                            @yield('client-info-header')
                         </div>
                     </div>
                 </header>
