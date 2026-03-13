@@ -9,17 +9,23 @@ use Illuminate\Support\Facades\Log;
 /**
  * Custom ForgotPassword page for Filament v4.
  *
- * Overrides the "request()" action to:
- *  - Use the same SMTP path as order confirmation emails (via User::sendPasswordResetNotification)
- *  - Show a proper SUCCESS toast ONLY when the email is actually sent
- *  - Show a proper ERROR toast when sending fails
- *  - Never show "email envoyé" as a fake success
+ * Extends the built-in RequestPasswordReset page.
+ * The base class namespace in Filament v4 (based on filesystem path
+ * src/Auth/Pages/PasswordReset/RequestPasswordReset.php) is:
+ * \Filament\Auth\Pages\PasswordReset\RequestPasswordReset
+ *
+ * The method that handles sending is "request()" — we override it
+ * to show proper success/failure toasts rather than static success.
  */
 class RequestPasswordReset extends \Filament\Auth\Pages\PasswordReset\RequestPasswordReset
 {
-    protected function sendPasswordResetLink(array $data): void
+    // Override the core action that sends the password reset link.
+    // In Filament v4 the built-in method is "request()" — we call
+    // Password::sendResetLink() directly and react to the status code.
+    public function request(): void
     {
-        $email = $data['email'];
+        $data  = $this->form->getState();
+        $email = $data['email'] ?? '';
 
         Log::info('ForgotPassword: attempting to send reset link', ['email' => $email]);
 
@@ -30,6 +36,7 @@ class RequestPasswordReset extends \Filament\Auth\Pages\PasswordReset\RequestPas
             Log::error('ForgotPassword: exception while sending reset link', [
                 'email' => $email,
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             Notification::make()
@@ -38,7 +45,6 @@ class RequestPasswordReset extends \Filament\Auth\Pages\PasswordReset\RequestPas
                 ->danger()
                 ->send();
 
-            // Halt — don't show the fake success
             return;
         }
 
@@ -48,24 +54,21 @@ class RequestPasswordReset extends \Filament\Auth\Pages\PasswordReset\RequestPas
         ]);
 
         if ($status === Password::RESET_LINK_SENT) {
-            // Real success — only now show the toast
             Notification::make()
-                ->title('Email envoyé')
-                ->body('Un lien de réinitialisation de mot de passe a été envoyé à votre adresse e-mail.')
+                ->title('Email envoyé ✅')
+                ->body('Un lien de réinitialisation a été envoyé à votre adresse e-mail.')
                 ->success()
                 ->send();
         } else {
-            // Broker returned an error code (e.g. user not found, throttled…)
-            // Map status codes to French messages
             $message = match ($status) {
-                Password::INVALID_USER  => 'Aucun compte trouvé avec cette adresse e-mail.',
-                Password::RESET_THROTTLED => 'Vous avez déjà demandé un lien. Veuillez patienter avant de réessayer.',
-                default => 'Impossible d\'envoyer le lien. Statut : ' . __($status),
+                Password::INVALID_USER    => 'Aucun compte trouvé avec cette adresse e-mail.',
+                Password::RESET_THROTTLED => 'Vous avez déjà demandé un lien récemment. Veuillez patienter avant de réessayer.',
+                default                   => 'Impossible d\'envoyer le lien. Code : ' . $status,
             };
 
             Log::warning('ForgotPassword: reset link not sent', [
-                'email'   => $email,
-                'status'  => $status,
+                'email'  => $email,
+                'status' => $status,
             ]);
 
             Notification::make()
