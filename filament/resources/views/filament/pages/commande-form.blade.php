@@ -110,7 +110,10 @@ body:has(.commande-edit-page) [wire\:key] > .fi-fo-field-wrp-label { display: no
             </div>
 
             <div class="cmd-client-box">
-                <label>Client</label>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <label style="margin-bottom: 0;">Client</label>
+                    <a href="{{ \App\Filament\Resources\ClientResource::getUrl('create') }}" target="_blank" style="font-size:11px; color:#3b82f6; text-decoration:none; font-weight:600;">+ Ajouter Client(e)</a>
+                </div>
                 <div class="cmd-input-group">
                     <select id="cmd_client_id" class="cmd-input" style="width:100%" onchange="cmdSelectClient()">
                         <option value="">— Choisir un client —</option>
@@ -220,7 +223,7 @@ body:has(.commande-edit-page) [wire\:key] > .fi-fo-field-wrp-label { display: no
                         <th style="width:100px">Qté</th>
                         <th style="width:120px">P.U TTC</th>
                         <th style="width:120px">P.T TTC</th>
-                        <th style="width:50px"></th>
+                        <th style="width:80px; text-align:center;">Delete</th>
                     </tr>
                 </thead>
                 <tbody id="cmd-tbody">
@@ -250,6 +253,10 @@ body:has(.commande-edit-page) [wire\:key] > .fi-fo-field-wrp-label { display: no
         <!-- Totals & Options -->
         <div class="cmd-bottom">
             <div class="cmd-totals">
+                <div class="cmd-total-row">
+                    <span><label for="cmd_notifier_client" style="cursor:pointer; font-weight:600; color:#3b82f6;">Notifier client (SMS)</label></span>
+                    <input type="checkbox" id="cmd_notifier_client" style="width:16px; height:16px;" {{ ($data['notifier_client'] ?? false) ? 'checked' : '' }}>
+                </div>
                 <div class="cmd-total-row">
                     <span>État de commande</span>
                     <select id="cmd_etat" class="cmd-input" style="width:180px;">
@@ -441,6 +448,7 @@ function cmdSave() {
     @this.set('data.livraison_adresse1', document.getElementById('cmd_l_adresse').value);
 
     @this.set('data.etat', document.getElementById('cmd_etat').value);
+    @this.set('data.notifier_client', document.getElementById('cmd_notifier_client').checked);
     @this.set('data.frais_livraison', parseFloat(document.getElementById('cmd_frais').value) || 0);
     @this.set('data.prix_ttc', parseFloat(document.getElementById('cmd_net').value) || 0);
 

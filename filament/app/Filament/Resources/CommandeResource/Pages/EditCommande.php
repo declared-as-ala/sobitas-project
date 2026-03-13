@@ -14,10 +14,16 @@ use Filament\Actions;
 use Filament\Actions\ActionGroup;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Filament\Support\Enums\MaxWidth;
 
 class EditCommande extends EditRecord
 {
     protected static string $resource = CommandeResource::class;
+
+    public function getMaxContentWidth(): MaxWidth | string | null
+    {
+        return MaxWidth::Full;
+    }
 
     public function getPageClasses(): array
     {

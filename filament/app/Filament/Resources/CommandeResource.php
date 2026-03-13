@@ -82,6 +82,7 @@ class CommandeResource extends Resource
             Forms\Components\Hidden::make('livraison_adresse1'),
 
             Forms\Components\Hidden::make('etat')->default(Commande::STATUS_NEW),
+            Forms\Components\Hidden::make('notifier_client')->default(false),
             Forms\Components\Hidden::make('frais_livraison')->default(0),
             Forms\Components\Hidden::make('prix_ttc')->default(0),
             Forms\Components\Hidden::make('prix_ht')->default(0),

@@ -8,10 +8,16 @@ use App\Services\ClientService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Filament\Resources\Pages\CreateRecord;
+use Filament\Support\Enums\MaxWidth;
 
 class CreateCommande extends CreateRecord
 {
     protected static string $resource = CommandeResource::class;
+
+    public function getMaxContentWidth(): MaxWidth | string | null
+    {
+        return MaxWidth::Full;
+    }
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
