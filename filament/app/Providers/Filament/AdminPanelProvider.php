@@ -196,7 +196,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->unsavedChangesAlerts()
             ->brandLogo(fn () => view('filament.app.logo'))
-            ->brandLogoHeight('auto')
+            ->brandLogoHeight('3.5rem')
             ->favicon(asset('logo.png'))
             ->navigationGroups([
                 NavigationGroup::make('Paramètres du site')
