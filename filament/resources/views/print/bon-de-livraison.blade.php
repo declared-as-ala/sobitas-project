@@ -7,39 +7,27 @@
 @section('client-info')
 <div class="row contacts">
     @php
-        $shipName = ''; $shipAddress = ''; $shipPhone = ''; $shipEmail = '';
+        $shipName = ''; $shipStreet = ''; $shipCity = ''; $shipRegion = ''; $shipCp = '';
+        $shipPhone = ''; $shipEmail = '';
 
         if (isset($facture)) {
             $f = $facture;
-            // 1. SHIPPING INFO (Priority)
-            $shipName = trim(($f->livraison_nom ?? '') . ' ' . ($f->livraison_prenom ?? ''));
-            if (empty($shipName)) {
-                $shipName = trim(($f->nom ?? '') . ' ' . ($f->prenom ?? ''));
-            }
-            if (empty($shipName) && isset($client)) {
-                $shipName = $client->nom_prenom ?? ($client->nom . ' ' . $client->prenom) ?? $client->name ?? '';
-            }
+            $clientName = isset($client) ? ($client->nom_prenom ?? trim(($client->nom ?? '') . ' ' . ($client->prenom ?? '')) ?: ($client->name ?? '')) : '';
 
-            $shipAddrParts = array_filter([$f->livraison_adresse1 ?? '', $f->livraison_adresse2 ?? '', $f->livraison_ville ?? '', $f->livraison_region ?? '', $f->livraison_code_postale ?? '']);
-            $shipAddress = implode(', ', $shipAddrParts);
-            
-            if (empty($shipAddress)) {
-                // Fallback to billing or client
-                $billAddrParts = array_filter([$f->adresse1 ?? '', $f->adresse2 ?? '', $f->ville ?? '', $f->region ?? '', $f->code_postale ?? '']);
-                $shipAddress = implode(', ', $billAddrParts);
-                if (empty($shipAddress) && isset($client)) {
-                    $clientParts = array_filter([$client->adresse ?? '', $client->ville ?? '', $client->region ?? '', $client->code_postale ?? '']);
-                    $shipAddress = implode(', ', $clientParts);
-                }
-            }
-
-            $shipPhone = $f->livraison_phone ?? $f->phone ?? ($client->phone ?? $client->phone_1 ?? '');
-            $shipEmail = $f->livraison_email ?? $f->email ?? ($client->email ?? '');
+            $shipName = trim(($f->livraison_nom ?? '') . ' ' . ($f->livraison_prenom ?? '')) ?: trim(($f->nom ?? '') . ' ' . ($f->prenom ?? '')) ?: $clientName;
+            $shipStreet = trim(($f->livraison_adresse1 ?? '') . ' ' . ($f->livraison_adresse2 ?? '')) ?: trim(($f->adresse1 ?? '') . ' ' . ($f->adresse2 ?? '')) ?: ($client->adresse ?? '');
+            $shipCity = $f->livraison_ville ?: $f->ville ?: ($client->ville ?? '');
+            $shipRegion = $f->livraison_region ?: $f->region ?: ($client->region ?? '');
+            $shipCp = $f->livraison_code_postale ?: $f->code_postale ?: ($client->code_postale ?? '');
+            $shipPhone = $f->livraison_phone ?: $f->phone ?: ($client->phone ?? $client->phone_1 ?? '');
+            $shipEmail = $f->livraison_email ?: $f->email ?: ($client->email ?? '');
 
         } elseif(isset($client) && $client) {
-            $shipName = $client->nom_prenom ?? ($client->nom . ' ' . $client->prenom) ?? $client->name ?? '';
-            $clientParts = array_filter([$client->adresse ?? '', $client->ville ?? '', $client->region ?? '', $client->code_postale ?? '']);
-            $shipAddress = implode(', ', $clientParts);
+            $shipName = $client->nom_prenom ?? trim(($client->nom ?? '') . ' ' . ($client->prenom ?? '')) ?: ($client->name ?? '');
+            $shipStreet = $client->adresse ?? '';
+            $shipCity = $client->ville ?? '';
+            $shipRegion = $client->region ?? '';
+            $shipCp = $client->code_postale ?? '';
             $shipPhone = $client->phone ?? $client->phone_1 ?? '';
             $shipEmail = $client->email ?? '';
         }
@@ -48,10 +36,13 @@
     <div class="col invoice-to">
         <h5 class="text-gray-light">INFORMATIONS DU CLIENT / COORDONNÉES DE LIVRAISON</h5>
         <hr class="custom-hr">
-        <div class="to"><b>Nom :</b> {{ $shipName }}</div>
-        @if($shipAddress)<div class="address"><b>Adresse :</b> {{ $shipAddress }}</div>@endif
-        @if($shipPhone)<div class="address"><b>Numéro de téléphone :</b> {{ $shipPhone }}</div>@endif
-        @if($shipEmail)<div class="address"><b>Email :</b> {{ $shipEmail }}</div>@endif
+        <div class="to"><b>Nom et prénom :</b> {{ $shipName ?: '—' }}</div>
+        <div class="address"><b>Email :</b> {{ $shipEmail ?: '—' }}</div>
+        <div class="address"><b>Téléphone :</b> {{ $shipPhone ?: '—' }}</div>
+        <div class="address"><b>Adresse :</b> {{ $shipStreet ?: '—' }}</div>
+        <div class="address"><b>Ville :</b> {{ $shipCity ?: '—' }}</div>
+        <div class="address"><b>Région (Gouvernorat) :</b> {{ $shipRegion ?: '—' }}</div>
+        <div class="address"><b>Code postal :</b> {{ $shipCp ?: '—' }}</div>
     </div>
 </div>
 @endsection
