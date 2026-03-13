@@ -174,8 +174,9 @@ class EditCommande extends EditRecord
 
         $frais = (float) ($this->form->getState()['frais_livraison'] ?? 0);
         $this->record->update([
-            'prix_ht' => round($prixHt, 3),
-            'prix_ttc' => round($prixHt + $frais, 3),
+            'prix_ht'          => round($prixHt, 3),
+            'frais_livraison'  => round($frais, 3),
+            'prix_ttc'         => round($prixHt + $frais, 3),
         ]);
     }
 }
