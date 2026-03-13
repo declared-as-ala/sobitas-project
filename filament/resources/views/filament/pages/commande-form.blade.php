@@ -1,6 +1,6 @@
 @php
     $coordinate = \App\Models\Coordinate::getCached();
-    $clients    = \App\Models\Client::orderBy('name')->get(['id','name','adresse','email','phone_1','pays','ville','code_postal']);
+    $clients    = \App\Models\Client::orderBy('name')->get(['id','name','adresse','email','phone_1','ville','code_postal']);
     $products   = \App\Models\Product::select('id','code_product','designation_fr','prix','qte')
                     ->orderBy('designation_fr')
                     ->get();
