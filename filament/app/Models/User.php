@@ -57,7 +57,8 @@ class User extends Authenticatable implements FilamentUser
         // Use Filament panel's URL builder — generates a SIGNED URL.
         // The previous manual route() call was NOT signed, causing 403.
         $resetUrl = \Filament\Facades\Filament::getPanel('admin')
-            ->getResetPasswordUrl($token, $this->getEmailForPasswordReset());
+            ->getResetPasswordUrl($token, $this);
+
 
 
         $user     = $this;
