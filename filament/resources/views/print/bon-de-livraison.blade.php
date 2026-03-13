@@ -13,14 +13,19 @@
         if (isset($facture)) {
             $f = $facture;
             $clientName = isset($client) ? ($client->nom_prenom ?? trim(($client->nom ?? '') . ' ' . ($client->prenom ?? '')) ?: ($client->name ?? '')) : '';
-
-            $shipName = trim(($f->livraison_nom ?? '') . ' ' . ($f->livraison_prenom ?? '')) ?: trim(($f->nom ?? '') . ' ' . ($f->prenom ?? '')) ?: $clientName;
-            $shipStreet = trim(($f->livraison_adresse1 ?? '') . ' ' . ($f->livraison_adresse2 ?? '')) ?: trim(($f->adresse1 ?? '') . ' ' . ($f->adresse2 ?? '')) ?: ($client->adresse ?? '');
-            $shipCity = $f->livraison_ville ?: $f->ville ?: ($client->ville ?? '');
-            $shipRegion = $f->livraison_region ?: $f->region ?: ($client->region ?? '');
-            $shipCp = $f->livraison_code_postale ?: $f->code_postale ?: ($client->code_postale ?? '');
-            $shipPhone = $f->livraison_phone ?: $f->phone ?: ($client->phone ?? $client->phone_1 ?? '');
-            $shipEmail = $f->livraison_email ?: $f->email ?: ($client->email ?? '');
+            $cmd = $f->commande; // Ensure we check the parent order if the facture lost data historically
+            
+            $safeLivNom = trim(($f->livraison_nom ?? '') . ' ' . ($f->livraison_prenom ?? '')) ?: trim(($cmd->livraison_nom ?? '') . ' ' . ($cmd->livraison_prenom ?? ''));
+            $shipName = $safeLivNom ?: trim(($f->nom ?? '') . ' ' . ($f->prenom ?? '')) ?: trim(($cmd->nom ?? '') . ' ' . ($cmd->prenom ?? '')) ?: $clientName;
+            
+            $safeLivAddr = trim(($f->livraison_adresse1 ?? '') . ' ' . ($f->livraison_adresse2 ?? '')) ?: trim(($cmd->livraison_adresse1 ?? '') . ' ' . ($cmd->livraison_adresse2 ?? ''));
+            $shipStreet = $safeLivAddr ?: trim(($f->adresse1 ?? '') . ' ' . ($f->adresse2 ?? '')) ?: trim(($cmd->adresse1 ?? '') . ' ' . ($cmd->adresse2 ?? '')) ?: ($client->adresse ?? '');
+            
+            $shipCity = $f->livraison_ville ?: ($cmd->livraison_ville ?? '') ?: $f->ville ?: ($cmd->ville ?? '') ?: ($client->ville ?? '');
+            $shipRegion = $f->livraison_region ?: ($cmd->livraison_region ?? '') ?: $f->region ?: ($cmd->region ?? '') ?: ($client->region ?? '');
+            $shipCp = $f->livraison_code_postale ?: ($cmd->livraison_code_postale ?? '') ?: $f->code_postale ?: ($cmd->code_postale ?? '') ?: ($client->code_postale ?? '');
+            $shipPhone = $f->livraison_phone ?: ($cmd->livraison_phone ?? '') ?: $f->phone ?: ($cmd->phone ?? '') ?: ($client->phone ?? $client->phone_1 ?? '');
+            $shipEmail = $f->livraison_email ?: ($cmd->livraison_email ?? '') ?: $f->email ?: ($cmd->email ?? '') ?: ($client->email ?? '');
 
         } elseif(isset($client) && $client) {
             $shipName = $client->nom_prenom ?? trim(($client->nom ?? '') . ' ' . ($client->prenom ?? '')) ?: ($client->name ?? '');

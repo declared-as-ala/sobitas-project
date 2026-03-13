@@ -246,9 +246,6 @@
                 position: fixed;
                 bottom: 0px;
             }
-            .invoice>div:last-child {
-                page-break-before: always;
-            }
             thead th {
                 -webkit-print-color-adjust: exact;
                 color-adjust: exact;
@@ -336,7 +333,6 @@
                 </footer>
                 @endif
             </div>
-            <div></div> <!-- for page break logic -->
         </div>
     </div>
 
