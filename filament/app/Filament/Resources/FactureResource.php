@@ -47,7 +47,7 @@ class FactureResource extends Resource
         $fraisLivraison = (float) ($isItem ? ($get('../../frais_livraison') ?? 0) : ($get('frais_livraison') ?? 0));
 
         // BL is HT only: no TVA; net_a_payer includes frais_livraison
-        $calcTotals = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, 0, $fraisLivraison);
+        $calcTotals = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, 0, $fraisLivraison, true);
 
         $prefix = $isItem ? '../../' : '';
 
@@ -103,7 +103,7 @@ class FactureResource extends Resource
                 Tables\Columns\TextColumn::make('net_a_payer')
                     ->label('Net à Payer')
                     ->state(function (Facture $record) {
-                        return $record->net_a_payer ?? 0;
+                        return ($record->prix_ht ?? 0) - ($record->remise ?? 0) + ($record->frais_livraison ?? 0);
                     })
                     ->money('TND', divideBy: 1)
                     ->sortable(),

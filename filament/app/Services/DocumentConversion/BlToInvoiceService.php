@@ -5,9 +5,9 @@ namespace App\Services\DocumentConversion;
 use App\Enums\InvoiceStatus;
 use App\Models\AuditLog;
 use App\Models\Coordinate;
-use App\Models\DetailsFactureTva;
 use App\Models\Facture;
 use App\Models\FactureTva;
+use App\Services\InvoiceCalculator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -39,37 +39,46 @@ class BlToInvoiceService
             if (Schema::hasColumn('facture_tvas', 'date_facture')) {
                 $invoice->date_facture = now()->toDateString();
             }
-            $invoice->prix_ht = (float) $bl->prix_ht;
-            $invoice->timbre = (float) ($bl->timbre ?? 0);
-            $invoice->remise = (float) ($bl->remise ?? 0);
-
-            $totalHt = 0.0;
-            $totalTva = 0.0;
+            $details = [];
             foreach ($bl->details as $line) {
                 if (! $line->produit_id) {
                     continue;
                 }
-                $qte = (int) ($line->qte ?? $line->quantite ?? 0);
-                $pu = (float) $line->prix_unitaire;
-                $lineHt = $qte * $pu;
-                $tvaAmount = $lineHt * $defaultTvaPct / 100;
-                $totalHt += $lineHt;
-                $totalTva += $tvaAmount;
+                $details[] = [
+                    'produit_id' => $line->produit_id,
+                    'qte' => (int) ($line->qte ?? $line->quantite ?? 1),
+                    'prix_unitaire' => (float) $line->prix_unitaire,
+                    'tva_pct' => $defaultTvaPct,
+                ];
             }
-            $invoice->tva = $totalTva;
-            $invoice->prix_ttc = $totalHt + $totalTva - (float) $invoice->remise + (float) $invoice->timbre;
-            // Do not set prix_total: facture_tvas table has no prix_total column (total is in prix_ttc)
+
+            // BL -> Facture TVA completely drops frais_livraison
+            $totals = InvoiceCalculator::calculate($details, (float) ($bl->remise ?? 0), (float) ($bl->timbre ?? 0), $defaultTvaPct, 0);
+
+            $invoice->prix_ht = $totals['total_ht_brut'];
+            $invoice->remise = $totals['remise'];
+            $invoice->timbre = $totals['timbre'];
+            $invoice->prix_ht_apres_remise = $totals['prix_ht_apres_remise'];
+            $invoice->tva = $totals['tva'];
+            $invoice->prix_ttc = $totals['prix_ttc'];
+            $invoice->net_a_payer = $totals['net_a_payer'];
+            if (Schema::hasColumn('facture_tvas', 'pourcentage_remise')) {
+                $invoice->pourcentage_remise = $totals['pourcentage_remise'];
+            }
+            if (Schema::hasColumn('facture_tvas', 'prix_total')) {
+                $invoice->prix_total = $totals['prix_ttc'];
+            }
             $invoice->save();
 
             foreach ($bl->details as $line) {
                 if (! $line->produit_id) {
                     continue;
                 }
-                $qte = (int) ($line->qte ?? $line->quantite ?? 0);
+                $qte = (int) ($line->qte ?? $line->quantite ?? 1);
                 $pu = (float) $line->prix_unitaire;
                 $lineHt = $qte * $pu;
                 $tvaAmount = $lineHt * $defaultTvaPct / 100;
-                DetailsFactureTva::create([
+                \App\Models\DetailsFactureTva::create([
                     'facture_tva_id' => $invoice->id,
                     'produit_id' => $line->produit_id,
                     'qte' => $qte,

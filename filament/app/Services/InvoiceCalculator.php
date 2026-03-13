@@ -15,7 +15,7 @@ class InvoiceCalculator
      * @param float $fraisLivraison Frais de livraison (ex: pour BL depuis commande)
      * @return array
      */
-    public static function calculate(array $details, float $remise = 0, float $timbre = 0, float $defaultTva = 19, float $fraisLivraison = 0): array
+    public static function calculate(array $details, float $remise = 0, float $timbre = 0, float $defaultTva = 19, float $fraisLivraison = 0, bool $ignoreTva = false): array
     {
         $totalHt = 0.0;
         $totalTva = 0.0;
@@ -29,7 +29,7 @@ class InvoiceCalculator
 
             $qte = (int) ($row['qte'] ?? $row['quantite'] ?? 1);
             $prixUnitaire = (float) ($row['prix_unitaire'] ?? 0);
-            $tvaPct = (float) ($row['tva_pct'] ?? $row['tva'] ?? $defaultTva);
+            $tvaPct = $ignoreTva ? 0.0 : (float) ($row['tva_pct'] ?? $row['tva'] ?? $defaultTva);
 
             $htLigne = $qte * $prixUnitaire;
             $tvaLigne = $htLigne * $tvaPct / 100;

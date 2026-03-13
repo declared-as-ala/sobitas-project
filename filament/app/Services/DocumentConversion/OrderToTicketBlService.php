@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use App\Models\Commande;
 use App\Models\DetailsTicket;
 use App\Models\Ticket;
+use App\Services\InvoiceCalculator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -32,9 +33,31 @@ class OrderToTicketBlService
             $year = date('Y');
             $nb = Ticket::whereYear('created_at', $year)->count() + 1;
             $bl->numero = $year . '/' . str_pad((string) $nb, 4, '0', STR_PAD_LEFT);
-            $bl->prix_ht = (float) $order->prix_ht;
-            $bl->prix_ttc = (float) $order->prix_ttc;
-            $bl->remise = (float) ($order->remise ?? 0);
+            $remise = (float) ($order->remise ?? 0);
+
+            $details = [];
+            foreach ($order->details as $line) {
+                if (! $line->produit_id) {
+                    continue;
+                }
+                $qte = $quantities[$line->id] ?? $quantities[$line->produit_id] ?? $line->qte;
+                $qte = (int) $qte;
+                if ($qte <= 0) {
+                    continue;
+                }
+                $details[] = [
+                    'produit_id' => $line->produit_id,
+                    'qte' => $qte,
+                    'prix_unitaire' => (float) $line->prix_unitaire,
+                    'tva_pct' => 0,
+                ];
+            }
+
+            $totals = InvoiceCalculator::calculate($details, $remise, 0, 0, 0, true);
+
+            $bl->prix_ht = $totals['total_ht_brut'];
+            $bl->prix_ttc = $totals['net_a_payer'];
+            $bl->remise = $totals['remise'];
             $bl->timbre = 0;
             $bl->save();
 

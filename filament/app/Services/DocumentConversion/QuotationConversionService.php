@@ -96,10 +96,28 @@ class QuotationConversionService
             $year = date('Y');
             $nb = Ticket::whereYear('created_at', $year)->count() + 1;
             $ticket->numero = $year . '/' . str_pad((string) $nb, 4, '0', STR_PAD_LEFT);
-            $ticket->prix_ht = (float) ($quotation->prix_ht ?? $quotation->prix_total ?? 0);
-            $ticket->prix_ttc = (float) ($quotation->prix_ttc ?? $quotation->prix_total ?? 0);
-            $ticket->remise = (float) ($quotation->remise ?? 0);
-            $ticket->timbre = (float) ($quotation->timbre ?? 0);
+            $remise = (float) ($quotation->remise ?? 0);
+            $timbre = (float) ($quotation->timbre ?? 0);
+
+            $details = [];
+            foreach ($quotation->details as $line) {
+                if (! $line->produit_id) {
+                    continue;
+                }
+                $details[] = [
+                    'produit_id' => $line->produit_id,
+                    'qte' => (int) ($line->qte ?? $line->quantite ?? 1),
+                    'prix_unitaire' => (float) ($line->prix_unitaire ?? 0),
+                    'tva_pct' => 0,
+                ];
+            }
+            // Tickets are completely HT, dropping TVA and frais livraison
+            $totals = InvoiceCalculator::calculate($details, $remise, $timbre, 0, 0, true);
+
+            $ticket->prix_ht = $totals['total_ht_brut'];
+            $ticket->prix_ttc = $totals['net_a_payer'];
+            $ticket->remise = $totals['remise'];
+            $ticket->timbre = $totals['timbre'];
             if (Schema::hasColumn('tickets', 'date_ticket')) {
                 $ticket->date_ticket = now()->toDateString();
             }
@@ -244,7 +262,10 @@ class QuotationConversionService
                     'tva_pct' => 0,
                 ];
             }
-            $totals = InvoiceCalculator::calculate($details, $remise, $timbre, 0);
+            $total_items_ht = collect($details)->reduce(fn($c, $row) => $c + ($row['qte'] * $row['prix_unitaire']), 0);
+            $frais_livraison = $total_items_ht > 300 ? 0 : 10;
+
+            $totals = InvoiceCalculator::calculate($details, $remise, $timbre, 0, $frais_livraison, true);
 
             $bl = new Facture();
             $bl->commande_id = null;
@@ -257,6 +278,7 @@ class QuotationConversionService
             $bl->prix_ht_apres_remise = $totals['prix_ht_apres_remise'];
             $bl->tva = $totals['tva'];
             $bl->timbre = $totals['timbre'];
+            $bl->frais_livraison = $totals['frais_livraison'];
             $bl->prix_ttc = $totals['prix_ttc'];
             $bl->net_a_payer = $totals['net_a_payer'];
             $bl->save();

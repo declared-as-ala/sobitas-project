@@ -262,7 +262,7 @@
 
 
                             <tr>
-                                <td>Totale HT</td>
+                                <td>Net à payer</td>
                                 <td></td>
                                 <td>{{ number_format((float) @$ticket->prix_ttc, 3, '.', '') }}</td>
                             </tr>

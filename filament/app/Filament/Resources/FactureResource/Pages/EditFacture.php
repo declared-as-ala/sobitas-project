@@ -53,7 +53,8 @@ class EditFacture extends EditRecord
             (float)($this->record->remise ?? 0),
             0.0,
             0,
-            (float)($this->record->frais_livraison ?? 0)
+            (float)($this->record->frais_livraison ?? 0),
+            true
         );
 
         $net = number_format($calc['net_a_payer'], 3, ',', ' ') . ' TND';
@@ -97,7 +98,7 @@ class EditFacture extends EditRecord
         $remise = (float) ($this->record->remise ?? 0);
         $timbre = 0.0;
         $fraisLivraison = (float) ($this->record->frais_livraison ?? 0);
-        $totals = \App\Services\InvoiceCalculator::calculate($data['details'], $remise, $timbre, 0, $fraisLivraison);
+        $totals = \App\Services\InvoiceCalculator::calculate($data['details'], $remise, $timbre, 0, $fraisLivraison, true);
 
         $data['prix_ht'] = $totals['total_ht_brut'];
         $data['pourcentage_remise'] = $totals['pourcentage_remise'];
@@ -146,7 +147,7 @@ class EditFacture extends EditRecord
         $timbre = 0.0;
         $fraisLivraison = (float) ($state['frais_livraison'] ?? 0);
 
-        $calcTotals = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, 0, $fraisLivraison);
+        $calcTotals = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, 0, $fraisLivraison, true);
 
         $this->record->update([
             'prix_ht' => $calcTotals['total_ht_brut'],
@@ -218,7 +219,7 @@ class EditFacture extends EditRecord
         $remise = (float) ($newState['remise'] ?? 0);
         $timbre = 0.0;
         $fraisLivraison = (float) ($newState['frais_livraison'] ?? 0);
-        $calc = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, 0, $fraisLivraison);
+        $calc = \App\Services\InvoiceCalculator::calculate($details, $remise, $timbre, 0, $fraisLivraison, true);
         $this->form->fill(array_merge($newState, [
             'prix_ht' => $calc['total_ht_brut'],
             'pourcentage_remise' => $calc['pourcentage_remise'],

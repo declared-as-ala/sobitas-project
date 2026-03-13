@@ -108,7 +108,7 @@ class OrderToBlService
                     'tva_pct' => 0,
                 ];
             }
-            $totals = InvoiceCalculator::calculate($details, $remise, $timbre, 0, $fraisLivraison);
+            $totals = InvoiceCalculator::calculate($details, $remise, $timbre, 0, $fraisLivraison, true);
 
             $bl = new Facture();
             $bl->commande_id = $order->id;

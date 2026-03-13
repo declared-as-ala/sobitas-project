@@ -56,8 +56,8 @@
             <th style="width: 5%;" class="text-center">#</th>
             <th style="width: 45%;">PRODUIT</th>
             <th style="width: 15%;" class="text-center">QUANTITÉ</th>
-            <th style="width: 15%;" class="text-right">PRIX.U</th>
-            <th style="width: 20%;" class="text-right">PRIX T.TTC</th>
+            <th style="width: 15%;" class="text-right">PRIX.U (HT)</th>
+            <th style="width: 20%;" class="text-right">TOTAL (HT)</th>
         </tr>
     </thead>
     <tbody>
@@ -76,7 +76,7 @@
                 <td>{{ collect(explode('-', $designation))->map(fn($v) => trim($v))->implode(' - ') }}</td>
                 <td class="text-center">{{ $qte }}</td>
                 <td class="text-right">{{ $fmt($pu) }}</td>
-                <td class="text-right">{{ $fmt($pttc) }}</td>
+                <td class="text-right">{{ $fmt($qte * $pu) }}</td>
             </tr>
             @php $i++; @endphp
         @endforeach
@@ -87,7 +87,7 @@
             $remise = $calc_remise ?? $facture->remise ?? 0;
             $frais = $calc_frais ?? $facture->frais_livraison ?? 0;
             $pourcentageRemise = $calc_pourcentage_remise ?? $facture->pourcentage_remise ?? 0;
-            $netAPayer = $calc_net_a_payer ?? $facture->net_a_payer ?? $facture->prix_ttc ?? $totalHt;
+            $netAPayer = $calc_net_a_payer ?? ($totalHt - $remise + $frais);
         @endphp
 
         <!-- Montant Total HT -->
@@ -124,10 +124,10 @@
             </tr>
         @endif
         
-        <!-- Montant Totale TTC -->
+        <!-- Net à payer -->
         <tr>
             <td colspan="2"></td>
-            <th class="bt" colspan="2" style="background-color: #fcece3;">Montant Totale TTC</th>
+            <th class="bt" colspan="2" style="background-color: #fcece3;">Net à payer</th>
             <th class="text-right bt" style="background-color: #fcece3;">
                 {{ $fmt($netAPayer) }}
             </th>
@@ -192,7 +192,7 @@
     }
     
     document.addEventListener('DOMContentLoaded', function() {
-        var total = "{{ $fmt($calc_net_a_payer ?? $facture->net_a_payer ?? $facture->prix_ttc ?? $calc_total_ht ?? $facture->prix_ht ?? 0) }}";
+        var total = "{{ $fmt($calc_net_a_payer ?? (isset($facture) ? ($facture->prix_ht - $facture->remise + $facture->frais_livraison) : 0)) }}";
         // Convert to properly read float string for inWords without spaces
         total = total.replace(/\s+/g, '');
         var el = document.getElementById("words_{{ $documentNumber ?? 'doc' }}");
