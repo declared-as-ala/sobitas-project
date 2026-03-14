@@ -102,7 +102,7 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
   const dedupedImages = [...new Set(imageArray)];
   const price = getSchemaPrice(product);
   // rupture = 0 means IN STOCK; rupture = 1 means OUT OF STOCK
-  const inStock = (product as { rupture?: number }).rupture === 0 || (product as { rupture?: number }).rupture === false || (product as { rupture?: number }).rupture === '0';
+  const inStock = (product as any).rupture === 0 || (product as any).rupture === false || (product as any).rupture === '0';
   const description = stripHtml(
     product.description_cover || product.description_fr || '',
     500
