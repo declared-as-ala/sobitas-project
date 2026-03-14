@@ -43,7 +43,7 @@ class CommandeResource extends Resource
     public static function getNavigationBadge(): ?string
     {
         // Cache the badge count for 60 seconds to avoid query on every page load
-        $count = Cache::remember('nav:commandes_pending', 60, function () {
+        $count = \Illuminate\Support\Facades\Cache::remember('nav:commandes_pending', 60, function () {
             return static::getModel()::where('etat', 'nouvelle_commande')->count();
         });
 
@@ -173,6 +173,7 @@ class CommandeResource extends Resource
             ])
             ->defaultSort('created_at', 'desc')
             ->defaultPaginationPageOption(25)
+            ->paginationPageOptions([10, 25, 50])
             ->filters([
                 Tables\Filters\SelectFilter::make('etat')
                     ->label('État')

@@ -87,7 +87,11 @@ class QuotationResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $query) => $query->with('client:id,name'))
+            // PERF: Select only needed columns + eager load client
+            ->modifyQueryUsing(fn (Builder $query) => $query
+                ->select(['quotations.id', 'quotations.numero', 'quotations.client_id', 'quotations.prix_ht', 'quotations.net_a_payer', 'quotations.created_at', 'quotations.statut'])
+                ->with('client:id,name')
+            )
             ->striped()
             ->columns([
                 Tables\Columns\TextColumn::make('numero')
@@ -137,6 +141,7 @@ class QuotationResource extends Resource
             ])
             ->defaultSort('created_at', 'desc')
             ->defaultPaginationPageOption(25)
+            ->paginationPageOptions([10, 25, 50])
             ->filters([
                 Tables\Filters\SelectFilter::make('statut')
                     ->label('Statut')

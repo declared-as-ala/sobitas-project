@@ -201,7 +201,11 @@ class TicketResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $query) => $query->with('client:id,name'))
+            // PERF: Select only needed columns + eager load client
+            ->modifyQueryUsing(fn (Builder $query) => $query
+                ->select(['tickets.id', 'tickets.numero', 'tickets.type', 'tickets.client_id', 'tickets.prix_ttc', 'tickets.created_at'])
+                ->with('client:id,name')
+            )
             ->striped()
             ->columns([
                 Tables\Columns\TextColumn::make('numero')
@@ -231,6 +235,7 @@ class TicketResource extends Resource
             ])
             ->defaultSort('created_at', 'desc')
             ->defaultPaginationPageOption(25)
+            ->paginationPageOptions([10, 25, 50])
             ->actions([
                 Actions\EditAction::make()
                     ->url(fn (Ticket $record) => \App\Filament\Pages\TicketPosPage::getUrl(['ticketId' => $record->id])),

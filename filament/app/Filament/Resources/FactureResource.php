@@ -133,6 +133,7 @@ class FactureResource extends Resource
             ])
             ->defaultSort('created_at', 'desc')
             ->defaultPaginationPageOption(25)
+            ->paginationPageOptions([10, 25, 50])
             ->striped()
             ->actions([
                 Actions\EditAction::make(),

@@ -106,6 +106,7 @@ class FactureTvaResource extends Resource
             ])
             ->defaultSort('created_at', 'desc')
             ->defaultPaginationPageOption(25)
+            ->paginationPageOptions([10, 25, 50])
             ->actions([
                 Actions\EditAction::make(),
                 Actions\Action::make('print')
