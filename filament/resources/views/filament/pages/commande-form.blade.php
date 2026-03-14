@@ -1,9 +1,15 @@
 @php
     $coordinate = \App\Models\Coordinate::getCached();
-    $clients    = \App\Models\Client::orderBy('name')->get(['id','name','adresse','email','phone_1','ville','code_postale']);
-    $products   = \App\Models\Product::select('id','code_product','designation_fr','prix','qte')
-                    ->orderBy('designation_fr')
-                    ->get();
+    $data   = $this->form->getRawState();
+    
+    $selProductIds = collect($data['details'] ?? [])->pluck('produit_id')->filter()->toArray();
+    $selProducts = [];
+    if (!empty($selProductIds)) {
+        $selProducts = \App\Models\Product::whereIn('id', $selProductIds)->get(['id','designation_fr','code_product','qte'])->keyBy('id');
+    }
+    
+    $selClientId = $data['user_id'] ?? null;
+    $selClient = $selClientId ? \App\Models\Client::find($selClientId) : null;
     $max = 100;
 
     $logoPath = public_path('logo.png');
@@ -13,7 +19,6 @@
 
     $record = $this->record;
     $isEdit = $record !== null;
-    $data   = $this->form->getRawState();
 @endphp
 
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
@@ -139,17 +144,16 @@ body:has(.commande-edit-page) .fi-form-actions { display: none !important; }
                         Client
                         <select id="select_client" class="form-control select2" onchange="selectClient()">
                             <option value="">Choisir</option>
-                            @foreach($clients as $client)
-                                <option value="{{ $client->id }}"
-                                    data-adresse="{{ $client->adresse }}"
-                                    data-phone="{{ $client->phone_1 }}"
-                                    data-email="{{ $client->email }}"
-                                    data-ville="{{ $client->ville }}"
-                                    data-cp="{{ $client->code_postale }}"
-                                    {{ ($data['user_id'] ?? '') == $client->id ? 'selected' : '' }}>
-                                    {{ $client->name }} ({{ $client->phone_1 }})
+                            @if($selClient)
+                                <option value="{{ $selClient->id }}" selected
+                                    data-adresse="{{ $selClient->adresse }}"
+                                    data-phone="{{ $selClient->phone_1 }}"
+                                    data-email="{{ $selClient->email }}"
+                                    data-ville="{{ $selClient->ville }}"
+                                    data-cp="{{ $selClient->code_postale }}">
+                                    {{ $selClient->name }} ({{ $selClient->phone_1 }})
                                 </option>
-                            @endforeach
+                            @endif
                         </select>
                         <p>Adresse : <input class="form-control" id="adr" disabled value="{{ $data['adresse1'] ?? '' }}"></p>
                         <p>N°Tél : <input class="form-control" id="phone_disp" disabled value="{{ $data['phone'] ?? '' }}"></p>
@@ -208,13 +212,6 @@ body:has(.commande-edit-page) .fi-form-actions { display: none !important; }
                             <td style="min-width:300px;">
                                 <select name="produit_id_{{ $i }}" class="form-control select2" id="select_produit{{ $i }}" onchange="selectProduit({{ $i }})">
                                     <option value="" selected disabled>Choisir..</option>
-                                    @foreach($products as $produit)
-                                        <option value="{{ $produit->id }}"
-                                            data-prix="{{ $produit->getEffectiveUnitPrice() }}"
-                                            data-qte="{{ $produit->qte }}">
-                                            {{ $produit->designation_fr }} ({{ $produit->qte }}) — {{ $produit->code_product }}
-                                        </option>
-                                    @endforeach
                                 </select>
                             </td>
                             <td><input type="number" id="qte{{ $i }}" class="form-control" step="1" value="1" min="1" onkeyup="calculate()" onchange="calculate()"></td>
@@ -285,21 +282,49 @@ var cmdMax = {{ $max }};
 
 $(document).ready(function() {
     // Init select2 for client
-    $('#select_client').select2({ placeholder: 'Choisir', allowClear: true, width: '100%' });
+    $('#select_client').select2({ 
+        placeholder: 'Choisir', 
+        allowClear: true, 
+        width: '100%',
+        ajax: {
+            url: '/api/pos-clients',
+            dataType: 'json',
+            delay: 250,
+            data: function (params) { return { q: params.term || '' }; },
+            cache: true
+        }
+    });
 
     // Init select2 for all product rows
     for (let i = 1; i <= cmdMax; i++) {
-        $('#select_produit' + i).select2({ placeholder: 'Choisir..', allowClear: true, width: '100%' });
+        $('#select_produit' + i).select2({ 
+            placeholder: 'Choisir..', 
+            allowClear: true, 
+            width: '100%',
+            ajax: {
+                url: '/api/pos-products',
+                dataType: 'json',
+                delay: 250,
+                data: function (params) { return { q: params.term || '' }; },
+                cache: true
+            }
+        });
     }
 
-    // Load existing rows from Livewire data
+    var selProducts = @json($selProducts);
     var existingLines = @json($data['details'] ?? []);
     if (existingLines.length > 0) {
         existingLines.forEach(function(line) {
             if (line.produit_id && j < cmdMax) {
                 j++;
                 document.getElementById('achat' + j).style.display = '';
-                $('#select_produit' + j).val(line.produit_id).trigger('change.select2');
+                var pInfo = selProducts[line.produit_id];
+                if (pInfo) {
+                    var newOption = new Option(pInfo.designation_fr + ' (' + (pInfo.qte||0) + ') — ' + pInfo.code_product, line.produit_id, true, true);
+                    $('#select_produit' + j).append(newOption).trigger('change.select2');
+                } else {
+                    $('#select_produit' + j).val(line.produit_id).trigger('change.select2');
+                }
                 document.getElementById('qte' + j).value = line.qte || 1;
                 document.getElementById('p_unitaire' + j).value = parseFloat(line.prix_unitaire || 0).toFixed(3);
             }
@@ -326,15 +351,15 @@ function annuler() {
 }
 
 function selectClient() {
-    var select = document.getElementById('select_client');
-    if (!select || !select.value) return;
-    var option = select.options[select.selectedIndex];
-    var adresse = option.getAttribute('data-adresse') || '';
-    var tel     = option.getAttribute('data-phone')   || '';
-    var email   = option.getAttribute('data-email')   || '';
-    var ville   = option.getAttribute('data-ville')   || '';
-    var cp      = option.getAttribute('data-cp')      || '';
-    var nom     = option.text.split('(')[0].trim();
+    var sel = $('#select_client').select2('data')[0];
+    if (!sel || !sel.id) return;
+    
+    var adresse = sel.adresse || '';
+    var tel     = sel.phone_1 || '';
+    var email   = sel.email || '';
+    var ville   = sel.ville || '';
+    var cp      = sel.code_postale || '';
+    var nom     = sel.text ? sel.text.split('(')[0].trim() : '';
 
     document.getElementById('adr').value      = adresse;
     document.getElementById('phone_disp').value= tel;
@@ -364,10 +389,9 @@ function cmdCopyFactToLiv() {
 }
 
 function selectProduit(i) {
-    var select = document.getElementById('select_produit' + i);
-    if (!select || !select.value) return;
-    var option = select.options[select.selectedIndex];
-    var prix   = parseFloat(option.getAttribute('data-prix') || 0);
+    var sel = $('#select_produit' + i).select2('data')[0];
+    if (!sel || !sel.id) return;
+    var prix   = parseFloat(sel.prix || 0);
     var qte    = parseFloat(document.getElementById('qte' + i).value) || 1;
     document.getElementById('p_unitaire' + i).value = prix.toFixed(3);
     document.getElementById('p_t_ht' + i).value = (prix * qte).toFixed(3);

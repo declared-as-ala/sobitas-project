@@ -1,10 +1,7 @@
 @php
     $coordinate = \App\Models\Coordinate::getCached();
-    $clients    = \App\Models\Client::orderBy('name')->get(['id','name','adresse','phone_1']);
-    $products   = \App\Models\Product::where('qte', '>', 0)
-                    ->select('id','code_product','designation_fr','prix','qte')
-                    ->orderBy('designation_fr')
-                    ->get();
+    $clients    = [];
+    $products   = [];
     $max = 100;
     // Embed logo as base64 so it always works (no 404, no asset path issues)
     $logoPath = public_path('logo.png');
@@ -123,16 +120,6 @@ body:has(.bl-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !importa
                     <div class="form-field">
                         <select id="bl_client_id" style="width:100%" onchange="blSelectClient()">
                             <option value="">— Choisir un client —</option>
-                            @foreach($clients as $c)
-                                <option value="{{ $c->id }}" 
-                                    data-adresse="{{ $c->adresse }}" 
-                                    data-phone="{{ $c->phone_1 }}"
-                                    data-email="{{ $c->email }}"
-                                    data-ville="{{ $c->ville }}"
-                                    data-cp="{{ $c->code_postale }}">
-                                    {{ $c->name }} ({{ $c->phone_1 }})
-                                </option>
-                            @endforeach
                         </select>
                     </div>
                     <div class="form-field" style="display:none;">
@@ -202,11 +189,6 @@ body:has(.bl-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !importa
                         <td>
                             <select id="bl_prod_{{ $i }}" style="width:100%" onchange="blSelectProd({{ $i }})">
                                 <option value="">— Choisir —</option>
-                                @foreach($products as $p)
-                                    <option value="{{ $p->id }}" data-prix="{{ $p->getEffectivePriceHt() }}" data-qte="{{ $p->qte }}">
-                                        {{ $p->designation_fr }} ({{ $p->qte }}) - {{ $p->code_product }}
-                                    </option>
-                                @endforeach
                             </select>
                         </td>
                         <td><input type="number" class="tbl-input" id="bl_qte_{{ $i }}" value="1" min="0.001" step="1" onchange="blCalculate()" oninput="blCalculate()"></td>
@@ -267,7 +249,18 @@ body:has(.bl-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !importa
 var blMax = {{ $max }};
 
 $(document).ready(function () {
-    $('#bl_client_id').select2({ placeholder: '— Choisir un client —', allowClear: true, width: '100%' });
+    $('#bl_client_id').select2({
+        placeholder: '— Choisir un client —',
+        allowClear: true,
+        width: '100%',
+        ajax: {
+            url: '/api/pos-clients',
+            dataType: 'json',
+            delay: 250,
+            data: function (params) { return { q: params.term || '' }; },
+            cache: true
+        }
+    });
     for (let i = 1; i <= blMax; i++) { blInitSelect2(i); }
     
     // Hydrate existing data if in Edit mode using Livewire's form data
@@ -302,10 +295,13 @@ function blHydrate(data) {
                 document.getElementById('bl_qte_' + i).value = item.qte || 1;
                 document.getElementById('bl_pu_' + i).value = item.prix_unitaire || 0;
                 
-                // Get constraints from the selected option
-                var opt = $sel.find('option:selected');
-                if (opt.length) {
-                    document.getElementById('bl_qte_' + i).max = opt.attr('data-qte') || 9999;
+                var opt = { qte: 9999 }; // We rely on the initial API to load later if needed, but for hydrate it's fine.
+                document.getElementById('bl_qte_' + i).max = opt.qte;
+                
+                // Add the option so it displays correctly
+                if (item.designation) {
+                    var newOption = new Option(item.designation, item.produit_id, true, true);
+                    $sel.append(newOption).trigger('change.select2');
                 }
                 
                 i++;
@@ -331,40 +327,44 @@ function blHydrate(data) {
 
 
 function blInitSelect2(i) {
-    $('#bl_prod_' + i).select2({ placeholder: '— Choisir —', allowClear: true, width: '100%', language: { noResults: function() { return 'Aucun résultat'; } } });
+    $('#bl_prod_' + i).select2({
+        placeholder: '— Choisir —',
+        allowClear: true,
+        width: '100%',
+        ajax: {
+            url: '/api/pos-products',
+            dataType: 'json',
+            delay: 250,
+            data: function (params) { return { q: params.term || '' }; },
+            cache: true
+        },
+        language: { noResults: function() { return 'Aucun résultat'; } }
+    });
     $('#bl_prod_' + i).on('change', function () { blSelectProd(i); });
 }
 
 function blSelectClient() {
-    var sel = document.getElementById('bl_client_id');
-    var opt = sel.options[sel.selectedIndex];
-    if (!opt || !opt.value) return;
+    var sel = $('#bl_client_id').select2('data')[0];
+    if (!sel || !sel.id) return;
 
-    var adresse = opt.getAttribute('data-adresse') ?? '';
-    var phone   = opt.getAttribute('data-phone') ?? '';
-    // Assuming client options are printed with data-* attributes (need to add these to the blade loop if missing, but we will use what's there and update later)
-    var email   = opt.getAttribute('data-email') ?? '';
-    var ville   = opt.getAttribute('data-ville') ?? '';
-    var cp      = opt.getAttribute('data-cp') ?? '';
-    var nom     = opt.text.split('(')[0].trim();
+    var nom     = sel.text ? sel.text.split('(')[0].trim() : '';
 
     // Populate Livraison fields directly from client record since billing is hidden
     document.getElementById('bl_livraison_nom').value = nom;
-    document.getElementById('bl_livraison_phone').value = phone;
-    document.getElementById('bl_livraison_email').value = email;
-    document.getElementById('bl_livraison_adresse1').value = adresse;
-    document.getElementById('bl_livraison_ville').value = ville;
-    document.getElementById('bl_livraison_region').value = ''; // No direct region on client by default here
-    document.getElementById('bl_livraison_cp').value = cp;
+    document.getElementById('bl_livraison_phone').value = sel.phone_1 || '';
+    document.getElementById('bl_livraison_email').value = sel.email || '';
+    document.getElementById('bl_livraison_adresse1').value = sel.adresse || '';
+    document.getElementById('bl_livraison_ville').value = sel.ville || '';
+    document.getElementById('bl_livraison_region').value = ''; 
+    document.getElementById('bl_livraison_cp').value = sel.code_postale || '';
 }
 $('#bl_client_id').on('change', function() { blSelectClient(); });
 
 function blSelectProd(i) {
-    var sel = document.getElementById('bl_prod_' + i);
-    if (!sel || !sel.value) return;
-    var opt  = sel.options[sel.selectedIndex];
-    var prix = parseFloat(opt.getAttribute('data-prix') ?? 0);
-    var maxQ = parseFloat(opt.getAttribute('data-qte') ?? 9999);
+    var sel = $('#bl_prod_' + i).select2('data')[0];
+    if (!sel || !sel.id) return;
+    var prix = parseFloat(sel.prix || 0);
+    var maxQ = parseFloat(sel.qte || 9999);
     document.getElementById('bl_pu_' + i).value  = prix.toFixed(3);
     document.getElementById('bl_qte_' + i).max   = maxQ;
     blCalculate();
@@ -439,43 +439,43 @@ function blScanner() {
     var barcodeInput = document.getElementById('bl_barcode');
     var code = (parseInt(barcodeInput.value) + 1) + '';
     if (!code) return;
-    var found = null;
-    var opts = document.getElementById('bl_prod_1').options;
-    for (let o of opts) {
-        var codePart = o.text.split(' - ').pop().trim();
-        if (codePart === code || codePart === '0' + code) {
-            found = { id: o.value, prix: o.getAttribute('data-prix'), qte: o.getAttribute('data-qte') };
-            break;
-        }
-    }
-    if (found) {
-        var existingIdx = -1;
-        for (let i = 1; i <= blMax; i++) {
-            var r = document.getElementById('bl-row-' + i);
-            if (r && r.style.display !== 'none' && $('#bl_prod_' + i).val() == found.id) { existingIdx = i; break; }
-        }
-        if (existingIdx > -1) {
-            var qteEl = document.getElementById('bl_qte_' + existingIdx);
-            qteEl.value = parseFloat(qteEl.value) + 1;
-            blCalculate();
-        } else {
-            blAddRow();
-            for (let i = 1; i <= blMax; i++) {
-                var r = document.getElementById('bl-row-' + i);
-                if (r && r.style.display !== 'none' && !$('#bl_prod_' + i).val()) {
-                    $('#bl_prod_' + i).val(found.id).trigger('change');
-                    document.getElementById('bl_qte_' + i).value = 1;
-                    document.getElementById('bl_pu_' + i).value  = parseFloat(found.prix).toFixed(3);
-                    blCalculate();
-                    break;
+    
+    barcodeInput.disabled = true;
+    fetch('/api/pos-barcode?code=' + encodeURIComponent(code))
+        .then(res => res.json())
+        .then(found => {
+            barcodeInput.disabled = false;
+            barcodeInput.value = '';
+            barcodeInput.focus();
+
+            if (found) {
+                var existingIdx = -1;
+                for (let i = 1; i <= blMax; i++) {
+                    var r = document.getElementById('bl-row-' + i);
+                    if (r && r.style.display !== 'none' && $('#bl_prod_' + i).val() == found.id) { existingIdx = i; break; }
                 }
+                if (existingIdx > -1) {
+                    var qteEl = document.getElementById('bl_qte_' + existingIdx);
+                    qteEl.value = parseFloat(qteEl.value) + 1;
+                    blCalculate();
+                } else {
+                    blAddRow();
+                    for (let i = 1; i <= blMax; i++) {
+                        var r = document.getElementById('bl-row-' + i);
+                        if (r && r.style.display !== 'none' && !$('#bl_prod_' + i).val()) {
+                            var newOption = new Option(found.designation, found.id, true, true);
+                            $('#bl_prod_' + i).append(newOption).trigger('change');
+                            document.getElementById('bl_qte_' + i).value = 1;
+                            document.getElementById('bl_pu_' + i).value  = parseFloat(found.prix_unitaire).toFixed(3);
+                            blCalculate();
+                            break;
+                        }
+                    }
+                }
+            } else {
+                Swal.fire('Introuvable', 'Aucun produit trouvé', 'warning');
             }
-        }
-    } else {
-        Swal.fire('Introuvable', 'Aucun produit trouvé', 'warning');
-    }
-    barcodeInput.value = '';
-    barcodeInput.focus();
+        });
 }
 
 function blAddClient() {

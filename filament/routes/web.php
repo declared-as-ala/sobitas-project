@@ -46,7 +46,7 @@ Route::middleware(['auth'])->group(function () {
         $details_facture = DetailsFacture::where('facture_id', $facture->id)
             ->with('product:id,designation_fr,cover')
             ->get();
-        $coordonnee = \App\Models\Coordinate::first();
+        $coordonnee = \App\Models\Coordinate::getCached();
         $totalHt = $details_facture->sum(fn($d) => ($d->qte ?? $d->quantite ?? 1) * ($d->prix_unitaire ?? $d->prix_ht ?? 0));
         $remise = (float) ($facture->remise ?? 0);
         $frais = (float) ($facture->frais_livraison ?? 0);
@@ -98,7 +98,7 @@ Route::middleware(['auth'])->group(function () {
         $details_facture = \App\Models\DetailsFactureTva::where('facture_tva_id', $factureTva->id)
             ->with('product:id,designation_fr')
             ->get();
-        $coordonnee = \App\Models\Coordinate::first();
+        $coordonnee = \App\Models\Coordinate::getCached();
         $defaultTva = (float) ($factureTva->tva ?? 19);
         $calcTotals = \App\Services\InvoiceCalculator::calculate(
             $details_facture->toArray(),
@@ -153,7 +153,7 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('product-price-lists/{productPriceList}/print', function (\App\Models\ProductPriceList $productPriceList) {
         $productPriceList->load(['details' => fn ($q) => $q->with('product:id,designation_fr')]);
-        $coordonnee = \App\Models\Coordinate::first();
+        $coordonnee = \App\Models\Coordinate::getCached();
         $price_list_rows = $productPriceList->details->map(function ($d, $i) {
             return [
                 'index' => $i + 1,
@@ -184,7 +184,7 @@ Route::middleware(['auth'])->group(function () {
         $details_facture = \App\Models\DetailsQuotation::where('quotation_id', $quotation->id)
             ->with('product:id,designation_fr')
             ->get();
-        $coordonnee = \App\Models\Coordinate::first();
+        $coordonnee = \App\Models\Coordinate::getCached();
         $defaultTva = $coordonnee && isset($coordonnee->tva) ? (float) $coordonnee->tva : 19;
         $devis_lines = \App\Services\DevisCalculator::lines($details_facture, $defaultTva)['lines'];
 
@@ -264,4 +264,23 @@ Route::middleware(['auth'])->group(function () {
             'qte' => $p->qte,
         ]);
     })->name('api.pos-barcode');
+
+    Route::get('/api/pos-clients', function() {
+        $search = request('q', '');
+        $clients = \App\Models\Client::query()
+            ->select('id', 'name', 'phone_1', 'adresse', 'email', 'ville', 'code_postale')
+            ->where('name', 'like', "%{$search}%")
+            ->orWhere('phone_1', 'like', "%{$search}%")
+            ->limit(30)
+            ->get();
+        return response()->json(['results' => $clients->map(fn($c) => [
+            'id' => $c->id,
+            'text' => $c->name . ' (' . ($c->phone_1 ?? '') . ')',
+            'phone_1' => $c->phone_1,
+            'adresse' => $c->adresse,
+            'email' => $c->email,
+            'ville' => $c->ville,
+            'code_postale' => $c->code_postale
+        ])]);
+    })->name('api.pos-clients');
 });

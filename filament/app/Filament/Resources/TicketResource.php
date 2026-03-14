@@ -47,16 +47,17 @@ class TicketResource extends Resource
                 Grid::make(1)->schema([
                     Section::make('Client / Commande')
                         ->schema([
-                            Forms\Components\Select::make('client_id')
-                                ->label('Client (optionnel)')
-                                ->relationship('client', 'name')
-                                ->getOptionLabelFromRecordUsing(fn ($record) => (string) ($record->name ?? 'Client #' . $record->id))
-                                ->searchable()
-                                ->preload()
-                                ->nullable()
-                                ->rules(['nullable', 'exists:clients,id'])
-                                ->placeholder('— Aucun client (comptoir) —')
-                                ->live()
+                                Forms\Components\Select::make('client_id')
+                                    ->label('Client (optionnel)')
+                                    ->relationship('client', 'name')
+                                    ->getOptionLabelFromRecordUsing(fn ($record) => (string) ($record->name ?? 'Client #' . $record->id))
+                                    ->getSearchResultsUsing(fn (string $search): array => \App\Models\Client::where('name', 'like', "%{$search}%")->orWhere('phone_1', 'like', "%{$search}%")->limit(30)->pluck('name', 'id')->toArray())
+                                    ->getOptionLabelUsing(fn ($value): ?string => \App\Models\Client::find($value)?->name)
+                                    ->searchable()
+                                    ->nullable()
+                                    ->rules(['nullable', 'exists:clients,id'])
+                                    ->placeholder('— Aucun client (comptoir) —')
+                                    ->live()
                                 ->afterStateUpdated(function ($state, $set) {
                                     if ($state && $client = Client::find($state)) {
                                         $set('client_adresse', $client->adresse ?? '');

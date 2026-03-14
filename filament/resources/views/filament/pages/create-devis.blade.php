@@ -1,9 +1,13 @@
 @php
     $coordinate = \App\Models\Coordinate::getCached();
-    $clients    = \App\Models\Client::orderBy('name')->get(['id','name','adresse','phone_1']);
-    $products   = \App\Models\Product::select('id','code_product','designation_fr','prix','qte')
-                    ->orderBy('designation_fr')
-                    ->get();
+    $getLwData = method_exists($getLivewire(), 'getRecord') && $getLivewire()->getRecord() ? $getLivewire()->data : [];
+    $selProductIds = collect($getLwData['details'] ?? [])->pluck('produit_id')->filter()->toArray();
+    $selProducts = [];
+    if (!empty($selProductIds)) {
+        $selProducts = \App\Models\Product::whereIn('id', $selProductIds)->get(['id','designation_fr','qte'])->keyBy('id');
+    }
+    $selClientId = $getLwData['client_id'] ?? null;
+    $selClient = $selClientId ? \App\Models\Client::find($selClientId) : null;
     $max = 100;
     $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
     // Embed logo as base64 so it always works (no 404, no asset path issues)
@@ -122,11 +126,13 @@ body:has(.devis-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !impo
                     <div class="form-field">
                         <select id="dv_client_id" style="width:100%" onchange="dvSelectClient()">
                             <option value="">— Choisir un client —</option>
-                            @foreach($clients as $c)
-                                <option value="{{ $c->id }}" data-adresse="{{ $c->adresse }}" data-phone="{{ $c->phone_1 }}">
-                                    {{ $c->name }} ({{ $c->phone_1 }})
+                            @if($selClient)
+                                <option value="{{ $selClient->id }}" selected
+                                    data-adresse="{{ $selClient->adresse }}"
+                                    data-phone="{{ $selClient->phone_1 }}">
+                                    {{ $selClient->name }} ({{ $selClient->phone_1 }})
                                 </option>
-                            @endforeach
+                            @endif
                         </select>
                     </div>
                     <div class="form-field">
@@ -176,11 +182,6 @@ body:has(.devis-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !impo
                         <td>
                             <select id="dv_prod_{{ $i }}" style="width:100%" onchange="dvSelectProd({{ $i }})">
                                 <option value="">— Choisir —</option>
-                                @foreach($products as $p)
-                                    <option value="{{ $p->id }}" data-prix="{{ $p->getEffectivePriceHt() }}" data-qte="{{ $p->qte }}" data-tva="{{ $defaultTva }}">
-                                        {{ $p->designation_fr }} ({{ $p->qte }}) - {{ $p->code_product }}
-                                    </option>
-                                @endforeach
                             </select>
                         </td>
                         <td><input type="number" class="tbl-input" id="dv_qte_{{ $i }}" value="1" min="0.001" step="1" onchange="dvCalculate()" oninput="dvCalculate()"></td>
@@ -251,7 +252,18 @@ var dvMax = {{ $max }};
 var dvDefaultTva = {{ $defaultTva }};
 
 $(document).ready(function () {
-    $('#dv_client_id').select2({ placeholder: '— Choisir un client —', allowClear: true, width: '100%' });
+    $('#dv_client_id').select2({
+        placeholder: '— Choisir un client —',
+        allowClear: true,
+        width: '100%',
+        ajax: {
+            url: '/api/pos-clients',
+            dataType: 'json',
+            delay: 250,
+            data: function (params) { return { q: params.term || '' }; },
+            cache: true
+        }
+    });
     for (let i = 1; i <= dvMax; i++) { dvInitSelect2(i); }
     
     // Hydrate existing data if in Edit mode using Livewire's form data
@@ -259,16 +271,18 @@ $(document).ready(function () {
         $formData = method_exists($getLivewire(), 'getRecord') && $getLivewire()->getRecord() ? $getLivewire()->data : [];
     @endphp
     var initData = @json($formData);
+    var selProducts = @json($selProducts);
     
     if (initData && initData.client_id) {
-        dvHydrate(initData);
+        dvHydrate(initData, selProducts);
     } else {
         dvCalculate();
     }
 });
 
-function dvHydrate(data) {
+function dvHydrate(data, selProducts) {
     if (data.client_id) {
+        // Option is natively rendered, just let select2 pick it up, although we can trigger it too in case
         $('#dv_client_id').val(data.client_id).trigger('change');
     }
     
@@ -280,16 +294,20 @@ function dvHydrate(data) {
                 if (r) r.style.display = '';
                 
                 var $sel = $('#dv_prod_' + i);
-                $sel.val(item.produit_id).trigger('change.select2');
+                var pInfo = selProducts[item.produit_id];
+                if (pInfo) {
+                    var newOption = new Option(pInfo.designation_fr, item.produit_id, true, true);
+                    $sel.append(newOption).trigger('change.select2');
+                } else {
+                    $sel.val(item.produit_id).trigger('change.select2');
+                }
                 
                 document.getElementById('dv_qte_' + i).value = item.qte || 1;
                 document.getElementById('dv_pu_' + i).value = item.prix_unitaire || 0;
                 document.getElementById('dv_tva_' + i).value = item.tva_pct || dvDefaultTva;
                 
-                var opt = $sel.find('option:selected');
-                if (opt.length) {
-                    document.getElementById('dv_qte_' + i).max = opt.attr('data-qte') || 9999;
-                }
+                var opt = { qte: 9999 };
+                document.getElementById('dv_qte_' + i).max = opt.qte;
                 
                 i++;
             }
@@ -305,24 +323,35 @@ function dvHydrate(data) {
 
 
 function dvInitSelect2(i) {
-    $('#dv_prod_' + i).select2({ placeholder: '— Choisir —', allowClear: true, width: '100%', language: { noResults: function() { return 'Aucun résultat'; } } });
+    $('#dv_prod_' + i).select2({ 
+        placeholder: '— Choisir —', 
+        allowClear: true, 
+        width: '100%',
+        ajax: {
+            url: '/api/pos-products',
+            dataType: 'json',
+            delay: 250,
+            data: function (params) { return { q: params.term || '' }; },
+            cache: true
+        },
+        language: { noResults: function() { return 'Aucun résultat'; } } 
+    });
     $('#dv_prod_' + i).on('change', function () { dvSelectProd(i); });
 }
 
 function dvSelectClient() {
-    var sel = document.getElementById('dv_client_id');
-    var opt = sel.options[sel.selectedIndex];
-    document.getElementById('dv_adr').value   = opt.getAttribute('data-adresse') ?? '';
-    document.getElementById('dv_phone').value = opt.getAttribute('data-phone') ?? '';
+    var sel = $('#dv_client_id').select2('data')[0];
+    if (!sel) return;
+    document.getElementById('dv_adr').value   = sel.adresse || '';
+    document.getElementById('dv_phone').value = sel.phone_1 || '';
 }
 $('#dv_client_id').on('change', function() { dvSelectClient(); });
 
 function dvSelectProd(i) {
-    var sel = document.getElementById('dv_prod_' + i);
-    if (!sel || !sel.value) return;
-    var opt  = sel.options[sel.selectedIndex];
-    var prix = parseFloat(opt.getAttribute('data-prix') ?? 0);
-    var tva  = parseFloat(opt.getAttribute('data-tva') ?? dvDefaultTva);
+    var sel = $('#dv_prod_' + i).select2('data')[0];
+    if (!sel || !sel.id) return;
+    var prix = parseFloat(sel.prix || 0);
+    var tva  = parseFloat(sel.tva || dvDefaultTva);
     document.getElementById('dv_pu_' + i).value  = prix.toFixed(3);
     document.getElementById('dv_tva_' + i).value = tva;
     dvCalculate();
@@ -407,44 +436,45 @@ function dvCalculate(typeRemise) {
 function dvScanner() {
     var barcodeInput = document.getElementById('dv_barcode');
     var code = (parseInt(barcodeInput.value) + 1) + '';
-    var found = null;
-    var opts = document.getElementById('dv_prod_1').options;
-    for (let o of opts) {
-        var codePart = o.text.split(' - ').pop().trim();
-        if (codePart === code || codePart === '0' + code) {
-            found = { id: o.value, prix: o.getAttribute('data-prix'), tva: o.getAttribute('data-tva') };
-            break;
-        }
-    }
-    if (found) {
-        var existingIdx = -1;
-        for (let i = 1; i <= dvMax; i++) {
-            var r = document.getElementById('dv-row-' + i);
-            if (r && r.style.display !== 'none' && $('#dv_prod_' + i).val() == found.id) { existingIdx = i; break; }
-        }
-        if (existingIdx > -1) {
-            var qteEl = document.getElementById('dv_qte_' + existingIdx);
-            qteEl.value = parseFloat(qteEl.value) + 1;
-            dvCalculate();
-        } else {
-            dvAddRow();
-            for (let i = 1; i <= dvMax; i++) {
-                var r = document.getElementById('dv-row-' + i);
-                if (r && r.style.display !== 'none' && !$('#dv_prod_' + i).val()) {
-                    $('#dv_prod_' + i).val(found.id).trigger('change');
-                    document.getElementById('dv_qte_' + i).value = 1;
-                    document.getElementById('dv_pu_' + i).value  = parseFloat(found.prix).toFixed(3);
-                    document.getElementById('dv_tva_' + i).value = found.tva;
-                    dvCalculate();
-                    break;
+    if (!code) return;
+    
+    barcodeInput.disabled = true;
+    fetch('/api/pos-barcode?code=' + encodeURIComponent(code))
+        .then(res => res.json())
+        .then(found => {
+            barcodeInput.disabled = false;
+            barcodeInput.value = '';
+            barcodeInput.focus();
+
+            if (found) {
+                var existingIdx = -1;
+                for (let i = 1; i <= dvMax; i++) {
+                    var r = document.getElementById('dv-row-' + i);
+                    if (r && r.style.display !== 'none' && $('#dv_prod_' + i).val() == found.id) { existingIdx = i; break; }
                 }
+                if (existingIdx > -1) {
+                    var qteEl = document.getElementById('dv_qte_' + existingIdx);
+                    qteEl.value = parseFloat(qteEl.value) + 1;
+                    dvCalculate();
+                } else {
+                    dvAddRow();
+                    for (let i = 1; i <= dvMax; i++) {
+                        var r = document.getElementById('dv-row-' + i);
+                        if (r && r.style.display !== 'none' && !$('#dv_prod_' + i).val()) {
+                            var newOption = new Option(found.designation, found.id, true, true);
+                            $('#dv_prod_' + i).append(newOption).trigger('change');
+                            document.getElementById('dv_qte_' + i).value = 1;
+                            document.getElementById('dv_pu_' + i).value  = parseFloat(found.prix_unitaire).toFixed(3);
+                            document.getElementById('dv_tva_' + i).value = dvDefaultTva;
+                            dvCalculate();
+                            break;
+                        }
+                    }
+                }
+            } else {
+                Swal.fire('Introuvable', 'Aucun produit trouvé', 'warning');
             }
-        }
-    } else {
-        Swal.fire('Introuvable', 'Aucun produit trouvé', 'warning');
-    }
-    barcodeInput.value = '';
-    barcodeInput.focus();
+        });
 }
 
 function dvAddClient() {

@@ -1,10 +1,7 @@
 @php
     $coordinate = \App\Models\Coordinate::getCached();
-    $clients    = \App\Models\Client::orderBy('name')->get(['id','name','adresse','phone_1']);
-    $products   = \App\Models\Product::where('qte', '>', 0)
-                    ->select('id','code_product','designation_fr','prix','qte')
-                    ->orderBy('designation_fr')
-                    ->get();
+    $clients    = [];
+    $products   = [];
     $max        = 100;
     $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
     $logoPath   = public_path('logo.png');
@@ -127,13 +124,6 @@
                     <div class="form-field">
                         <select id="ftva_client_id" name="ftva_client_id" style="width:100%" onchange="ftvaSelectClient()">
                             <option value="">— Choisir un client —</option>
-                            @foreach($clients as $c)
-                                <option value="{{ $c->id }}"
-                                    data-adresse="{{ $c->adresse }}"
-                                    data-phone="{{ $c->phone_1 }}">
-                                    {{ $c->name }} ({{ $c->phone_1 }})
-                                </option>
-                            @endforeach
                         </select>
                     </div>
                     <div class="form-field">
@@ -199,14 +189,6 @@
                             <select id="ftva_prod_{{ $i }}" name="ftva_prod_{{ $i }}"
                                     style="width:100%" onchange="ftvaSelectProd({{ $i }})">
                                 <option value="">— Choisir —</option>
-                                @foreach($products as $p)
-                                    <option value="{{ $p->id }}"
-                                        data-prix="{{ $p->getEffectivePriceHt() }}"
-                                        data-qte="{{ $p->qte }}"
-                                        data-tva="{{ $defaultTva }}">
-                                        {{ $p->designation_fr }} ({{ $p->qte }}) - {{ $p->code_product }}
-                                    </option>
-                                @endforeach
                             </select>
                         </td>
                         <td><input type="number" class="tbl-input" id="ftva_qte_{{ $i }}" value="1" min="0.001" step="1" onchange="ftvaCalculate()" oninput="ftvaCalculate()"></td>
@@ -282,7 +264,18 @@ var ftvaDefaultTva = {{ $defaultTva }};
 
 $(document).ready(function () {
     // Init Select2 for client
-    $('#ftva_client_id').select2({ placeholder: '— Choisir un client —', allowClear: true, width: '100%' });
+    $('#ftva_client_id').select2({
+        placeholder: '— Choisir un client —',
+        allowClear: true,
+        width: '100%',
+        ajax: {
+            url: '/api/pos-clients',
+            dataType: 'json',
+            delay: 250,
+            data: function (params) { return { q: params.term || '' }; },
+            cache: true
+        }
+    });
 
     // Init Select2 for all product rows
     for (let i = 1; i <= ftvaMax; i++) {
@@ -297,6 +290,13 @@ function ftvaInitSelect2(i) {
         placeholder: '— Choisir —',
         allowClear: true,
         width: '100%',
+        ajax: {
+            url: '/api/pos-products',
+            dataType: 'json',
+            delay: 250,
+            data: function (params) { return { q: params.term || '' }; },
+            cache: true
+        },
         language: { noResults: function() { return 'Aucun résultat'; } }
     });
     $('#ftva_prod_' + i).on('change', function () {
@@ -305,22 +305,20 @@ function ftvaInitSelect2(i) {
 }
 
 function ftvaSelectClient() {
-    var sel = document.getElementById('ftva_client_id');
-    var opt = sel.options[sel.selectedIndex];
-    document.getElementById('ftva_adr').value   = opt.getAttribute('data-adresse') ?? '';
-    document.getElementById('ftva_phone').value = opt.getAttribute('data-phone') ?? '';
-    document.getElementById('ftva_email').value = opt.getAttribute('data-email') ?? '';
+    var sel = $('#ftva_client_id').select2('data')[0];
+    if (!sel) return;
+    document.getElementById('ftva_adr').value   = sel.adresse || '';
+    document.getElementById('ftva_phone').value = sel.phone_1 || '';
 }
 
 $('#ftva_client_id').on('change', function() { ftvaSelectClient(); });
 
 function ftvaSelectProd(i) {
-    var sel = document.getElementById('ftva_prod_' + i);
-    if (!sel || !sel.value) return;
-    var opt  = sel.options[sel.selectedIndex];
-    var prix = parseFloat(opt.getAttribute('data-prix') ?? 0);
-    var tva  = parseFloat(opt.getAttribute('data-tva') ?? ftvaDefaultTva);
-    var maxQ = parseFloat(opt.getAttribute('data-qte') ?? 9999);
+    var sel = $('#ftva_prod_' + i).select2('data')[0];
+    if (!sel || !sel.id) return;
+    var prix = parseFloat(sel.prix || 0);
+    var tva  = parseFloat(sel.tva || ftvaDefaultTva);
+    var maxQ = parseFloat(sel.qte || 9999);
     document.getElementById('ftva_pu_' + i).value  = prix.toFixed(3);
     document.getElementById('ftva_tva_' + i).value = tva;
     document.getElementById('ftva_qte_' + i).max   = maxQ;
@@ -412,55 +410,43 @@ function ftvaScanner() {
     var code = (parseInt(barcodeInput.value) + 1) + '';
     if (!code) return;
 
-    // Find product matching barcode (code_product stored in option text/value via data attribute)
-    // We search through the product options of row 1 for matching code_product
-    var found = null;
-    var opts = document.getElementById('ftva_prod_1').options;
-    for (let o of opts) {
-        // Option text format: "Designation (stock) - CODE"
-        var txt = o.text;
-        var codePart = txt.split(' - ').pop().trim();
-        if (codePart === code || codePart === '0' + code) {
-            found = { id: o.value, prix: o.getAttribute('data-prix'), tva: o.getAttribute('data-tva'), qte: o.getAttribute('data-qte') };
-            break;
-        }
-    }
+    barcodeInput.disabled = true;
+    fetch('/api/pos-barcode?code=' + encodeURIComponent(code))
+        .then(res => res.json())
+        .then(found => {
+            barcodeInput.disabled = false;
+            barcodeInput.value = '';
+            barcodeInput.focus();
 
-    if (found) {
-        // Find existing row with same product to increment qty
-        var existingIdx = -1;
-        for (let i = 1; i <= ftvaMax; i++) {
-            var r = document.getElementById('ftva-row-' + i);
-            if (r && r.style.display !== 'none') {
-                if ($('#ftva_prod_' + i).val() == found.id) { existingIdx = i; break; }
-            }
-        }
-        if (existingIdx > -1) {
-            var qteEl = document.getElementById('ftva_qte_' + existingIdx);
-            qteEl.value = parseFloat(qteEl.value) + 1;
-            ftvaCalculate();
-        } else {
-            // Add new row
-            ftvaAddRow();
-            // Find the newly revealed row
-            for (let i = 1; i <= ftvaMax; i++) {
-                var r = document.getElementById('ftva-row-' + i);
-                if (r && r.style.display !== 'none' && !$('#ftva_prod_' + i).val()) {
-                    $('#ftva_prod_' + i).val(found.id).trigger('change');
-                    document.getElementById('ftva_qte_' + i).value = 1;
-                    document.getElementById('ftva_pu_' + i).value  = parseFloat(found.prix).toFixed(3);
-                    document.getElementById('ftva_tva_' + i).value = found.tva;
-                    ftvaCalculate();
-                    break;
+            if (found) {
+                var existingIdx = -1;
+                for (let i = 1; i <= ftvaMax; i++) {
+                    var r = document.getElementById('ftva-row-' + i);
+                    if (r && r.style.display !== 'none' && $('#ftva_prod_' + i).val() == found.id) { existingIdx = i; break; }
                 }
+                if (existingIdx > -1) {
+                    var qteEl = document.getElementById('ftva_qte_' + existingIdx);
+                    qteEl.value = parseFloat(qteEl.value) + 1;
+                    ftvaCalculate();
+                } else {
+                    ftvaAddRow();
+                    for (let i = 1; i <= ftvaMax; i++) {
+                        var r = document.getElementById('ftva-row-' + i);
+                        if (r && r.style.display !== 'none' && !$('#ftva_prod_' + i).val()) {
+                            var newOption = new Option(found.designation, found.id, true, true);
+                            $('#ftva_prod_' + i).append(newOption).trigger('change');
+                            document.getElementById('ftva_qte_' + i).value = 1;
+                            document.getElementById('ftva_pu_' + i).value  = parseFloat(found.prix_unitaire).toFixed(3);
+                            document.getElementById('ftva_tva_' + i).value = ftvaDefaultTva;
+                            ftvaCalculate();
+                            break;
+                        }
+                    }
+                }
+            } else {
+                Swal.fire('Introuvable', 'Aucun produit trouvé', 'warning');
             }
-        }
-    } else {
-        Swal.fire('Introuvable', 'Aucun produit trouvé', 'warning');
-    }
-
-    barcodeInput.value = '';
-    barcodeInput.focus();
+        });
 }
 
 function ftvaAddClient() {
