@@ -50,7 +50,8 @@ class Form extends Component implements HasForms
 
     public function submit(): never
     {
-        dd($this->form->getState());
+        // Form submission logic here
+        redirect()->to('/admin');
     }
 
     protected function getFormStatePath(): ?string
