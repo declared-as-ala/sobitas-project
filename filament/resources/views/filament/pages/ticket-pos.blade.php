@@ -12,13 +12,7 @@
         ->orderBy('designation_fr')
         ->get();
     
-    $productsJson = $products->map(fn($p) => [
-        'id' => $p->id,
-        'designation_fr' => $p->designation_fr,
-        'prix' => $p->getEffectiveUnitPrice(),
-        'qte' => $p->qte,
-        'code_product' => $p->code_product
-    ])->toJson();
+    $productsJson = '[]';
 
     // Start lines loaded from Livewire (either existing ticket or 1 empty line)
     $startLines = (isset($lines) && is_array($lines) && count($lines) > 0) ? $lines : [['produit_id' => '', 'qte' => 1, 'prix_unitaire' => 0]];
@@ -458,12 +452,13 @@
                 <tr id="row-{{ $i }}" style="{{ !$isInit ? 'display:none;' : '' }}">
                     <td>
                         <select id="select_produit{{ $i }}" class="form-control select2" style="width:100%" onchange="selectProduit({{ $i }})">
-                            <option value="">— Choisir un produit —</option>
-                            @foreach($products as $p)
-                                <option value="{{ $p->id }}" data-prix="{{ $p->getEffectiveUnitPrice() }}" data-qte="{{ $p->qte }}" {{ ($line && $line['produit_id'] == $p->id) ? 'selected' : '' }}>
-                                    {{ $p->designation_fr }} ( {{ $p->qte ?? 0 }} ) - {{ $p->code_product }}
+                            @if($line && $line['produit_id'])
+                                <option value="{{ $line['produit_id'] }}" data-prix="{{ $line['prix_unitaire'] }}" selected>
+                                    {{ $line['designation'] ?? 'Produit' }}
                                 </option>
-                            @endforeach
+                            @else
+                                <option value="">— Choisir un produit —</option>
+                            @endif
                         </select>
                     </td>
                     <td class="td-num">
@@ -554,8 +549,9 @@
     document.addEventListener('DOMContentLoaded', function () {
         // Init select2 on all active and hidden rows for fast switching
         $('#client_select').select2();
+        
         for(let i=0; i<maxRows; i++) {
-            $('#select_produit'+i).select2();
+            initSelect2(i);
         }
 
         // Focus barcode safely
@@ -570,9 +566,30 @@
         window.addEventListener('keydown', function(e) {
             if(e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
                 e.preventDefault();
+                // If it's the barcode input, trigger scan
+                if(e.target.id === 'barcode_input') {
+                    scanBarcode();
+                }
             }
         });
     });
+
+    function initSelect2(i) {
+        $('#select_produit' + i).select2({
+            placeholder: "— Choisir un produit —",
+            allowClear: true,
+            ajax: {
+                transport: function (params, success, failure) {
+                    let search = params.data.q || '';
+                    @this.call('searchProductsAJAX', search).then(res => {
+                        success({ results: res });
+                    }).catch(failure);
+                },
+                delay: 250,
+                cache: true
+            }
+        });
+    }
 
     // Client Selection
     function selectClient() {
@@ -590,13 +607,24 @@
     // Product Selection
     function selectProduit(i) {
         var select = document.getElementById('select_produit' + i);
-        if(!select.value) return;
+        if(!select.value) {
+            document.getElementById('p_unitaire' + i).value = 0;
+            calculate();
+            return;
+        }
         
-        var option = select.options[select.selectedIndex];
-        var v_prix = option.getAttribute('data-prix');
-        
-        var input_pu = document.getElementById('p_unitaire' + i);
-        input_pu.value = v_prix;
+        // If data is from AJAX, get the 'prix' property
+        var $data = $(select).select2('data')[0];
+        if($data && $data.prix !== undefined) {
+            document.getElementById('p_unitaire' + i).value = $data.prix;
+        } else {
+            // Fallback for pre-loaded lines
+            var option = select.options[select.selectedIndex];
+            var v_prix = option.getAttribute('data-prix');
+            if(v_prix !== null) {
+                document.getElementById('p_unitaire' + i).value = v_prix;
+            }
+        }
         
         calculate();
     }
@@ -634,54 +662,62 @@
         var code = input.value.trim();
         if(!code) return;
 
-        var search = produits.find((prod)=> prod.code_product == code || prod.code_product == '0'+code);
+        // Visual feedback during scan
+        input.disabled = true;
 
-        if(search) {
-            // Check if already in active rows to increment qty
-            let foundIndex = -1;
-            for(let i=0; i<maxRows; i++) {
-                var el = document.getElementById('row-' + i);
-                if (el.style.display !== "none") {
-                    var pid = $('#select_produit'+i).val();
-                    if(pid == search.id) {
-                        foundIndex = i;
-                        break;
-                    }
-                }
-            }
+        @this.call('searchProductByBarcode', code).then(search => {
+            input.disabled = false;
+            input.value = '';
+            input.focus();
 
-            if(foundIndex !== -1) {
-                var qteEl = document.getElementById('qte' + foundIndex);
-                qteEl.value = parseFloat(qteEl.value) + 1;
-                calculate();
-            } else {
-                // Find empty hidden row
-                let emptyIndex = -1;
+            if(search) {
+                // Check if already in active rows to increment qty
+                let foundIndex = -1;
                 for(let i=0; i<maxRows; i++) {
                     var el = document.getElementById('row-' + i);
-                    if (el.style.display === "none") {
-                        emptyIndex = i;
-                        break;
+                    if (el.style.display !== "none") {
+                        var pid = $('#select_produit'+i).val();
+                        if(pid == search.id) {
+                            foundIndex = i;
+                            break;
+                        }
                     }
                 }
-                
-                if(emptyIndex !== -1) {
-                    var el = document.getElementById('row-' + emptyIndex);
-                    el.style.display = "";
-                    $('#select_produit'+emptyIndex).val(search.id).trigger('change');
-                    document.getElementById('qte'+emptyIndex).value = 1;
-                    document.getElementById('p_unitaire'+emptyIndex).value = search.prix;
+
+                if(foundIndex !== -1) {
+                    var qteEl = document.getElementById('qte' + foundIndex);
+                    qteEl.value = parseFloat(qteEl.value) + 1;
                     calculate();
                 } else {
-                    Swal.fire('Limite atteinte', 'Vous avez atteint le maximum de produits.', 'warning');
+                    // Find empty hidden row
+                    let emptyIndex = -1;
+                    for(let i=0; i<maxRows; i++) {
+                        var el = document.getElementById('row-' + i);
+                        if (el.style.display === "none") {
+                            emptyIndex = i;
+                            break;
+                        }
+                    }
+                    
+                    if(emptyIndex !== -1) {
+                        var el = document.getElementById('row-' + emptyIndex);
+                        el.style.display = "";
+                        
+                        // Because this row didn't exist in option list, append it so select2 shows it
+                        var newOption = new Option(search.designation, search.id, true, true);
+                        $('#select_produit'+emptyIndex).append(newOption).trigger('change');
+                        
+                        document.getElementById('qte'+emptyIndex).value = 1;
+                        document.getElementById('p_unitaire'+emptyIndex).value = search.prix_unitaire;
+                        calculate();
+                    } else {
+                        Swal.fire('Limite atteinte', 'Vous avez atteint le maximum de produits.', 'warning');
+                    }
                 }
+            } else {
+                Swal.fire('Aucun produit trouvé', 'Le code scanné ne correspond à aucun produit.', 'info');
             }
-        } else {
-            Swal.fire('Aucun produit trouvé', 'Le code scanné ne correspond à aucun produit.', 'info');
-        }
-
-        input.value = '';
-        input.focus();
+        });
     }
 
     // Main calculation engine (Instant!)

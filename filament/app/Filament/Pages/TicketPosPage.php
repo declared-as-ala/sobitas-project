@@ -99,6 +99,50 @@ class TicketPosPage extends Page
         return Product::getSearchOptionsForFilament($search, 30);
     }
 
+    public function searchProductsAJAX(string $search = ''): array
+    {
+        $products = Product::query()
+            ->select('id', 'designation_fr', 'prix', 'promo', 'promo_expiration_date', 'qte', 'code_product')
+            ->where('designation_fr', 'like', "%{$search}%")
+            ->orWhere('code_product', 'like', "%{$search}%")
+            ->limit(30)
+            ->get();
+
+        return $products->map(function ($p) {
+            return [
+                'id' => $p->id,
+                'text' => $p->designation_fr . ' (' . ($p->qte ?? 0) . ') - ' . $p->code_product,
+                'prix' => $p->getEffectiveUnitPrice(),
+                'qte' => $p->qte,
+            ];
+        })->toArray();
+    }
+
+    public function searchProductByBarcode(string $code): ?array
+    {
+        $code = trim($code);
+        if ($code === '') {
+            return null;
+        }
+
+        $product = Product::query()
+            ->select('id', 'designation_fr', 'prix', 'promo', 'promo_expiration_date', 'qte', 'code_product')
+            ->where('code_product', $code)
+            ->orWhere('code_product', '0' . $code)
+            ->first();
+
+        if ($product) {
+            return [
+                'id' => $product->id,
+                'designation' => $product->designation_fr,
+                'prix_unitaire' => $product->getEffectiveUnitPrice(),
+                'qte' => $product->qte,
+            ];
+        }
+
+        return null;
+    }
+
     // ── Save ─────────────────────────────────────────────────────────────────
     public function save(array $payload = []): void
     {
@@ -131,34 +175,40 @@ class TicketPosPage extends Page
             'prix_ttc'           => $net,
         ];
 
-        if ($this->ticketId) {
-            $ticket = Ticket::findOrFail($this->ticketId);
-            $ticket->update($data);
-            $ticket->details()->delete();
-        } else {
-            $nb = Ticket::whereYear('created_at', date('Y'))->count() + 1;
-            $data['numero'] = date('Y') . '/' . str_pad((string) $nb, 4, '0', STR_PAD_LEFT);
-            $ticket = Ticket::create($data);
-            $this->ticketId = $ticket->id;
-        }
-
-        foreach ($this->lines as $row) {
-            if (empty($row['produit_id'])) {
-                continue;
+        \Illuminate\Support\Facades\DB::transaction(function () use ($data) {
+            if ($this->ticketId) {
+                $ticket = Ticket::findOrFail($this->ticketId);
+                $ticket->update($data);
+                $ticket->details()->delete();
+            } else {
+                $nb = Ticket::whereYear('created_at', date('Y'))->sharedLock()->count() + 1;
+                $data['numero'] = date('Y') . '/' . str_pad((string) $nb, 4, '0', STR_PAD_LEFT);
+                $ticket = Ticket::create($data);
+                $this->ticketId = $ticket->id;
             }
-            $qte      = (float) ($row['qte'] ?? 1);
-            $pu       = (float) ($row['prix_unitaire'] ?? 0);
-            $lineTotal = $qte * $pu;
-            DetailsTicket::create([
-                'ticket_id'     => $ticket->id,
-                'produit_id'    => $row['produit_id'],
-                'designation_fr' => $row['designation'] ?? '',
-                'qte'           => $qte,
-                'prix_unitaire' => $pu,
-                'prix_ht'       => $lineTotal,
-                'prix_ttc'      => $lineTotal,
-            ]);
-        }
+
+            $inserts = [];
+            foreach ($this->lines as $row) {
+                if (empty($row['produit_id'])) {
+                    continue;
+                }
+                $qte      = (float) ($row['qte'] ?? 1);
+                $pu       = (float) ($row['prix_unitaire'] ?? 0);
+                $lineTotal = $qte * $pu;
+                $inserts[] = [
+                    'ticket_id'     => $ticket->id,
+                    'produit_id'    => $row['produit_id'],
+                    'designation_fr' => $row['designation'] ?? '',
+                    'qte'           => $qte,
+                    'prix_unitaire' => $pu,
+                    'prix_ht'       => $lineTotal,
+                    'prix_ttc'      => $lineTotal,
+                ];
+            }
+            if (!empty($inserts)) {
+                DetailsTicket::insert($inserts);
+            }
+        });
 
         Notification::make()
             ->title('Ticket enregistré — ouverture de l’impression.')
@@ -166,8 +216,8 @@ class TicketPosPage extends Page
             ->send();
 
         $this->dispatch('ticket-saved', [
-            'printUrl' => route('tickets.print', ['ticket' => $ticket->id]),
-            'posUrl'   => TicketPosPage::getUrl(['ticketId' => $ticket->id]),
+            'printUrl' => route('tickets.print', ['ticket' => $this->ticketId]),
+            'posUrl'   => TicketPosPage::getUrl(['ticketId' => $this->ticketId]),
         ]);
     }
 
