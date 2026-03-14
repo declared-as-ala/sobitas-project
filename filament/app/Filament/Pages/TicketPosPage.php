@@ -100,8 +100,15 @@ class TicketPosPage extends Page
     }
 
     // ── Save ─────────────────────────────────────────────────────────────────
-    public function save(): void
+    public function save(array $payload = []): void
     {
+        if (!empty($payload)) {
+            $this->lines = $payload['lines'] ?? [];
+            $this->client_id = !empty($payload['client_id']) ? (int) $payload['client_id'] : null;
+            $this->remise = (float) ($payload['remise'] ?? 0);
+            $this->pourcentage_remise = (float) ($payload['pourcentage_remise'] ?? 0);
+        }
+
         $total = 0.0;
         foreach ($this->lines as $line) {
             if (! empty($line['produit_id'])) {
@@ -132,6 +139,7 @@ class TicketPosPage extends Page
             $nb = Ticket::whereYear('created_at', date('Y'))->count() + 1;
             $data['numero'] = date('Y') . '/' . str_pad((string) $nb, 4, '0', STR_PAD_LEFT);
             $ticket = Ticket::create($data);
+            $this->ticketId = $ticket->id;
         }
 
         foreach ($this->lines as $row) {
@@ -153,11 +161,14 @@ class TicketPosPage extends Page
         }
 
         Notification::make()
-            ->title('Ticket enregistré avec succès !')
+            ->title('Ticket enregistré — ouverture de l’impression.')
             ->success()
             ->send();
 
-        $this->redirect(route('filament.admin.resources.tickets.index'));
+        $this->dispatch('ticket-saved', [
+            'printUrl' => route('tickets.print', ['ticket' => $ticket->id]),
+            'posUrl'   => TicketPosPage::getUrl(['ticketId' => $ticket->id]),
+        ]);
     }
 
     public static function getUrl(array $parameters = [], bool $isAbsolute = true, ?string $panel = null, ?\Illuminate\Database\Eloquent\Model $tenant = null, bool $shouldGuessMissingParameters = false): string

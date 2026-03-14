@@ -33,9 +33,8 @@
 
 <style>
 /* ── POS modern reset ── */
-.fi-page-ticket-pos .fi-page-header { display: none !important; }
-
 .pos-wrap {
+    margin-top: -2rem; /* Pull up to reduce gap */
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     font-size: 14px;
     color: #1f2937;
@@ -749,16 +748,36 @@
             }
         }
 
-        // We push the state to the Livewire component directly 
-        // without triggering DOM updates because we are protected by wire:ignore
-        @this.set('lines', finalLines);
-        @this.set('client_id', document.getElementById('client_select').value);
-        @this.set('remise', document.getElementById('m_remise').value || 0);
-        @this.set('pourcentage_remise', document.getElementById('pourcen_remise').value || 0);
+        let payload = {
+            lines: finalLines,
+            client_id: document.getElementById('client_select').value,
+            remise: document.getElementById('m_remise').value || 0,
+            pourcentage_remise: document.getElementById('pourcen_remise').value || 0
+        };
         
-        // Finally, trigger the save method gracefully
-        @this.call('save');
+        // Trigger the save method gracefully with payload
+        @this.call('save', payload);
     }
+
+    document.addEventListener('livewire:initialized', () => {
+        Livewire.on('ticket-saved', (data) => {
+            let eventData = Array.isArray(data) ? data[0] : data;
+            
+            if(eventData && eventData.printUrl) {
+                window.open(eventData.printUrl, '_blank');
+            }
+            
+            if(eventData && eventData.posUrl) {
+                window.history.pushState(null, '', eventData.posUrl);
+            }
+            
+            var btn = document.getElementById('btn-save');
+            if(btn) {
+                btn.innerHTML = "Enregistrer";
+                btn.disabled = false;
+            }
+        });
+    });
 
 </script>
 
