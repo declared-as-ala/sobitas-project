@@ -101,7 +101,8 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
     .filter((url) => isValidImageUrl(url));
   const dedupedImages = [...new Set(imageArray)];
   const price = getSchemaPrice(product);
-  const inStock = (product as { rupture?: number }).rupture !== 1;
+  // rupture = 0 means IN STOCK; rupture = 1 means OUT OF STOCK
+  const inStock = (product as { rupture?: number }).rupture === 0 || (product as { rupture?: number }).rupture === false || (product as { rupture?: number }).rupture === '0';
   const description = stripHtml(
     product.description_cover || product.description_fr || '',
     500
