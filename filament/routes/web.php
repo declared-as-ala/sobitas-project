@@ -229,4 +229,39 @@ Route::middleware(['auth'])->group(function () {
         ->name('stock.reports.export.csv');
     Route::get('stock/reports/export/excel', [\App\Http\Controllers\StockReportExportController::class, 'excel'])
         ->name('stock.reports.export.excel');
+
+    // POS Native AJAX endpoints
+    Route::get('/api/pos-products', function() {
+        $search = request('q', '');
+        $products = \App\Models\Product::query()
+            ->select('id', 'designation_fr', 'prix', 'promo', 'promo_expiration_date', 'qte', 'code_product')
+            ->where('designation_fr', 'like', "%{$search}%")
+            ->orWhere('code_product', 'like', "%{$search}%")
+            ->limit(30)
+            ->get();
+        return response()->json(['results' => $products->map(fn($p) => [
+            'id' => $p->id,
+            'text' => $p->designation_fr . ' (' . ($p->qte ?? 0) . ') - ' . $p->code_product,
+            'prix' => $p->getEffectiveUnitPrice(),
+            'qte' => $p->qte,
+            'code_product' => $p->code_product
+        ])]);
+    })->name('api.pos-products');
+
+    Route::get('/api/pos-barcode', function() {
+        $code = trim(request('code', ''));
+        if (!$code) return response()->json(null);
+        $p = \App\Models\Product::query()
+            ->select('id', 'designation_fr', 'prix', 'promo', 'promo_expiration_date', 'qte', 'code_product')
+            ->where('code_product', $code)
+            ->orWhere('code_product', '0' . $code)
+            ->first();
+        if (!$p) return response()->json(null);
+        return response()->json([
+            'id' => $p->id,
+            'designation' => $p->designation_fr,
+            'prix_unitaire' => $p->getEffectiveUnitPrice(),
+            'qte' => $p->qte,
+        ]);
+    })->name('api.pos-barcode');
 });

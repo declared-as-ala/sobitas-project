@@ -579,13 +579,12 @@
             placeholder: "— Choisir un produit —",
             allowClear: true,
             ajax: {
-                transport: function (params, success, failure) {
-                    let search = params.data.q || '';
-                    @this.call('searchProductsAJAX', search).then(res => {
-                        success({ results: res });
-                    }).catch(failure);
-                },
+                url: '{{ route("api.pos-products") }}',
+                dataType: 'json',
                 delay: 250,
+                data: function (params) {
+                    return { q: params.term || '' };
+                },
                 cache: true
             }
         });
@@ -665,10 +664,12 @@
         // Visual feedback during scan
         input.disabled = true;
 
-        @this.call('searchProductByBarcode', code).then(search => {
-            input.disabled = false;
-            input.value = '';
-            input.focus();
+        fetch('{{ route("api.pos-barcode") }}?code=' + encodeURIComponent(code))
+            .then(res => res.json())
+            .then(search => {
+                input.disabled = false;
+                input.value = '';
+                input.focus();
 
             if(search) {
                 // Check if already in active rows to increment qty
