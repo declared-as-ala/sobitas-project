@@ -122,19 +122,18 @@ jobs:
             echo "⚡ PERFORMANCE OPTIMIZATION - Running on deploy..."
             echo "════════════════════════════════════════════════════════════"
 
-            # 1. Clear old caches
+            # 1. Clear old caches (but NOT view cache - Filament components cause issues)
             echo "🧹 Clearing old caches..."
             docker compose -f "$COMPOSE_FILE" exec -T backend-v2 php artisan cache:clear > /dev/null 2>&1 || true
             docker compose -f "$COMPOSE_FILE" exec -T backend-v2 php artisan config:clear > /dev/null 2>&1 || true
             docker compose -f "$COMPOSE_FILE" exec -T backend-v2 php artisan route:clear > /dev/null 2>&1 || true
-            docker compose -f "$COMPOSE_FILE" exec -T backend-v2 php artisan view:clear > /dev/null 2>&1 || true
 
-            # 2. Build new caches (critical for performance)
+            # 2. Build new caches (critical for performance: +50-80ms per request)
             echo "💾 Building optimized caches (50-80ms improvement per request)..."
             docker compose -f "$COMPOSE_FILE" exec -T backend-v2 php artisan config:cache
             docker compose -f "$COMPOSE_FILE" exec -T backend-v2 php artisan route:cache
 
-            # 3. Run migrations (ensures indexes for query optimization)
+            # 3. Run migrations (ensures database indexes for query optimization)
             echo "📊 Running database migrations..."
             docker compose -f "$COMPOSE_FILE" exec -T backend-v2 php artisan migrate --force > /dev/null 2>&1 || true
 
@@ -143,13 +142,13 @@ jobs:
             docker compose -f "$COMPOSE_FILE" exec -T backend-v2 npm ci --only=production > /dev/null 2>&1 || true
             docker compose -f "$COMPOSE_FILE" exec -T backend-v2 npm run build > /dev/null 2>&1 || true
 
-            # 5. Optimize composer autoloader
+            # 5. Optimize composer autoloader (faster class loading)
             echo "🔧 Optimizing PHP autoloader..."
             docker compose -f "$COMPOSE_FILE" exec -T backend-v2 composer install --optimize-autoloader --no-dev > /dev/null 2>&1 || true
 
-            # 6. Run Laravel optimization
-            echo "⚙️  Running Laravel framework optimization..."
-            docker compose -f "$COMPOSE_FILE" exec -T backend-v2 php artisan optimize
+            # 6. Clear opcache to ensure latest code is used
+            echo "♻️  Clearing PHP OPcache..."
+            docker compose -f "$COMPOSE_FILE" exec -T backend-v2 php -r "if (function_exists('opcache_reset')) { opcache_reset(); echo 'OPcache cleared'; } else { echo 'OPcache not available'; }" > /dev/null 2>&1 || true
             
             # 7. Restart queue workers with new code
             echo "🔄 Restarting queue workers..."
