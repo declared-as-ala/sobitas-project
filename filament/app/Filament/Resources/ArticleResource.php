@@ -68,6 +68,10 @@ class ArticleResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            // ✅ OPTIMIZATION: Select only needed columns to reduce memory and DB time
+            ->modifyQueryUsing(fn (\Illuminate\Database\Eloquent\Builder $query) => $query
+                ->select(['id', 'designation_fr', 'slug', 'cover', 'publier', 'created_at'])
+            )
             ->columns([
                 Tables\Columns\ImageColumn::make('cover')
                     ->label('Image')
