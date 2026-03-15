@@ -61,8 +61,20 @@ const nextConfig = {
         ],
       },
       {
-        source: '/icon.png',
-        headers: [{ key: 'Cache-Control', value: 'public, max-age=86400' }],
+        source: '/favicon.ico',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000' }],
+      },
+      {
+        source: '/favicon-*.png',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000' }],
+      },
+      {
+        source: '/apple-touch-icon.png',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000' }],
+      },
+      {
+        source: '/manifest.json',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=3600' }],
       },
     ];
   },

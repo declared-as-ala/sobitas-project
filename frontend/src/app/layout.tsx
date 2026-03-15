@@ -22,12 +22,16 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn'),
   icons: {
     icon: [
-      { url: '/logo.png', sizes: 'any' },
-      { url: '/logo.png', sizes: '192x192', type: 'image/png' },
-      { url: '/logo.png', sizes: '512x512', type: 'image/png' },
+      { url: '/favicon.ico', sizes: '32x32', type: 'image/x-icon' },
+      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/favicon-512x512.png', sizes: '512x512', type: 'image/png' },
     ],
-    apple: '/logo.png',
-    shortcut: '/logo.png',
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+    shortcut: '/favicon.ico',
   },
   title: {
     default: "Protéine Tunisie | Whey, Créatine & Compléments – SOBITAS",
@@ -73,7 +77,7 @@ export const metadata: Metadata = {
     description: "Protéine Tunisie : whey protein, créatine et compléments alimentaires avec livraison rapide partout en Tunisie sur Protein.tn.",
     images: [
       {
-        url: "/icon.png",
+        url: "/favicon-512x512.png",
         width: 512,
         height: 512,
         alt: "Protein.tn - Protéine Tunisie par SOBITAS",
@@ -84,7 +88,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Protéine Tunisie | Whey, Créatine & Compléments – SOBITAS",
     description: "Protéine Tunisie : whey protein, créatine et compléments alimentaires avec livraison rapide partout en Tunisie sur Protein.tn.",
-    images: ["/icon.png"],
+    images: ["/favicon-512x512.png"],
   },
   robots: {
     index: true,
@@ -116,6 +120,8 @@ export default async function RootLayout({
   return (
     <html lang="fr" suppressHydrationWarning data-scroll-behavior="smooth">
       <head>
+        {/* Manifest for PWA and Android support */}
+        <link rel="manifest" href="/manifest.json" />
         {/* Preconnect for image/storage origin – same default as api.ts to avoid hydration mismatch */}
         <link rel="preconnect" href={process.env.NEXT_PUBLIC_API_URL?.replace(/\/api\/?$/, '') || 'https://admin.protein.tn'} crossOrigin="anonymous" />
         <link rel="dns-prefetch" href={process.env.NEXT_PUBLIC_API_URL?.replace(/\/api\/?$/, '') || 'https://admin.protein.tn'} />
