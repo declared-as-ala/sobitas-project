@@ -275,8 +275,8 @@ function dvInitializeForm() {
         }
     });
     
-    // Initialize all product selects
-    for (let i = 1; i <= dvMax; i++) { dvInitSelect2(i); }
+    // Initialize all product selects dynamically
+    // for (let i = 1; i <= dvMax; i++) { dvInitSelect2(i); }
     
     // Hydrate existing data if in Edit/Create mode
     @php
@@ -288,6 +288,7 @@ function dvInitializeForm() {
     if (initData && initData.client_id) {
         dvHydrate(initData, selProducts);
     } else {
+        dvInitSelect2(1);
         dvCalculate();
     }
 }
@@ -327,6 +328,7 @@ function dvHydrate(data, selProducts) {
             if (item.produit_id && i <= dvMax) {
                 var r = document.getElementById('dv-row-' + i);
                 if (r) r.style.display = '';
+                dvInitSelect2(i);
                 
                 var $sel = $('#dv_prod_' + i);
                 var pInfo = selProducts[item.produit_id];
@@ -358,7 +360,9 @@ function dvHydrate(data, selProducts) {
 
 
 function dvInitSelect2(i) {
-    $('#dv_prod_' + i).select2({ 
+    var $el = $('#dv_prod_' + i);
+    if ($el.hasClass('select2-hidden-accessible')) return; // Already initialized
+    $el.select2({ 
         placeholder: '— Choisir —', 
         allowClear: true, 
         width: '100%',
@@ -397,6 +401,7 @@ function dvAddRow() {
         var r = document.getElementById('dv-row-' + i);
         if (r.style.display === 'none') {
             r.style.display = '';
+            dvInitSelect2(i);
             $('#dv_prod_' + i).val('').trigger('change.select2');
             document.getElementById('dv_qte_' + i).value      = 1;
             document.getElementById('dv_pu_' + i).value       = 0;

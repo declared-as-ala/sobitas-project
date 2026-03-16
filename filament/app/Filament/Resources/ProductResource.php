@@ -46,13 +46,11 @@ class ProductResource extends Resource
                         Forms\Components\Select::make('sous_categorie_id')
                             ->label('Sous-catégorie')
                             ->relationship('sousCategorie', 'designation_fr')
-                            ->searchable()
-                            ->preload(),
+                            ->searchable(),
                         Forms\Components\Select::make('brand_id')
                             ->label('Marque')
                             ->relationship('brand', 'designation_fr')
-                            ->searchable()
-                            ->preload(),
+                            ->searchable(),
                     ]),
                     Forms\Components\RichEditor::make('description_fr')
                         ->label('Description')
@@ -156,12 +154,10 @@ class ProductResource extends Resource
                     Forms\Components\Select::make('tags')
                         ->relationship('tags', 'designation_fr')
                         ->multiple()
-                        ->preload()
                         ->searchable(),
                     Forms\Components\Select::make('aromes')
                         ->relationship('aromes', 'designation_fr')
                         ->multiple()
-                        ->preload()
                         ->searchable(),
                 ]),
             ])->columnSpanFull(),

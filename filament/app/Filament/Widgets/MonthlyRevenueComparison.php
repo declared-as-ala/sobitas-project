@@ -13,6 +13,8 @@ class MonthlyRevenueComparison extends ChartWidget
 
     protected static ?int $sort = 3;
 
+    protected static bool $isLazy = true;
+
     protected ?string $maxHeight = '250px';
 
     protected ?string $pollingInterval = null; // Disable polling — data cached 5min

@@ -260,8 +260,8 @@ $(document).ready(function () {
             data: function (params) { return { q: params.term || '' }; },
             cache: true
         }
-    });
-    for (let i = 1; i <= blMax; i++) { blInitSelect2(i); }
+    // Initialize all product selects dynamically
+    // for (let i = 1; i <= blMax; i++) { blInitSelect2(i); }
     
     // Hydrate existing data if in Edit mode using Livewire's form data
     @php
@@ -272,6 +272,7 @@ $(document).ready(function () {
     if (initData && initData.client_id) {
         blHydrate(initData);
     } else {
+        blInitSelect2(1);
         blCalculate();
     }
 });
@@ -287,6 +288,7 @@ function blHydrate(data) {
             if (item.produit_id && i <= blMax) {
                 var r = document.getElementById('bl-row-' + i);
                 if (r) r.style.display = '';
+                blInitSelect2(i);
                 
                 // Set the Select2 value without triggering its full onchange yet to avoid recalculation loops
                 var $sel = $('#bl_prod_' + i);
@@ -327,7 +329,9 @@ function blHydrate(data) {
 
 
 function blInitSelect2(i) {
-    $('#bl_prod_' + i).select2({
+    var $el = $('#bl_prod_' + i);
+    if ($el.hasClass('select2-hidden-accessible')) return; // Already initialized
+    $el.select2({
         placeholder: '— Choisir —',
         allowClear: true,
         width: '100%',
@@ -375,6 +379,7 @@ function blAddRow() {
         var r = document.getElementById('bl-row-' + i);
         if (r.style.display === 'none') {
             r.style.display = '';
+            blInitSelect2(i);
             $('#bl_prod_' + i).val('').trigger('change.select2');
             document.getElementById('bl_qte_' + i).value  = 1;
             document.getElementById('bl_pu_' + i).value   = 0;

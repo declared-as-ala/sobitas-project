@@ -15,6 +15,8 @@ class GeographicChart extends ChartWidget
 
     protected static ?int $sort = 6;
 
+    protected static bool $isLazy = true;
+
     protected int | string | array $columnSpan = 'full';
 
     protected ?string $pollingInterval = null;

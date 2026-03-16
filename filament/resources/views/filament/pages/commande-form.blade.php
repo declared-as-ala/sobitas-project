@@ -295,21 +295,21 @@ $(document).ready(function() {
         }
     });
 
-    // Init select2 for all product rows
-    for (let i = 1; i <= cmdMax; i++) {
-        $('#select_produit' + i).select2({ 
-            placeholder: 'Choisir..', 
-            allowClear: true, 
-            width: '100%',
-            ajax: {
-                url: '/api/pos-products',
-                dataType: 'json',
-                delay: 250,
-                data: function (params) { return { q: params.term || '' }; },
-                cache: true
-            }
-        });
-    }
+    // Init select2 for all product rows dynamically
+    // for (let i = 1; i <= cmdMax; i++) {
+    //     $('#select_produit' + i).select2({ 
+    //         placeholder: 'Choisir..', 
+    //         allowClear: true, 
+    //         width: '100%',
+    //         ajax: {
+    //             url: '/api/pos-products',
+    //             dataType: 'json',
+    //             delay: 250,
+    //             data: function (params) { return { q: params.term || '' }; },
+    //             cache: true
+    //         }
+    //     });
+    // }
 
     var selProducts = @json($selProducts);
     var existingLines = @json($data['details'] ?? []);
@@ -318,6 +318,7 @@ $(document).ready(function() {
             if (line.produit_id && j < cmdMax) {
                 j++;
                 document.getElementById('achat' + j).style.display = '';
+                cmdInitSelect2(j);
                 var pInfo = selProducts[line.produit_id];
                 if (pInfo) {
                     var newOption = new Option(pInfo.designation_fr + ' (' + (pInfo.qte||0) + ') — ' + pInfo.code_product, line.produit_id, true, true);
@@ -333,9 +334,27 @@ $(document).ready(function() {
         // Show one empty row by default
         j = 1;
         document.getElementById('achat1').style.display = '';
+        cmdInitSelect2(1);
     }
     calculate();
 });
+
+function cmdInitSelect2(i) {
+    var $el = $('#select_produit' + i);
+    if ($el.hasClass('select2-hidden-accessible')) return; // Already initialized
+    $el.select2({ 
+        placeholder: 'Choisir..', 
+        allowClear: true, 
+        width: '100%',
+        ajax: {
+            url: '/api/pos-products',
+            dataType: 'json',
+            delay: 250,
+            data: function (params) { return { q: params.term || '' }; },
+            cache: true
+        }
+    });
+}
 
 function addPatient() {
     document.getElementById('ajoutPatient').style.display = 'revert';
@@ -402,6 +421,7 @@ function addRow() {
     if (j < cmdMax) {
         j++;
         document.getElementById('achat' + j).style.display = '';
+        cmdInitSelect2(j);
         $('#select_produit' + j).val('').trigger('change.select2');
         document.getElementById('qte' + j).value = 1;
         document.getElementById('p_unitaire' + j).value = '0.000';

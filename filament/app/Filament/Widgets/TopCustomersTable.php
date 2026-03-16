@@ -16,6 +16,8 @@ class TopCustomersTable extends BaseWidget
 
     protected static ?int $sort = 9;
 
+    protected static bool $isLazy = true;
+
     protected int | string | array $columnSpan = 'full';
 
     public function table(Table $table): Table

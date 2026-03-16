@@ -550,9 +550,9 @@
         // Init select2 on all active and hidden rows for fast switching
         $('#client_select').select2();
         
-        for(let i=0; i<maxRows; i++) {
-            initSelect2(i);
-        }
+        // for(let i=0; i<maxRows; i++) {
+        //     initSelect2(i);
+        // }
 
         // Focus barcode safely
         setTimeout(() => {
@@ -572,10 +572,20 @@
                 }
             }
         });
+        
+        // Initialize visible rows
+        for (let i = 0; i < maxRows; i++) {
+            var el = document.getElementById('row-' + i);
+            if (el && el.style.display !== "none") {
+                initSelect2(i);
+            }
+        }
     });
 
     function initSelect2(i) {
-        $('#select_produit' + i).select2({
+        var $el = $('#select_produit' + i);
+        if ($el.hasClass('select2-hidden-accessible')) return; // Already initialized
+        $el.select2({
             placeholder: "— Choisir un produit —",
             allowClear: true,
             ajax: {
@@ -634,6 +644,7 @@
             var el = document.getElementById('row-' + i);
             if (el.style.display === "none") {
                 el.style.display = "";
+                initSelect2(i);
                 // reset values
                 $('#select_produit'+i).val('').trigger('change.select2');
                 document.getElementById('qte'+i).value = 1;
@@ -703,6 +714,7 @@
                     if(emptyIndex !== -1) {
                         var el = document.getElementById('row-' + emptyIndex);
                         el.style.display = "";
+                        initSelect2(emptyIndex);
                         
                         // Because this row didn't exist in option list, append it so select2 shows it
                         var newOption = new Option(search.designation, search.id, true, true);
