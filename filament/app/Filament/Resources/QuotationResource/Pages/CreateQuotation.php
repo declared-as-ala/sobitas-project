@@ -191,3 +191,4 @@ class CreateQuotation extends CreateRecord
             return null;
         }
     }
+}
