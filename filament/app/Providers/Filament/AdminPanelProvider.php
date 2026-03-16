@@ -89,7 +89,7 @@ class AdminPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
     {
-        return $panel
+        $p = $panel
             ->default()
             ->id('admin')
             ->login(Login::class)
@@ -186,11 +186,13 @@ class AdminPanelProvider extends PanelProvider
                 RevenueBySourcePieChart::class,
                 ProductsStockPieChart::class,
             ])
-            ->unsavedChangesAlerts()
-            ->brandLogo(asset('logo.png'))
-            ->brandLogoHeight('auto')
-            ->favicon(asset('logo.png'))
-            ->navigationGroups([
+            ->unsavedChangesAlerts();
+
+        if (is_file(public_path('logo.png'))) {
+            $p = $p->brandLogo(asset('logo.png'))->brandLogoHeight('auto')->favicon(asset('logo.png'));
+        }
+
+        return $p->navigationGroups([
                 NavigationGroup::make('Paramètres du site')
                     ->icon('heroicon-o-cog-6-tooth')
                     ->collapsed(),
