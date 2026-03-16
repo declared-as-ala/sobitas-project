@@ -125,4 +125,69 @@ class CreateQuotation extends CreateRecord
             Product::where('id', $row['produit_id'])->decrement('qte', $qte);
         }
     }
-}
+
+    /**
+     * Public save method callable from JavaScript via Livewire.
+     * This ensures form data is validated and properly persisted.
+     */
+    public function save(): null
+    {
+        // Get the current form state from Livewire
+        $data = $this->form->getState();
+
+        // Validate required fields
+        if (empty($data['client_id'])) {
+            \Filament\Notifications\Notification::make()
+                ->title('Erreur de validation')
+                ->body('Veuillez sélectionner un client')
+                ->danger()
+                ->send();
+            return null;
+        }
+
+        if (empty($data['details']) || !is_array($data['details']) || count($data['details']) === 0) {
+            \Filament\Notifications\Notification::make()
+                ->title('Erreur de validation')
+                ->body('Ajoutez au moins un produit')
+                ->danger()
+                ->send();
+            return null;
+        }
+
+        try {
+            // Mutate the form data before creation
+            $mutatedData = $this->mutateFormDataBeforeCreate($data);
+
+            // Create the quotation record
+            $this->record = $this->getModel()::create($mutatedData);
+            
+            // Call the afterCreate hook to create related details
+            $this->afterCreate();
+
+            // Show success notification
+            \Filament\Notifications\Notification::make()
+                ->title('Devis créé avec succès!')
+                ->body('Le devis #' . $this->record->numero . ' a été créé.')
+                ->success()
+                ->send();
+
+            // Dispatch an event to navigate to the resource's index page
+            $this->dispatch('navigate', url: static::getResource()::getUrl('index'));
+            
+            return null;
+        } catch (\Illuminate\Database\QueryException $e) {
+            \Filament\Notifications\Notification::make()
+                ->title('Erreur base de données')
+                ->body('Erreur lors de la création: ' . $e->getMessage())
+                ->danger()
+                ->send();
+            return null;
+        } catch (\Exception $e) {
+            \Filament\Notifications\Notification::make()
+                ->title('Erreur lors de la création')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+            return null;
+        }
+    }

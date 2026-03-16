@@ -251,7 +251,17 @@ body:has(.devis-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !impo
 var dvMax = {{ $max }};
 var dvDefaultTva = {{ $defaultTva }};
 
-$(document).ready(function () {
+// Initialize Select2 and form after page load or SPA navigation
+function dvInitializeForm() {
+    // Destroy existing Select2 instances to prevent duplicates
+    try {
+        $('#dv_client_id').select2('destroy');
+        for (let i = 1; i <= dvMax; i++) {
+            $('#dv_prod_' + i).select2('destroy');
+        }
+    } catch (e) { /* Ignore if Select2 not initialized yet */ }
+    
+    // Re-initialize client select with Select2
     $('#dv_client_id').select2({
         placeholder: '— Choisir un client —',
         allowClear: true,
@@ -264,9 +274,11 @@ $(document).ready(function () {
             cache: true
         }
     });
+    
+    // Initialize all product selects
     for (let i = 1; i <= dvMax; i++) { dvInitSelect2(i); }
     
-    // Hydrate existing data if in Edit mode using Livewire's form data
+    // Hydrate existing data if in Edit/Create mode
     @php
         $formData = method_exists($getLivewire(), 'getRecord') && $getLivewire()->getRecord() ? $getLivewire()->data : [];
     @endphp
@@ -278,7 +290,30 @@ $(document).ready(function () {
     } else {
         dvCalculate();
     }
+}
+
+// Run on initial page load
+$(document).ready(function () {
+    dvInitializeForm();
 });
+
+// Re-initialize when SPA navigates to this page
+// This hook is called by spa-navigation-fix.blade.php after every SPA navigation
+window.dvFormReinit = function() {
+    // Small delay to ensure DOM is fully updated
+    setTimeout(function() {
+        dvInitializeForm();
+    }, 50);
+};
+
+// Ensure Livewire re-initializes on component initialization
+if (typeof window.Livewire !== 'undefined') {
+    document.addEventListener('livewire:initialized', function() {
+        setTimeout(function() {
+            dvInitializeForm();
+        }, 50);
+    });
+}
 
 function dvHydrate(data, selProducts) {
     if (data.client_id) {
@@ -493,7 +528,12 @@ function dvSave() {
         if (!r || r.style.display === 'none') continue;
         var pid = $('#dv_prod_' + i).val();
         if (!pid) continue;
-        lines.push({ produit_id: pid, qte: document.getElementById('dv_qte_' + i).value, prix_unitaire: document.getElementById('dv_pu_' + i).value, tva_pct: document.getElementById('dv_tva_' + i).value });
+        lines.push({ 
+            produit_id: pid, 
+            qte: document.getElementById('dv_qte_' + i).value, 
+            prix_unitaire: document.getElementById('dv_pu_' + i).value, 
+            tva_pct: document.getElementById('dv_tva_' + i).value 
+        });
     }
 
     var clientId  = $('#dv_client_id').val();
@@ -505,24 +545,48 @@ function dvSave() {
     var timbre    = document.getElementById('dv_timbre').value;
     var net       = document.getElementById('dv_net').value;
 
-    if (!clientId) { Swal.fire('Erreur', 'Veuillez choisir un client', 'warning'); return; }
-    if (lines.length === 0) { Swal.fire('Erreur', 'Ajoutez au moins un produit', 'warning'); return; }
+    if (!clientId) { 
+        Swal.fire('Erreur', 'Veuillez choisir un client', 'warning'); 
+        return; 
+    }
+    if (lines.length === 0) { 
+        Swal.fire('Erreur', 'Ajoutez au moins un produit', 'warning'); 
+        return; 
+    }
 
-    @this.set('data.client_id', clientId);
-    @this.set('data.details', lines);
-    @this.set('data.remise', parseFloat(remise));
-    @this.set('data.pourcentage_remise', parseFloat(pct));
-    @this.set('data.prix_ht', parseFloat(prixHt));
-    @this.set('data.tva', parseFloat(tva));
-    @this.set('data.prix_ttc', parseFloat(prixTtc));
-    @this.set('data.timbre', parseFloat(timbre));
-    @this.set('data.net_a_payer', parseFloat(net));
-    @this.set('data.prix_ht_apres_remise', parseFloat(document.getElementById('dv_apres_remise')?.value || prixHt));
+    // Disable the save button to prevent double-submission
+    var saveBtn = document.querySelector('.btn-save');
+    if (saveBtn) saveBtn.disabled = true;
 
-    setTimeout(() => {
-        var btn = document.querySelector('[wire\\:click*="save"], button[type="submit"]');
-        if (btn) { btn.click(); } else { @this.call('save'); }
-    }, 200);
+    // Prepare form data object
+    var formData = {
+        client_id: clientId,
+        details: lines,
+        remise: parseFloat(remise),
+        pourcentage_remise: parseFloat(pct),
+        prix_ht: parseFloat(prixHt),
+        tva: parseFloat(tva),
+        prix_ttc: parseFloat(prixTtc),
+        timbre: parseFloat(timbre),
+        net_a_payer: parseFloat(net),
+        prix_ht_apres_remise: parseFloat(document.getElementById('dv_apres_remise')?.value || prixHt)
+    };
+
+    try {
+        // Update Livewire form data with all required fields
+        for (let key in formData) {
+            @this.set('data.' + key, formData[key]);
+        }
+
+        // Call the save method
+        setTimeout(() => {
+            @this.call('save');
+        }, 100);
+    } catch (e) {
+        console.error('Error saving form', e);
+        Swal.fire('Erreur', 'Erreur lors de la sauvegarde: ' + (e.message || 'Erreur inconnue'), 'error');
+        if (saveBtn) saveBtn.disabled = false;
+    }
 }
 
 document.addEventListener('keypress', function(e) {

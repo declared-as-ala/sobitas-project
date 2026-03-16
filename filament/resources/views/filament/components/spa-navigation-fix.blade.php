@@ -53,9 +53,13 @@
      */
     function reinitAfterNavigate() {
         removeOrphanedOverlays();
-        // Future: call any custom re-init (e.g. window.filamentReinit && window.filamentReinit());
+        // Call main custom re-init
         if (typeof window.filamentReinit === 'function') {
             try { window.filamentReinit(); } catch (e) { log('filamentReinit error', e); }
+        }
+        // Call form-specific re-init (e.g., for Devis form with Select2)
+        if (typeof window.dvFormReinit === 'function') {
+            try { window.dvFormReinit(); } catch (e) { log('dvFormReinit error', e); }
         }
     }
 
