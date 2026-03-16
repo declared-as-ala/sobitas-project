@@ -98,7 +98,10 @@ class AdminPanelProvider extends PanelProvider
             ->renderHook(
                 'panels::head.end',
                 function (): string {
-                    $loginCss = ".fi-simple-layout { background-image: url('" . asset('images/auth/gym-bg.jpg') . "') !important; }";
+                    $bgPath = public_path('images/auth/gym-bg.jpg');
+                    $loginCss = is_file($bgPath)
+                        ? ".fi-simple-layout { background-image: url('" . asset('images/auth/gym-bg.jpg') . "') !important; }"
+                        : '';
 
                     return '
                         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.min.css" />
@@ -107,7 +110,7 @@ class AdminPanelProvider extends PanelProvider
                     . "\n" . '<link rel="stylesheet" href="' . asset('css/filament/topbar.css') . '" />'
                     . "\n" . '<link rel="stylesheet" href="' . asset('css/filament/doc-edit.css') . '" />'
                     . "\n" . '<link rel="stylesheet" href="' . asset('css/filament/auth.css') . '" />'
-                    . "\n" . '<style>' . $loginCss . '</style>';
+                    . ($loginCss !== '' ? "\n" . '<style>' . $loginCss . '</style>' : '');
                 }
             )
             ->renderHook(

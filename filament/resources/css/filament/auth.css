@@ -83,7 +83,8 @@
 /* LOGO — login/auth pages only (320px wide) */
 .fi-simple-layout .fi-logo img,
 .fi-simple-layout .fi-brand-logo img,
-.fi-simple-layout [data-slot="logo"] img {
+.fi-simple-layout [data-slot="logo"] img,
+.fi-simple-layout .auth-logo {
     width: 320px !important;
     max-width: 100% !important;
     height: auto !important;
@@ -91,6 +92,16 @@
     margin: 0 auto 1.5rem auto !important;
     object-fit: contain !important;
     filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.2));
+}
+
+/* Fallback when logo.png is missing */
+.fi-simple-layout .auth-logo-fallback {
+    display: block;
+    font-size: 1.75rem;
+    font-weight: 700;
+    text-align: center;
+    margin: 0 auto 1.5rem auto;
+    color: var(--fi-body-text-color, #1f2937);
 }
 
 /* Dashboard sidebar logo — keep small/normal */
