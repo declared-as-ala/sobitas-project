@@ -98,28 +98,15 @@ class AdminPanelProvider extends PanelProvider
             ->renderHook(
                 'panels::head.end',
                 function (): string {
-                    $authCss  = file_get_contents(resource_path('css/filament/auth.css'));
-                    $imagePath = public_path('images/auth/gym-bg.jpg');
-                    if (is_file($imagePath)) {
-                        $mime   = mime_content_type($imagePath) ?: 'image/jpeg';
-                        $b64    = base64_encode(file_get_contents($imagePath));
-                        $dataUri = 'data:' . $mime . ';base64,' . $b64;
-                    } else {
-                        // Fallback: dark gradient if image not found
-                        $dataUri = '';
-                    }
-
-                    $loginCss = $dataUri
-                        ? ".fi-simple-layout { background-image: url('{$dataUri}') !important; }"
-                        : ".fi-simple-layout { background: linear-gradient(135deg,#0f0c0a 0%,#1a1008 100%) !important; }";
+                    $loginCss = ".fi-simple-layout { background-image: url('" . asset('images/auth/gym-bg.jpg') . "') !important; }";
 
                     return '
                         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.min.css" />
                     '
                     . "\n" . view('filament.components.custom-admin-styles')->render()
-                    . "\n" . '<style>' . file_get_contents(resource_path('css/filament/topbar.css')) . '</style>'
-                    . "\n" . '<style>' . file_get_contents(resource_path('css/filament/doc-edit.css')) . '</style>'
-                    . "\n" . '<style>' . $authCss . '</style>'
+                    . "\n" . '<link rel="stylesheet" href="' . asset('css/filament/topbar.css') . '" />'
+                    . "\n" . '<link rel="stylesheet" href="' . asset('css/filament/doc-edit.css') . '" />'
+                    . "\n" . '<link rel="stylesheet" href="' . asset('css/filament/auth.css') . '" />'
                     . "\n" . '<style>' . $loginCss . '</style>';
                 }
             )
@@ -197,7 +184,7 @@ class AdminPanelProvider extends PanelProvider
                 ProductsStockPieChart::class,
             ])
             ->unsavedChangesAlerts()
-            ->brandLogo(fn () => view('filament.app.logo'))
+            ->brandLogo(asset('logo.png'))
             ->brandLogoHeight('auto')
             ->favicon(asset('logo.png'))
             ->navigationGroups([
