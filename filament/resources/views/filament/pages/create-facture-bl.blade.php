@@ -170,26 +170,15 @@ body:has(.bl-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !importa
                     </div>
                 </div>
 
-                {{-- SHIPPING DETAILS (Editable) --}}
-                <div id="bl-shipping-details" style="margin-top:16px; padding-top:12px; border-top:1px dashed #e2e8f0;">
-                    <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:8px;">
-                        INFORMATIONS DE LIVRAISON / COORDONNÉES DE LIVRAISON
-                    </label>
-                    <div style="display:flex; gap:12px; margin-bottom:8px;">
-                        <input class="bl-input" id="bl_livraison_nom" placeholder="Nom et prénom..." style="flex:1;">
-                        <input class="bl-input" id="bl_livraison_phone" placeholder="Téléphone..." style="width:120px;">
-                    </div>
-                    <div style="margin-bottom:8px;">
-                        <input class="bl-input" id="bl_livraison_email" type="email" placeholder="Email..." style="width:100%;">
-                    </div>
-                    <div style="margin-bottom:8px;">
-                        <input class="bl-input" id="bl_livraison_adresse1" placeholder="Adresse de livraison..." style="width:100%;">
-                    </div>
-                    <div style="display:flex; gap:12px;">
-                        <input class="bl-input" id="bl_livraison_ville" placeholder="Ville..." style="flex:1;">
-                        <input class="bl-input" id="bl_livraison_region" placeholder="Région..." style="flex:1;">
-                        <input class="bl-input" id="bl_livraison_cp" placeholder="Code Postal..." style="width:90px;">
-                    </div>
+                {{-- SHIPPING DETAILS (keep in DOM but hidden; used internally for saving/printing) --}}
+                <div id="bl-shipping-details" style="display:none;">
+                    <input class="bl-input" id="bl_livraison_nom">
+                    <input class="bl-input" id="bl_livraison_phone">
+                    <input class="bl-input" id="bl_livraison_email" type="email">
+                    <input class="bl-input" id="bl_livraison_adresse1">
+                    <input class="bl-input" id="bl_livraison_ville">
+                    <input class="bl-input" id="bl_livraison_region">
+                    <input class="bl-input" id="bl_livraison_cp">
                 </div>
                 <div id="bl-add-client">
                     <div style="margin-bottom:8px;text-align:right;">

@@ -238,26 +238,6 @@ class EditFacture extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            // Transformer en Facture TVA (with confirmation modal)
-            Actions\Action::make('convertToInvoice')
-                ->label('Transformer en facture TVA')
-                ->icon('heroicon-o-document-duplicate')
-                ->color('success')
-                ->visible(fn () => Schema::hasColumn('facture_tvas', 'facture_id') && ! $this->record->factureTvas()->exists())
-                ->requiresConfirmation()
-                ->modalHeading('Transformer en Facture TVA ?')
-                ->modalDescription('Une nouvelle Facture TVA sera créée avec les mêmes produits et client. Cette action ne supprime pas le BL.')
-                ->modalSubmitActionLabel('Confirmer')
-                ->modalCancelActionLabel('Annuler')
-                ->action(function (BlToInvoiceService $service) {
-                    $invoice = $service->createInvoiceFromBl($this->record);
-                    Notification::make()
-                        ->title('Facture TVA #' . $invoice->numero . ' créée.')
-                        ->success()
-                        ->send();
-                    $this->redirect(FactureTvaResource::getUrl('edit', ['record' => $invoice]));
-                }),
-
             // Imprimer — open in new tab (safest in SPA mode, avoids modal dependency)
             Actions\Action::make('imprimer')
                 ->label('Imprimer')
@@ -280,12 +260,12 @@ class EditFacture extends EditRecord
 
     /**
      * Native Filament form footer actions with French labels.
-     * These use the proper Livewire save lifecycle — DO NOT override with custom header buttons.
+     * Only keep \"Enregistrer\" and \"Annuler\".
      */
     protected function getFormActions(): array
     {
         return [
-            $this->getSaveFormAction()->label('Enregistrer les modifications')->icon('heroicon-o-check'),
+            $this->getSaveFormAction()->label('Enregistrer')->icon('heroicon-o-check'),
             $this->getCancelFormAction()->label('Annuler'),
         ];
     }

@@ -136,4 +136,16 @@ class CreateFacture extends CreateRecord
             'net_a_payer' => $calcTotals['net_a_payer'],
         ]);
     }
+
+    /**
+     * Footer form actions (bottom buttons).
+     * Only keep \"Enregistrer\" and \"Annuler\" for BL create.
+     */
+    protected function getFormActions(): array
+    {
+        return [
+            $this->getCreateFormAction()->label('Enregistrer'),
+            $this->getCancelFormAction()->label('Annuler'),
+        ];
+    }
 }
