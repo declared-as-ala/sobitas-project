@@ -3,10 +3,9 @@
    Optimized for Filament v4
    ══════════════════════════════════════════════ */
 
-/* Page layout — gradient fallback when images/auth/gym-bg.jpg is missing */
+/* Page layout */
 .fi-simple-layout {
     min-height: 100vh !important;
-    background-image: linear-gradient(135deg, #1e3a5f 0%, #0f172a 50%, #1e293b 100%);
     background-size: cover !important;
     background-position: center !important;
     background-repeat: no-repeat !important;
@@ -84,8 +83,7 @@
 /* LOGO — login/auth pages only (320px wide) */
 .fi-simple-layout .fi-logo img,
 .fi-simple-layout .fi-brand-logo img,
-.fi-simple-layout [data-slot="logo"] img,
-.fi-simple-layout .auth-logo {
+.fi-simple-layout [data-slot="logo"] img {
     width: 320px !important;
     max-width: 100% !important;
     height: auto !important;
@@ -93,16 +91,6 @@
     margin: 0 auto 1.5rem auto !important;
     object-fit: contain !important;
     filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.2));
-}
-
-/* Fallback when logo.png is missing */
-.fi-simple-layout .auth-logo-fallback {
-    display: block;
-    font-size: 1.75rem;
-    font-weight: 700;
-    text-align: center;
-    margin: 0 auto 1.5rem auto;
-    color: var(--fi-body-text-color, #1f2937);
 }
 
 /* Dashboard sidebar logo — keep small/normal */
