@@ -216,9 +216,8 @@ class OrderToBlService
      */
     protected function buildDeliveryAddressFromOrder(Commande $order, ?Client $client): string
     {
-        $segments = [];
+        $parts = [];
 
-        // Prefer explicit livraison address fields.
         $street = trim(((string) ($order->livraison_adresse1 ?? '')) . ' ' . ((string) ($order->livraison_adresse2 ?? '')));
         if ($street === '') {
             $street = trim(((string) ($order->adresse1 ?? '')) . ' ' . ((string) ($order->adresse2 ?? '')));
@@ -227,20 +226,25 @@ class OrderToBlService
             $street = trim((string) ($client->adresse ?? ''));
         }
         if ($street !== '') {
-            $segments[] = $street;
+            $parts[] = $street;
         }
 
-        $cityRegion = trim(((string) ($order->livraison_ville ?? $order->ville ?? ($client->ville ?? ''))) . ' ' . ((string) ($order->livraison_region ?? $order->region ?? ($client->region ?? ''))));
-        if ($cityRegion !== '') {
-            $segments[] = $cityRegion;
+        $ville = trim((string) ($order->livraison_ville ?? $order->ville ?? ($client->ville ?? '')));
+        if ($ville !== '') {
+            $parts[] = $ville;
+        }
+
+        $region = trim((string) ($order->livraison_region ?? $order->region ?? ($client->region ?? '')));
+        if ($region !== '') {
+            $parts[] = $region;
         }
 
         $cp = trim((string) ($order->livraison_code_postale ?? $order->code_postale ?? ($client->code_postale ?? '')));
         if ($cp !== '') {
-            $segments[] = $cp;
+            $parts[] = $cp;
         }
 
-        return trim(implode(' - ', array_filter($segments, fn ($v) => $v !== '')));
+        return implode(' - ', $parts);
     }
 
     protected function audit(string $action, $entity, array $after = []): void

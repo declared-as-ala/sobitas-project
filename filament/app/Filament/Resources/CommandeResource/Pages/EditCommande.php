@@ -4,15 +4,10 @@ namespace App\Filament\Resources\CommandeResource\Pages;
 
 use App\Filament\Resources\CommandeResource;
 use App\Filament\Resources\ClientResource;
-use App\Filament\Resources\FactureTvaResource;
-use App\Filament\Resources\TicketResource;
 use App\Filament\Widgets\DocumentTimelineWidget;
 use App\Models\Commande;
-use App\Services\DocumentConversion\CommandeToInvoiceService;
-use App\Services\DocumentConversion\OrderToTicketBlService;
 use Filament\Actions;
 use Filament\Actions\ActionGroup;
-use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Support\Enums\Width;
 
@@ -60,49 +55,13 @@ class EditCommande extends EditRecord
 
     protected function getHeaderActions(): array
     {
-        $r = $this->record;
         return array_merge(parent::getHeaderActions(), [
-            Actions\Action::make('saveTop')
-                ->label('Sauvegarder les modifications')
-                ->icon('heroicon-o-check')
-                ->color('primary')
-                ->action(function (): void {
-                    $this->save();
-                }),
-            Actions\Action::make('cancelTop')
-                ->label('Annuler')
-                ->icon('heroicon-o-x-mark')
-                ->color('gray')
-                ->url(CommandeResource::getUrl('index')),
             Actions\Action::make('viewClient')
                 ->label('Voir client')
                 ->icon('heroicon-o-user')
                 ->visible(fn () => (bool) $this->record->user_id)
                 ->url(fn () => ClientResource::getUrl('edit', ['record' => $this->record->user_id]))
                 ->openUrlInNewTab(),
-            Actions\Action::make('createBlTicket')
-                ->label('Créer Bon de livraison')
-                ->icon('heroicon-o-document-text')
-                ->color('success')
-                ->visible(fn () => ! $this->record->factures()->exists())
-                ->modalHeading('Créer un Bon de livraison pour cette commande')
-                ->modalDescription('Un bon de livraison sera créé avec les lignes de la commande.')
-                ->modalSubmitActionLabel('Créer le BL')
-                ->modalContent(fn () => view('filament.components.convert-wizard-summary', [
-                    'sourceNumber' => $r->numero,
-                    'client' => $r->getFullNameAttribute() ?: trim(($r->nom ?? '') . ' ' . ($r->prenom ?? '')) ?: '—',
-                    'date' => $r->created_at?->format('d/m/Y'),
-                    'itemsCount' => $r->details->count(),
-                    'totalTtc' => number_format((float) ($r->prix_ttc ?? 0), 3, ',', ' ') . ' DT',
-                ]))
-                ->action(function (\App\Services\DocumentConversion\OrderToBlService $service) {
-                    $bl = $service->createBlFromOrder($this->record);
-                    Notification::make()
-                        ->title('Conversion réussie — téléchargement du Bon de livraison en cours')
-                        ->success()
-                        ->send();
-                    $this->redirect(route('factures.download', ['facture' => $bl->id]));
-                }),
             ActionGroup::make([
                 Actions\DeleteAction::make()->label('Supprimer la commande'),
             ])->label('')->icon('heroicon-o-ellipsis-vertical'),

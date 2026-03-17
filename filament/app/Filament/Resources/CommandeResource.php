@@ -245,9 +245,7 @@ class CommandeResource extends Resource
 
     public static function getRelations(): array
     {
-        return [
-            CommandeResource\RelationManagers\DetailsRelationManager::class,
-        ];
+        return [];
     }
 
     public static function getPages(): array
