@@ -61,6 +61,10 @@
         if (typeof window.dvFormReinit === 'function') {
             try { window.dvFormReinit(); } catch (e) { log('dvFormReinit error', e); }
         }
+        // BL (Bon de Livraison) form re-init
+        if (typeof window.blFormReinit === 'function') {
+            try { window.blFormReinit(); } catch (e) { log('blFormReinit error', e); }
+        }
     }
 
     function onNavigated() {

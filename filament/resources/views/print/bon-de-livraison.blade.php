@@ -8,6 +8,7 @@
 <div class="client-info-block" style="text-align: left; margin-top: 20px; font-size: 10pt; line-height: 1.4;">
     @php
         $shipName = '';
+        $shipEmail = '';
         $shipPhone = '';
         $formattedAddress = '';
 
@@ -19,6 +20,7 @@
             $safeLivNom = trim(($f->livraison_nom ?? '') . ' ' . ($f->livraison_prenom ?? '')) ?: trim(($cmd->livraison_nom ?? '') . ' ' . ($cmd->livraison_prenom ?? ''));
             $shipName = $safeLivNom ?: trim(($f->nom ?? '') . ' ' . ($f->prenom ?? '')) ?: trim(($cmd->nom ?? '') . ' ' . ($cmd->prenom ?? '')) ?: $clientName;
             
+            $shipEmail = $f->livraison_email ?: ($cmd->livraison_email ?? '') ?: $f->email ?: ($cmd->email ?? '') ?: ($client->email ?? '');
             $shipPhone = $f->livraison_phone ?: ($cmd->livraison_phone ?? '') ?: $f->phone ?: ($cmd->phone ?? '') ?: ($client->phone ?? $client->phone_1 ?? '');
             // Prefer the model accessor for a single-line delivery address
             $formattedAddress = method_exists($f, 'getFormattedDeliveryAddressAttribute')
@@ -40,6 +42,7 @@
 
         } elseif(isset($client) && $client) {
             $shipName = $client->nom_prenom ?? trim(($client->nom ?? '') . ' ' . ($client->prenom ?? '')) ?: ($client->name ?? '');
+            $shipEmail = $client->email ?? '';
             $shipPhone = $client->phone ?? $client->phone_1 ?? '';
             $formattedAddress = $client->adresse ?? '';
         }
@@ -50,6 +53,7 @@
     </h5>
     
     <div><b>Nom et prénom :</b> {{ $shipName ?: '—' }}</div>
+    @if($shipEmail)<div><b>Email :</b> {{ $shipEmail }}</div>@endif
     <div><b>Téléphone :</b> {{ $shipPhone ?: '—' }}</div>
     <div><b>Adresse :</b> {{ $formattedAddress ?: '—' }}</div>
 </div>

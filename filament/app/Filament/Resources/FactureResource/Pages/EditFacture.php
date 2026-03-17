@@ -160,6 +160,8 @@ class EditFacture extends EditRecord
             'prix_ttc' => $calcTotals['prix_ttc'],
             'net_a_payer' => $calcTotals['net_a_payer'],
         ]);
+
+        $this->dispatch('open-url-new-tab', url: route('factures.print', ['facture' => $this->record->id]));
     }
 
     /**

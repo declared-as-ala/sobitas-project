@@ -276,21 +276,28 @@ body:has(.bl-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !importa
 
 <script>
 var blMax = {{ $max }};
-var blDefaultTva = 0; // BL is HT-only; kept for parity with Devis logic where needed.
+var blDefaultTva = 0;
 
-// Initialize Select2 and form after page load or SPA navigation
+function getBlWire() {
+    var el = document.querySelector('.bl-page');
+    if (!el) return null;
+    var wireEl = el.closest('[wire\\:id]') || document.querySelector('[wire\\:id]');
+    return (wireEl && window.Livewire) ? window.Livewire.find(wireEl.getAttribute('wire:id')) : null;
+}
+
 function blInitializeForm() {
-    // Destroy existing Select2 instances to prevent duplicates
-    try {
-        $('#bl_client_id').select2('destroy');
-        for (let i = 1; i <= blMax; i++) {
-            $('#bl_prod_' + i).select2('destroy');
-        }
-    } catch (e) {
-        // Ignore if Select2 not initialized yet
+    if (typeof jQuery === 'undefined' || typeof jQuery.fn.select2 === 'undefined') {
+        setTimeout(blInitializeForm, 100);
+        return;
     }
 
-    // Expose initial client address/phone (for edit mode) to JS so hydration can use them
+    try {
+        if ($('#bl_client_id').hasClass('select2-hidden-accessible')) $('#bl_client_id').select2('destroy');
+        for (var i = 1; i <= blMax; i++) {
+            if ($('#bl_prod_' + i).hasClass('select2-hidden-accessible')) $('#bl_prod_' + i).select2('destroy');
+        }
+    } catch (e) {}
+
     @if($selClient)
         window.blInitialClientAdresse = @json($selClient->adresse ?? '');
         window.blInitialClientPhone   = @json($selClient->phone_1 ?? '');
@@ -299,7 +306,6 @@ function blInitializeForm() {
         window.blInitialClientPhone   = '';
     @endif
 
-    // Re-initialize client Select2 with AJAX
     $('#bl_client_id').select2({
         placeholder: '— Choisir un client —',
         allowClear: true,
@@ -319,7 +325,6 @@ function blInitializeForm() {
         blSelectClient();
     });
 
-    // Hydrate existing data if in Edit/Create mode using Livewire's form data
     @php
         $formData = method_exists($getLivewire(), 'getRecord') && $getLivewire()->getRecord()
             ? $getLivewire()->data
@@ -336,26 +341,26 @@ function blInitializeForm() {
     }
 }
 
-// Run on initial page load
-$(document).ready(function () {
+function blBootstrap() {
+    if (!document.querySelector('.bl-page')) return;
     blInitializeForm();
-});
+}
 
-// Re-initialize when SPA navigates to this page (hooked from spa-navigation-fix like Devis)
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', blBootstrap);
+} else {
+    setTimeout(blBootstrap, 10);
+}
+
 window.blFormReinit = function () {
-    setTimeout(function () {
-        blInitializeForm();
-    }, 50);
+    setTimeout(blBootstrap, 50);
 };
 
-// Ensure Livewire re-initializes on component initialization
-if (typeof window.Livewire !== 'undefined') {
-    document.addEventListener('livewire:initialized', function () {
-        setTimeout(function () {
-            blInitializeForm();
-        }, 50);
-    });
-}
+document.addEventListener('livewire:navigated', function () {
+    if (document.querySelector('.bl-page')) {
+        setTimeout(blBootstrap, 80);
+    }
+});
 
 function blHydrate(data, selProducts) {
     // Hydrate client
@@ -626,7 +631,7 @@ function blAnnulerClient() {
 
 function blSave() {
     var lines = [];
-    for (let i = 1; i <= blMax; i++) {
+    for (var i = 1; i <= blMax; i++) {
         var r = document.getElementById('bl-row-' + i);
         if (!r || r.style.display === 'none') continue;
         var pid = $('#bl_prod_' + i).val();
@@ -644,45 +649,55 @@ function blSave() {
     if (!clientId) { Swal.fire('Erreur', 'Veuillez choisir un client', 'warning'); return; }
     if (lines.length === 0) { Swal.fire('Erreur', 'Ajoutez au moins un produit', 'warning'); return; }
 
-    @this.set('data.client_id', clientId);
-    @this.set('data.details', lines);
-    @this.set('data.remise', parseFloat(remise));
-    @this.set('data.pourcentage_remise', parseFloat(pct));
-    @this.set('data.prix_ht', parseFloat(prixHt));
-    @this.set('data.frais_livraison', parseFloat(frais));
-    @this.set('data.net_a_payer', parseFloat(net));
-    @this.set('data.prix_ht_apres_remise', parseFloat(document.getElementById('bl_apres_remise')?.value || prixHt));
-    @this.set('data.tva', 0);
-    @this.set('data.prix_ttc', parseFloat(net));
-    @this.set('data.timbre', 0);
+    var wire = getBlWire();
+    if (!wire) {
+        Swal.fire('Erreur', 'Session expirée. Veuillez recharger la page.', 'error');
+        return;
+    }
 
-    // Save existing nulls/overwrites to Facturation to ensure its clean
-    @this.set('data.nom', null);
-    @this.set('data.phone', null);
-    @this.set('data.email', null);
-    @this.set('data.adresse1', null);
-    @this.set('data.ville', null);
-    @this.set('data.region', null);
-    @this.set('data.code_postale', null);
+    var saveBtn = document.querySelector('.btn-save');
+    if (saveBtn) saveBtn.disabled = true;
 
-    // Save Shipping Details
-    @this.set('data.livraison_nom', document.getElementById('bl_livraison_nom')?.value || null);
-    @this.set('data.livraison_phone', document.getElementById('bl_livraison_phone')?.value || null);
-    @this.set('data.livraison_email', document.getElementById('bl_livraison_email')?.value || null);
-    @this.set('data.livraison_adresse1', document.getElementById('bl_livraison_adresse1')?.value || null);
-    @this.set('data.livraison_ville', document.getElementById('bl_livraison_ville')?.value || null);
-    @this.set('data.livraison_region', document.getElementById('bl_livraison_region')?.value || null);
-    @this.set('data.livraison_code_postale', document.getElementById('bl_livraison_cp')?.value || null);
-    @this.set('data.net_a_payer', parseFloat(net));
-    @this.set('data.prix_ht_apres_remise', parseFloat(document.getElementById('bl_apres_remise')?.value || prixHt));
-    @this.set('data.tva', 0);
-    @this.set('data.prix_ttc', parseFloat(net));
-    @this.set('data.timbre', 0);
+    var formData = {
+        client_id: clientId,
+        details: lines,
+        remise: parseFloat(remise),
+        pourcentage_remise: parseFloat(pct),
+        prix_ht: parseFloat(prixHt),
+        frais_livraison: parseFloat(frais),
+        net_a_payer: parseFloat(net),
+        prix_ht_apres_remise: parseFloat(document.getElementById('bl_apres_remise')?.value || prixHt),
+        tva: 0,
+        prix_ttc: parseFloat(net),
+        timbre: 0,
+        nom: null,
+        phone: null,
+        email: null,
+        adresse1: null,
+        ville: null,
+        region: null,
+        code_postale: null,
+        livraison_nom: document.getElementById('bl_livraison_nom')?.value || null,
+        livraison_phone: document.getElementById('bl_livraison_phone')?.value || null,
+        livraison_email: document.getElementById('bl_livraison_email')?.value || null,
+        livraison_adresse1: document.getElementById('bl_livraison_adresse1')?.value || null,
+        livraison_ville: document.getElementById('bl_livraison_ville')?.value || null,
+        livraison_region: document.getElementById('bl_livraison_region')?.value || null,
+        livraison_code_postale: document.getElementById('bl_livraison_cp')?.value || null
+    };
 
-    setTimeout(() => {
-        var btn = document.querySelector('[wire\\:click*="save"], button[type="submit"]');
-        if (btn) { btn.click(); } else { @this.call('save'); }
-    }, 200);
+    try {
+        for (var key in formData) {
+            wire.set('data.' + key, formData[key]);
+        }
+        setTimeout(function () {
+            wire.call('save');
+        }, 200);
+    } catch (e) {
+        console.error('BL save error', e);
+        Swal.fire('Erreur', 'Erreur lors de la sauvegarde. Rechargez la page.', 'error');
+        if (saveBtn) saveBtn.disabled = false;
+    }
 }
 
 document.addEventListener('keypress', function(e) {
