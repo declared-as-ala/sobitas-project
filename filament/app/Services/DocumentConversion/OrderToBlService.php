@@ -83,7 +83,7 @@ class OrderToBlService
     public function createBlFromOrder(Commande $order, ?array $quantities = null): Facture
     {
         return DB::transaction(function () use ($order, $quantities) {
-            $order->load('details.product', 'client');
+            $order = $order->fresh(['details.product', 'client']);
 
             $clientId = $this->resolveOrCreateClient($order);
 
