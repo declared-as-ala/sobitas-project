@@ -7,8 +7,9 @@
 @section('client-info-header')
 <div class="client-info-block" style="text-align: left; margin-top: 20px; font-size: 10pt; line-height: 1.4;">
     @php
-        $shipName = ''; $shipStreet = ''; $shipCity = ''; $shipRegion = ''; $shipCp = '';
-        $shipPhone = ''; $shipEmail = '';
+        $shipName = '';
+        $shipPhone = '';
+        $formattedAddress = '';
 
         if (isset($facture)) {
             $f = $facture;
@@ -18,37 +19,39 @@
             $safeLivNom = trim(($f->livraison_nom ?? '') . ' ' . ($f->livraison_prenom ?? '')) ?: trim(($cmd->livraison_nom ?? '') . ' ' . ($cmd->livraison_prenom ?? ''));
             $shipName = $safeLivNom ?: trim(($f->nom ?? '') . ' ' . ($f->prenom ?? '')) ?: trim(($cmd->nom ?? '') . ' ' . ($cmd->prenom ?? '')) ?: $clientName;
             
-            $safeLivAddr = trim(($f->livraison_adresse1 ?? '') . ' ' . ($f->livraison_adresse2 ?? '')) ?: trim(($cmd->livraison_adresse1 ?? '') . ' ' . ($cmd->livraison_adresse2 ?? ''));
-            $shipStreet = $safeLivAddr ?: trim(($f->adresse1 ?? '') . ' ' . ($f->adresse2 ?? '')) ?: trim(($cmd->adresse1 ?? '') . ' ' . ($cmd->adresse2 ?? '')) ?: ($client->adresse ?? '');
-            
-            $shipCity = $f->livraison_ville ?: ($cmd->livraison_ville ?? '') ?: $f->ville ?: ($cmd->ville ?? '') ?: ($client->ville ?? '');
-            $shipRegion = $f->livraison_region ?: ($cmd->livraison_region ?? '') ?: $f->region ?: ($cmd->region ?? '') ?: ($client->region ?? '');
-            $shipCp = $f->livraison_code_postale ?: ($cmd->livraison_code_postale ?? '') ?: $f->code_postale ?: ($cmd->code_postale ?? '') ?: ($client->code_postale ?? '');
             $shipPhone = $f->livraison_phone ?: ($cmd->livraison_phone ?? '') ?: $f->phone ?: ($cmd->phone ?? '') ?: ($client->phone ?? $client->phone_1 ?? '');
-            $shipEmail = $f->livraison_email ?: ($cmd->livraison_email ?? '') ?: $f->email ?: ($cmd->email ?? '') ?: ($client->email ?? '');
+            // Prefer the model accessor for a single-line delivery address
+            $formattedAddress = method_exists($f, 'getFormattedDeliveryAddressAttribute')
+                ? ($f->formatted_delivery_address ?: '')
+                : '';
+            if ($formattedAddress === '') {
+                // Fallback: minimal composition from legacy fields
+                $safeLivAddr = trim(($f->livraison_adresse1 ?? '') . ' ' . ($f->livraison_adresse2 ?? '')) ?: trim(($cmd->livraison_adresse1 ?? '') . ' ' . ($cmd->livraison_adresse2 ?? ''));
+                $city = $f->livraison_ville ?: ($cmd->livraison_ville ?? '') ?: $f->ville ?: ($cmd->ville ?? '') ?: ($client->ville ?? '');
+                $region = $f->livraison_region ?: ($cmd->livraison_region ?? '') ?: $f->region ?: ($cmd->region ?? '') ?: ($client->region ?? '');
+                $cp = $f->livraison_code_postale ?: ($cmd->livraison_code_postale ?? '') ?: $f->code_postale ?: ($cmd->code_postale ?? '') ?: ($client->code_postale ?? '');
+                $parts = [];
+                if (trim($safeLivAddr) !== '') $parts[] = trim($safeLivAddr);
+                $cityRegion = trim(trim($city . ' ' . $region));
+                if ($cityRegion !== '') $parts[] = $cityRegion;
+                if (trim($cp) !== '') $parts[] = trim($cp);
+                $formattedAddress = implode(' - ', array_filter($parts));
+            }
 
         } elseif(isset($client) && $client) {
             $shipName = $client->nom_prenom ?? trim(($client->nom ?? '') . ' ' . ($client->prenom ?? '')) ?: ($client->name ?? '');
-            $shipStreet = $client->adresse ?? '';
-            $shipCity = $client->ville ?? '';
-            $shipRegion = $client->region ?? '';
-            $shipCp = $client->code_postale ?? '';
             $shipPhone = $client->phone ?? $client->phone_1 ?? '';
-            $shipEmail = $client->email ?? '';
+            $formattedAddress = $client->adresse ?? '';
         }
     @endphp
 
     <h5 class="text-gray-light" style="margin-bottom: 5px; font-size: 10pt; border-bottom: 1px solid #eee; padding-bottom: 5px;">
-        INFORMATIONS DU CLIENT / COORDONNÉES DE LIVRAISON
+        INFORMATIONS DU CLIENT
     </h5>
     
     <div><b>Nom et prénom :</b> {{ $shipName ?: '—' }}</div>
-    <div><b>Email :</b> {{ $shipEmail ?: '—' }}</div>
     <div><b>Téléphone :</b> {{ $shipPhone ?: '—' }}</div>
-    <div><b>Adresse :</b> {{ $shipStreet ?: '—' }}</div>
-    <div><b>Ville :</b> {{ $shipCity ?: '—' }}</div>
-    <div><b>Région (Gouvernorat) :</b> {{ $shipRegion ?: '—' }}</div>
-    <div><b>Code postal :</b> {{ $shipCp ?: '—' }}</div>
+    <div><b>Adresse :</b> {{ $formattedAddress ?: '—' }}</div>
 </div>
 @endsection
 

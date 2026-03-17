@@ -39,6 +39,7 @@ class DocumentPdfController extends Controller
     {
         try {
             $facture->load('client');
+            $coordonnee = \App\Models\Coordinate::getCached();
             $details_facture = DetailsFacture::where('facture_id', $facture->id)
                 ->with('product:id,designation_fr,cover')
                 ->get();

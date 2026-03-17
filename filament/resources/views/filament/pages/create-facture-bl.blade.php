@@ -158,11 +158,15 @@ body:has(.bl-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !importa
                             @endif
                         </select>
                     </div>
-                    <div class="form-field" style="display:none;">
-                        <input class="bl-input" id="bl_adr" disabled value="">
+                    <div class="form-field">
+                        <label style="font-size:12px;color:#64748b;display:block;margin-bottom:4px;">Adresse :</label>
+                        <input class="bl-input" id="bl_adr" disabled
+                               value="{{ $selClient ? $selClient->adresse : '' }}">
                     </div>
-                    <div class="form-field" style="display:none;">
-                        <input class="bl-input" id="bl_phone" disabled value="">
+                    <div class="form-field">
+                        <label style="font-size:12px;color:#64748b;display:block;margin-bottom:4px;">N°Tél :</label>
+                        <input class="bl-input" id="bl_phone" disabled
+                               value="{{ $selClient ? $selClient->phone_1 : '' }}">
                     </div>
                 </div>
 
@@ -297,6 +301,15 @@ function blInitializeForm() {
         // Ignore if Select2 not initialized yet
     }
 
+    // Expose initial client address/phone (for edit mode) to JS so hydration can use them
+    @if($selClient)
+        window.blInitialClientAdresse = @json($selClient->adresse ?? '');
+        window.blInitialClientPhone   = @json($selClient->phone_1 ?? '');
+    @else
+        window.blInitialClientAdresse = '';
+        window.blInitialClientPhone   = '';
+    @endif
+
     // Re-initialize client Select2 with AJAX
     $('#bl_client_id').select2({
         placeholder: '— Choisir un client —',
@@ -377,6 +390,22 @@ function blHydrate(data, selProducts) {
         }
 
         $client.val(data.client_id).trigger('change.select2');
+    }
+
+    // Hydrate client address & phone display under the select
+    if (data.adresse1 !== undefined && data.adresse1 !== null) {
+        var adrInput = document.getElementById('bl_adr');
+        if (adrInput) adrInput.value = data.adresse1 || '';
+    } else if (typeof window.blInitialClientAdresse !== 'undefined') {
+        var adrInput2 = document.getElementById('bl_adr');
+        if (adrInput2 && !adrInput2.value) adrInput2.value = window.blInitialClientAdresse;
+    }
+    if (data.phone !== undefined && data.phone !== null) {
+        var phoneInput = document.getElementById('bl_phone');
+        if (phoneInput) phoneInput.value = data.phone || '';
+    } else if (typeof window.blInitialClientPhone !== 'undefined') {
+        var phoneInput2 = document.getElementById('bl_phone');
+        if (phoneInput2 && !phoneInput2.value) phoneInput2.value = window.blInitialClientPhone;
     }
 
     // Hydrate product lines
@@ -460,6 +489,12 @@ function blSelectClient() {
     if (!sel || !sel.id) return;
 
     var nom = sel.text ? sel.text.split('(')[0].trim() : '';
+
+    // Update client info display under the select (Adresse / N°Tél) like old backend
+    var adrInput = document.getElementById('bl_adr');
+    if (adrInput) adrInput.value = sel.adresse || '';
+    var phoneInput = document.getElementById('bl_phone');
+    if (phoneInput) phoneInput.value = sel.phone_1 || '';
 
     // Populate Livraison fields directly from client record since billing is hidden
     document.getElementById('bl_livraison_nom').value = nom;

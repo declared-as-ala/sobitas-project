@@ -32,6 +32,73 @@ class Facture extends Model
         'status' => BlStatus::class,
     ];
 
+    /**
+     * Computed, human-friendly single-line delivery address.
+     *
+     * Preference order:
+     * 1) livraison_adresse1 (already combined for new BLs)
+     * 2) combination of livraison_* pieces
+     * 3) combination of billing address pieces
+     * 4) related client adresse
+     */
+    public function getFormattedDeliveryAddressAttribute(): string
+    {
+        // 1) If livraison_adresse1 is already a full line, prefer it.
+        $line = trim((string) ($this->livraison_adresse1 ?? ''));
+        if ($line !== '') {
+            return $line;
+        }
+
+        // 2) Build from individual livraison_* pieces.
+        $parts = [];
+        $streetParts = trim(((string) ($this->livraison_adresse1 ?? '')) . ' ' . ((string) ($this->livraison_adresse2 ?? '')));
+        if ($streetParts !== '') {
+            $parts[] = $streetParts;
+        }
+        $cityRegion = trim(((string) ($this->livraison_ville ?? '')) . ' ' . ((string) ($this->livraison_region ?? '')));
+        if ($cityRegion !== '') {
+            // Use \" - \" to visually separate street from city/region when street exists.
+            $parts[] = $cityRegion;
+        }
+        $cp = trim((string) ($this->livraison_code_postale ?? ''));
+        if ($cp !== '') {
+            $parts[] = $cp;
+        }
+        $line = trim(implode(' - ', array_filter($parts, fn ($v) => $v !== '')));
+        if ($line !== '') {
+            return $line;
+        }
+
+        // 3) Fallback to billing address pieces.
+        $parts = [];
+        $streetParts = trim(((string) ($this->adresse1 ?? '')) . ' ' . ((string) ($this->adresse2 ?? '')));
+        if ($streetParts !== '') {
+            $parts[] = $streetParts;
+        }
+        $cityRegion = trim(((string) ($this->ville ?? '')) . ' ' . ((string) ($this->region ?? '')));
+        if ($cityRegion !== '') {
+            $parts[] = $cityRegion;
+        }
+        $cp = trim((string) ($this->code_postale ?? ''));
+        if ($cp !== '') {
+            $parts[] = $cp;
+        }
+        $line = trim(implode(' - ', array_filter($parts, fn ($v) => $v !== '')));
+        if ($line !== '') {
+            return $line;
+        }
+
+        // 4) Last resort: client adresse field.
+        if ($this->relationLoaded('client') || $this->client) {
+            $clientAdresse = trim((string) ($this->client->adresse ?? ''));
+            if ($clientAdresse !== '') {
+                return $clientAdresse;
+            }
+        }
+
+        return '';
+    }
+
     protected static function booted()
     {
         static::creating(function ($facture) {

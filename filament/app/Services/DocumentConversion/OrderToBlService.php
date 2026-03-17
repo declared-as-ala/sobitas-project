@@ -159,11 +159,14 @@ class OrderToBlService
             $bl->livraison_prenom = $order->livraison_prenom ?: $order->prenom ?: '';
             $bl->livraison_email = $order->livraison_email ?: $order->email ?: ($client->email ?? '');
             $bl->livraison_phone = $order->livraison_phone ?: $order->phone ?: ($client->phone ?? $client->phone_1 ?? '');
-            
-            $addr = trim(($order->livraison_adresse1 ?? '') . ' ' . ($order->livraison_adresse2 ?? ''));
-            $addrFallback = trim(($order->adresse1 ?? '') . ' ' . ($order->adresse2 ?? ''));
-            $bl->livraison_adresse1 = $addr ?: $addrFallback ?: ($client->adresse ?? '');
+
+            // Build a single-line delivery address from order + client and store it.
+            $fullAddress = $this->buildDeliveryAddressFromOrder($order, $client);
+            $bl->livraison_adresse1 = $fullAddress;
             $bl->livraison_adresse2 = null;
+            // Optionally mirror to billing adresse1 for backward compatibility.
+            $bl->adresse1 = $fullAddress;
+            $bl->adresse2 = null;
             
             $bl->livraison_ville = $order->livraison_ville ?: $order->ville ?: ($client->ville ?? '');
             $bl->livraison_region = $order->livraison_region ?: $order->region ?: ($client->region ?? '');
@@ -205,6 +208,39 @@ class OrderToBlService
 
             return $bl->fresh(['details']);
         });
+    }
+
+    /**
+     * Build a normalized single-line delivery address from Commande + Client.
+     * This is used for BL printing and display.
+     */
+    protected function buildDeliveryAddressFromOrder(Commande $order, ?Client $client): string
+    {
+        $segments = [];
+
+        // Prefer explicit livraison address fields.
+        $street = trim(((string) ($order->livraison_adresse1 ?? '')) . ' ' . ((string) ($order->livraison_adresse2 ?? '')));
+        if ($street === '') {
+            $street = trim(((string) ($order->adresse1 ?? '')) . ' ' . ((string) ($order->adresse2 ?? '')));
+        }
+        if ($street === '' && $client) {
+            $street = trim((string) ($client->adresse ?? ''));
+        }
+        if ($street !== '') {
+            $segments[] = $street;
+        }
+
+        $cityRegion = trim(((string) ($order->livraison_ville ?? $order->ville ?? ($client->ville ?? ''))) . ' ' . ((string) ($order->livraison_region ?? $order->region ?? ($client->region ?? ''))));
+        if ($cityRegion !== '') {
+            $segments[] = $cityRegion;
+        }
+
+        $cp = trim((string) ($order->livraison_code_postale ?? $order->code_postale ?? ($client->code_postale ?? '')));
+        if ($cp !== '') {
+            $segments[] = $cp;
+        }
+
+        return trim(implode(' - ', array_filter($segments, fn ($v) => $v !== '')));
     }
 
     protected function audit(string $action, $entity, array $after = []): void

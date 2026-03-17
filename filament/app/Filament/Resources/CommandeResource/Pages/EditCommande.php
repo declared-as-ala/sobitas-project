@@ -103,29 +103,6 @@ class EditCommande extends EditRecord
                         ->send();
                     $this->redirect(route('factures.download', ['facture' => $bl->id]));
                 }),
-            Actions\Action::make('createInvoice')
-                ->label('Créer Facture TVA')
-                ->icon('heroicon-o-document-duplicate')
-                ->color('warning')
-                ->visible(fn () => ! $this->record->factureTvas()->exists())
-                ->modalHeading('Créer une facture TVA pour cette commande')
-                ->modalDescription('Une facture TVA liée à cette commande sera créée sans l’ajouter une seconde fois au chiffre d’affaires.')
-                ->modalSubmitActionLabel('Créer la facture')
-                ->modalContent(fn () => view('filament.components.convert-wizard-summary', [
-                    'sourceNumber' => $r->numero,
-                    'client' => $r->getFullNameAttribute() ?: trim(($r->nom ?? '') . ' ' . ($r->prenom ?? '')) ?: '—',
-                    'date' => $r->created_at?->format('d/m/Y'),
-                    'itemsCount' => $r->details->count(),
-                    'totalTtc' => number_format((float) ($r->prix_ttc ?? 0), 3, ',', ' ') . ' DT',
-                ]))
-                ->action(function (CommandeToInvoiceService $service) {
-                    $invoice = $service->createInvoiceFromCommande($this->record);
-                    Notification::make()
-                        ->title('Conversion réussie — ouverture de l’impression pour la Facture TVA')
-                        ->success()
-                        ->send();
-                    $this->redirect(route('facture-tvas.print', ['factureTva' => $invoice->id]));
-                }),
             ActionGroup::make([
                 Actions\DeleteAction::make()->label('Supprimer la commande'),
             ])->label('')->icon('heroicon-o-ellipsis-vertical'),
