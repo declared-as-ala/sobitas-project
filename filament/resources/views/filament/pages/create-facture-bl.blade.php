@@ -1,8 +1,34 @@
 @php
     $coordinate = \App\Models\Coordinate::getCached();
-    $clients    = [];
-    $products   = [];
     $max = 100;
+
+    // Get current Livewire form data (create or edit) so we can hydrate Select2 and totals.
+    $getLwData = method_exists($getLivewire(), 'getRecord') && $getLivewire()->getRecord()
+        ? $getLivewire()->data
+        : [];
+
+    // Preload selected products so Select2 can show proper labels immediately on edit.
+    $selProductIds = collect($getLwData['details'] ?? [])->pluck('produit_id')->filter()->toArray();
+    $selProducts = [];
+    if (! empty($selProductIds)) {
+        $selProducts = \App\Models\Product::whereIn('id', $selProductIds)
+            ->get(['id', 'designation_fr', 'qte', 'code_product'])
+            ->mapWithKeys(function ($p) {
+                return [$p->id => [
+                    'id' => $p->id,
+                    'text' => $p->designation_fr . ' (' . ($p->qte ?? 0) . ') - ' . $p->code_product,
+                    'designation_fr' => $p->designation_fr,
+                    'qte' => $p->qte,
+                    'code_product' => $p->code_product,
+                ]];
+            })
+            ->toArray();
+    }
+
+    // Preload selected client so the client Select2 can render the label on edit without extra AJAX.
+    $selClientId = $getLwData['client_id'] ?? null;
+    $selClient = $selClientId ? \App\Models\Client::find($selClientId) : null;
+
     // Embed logo as base64 so it always works (no 404, no asset path issues)
     $logoPath = public_path('logo.png');
     $logoSrc  = is_file($logoPath)
@@ -120,6 +146,16 @@ body:has(.bl-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !importa
                     <div class="form-field">
                         <select id="bl_client_id" style="width:100%" onchange="blSelectClient()">
                             <option value="">— Choisir un client —</option>
+                            @if($selClient)
+                                <option value="{{ $selClient->id }}" selected
+                                    data-adresse="{{ $selClient->adresse }}"
+                                    data-phone="{{ $selClient->phone_1 }}"
+                                    data-email="{{ $selClient->email }}"
+                                    data-ville="{{ $selClient->ville }}"
+                                    data-code_postale="{{ $selClient->code_postale }}">
+                                    {{ $selClient->name }} ({{ $selClient->phone_1 }})
+                                </option>
+                            @endif
                         </select>
                     </div>
                     <div class="form-field" style="display:none;">
@@ -247,8 +283,21 @@ body:has(.bl-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !importa
 
 <script>
 var blMax = {{ $max }};
+var blDefaultTva = 0; // BL is HT-only; kept for parity with Devis logic where needed.
 
-$(document).ready(function () {
+// Initialize Select2 and form after page load or SPA navigation
+function blInitializeForm() {
+    // Destroy existing Select2 instances to prevent duplicates
+    try {
+        $('#bl_client_id').select2('destroy');
+        for (let i = 1; i <= blMax; i++) {
+            $('#bl_prod_' + i).select2('destroy');
+        }
+    } catch (e) {
+        // Ignore if Select2 not initialized yet
+    }
+
+    // Re-initialize client Select2 with AJAX
     $('#bl_client_id').select2({
         placeholder: '— Choisir un client —',
         allowClear: true,
@@ -257,65 +306,125 @@ $(document).ready(function () {
             url: '/api/pos-clients',
             dataType: 'json',
             delay: 250,
-            data: function (params) { return { q: params.term || '' }; },
+            data: function (params) {
+                return { q: params.term || '' };
+            },
             cache: true
         }
-    // Initialize all product selects dynamically
-    // for (let i = 1; i <= blMax; i++) { blInitSelect2(i); }
-    
-    // Hydrate existing data if in Edit mode using Livewire's form data
+    });
+
+    $('#bl_client_id').off('change.bl').on('change.bl', function () {
+        blSelectClient();
+    });
+
+    // Hydrate existing data if in Edit/Create mode using Livewire's form data
     @php
-        $formData = method_exists($getLivewire(), 'getRecord') && $getLivewire()->getRecord() ? $getLivewire()->data : [];
+        $formData = method_exists($getLivewire(), 'getRecord') && $getLivewire()->getRecord()
+            ? $getLivewire()->data
+            : [];
     @endphp
     var initData = @json($formData);
-    
+    var selProducts = @json($selProducts);
+
     if (initData && initData.client_id) {
-        blHydrate(initData);
+        blHydrate(initData, selProducts);
     } else {
         blInitSelect2(1);
         blCalculate();
     }
+}
+
+// Run on initial page load
+$(document).ready(function () {
+    blInitializeForm();
 });
 
-function blHydrate(data) {
+// Re-initialize when SPA navigates to this page (hooked from spa-navigation-fix like Devis)
+window.blFormReinit = function () {
+    setTimeout(function () {
+        blInitializeForm();
+    }, 50);
+};
+
+// Ensure Livewire re-initializes on component initialization
+if (typeof window.Livewire !== 'undefined') {
+    document.addEventListener('livewire:initialized', function () {
+        setTimeout(function () {
+            blInitializeForm();
+        }, 50);
+    });
+}
+
+function blHydrate(data, selProducts) {
+    // Hydrate client
     if (data.client_id) {
-        $('#bl_client_id').val(data.client_id).trigger('change');
+        var $client = $('#bl_client_id');
+
+        // If the option is already rendered from blade, Select2 will pick it up automatically.
+        if ($client.find('option[value="' + data.client_id + '"]').length === 0) {
+            // Create an option using the same label as the AJAX response
+            var label = '';
+            @if($selClient)
+                if (data.client_id == {{ $selClientId ?? 'null' }}) {
+                    label = '{{ $selClient?->name }} ({{ $selClient?->phone_1 }})';
+                }
+            @endif
+            if (!label) {
+                label = 'Client #' + data.client_id;
+            }
+            var newClientOption = new Option(label, data.client_id, true, true);
+            $client.append(newClientOption);
+        }
+
+        $client.val(data.client_id).trigger('change.select2');
     }
-    
+
+    // Hydrate product lines
     if (data.details && Array.isArray(data.details)) {
         let i = 1;
-        data.details.forEach(item => {
+        data.details.forEach(function (item) {
             if (item.produit_id && i <= blMax) {
                 var r = document.getElementById('bl-row-' + i);
                 if (r) r.style.display = '';
+
                 blInitSelect2(i);
-                
-                // Set the Select2 value without triggering its full onchange yet to avoid recalculation loops
+
                 var $sel = $('#bl_prod_' + i);
-                $sel.val(item.produit_id).trigger('change.select2');
-                
+                var pInfo = selProducts && selProducts[item.produit_id]
+                    ? selProducts[item.produit_id]
+                    : null;
+
+                if (pInfo) {
+                    var prodOption = new Option(pInfo.text, item.produit_id, true, true);
+                    $sel.append(prodOption).trigger('change.select2');
+                    document.getElementById('bl_qte_' + i).max = pInfo.qte || 9999;
+                } else {
+                    // Fallback if selProducts did not contain this item
+                    var fallbackOption = new Option(item.designation || ('Produit #' + item.produit_id), item.produit_id, true, true);
+                    $sel.append(fallbackOption).trigger('change.select2');
+                    document.getElementById('bl_qte_' + i).max = 9999;
+                }
+
                 document.getElementById('bl_qte_' + i).value = item.qte || 1;
                 document.getElementById('bl_pu_' + i).value = item.prix_unitaire || 0;
-                
-                var opt = { qte: 9999 }; // We rely on the initial API to load later if needed, but for hydrate it's fine.
-                document.getElementById('bl_qte_' + i).max = opt.qte;
-                
-                // Add the option so it displays correctly
-                if (item.designation) {
-                    var newOption = new Option(item.designation, item.produit_id, true, true);
-                    $sel.append(newOption).trigger('change.select2');
-                }
-                
+
                 i++;
             }
         });
     }
 
-    if (data.remise) document.getElementById('bl_remise').value = data.remise;
-    if (data.pourcentage_remise) document.getElementById('bl_pourcent_remise').value = data.pourcentage_remise;
-    if (data.frais_livraison) document.getElementById('bl_frais_livraison').value = data.frais_livraison;
+    // Hydrate totals & discounts
+    if (data.remise !== undefined && data.remise !== null) {
+        document.getElementById('bl_remise').value = data.remise;
+    }
+    if (data.pourcentage_remise !== undefined && data.pourcentage_remise !== null) {
+        document.getElementById('bl_pourcent_remise').value = data.pourcentage_remise;
+    }
+    if (data.frais_livraison !== undefined && data.frais_livraison !== null) {
+        document.getElementById('bl_frais_livraison').value = data.frais_livraison;
+    }
 
-    // Only Hydrate Shipping details now
+    // Hydrate shipping details
     if (data.livraison_nom !== undefined) document.getElementById('bl_livraison_nom').value = data.livraison_nom || '';
     if (data.livraison_phone !== undefined) document.getElementById('bl_livraison_phone').value = data.livraison_phone || '';
     if (data.livraison_email !== undefined) document.getElementById('bl_livraison_email').value = data.livraison_email || '';
@@ -323,10 +432,9 @@ function blHydrate(data) {
     if (data.livraison_ville !== undefined) document.getElementById('bl_livraison_ville').value = data.livraison_ville || '';
     if (data.livraison_region !== undefined) document.getElementById('bl_livraison_region').value = data.livraison_region || '';
     if (data.livraison_code_postale !== undefined) document.getElementById('bl_livraison_cp').value = data.livraison_code_postale || '';
-    
+
     blCalculate();
 }
-
 
 function blInitSelect2(i) {
     var $el = $('#bl_prod_' + i);
@@ -344,14 +452,14 @@ function blInitSelect2(i) {
         },
         language: { noResults: function() { return 'Aucun résultat'; } }
     });
-    $('#bl_prod_' + i).on('change', function () { blSelectProd(i); });
+    $('#bl_prod_' + i).off('change.bl').on('change.bl', function () { blSelectProd(i); });
 }
 
 function blSelectClient() {
     var sel = $('#bl_client_id').select2('data')[0];
     if (!sel || !sel.id) return;
 
-    var nom     = sel.text ? sel.text.split('(')[0].trim() : '';
+    var nom = sel.text ? sel.text.split('(')[0].trim() : '';
 
     // Populate Livraison fields directly from client record since billing is hidden
     document.getElementById('bl_livraison_nom').value = nom;
@@ -359,10 +467,9 @@ function blSelectClient() {
     document.getElementById('bl_livraison_email').value = sel.email || '';
     document.getElementById('bl_livraison_adresse1').value = sel.adresse || '';
     document.getElementById('bl_livraison_ville').value = sel.ville || '';
-    document.getElementById('bl_livraison_region').value = ''; 
+    document.getElementById('bl_livraison_region').value = '';
     document.getElementById('bl_livraison_cp').value = sel.code_postale || '';
 }
-$('#bl_client_id').on('change', function() { blSelectClient(); });
 
 function blSelectProd(i) {
     var sel = $('#bl_prod_' + i).select2('data')[0];
