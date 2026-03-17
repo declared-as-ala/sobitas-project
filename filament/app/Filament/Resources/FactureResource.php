@@ -137,22 +137,6 @@ class FactureResource extends Resource
             ->striped()
             ->actions([
                 Actions\EditAction::make(),
-                Actions\Action::make('convertToInvoice')
-                    ->label('')
-                    ->tooltip('Transformer en facture TVA')
-                    ->icon('heroicon-o-arrow-right-on-rectangle')
-                    ->color('success')
-                    ->visible(fn (Facture $record): bool => \Illuminate\Support\Facades\Schema::hasColumn('facture_tvas', 'facture_id') && ! $record->factureTvas()->exists())
-                    ->requiresConfirmation()
-                    ->modalHeading('Transformer en facture TVA')
-                    ->modalDescription('Voulez-vous transformer ce Bon de Livraison en facture TVA ?')
-                    ->modalSubmitActionLabel('Transformer')
-                    ->modalCancelActionLabel('Annuler')
-                    ->action(function (Facture $record) {
-                        $invoice = app(\App\Services\DocumentConversion\BlToInvoiceService::class)->createInvoiceFromBl($record);
-                        \Filament\Notifications\Notification::make()->title('Facture #' . $invoice->numero . ' créée')->success()->send();
-                        return redirect(FactureTvaResource::getUrl('edit', ['record' => $invoice]));
-                    }),
                 Actions\Action::make('print')
                     ->label('Imprimer')
                     ->icon('heroicon-o-printer')
