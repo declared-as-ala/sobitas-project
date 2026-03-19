@@ -206,7 +206,7 @@ body:has(.bl-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !importa
                 <thead>
                     <tr>
                         <th style="min-width:280px">Produits</th>
-                        <th style="min-width:70px">Qté</th>
+                        <th style="min-width:70px">Qte</th>
                         <th style="min-width:90px">P.U</th>
                         <th style="min-width:90px">P.T</th>
                         <th style="min-width:50px">#</th>
@@ -229,7 +229,7 @@ body:has(.bl-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !importa
                 </tbody>
             </table>
         </div>
-        <button type="button" class="btn-add-row" onclick="blAddRow()">+ Ajouter un produit</button>
+        <button type="button" class="btn-add-row" onclick="blAddRow()">Ajouter</button>
 
         {{-- TOTALS --}}
         <div class="bl-bottom">
@@ -593,7 +593,8 @@ function blScanner() {
                     for (let i = 1; i <= blMax; i++) {
                         var r = document.getElementById('bl-row-' + i);
                         if (r && r.style.display !== 'none' && !$('#bl_prod_' + i).val()) {
-                            var newOption = new Option(found.designation, found.id, true, true);
+                            var optionLabel = found.designation + ' (' + (found.qte ?? 0) + ') - ' + (found.code_product ?? '');
+                            var newOption = new Option(optionLabel, found.id, true, true);
                             $('#bl_prod_' + i).append(newOption).trigger('change');
                             document.getElementById('bl_qte_' + i).value = 1;
                             document.getElementById('bl_pu_' + i).value  = parseFloat(found.prix_unitaire).toFixed(3);

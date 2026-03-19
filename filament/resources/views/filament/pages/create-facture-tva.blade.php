@@ -174,7 +174,7 @@
                 <thead>
                     <tr>
                         <th style="min-width:280px">Produits</th>
-                        <th style="min-width:70px">Qté</th>
+                        <th style="min-width:70px">Qte</th>
                         <th style="min-width:90px">P.U</th>
                         <th style="min-width:90px">P.T/HT</th>
                         <th style="min-width:70px">TVA (%)</th>
@@ -203,7 +203,7 @@
             </table>
         </div>
 
-        <button type="button" class="btn-add-row" onclick="ftvaAddRow()">+ Ajouter un produit</button>
+        <button type="button" class="btn-add-row" onclick="ftvaAddRow()">Ajouter</button>
 
         {{-- TOTALS --}}
         <div class="ftva-bottom">
@@ -469,7 +469,8 @@ function ftvaScanner() {
                     for (let i = 1; i <= ftvaMax; i++) {
                         var r = document.getElementById('ftva-row-' + i);
                         if (r && r.style.display !== 'none' && !$('#ftva_prod_' + i).val()) {
-                            var newOption = new Option(found.designation, found.id, true, true);
+                            var optionLabel = found.designation + ' (' + (found.qte ?? 0) + ') - ' + (found.code_product ?? '');
+                            var newOption = new Option(optionLabel, found.id, true, true);
                             $('#ftva_prod_' + i).append(newOption).trigger('change');
                             document.getElementById('ftva_qte_' + i).value = 1;
                             document.getElementById('ftva_pu_' + i).value  = parseFloat(found.prix_unitaire).toFixed(3);

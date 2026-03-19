@@ -436,7 +436,7 @@
             <thead>
                 <tr>
                     <th style="width:40%">Produits</th>
-                    <th class="th-center" style="width:10%">Qté</th>
+                    <th class="th-center" style="width:10%">Qte</th>
                     <th class="th-num" style="width:20%">P.U</th>
                     <th class="th-num" style="width:20%">P.T</th>
                     <th class="th-center" style="width:10%">#</th>
@@ -486,7 +486,7 @@
                                readonly>
                     </td>
                     <td style="text-align:center">
-                        <button type="button" class="pos-btn-del" onclick="removeRow({{ $i }}, event)">Retirer</button>
+                        <button type="button" class="pos-btn-del" onclick="removeRow({{ $i }}, event)">✕</button>
                     </td>
                 </tr>
                 @endfor
@@ -494,7 +494,7 @@
         </table>
     </div>
 
-    <button type="button" class="pos-btn-add" onclick="addRow()">+ Ajouter un produit</button>
+    <button type="button" class="pos-btn-add" onclick="addRow()">Ajouter</button>
 
     {{-- ── TOTALS ── --}}
     <div class="pos-totals-wrap">
@@ -650,12 +650,19 @@
         var $data = $(select).select2('data')[0];
         if($data && $data.prix !== undefined) {
             document.getElementById('p_unitaire' + i).value = $data.prix;
+            if($data.qte !== undefined) {
+                document.getElementById('qte' + i).max = parseFloat($data.qte) || 9999;
+            }
         } else {
             // Fallback for pre-loaded lines
             var option = select.options[select.selectedIndex];
             var v_prix = option.getAttribute('data-prix');
+            var v_qte = option.getAttribute('data-qte');
             if(v_prix !== null) {
                 document.getElementById('p_unitaire' + i).value = v_prix;
+            }
+            if(v_qte !== null) {
+                document.getElementById('qte' + i).max = parseFloat(v_qte) || 9999;
             }
         }
         
@@ -741,10 +748,12 @@
                         initSelect2(emptyIndex);
                         
                         // Because this row didn't exist in option list, append it so select2 shows it
-                        var newOption = new Option(search.designation, search.id, true, true);
+                        var optionLabel = search.designation + ' (' + (search.qte ?? 0) + ') - ' + (search.code_product ?? '');
+                        var newOption = new Option(optionLabel, search.id, true, true);
                         $('#select_produit'+emptyIndex).append(newOption).trigger('change');
                         
                         document.getElementById('qte'+emptyIndex).value = 1;
+                        document.getElementById('qte'+emptyIndex).max = parseFloat(search.qte || 0) || 9999;
                         document.getElementById('p_unitaire'+emptyIndex).value = search.prix_unitaire;
                         calculate();
                     } else {
@@ -837,11 +846,9 @@
             let eventData = Array.isArray(data) ? data[0] : data;
             
             if(eventData && eventData.printUrl) {
-                window.open(eventData.printUrl, '_blank');
-            }
-            
-            if(eventData && eventData.posUrl) {
-                window.history.pushState(null, '', eventData.posUrl);
+                // Voyager-like flow: after save, navigate to print page in same tab.
+                window.location.href = eventData.printUrl;
+                return;
             }
             
             var btn = document.getElementById('btn-save');
