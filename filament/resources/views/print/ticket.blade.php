@@ -262,13 +262,7 @@
 
 
                             <tr>
-                                <td>Frais Livraison</td>
-                                <td></td>
-                                <td>{{ number_format((float) ($ticket->frais_livraison ?? 0), 3, '.', '') }}</td>
-                            </tr>
-
-                            <tr>
-                                <td>Net à payer</td>
+                                <td>Totale HT</td>
                                 <td></td>
                                 <td>{{ number_format((float) @$ticket->prix_ttc, 3, '.', '') }}</td>
                             </tr>

@@ -229,7 +229,10 @@
             color: #444;
         }
 
+        .hidden-print { display: block; }
+
         @media print {
+            .hidden-print { display: none !important; }
             @page {
                 margin: 8mm;
             }
@@ -294,6 +297,11 @@
     @endphp
 
     <div id="invoice">
+        <div class="toolbar hidden-print" style="text-align:right; padding:10px 30px;">
+            <button class="btn btn-info" onclick="window.print()" style="background:#3e46df;border:0;border-radius:3px;color:#fff;padding:6px 15px;font-size:14px;cursor:pointer;">Imprimer</button>
+            <button class="btn btn-info" onclick="window.close()" style="background:#3e46df;border:0;border-radius:3px;color:#fff;padding:6px 15px;font-size:14px;cursor:pointer;margin-left:5px;">Retour</button>
+            <hr>
+        </div>
         <div class="invoice">
             <div>
                 <!-- HEADER -->
@@ -363,5 +371,13 @@
     </div>
 
     @yield('scripts')
+
+    <script>
+        window.addEventListener('load', function() {
+            if (!window.location.search.includes('embed=true') && !window.location.search.includes('embed=1')) {
+                window.print();
+            }
+        });
+    </script>
 </body>
 </html>

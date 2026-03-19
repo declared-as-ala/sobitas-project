@@ -136,18 +136,8 @@ Route::middleware(['auth'])->group(function () {
             'documentNumber' => $factureTva->numero ?? '',
             'documentDate' => $factureTva->date_facture ? \Carbon\Carbon::parse($factureTva->date_facture)->format('d/m/Y') : ($factureTva->created_at?->format('d/m/Y') ?? ''),
             'client' => $factureTva->client,
-            'status' => $factureTva->status ? $factureTva->status->value : null,
-            'status_label' => $factureTva->status ? $factureTva->status->label() : null,
-            'totals' => [
-                ['label' => 'Total HT', 'value' => number_format($calcTotals['total_ht_brut'], 3, ',', ' ') . ' DT'],
-                ['label' => 'Remise', 'value' => number_format($calcTotals['remise'], 3, ',', ' ') . ' DT'],
-                ['label' => 'TVA', 'value' => number_format($calcTotals['tva'], 3, ',', ' ') . ' DT'],
-                ['label' => 'Timbre', 'value' => number_format($calcTotals['timbre'], 3, ',', ' ') . ' DT'],
-                ['label' => 'TOTAL TTC', 'value' => number_format($calcTotals['prix_ttc'], 3, ',', ' ') . ' DT'],
-                ['label' => 'NET À PAYER', 'value' => number_format($calcTotals['net_a_payer'], 3, ',', ' ') . ' DT', 'class' => 'net-a-payer'],
-            ],
+            'calcTotals' => $calcTotals,
             'footerNote' => $coordonnee && ! empty($coordonnee->note) ? $coordonnee->note : null,
-            'paymentTerms' => 'Paiement à réception. Virement bancaire ou espèces. Merci de préciser le n° de facture.',
         ]);
     })->name('facture-tvas.print');
 

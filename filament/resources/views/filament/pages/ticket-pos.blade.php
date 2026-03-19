@@ -439,7 +439,7 @@
                     <th class="th-center" style="width:10%">Qté</th>
                     <th class="th-num" style="width:20%">P.U</th>
                     <th class="th-num" style="width:20%">P.T</th>
-                    <th class="th-center" style="width:10%">Action</th>
+                    <th class="th-center" style="width:10%">#</th>
                 </tr>
             </thead>
             <tbody>
@@ -512,7 +512,7 @@
                 </div>
             </div>
             <div class="pos-tot-row">
-                <div class="pos-tot-label">Pourcentage Remise %</div>
+                <div class="pos-tot-label">Poucentage Remise %</div>
                 <div class="pos-tot-value">
                     <input type="number" id="pourcen_remise" step="0.1" min="0" max="100" value="{{ $pourcentage_remise }}" onkeyup="calculate('pourcen_remise')" onchange="calculate('pourcen_remise')">
                 </div>
@@ -546,45 +546,69 @@
         return parseFloat(n).toFixed(3);
     }
 
-    document.addEventListener('DOMContentLoaded', function () {
-        // Init select2 on all active and hidden rows for fast switching
-        $('#client_select').select2();
-        
-        // for(let i=0; i<maxRows; i++) {
-        //     initSelect2(i);
-        // }
+    function ticketPosBootstrap() {
+        if (!document.getElementById('pos-ticket-root')) return;
+        if (typeof jQuery === 'undefined' || typeof jQuery.fn.select2 === 'undefined') {
+            setTimeout(ticketPosBootstrap, 100);
+            return;
+        }
 
-        // Focus barcode safely
-        setTimeout(() => {
-            const bc = document.getElementById('barcode_input');
-            if(bc) bc.focus();
-        }, 300);
-
-        calculate(); // Initial calculation
-        
-        // Prevent form submit on enter
-        window.addEventListener('keydown', function(e) {
-            if(e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
-                e.preventDefault();
-                // If it's the barcode input, trigger scan
-                if(e.target.id === 'barcode_input') {
-                    scanBarcode();
-                }
+        // Destroy existing Select2 instances to avoid stale state after SPA navigation
+        try {
+            if ($('#client_select').hasClass('select2-hidden-accessible')) $('#client_select').select2('destroy');
+            for (var i = 0; i < maxRows; i++) {
+                if ($('#select_produit' + i).hasClass('select2-hidden-accessible')) $('#select_produit' + i).select2('destroy');
             }
-        });
-        
+        } catch (e) {}
+
+        $('#client_select').select2();
+
         // Initialize visible rows
-        for (let i = 0; i < maxRows; i++) {
+        for (var i = 0; i < maxRows; i++) {
             var el = document.getElementById('row-' + i);
             if (el && el.style.display !== "none") {
                 initSelect2(i);
             }
         }
+
+        // Focus barcode safely
+        setTimeout(function () {
+            var bc = document.getElementById('barcode_input');
+            if (bc) bc.focus();
+        }, 300);
+
+        calculate();
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        ticketPosBootstrap();
+
+        // Prevent form submit on enter
+        window.addEventListener('keydown', function(e) {
+            if(e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+                if(e.target.id === 'barcode_input') {
+                    scanBarcode();
+                }
+            }
+        });
+    });
+
+    window.ticketPosReinit = function () {
+        setTimeout(ticketPosBootstrap, 50);
+    };
+
+    document.addEventListener('livewire:navigated', function () {
+        if (document.getElementById('pos-ticket-root')) {
+            setTimeout(ticketPosBootstrap, 80);
+        }
     });
 
     function initSelect2(i) {
         var $el = $('#select_produit' + i);
-        if ($el.hasClass('select2-hidden-accessible')) return; // Already initialized
+        if ($el.hasClass('select2-hidden-accessible')) {
+            try { $el.select2('destroy'); } catch (e) {}
+        }
         $el.select2({
             placeholder: "— Choisir un produit —",
             allowClear: true,

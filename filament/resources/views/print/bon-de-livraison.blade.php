@@ -4,58 +4,21 @@
     $fmt = fn($n) => number_format((float)$n, 3, '.', ' ');
 @endphp
 
-@section('client-info-header')
-<div class="client-info-block" style="text-align: left; margin-top: 20px; font-size: 10pt; line-height: 1.4;">
-    @php
-        $shipName = '';
-        $shipEmail = '';
-        $shipPhone = '';
-        $formattedAddress = '';
+@section('client-info')
+<div class="row contacts">
+    <div class="col invoice-to">
+        <h5 class="text-gray-light">INFORMATIONS DU CLIENT</h5>
+        <hr class="custom-hr">
 
-        if (isset($facture)) {
-            $f = $facture;
-            $clientName = isset($client) ? ($client->nom_prenom ?? trim(($client->nom ?? '') . ' ' . ($client->prenom ?? '')) ?: ($client->name ?? '')) : '';
-            $cmd = $f->commande;
-            
-            $safeLivNom = trim(($f->livraison_nom ?? '') . ' ' . ($f->livraison_prenom ?? '')) ?: trim(($cmd->livraison_nom ?? '') . ' ' . ($cmd->livraison_prenom ?? ''));
-            $shipName = $safeLivNom ?: trim(($f->nom ?? '') . ' ' . ($f->prenom ?? '')) ?: trim(($cmd->nom ?? '') . ' ' . ($cmd->prenom ?? '')) ?: $clientName;
-            
-            $shipEmail = $f->livraison_email ?: ($cmd->livraison_email ?? '') ?: $f->email ?: ($cmd->email ?? '') ?: ($client->email ?? '');
-            $shipPhone = $f->livraison_phone ?: ($cmd->livraison_phone ?? '') ?: $f->phone ?: ($cmd->phone ?? '') ?: ($client->phone ?? $client->phone_1 ?? '');
-            // Prefer the model accessor for a single-line delivery address
-            $formattedAddress = method_exists($f, 'getFormattedDeliveryAddressAttribute')
-                ? ($f->formatted_delivery_address ?: '')
-                : '';
-            if ($formattedAddress === '') {
-                // Fallback: minimal composition from legacy fields
-                $safeLivAddr = trim(($f->livraison_adresse1 ?? '') . ' ' . ($f->livraison_adresse2 ?? '')) ?: trim(($cmd->livraison_adresse1 ?? '') . ' ' . ($cmd->livraison_adresse2 ?? ''));
-                $city = $f->livraison_ville ?: ($cmd->livraison_ville ?? '') ?: $f->ville ?: ($cmd->ville ?? '') ?: ($client->ville ?? '');
-                $region = $f->livraison_region ?: ($cmd->livraison_region ?? '') ?: $f->region ?: ($cmd->region ?? '') ?: ($client->region ?? '');
-                $cp = $f->livraison_code_postale ?: ($cmd->livraison_code_postale ?? '') ?: $f->code_postale ?: ($cmd->code_postale ?? '') ?: ($client->code_postale ?? '');
-                $parts = [];
-                if (trim($safeLivAddr) !== '') $parts[] = trim($safeLivAddr);
-                $cityRegion = trim(trim($city . ' ' . $region));
-                if ($cityRegion !== '') $parts[] = $cityRegion;
-                if (trim($cp) !== '') $parts[] = trim($cp);
-                $formattedAddress = implode(' - ', array_filter($parts));
-            }
-
-        } elseif(isset($client) && $client) {
-            $shipName = $client->nom_prenom ?? trim(($client->nom ?? '') . ' ' . ($client->prenom ?? '')) ?: ($client->name ?? '');
-            $shipEmail = $client->email ?? '';
-            $shipPhone = $client->phone ?? $client->phone_1 ?? '';
-            $formattedAddress = $client->adresse ?? '';
-        }
-    @endphp
-
-    <h5 class="text-gray-light" style="margin-bottom: 5px; font-size: 10pt; border-bottom: 1px solid #eee; padding-bottom: 5px;">
-        INFORMATIONS DU CLIENT
-    </h5>
-    
-    <div><b>Nom et prénom :</b> {{ $shipName ?: '—' }}</div>
-    @if($shipEmail)<div><b>Email :</b> {{ $shipEmail }}</div>@endif
-    <div><b>Téléphone :</b> {{ $shipPhone ?: '—' }}</div>
-    <div><b>Adresse :</b> {{ $formattedAddress ?: '—' }}</div>
+        @if(isset($client) && $client)
+            <b class="to"><b>Nom :</b> {{ $client->name ?? '' }}</b>
+            <div class="address"><b>Adresse :</b> {{ $client->adresse ?? '' }}</div>
+            @if(!empty($client->matricule))
+                <div class="email"><b>Matricule</b> : {{ $client->matricule }}</div>
+            @endif
+            <div class="email"><b>Numéro de téléphone :</b> {{ $client->phone_1 ?? '' }}</div>
+        @endif
+    </div>
 </div>
 @endsection
 
@@ -64,10 +27,10 @@
     <thead>
         <tr>
             <th style="width: 5%;" class="text-center">#</th>
-            <th style="width: 45%;">PRODUIT</th>
-            <th style="width: 15%;" class="text-center">QUANTITÉ</th>
-            <th style="width: 15%;" class="text-right">PRIX.U (HT)</th>
-            <th style="width: 20%;" class="text-right">TOTAL (HT)</th>
+            <th style="width: 40%;">Produit</th>
+            <th style="width: 15%;" class="text-center">Quantité</th>
+            <th style="width: 20%;" class="text-right">Prix.U</th>
+            <th style="width: 20%;" class="text-right">Prix T.TTC</th>
         </tr>
     </thead>
     <tbody>
@@ -95,48 +58,29 @@
         @php
             $totalHt = $calc_total_ht ?? $facture->prix_ht ?? 0;
             $remise = $calc_remise ?? $facture->remise ?? 0;
-            $frais = $calc_frais ?? $facture->frais_livraison ?? 0;
             $pourcentageRemise = $calc_pourcentage_remise ?? $facture->pourcentage_remise ?? 0;
-            $netAPayer = $calc_net_a_payer ?? ($totalHt - $remise + $frais);
+            $montantTtc = $calc_net_a_payer ?? ($totalHt - $remise);
         @endphp
 
-        <!-- Montant Total HT -->
         <tr>
-            <td colspan="2"></td>
-            <th colspan="2">Montant Total HT</th>
+            <td colspan="3"></td>
+            <th>Montant Total HT</th>
             <th class="text-right">{{ $fmt($totalHt) }}</th>
         </tr>
-
-        <!-- Montant Remise -->
         <tr>
-            <td colspan="2"></td>
-            <th colspan="2">Montant Remise</th>
+            <td colspan="3"></td>
+            <th>Montant Remise</th>
             <th class="text-right">{{ $fmt($remise) }}</th>
         </tr>
-        
-        <!-- Pourcentage Remise % (optional) -->
-        @if($pourcentageRemise > 0)
-            <tr>
-                <td colspan="2"></td>
-                <th colspan="2">Pourcentage Remise %</th>
-                <th class="text-right">{{ number_format((float) $pourcentageRemise, 1, '.', '') }} %</th>
-            </tr>
-        @endif
-        
-        <!-- Frais Livraison -->
         <tr>
-            <td colspan="2"></td>
-            <th colspan="2">Frais Livraison</th>
-            <th class="text-right">{{ $fmt($frais) }}</th>
+            <td colspan="3"></td>
+            <th>Poucentage Remise %</th>
+            <th class="text-right">{{ number_format((float) $pourcentageRemise, 1, '.', '') }} %</th>
         </tr>
-        
-        <!-- Net à payer -->
         <tr>
-            <td colspan="2"></td>
-            <th class="bt" colspan="2" style="background-color: #fcece3;">Net à payer</th>
-            <th class="text-right bt" style="background-color: #fcece3;">
-                {{ $fmt($netAPayer) }}
-            </th>
+            <td colspan="3"></td>
+            <th class="bt">Montant Totale TTC</th>
+            <th class="text-right">{{ $fmt($montantTtc) }}</th>
         </tr>
     </tfoot>
 </table>
@@ -195,8 +139,7 @@
     }
     
     document.addEventListener('DOMContentLoaded', function() {
-        var total = "{{ $fmt($calc_net_a_payer ?? (isset($facture) ? ($facture->prix_ht - $facture->remise + $facture->frais_livraison) : 0)) }}";
-        // Convert to properly read float string for inWords without spaces
+        var total = "{{ $fmt($calc_net_a_payer ?? (isset($facture) ? ($facture->prix_ttc ?? ($facture->prix_ht - $facture->remise)) : 0)) }}";
         total = total.replace(/\s+/g, '');
         var el = document.getElementById("words_{{ $documentNumber ?? 'doc' }}");
         if(el && total && parseFloat(total) > 0) {

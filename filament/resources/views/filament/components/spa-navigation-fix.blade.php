@@ -65,6 +65,14 @@
         if (typeof window.blFormReinit === 'function') {
             try { window.blFormReinit(); } catch (e) { log('blFormReinit error', e); }
         }
+        // Facture TVA form re-init
+        if (typeof window.ftvaFormReinit === 'function') {
+            try { window.ftvaFormReinit(); } catch (e) { log('ftvaFormReinit error', e); }
+        }
+        // Ticket POS form re-init
+        if (typeof window.ticketPosReinit === 'function') {
+            try { window.ticketPosReinit(); } catch (e) { log('ticketPosReinit error', e); }
+        }
     }
 
     function onNavigated() {

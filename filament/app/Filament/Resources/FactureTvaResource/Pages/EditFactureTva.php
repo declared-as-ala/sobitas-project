@@ -209,6 +209,8 @@ class EditFactureTva extends EditRecord
             $totals['net_a_payer'] = $calcTotals['net_a_payer'];
         }
         $this->record->update($totals);
+
+        $this->dispatch('open-url-new-tab', url: route('facture-tvas.print', ['factureTva' => $this->record->id]));
     }
 
     protected function getFormActions(): array

@@ -144,5 +144,7 @@ class CreateFactureTva extends CreateRecord
         ];
         
         $this->record->update($totals);
+
+        $this->dispatch('open-url-new-tab', url: route('facture-tvas.print', ['factureTva' => $this->record->id]));
     }
 }

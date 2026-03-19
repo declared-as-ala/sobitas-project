@@ -175,9 +175,9 @@
                     <tr>
                         <th style="min-width:280px">Produits</th>
                         <th style="min-width:70px">Qté</th>
-                        <th style="min-width:90px">P.U HT</th>
+                        <th style="min-width:90px">P.U</th>
                         <th style="min-width:90px">P.T/HT</th>
-                        <th style="min-width:70px">TVA %</th>
+                        <th style="min-width:70px">TVA (%)</th>
                         <th style="min-width:90px">TVA</th>
                         <th style="min-width:50px">#</th>
                     </tr>
@@ -220,12 +220,12 @@
                                    onkeyup="ftvaCalculate('mt_remise')" onchange="ftvaCalculate('mt_remise')"></td>
                     </tr>
                     <tr>
-                        <td>Pourcentage Remise %</td>
+                        <td>Poucentage Remise %</td>
                         <td><input class="tot-input" id="ftva_pourcent_remise" value="0" step="0.001"
                                    onkeyup="ftvaCalculate('pourcen_remise')" onchange="ftvaCalculate('pourcen_remise')"></td>
                     </tr>
                     <tr id="ftva_ligne_apres_remise" style="display:none">
-                        <td>HT après remise</td>
+                        <td>Montant totale HT aprés remise</td>
                         <td><input class="tot-input" id="ftva_apres_remise" disabled value="0.000"></td>
                     </tr>
                     <tr>
@@ -262,8 +262,21 @@ var ftvaMax = {{ $max }};
 var ftvaJ   = 1;  // last visible row
 var ftvaDefaultTva = {{ $defaultTva }};
 
-$(document).ready(function () {
-    // Init Select2 for client
+function ftvaBootstrap() {
+    if (!document.getElementById('ftva-main')) return;
+    if (typeof jQuery === 'undefined' || typeof jQuery.fn.select2 === 'undefined') {
+        setTimeout(ftvaBootstrap, 100);
+        return;
+    }
+
+    // Destroy existing Select2 instances to avoid stale state after SPA navigation
+    try {
+        if ($('#ftva_client_id').hasClass('select2-hidden-accessible')) $('#ftva_client_id').select2('destroy');
+        for (var i = 1; i <= ftvaMax; i++) {
+            if ($('#ftva_prod_' + i).hasClass('select2-hidden-accessible')) $('#ftva_prod_' + i).select2('destroy');
+        }
+    } catch (e) {}
+
     $('#ftva_client_id').select2({
         placeholder: '— Choisir un client —',
         allowClear: true,
@@ -277,16 +290,39 @@ $(document).ready(function () {
         }
     });
 
-    // Init Select2 for all product rows
-    for (let i = 1; i <= ftvaMax; i++) {
-        ftvaInitSelect2(i);
+    // Init Select2 for visible product rows only
+    for (var i = 1; i <= ftvaMax; i++) {
+        var r = document.getElementById('ftva-row-' + i);
+        if (r && r.style.display !== 'none') {
+            ftvaInitSelect2(i);
+        }
     }
 
     ftvaCalculate();
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', ftvaBootstrap);
+} else {
+    setTimeout(ftvaBootstrap, 10);
+}
+
+window.ftvaFormReinit = function () {
+    setTimeout(ftvaBootstrap, 50);
+};
+
+document.addEventListener('livewire:navigated', function () {
+    if (document.getElementById('ftva-main')) {
+        setTimeout(ftvaBootstrap, 80);
+    }
 });
 
 function ftvaInitSelect2(i) {
-    $('#ftva_prod_' + i).select2({
+    var $el = $('#ftva_prod_' + i);
+    if ($el.hasClass('select2-hidden-accessible')) {
+        try { $el.select2('destroy'); } catch (e) {}
+    }
+    $el.select2({
         placeholder: '— Choisir —',
         allowClear: true,
         width: '100%',

@@ -207,8 +207,8 @@ body:has(.bl-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !importa
                     <tr>
                         <th style="min-width:280px">Produits</th>
                         <th style="min-width:70px">Qté</th>
-                        <th style="min-width:90px">P.U HT</th>
-                        <th style="min-width:90px">P.T HT</th>
+                        <th style="min-width:90px">P.U</th>
+                        <th style="min-width:90px">P.T</th>
                         <th style="min-width:50px">#</th>
                     </tr>
                 </thead>
@@ -237,7 +237,7 @@ body:has(.bl-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !importa
             <div class="bl-totals">
                 <table>
                     <tr>
-                        <td>Montant Total HT</td>
+                        <td>Montant Total</td>
                         <td><input class="tot-input" id="bl_p_ht" disabled value="0.000"></td>
                     </tr>
                     <tr>
@@ -246,24 +246,17 @@ body:has(.bl-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !importa
                                    onkeyup="blCalculate('mt_remise')" onchange="blCalculate('mt_remise')"></td>
                     </tr>
                     <tr>
-                        <td>Pourcentage Remise %</td>
+                        <td>Poucentage Remise %</td>
                         <td><input class="tot-input" id="bl_pourcent_remise" value="0" step="0.001"
                                    onkeyup="blCalculate('pourcen_remise')" onchange="blCalculate('pourcen_remise')"></td>
-                    </tr>
-                    <tr id="bl_ligne_apres_remise" style="display:none">
-                        <td>HT après remise</td>
-                        <td><input class="tot-input" id="bl_apres_remise" disabled value="0.000"></td>
-                    </tr>
-                    <tr>
-                        <td>Frais Livraison</td>
-                        <td><input class="tot-input" id="bl_frais_livraison" value="0.000" step="0.001" type="number"
-                                   onkeyup="blCalculate()" onchange="blCalculate()"></td>
                     </tr>
                     <tr class="bl-net-row">
                         <td>Net à payer</td>
                         <td><input class="tot-input" id="bl_net" disabled value="0.000"></td>
                     </tr>
                 </table>
+                <input type="hidden" id="bl_frais_livraison" value="0">
+                <input type="hidden" id="bl_apres_remise" value="0">
             </div>
         </div>
 
@@ -461,7 +454,9 @@ function blHydrate(data, selProducts) {
 
 function blInitSelect2(i) {
     var $el = $('#bl_prod_' + i);
-    if ($el.hasClass('select2-hidden-accessible')) return; // Already initialized
+    if ($el.hasClass('select2-hidden-accessible')) {
+        try { $el.select2('destroy'); } catch (e) {}
+    }
     $el.select2({
         placeholder: '— Choisir —',
         allowClear: true,
@@ -562,18 +557,12 @@ function blCalculate(typeRemise) {
         totRemise = parseFloat(remiseEl.value) || 0;
     }
 
-    if (totRemise > 0) {
-        document.getElementById('bl_ligne_apres_remise').style.display = '';
-        document.getElementById('bl_apres_remise').value = (totalHt - totRemise).toFixed(3);
-    } else {
-        document.getElementById('bl_ligne_apres_remise').style.display = 'none';
-    }
+    document.getElementById('bl_apres_remise').value = (totalHt - totRemise).toFixed(3);
 
-    var frais = parseFloat(document.getElementById('bl_frais_livraison')?.value) || 0;
-    var net   = totalHt - totRemise + frais;
+    var net = Math.max(0, totalHt - totRemise);
 
-    document.getElementById('bl_p_ht').value       = totalHt.toFixed(3);
-    document.getElementById('bl_net').value         = net.toFixed(3);
+    document.getElementById('bl_p_ht').value = totalHt.toFixed(3);
+    document.getElementById('bl_net').value  = net.toFixed(3);
 }
 
 function blScanner() {
