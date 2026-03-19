@@ -6,7 +6,8 @@
         ? 'data:' . (mime_content_type($logoPath) ?: 'image/png') . ';base64,' . base64_encode(file_get_contents($logoPath))
         : asset('logo.png');
     
-    $clients = \App\Models\Client::orderBy('name')->get(['id','name','adresse','phone_1']);
+    // Match legacy Voyager behavior: retrieve clients with default DB order.
+    $clients = \App\Models\Client::all(['id','name','adresse','phone_1']);
     $products = \App\Models\Product::query()
         ->select('id','designation_fr','prix','promo','promo_expiration_date','qte','code_product')
         ->orderBy('designation_fr')
