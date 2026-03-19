@@ -24,6 +24,10 @@ class EditProduct extends EditRecord
         $data['_slug_auto_source'] = $data['designation_fr'] ?? '';
         $data['faq'] = $data['faq'] ?? [];
 
+        // Aligner l’affichage avec la qté (qté 0 ⇒ Rupture), comme le modèle au save.
+        $qte = (int) ($data['qte'] ?? 0);
+        $data['rupture'] = $qte <= 0 ? 1 : 0;
+
         return $data;
     }
 
@@ -35,6 +39,12 @@ class EditProduct extends EditRecord
     {
         if ((int) ($data['rupture'] ?? 0) === 1) {
             $data['qte'] = 0;
+        }
+
+        $qte = (int) ($data['qte'] ?? 0);
+        if ($qte <= 0) {
+            $data['qte'] = 0;
+            $data['rupture'] = 1;
         }
 
         $data['slug'] = isset($data['slug']) ? (string) $data['slug'] : '';

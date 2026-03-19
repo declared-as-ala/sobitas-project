@@ -114,7 +114,7 @@ class ProductResource extends Resource
                         ->schema([
                             Section::make('Stock')
                                 ->schema([
-                                    Grid::make(3)->schema([
+                                    Grid::make(2)->schema([
                                         Forms\Components\TextInput::make('qte')
                                             ->label('Qte (quantité)')
                                             ->numeric()
@@ -132,21 +132,22 @@ class ProductResource extends Resource
                                                 0 => 'En stock',
                                                 1 => 'Rupture',
                                             ])
-                                            ->default(0)
+                                            // Qté = 0 ⇒ rupture (aligné avec le modèle)
+                                            ->default(1)
                                             ->required()
                                             ->native(false)
                                             ->live()
-                                            ->formatStateUsing(fn ($state): int => ((bool) $state || (int) $state === 1) ? 1 : 0)
-                                            ->afterStateUpdated(function ($state, callable $set): void {
+                                            ->afterStateUpdated(function ($state, callable $set, callable $get): void {
                                                 if ((int) $state === 1) {
                                                     $set('qte', 0);
+
+                                                    return;
+                                                }
+                                                // En stock : éviter qté 0 (sinon le modèle remettrait en rupture au save)
+                                                if ((int) $get('qte') <= 0) {
+                                                    $set('qte', 1);
                                                 }
                                             }),
-                                        Forms\Components\TextInput::make('note')
-                                            ->label('Nombre d’étoiles (rating)')
-                                            ->numeric()
-                                            ->minValue(0)
-                                            ->maxValue(5),
                                     ]),
                                 ]),
                         ]),

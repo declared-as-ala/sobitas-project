@@ -21,6 +21,12 @@ class CreateProduct extends CreateRecord
             $data['qte'] = 0;
         }
 
+        $qte = (int) ($data['qte'] ?? 0);
+        if ($qte <= 0) {
+            $data['qte'] = 0;
+            $data['rupture'] = 1;
+        }
+
         $data['slug'] = isset($data['slug']) ? (string) $data['slug'] : '';
         if ($data['slug'] === '' && ! empty($data['designation_fr'])) {
             $data['slug'] = Str::slug((string) $data['designation_fr']);
