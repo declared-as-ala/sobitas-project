@@ -8,6 +8,8 @@ use Filament\Actions;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Forms\Components\FileUpload;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -28,10 +30,10 @@ class ProductResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            Forms\Components\Section::make('Identification')
+            Section::make('Identification')
                 ->description('Informations de base du produit (format backend, mieux organisé).')
                 ->schema([
-                    Forms\Components\Grid::make(3)->schema([
+                    Grid::make(3)->schema([
                         Forms\Components\TextInput::make('designation_fr')
                             ->label('Désignation')
                             ->required()
@@ -56,9 +58,9 @@ class ProductResource extends Resource
                     ]),
                 ]),
 
-            Forms\Components\Section::make('Prix & Stock')
+            Section::make('Prix & Stock')
                 ->schema([
-                    Forms\Components\Grid::make(4)->schema([
+                    Grid::make(4)->schema([
                         Forms\Components\TextInput::make('prix')
                             ->label('Prix TTC')
                             ->numeric()
@@ -105,7 +107,7 @@ class ProductResource extends Resource
                     ]),
                 ]),
 
-            Forms\Components\Section::make('Médias')
+            Section::make('Médias')
                 ->schema([
                     FileUpload::make('cover')
                         ->label('Image principale')
@@ -122,7 +124,7 @@ class ProductResource extends Resource
                         ->multiple()
                         ->reorderable()
                         ->maxSize(4096),
-                    Forms\Components\Grid::make(2)->schema([
+                    Grid::make(2)->schema([
                         Forms\Components\TextInput::make('alt_cover')
                             ->label('Alt image')
                             ->maxLength(255),
@@ -132,12 +134,12 @@ class ProductResource extends Resource
                     ]),
                 ]),
 
-            Forms\Components\Section::make('Contenu & SEO')
+            Section::make('Contenu & SEO')
                 ->schema([
                     Forms\Components\RichEditor::make('description_fr')
                         ->label('Description')
                         ->columnSpanFull(),
-                    Forms\Components\Grid::make(2)->schema([
+                    Grid::make(2)->schema([
                         Forms\Components\TextInput::make('meta_title')
                             ->label('Meta Title')
                             ->maxLength(255),
@@ -147,9 +149,9 @@ class ProductResource extends Resource
                     ]),
                 ]),
 
-            Forms\Components\Section::make('Commercial & Relations')
+            Section::make('Commercial & Relations')
                 ->schema([
-                    Forms\Components\Grid::make(6)->schema([
+                    Grid::make(6)->schema([
                         Forms\Components\Toggle::make('publier')
                             ->label('Publié')
                             ->default(true),
@@ -165,7 +167,7 @@ class ProductResource extends Resource
                             ->minValue(0)
                             ->maxValue(5),
                     ]),
-                    Forms\Components\Grid::make(2)->schema([
+                    Grid::make(2)->schema([
                         Forms\Components\Select::make('tags')
                             ->relationship('tags', 'designation_fr')
                             ->multiple()

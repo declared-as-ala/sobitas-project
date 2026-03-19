@@ -15,16 +15,13 @@
             >
         </div>
 
-        <x-filament-panels::form
-            wire:submit="authenticate"
-            id="form"
-        >
+        <form wire:submit="authenticate" id="form" class="fi-form grid gap-y-6">
             {{ $this->form }}
 
             <x-filament::button type="submit" form="form" class="w-full">
                 Se connecter
             </x-filament::button>
-        </x-filament-panels::form>
+        </form>
     </div>
 </x-filament-panels::page.simple>
 
