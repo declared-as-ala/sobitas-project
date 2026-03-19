@@ -1,14 +1,6 @@
 @php
     $title = __('filament-panels::pages/auth/login.title');
-    $coordinate = \App\Models\Coordinate::getCached();
-    $logoUrl = asset('logo.png');
-    if ($coordinate && ! empty($coordinate->logo_facture)) {
-        try {
-            $logoUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($coordinate->logo_facture);
-        } catch (\Throwable $e) {
-            $logoUrl = asset('logo.png');
-        }
-    }
+    $logoUrl = \App\Models\Coordinate::publicBrandLogoUrl();
 @endphp
 
 <x-filament-panels::page.simple

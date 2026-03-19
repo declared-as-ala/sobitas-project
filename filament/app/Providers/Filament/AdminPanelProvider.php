@@ -84,35 +84,18 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class AdminPanelProvider extends PanelProvider
 {
     private function resolveBrandLogoUrl(): string
     {
-        $coordinate = Coordinate::getCached();
-
-        if ($coordinate && ! empty($coordinate->logo_facture)) {
-            try {
-                return Storage::disk('public')->url($coordinate->logo_facture);
-            } catch (\Throwable $e) {
-                // Fallback below
-            }
-        }
-
-        return asset('logo.png');
+        return Coordinate::publicBrandLogoUrl();
     }
 
     private function resolveLoginBackgroundUrl(): string
     {
-        $bgPublic = public_path('images/auth/gym-bg.jpg');
-
-        if (is_file($bgPublic)) {
-            return asset('images/auth/gym-bg.jpg');
-        }
-
-        return '';
+        return Coordinate::publicLoginBackgroundUrl();
     }
 
     public function panel(Panel $panel): Panel
@@ -128,8 +111,8 @@ class AdminPanelProvider extends PanelProvider
                 function (): string {
                     $bg = $this->resolveLoginBackgroundUrl();
                     $loginCss = $bg !== ''
-                        ? ".fi-simple-layout { background-image: url('" . $bg . "') !important; }"
-                        : ".fi-simple-layout { background-image: none !important; background-color: #111827 !important; }";
+                        ? '.fi-simple-layout { background-image: url('.json_encode($bg).') !important; background-size: cover !important; background-position: center !important; }'
+                        : '.fi-simple-layout { background-image: none !important; background-color: #111827 !important; }';
 
                     return '
                         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.min.css" />
