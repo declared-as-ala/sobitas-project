@@ -144,7 +144,7 @@ class TicketPosPage extends Page
     }
 
     // ── Save ─────────────────────────────────────────────────────────────────
-    public function save(array $payload = []): void
+    public function save(array $payload = [])
     {
         if (!empty($payload)) {
             $this->lines = $payload['lines'] ?? [];
@@ -219,6 +219,9 @@ class TicketPosPage extends Page
             'printUrl' => route('tickets.print', ['ticket' => $this->ticketId]),
             'posUrl'   => TicketPosPage::getUrl(['ticketId' => $this->ticketId]),
         ]);
+
+        // Hard redirect fallback to guarantee Voyager-like flow even if JS event listeners fail.
+        return $this->redirect(route('tickets.print', ['ticket' => $this->ticketId]), navigate: false);
     }
 
     public static function getUrl(array $parameters = [], bool $isAbsolute = true, ?string $panel = null, ?\Illuminate\Database\Eloquent\Model $tenant = null, bool $shouldGuessMissingParameters = false): string
