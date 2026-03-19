@@ -12,12 +12,21 @@
         ->select('id','designation_fr','prix','promo','promo_expiration_date','qte','code_product')
         ->orderBy('designation_fr')
         ->get();
+    $coordinate = \App\Models\Coordinate::getCached();
     
     $productsJson = '[]';
 
     // Start lines loaded from Livewire (either existing ticket or 1 empty line)
     $startLines = (isset($lines) && is_array($lines) && count($lines) > 0) ? $lines : [['produit_id' => '', 'qte' => 1, 'prix_unitaire' => 0]];
     $maxRows = 100;
+    $startProductIds = collect($startLines)->pluck('produit_id')->filter()->values()->all();
+    $startProductMeta = [];
+    if (! empty($startProductIds)) {
+        $startProductMeta = \App\Models\Product::whereIn('id', $startProductIds)
+            ->get(['id', 'designation_fr', 'qte', 'code_product'])
+            ->keyBy('id')
+            ->toArray();
+    }
 @endphp
 
 <!-- Select2 requirements -->
@@ -392,6 +401,14 @@
         {{-- LEFT: Company info --}}
         <div class="pos-company">
             <img src="{{ $logoUrl }}" alt="Logo" class="pos-logo" onerror="this.style.display='none'">
+            @if($coordinate)
+                <div class="pos-company-name">{{ $coordinate->abbreviation ?? $coordinate->name_fr ?? '' }}</div>
+                <div class="pos-company-info">
+                    {{ $coordinate->phone_1 ?? '' }}@if(!empty($coordinate->phone_2)) / {{ $coordinate->phone_2 }}@endif
+                    <br>
+                    {{ $coordinate->adresse_fr ?? $coordinate->adresse ?? '' }}
+                </div>
+            @endif
         </div>
 
         {{-- RIGHT: Client block --}}
@@ -454,8 +471,14 @@
                     <td>
                         <select id="select_produit{{ $i }}" class="form-control select2" style="width:100%" onchange="selectProduit({{ $i }})">
                             @if($line && $line['produit_id'])
-                                <option value="{{ $line['produit_id'] }}" data-prix="{{ $line['prix_unitaire'] }}" selected>
-                                    {{ $line['designation'] ?? 'Produit' }}
+                                @php
+                                    $meta = $startProductMeta[$line['produit_id']] ?? null;
+                                    $lineDesignation = $meta['designation_fr'] ?? ($line['designation'] ?? 'Produit');
+                                    $lineQte = $meta['qte'] ?? null;
+                                    $lineCode = $meta['code_product'] ?? '';
+                                @endphp
+                                <option value="{{ $line['produit_id'] }}" data-prix="{{ $line['prix_unitaire'] }}" data-qte="{{ $lineQte }}" selected>
+                                    {{ $lineDesignation }}@if($lineQte !== null) ({{ $lineQte }}) @endif - {{ $lineCode }}
                                 </option>
                             @else
                                 <option value="">— Choisir un produit —</option>

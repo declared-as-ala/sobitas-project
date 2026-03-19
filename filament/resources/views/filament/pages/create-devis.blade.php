@@ -333,7 +333,8 @@ function dvHydrate(data, selProducts) {
                 var $sel = $('#dv_prod_' + i);
                 var pInfo = selProducts[item.produit_id];
                 if (pInfo) {
-                    var newOption = new Option(pInfo.designation_fr, item.produit_id, true, true);
+                    var label = pInfo.designation_fr + ' (' + (pInfo.qte || 0) + ') - ' + (pInfo.code_product || '');
+                    var newOption = new Option(label, item.produit_id, true, true);
                     $sel.append(newOption).trigger('change.select2');
                 } else {
                     $sel.val(item.produit_id).trigger('change.select2');
@@ -501,7 +502,8 @@ function dvScanner() {
                     for (let i = 1; i <= dvMax; i++) {
                         var r = document.getElementById('dv-row-' + i);
                         if (r && r.style.display !== 'none' && !$('#dv_prod_' + i).val()) {
-                            var newOption = new Option(found.designation, found.id, true, true);
+                            var optionLabel = found.designation + ' (' + (found.qte ?? 0) + ') - ' + (found.code_product ?? '');
+                            var newOption = new Option(optionLabel, found.id, true, true);
                             $('#dv_prod_' + i).append(newOption).trigger('change');
                             document.getElementById('dv_qte_' + i).value = 1;
                             document.getElementById('dv_pu_' + i).value  = parseFloat(found.prix_unitaire).toFixed(3);
