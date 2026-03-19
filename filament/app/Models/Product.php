@@ -16,10 +16,6 @@ class Product extends Model
         'images', 'prix', 'prix_ht', 'promo', 'promo_ht', 'promo_expiration_date',
         'qte', 'low_stock_threshold', 'publier', 'rupture', 'new_product', 'best_seller', 'pack', 'note',
         'meta_title', 'meta_description', 'sous_categorie_id', 'brand_id', 'code_product',
-        'questions', 'nutrition_values',
-        'meta_name_content', 'schema_description', 'schema_review', 'schema_aggregate_rating',
-        'tab1_title', 'tab1_content', 'tab2_title', 'tab2_content',
-        'tab3_title', 'tab3_content', 'tab4_title', 'tab4_content',
     ];
 
     protected $casts = [
