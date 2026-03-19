@@ -88,7 +88,7 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class AdminPanelProvider extends PanelProvider
 {
-    private function resolveBrandLogoUrl(): string
+    private function resolveBrandLogoUrl(): ?string
     {
         return Coordinate::publicBrandLogoUrl();
     }
@@ -198,9 +198,23 @@ class AdminPanelProvider extends PanelProvider
                 ProductsStockPieChart::class,
             ])
             ->unsavedChangesAlerts()
-            ->brandLogo(fn (): string => $this->resolveBrandLogoUrl())
-            ->brandLogoHeight('auto')
-            ->favicon(fn (): string => $this->resolveBrandLogoUrl())
+            ->brandLogo(function (): \Illuminate\Support\HtmlString|null {
+                $url = $this->resolveBrandLogoUrl();
+                if ($url === null) {
+                    // No logo on disk – Filament will render the brand name as text instead.
+                    return null;
+                }
+
+                // Return explicit <img> HTML so Filament v4 never has to guess whether the
+                // string is a URL or raw markup. height/width are set here because
+                // brandLogoHeight() only applies when Filament itself wraps the URL.
+                return new \Illuminate\Support\HtmlString(
+                    '<img src="' . e($url) . '"'
+                    . ' alt="' . e(config('app.name', 'Sobitas')) . '"'
+                    . ' style="max-height:2.2rem;height:auto;width:auto;">'
+                );
+            })
+            ->favicon(fn (): ?string => $this->resolveBrandLogoUrl())
             ->navigationGroups([
                 NavigationGroup::make('Paramètres du site')
                     ->icon('heroicon-o-cog-6-tooth')

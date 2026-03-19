@@ -1,5 +1,5 @@
 @php
-    $title = __('filament-panels::pages/auth/login.title');
+    $title   = __('filament-panels::pages/auth/login.title');
     $logoUrl = \App\Models\Coordinate::publicBrandLogoUrl();
 @endphp
 
@@ -9,11 +9,15 @@
 >
     <div class="auth-card">
         <div class="auth-logo-wrapper">
-            <img
-                src="{{ $logoUrl }}"
-                alt="{{ config('app.name', 'Sobitas') }}"
-                class="auth-logo"
-            >
+            @if ($logoUrl)
+                <img
+                    src="{{ $logoUrl }}"
+                    alt="{{ config('app.name', 'Sobitas') }}"
+                    class="auth-logo"
+                >
+            @else
+                <span class="auth-logo-text">{{ config('app.name', 'Sobitas') }}</span>
+            @endif
         </div>
 
         <form wire:submit="authenticate" id="form" class="fi-form grid gap-y-6">

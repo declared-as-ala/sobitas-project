@@ -50,28 +50,69 @@ class Coordinate extends Model
 
     /**
      * Absolute URL for Filament panel logo / favicon / login logo.
-     * Prefers logo_facture on the public disk; supports full http(s) URLs in DB.
+     * Returns null when no valid logo can be confirmed to exist, so callers
+     * can show a text/brand-name fallback instead of a broken <img>.
+     *
+     * Resolution order:
+     *   1. logo_facture is a full http(s) URL → return as-is (external CDN).
+     *   2. logo_facture is a relative path → verify file exists on public disk,
+     *      then build URL from the live request origin (proxy-safe).
+     *   3. Fallback: public/logo.png (direct public file, no symlink needed).
+     *   4. Nothing found → null.
      */
-    public static function publicBrandLogoUrl(): string
+    public static function publicBrandLogoUrl(): ?string
     {
         $coordinate = static::getCached();
-        $raw = $coordinate?->logo_facture;
+        $raw        = $coordinate?->logo_facture;
+
+        \Illuminate\Support\Facades\Log::debug('[Logo] publicBrandLogoUrl called', [
+            'logo_facture' => $raw ?? 'null',
+            'origin'       => static::originRootUrl(),
+        ]);
 
         if (! empty($raw)) {
             $raw = trim((string) $raw);
+
+            // External URL – trust as-is (no local file check possible).
             if (preg_match('#^https?://#i', $raw)) {
+                \Illuminate\Support\Facades\Log::debug('[Logo] using external URL', ['url' => $raw]);
+
                 return $raw;
             }
 
+            // Normalise: strip leading slash and any accidental `storage/` prefix
+            // (FileUpload stores only the disk-relative path, e.g. coordonnees/Month/file.png).
             $path = ltrim($raw, '/');
             if (str_starts_with($path, 'storage/')) {
                 $path = substr($path, strlen('storage/'));
             }
 
-            return rtrim(static::originRootUrl(), '/').'/storage/'.$path;
+            // Confirm the file is actually present on the public disk before
+            // returning a URL that would 404 in the browser.
+            if (\Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
+                $url = rtrim(static::originRootUrl(), '/') . '/storage/' . $path;
+                \Illuminate\Support\Facades\Log::debug('[Logo] resolved storage URL', ['url' => $url, 'path' => $path]);
+
+                return $url;
+            }
+
+            \Illuminate\Support\Facades\Log::warning('[Logo] logo_facture path not found on public disk', [
+                'raw'  => $raw,
+                'path' => $path,
+            ]);
         }
 
-        return rtrim(static::originRootUrl(), '/').'/logo.png';
+        // Fallback: public/logo.png is a direct file – no symlink required.
+        if (is_file(public_path('logo.png'))) {
+            $url = rtrim(static::originRootUrl(), '/') . '/logo.png';
+            \Illuminate\Support\Facades\Log::debug('[Logo] falling back to public/logo.png', ['url' => $url]);
+
+            return $url;
+        }
+
+        \Illuminate\Support\Facades\Log::warning('[Logo] no logo resolved – returning null');
+
+        return null;
     }
 
     /**
