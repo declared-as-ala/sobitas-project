@@ -10,6 +10,8 @@ use Filament\Resources\Resource;
 use Filament\Forms\Components\FileUpload;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Tabs;
+use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -30,154 +32,207 @@ class ProductResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            Section::make('Identification')
-                ->description('Informations de base du produit (format backend, mieux organisé).')
-                ->schema([
-                    Grid::make(3)->schema([
-                        Forms\Components\TextInput::make('designation_fr')
-                            ->label('Désignation')
-                            ->required()
-                            ->maxLength(255),
-                        Forms\Components\TextInput::make('slug')
-                            ->label('Slug')
-                            ->required()
-                            ->maxLength(255)
-                            ->unique(ignoreRecord: true),
-                        Forms\Components\TextInput::make('code_product')
-                            ->label('Code produit')
-                            ->maxLength(255)
-                            ->helperText('Code utilisé pour la recherche et le scan code à barre.'),
-                        Forms\Components\Select::make('sous_categorie_id')
-                            ->label('Sous-catégorie')
-                            ->relationship('sousCategorie', 'designation_fr')
-                            ->searchable(),
-                        Forms\Components\Select::make('brand_id')
-                            ->label('Marque')
-                            ->relationship('brand', 'designation_fr')
-                            ->searchable(),
-                    ]),
-                ]),
+            Tabs::make('Produit')
+                ->tabs([
+                    Tab::make('1. Général')
+                        ->schema([
+                            Section::make('Identification')
+                                ->schema([
+                                    Grid::make(3)->schema([
+                                        Forms\Components\TextInput::make('designation_fr')
+                                            ->label('Désignation')
+                                            ->required()
+                                            ->maxLength(255),
+                                        Forms\Components\TextInput::make('slug')
+                                            ->label('Slug')
+                                            ->required()
+                                            ->maxLength(255)
+                                            ->unique(ignoreRecord: true),
+                                        Forms\Components\TextInput::make('code_product')
+                                            ->label('Code Produit')
+                                            ->maxLength(255),
+                                        Forms\Components\Select::make('brand_id')
+                                            ->label('Marque')
+                                            ->relationship('brand', 'designation_fr')
+                                            ->searchable(),
+                                        Forms\Components\Select::make('sous_categorie_id')
+                                            ->label('Sous-catégories')
+                                            ->relationship('sousCategorie', 'designation_fr')
+                                            ->searchable(),
+                                    ]),
+                                ]),
+                            Section::make('Médias')
+                                ->schema([
+                                    FileUpload::make('cover')
+                                        ->label('Couverture (image principale)')
+                                        ->disk('public')
+                                        ->directory('products')
+                                        ->image()
+                                        ->imageEditor()
+                                        ->maxSize(4096),
+                                    FileUpload::make('images')
+                                        ->label('Gallery (images secondaires)')
+                                        ->disk('public')
+                                        ->directory('products')
+                                        ->image()
+                                        ->multiple()
+                                        ->reorderable()
+                                        ->maxSize(4096),
+                                ]),
+                            Section::make('Flags produit')
+                                ->schema([
+                                    Grid::make(3)->schema([
+                                        Forms\Components\Toggle::make('pack')->label('Pack'),
+                                        Forms\Components\Toggle::make('new_product')->label('New Product'),
+                                        Forms\Components\Toggle::make('best_seller')->label('Meilleures ventes'),
+                                    ]),
+                                ]),
+                        ]),
 
-            Section::make('Prix & Stock')
-                ->schema([
-                    Grid::make(4)->schema([
-                        Forms\Components\TextInput::make('prix')
-                            ->label('Prix TTC')
-                            ->numeric()
-                            ->prefix('DT'),
-                        Forms\Components\TextInput::make('prix_ht')
-                            ->label('Prix HT')
-                            ->numeric()
-                            ->prefix('DT'),
-                        Forms\Components\TextInput::make('promo')
-                            ->label('Prix promo TTC')
-                            ->numeric()
-                            ->prefix('DT'),
-                        Forms\Components\TextInput::make('promo_ht')
-                            ->label('Prix promo HT')
-                            ->numeric()
-                            ->prefix('DT'),
-                        Forms\Components\DateTimePicker::make('promo_expiration_date')
-                            ->label('Expiration promo'),
-                        Forms\Components\TextInput::make('qte')
-                            ->label('Qte en stock')
-                            ->numeric()
-                            ->default(0)
-                            ->minValue(0)
-                            ->reactive()
-                            ->disabled(fn ($get) => $get('rupture') === true)
-                            ->dehydrated(true)
-                            ->afterStateUpdated(function ($state, callable $set): void {
-                                $set('rupture', (int) $state <= 0);
-                            }),
-                        Forms\Components\TextInput::make('low_stock_threshold')
-                            ->label('Seuil stock bas')
-                            ->numeric()
-                            ->default(10)
-                            ->minValue(0),
-                        Forms\Components\Toggle::make('rupture')
-                            ->label('En rupture')
-                            ->default(false)
-                            ->reactive()
-                            ->afterStateUpdated(function ($state, callable $set): void {
-                                if ($state === true) {
-                                    $set('qte', 0);
-                                }
-                            }),
-                    ]),
-                ]),
+                    Tab::make('2. Stock & état')
+                        ->schema([
+                            Section::make('📦 Stock')
+                                ->schema([
+                                    Grid::make(3)->schema([
+                                        Forms\Components\TextInput::make('qte')
+                                            ->label('Qte (quantité)')
+                                            ->numeric()
+                                            ->default(0)
+                                            ->minValue(0)
+                                            ->reactive()
+                                            ->disabled(fn ($get) => $get('rupture') === true)
+                                            ->dehydrated(true)
+                                            ->afterStateUpdated(function ($state, callable $set): void {
+                                                $set('rupture', (int) $state <= 0);
+                                            }),
+                                        Forms\Components\Toggle::make('rupture')
+                                            ->label('Etat de stock (rupture)')
+                                            ->default(false)
+                                            ->reactive()
+                                            ->afterStateUpdated(function ($state, callable $set): void {
+                                                if ($state === true) {
+                                                    $set('qte', 0);
+                                                }
+                                            }),
+                                        Forms\Components\TextInput::make('low_stock_threshold')
+                                            ->label('Seuil stock bas')
+                                            ->numeric()
+                                            ->default(10)
+                                            ->minValue(0),
+                                        Forms\Components\TextInput::make('note')
+                                            ->label('Nombre d’étoiles (rating)')
+                                            ->numeric()
+                                            ->minValue(0)
+                                            ->maxValue(5),
+                                    ]),
+                                ]),
+                        ]),
 
-            Section::make('Médias')
-                ->schema([
-                    FileUpload::make('cover')
-                        ->label('Image principale')
-                        ->disk('public')
-                        ->directory('products')
-                        ->image()
-                        ->imageEditor()
-                        ->maxSize(4096),
-                    FileUpload::make('images')
-                        ->label('Images supplémentaires')
-                        ->disk('public')
-                        ->directory('products')
-                        ->image()
-                        ->multiple()
-                        ->reorderable()
-                        ->maxSize(4096),
-                    Grid::make(2)->schema([
-                        Forms\Components\TextInput::make('alt_cover')
-                            ->label('Alt image')
-                            ->maxLength(255),
-                        Forms\Components\TextInput::make('description_cover')
-                            ->label('Description image')
-                            ->maxLength(500),
-                    ]),
-                ]),
+                    Tab::make('3. Prix & Promotion')
+                        ->schema([
+                            Section::make('💰 Prix')
+                                ->schema([
+                                    Grid::make(3)->schema([
+                                        Forms\Components\TextInput::make('prix')
+                                            ->label('Prix')
+                                            ->numeric()
+                                            ->prefix('DT'),
+                                        Forms\Components\TextInput::make('prix_ht')
+                                            ->label('Prix HT')
+                                            ->numeric()
+                                            ->prefix('DT'),
+                                        Forms\Components\TextInput::make('promo')
+                                            ->label('Promo')
+                                            ->numeric()
+                                            ->prefix('DT'),
+                                        Forms\Components\TextInput::make('promo_ht')
+                                            ->label('Promo HT')
+                                            ->numeric()
+                                            ->prefix('DT'),
+                                        Forms\Components\DateTimePicker::make('promo_expiration_date')
+                                            ->label('Date d’expiration du promo (Ventes Flash)'),
+                                    ]),
+                                ]),
+                        ]),
 
-            Section::make('Contenu & SEO')
-                ->schema([
-                    Forms\Components\RichEditor::make('description_fr')
-                        ->label('Description')
-                        ->columnSpanFull(),
-                    Grid::make(2)->schema([
-                        Forms\Components\TextInput::make('meta_title')
-                            ->label('Meta Title')
-                            ->maxLength(255),
-                        Forms\Components\TextInput::make('meta_description')
-                            ->label('Meta Description')
-                            ->maxLength(255),
-                    ]),
-                ]),
+                    Tab::make('4. Contenu produit')
+                        ->schema([
+                            Section::make('🧠 Contenu')
+                                ->schema([
+                                    Forms\Components\RichEditor::make('description_fr')
+                                        ->label('Description')
+                                        ->columnSpanFull(),
+                                    Forms\Components\Placeholder::make('missing_content_fields')
+                                        ->label('Questions / Nutrition Values')
+                                        ->content('Ces champs ne sont pas en base actuellement (mode: reuse_existing_only).'),
+                                ]),
+                        ]),
 
-            Section::make('Commercial & Relations')
-                ->schema([
-                    Grid::make(6)->schema([
-                        Forms\Components\Toggle::make('publier')
-                            ->label('Publié')
-                            ->default(true),
-                        Forms\Components\Toggle::make('new_product')
-                            ->label('Nouveau'),
-                        Forms\Components\Toggle::make('best_seller')
-                            ->label('Best-seller'),
-                        Forms\Components\Toggle::make('pack')
-                            ->label('Pack'),
-                        Forms\Components\TextInput::make('note')
-                            ->label('Note')
-                            ->numeric()
-                            ->minValue(0)
-                            ->maxValue(5),
-                    ]),
-                    Grid::make(2)->schema([
-                        Forms\Components\Select::make('tags')
-                            ->relationship('tags', 'designation_fr')
-                            ->multiple()
-                            ->searchable(),
-                        Forms\Components\Select::make('aromes')
-                            ->relationship('aromes', 'designation_fr')
-                            ->multiple()
-                            ->searchable(),
-                    ]),
-                ]),
+                    Tab::make('5. SEO')
+                        ->schema([
+                            Section::make('🔍 SEO')
+                                ->schema([
+                                    Grid::make(2)->schema([
+                                        Forms\Components\TextInput::make('meta_title')
+                                            ->label('Meta (name;content)')
+                                            ->maxLength(255),
+                                        Forms\Components\TextInput::make('meta_description')
+                                            ->label('Meta Description')
+                                            ->maxLength(255),
+                                        Forms\Components\TextInput::make('alt_cover')
+                                            ->label('Alt Cover (SEO)')
+                                            ->maxLength(255),
+                                        Forms\Components\TextInput::make('description_cover')
+                                            ->label('Description Cover (SEO)')
+                                            ->maxLength(500),
+                                    ]),
+                                    Forms\Components\Placeholder::make('missing_seo_fields')
+                                        ->label('Schema / Review / AggregateRating')
+                                        ->content('Ces champs ne sont pas en base actuellement (mode: reuse_existing_only).'),
+                                ]),
+                        ]),
+
+                    Tab::make('6. Classification')
+                        ->schema([
+                            Section::make('🏷️ Classification')
+                                ->schema([
+                                    Grid::make(2)->schema([
+                                        Forms\Components\Select::make('tags')
+                                            ->label('Tags')
+                                            ->relationship('tags', 'designation_fr')
+                                            ->multiple()
+                                            ->searchable(),
+                                        Forms\Components\Select::make('aromes')
+                                            ->label('Aromas')
+                                            ->relationship('aromes', 'designation_fr')
+                                            ->multiple()
+                                            ->searchable(),
+                                    ]),
+                                ]),
+                        ]),
+
+                    Tab::make('7. Publication')
+                        ->schema([
+                            Section::make('🧾 Publication')
+                                ->schema([
+                                    Forms\Components\Toggle::make('publier')
+                                        ->label('Publier')
+                                        ->default(true),
+                                ]),
+                        ]),
+
+                    Tab::make('8. Tabilation')
+                        ->schema([
+                            Section::make('📊 Tabilation (Custom sections / specs)')
+                                ->schema([
+                                    Forms\Components\Placeholder::make('missing_tabilation_fields')
+                                        ->label('Tabilation Zone 1..4')
+                                        ->content('Zones non disponibles en base actuellement (mode: reuse_existing_only).'),
+                                ]),
+                        ]),
+                ])
+                ->persistTabInQueryString()
+                ->columnSpanFull(),
         ]);
     }
 
