@@ -101,6 +101,14 @@ class StockDashboard extends Page implements HasTable
         ];
     }
 
+    public function getRecentMovements(): \Illuminate\Support\Collection
+    {
+        return \App\Models\StockMovement::with('product:id,designation_fr')
+            ->latest()
+            ->limit(10)
+            ->get();
+    }
+
     public function getAlertProducts(): \Illuminate\Support\Collection
     {
         return Product::query()

@@ -12,7 +12,7 @@ class StatusCardsWidget extends Widget
 {
     protected string $view = 'filament.widgets.status-cards-widget';
 
-    protected static ?int $sort = 15;
+    protected static ?int $sort = 20;
 
     protected int | string | array $columnSpan = 'full';
 
@@ -25,9 +25,9 @@ class StatusCardsWidget extends Widget
     {
         return Cache::remember('dashboard.status_cards', 60, function () {
             $counts = Commande::query()
-                ->selectRaw('status, count(*) as total')
-                ->groupBy('status')
-                ->pluck('total', 'status');
+                ->selectRaw('etat, count(*) as total')
+                ->groupBy('etat')
+                ->pluck('total', 'etat');
 
             $ruptures = Product::where('rupture', 1)->count();
 

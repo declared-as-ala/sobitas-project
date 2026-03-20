@@ -57,16 +57,16 @@ class Dashboard extends BaseDashboard
     public function getWidgets(): array
     {
         return [
-            QuickActionsWidget::class,          // sort=5   — Actions Rapides (top)
-            ClientHistoriqueSearchWidget::class, // sort=8   — Recherche client
-            StatusCardsWidget::class,           // sort=15  — Statuts en temps réel
-            StatsOverview::class,               // sort=20  — KPIs financiers
-            MarketplaceKpis::class,             // sort=30  — KPIs commandes/clients
-            RevenueChart::class,                // sort=40  — Graphique CA
-            TopProductsWidget::class,           // sort=50  — Top produits (col=1)
-            RevenueBySourcePieChart::class,     // sort=55  — Répartition CA (col=1)
-            GeographicChart::class,             // sort=60  — Géographie
-            TopCustomersTable::class,           // sort=80  — Top clients
+            QuickActionsWidget::class,          // sort=5   — Actions Rapides (full)
+            StatsOverview::class,               // sort=6   — KPIs financiers (full)
+            MarketplaceKpis::class,             // sort=8   — KPIs commandes (col=1) ─┐ side-by-side
+            RevenueBySourcePieChart::class,     // sort=9   — Répartition CA (col=1)  ─┘
+            StatusCardsWidget::class,           // sort=20  — Statuts temps réel (full)
+            ClientHistoriqueSearchWidget::class, // sort=25  — Recherche client (full)
+            RevenueChart::class,                // sort=40  — Graphique CA (full)
+            TopProductsWidget::class,           // sort=50  — Top produits
+            GeographicChart::class,             // sort=60  — Géographie (full)
+            TopCustomersTable::class,           // sort=80  — Top clients (full)
         ];
     }
 

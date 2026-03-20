@@ -9,7 +9,7 @@ class ClientHistoriqueSearchWidget extends Widget
 {
     protected string $view = 'filament.widgets.client-historique-search-widget';
 
-    protected static ?int $sort = 8;
+    protected static ?int $sort = 25;
 
     protected int | string | array $columnSpan = 'full';
 
@@ -35,7 +35,7 @@ class ClientHistoriqueSearchWidget extends Widget
             'tel' => $tel !== '' ? $tel : null,
             'name' => $name !== '' ? $name : null,
         ]);
-        $this->redirect(HistoriqueClient::getUrl($params));
+        $this->redirect(HistoriqueClient::getUrl($params), navigate: true);
     }
 
     public function clearHistorique(): void

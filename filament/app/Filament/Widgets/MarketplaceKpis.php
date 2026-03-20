@@ -12,11 +12,11 @@ use Livewire\Attributes\On;
 
 class MarketplaceKpis extends BaseWidget
 {
-    protected static ?int $sort = 30;
+    protected static ?int $sort = 8;
 
     protected static bool $isLazy = true;
 
-    protected int | string | array $columnSpan = 'full';
+    protected int | string | array $columnSpan = 1;
 
     protected ?string $pollingInterval = null; // Manual refresh only
 
