@@ -171,8 +171,8 @@ class CreateQuotation extends CreateRecord
                 ->success()
                 ->send();
 
-            // Dispatch an event to navigate to the resource's index page
-            $this->dispatch('navigate', url: static::getResource()::getUrl('index'));
+            // Redirect to the print page
+            $this->dispatch('navigate', url: route('quotations.print', $this->record));
             
             return null;
         } catch (\Illuminate\Database\QueryException $e) {

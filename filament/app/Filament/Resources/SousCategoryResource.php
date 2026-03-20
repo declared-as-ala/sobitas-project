@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\SousCategoryResource\Pages;
+use App\Models\Categ;
 use App\Models\SousCategory;
 use Filament\Actions;
 use Filament\Forms;
@@ -16,9 +17,9 @@ class SousCategoryResource extends Resource
 {
     protected static ?string $model = SousCategory::class;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-rectangle-group';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-rectangle-group';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Catalogue';
+    protected static string|\UnitEnum|null $navigationGroup = 'Catalogue';
 
     protected static ?int $navigationSort = 3;
 
@@ -29,6 +30,18 @@ class SousCategoryResource extends Resource
     protected static ?string $recordTitleAttribute = 'designation_fr';
 
     protected static bool $isGloballySearchable = false;
+
+    // ─── Palette for category badges ──────────────────────────────────────────
+    private static array $categoryColors = [
+        'primary', 'success', 'warning', 'info', 'danger',
+    ];
+
+    private static function categoryColor(int $id): string
+    {
+        return self::$categoryColors[$id % count(self::$categoryColors)];
+    }
+
+    // ─── Form ─────────────────────────────────────────────────────────────────
 
     public static function form(Schema $schema): Schema
     {
@@ -65,46 +78,132 @@ class SousCategoryResource extends Resource
         ]);
     }
 
+    // ─── Table ────────────────────────────────────────────────────────────────
+
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $query) => $query->with('categorie:id,designation_fr'))
+            ->modifyQueryUsing(fn (Builder $query) => $query
+                ->with('categorie:id,designation_fr')
+                ->withCount('products')
+            )
+
+            // ── Grouping: sous-catégories grouped under their catégorie ──────
+            ->groups([
+                Tables\Grouping\Group::make('categorie.designation_fr')
+                    ->label('Catégorie')
+                    ->collapsible()
+                    ->titlePrefixedWithLabel(false),
+            ])
+            ->defaultGroup('categorie.designation_fr')
+            ->groupingSettingsHidden()   // hide the "Group by" settings dropdown — grouping is always on
+
+            // ── Columns ──────────────────────────────────────────────────────
             ->columns([
+
+                // Désignation — primary identifier, always visible
+                Tables\Columns\TextColumn::make('designation_fr')
+                    ->label('Sous-catégorie')
+                    ->searchable()
+                    ->sortable()
+                    ->weight(\Filament\Support\Enums\FontWeight::SemiBold)
+                    ->description(fn (SousCategory $record): string =>
+                        $record->slug ? '/' . $record->slug : ''
+                    ),
+
+                // Catégorie badge — visible by default (useful when group is collapsed or grouping disabled)
                 Tables\Columns\TextColumn::make('categorie.designation_fr')
-                    ->label('Catégories')
+                    ->label('Catégorie')
+                    ->badge()
+                    ->color(fn ($record) => $record?->categorie_id
+                        ? self::categoryColor($record->categorie_id)
+                        : 'gray'
+                    )
                     ->sortable()
                     ->searchable(),
-                Tables\Columns\TextColumn::make('designation_fr')
-                    ->label('Désignation')
-                    ->searchable()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('slug')
-                    ->label('Slug')
-                    ->searchable()
-                    ->sortable(),
+
+                // Description — HTML stripped, short preview with full-text tooltip
                 Tables\Columns\TextColumn::make('description_fr')
                     ->label('Description')
-                    ->limit(40)
-                    ->searchable()
+                    ->formatStateUsing(fn (?string $state): string =>
+                        $state ? trim(strip_tags(html_entity_decode($state))) : '—'
+                    )
+                    ->limit(70)
+                    ->tooltip(fn (?string $state): ?string =>
+                        $state ? mb_substr(trim(strip_tags(html_entity_decode($state))), 0, 300) : null
+                    )
+                    ->color('gray')
                     ->toggleable(),
+
+                // Product count badge
+                Tables\Columns\TextColumn::make('products_count')
+                    ->label('Produits')
+                    ->badge()
+                    ->color(fn (int $state): string => match(true) {
+                        $state === 0   => 'gray',
+                        $state <= 5    => 'warning',
+                        default        => 'success',
+                    })
+                    ->sortable()
+                    ->alignCenter(),
+
+                // ── SEO / meta fields — hidden by default, toggled on demand ─
                 Tables\Columns\TextColumn::make('alt_cover')
                     ->label('Alt Cover')
-                    ->limit(30)
-                    ->searchable()
-                    ->toggleable(),
+                    ->limit(40)
+                    ->tooltip(fn (?string $state) => $state)
+                    ->color('gray')
+                    ->toggleable(isToggledHiddenByDefault: true),
+
                 Tables\Columns\TextColumn::make('review_seo')
-                    ->label('Review (seo)')
-                    ->limit(30)
-                    ->toggleable(),
+                    ->label('Review SEO')
+                    ->limit(40)
+                    ->color('gray')
+                    ->toggleable(isToggledHiddenByDefault: true),
+
                 Tables\Columns\TextColumn::make('aggregate_rating_seo')
-                    ->label('AggregateRating (seo)')
-                    ->limit(30)
-                    ->toggleable(),
+                    ->label('AggRating SEO')
+                    ->limit(40)
+                    ->color('gray')
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
+
+            // ── Filters ───────────────────────────────────────────────────────
+            ->filters([
+                Tables\Filters\SelectFilter::make('categorie_id')
+                    ->label('Catégorie')
+                    ->relationship('categorie', 'designation_fr')
+                    ->searchable()
+                    ->preload()
+                    ->placeholder('Toutes les catégories'),
+
+                Tables\Filters\Filter::make('has_description')
+                    ->label('Avec description')
+                    ->query(fn (Builder $query) => $query->whereNotNull('description_fr')->where('description_fr', '!=', '')),
+
+                Tables\Filters\Filter::make('no_products')
+                    ->label('Sans produits')
+                    ->query(fn (Builder $query) => $query->doesntHave('products')),
+            ])
+            ->filtersLayout(Tables\Enums\FiltersLayout::AboveContent)
+
+            // ── Search ────────────────────────────────────────────────────────
+            ->searchPlaceholder('Rechercher une sous-catégorie...')
+
+            // ── Sorting ───────────────────────────────────────────────────────
+            ->defaultSort('designation_fr', 'asc')
+            ->striped()
+            ->defaultPaginationPageOption(25)
+            ->paginationPageOptions([25, 50, 100])
+
+            // ── Actions ───────────────────────────────────────────────────────
             ->actions([
-                Actions\ViewAction::make()->slideOver(),
-                Actions\EditAction::make(),
-                Actions\DeleteAction::make(),
+                Actions\EditAction::make()
+                    ->iconButton()
+                    ->tooltip('Modifier'),
+                Actions\DeleteAction::make()
+                    ->iconButton()
+                    ->tooltip('Supprimer'),
             ])
             ->bulkActions([
                 Actions\DeleteBulkAction::make(),

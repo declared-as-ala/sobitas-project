@@ -40,6 +40,7 @@ class QuotationSent extends Mailable
             'documentNumber' => $this->quotation->numero ?? '',
             'documentDate' => $this->quotation->date_quotation ? \Carbon\Carbon::parse($this->quotation->date_quotation)->format('d/m/Y') : ($this->quotation->created_at?->format('d/m/Y') ?? ''),
             'client' => $this->quotation->client,
+            'customMessage' => $customMessage,
             'totals' => [
                 ['label' => 'Total HT', 'value' => number_format((float)($this->quotation->prix_ht ?? $this->quotation->prix_total ?? 0), 3, ',', ' ') . ' DT'],
                 ['label' => 'TVA', 'value' => number_format((float)($this->quotation->tva ?? 0), 3, ',', ' ') . ' DT'],
@@ -67,7 +68,7 @@ class QuotationSent extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'print.quotation',
+            view: 'emails.documents.devis',
             with: $this->sharedData
         );
     }
