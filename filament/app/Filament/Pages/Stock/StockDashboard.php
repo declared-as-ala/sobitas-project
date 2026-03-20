@@ -252,7 +252,7 @@ class StockDashboard extends Page implements HasTable
                     }),
             ])
             ->actions([
-                Tables\Actions\Action::make('adjustStock')
+                Actions\Action::make('adjustStock')
                     ->label('Ajuster')
                     ->icon('heroicon-o-adjustments-horizontal')
                     ->color('warning')
@@ -279,7 +279,7 @@ class StockDashboard extends Page implements HasTable
                         app(StockReportService::class)->clearCache();
                         Notification::make()->title('Stock mis à jour')->success()->send();
                     }),
-                Tables\Actions\Action::make('addStock')
+                Actions\Action::make('addStock')
                     ->label('+')
                     ->icon('heroicon-o-plus-circle')
                     ->color('success')
@@ -299,7 +299,7 @@ class StockDashboard extends Page implements HasTable
                         app(StockReportService::class)->clearCache();
                         Notification::make()->title('+' . $data['qty'] . ' unités ajoutées')->success()->send();
                     }),
-                Tables\Actions\Action::make('removeStock')
+                Actions\Action::make('removeStock')
                     ->label('−')
                     ->icon('heroicon-o-minus-circle')
                     ->color('danger')
@@ -319,7 +319,7 @@ class StockDashboard extends Page implements HasTable
                         app(StockReportService::class)->clearCache();
                         Notification::make()->title('−' . $data['qty'] . ' unités retirées')->success()->send();
                     }),
-                Tables\Actions\Action::make('editProduct')
+                Actions\Action::make('editProduct')
                     ->label('Modifier')
                     ->icon('heroicon-o-pencil-square')
                     ->url(fn (Product $record) => ProductResource::getUrl('edit', ['record' => $record])),
