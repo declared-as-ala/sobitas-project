@@ -15,6 +15,8 @@ use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\HtmlString;
 
 class CoordinateResource extends Resource
 {
@@ -116,22 +118,62 @@ class CoordinateResource extends Resource
                     Tab::make('Logos')
                         ->schema([
                             Section::make()->schema([
+                                Forms\Components\Placeholder::make('logo_preview')
+                                    ->label('Logo actuel')
+                                    ->content(function ($record): HtmlString|string {
+                                        $raw = $record?->logo;
+                                        if (empty($raw)) {
+                                            return 'Aucun logo enregistré.';
+                                        }
+                                        $path = ltrim(str_replace('\\', '/', trim((string) $raw)), '/');
+                                        if (str_starts_with($path, 'storage/')) {
+                                            $path = substr($path, 8);
+                                        }
+                                        if (! Storage::disk('public')->exists($path)) {
+                                            return 'Fichier introuvable : ' . $path;
+                                        }
+                                        $url = rtrim(Coordinate::originRootUrl(), '/') . '/storage/' . $path;
+
+                                        return new HtmlString(
+                                            '<img src="' . e($url) . '" alt="Logo" style="max-height:120px;height:auto;width:auto;border-radius:6px;">'
+                                        );
+                                    })
+                                    ->columnSpanFull(),
                                 FileUpload::make('logo')
-                                    ->label('Logo')
+                                    ->label('Logo (remplacer)')
                                     ->disk('public')
                                     ->directory('coordonnees')
                                     ->image()
                                     ->imageEditor()
-                                    ->imagePreviewHeight('120')
                                     ->maxSize(2048)
                                     ->columnSpanFull(),
+                                Forms\Components\Placeholder::make('logo_facture_preview')
+                                    ->label('Logo Facture actuel')
+                                    ->content(function ($record): HtmlString|string {
+                                        $raw = $record?->logo_facture;
+                                        if (empty($raw)) {
+                                            return 'Aucun logo facture enregistré.';
+                                        }
+                                        $path = ltrim(str_replace('\\', '/', trim((string) $raw)), '/');
+                                        if (str_starts_with($path, 'storage/')) {
+                                            $path = substr($path, 8);
+                                        }
+                                        if (! Storage::disk('public')->exists($path)) {
+                                            return 'Fichier introuvable : ' . $path;
+                                        }
+                                        $url = rtrim(Coordinate::originRootUrl(), '/') . '/storage/' . $path;
+
+                                        return new HtmlString(
+                                            '<img src="' . e($url) . '" alt="Logo Facture" style="max-height:120px;height:auto;width:auto;border-radius:6px;">'
+                                        );
+                                    })
+                                    ->columnSpanFull(),
                                 FileUpload::make('logo_facture')
-                                    ->label('Logo Facture')
+                                    ->label('Logo Facture (remplacer)')
                                     ->disk('public')
                                     ->directory('coordonnees')
                                     ->image()
                                     ->imageEditor()
-                                    ->imagePreviewHeight('120')
                                     ->maxSize(2048)
                                     ->columnSpanFull(),
                             ]),
@@ -226,11 +268,24 @@ class CoordinateResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\ImageColumn::make('logo')
+                Tables\Columns\TextColumn::make('logo')
                     ->label('Logo')
-                    ->disk('public')
-                    ->circular()
-                    ->size(48),
+                    ->html()
+                    ->formatStateUsing(function ($state): string {
+                        if (empty($state)) {
+                            return '—';
+                        }
+                        $path = ltrim(str_replace('\\', '/', trim((string) $state)), '/');
+                        if (str_starts_with($path, 'storage/')) {
+                            $path = substr($path, 8);
+                        }
+                        if (! Storage::disk('public')->exists($path)) {
+                            return '—';
+                        }
+                        $url = rtrim(Coordinate::originRootUrl(), '/') . '/storage/' . $path;
+
+                        return '<img src="' . e($url) . '" style="height:48px;width:48px;object-fit:cover;border-radius:50%;">';
+                    }),
                 Tables\Columns\TextColumn::make('designation_fr')
                     ->label('Société')
                     ->searchable()
