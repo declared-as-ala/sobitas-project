@@ -11,6 +11,7 @@ use App\Filament\Widgets\QuickActionsWidget;
 use App\Filament\Widgets\RevenueBySourcePieChart;
 use App\Filament\Widgets\RevenueChart;
 use App\Filament\Widgets\StatsOverview;
+use App\Filament\Widgets\StatusCardsWidget;
 use App\Filament\Widgets\TopCustomersTable;
 use App\Filament\Widgets\TopProductsWidget;
 use Filament\Pages\Dashboard as BaseDashboard;
@@ -56,15 +57,16 @@ class Dashboard extends BaseDashboard
     public function getWidgets(): array
     {
         return [
-            QuickActionsWidget::class,
-            StatsOverview::class,
-            MarketplaceKpis::class,
-            RevenueChart::class,
-            TopProductsWidget::class,
-            RevenueBySourcePieChart::class,
-            GeographicChart::class,
-            ClientHistoriqueSearchWidget::class,
-            TopCustomersTable::class,
+            QuickActionsWidget::class,          // sort=5   — Actions Rapides (top)
+            ClientHistoriqueSearchWidget::class, // sort=8   — Recherche client
+            StatusCardsWidget::class,           // sort=15  — Statuts en temps réel
+            StatsOverview::class,               // sort=20  — KPIs financiers
+            MarketplaceKpis::class,             // sort=30  — KPIs commandes/clients
+            RevenueChart::class,                // sort=40  — Graphique CA
+            TopProductsWidget::class,           // sort=50  — Top produits (col=1)
+            RevenueBySourcePieChart::class,     // sort=55  — Répartition CA (col=1)
+            GeographicChart::class,             // sort=60  — Géographie
+            TopCustomersTable::class,           // sort=80  — Top clients
         ];
     }
 
