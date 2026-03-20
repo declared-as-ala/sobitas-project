@@ -366,7 +366,8 @@ function ftvaAddRow() {
         var r = document.getElementById('ftva-row-' + i);
         if (r.style.display === 'none') {
             r.style.display = '';
-            $('#ftva_prod_' + i).val('').trigger('change.select2');
+            ftvaInitSelect2(i);
+            $('#ftva_prod_' + i).val(null).trigger('change');
             document.getElementById('ftva_qte_' + i).value = 1;
             document.getElementById('ftva_pu_' + i).value  = 0;
             document.getElementById('ftva_ptht_' + i).value= 0;
