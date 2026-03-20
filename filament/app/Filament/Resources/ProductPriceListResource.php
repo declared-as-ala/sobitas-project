@@ -130,7 +130,7 @@ class ProductPriceListResource extends Resource
                         ->defaultItems(1)
                         ->addActionLabel('Ajouter un produit')
                         ->deleteAction(
-                            fn (Forms\Components\Actions\Action $action) => $action
+                            fn ($action) => $action
                                 ->icon('heroicon-m-trash')
                                 ->color('danger')
                         ),

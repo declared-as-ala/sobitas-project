@@ -133,8 +133,8 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($rows as $i => $row)
-                        <tr style="background:{{ $i % 2 === 0 ? '#ffffff' : '#f8fafc' }};">
+                        @forelse($rows as $row)
+                        <tr style="background:{{ $loop->even ? '#ffffff' : '#f8fafc' }};">
                             <td style="padding:9px 10px;font-size:12px;color:#94a3b8;text-align:center;border-top:1px solid #f1f5f9;">{{ $row['index'] }}</td>
                             <td style="padding:9px 10px;font-size:12px;color:#1e293b;border-top:1px solid #f1f5f9;">{{ $row['produit'] }}</td>
                             <td style="padding:9px 8px;font-size:12px;color:#475569;text-align:center;border-top:1px solid #f1f5f9;">{{ $row['qte'] }}</td>
