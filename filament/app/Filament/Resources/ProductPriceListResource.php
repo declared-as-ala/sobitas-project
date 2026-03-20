@@ -3,11 +3,9 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\ProductPriceListResource\Pages;
-use App\Models\Product;
 use App\Models\ProductPriceList;
 use Filament\Forms;
 use Filament\Resources\Resource;
-use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Actions;
@@ -33,108 +31,14 @@ class ProductPriceListResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
+            Forms\Components\ViewField::make('custom_lp_view')
+                ->hiddenLabel()
+                ->view('filament.pages.create-liste-prix')
+                ->columnSpanFull(),
 
-            // ── Header: designation ───────────────────────────────────────────
-            Section::make('Informations')
-                ->schema([
-                    Forms\Components\TextInput::make('designation')
-                        ->label('Désignation de la liste de prix')
-                        ->placeholder('Ex : Prix Détail 2025')
-                        ->required()
-                        ->maxLength(255)
-                        ->columnSpanFull(),
-                ]),
-
-            // ── Barcode scanner ───────────────────────────────────────────────
-            Section::make('Scanner code à barre')
-                ->schema([
-                    Forms\Components\TextInput::make('_barcode')
-                        ->label('Code barre')
-                        ->placeholder('Scannez ou saisissez un code barre puis Entrée...')
-                        ->dehydrated(false)
-                        ->autocomplete('off')
-                        ->extraInputAttributes([
-                            // Alpine: on Enter key → call Livewire method, clear field, refocus
-                            'x-on:keydown.enter.prevent' => "
-                                const code = \$el.value.trim();
-                                if (code) {
-                                    \$wire.addProductByBarcode(code).then(() => {
-                                        \$el.value = '';
-                                        \$el.focus();
-                                    });
-                                }
-                            ",
-                        ]),
-                ]),
-
-            // ── Inline product rows (Repeater) ────────────────────────────────
-            Section::make('Produits')
-                ->schema([
-                    Forms\Components\Repeater::make('details')
-                        ->relationship(
-                            'details',
-                            fn (Builder $query) => $query->with('product:id,code_product,designation_fr')
-                        )
-                        ->label('')
-                        ->schema([
-                            // Product select
-                            Forms\Components\Select::make('produit_id')
-                                ->label('Produit')
-                                ->relationship('product', 'designation_fr')
-                                ->searchable()
-                                ->preload(false)
-                                ->required()
-                                ->live()
-                                ->afterStateUpdated(function ($state, callable $set) {
-                                    if ($state) {
-                                        $product = Product::select('id', 'prix', 'code_product')->find($state);
-                                        if ($product) {
-                                            $set('prix_unitaire', $product->prix ?? 0);
-                                            $set('_code_barre', $product->code_product ?? '');
-                                        }
-                                    }
-                                })
-                                ->columnSpan(2),
-
-                            // Code barre (display-only, loaded from relationship)
-                            Forms\Components\TextInput::make('_code_barre')
-                                ->label('Code Barre')
-                                ->disabled()
-                                ->dehydrated(false)
-                                ->afterStateHydrated(function (Forms\Components\TextInput $component, $record) {
-                                    if ($record) {
-                                        $component->state($record->product?->code_product ?? '');
-                                    }
-                                }),
-
-                            // Prix de gros
-                            Forms\Components\TextInput::make('prix_gros')
-                                ->label('Prix Gros')
-                                ->numeric()
-                                ->step(0.001)
-                                ->minValue(0)
-                                ->default(0),
-
-                            // Prix unitaire
-                            Forms\Components\TextInput::make('prix_unitaire')
-                                ->label('Prix Unitaire')
-                                ->numeric()
-                                ->step(0.001)
-                                ->minValue(0)
-                                ->required()
-                                ->default(0),
-                        ])
-                        ->columns(5)
-                        ->columnSpanFull()
-                        ->reorderable(false)
-                        ->defaultItems(1)
-                        ->addActionLabel('Ajouter un produit')
-                        ->deleteAction(
-                            fn ($action) => $action
-                                ->icon('heroicon-m-trash')
-                                ->color('danger')
-                        ),
-                ]),
+            // Hidden fields populated by the custom blade view on save
+            Forms\Components\Hidden::make('designation'),
+            Forms\Components\Hidden::make('details'),
         ]);
     }
 

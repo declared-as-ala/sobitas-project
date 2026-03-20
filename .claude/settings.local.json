@@ -18,7 +18,9 @@
       "Bash(find /c/Users/Ala/Desktop/sobitas-project/filament/resources/views/print -type f -name *quot* -o -name *devis*)",
       "Bash(grep -E \"\\\\.\\(blade\\\\.php|php\\)$\")",
       "Bash(find C:UsersAlaDesktopsobitas-project -type f -name *price*list* -o -type f -name *liste*prix*)",
-      "Bash(find C:UsersAlaDesktopsobitas-projectbackendconfig -type f -name *.php)"
+      "Bash(find C:UsersAlaDesktopsobitas-projectbackendconfig -type f -name *.php)",
+      "Bash(find C:/Users/Ala/Desktop/sobitas-project/filament/database/migrations -name *product_price*)",
+      "Bash(find C:/Users/Ala/Desktop/sobitas-project/filament/database -name *.php)"
     ]
   }
 }
