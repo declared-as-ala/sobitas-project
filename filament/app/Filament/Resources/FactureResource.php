@@ -101,7 +101,7 @@ class FactureResource extends Resource
     {
         return $table
             ->modifyQueryUsing(fn (Builder $query) => $query
-                ->select(['factures.id', 'factures.numero', 'factures.client_id', 'factures.prix_ht', 'factures.remise', 'factures.frais_livraison', 'factures.net_a_payer', 'factures.created_at'])
+                ->select(['factures.id', 'factures.numero', 'factures.client_id', 'factures.prix_ht', 'factures.remise', 'factures.pourcentage_remise', 'factures.frais_livraison', 'factures.net_a_payer', 'factures.created_at'])
                 ->with('client:id,name')
             )
             ->columns([
@@ -115,29 +115,42 @@ class FactureResource extends Resource
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('prix_ht')
-                    ->label('Montant Total')
+                    ->label('Montant Total HT')
                     ->money('TND', divideBy: 1)
-                    ->sortable(),
+                    ->sortable()
+                    ->alignEnd(),
                 Tables\Columns\TextColumn::make('remise')
                     ->label('Montant Remise')
                     ->money('TND', divideBy: 1)
                     ->sortable()
-                    ->placeholder('—'),
+                    ->alignEnd()
+                    ->placeholder('—')
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('pourcentage_remise')
+                    ->label('Remise %')
+                    ->suffix(' %')
+                    ->sortable()
+                    ->alignEnd()
+                    ->placeholder('—')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('frais_livraison')
                     ->label('Frais Livraison')
                     ->money('TND', divideBy: 1)
                     ->sortable()
+                    ->alignEnd()
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->placeholder('—'),
                 Tables\Columns\TextColumn::make('net_a_payer')
-                    ->label('Net à Payer')
+                    ->label('Montant Totale TTC')
                     ->money('TND', divideBy: 1)
                     ->sortable()
+                    ->alignEnd()
                     ->weight(\Filament\Support\Enums\FontWeight::Bold),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Date')
                     ->dateTime('d/m/Y')
-                    ->sortable(),
+                    ->sortable()
+                    ->color('gray'),
             ])
             ->defaultSort('created_at', 'desc')
             ->defaultPaginationPageOption(25)

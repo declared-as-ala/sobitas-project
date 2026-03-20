@@ -17,8 +17,9 @@ class OrderConfirmedCustomerMail extends Mailable
 
     public function build(): static
     {
+        $this->commande->loadMissing('details.product');
         return $this
-            ->subject('Votre commande ' . $this->commande->numero . ' est confirmée — SOBITAS')
+            ->subject('✅ Votre commande #' . $this->commande->numero . ' est confirmée — SOBITAS')
             ->view('emails.orders.confirmed-customer');
     }
 }

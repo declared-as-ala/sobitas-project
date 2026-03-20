@@ -3,7 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Mail\SoumissionMail;
+use App\Mail\OrderConfirmedAdminMail;
+use App\Mail\OrderConfirmedCustomerMail;
 use App\Models\Commande;
 use App\Models\CommandeDetail;
 use App\Models\Message;
@@ -220,49 +221,67 @@ class CommandeController extends Controller
             return $new_facture;
         });
 
-        // ── Send SMS immediately (same as backend: synchronous, no queue) ────────
+        $commande = $new_facture->fresh(['details.product']);
+
+        // ── Send SMS ──────────────────────────────────────────────────────────────
         try {
-            $phone = $new_facture->phone ?? $new_facture->livraison_phone ?? null;
+            $phone = $commande->phone ?? $commande->livraison_phone ?? null;
             if ($phone && ! empty(trim((string) $phone))) {
+                $nom    = trim(($commande->nom ?: $commande->livraison_nom ?: ''));
+                $prenom = trim(($commande->prenom ?: $commande->livraison_prenom ?: ''));
+                $numero = (string) ($commande->numero ?? '');
+                $total  = number_format((float) ($commande->prix_ttc ?? 0), 3, '.', ' ');
+
                 $msg = Message::getCached();
-                if ($msg && ! empty(trim((string) ($msg->msg_passez_commande ?? '')))) {
-                    $nom = (string) ($new_facture->nom ?: $new_facture->livraison_nom ?: '');
-                    $prenom = (string) ($new_facture->prenom ?: $new_facture->livraison_prenom ?: '');
-                    $numero = (string) ($new_facture->numero ?? '');
+                $template = $msg ? trim((string) ($msg->msg_passez_commande ?? '')) : '';
+
+                if ($template !== '') {
+                    // Use admin-configured template (supports [nom], [prenom], [num_commande])
                     $sms = str_replace(
                         ['[nom]', '[prenom]', '[num_commande]'],
                         [$nom, $prenom, $numero],
-                        $msg->msg_passez_commande
+                        $template
                     );
-                    if (! empty(trim($sms))) {
-                        app(SmsService::class)->send_sms($phone, $sms);
-                    }
+                } else {
+                    // Built-in rich fallback
+                    $productNames = $commande->details
+                        ->take(3)
+                        ->map(fn ($d) => $d->product->designation_fr ?? 'Produit')
+                        ->implode(', ');
+                    $hasMore = $commande->details->count() > 3
+                        ? ' (+' . ($commande->details->count() - 3) . ')'
+                        : '';
+
+                    $greeting = $nom ? "Bonjour {$nom}" : 'Bonjour';
+                    $sms  = "{$greeting}, votre commande #{$numero} est confirmée ✅\n";
+                    $sms .= "Produits: {$productNames}{$hasMore}\n";
+                    $sms .= "Total: {$total} TND\n";
+                    $sms .= "Merci pour votre confiance 🙌";
+                }
+
+                if (! empty(trim($sms))) {
+                    app(SmsService::class)->send_sms($phone, $sms);
                 }
             }
         } catch (\Exception $e) {
             Log::error('Failed to send order SMS', [
-                'commande_id' => $new_facture->id,
+                'commande_id' => $commande->id,
                 'error'       => $e->getMessage(),
             ]);
         }
 
-        // ── Send emails immediately (same logic as backend: SoumissionMail to admin + client) ─────
-        $commande = $new_facture->fresh();
-        $details = CommandeDetail::where('commande_id', $commande->id)->with('product')->get();
-        $data = [
-            'titre'    => 'Nouvelle commande',
-            'commande' => $commande,
-            'details'  => $details,
-        ];
-
+        // ── Send emails ───────────────────────────────────────────────────────────
         try {
-            // Send to admin (same as backend)
-            Mail::to('bitoutawalid@gmail.com')->send(new SoumissionMail($data, 'bitoutawalid@gmail.com'));
+            $adminEmails = array_filter(
+                array_map('trim', explode(',', config('mail.admin_emails', config('mail.username', 'admin@sobitas.tn'))))
+            );
+            foreach ($adminEmails as $adminEmail) {
+                Mail::to($adminEmail)->send(new OrderConfirmedAdminMail($commande));
+            }
 
-            // Send to client (same as backend)
             $clientEmail = $commande->email ?? $commande->livraison_email ?? null;
             if ($clientEmail && filter_var($clientEmail, FILTER_VALIDATE_EMAIL)) {
-                Mail::to($clientEmail)->send(new SoumissionMail($data, config('mail.from.address', 'contact@sobitas.tn')));
+                Mail::to($clientEmail)->send(new OrderConfirmedCustomerMail($commande));
             }
         } catch (\Exception $e) {
             Log::error('Failed to send order email', [
