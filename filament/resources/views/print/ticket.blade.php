@@ -142,7 +142,22 @@
             padding-top: 10px;
             margin-top: 25px;
             text-align: center;
-            text-transform: uppercase;
+        }
+
+        .qr-zone {
+            margin-top: 16px;
+            text-align: center;
+        }
+
+        .qr-zone img {
+            width: 110px;
+            height: 110px;
+        }
+
+        .qr-zone p {
+            font-size: 10px;
+            color: #555;
+            margin-top: 4px;
         }
 
         .hide_print {
@@ -286,8 +301,21 @@
 
             <br><br>
             <h4>{{ $coordonnee->footer_ticket ?? '' }}</h4>
-            <h3>Notre Site web <br>
-                {{ $coordonnee->site_web ?? '' }}</h3>
+            <h3 style="text-transform:uppercase;">Notre Site web</h3>
+            <div style="text-align:center; font-size:12px; margin-top:4px;">
+                {{ $coordonnee->site_web ?? '' }}
+            </div>
+
+            @php $siteUrl = $coordonnee->site_web ?? ''; @endphp
+            @if ($siteUrl)
+            <div class="qr-zone">
+                <img
+                    src="https://api.qrserver.com/v1/create-qr-code/?size=110x110&data={{ urlencode($siteUrl) }}"
+                    alt="QR Code site web"
+                >
+                <p>Scannez pour visiter notre site</p>
+            </div>
+            @endif
 
 
         </div>
