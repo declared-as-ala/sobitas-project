@@ -18,25 +18,19 @@ class DashboardHeaderWidget extends Widget
     protected static bool $isLazy = false;
 
     /**
-     * Source of truth: URL (?period=) then session. Persist to session so widgets read the same value.
+     * Read preset from session on mount and on every hydration.
+     * Session is set by Dashboard::mount() on first load (from URL),
+     * then kept in sync by updatedPreset() on every filter click.
      */
     public function mount(): void
     {
-        $fromUrl = request()->query('period');
-        if ($fromUrl !== null && $fromUrl !== '') {
-            session(['dashboard.filter.preset' => $fromUrl]);
-            $this->preset = $fromUrl;
-        } else {
-            $this->preset = session('dashboard.filter.preset', '30d');
-        }
+        $this->preset = session('dashboard.filter.preset', '30d');
     }
 
-    /**
-     * Keep dropdown in sync with session on every request so the selected period never "disappears"
-     * after changing the filter or refreshing.
-     */
     public function hydrate(): void
     {
+        // Re-read from session on every Livewire hydration so the selected
+        // period chip stays in sync after any server-side update.
         $fromSession = session('dashboard.filter.preset');
         if ($fromSession !== null && $fromSession !== '') {
             $this->preset = $fromSession;

@@ -33,12 +33,12 @@ class MessageResource extends Resource
         return $schema
             ->schema([
                 Section::make('Templates de messages SMS')
-                    ->description('Variables: [nom], [prenom], [num_commande], [etat]')
+                    ->description('Variables: [nom], [prenom], [num_commande], [etat], [produits], [total]')
                     ->schema([
                         Forms\Components\Textarea::make('msg_etat_commande')
                             ->label('Message état commande')
                             ->rows(4)
-                            ->helperText('Envoyé quand le statut de commande change'),
+                            ->helperText('Envoyé quand le statut change. Ex: Bonjour [prenom], votre commande [num_commande] est [etat]. Produits: [produits]. Total: [total] TND.'),
                         Forms\Components\Textarea::make('msg_inscription')
                             ->label('Message inscription')
                             ->rows(4)

@@ -60,20 +60,39 @@ class CommandeObserver
         }
 
         $msg = Message::getCached();
-        if (! $msg || empty(trim((string) $msg->msg_etat_commande))) {
-            return;
-        }
+        $commande->loadMissing('details.product:id,designation_fr');
+        $products = $commande->details
+            ->take(4)
+            ->map(fn ($d) => $d->product->designation_fr ?? 'Produit')
+            ->filter()
+            ->implode(', ');
+        $more = $commande->details->count() > 4 ? ' (+' . ($commande->details->count() - 4) . ')' : '';
+        $productsText = trim($products . $more);
+        $total = number_format((float) ($commande->prix_ttc ?? 0), 3, '.', ' ');
 
-        $sms = str_replace(
-            ['[nom]', '[prenom]', '[num_commande]', '[etat]'],
-            [
-                $commande->nom ?? '',
-                $commande->prenom ?? '',
-                $commande->numero ?? '',
-                Commande::getStatusLabel($commande->etat),
-            ],
-            $msg->msg_etat_commande
-        );
+        if ($msg && ! empty(trim((string) $msg->msg_etat_commande))) {
+            $sms = str_replace(
+                ['[nom]', '[prenom]', '[num_commande]', '[etat]', '[produits]', '[total]'],
+                [
+                    $commande->nom ?? '',
+                    $commande->prenom ?? '',
+                    $commande->numero ?? '',
+                    Commande::getStatusLabel($commande->etat),
+                    $productsText,
+                    $total,
+                ],
+                $msg->msg_etat_commande
+            );
+        } else {
+            $greeting = trim(($commande->prenom ?? '') . ' ' . ($commande->nom ?? ''));
+            $greeting = $greeting !== '' ? "Bonjour {$greeting}," : 'Bonjour,';
+            $status = Commande::getStatusLabel($commande->etat);
+            $sms = $greeting
+                . " votre commande {$commande->numero} est {$status}.\n"
+                . "Produits: {$productsText}\n"
+                . "Total: {$total} TND.\n"
+                . 'Merci pour votre confiance.';
+        }
 
         SendSmsJob::dispatch($phone, $sms);
 

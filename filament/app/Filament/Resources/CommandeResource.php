@@ -221,9 +221,26 @@ class CommandeResource extends Resource
                         $msg = Message::getCached();
 
                         if ($msg && $msg->msg_etat_commande) {
+                            $record->loadMissing('details.product:id,designation_fr');
+                            $products = $record->details
+                                ->take(4)
+                                ->map(fn ($d) => $d->product->designation_fr ?? 'Produit')
+                                ->filter()
+                                ->implode(', ');
+                            $more = $record->details->count() > 4 ? ' (+' . ($record->details->count() - 4) . ')' : '';
+                            $productsText = trim($products . $more);
+                            $total = number_format((float) ($record->prix_ttc ?? 0), 3, '.', ' ');
+
                             $sms = str_replace(
-                                ['[nom]', '[prenom]', '[num_commande]', '[etat]'],
-                                [$record->nom ?? '', $record->prenom ?? '', $record->numero ?? '', Commande::getStatusLabel($record->etat)],
+                                ['[nom]', '[prenom]', '[num_commande]', '[etat]', '[produits]', '[total]'],
+                                [
+                                    $record->nom ?? '',
+                                    $record->prenom ?? '',
+                                    $record->numero ?? '',
+                                    Commande::getStatusLabel($record->etat),
+                                    $productsText,
+                                    $total,
+                                ],
                                 $msg->msg_etat_commande
                             );
                             

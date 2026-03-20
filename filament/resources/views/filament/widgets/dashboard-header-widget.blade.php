@@ -197,6 +197,8 @@
                         <button
                             type="button"
                             wire:click="$set('preset', '{{ $value }}')"
+                            wire:loading.attr="disabled"
+                            wire:loading.class="opacity-50"
                             class="dh-preset-btn {{ $this->preset === $value ? 'dh-preset-btn--active' : '' }}"
                         >
                             {{ $label }}

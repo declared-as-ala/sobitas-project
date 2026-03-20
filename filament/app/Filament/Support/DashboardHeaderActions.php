@@ -34,8 +34,9 @@ trait DashboardHeaderActions
     {
         session(['dashboard.filter.preset' => $value]);
         $this->dispatch('dashboardFilterUpdated');
-        $url = $this->getDashboardUrlWithPeriod((string) $value);
-        $this->js('window.history.replaceState({}, "", ' . json_encode($url) . ')');
+        // Do NOT use replaceState/pushState here — URL manipulation from a Livewire
+        // component can trigger Livewire's navigate router and cause a full page swap,
+        // which destroys all widgets. Session is the source of truth for the period.
     }
 
     public function refreshStats(): void
