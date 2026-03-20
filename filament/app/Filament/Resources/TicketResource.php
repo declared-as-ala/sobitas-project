@@ -203,7 +203,7 @@ class TicketResource extends Resource
         return $table
             // PERF: Select only needed columns + eager load client
             ->modifyQueryUsing(fn (Builder $query) => $query
-                ->select(['tickets.id', 'tickets.numero', 'tickets.type', 'tickets.client_id', 'tickets.prix_ttc', 'tickets.created_at'])
+                ->select(['tickets.id', 'tickets.numero', 'tickets.type', 'tickets.client_id', 'tickets.prix_ht', 'tickets.remise', 'tickets.prix_ttc', 'tickets.created_at'])
                 ->with('client:id,name')
             )
             ->striped()
@@ -222,11 +222,23 @@ class TicketResource extends Resource
                     ->label('Client')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('prix_ttc')
-                    ->label('Total TTC')
+                Tables\Columns\TextColumn::make('prix_ht')
+                    ->label('Montant Total')
                     ->money('TND')
                     ->sortable()
                     ->alignEnd(),
+                Tables\Columns\TextColumn::make('remise')
+                    ->label('Montant Remise')
+                    ->money('TND')
+                    ->sortable()
+                    ->alignEnd()
+                    ->placeholder('—'),
+                Tables\Columns\TextColumn::make('prix_ttc')
+                    ->label('Net à Payer')
+                    ->money('TND')
+                    ->sortable()
+                    ->alignEnd()
+                    ->weight(\Filament\Support\Enums\FontWeight::Bold),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Date')
                     ->dateTime('d/m/Y')

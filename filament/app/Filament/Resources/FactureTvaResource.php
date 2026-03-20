@@ -58,13 +58,55 @@ class FactureTvaResource extends Resource
 
     public static function table(Table $table): Table
     {
-        // Root cause fix: facture_tvas.tva stores TVA AMOUNT (TND), not rate. The previous column
-        // displayed it with suffix '%', producing nonsense (e.g. 23978%). We now show TVA % (derived)
-        // and TVA (DT) (amount) separately.
         return $table
-            ->modifyQueryUsing(fn (Builder $query) => $query->with('client:id,name')->select(['facture_tvas.id', 'facture_tvas.numero', 'facture_tvas.status', 'facture_tvas.client_id', 'facture_tvas.prix_ht', 'facture_tvas.tva', 'facture_tvas.remise', 'facture_tvas.timbre', 'facture_tvas.prix_ttc', 'facture_tvas.net_a_payer', 'facture_tvas.created_at']))
+            ->modifyQueryUsing(fn (Builder $query) => $query
+                ->select(['facture_tvas.id', 'facture_tvas.numero', 'facture_tvas.status', 'facture_tvas.client_id', 'facture_tvas.prix_ht', 'facture_tvas.remise', 'facture_tvas.tva', 'facture_tvas.timbre', 'facture_tvas.prix_ttc', 'facture_tvas.net_a_payer', 'facture_tvas.created_at'])
+                ->with('client:id,name')
+            )
             ->columns([
-                Tables\Columns\TextColumn::make('numero')->label('N°')->searchable()->sortable(),
+                Tables\Columns\TextColumn::make('numero')
+                    ->label('N°')
+                    ->searchable()
+                    ->sortable()
+                    ->weight(\Filament\Support\Enums\FontWeight::Bold),
+                Tables\Columns\TextColumn::make('client.name')
+                    ->label('Client')
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('prix_ht')
+                    ->label('Montant Total HT')
+                    ->money('TND')
+                    ->sortable()
+                    ->alignEnd(),
+                Tables\Columns\TextColumn::make('remise')
+                    ->label('Montant Remise')
+                    ->money('TND')
+                    ->sortable()
+                    ->alignEnd()
+                    ->placeholder('—')
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('tva')
+                    ->label('Montant TVA')
+                    ->money('TND')
+                    ->sortable()
+                    ->alignEnd(),
+                Tables\Columns\TextColumn::make('prix_ttc')
+                    ->label('Montant TTC')
+                    ->money('TND')
+                    ->sortable()
+                    ->alignEnd(),
+                Tables\Columns\TextColumn::make('timbre')
+                    ->label('Timbre Fiscal')
+                    ->money('TND')
+                    ->sortable()
+                    ->alignEnd()
+                    ->placeholder('—'),
+                Tables\Columns\TextColumn::make('net_a_payer')
+                    ->label('Net à Payer')
+                    ->money('TND')
+                    ->sortable()
+                    ->alignEnd()
+                    ->weight(\Filament\Support\Enums\FontWeight::Bold),
                 Tables\Columns\TextColumn::make('status')
                     ->label('Statut')
                     ->badge()
@@ -77,32 +119,10 @@ class FactureTvaResource extends Resource
                         default => 'gray',
                     })
                     ->toggleable(),
-                Tables\Columns\TextColumn::make('client.name')->label('Client')->searchable()->sortable(),
-                Tables\Columns\TextColumn::make('net_a_payer')
-                    ->label('NET À PAYER')
-                    ->getStateUsing(fn (FactureTva $record) => $record->net_a_payer ?? 0)
-                    ->money('TND')
-                    ->sortable()
-                    ->weight('bold'),
-                Tables\Columns\TextColumn::make('prix_ttc')
-                    ->label('Total TTC')
-                    ->money('TND')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('tva_rate_display')
-                    ->label('TVA %')
-                    ->getStateUsing(fn (FactureTva $record) => $record->getTvaRatePercent())
-                    ->formatStateUsing(fn ($state) => $state !== null ? (round($state) == $state ? (int) $state : $state) . '%' : '—')
-                    ->badge()
-                    ->color('gray'),
-                Tables\Columns\TextColumn::make('tva_amount_display')
-                    ->label('TVA (DT)')
-                    ->getStateUsing(fn (FactureTva $record) => $record->getTvaAmount())
-                    ->formatStateUsing(fn ($state) => number_format((float) $state, 3, '.', ' ') . ' DT')
-                    ->sortable(query: function ($query, string $direction) {
-                        return $query->orderBy('tva', $direction);
-                    }),
-                Tables\Columns\TextColumn::make('created_at')->label('Date')->dateTime('d/m/Y')->sortable(),
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('Date')
+                    ->dateTime('d/m/Y')
+                    ->sortable(),
             ])
             ->defaultSort('created_at', 'desc')
             ->defaultPaginationPageOption(25)

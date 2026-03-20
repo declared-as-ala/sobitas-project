@@ -100,32 +100,40 @@ class FactureResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $query) => $query->with('client:id,name', 'factureTvas:id,facture_id'))
+            ->modifyQueryUsing(fn (Builder $query) => $query
+                ->select(['factures.id', 'factures.numero', 'factures.client_id', 'factures.prix_ht', 'factures.remise', 'factures.frais_livraison', 'factures.net_a_payer', 'factures.created_at'])
+                ->with('client:id,name')
+            )
             ->columns([
                 Tables\Columns\TextColumn::make('numero')
                     ->label('N°')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->weight(\Filament\Support\Enums\FontWeight::Bold),
                 Tables\Columns\TextColumn::make('client.name')
                     ->label('Client')
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('prix_ht')
-                    ->label('Total HT')
-                    ->money('TND', divideBy: 1)
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('net_a_payer')
-                    ->label('Net à Payer')
-                    ->state(function (Facture $record) {
-                        return ($record->prix_ht ?? 0) - ($record->remise ?? 0) + ($record->frais_livraison ?? 0);
-                    })
+                    ->label('Montant Total')
                     ->money('TND', divideBy: 1)
                     ->sortable(),
                 Tables\Columns\TextColumn::make('remise')
-                    ->label('Remise')
+                    ->label('Montant Remise')
                     ->money('TND', divideBy: 1)
-                    ->toggleable(),
+                    ->sortable()
+                    ->placeholder('—'),
+                Tables\Columns\TextColumn::make('frais_livraison')
+                    ->label('Frais Livraison')
+                    ->money('TND', divideBy: 1)
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->placeholder('—'),
+                Tables\Columns\TextColumn::make('net_a_payer')
+                    ->label('Net à Payer')
+                    ->money('TND', divideBy: 1)
+                    ->sortable()
+                    ->weight(\Filament\Support\Enums\FontWeight::Bold),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Date')
                     ->dateTime('d/m/Y')

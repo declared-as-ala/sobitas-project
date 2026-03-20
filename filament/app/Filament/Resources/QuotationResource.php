@@ -89,7 +89,7 @@ class QuotationResource extends Resource
         return $table
             // PERF: Select only needed columns + eager load client
             ->modifyQueryUsing(fn (Builder $query) => $query
-                ->select(['quotations.id', 'quotations.numero', 'quotations.client_id', 'quotations.prix_ht', 'quotations.net_a_payer', 'quotations.created_at', 'quotations.statut'])
+                ->select(['quotations.id', 'quotations.numero', 'quotations.client_id', 'quotations.prix_ht', 'quotations.remise', 'quotations.tva', 'quotations.prix_ttc', 'quotations.net_a_payer', 'quotations.created_at', 'quotations.statut'])
                 ->with('client:id,name')
             )
             ->striped()
@@ -104,22 +104,33 @@ class QuotationResource extends Resource
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('prix_ht')
-                    ->label('Total HT')
-                    ->money('TND', divideBy: 1)
-                    ->sortable()
-                    ->alignEnd()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('net_a_payer')
-                    ->label('Net à Payer')
-                    ->state(fn (Quotation $record) => $record->net_a_payer ?? 0)
+                    ->label('Montant Total HT')
                     ->money('TND', divideBy: 1)
                     ->sortable()
                     ->alignEnd(),
-                Tables\Columns\TextColumn::make('created_at')
-                    ->label('Date')
-                    ->dateTime('d/m/Y')
+                Tables\Columns\TextColumn::make('remise')
+                    ->label('Montant Remise')
+                    ->money('TND', divideBy: 1)
                     ->sortable()
-                    ->color('gray'),
+                    ->alignEnd()
+                    ->placeholder('—')
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('tva')
+                    ->label('Montant TVA')
+                    ->money('TND', divideBy: 1)
+                    ->sortable()
+                    ->alignEnd(),
+                Tables\Columns\TextColumn::make('prix_ttc')
+                    ->label('Montant TTC')
+                    ->money('TND', divideBy: 1)
+                    ->sortable()
+                    ->alignEnd(),
+                Tables\Columns\TextColumn::make('net_a_payer')
+                    ->label('Net à Payer')
+                    ->money('TND', divideBy: 1)
+                    ->sortable()
+                    ->alignEnd()
+                    ->weight(\Filament\Support\Enums\FontWeight::Bold),
                 Tables\Columns\TextColumn::make('statut')
                     ->label('Statut')
                     ->badge()
@@ -136,8 +147,12 @@ class QuotationResource extends Resource
                         'refuse' => 'danger',
                         'en_attente' => 'warning',
                         default => 'gray',
-                    })
-                    ->toggleable(isToggledHiddenByDefault: false),
+                    }),
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('Date')
+                    ->dateTime('d/m/Y')
+                    ->sortable()
+                    ->color('gray'),
             ])
             ->defaultSort('created_at', 'desc')
             ->defaultPaginationPageOption(25)
