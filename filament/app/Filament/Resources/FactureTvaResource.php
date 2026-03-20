@@ -61,7 +61,7 @@ class FactureTvaResource extends Resource
     {
         return $table
             ->modifyQueryUsing(fn (Builder $query) => $query
-                ->select(['facture_tvas.id', 'facture_tvas.numero', 'facture_tvas.status', 'facture_tvas.client_id', 'facture_tvas.prix_ht', 'facture_tvas.remise', 'facture_tvas.tva', 'facture_tvas.timbre', 'facture_tvas.prix_ttc', 'facture_tvas.net_a_payer', 'facture_tvas.created_at'])
+                ->select(['facture_tvas.id', 'facture_tvas.numero', 'facture_tvas.status', 'facture_tvas.client_id', 'facture_tvas.prix_ht', 'facture_tvas.remise', 'facture_tvas.tva', 'facture_tvas.timbre', 'facture_tvas.prix_ttc', 'facture_tvas.created_at'])
                 ->with('client:id,name')
             )
             ->columns([
@@ -102,12 +102,6 @@ class FactureTvaResource extends Resource
                     ->sortable()
                     ->alignEnd()
                     ->placeholder('—'),
-                Tables\Columns\TextColumn::make('net_a_payer')
-                    ->label('Net à Payer')
-                    ->money('TND')
-                    ->sortable()
-                    ->alignEnd()
-                    ->weight(\Filament\Support\Enums\FontWeight::Bold),
                 Tables\Columns\TextColumn::make('status')
                     ->label('Statut')
                     ->badge()
