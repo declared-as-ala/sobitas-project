@@ -9,7 +9,6 @@ use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
-use Barryvdh\DomPDF\Facade\Pdf;
 
 class QuotationSent extends Mailable
 {
@@ -78,7 +77,11 @@ class QuotationSent extends Mailable
      */
     public function attachments(): array
     {
-        $pdf = Pdf::loadView('print.devis', $this->sharedData)->output();
+        if (!class_exists(\Barryvdh\DomPDF\Facade\Pdf::class)) {
+            return [];
+        }
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('print.devis', $this->sharedData)->output();
 
         $numero = (string) ($this->quotation->numero ?? $this->quotation->id);
         $safeNumero = str_replace('/', '-', $numero);

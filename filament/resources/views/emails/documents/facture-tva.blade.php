@@ -41,7 +41,9 @@
                 <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                     <tr>
                         <td style="vertical-align:middle;">
-                            <img src="{{ $logoUrl }}" alt="SOBITAS" style="max-height:60px;max-width:200px;height:auto;display:block;">
+                            <div style="display:inline-block;background:#ffffff;border-radius:10px;padding:8px 14px;">
+                                <img src="{{ $logoUrl }}" alt="SOBITAS" style="max-height:72px;max-width:220px;height:auto;display:block;">
+                            </div>
                         </td>
                         <td align="right" style="vertical-align:middle;padding-left:16px;">
                             <p style="margin:0;font-size:26px;font-weight:800;color:#ffffff;text-transform:uppercase;letter-spacing:.06em;">{{ mb_strtoupper($documentTitle ?? 'FACTURE') }}</p>

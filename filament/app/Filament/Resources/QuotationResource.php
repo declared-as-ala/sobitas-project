@@ -94,25 +94,34 @@ class QuotationResource extends Resource
             )
             ->striped()
             ->columns([
+                Tables\Columns\TextColumn::make('numero')
+                    ->label('N°')
+                    ->searchable()
+                    ->sortable()
+                    ->weight(\Filament\Support\Enums\FontWeight::Bold),
+                Tables\Columns\TextColumn::make('client.name')
+                    ->label('Client')
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('prix_ht')
+                    ->label('Total HT')
+                    ->money('TND', divideBy: 1)
+                    ->sortable()
+                    ->alignEnd(),
                 Tables\Columns\TextColumn::make('remise')
                     ->label('Remise')
                     ->money('TND', divideBy: 1)
                     ->sortable()
                     ->alignEnd()
                     ->placeholder('—'),
-                Tables\Columns\TextColumn::make('prix_ht')
-                    ->label('Prix Ht')
-                    ->money('TND', divideBy: 1)
-                    ->sortable()
-                    ->alignEnd(),
-                Tables\Columns\TextColumn::make('prix_ttc')
-                    ->label('Prix Ttc')
-                    ->money('TND', divideBy: 1)
+                Tables\Columns\TextColumn::make('pourcentage_remise')
+                    ->label('Remise %')
+                    ->suffix(' %')
                     ->sortable()
                     ->alignEnd()
-                    ->weight(\Filament\Support\Enums\FontWeight::Bold),
+                    ->placeholder('—'),
                 Tables\Columns\TextColumn::make('tva')
-                    ->label('Tva')
+                    ->label('TVA')
                     ->money('TND', divideBy: 1)
                     ->sortable()
                     ->alignEnd()
@@ -123,21 +132,12 @@ class QuotationResource extends Resource
                     ->sortable()
                     ->alignEnd()
                     ->placeholder('—'),
-                Tables\Columns\TextColumn::make('numero')
-                    ->label('Numero')
-                    ->searchable()
-                    ->sortable()
-                    ->weight(\Filament\Support\Enums\FontWeight::Bold),
-                Tables\Columns\TextColumn::make('pourcentage_remise')
-                    ->label('Pourcentage Remise')
-                    ->suffix(' %')
+                Tables\Columns\TextColumn::make('prix_ttc')
+                    ->label('Net à payer')
+                    ->money('TND', divideBy: 1)
                     ->sortable()
                     ->alignEnd()
-                    ->placeholder('—'),
-                Tables\Columns\TextColumn::make('client.name')
-                    ->label('Clients')
-                    ->searchable()
-                    ->sortable(),
+                    ->weight(\Filament\Support\Enums\FontWeight::Bold),
             ])
             ->defaultSort('created_at', 'desc')
             ->defaultPaginationPageOption(25)

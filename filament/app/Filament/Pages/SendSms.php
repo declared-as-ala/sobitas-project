@@ -2,11 +2,9 @@
 
 namespace App\Filament\Pages;
 
-use App\Jobs\SendMarketingSmsJob;
 use App\Models\Client;
 use App\Models\Contact;
 use App\Models\User;
-use App\Services\DefaultSmsTemplates;
 use App\Services\MarketingService;
 use App\Services\SmsService;
 use Filament\Forms;
@@ -18,10 +16,6 @@ use Filament\Schemas\Schema;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Schema as SchemaFacade;
 
-/**
- * Envoyer SMS — sends immediately (no queue).
- * Uses SmsService directly; QUEUE_CONNECTION is irrelevant for SMS.
- */
 class SendSms extends Page implements HasForms
 {
     use InteractsWithForms;
@@ -37,7 +31,11 @@ class SendSms extends Page implements HasForms
 
     public array $data = [];
 
-    /** @var string[] row_id (e.g. sms_97234567) for table selection */
+    public string $sendMode = 'one';
+
+    public string $onePhone = '';
+
+    /** @var string[] row_id for table selection */
     public array $selectedSmsRowIds = [];
 
     public string $recipientSearch = '';
@@ -48,140 +46,25 @@ class SendSms extends Page implements HasForms
 
     public function mount(): void
     {
-        $keys = array_keys(DefaultSmsTemplates::options());
-        $firstKey = $keys[0] ?? null;
-        if ($firstKey) {
-            $this->data['template_key'] = $firstKey;
-            $this->data['template_vars'] = array_merge(
-                DefaultSmsTemplates::getDefaultVariables($firstKey),
-                ['stop_text' => MarketingService::SMS_STOP_DEFAULT]
-            );
-        }
-        $this->data['send_mode'] = $this->data['send_mode'] ?? 'one';
-        $this->data['stop_text'] = $this->data['stop_text'] ?? MarketingService::SMS_STOP_DEFAULT;
+        $this->data['message'] = '';
     }
 
     public function form(Schema $schema): Schema
     {
-        $templateOptions = DefaultSmsTemplates::options();
-        $firstKey = array_key_first($templateOptions);
-
         return $schema->statePath('data')->schema([
-            Forms\Components\Select::make('send_mode')
-                ->label('Mode')
-                ->options([
-                    'one' => 'Un seul destinataire',
-                    'list' => 'Liste (plusieurs destinataires)',
-                ])
-                ->default('one')
+            Forms\Components\Textarea::make('message')
+                ->label('Message')
+                ->rows(6)
+                ->maxLength(1600)
                 ->live()
+                ->placeholder('Écrivez votre message ici…')
                 ->required(),
-
-            Forms\Components\TextInput::make('one_phone')
-                ->label('Téléphone')
-                ->tel()
-                ->placeholder('Ex: 97991266 ou +216 97 991 266')
-                ->live(onBlur: true)
-                ->afterStateUpdated(function ($state, $set) {
-                    if (is_string($state) && trim($state) !== '') {
-                        $normalized = MarketingService::normalizePhone($state);
-                        if (MarketingService::isValidPhone($normalized) && $normalized !== $state) {
-                            $set('one_phone', $normalized);
-                        }
-                    }
-                })
-                ->visible(fn ($get) => $get('send_mode') === 'one'),
-
-            Forms\Components\Select::make('template_key')
-                ->label('Template')
-                ->options($templateOptions)
-                ->default($firstKey)
-                ->live()
-                ->required()
-                ->afterStateUpdated(fn ($state, $set) => $this->fillTemplateDefaults($state, $set)),
-
-            Forms\Components\KeyValue::make('template_vars')
-                ->label('Variables du template')
-                ->keyLabel('Variable')
-                ->valueLabel('Valeur')
-                ->live()
-                ->helperText(fn () => $this->getTemplateVariablesHint())
-                ->visible(fn ($get) => (bool) $get('template_key') && count(DefaultSmsTemplates::getVariableNames($get('template_key') ?? '')) > 0),
-
-            Forms\Components\Placeholder::make('no_variables_hint')
-                ->label('')
-                ->content('Aucune variable pour ce template.')
-                ->visible(fn ($get) => (bool) $get('template_key') && count(DefaultSmsTemplates::getVariableNames($get('template_key') ?? '')) === 0)
-                ->extraAttributes(['class' => 'text-sm text-gray-500 dark:text-gray-400 italic']),
-
-            Forms\Components\Textarea::make('custom_message')
-                ->label('Message personnalisé (optionnel)')
-                ->rows(4)
-                ->maxLength(1000)
-                ->live()
-                ->placeholder('Laissez vide pour utiliser le template.')
-                ->helperText('Le texte STOP est ajouté automatiquement à la fin.'),
-
-            Forms\Components\TextInput::make('stop_text')
-                ->label('Texte STOP')
-                ->default(MarketingService::SMS_STOP_DEFAULT)
-                ->required()
-                ->maxLength(20)
-                ->helperText('Le texte STOP est obligatoire pour la délivrabilité (ex: STOP).'),
-
-            Forms\Components\Checkbox::make('send_test_to_me')
-                ->label('Envoyer un test à mon numéro')
-                ->default(false)
-                ->visible(fn () => (bool) optional(auth()->user())->phone),
         ])->columns(1);
-    }
-
-    protected function fillTemplateDefaults(?string $templateKey, $set): void
-    {
-        if (!$templateKey) {
-            return;
-        }
-        $defaults = array_merge(
-            DefaultSmsTemplates::getDefaultVariables($templateKey),
-            ['stop_text' => $this->data['stop_text'] ?? MarketingService::SMS_STOP_DEFAULT]
-        );
-        $current = $this->data['template_vars'] ?? [];
-        $set('template_vars', array_merge($defaults, $current));
-    }
-
-    public function getTemplateVariablesHint(): string
-    {
-        $key = $this->data['template_key'] ?? null;
-        if (!$key) {
-            return '';
-        }
-        $names = DefaultSmsTemplates::getVariableNames($key);
-        if ($names === []) {
-            return 'Aucune variable pour ce template.';
-        }
-        return 'Variables utilisées: ' . implode(', ', array_map(fn ($n) => '{{' . $n . '}}', $names));
     }
 
     public function getPreviewBody(): string
     {
-        $data = $this->data;
-        $custom = trim($data['custom_message'] ?? '');
-        $stopText = trim($data['stop_text'] ?? MarketingService::SMS_STOP_DEFAULT) ?: MarketingService::SMS_STOP_DEFAULT;
-
-        if ($custom !== '') {
-            return MarketingService::smsWithStop($custom, $stopText);
-        }
-        $key = $data['template_key'] ?? null;
-        if ($key) {
-            $vars = array_merge(
-                DefaultSmsTemplates::getDefaultVariables($key),
-                $data['template_vars'] ?? []
-            );
-            $vars['stop_text'] = $stopText;
-            $body = DefaultSmsTemplates::renderText($key, $vars);
-            return MarketingService::smsWithStop($body, $stopText);
-        }
-        return MarketingService::smsWithStop('', $stopText);
+        return trim($this->data['message'] ?? '');
     }
 
     public function getPreviewCharCount(): int
@@ -191,12 +74,16 @@ class SendSms extends Page implements HasForms
 
     public function getPreviewSegments(): int
     {
-        return DefaultSmsTemplates::estimateSegments($this->getPreviewBody());
+        $len = $this->getPreviewCharCount();
+        if ($len === 0) {
+            return 0;
+        }
+        if ($len <= 160) {
+            return 1;
+        }
+        return (int) ceil($len / 153);
     }
 
-    /**
-     * Build unique key for dedupe: Tunisia last 8 digits.
-     */
     protected static function phoneKey(string $normalized): string
     {
         $digits = preg_replace('/\D/', '', $normalized);
@@ -204,8 +91,6 @@ class SendSms extends Page implements HasForms
     }
 
     /**
-     * All SMS recipients from DB (Client phone_1, User phone, Contact phone if exists), deduped by last 8 digits.
-     *
      * @return \Illuminate\Support\Collection<int, array{row_id: string, phone: string, name: string|null, source: string, source_label: string, client_id: int|null, user_id: int|null, contact_id: int|null}>
      */
     public function getAllSmsRecipientsRows(): \Illuminate\Support\Collection
@@ -231,14 +116,14 @@ class SendSms extends Page implements HasForms
             $key = self::phoneKey($p);
             if (!isset($byKey[$key])) {
                 $byKey[$key] = [
-                    'row_id' => 'sms_' . $key,
-                    'phone' => $p,
-                    'name' => $c->name,
-                    'source' => 'client',
+                    'row_id'       => 'sms_' . $key,
+                    'phone'        => $p,
+                    'name'         => $c->name,
+                    'source'       => 'client',
                     'source_label' => 'Client',
-                    'client_id' => $c->id,
-                    'user_id' => null,
-                    'contact_id' => null,
+                    'client_id'    => $c->id,
+                    'user_id'      => null,
+                    'contact_id'   => null,
                 ];
             }
         }
@@ -260,14 +145,14 @@ class SendSms extends Page implements HasForms
             $key = self::phoneKey($p);
             if (!isset($byKey[$key])) {
                 $byKey[$key] = [
-                    'row_id' => 'sms_' . $key,
-                    'phone' => $p,
-                    'name' => $u->name,
-                    'source' => 'user',
+                    'row_id'       => 'sms_' . $key,
+                    'phone'        => $p,
+                    'name'         => $u->name,
+                    'source'       => 'user',
                     'source_label' => 'Utilisateur',
-                    'client_id' => null,
-                    'user_id' => $u->id,
-                    'contact_id' => null,
+                    'client_id'    => null,
+                    'user_id'      => $u->id,
+                    'contact_id'   => null,
                 ];
             }
         }
@@ -290,20 +175,30 @@ class SendSms extends Page implements HasForms
                 $key = self::phoneKey($p);
                 if (!isset($byKey[$key])) {
                     $byKey[$key] = [
-                        'row_id' => 'sms_' . $key,
-                        'phone' => $p,
-                        'name' => $c->name,
-                        'source' => 'contact',
+                        'row_id'       => 'sms_' . $key,
+                        'phone'        => $p,
+                        'name'         => $c->name,
+                        'source'       => 'contact',
                         'source_label' => 'Contact',
-                        'client_id' => null,
-                        'user_id' => null,
-                        'contact_id' => $c->id,
+                        'client_id'    => null,
+                        'user_id'      => null,
+                        'contact_id'   => $c->id,
                     ];
                 }
             }
         }
 
-        return collect($byKey)->sortBy('phone')->values();
+        return collect($byKey)->sortBy('name')->values();
+    }
+
+    public function getSelectedRows(): \Illuminate\Support\Collection
+    {
+        if (empty($this->selectedSmsRowIds)) {
+            return collect();
+        }
+        return $this->getAllSmsRecipientsRows()
+            ->filter(fn ($r) => in_array($r['row_id'], $this->selectedSmsRowIds, true))
+            ->values();
     }
 
     public function getPaginatedSmsRecipients(): LengthAwarePaginator
@@ -325,6 +220,11 @@ class SendSms extends Page implements HasForms
         }
     }
 
+    public function removeSelectedRecipient(string $rowId): void
+    {
+        $this->selectedSmsRowIds = array_values(array_filter($this->selectedSmsRowIds, fn ($id) => $id !== $rowId));
+    }
+
     public function selectAllSmsCurrentPage(): void
     {
         foreach ($this->getPaginatedSmsRecipients()->items() as $row) {
@@ -344,12 +244,10 @@ class SendSms extends Page implements HasForms
         $this->selectedSmsRowIds = [];
     }
 
-    /** @return \Illuminate\Support\Collection<int, array{phone_1: string, client_id: int|null, user_id: int|null}> */
     public function getResolvedRecipients(): \Illuminate\Support\Collection
     {
-        $mode = $this->data['send_mode'] ?? 'one';
-        if ($mode === 'one') {
-            $phone = trim($this->data['one_phone'] ?? '');
+        if ($this->sendMode === 'one') {
+            $phone = trim($this->onePhone);
             if ($phone === '') {
                 return collect();
             }
@@ -359,9 +257,10 @@ class SendSms extends Page implements HasForms
             }
             return collect([['phone_1' => $phone, 'client_id' => null, 'user_id' => null]]);
         }
-        if ($mode === 'list') {
+        if ($this->sendMode === 'list') {
             $all = $this->getAllSmsRecipientsRows();
-            return $all->filter(fn ($r) => in_array($r['row_id'], $this->selectedSmsRowIds, true))
+            return $all
+                ->filter(fn ($r) => in_array($r['row_id'], $this->selectedSmsRowIds, true))
                 ->map(fn ($r) => ['phone_1' => $r['phone'], 'client_id' => $r['client_id'], 'user_id' => $r['user_id']])
                 ->values();
         }
@@ -378,78 +277,18 @@ class SendSms extends Page implements HasForms
         return $this->getAllSmsRecipientsRows()->count();
     }
 
-    public function clearRecipientSelection(): void
-    {
-        $this->selectedSmsRowIds = [];
-    }
-
     public function setSmsRecipientPage(int $page): void
     {
         $this->smsRecipientPage = max(1, $page);
     }
 
-    /** @return array{clients: int, users: int, contacts: int, total: int} */
-    public function getRecipientCountBySource(): array
-    {
-        $recipients = $this->getResolvedRecipients();
-        $all = $this->getAllSmsRecipientsRows()->keyBy('row_id');
-        $clients = $users = $contacts = 0;
-        foreach ($this->selectedSmsRowIds as $rowId) {
-            $r = $all->get($rowId);
-            if (!$r) {
-                continue;
-            }
-            if ($r['source'] === 'client') {
-                $clients++;
-            } elseif ($r['source'] === 'user') {
-                $users++;
-            } else {
-                $contacts++;
-            }
-        }
-        return ['clients' => $clients, 'users' => $users, 'contacts' => $contacts, 'total' => $recipients->count()];
-    }
-
-    /** Send SMS to a single recipient from the table (row_id). */
-    public function sendToOneRecipient(string $rowId): void
-    {
-        $all = $this->getAllSmsRecipientsRows();
-        $row = $all->firstWhere('row_id', $rowId);
-        if (!$row) {
-            Notification::make()->title('Destinataire introuvable')->danger()->send();
-            return;
-        }
-        $body = $this->getPreviewBody();
-        if ($body === '' || $body === trim($this->data['stop_text'] ?? MarketingService::SMS_STOP_DEFAULT)) {
-            Notification::make()->title('Message vide')->body('Renseignez un message ou un template.')->danger()->send();
-            return;
-        }
-        try {
-            SendMarketingSmsJob::dispatchSync(
-                $row['phone'],
-                $body,
-                null,
-                $row['client_id'],
-                null,
-                null
-            );
-            Notification::make()->title('SMS envoyé')->body('Envoyé à ' . $row['phone'])->success()->send();
-        } catch (\Throwable $e) {
-            Notification::make()->title('Échec envoi')->body($e->getMessage())->danger()->send();
-        }
-    }
-
     public function send(): void
     {
         $data = $this->form->getState();
-        $mode = $data['send_mode'] ?? 'one';
-        $custom = trim($data['custom_message'] ?? '');
-        $templateKey = $data['template_key'] ?? null;
-        $stopText = trim($data['stop_text'] ?? MarketingService::SMS_STOP_DEFAULT) ?: MarketingService::SMS_STOP_DEFAULT;
+        $body = trim($data['message'] ?? '');
 
-        $body = $this->getPreviewBody();
-        if ($body === '' || $body === $stopText) {
-            Notification::make()->title('Message vide')->body('Renseignez un message ou un template.')->danger()->send();
+        if ($body === '') {
+            Notification::make()->title('Message vide')->body('Rédigez un message avant d\'envoyer.')->danger()->send();
             return;
         }
 
@@ -457,25 +296,12 @@ class SendSms extends Page implements HasForms
         $count = $recipients->count();
 
         if ($count === 0) {
-            if ($mode === 'one') {
+            if ($this->sendMode === 'one') {
                 Notification::make()->title('Téléphone requis')->body('Saisissez un numéro valide (8 chiffres, +216 optionnel).')->danger()->send();
-        } else {
+            } else {
                 Notification::make()->title('Aucun destinataire')->body('Sélectionnez au moins un destinataire.')->warning()->send();
             }
             return;
-        }
-
-        $sendTestToMe = !empty($data['send_test_to_me']) && optional(auth()->user())->phone;
-        if ($sendTestToMe) {
-            $testPhone = MarketingService::normalizePhone(auth()->user()->phone);
-            if (MarketingService::isValidPhone($testPhone)) {
-                try {
-                    app(SmsService::class)->send_sms($testPhone, $body);
-                    Notification::make()->title('Test envoyé')->body('SMS de test envoyé à votre numéro.')->success()->send();
-                } catch (\Throwable $e) {
-                    Notification::make()->title('Échec test')->body($e->getMessage())->danger()->send();
-                }
-            }
         }
 
         $smsService = app(SmsService::class);
@@ -497,35 +323,25 @@ class SendSms extends Page implements HasForms
                 ->warning()
                 ->send();
         } else {
-        Notification::make()
-                ->title('Envoi terminé')
-                ->body($sent . ' SMS envoyé(s).')
-            ->success()
-            ->send();
+            Notification::make()
+                ->title($sent > 1 ? 'SMS envoyés' : 'SMS envoyé')
+                ->body($sent . ' SMS envoyé(s) avec succès.')
+                ->success()
+                ->send();
         }
 
-        $this->form->fill(['custom_message' => '', 'one_phone' => '']);
+        $this->data['message'] = '';
+        $this->onePhone = '';
         $this->selectedSmsRowIds = [];
+        $this->form->fill(['message' => '']);
     }
 
     public function resetForm(): void
     {
-        $this->form->fill([
-            'one_phone' => '',
-            'custom_message' => '',
-            'stop_text' => MarketingService::SMS_STOP_DEFAULT,
-        ]);
+        $this->data['message'] = '';
+        $this->onePhone = '';
         $this->selectedSmsRowIds = [];
-        $keys = array_keys(DefaultSmsTemplates::options());
-        $firstKey = $keys[0] ?? null;
-        if ($firstKey) {
-            $this->data['template_key'] = $firstKey;
-            $this->data['template_vars'] = array_merge(
-                DefaultSmsTemplates::getDefaultVariables($firstKey),
-                ['stop_text' => MarketingService::SMS_STOP_DEFAULT]
-            );
-        }
-        Notification::make()->title('Formulaire réinitialisé')->success()->send();
+        $this->form->fill(['message' => '']);
     }
 
     public static function getSlug(?\Filament\Panel $panel = null): string

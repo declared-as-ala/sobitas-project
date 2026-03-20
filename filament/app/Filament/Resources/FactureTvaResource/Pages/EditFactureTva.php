@@ -234,6 +234,7 @@ class EditFactureTva extends EditRecord
                 ->modalHeading('Envoyer la facture')
                 ->modalSubmitActionLabel('Envoyer')
                 ->modalCancelActionLabel('Annuler')
+                ->modalWidth('sm')
                 ->modalAutofocus()
                 ->form([
                     Forms\Components\TextInput::make('email')

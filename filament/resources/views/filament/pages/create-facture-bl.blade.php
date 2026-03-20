@@ -144,15 +144,10 @@ body:has(.bl-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !importa
                 </div>
                 <div id="bl-select-client">
                     <div class="form-field">
-                        <select id="bl_client_id" style="width:100%" onchange="blSelectClient()">
+                        <select id="bl_client_id" style="width:100%">
                             <option value="">— Choisir un client —</option>
                             @if($selClient)
-                                <option value="{{ $selClient->id }}" selected
-                                    data-adresse="{{ $selClient->adresse }}"
-                                    data-phone="{{ $selClient->phone_1 }}"
-                                    data-email="{{ $selClient->email }}"
-                                    data-ville="{{ $selClient->ville }}"
-                                    data-code_postale="{{ $selClient->code_postale }}">
+                                <option value="{{ $selClient->id }}" selected>
                                     {{ $selClient->name }} ({{ $selClient->phone_1 }})
                                 </option>
                             @endif
@@ -270,6 +265,7 @@ body:has(.bl-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !importa
 <script>
 var blMax = {{ $max }};
 var blDefaultTva = 0;
+var _blIsHydrating = false; // flag to suppress side-effects during programmatic hydration
 
 function getBlWire() {
     var el = document.querySelector('.bl-page');
@@ -303,6 +299,7 @@ function blInitializeForm() {
         placeholder: '— Choisir un client —',
         allowClear: true,
         width: '100%',
+        minimumInputLength: 0,
         ajax: {
             url: '/api/pos-clients',
             dataType: 'json',
@@ -310,12 +307,16 @@ function blInitializeForm() {
             data: function (params) {
                 return { q: params.term || '' };
             },
-            cache: true
+            processResults: function (data) {
+                return { results: data.results || [] };
+            },
+            cache: false
         }
     });
 
+    // Fires on every client change; hydration flag suppresses side-effects during programmatic init
     $('#bl_client_id').off('change.bl').on('change.bl', function () {
-        blSelectClient();
+        if (!_blIsHydrating) blSelectClient();
     });
 
     @php
@@ -356,76 +357,67 @@ document.addEventListener('livewire:navigated', function () {
 });
 
 function blHydrate(data, selProducts) {
+    _blIsHydrating = true;
+
     // Hydrate client
     if (data.client_id) {
         var $client = $('#bl_client_id');
 
-        // If the option is already rendered from blade, Select2 will pick it up automatically.
+        // Ensure the option exists so Select2 can show it as the current selection
         if ($client.find('option[value="' + data.client_id + '"]').length === 0) {
-            // Create an option using the same label as the AJAX response
             var label = '';
             @if($selClient)
                 if (data.client_id == {{ $selClientId ?? 'null' }}) {
-                    label = '{{ $selClient?->name }} ({{ $selClient?->phone_1 }})';
+                    label = '{{ addslashes($selClient?->name ?? '') }} ({{ addslashes($selClient?->phone_1 ?? '') }})';
                 }
             @endif
-            if (!label) {
-                label = 'Client #' + data.client_id;
-            }
-            var newClientOption = new Option(label, data.client_id, true, true);
-            $client.append(newClientOption);
+            if (!label) label = 'Client #' + data.client_id;
+            $client.append(new Option(label, data.client_id, true, true));
         }
 
-        $client.val(data.client_id).trigger('change.select2');
+        // Set value — trigger('change') lets Select2 update its display;
+        // _blIsHydrating flag prevents blSelectClient() from clearing the address fields.
+        $client.val(data.client_id).trigger('change');
     }
 
-    // Hydrate client address & phone display under the select
-    if (data.adresse1 !== undefined && data.adresse1 !== null) {
-        var adrInput = document.getElementById('bl_adr');
-        if (adrInput) adrInput.value = data.adresse1 || '';
-    } else if (typeof window.blInitialClientAdresse !== 'undefined') {
-        var adrInput2 = document.getElementById('bl_adr');
-        if (adrInput2 && !adrInput2.value) adrInput2.value = window.blInitialClientAdresse;
-    }
-    if (data.phone !== undefined && data.phone !== null) {
-        var phoneInput = document.getElementById('bl_phone');
-        if (phoneInput) phoneInput.value = data.phone || '';
-    } else if (typeof window.blInitialClientPhone !== 'undefined') {
-        var phoneInput2 = document.getElementById('bl_phone');
-        if (phoneInput2 && !phoneInput2.value) phoneInput2.value = window.blInitialClientPhone;
-    }
+    // Always restore address & phone from the PHP-rendered server data (authoritative source)
+    var adrEl   = document.getElementById('bl_adr');
+    var phoneEl = document.getElementById('bl_phone');
+    if (adrEl)   adrEl.value   = window.blInitialClientAdresse || '';
+    if (phoneEl) phoneEl.value = window.blInitialClientPhone   || '';
 
     // Hydrate product lines
-    if (data.details && Array.isArray(data.details)) {
-        let i = 1;
-        data.details.forEach(function (item) {
-            if (item.produit_id && i <= blMax) {
-                var r = document.getElementById('bl-row-' + i);
-                if (r) r.style.display = '';
+    if (data.details) {
+        var details = Array.isArray(data.details) ? data.details
+                    : (typeof data.details === 'string' ? JSON.parse(data.details) : []);
+        var rowIdx = 1;
+        details.forEach(function (item) {
+            if (!item.produit_id || rowIdx > blMax) return;
 
-                blInitSelect2(i);
+            var r = document.getElementById('bl-row-' + rowIdx);
+            if (r) r.style.display = '';
 
-                var $sel = $('#bl_prod_' + i);
-                var pInfo = selProducts && selProducts[item.produit_id]
-                    ? selProducts[item.produit_id]
-                    : null;
+            blInitSelect2(rowIdx);
 
-                if (pInfo) {
-                    var prodOption = new Option(pInfo.text, item.produit_id, true, true);
-                    $sel.append(prodOption).trigger('change.select2');
-                    document.getElementById('bl_qte_' + i).max = pInfo.qte || 9999;
-                } else {
-                    // Fallback if selProducts did not contain this item
-                    var fallbackOption = new Option(item.designation || ('Produit #' + item.produit_id), item.produit_id, true, true);
-                    $sel.append(fallbackOption).trigger('change.select2');
-                    document.getElementById('bl_qte_' + i).max = 9999;
-                }
+            var $sel  = $('#bl_prod_' + rowIdx);
+            var pInfo = selProducts && selProducts[item.produit_id] ? selProducts[item.produit_id] : null;
+            var label = pInfo
+                ? pInfo.text
+                : (item.designation || ('Produit #' + item.produit_id));
 
-                document.getElementById('bl_qte_' + i).value = item.qte || 1;
-                document.getElementById('bl_pu_' + i).value = item.prix_unitaire || 0;
-
-                i++;
+            // Append the pre-selected option so Select2 shows the product name immediately
+            if ($sel.find('option[value="' + item.produit_id + '"]').length === 0) {
+                $sel.append(new Option(label, item.produit_id, true, true));
             }
+            // Update Select2 display without firing blSelectProd (hydration flag is set)
+            $sel.val(item.produit_id).trigger('change');
+
+            // Set values AFTER the trigger so they are not overridden by blSelectProd
+            document.getElementById('bl_qte_' + rowIdx).value = item.qte || 1;
+            document.getElementById('bl_pu_' + rowIdx).value  = parseFloat(item.prix_unitaire || 0).toFixed(3);
+            if (pInfo) document.getElementById('bl_qte_' + rowIdx).max = pInfo.qte || 9999;
+
+            rowIdx++;
         });
     }
 
@@ -449,6 +441,7 @@ function blHydrate(data, selProducts) {
     if (data.livraison_region !== undefined) document.getElementById('bl_livraison_region').value = data.livraison_region || '';
     if (data.livraison_code_postale !== undefined) document.getElementById('bl_livraison_cp').value = data.livraison_code_postale || '';
 
+    _blIsHydrating = false;
     blCalculate();
 }
 
@@ -461,16 +454,20 @@ function blInitSelect2(i) {
         placeholder: '— Choisir —',
         allowClear: true,
         width: '100%',
+        minimumInputLength: 0,
         ajax: {
             url: '/api/pos-products',
             dataType: 'json',
             delay: 250,
             data: function (params) { return { q: params.term || '' }; },
-            cache: true
+            processResults: function (data) { return { results: data.results || [] }; },
+            cache: false
         },
         language: { noResults: function() { return 'Aucun résultat'; } }
     });
-    $('#bl_prod_' + i).off('change.bl').on('change.bl', function () { blSelectProd(i); });
+    $('#bl_prod_' + i).off('change.bl').on('change.bl', function () {
+        if (!_blIsHydrating) blSelectProd(i);
+    });
 }
 
 function blSelectClient() {
@@ -479,20 +476,23 @@ function blSelectClient() {
 
     var nom = sel.text ? sel.text.split('(')[0].trim() : '';
 
-    // Update client info display under the select (Adresse / N°Tél) like old backend
-    var adrInput = document.getElementById('bl_adr');
-    if (adrInput) adrInput.value = sel.adresse || '';
-    var phoneInput = document.getElementById('bl_phone');
-    if (phoneInput) phoneInput.value = sel.phone_1 || '';
+    // Only update address/phone when the data comes from an AJAX response (has adresse/phone_1 fields).
+    // Static pre-rendered options don't carry these fields — skip to avoid clearing the display.
+    if (sel.adresse !== undefined || sel.phone_1 !== undefined) {
+        var adrInput = document.getElementById('bl_adr');
+        if (adrInput) adrInput.value = sel.adresse || '';
+        var phoneInput = document.getElementById('bl_phone');
+        if (phoneInput) phoneInput.value = sel.phone_1 || '';
 
-    // Populate Livraison fields directly from client record since billing is hidden
-    document.getElementById('bl_livraison_nom').value = nom;
-    document.getElementById('bl_livraison_phone').value = sel.phone_1 || '';
-    document.getElementById('bl_livraison_email').value = sel.email || '';
-    document.getElementById('bl_livraison_adresse1').value = sel.adresse || '';
-    document.getElementById('bl_livraison_ville').value = sel.ville || '';
-    document.getElementById('bl_livraison_region').value = '';
-    document.getElementById('bl_livraison_cp').value = sel.code_postale || '';
+        // Populate livraison fields from client data
+        document.getElementById('bl_livraison_nom').value     = nom;
+        document.getElementById('bl_livraison_phone').value   = sel.phone_1 || '';
+        document.getElementById('bl_livraison_email').value   = sel.email || '';
+        document.getElementById('bl_livraison_adresse1').value = sel.adresse || '';
+        document.getElementById('bl_livraison_ville').value   = sel.ville || '';
+        document.getElementById('bl_livraison_region').value  = '';
+        document.getElementById('bl_livraison_cp').value      = sel.code_postale || '';
+    }
 }
 
 function blSelectProd(i) {
