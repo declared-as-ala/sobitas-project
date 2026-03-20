@@ -63,6 +63,9 @@ class SendEmail extends Page implements HasForms
     /** Track last campaign we sent a "finished" notification for, to avoid duplicates. */
     public ?int $lastNotifiedCampaignId = null;
 
+    /** Filter the recipients table by source: all | client | user | contact */
+    public string $sourceFilter = 'all';
+
     public function mount(): void
     {
         $keys = array_keys(DefaultEmailTemplates::options());
@@ -301,7 +304,11 @@ class SendEmail extends Page implements HasForms
                 'is_selected' => in_array($c->id, $this->selectedContactIds, true),
             ]);
 
-        $rows = $clients->concat($users)->concat($contacts)->sortBy('email')->values();
+        $rows = $clients->concat($users)->concat($contacts)->sortBy('name')->values();
+
+        if ($this->sourceFilter !== 'all') {
+            $rows = $rows->filter(fn ($r) => $r['source'] === $this->sourceFilter)->values();
+        }
         $total = $rows->count();
         $page = max(1, (int) $this->recipientPage);
         $perPage = in_array($this->recipientPerPage, [10, 25, 50, 100], true) ? $this->recipientPerPage : 25;
@@ -479,6 +486,27 @@ class SendEmail extends Page implements HasForms
     public function setRecipientPage(int $page): void
     {
         $this->recipientPage = max(1, $page);
+    }
+
+    public function setSourceFilter(string $filter): void
+    {
+        $this->sourceFilter = in_array($filter, ['all', 'client', 'user', 'contact'], true) ? $filter : 'all';
+        $this->recipientPage = 1;
+    }
+
+    /** Counts per source from the full (unfiltered, unsearched) DB pool. */
+    public function getSourceCounts(): array
+    {
+        $clients = Client::query()
+            ->whereNotNull('email')->where('email', '!=', '')->whereNull('email_unsubscribed_at')
+            ->count();
+        $users = User::query()
+            ->whereNotNull('email')->where('email', '!=', '')
+            ->count();
+        $contacts = Contact::query()
+            ->whereNotNull('email')->where('email', '!=', '')
+            ->count();
+        return ['all' => $clients + $users + $contacts, 'client' => $clients, 'user' => $users, 'contact' => $contacts];
     }
 
     public function getTemplateName(): string
