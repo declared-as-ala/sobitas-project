@@ -18,15 +18,21 @@ class Dashboard extends BaseDashboard
 
     protected static ?string $title = 'Tableau de bord';
 
-    /**
-     * Kept as a public property so that stale Livewire browser snapshots
-     * (from sessions before the DashboardHeaderActions trait was removed) can
-     * still call $set('preset', ...) without throwing a
-     * "Public property not found" exception.  It is intentionally unused —
-     * the real source of truth is session('dashboard.filter.preset'),
-     * managed entirely by DashboardHeaderWidget.
-     */
-    public string $preset = '30d';
+    // ── Stale-snapshot compatibility shims ──────────────────────────────────
+    // Old browser sessions may still hold Livewire snapshots where these
+    // properties/methods belonged to the Dashboard page (before the widget
+    // split). Keeping them as no-ops prevents "property/method not found"
+    // exceptions without re-introducing the old double-dispatch bugs.
+    public string  $preset      = '30d';
+    public ?string $tel         = null;
+    public ?string $name        = null;
+    public bool    $isRefreshing = false;
+    public bool    $isExporting  = false;
+
+    public function searchHistorique(): void {}
+    public function clearHistorique(): void {}
+    public function refreshStats(): void {}
+    // ────────────────────────────────────────────────────────────────────────
 
     public function mount(): void
     {
@@ -47,11 +53,11 @@ class Dashboard extends BaseDashboard
             QuickActionsWidget::class,          // sort=-200  — Action buttons (very top)
             ClientHistoriqueSearchWidget::class, // sort=-150  — Client search
             DashboardHeaderWidget::class,       // sort=-100  — Period filter
-            StatsOverview::class,              // sort=4     — 4 KPI cards
-            RevenueChart::class,               // sort=5     — Évolution des ventes (col=1)
-            RevenueBySourcePieChart::class,    // sort=6     — Répartition par source (col=1)
-            TopProductsWidget::class,          // sort=7     — Top 5 produits (full)
-            MarketplaceKpis::class,            // sort=8     — Nouvelles commandes / Clients / Produits
+            StatsOverview::class,              // sort=4     — 4 KPI cards (CA, Produits, Clients, Commandes)
+            MarketplaceKpis::class,            // sort=5     — Commandes / Nouveaux Clients KPI cards
+            RevenueChart::class,               // sort=6     — Évolution des ventes (bar, full-width)
+            RevenueBySourcePieChart::class,    // sort=7     — Répartition par source (col=1)
+            TopProductsWidget::class,          // sort=8     — Top 5 produits (full)
         ];
     }
 

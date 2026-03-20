@@ -15,11 +15,11 @@ class RevenueChart extends ChartWidget
 {
     protected static bool $isLazy = true;
 
-    protected static ?int $sort = 5;
+    protected static ?int $sort = 6;
 
-    protected int | string | array $columnSpan = 1;
+    protected int | string | array $columnSpan = 'full';
 
-    protected ?string $maxHeight = '300px';
+    protected ?string $maxHeight = '320px';
 
     protected ?string $pollingInterval = null;
 
@@ -33,7 +33,7 @@ class RevenueChart extends ChartWidget
         $period = $this->getCurrentPeriod();
         $label = $period['label'] ?? 'Période';
 
-        return "Chiffre d'affaires HT ({$label})";
+        return "Évolution des ventes ({$label})";
     }
 
     /**
@@ -52,10 +52,11 @@ class RevenueChart extends ChartWidget
     private function buildChartData(array $period): array
     {
         $startDate = $period['start'];
-        $endDate = $period['end'];
+        $endDate   = $period['end'];
 
-        $ticketsData = $this->getDailyTotals('tickets', $startDate, $endDate, "type = '" . Ticket::TYPE_TICKET_CAISSE . "'");
-        $blsData = $this->getDailyTotals('factures', $startDate, $endDate);
+        $ticketsData  = $this->getDailyTotals('tickets', $startDate, $endDate, "type = '" . Ticket::TYPE_TICKET_CAISSE . "'");
+        $blsData      = $this->getDailyTotals('factures', $startDate, $endDate);
+
         $invoicesQuery = DB::table('facture_tvas')->whereBetween('created_at', [$startDate, $endDate]);
         if (Schema::hasColumn('facture_tvas', 'source_ticket_id')) {
             $invoicesQuery->whereNull('source_ticket_id');
@@ -73,36 +74,34 @@ class RevenueChart extends ChartWidget
             ->toArray();
 
         $labels = [];
-        $days = [];
+        $days   = [];
         $current = $startDate->copy();
         while ($current->lte($endDate)) {
             $labels[] = $current->format('d M');
-            $days[] = $current->format('Y-m-d');
+            $days[]   = $current->format('Y-m-d');
             $current->addDay();
+        }
+
+        // Merge all sources into one combined total per day
+        $totals = [];
+        foreach ($days as $day) {
+            $totals[] = round(
+                (float) ($ticketsData[$day] ?? 0)
+                + (float) ($blsData[$day]     ?? 0)
+                + (float) ($invoicesData[$day] ?? 0),
+                2
+            );
         }
 
         return [
             'datasets' => [
                 [
-                    'label' => 'Boutique (tickets caisse)',
-                    'data' => $this->mapToOrderedArray($days, $ticketsData),
-                    'borderColor' => '#f59e0b',
-                    'backgroundColor' => 'rgba(245, 158, 11, 0.1)',
-                    'fill' => true,
-                ],
-                [
-                    'label' => 'Bons de livraison',
-                    'data' => $this->mapToOrderedArray($days, $blsData),
-                    'borderColor' => '#ef4444',
-                    'backgroundColor' => 'rgba(239, 68, 68, 0.1)',
-                    'fill' => true,
-                ],
-                [
-                    'label' => 'Factures TVA (standalone)',
-                    'data' => $this->mapToOrderedArray($days, $invoicesData),
-                    'borderColor' => '#10b981',
-                    'backgroundColor' => 'rgba(16, 185, 129, 0.1)',
-                    'fill' => true,
+                    'label'           => 'Ventes HT (DT)',
+                    'data'            => $totals,
+                    'backgroundColor' => 'rgba(59, 130, 246, 0.65)',
+                    'borderColor'     => '#2563eb',
+                    'borderWidth'     => 1,
+                    'borderRadius'    => 4,
                 ],
             ],
             'labels' => $labels,
@@ -152,6 +151,6 @@ class RevenueChart extends ChartWidget
 
     protected function getType(): string
     {
-        return 'line';
+        return 'bar';
     }
 }
