@@ -1,89 +1,62 @@
 <style>
-    /* ── Quick Actions Grid ── */
-    .qa-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 0.75rem;
-    }
-    @media (max-width: 640px) {
-        .qa-grid { grid-template-columns: repeat(2, 1fr); }
-    }
-
-    /* ── Tile base ── */
-    .qa-tile {
+    .qa-strip {
         display: flex;
-        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    .qa-btn {
+        display: flex;
         align-items: center;
-        justify-content: center;
-        padding: 1.25rem 0.75rem;
-        border-radius: 0.75rem;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 0.625rem;
         text-decoration: none;
-        transition: all 0.2s ease;
-    }
-    .qa-tile:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-    .qa-tile-icon {
-        width: 1.75rem;
-        height: 1.75rem;
-        margin-bottom: 0.625rem;
-    }
-    .qa-tile-label {
-        font-size: 0.875rem;
+        font-size: 0.8125rem;
         font-weight: 600;
-        text-align: center;
+        transition: all 0.18s ease;
+        white-space: nowrap;
+        border: 1px solid transparent;
+        flex: 1;
+        justify-content: center;
+        min-width: 120px;
+    }
+    .qa-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 3px 10px rgba(0,0,0,0.12);
+    }
+    .qa-btn-icon {
+        width: 1.1rem;
+        height: 1.1rem;
+        flex-shrink: 0;
     }
 
-    /* ── Color variants: light ── */
-    .qa-tile-blue   { background: #eff6ff; }
-    .qa-tile-blue .qa-tile-icon, .qa-tile-blue .qa-tile-label { color: #2563eb; }
+    /* Light color variants */
+    .qa-btn-blue    { background:#eff6ff; color:#2563eb; border-color:#bfdbfe; }
+    .qa-btn-green   { background:#f0fdf4; color:#16a34a; border-color:#bbf7d0; }
+    .qa-btn-emerald { background:#ecfdf5; color:#059669; border-color:#a7f3d0; }
+    .qa-btn-red     { background:#fef2f2; color:#dc2626; border-color:#fecaca; }
+    .qa-btn-purple  { background:#faf5ff; color:#9333ea; border-color:#e9d5ff; }
+    .qa-btn-indigo  { background:#eef2ff; color:#4f46e5; border-color:#c7d2fe; }
+    .qa-btn-teal    { background:#f0fdfa; color:#0d9488; border-color:#99f6e4; }
+    .qa-btn-amber   { background:#fffbeb; color:#d97706; border-color:#fde68a; }
 
-    .qa-tile-green  { background: #f0fdf4; }
-    .qa-tile-green .qa-tile-icon, .qa-tile-green .qa-tile-label { color: #16a34a; }
+    /* Dark mode */
+    .dark .qa-btn-blue    { background:rgba(30,58,138,0.25);   color:#60a5fa; border-color:rgba(96,165,250,0.2); }
+    .dark .qa-btn-green   { background:rgba(20,83,45,0.25);    color:#4ade80; border-color:rgba(74,222,128,0.2); }
+    .dark .qa-btn-emerald { background:rgba(6,78,59,0.25);     color:#34d399; border-color:rgba(52,211,153,0.2); }
+    .dark .qa-btn-red     { background:rgba(127,29,29,0.25);   color:#f87171; border-color:rgba(248,113,113,0.2); }
+    .dark .qa-btn-purple  { background:rgba(88,28,135,0.25);   color:#c084fc; border-color:rgba(192,132,252,0.2); }
+    .dark .qa-btn-indigo  { background:rgba(49,46,129,0.25);   color:#818cf8; border-color:rgba(129,140,248,0.2); }
+    .dark .qa-btn-teal    { background:rgba(19,78,74,0.25);    color:#2dd4bf; border-color:rgba(45,212,191,0.2); }
+    .dark .qa-btn-amber   { background:rgba(120,53,15,0.25);   color:#fbbf24; border-color:rgba(251,191,36,0.2); }
 
-    .qa-tile-emerald { background: #ecfdf5; }
-    .qa-tile-emerald .qa-tile-icon, .qa-tile-emerald .qa-tile-label { color: #059669; }
-
-    .qa-tile-red    { background: #fef2f2; }
-    .qa-tile-red .qa-tile-icon, .qa-tile-red .qa-tile-label { color: #ef4444; }
-
-    .qa-tile-purple { background: #faf5ff; }
-    .qa-tile-purple .qa-tile-icon, .qa-tile-purple .qa-tile-label { color: #9333ea; }
-
-    .qa-tile-indigo { background: #eef2ff; }
-    .qa-tile-indigo .qa-tile-icon, .qa-tile-indigo .qa-tile-label { color: #4f46e5; }
-
-    .qa-tile-teal   { background: #f0fdfa; }
-    .qa-tile-teal .qa-tile-icon, .qa-tile-teal .qa-tile-label { color: #0d9488; }
-
-    .qa-tile-amber  { background: #fffbeb; }
-    .qa-tile-amber .qa-tile-icon, .qa-tile-amber .qa-tile-label { color: #d97706; }
-
-    /* ── Color variants: dark mode ── */
-    .dark .qa-tile-blue   { background: rgba(30, 58, 138, 0.3); }
-    .dark .qa-tile-blue .qa-tile-icon, .dark .qa-tile-blue .qa-tile-label { color: #60a5fa; }
-
-    .dark .qa-tile-green  { background: rgba(20, 83, 45, 0.3); }
-    .dark .qa-tile-green .qa-tile-icon, .dark .qa-tile-green .qa-tile-label { color: #4ade80; }
-
-    .dark .qa-tile-emerald { background: rgba(6, 78, 59, 0.3); }
-    .dark .qa-tile-emerald .qa-tile-icon, .dark .qa-tile-emerald .qa-tile-label { color: #34d399; }
-
-    .dark .qa-tile-red    { background: rgba(127, 29, 29, 0.3); }
-    .dark .qa-tile-red .qa-tile-icon, .dark .qa-tile-red .qa-tile-label { color: #f87171; }
-
-    .dark .qa-tile-purple { background: rgba(88, 28, 135, 0.3); }
-    .dark .qa-tile-purple .qa-tile-icon, .dark .qa-tile-purple .qa-tile-label { color: #c084fc; }
-
-    .dark .qa-tile-indigo { background: rgba(49, 46, 129, 0.3); }
-    .dark .qa-tile-indigo .qa-tile-icon, .dark .qa-tile-indigo .qa-tile-label { color: #818cf8; }
-
-    .dark .qa-tile-teal   { background: rgba(19, 78, 74, 0.3); }
-    .dark .qa-tile-teal .qa-tile-icon, .dark .qa-tile-teal .qa-tile-label { color: #2dd4bf; }
-
-    .dark .qa-tile-amber  { background: rgba(120, 53, 15, 0.3); }
-    .dark .qa-tile-amber .qa-tile-icon, .dark .qa-tile-amber .qa-tile-label { color: #fbbf24; }
+    @media (max-width: 900px) {
+        .qa-btn { flex: none; width: calc(50% - 0.25rem); min-width: 0; }
+    }
+    @media (max-width: 480px) {
+        .qa-btn { width: 100%; flex: none; }
+    }
 </style>
 
 <x-filament-widgets::widget>
@@ -92,16 +65,13 @@
             Actions Rapides
         </x-slot>
 
-        <div class="qa-grid">
+        <div class="qa-strip">
             @foreach($this->getActions() as $action)
-                <a href="{{ $action['url'] }}" class="qa-tile qa-tile-{{ $action['color'] }}">
-                    <x-filament::icon
-                        :icon="$action['icon']"
-                        class="qa-tile-icon"
-                    />
-                    <span class="qa-tile-label">{{ $action['label'] }}</span>
-        </a>
+                <a href="{{ $action['url'] }}" class="qa-btn qa-btn-{{ $action['color'] }}">
+                    <x-filament::icon :icon="$action['icon']" class="qa-btn-icon" />
+                    <span>{{ $action['label'] }}</span>
+                </a>
             @endforeach
-    </div>
+        </div>
     </x-filament::section>
 </x-filament-widgets::widget>

@@ -14,7 +14,7 @@ class TopCustomersTable extends BaseWidget
 {
     protected static ?string $heading = 'Top 20 Clients (LTV)';
 
-    protected static ?int $sort = 9;
+    protected static ?int $sort = 80;
 
     protected static bool $isLazy = true;
 

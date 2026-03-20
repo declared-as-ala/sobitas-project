@@ -15,7 +15,7 @@ class RevenueBySourcePieChart extends ChartWidget
 
     protected static bool $isLazy = true;
 
-    protected static ?int $sort = 51;
+    protected static ?int $sort = 55;
 
     protected int | string | array $columnSpan = 1;
 

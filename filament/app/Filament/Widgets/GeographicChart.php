@@ -13,7 +13,7 @@ class GeographicChart extends ChartWidget
 {
     protected ?string $heading = 'Top 10 Régions';
 
-    protected static ?int $sort = 6;
+    protected static ?int $sort = 60;
 
     protected static bool $isLazy = true;
 

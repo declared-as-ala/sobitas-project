@@ -12,7 +12,7 @@ use Livewire\Attributes\On;
 
 class MarketplaceKpis extends BaseWidget
 {
-    protected static ?int $sort = 10;
+    protected static ?int $sort = 30;
 
     protected static bool $isLazy = true;
 
