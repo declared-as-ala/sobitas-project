@@ -6,7 +6,13 @@
       "Bash(find C:UsersAlaDesktopsobitas-projectbackendresources -name *.blade.php)",
       "Bash(find C:UsersAlaDesktopsobitas-projectbackend -name *.blade.php)",
       "Bash(find C:UsersAlaDesktopsobitas-projectbackendpublic -name *.jpg -o -name *.png -o -name *.webp)",
-      "Bash(find C:UsersAlaDesktopsobitas-projectbackenddatabase -name *.php -o -name *.sql)"
+      "Bash(find C:UsersAlaDesktopsobitas-projectbackenddatabase -name *.php -o -name *.sql)",
+      "Bash(grep 'INSERT INTO \\\\`coordinates\\\\`' C:UsersAlaDesktopsobitas-projectbackendsobitas_db_2026.sql)",
+      "Bash(grep 'CREATE TABLE \\\\`coordinates\\\\`' C:UsersAlaDesktopsobitas-projectbackendsobitas_db_2026.sql -A 60)",
+      "Bash(grep -i \"data_types\\\\|data_rows\\\\|INSERT INTO \\\\`data\")",
+      "Bash(grep -v \"CREATE\\\\|INSERT INTO \\\\`coord\\\\|ENGINE\\\\|COLLATE\\\\|KEY\\\\|PRIMARY\\\\|UNIQUE\")",
+      "Bash(find C:UsersAlaDesktopsobitas-projectfilamentdatabasemigrations -name *coordinate*)",
+      "Bash(grep 'CREATE TABLE \\\\`coordinates\\\\`' C:UsersAlaDesktopsobitas-projectprotein_db_backup.sql -A 60)"
     ]
   }
 }
