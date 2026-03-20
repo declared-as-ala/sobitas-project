@@ -272,9 +272,10 @@ class CommandeController extends Controller
 
         // ── Send emails ───────────────────────────────────────────────────────────
         try {
-            $adminEmails = array_filter(
-                array_map('trim', explode(',', config('mail.admin_emails', config('mail.username', 'admin@sobitas.tn'))))
-            );
+            $adminEmailsRaw = config('mail.admin_emails', config('mail.username', 'admin@sobitas.tn'));
+            $adminEmails = is_array($adminEmailsRaw)
+                ? array_filter(array_map('trim', $adminEmailsRaw))
+                : array_filter(array_map('trim', explode(',', (string) $adminEmailsRaw)));
             foreach ($adminEmails as $adminEmail) {
                 Mail::to($adminEmail)->send(new OrderConfirmedAdminMail($commande));
             }
