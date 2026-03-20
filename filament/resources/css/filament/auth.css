@@ -81,11 +81,11 @@
     align-items: center !important;
 }
 
-/* LOGO — login/auth pages only (320px wide) */
+/* LOGO — login/auth pages only (400px wide) */
 .fi-simple-layout .fi-logo img,
 .fi-simple-layout .fi-brand-logo img,
 .fi-simple-layout [data-slot="logo"] img {
-    width: 320px !important;
+    width: 400px !important;
     max-width: 100% !important;
     height: auto !important;
     display: block !important;

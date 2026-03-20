@@ -301,18 +301,18 @@
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3 1 3m0 0 .5 1.5m-.5-1.5h-9.5m0 0-.5 1.5" /></svg>
             Dashboard
         </a>
-        <a href="{{ \App\Filament\Pages\Stock\StockProductsPage::getUrl() }}" class="st-nav-a">
+        <a href="{{ \App\Filament\Resources\ProductResource::getUrl('index') }}" class="st-nav-a">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" /></svg>
             Tous les produits
         </a>
-        <a href="{{ \App\Filament\Pages\Stock\StockAlertsPage::getUrl() }}" class="st-nav-a">
+        <a href="#st-alerts" class="st-nav-a">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
             Alertes
             @if($metrics['out_of_stock'] + $metrics['low_stock'] > 0)
                 <span class="st-nav-badge">{{ $metrics['out_of_stock'] + $metrics['low_stock'] }}</span>
             @endif
         </a>
-        <a href="{{ \App\Filament\Pages\Stock\StockReportsPage::getUrl() }}" class="st-nav-a">
+        <a href="#st-reports" class="st-nav-a">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z" /><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0013.5 3v7.5z" /></svg>
             Rapports
         </a>
@@ -360,7 +360,7 @@
         </div>
 
         {{-- En stock --}}
-        <a href="{{ \App\Filament\Pages\Stock\StockProductsPage::getUrl() }}" class="st-kpi" style="--_a:#16a34a;--_ibg:#f0fdf4;">
+        <a href="{{ \App\Filament\Resources\ProductResource::getUrl('index') }}" class="st-kpi" style="--_a:#16a34a;--_ibg:#f0fdf4;">
             <div class="st-kpi-head">
                 <div class="st-kpi-ico">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="#16a34a"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -373,7 +373,7 @@
         </a>
 
         {{-- Stock faible --}}
-        <a href="{{ \App\Filament\Pages\Stock\StockAlertsPage::getUrl() }}" class="st-kpi" style="--_a:#d97706;--_ibg:#fffbeb;">
+        <a href="#st-alerts" class="st-kpi" style="--_a:#d97706;--_ibg:#fffbeb;">
             <div class="st-kpi-head">
                 <div class="st-kpi-ico">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="#d97706"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>
@@ -386,7 +386,7 @@
         </a>
 
         {{-- Rupture --}}
-        <a href="{{ \App\Filament\Pages\Stock\StockAlertsPage::getUrl() }}" class="st-kpi" style="--_a:#dc2626;--_ibg:#fef2f2;">
+        <a href="#st-alerts" class="st-kpi" style="--_a:#dc2626;--_ibg:#fef2f2;">
             <div class="st-kpi-head">
                 <div class="st-kpi-ico">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="#dc2626"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>
@@ -412,7 +412,7 @@
 
         {{-- Publiés / Incohérences --}}
         @if($metrics['inconsistent'] > 0)
-        <a href="{{ \App\Filament\Pages\Stock\StockAlertsPage::getUrl() }}" class="st-kpi" style="--_a:#9333ea;--_ibg:#faf5ff;">
+        <a href="#st-alerts" class="st-kpi" style="--_a:#9333ea;--_ibg:#faf5ff;">
             <div class="st-kpi-head">
                 <div class="st-kpi-ico">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="#9333ea"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg>
@@ -448,7 +448,7 @@
             </p>
             <p class="st-banner-sub">Ces produits sont indisponibles à la vente. Réapprovisionnez-les dès que possible.</p>
         </div>
-        <a href="{{ \App\Filament\Pages\Stock\StockAlertsPage::getUrl() }}" class="st-banner-cta">
+        <a href="#st-alerts" class="st-banner-cta">
             Voir les alertes
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
         </a>
@@ -460,7 +460,7 @@
             <p class="st-banner-ttl" style="color:var(--warn)">{{ $metrics['low_stock'] }} produit{{ $metrics['low_stock'] > 1 ? 's' : '' }} en stock faible</p>
             <p class="st-banner-sub">Ces produits approchent du seuil d'alerte. Anticipez le réapprovisionnement.</p>
         </div>
-        <a href="{{ \App\Filament\Pages\Stock\StockAlertsPage::getUrl() }}" class="st-banner-cta" style="background:var(--warn)">
+        <a href="#st-alerts" class="st-banner-cta" style="background:var(--warn)">
             Voir les alertes
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
         </a>
@@ -533,7 +533,7 @@
                 </div>
                 @endif
                 <div class="st-sum-row" style="padding-top:.75rem">
-                    <a href="{{ \App\Filament\Pages\Stock\StockReportsPage::getUrl() }}" class="st-view-all">
+                    <a href="{{ route('stock.reports.export.pdf') }}" target="_blank" class="st-view-all">
                         Rapport complet
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
                     </a>
@@ -545,7 +545,7 @@
 
     {{-- ══ Critical Products Table ══ --}}
     @if($alerts->isNotEmpty())
-    <div class="st-section">
+    <div class="st-section" id="st-alerts">
         <div class="st-card">
             <div class="st-card-hd">
                 <h3 class="st-card-ttl" style="color:var(--danger)">
@@ -553,7 +553,7 @@
                     Produits critiques
                     <span style="font-size:.75rem;font-weight:400;color:var(--st-muted);margin-left:.375rem">{{ $alerts->count() }} à traiter</span>
                 </h3>
-                <a href="{{ \App\Filament\Pages\Stock\StockAlertsPage::getUrl() }}" class="st-view-all">
+                <a href="{{ \App\Filament\Resources\ProductResource::getUrl('index') }}" class="st-view-all">
                     Tout voir
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
                 </a>
