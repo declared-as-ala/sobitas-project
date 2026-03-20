@@ -97,7 +97,7 @@
 .btn-save:hover { background: #1d4ed8; }
 </style>
 
-<div class="ftva-wrap" id="ftva-main">
+<div class="ftva-wrap" id="ftva-main" wire:ignore>
     <div class="ftva-form">
 
         {{-- TOP ROW --}}

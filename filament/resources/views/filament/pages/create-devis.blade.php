@@ -102,7 +102,7 @@ body:has(.devis-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !impo
 .btn-save:hover{background:#1d4ed8}
 </style>
 
-<div class="devis-page">
+<div class="devis-page" wire:ignore>
 <div class="dv-wrap">
     <div class="dv-form">
         <div class="dv-top">

@@ -121,7 +121,7 @@ body:has(.bl-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !importa
 .btn-save:hover{background:#1d4ed8}
 </style>
 
-<div class="bl-page">
+<div class="bl-page" wire:ignore>
 <div class="bl-wrap">
     <div class="bl-form">
         {{-- TOP ROW --}}
