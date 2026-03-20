@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find C:UsersAlaDesktopsobitas-projectfilamentvendorfilamentfilamentsrcView -name *.php)"
+    ]
+  }
+}

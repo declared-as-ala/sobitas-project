@@ -65,18 +65,11 @@ class Coordinate extends Model
         $coordinate = static::getCached();
         $raw        = $coordinate?->logo_facture;
 
-        \Illuminate\Support\Facades\Log::debug('[Logo] publicBrandLogoUrl called', [
-            'logo_facture' => $raw ?? 'null',
-            'origin'       => static::originRootUrl(),
-        ]);
-
         if (! empty($raw)) {
             $raw = trim((string) $raw);
 
             // External URL – trust as-is (no local file check possible).
             if (preg_match('#^https?://#i', $raw)) {
-                \Illuminate\Support\Facades\Log::debug('[Logo] using external URL', ['url' => $raw]);
-
                 return $raw;
             }
 
@@ -90,27 +83,14 @@ class Coordinate extends Model
             // Confirm the file is actually present on the public disk before
             // returning a URL that would 404 in the browser.
             if (\Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
-                $url = rtrim(static::originRootUrl(), '/') . '/storage/' . $path;
-                \Illuminate\Support\Facades\Log::debug('[Logo] resolved storage URL', ['url' => $url, 'path' => $path]);
-
-                return $url;
+                return rtrim(static::originRootUrl(), '/') . '/storage/' . $path;
             }
-
-            \Illuminate\Support\Facades\Log::warning('[Logo] logo_facture path not found on public disk', [
-                'raw'  => $raw,
-                'path' => $path,
-            ]);
         }
 
         // Fallback: public/logo.png is a direct file – no symlink required.
         if (is_file(public_path('logo.png'))) {
-            $url = rtrim(static::originRootUrl(), '/') . '/logo.png';
-            \Illuminate\Support\Facades\Log::debug('[Logo] falling back to public/logo.png', ['url' => $url]);
-
-            return $url;
+            return rtrim(static::originRootUrl(), '/') . '/logo.png';
         }
-
-        \Illuminate\Support\Facades\Log::warning('[Logo] no logo resolved – returning null');
 
         return null;
     }

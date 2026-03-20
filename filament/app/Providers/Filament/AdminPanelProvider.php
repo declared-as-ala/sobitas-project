@@ -107,28 +107,37 @@ class AdminPanelProvider extends PanelProvider
             ->passwordReset()
             ->profile(EditProfile::class)
             ->renderHook(
-                'panels::head.end',
+                PanelsRenderHook::HEAD_END,
                 function (): string {
-                    $bg = $this->resolveLoginBackgroundUrl();
-                    $loginCss = $bg !== ''
-                        ? '.fi-simple-layout { background-image: url('.json_encode($bg).') !important; background-size: cover !important; background-position: center !important; }'
-                        : '.fi-simple-layout { background-image: none !important; background-color: #111827 !important; }';
+                    $origin = rtrim(Coordinate::originRootUrl(), '/');
 
-                    return '
-                        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.min.css" />
-                    '
-                    . "\n" . view('filament.components.custom-admin-styles')->render()
-                    . "\n" . '<link rel="stylesheet" href="' . asset('css/filament/topbar.css') . '" />'
-                    . "\n" . '<link rel="stylesheet" href="' . asset('css/filament/doc-edit.css') . '" />'
-                    . "\n" . '<link rel="stylesheet" href="' . asset('css/filament/auth.css') . '" />'
-                    . "\n" . '<style>' . $loginCss . '</style>';
+                    return implode("\n", [
+                        '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.min.css" />',
+                        view('filament.components.custom-admin-styles')->render(),
+                        '<link rel="stylesheet" href="' . $origin . '/css/filament/topbar.css" />',
+                        '<link rel="stylesheet" href="' . $origin . '/css/filament/doc-edit.css" />',
+                        '<link rel="stylesheet" href="' . $origin . '/css/filament/auth.css" />',
+                    ]);
                 }
             )
             ->renderHook(
-                'panels::body.end',
-                fn (): string => '
-                    <script src="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.min.js"></script>
-                    ' . "\n" . view('filament.components.spa-navigation-fix')->render()
+                PanelsRenderHook::HEAD_END,
+                function (): string {
+                    $bg       = $this->resolveLoginBackgroundUrl();
+                    $bgCss    = $bg !== ''
+                        ? 'background-image:url(' . json_encode($bg) . ');background-size:cover;background-position:center;'
+                        : 'background-image:none;background-color:#111827;';
+
+                    return '<style>.fi-simple-layout{' . $bgCss . '}</style>';
+                },
+                scopes: \App\Filament\Pages\Auth\Login::class,
+            )
+            ->renderHook(
+                PanelsRenderHook::BODY_END,
+                fn (): string => implode("\n", [
+                    '<script src="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.min.js"></script>',
+                    view('filament.components.spa-navigation-fix')->render(),
+                ])
             )
             // ── PERFORMANCE: Explicit registration instead of filesystem discovery ──
             // discoverResources/discoverPages/discoverWidgets use Symfony Finder
