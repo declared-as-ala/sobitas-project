@@ -325,8 +325,8 @@ class StockDashboard extends Page implements HasTable
                     ->url(fn (Product $record) => ProductResource::getUrl('edit', ['record' => $record])),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\BulkAction::make('markRupture')
+                Actions\BulkActionGroup::make([
+                    Actions\BulkAction::make('markRupture')
                         ->label('Marquer en rupture')
                         ->icon('heroicon-o-x-circle')
                         ->color('danger')
@@ -340,7 +340,7 @@ class StockDashboard extends Page implements HasTable
                                 ->send();
                         })
                         ->deselectRecordsAfterCompletion(),
-                    Tables\Actions\BulkAction::make('markInStock')
+                    Actions\BulkAction::make('markInStock')
                         ->label('Remettre en stock')
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
@@ -362,7 +362,7 @@ class StockDashboard extends Page implements HasTable
                                 ->send();
                         })
                         ->deselectRecordsAfterCompletion(),
-                    Tables\Actions\BulkAction::make('updateThreshold')
+                    Actions\BulkAction::make('updateThreshold')
                         ->label('Mettre à jour le seuil')
                         ->icon('heroicon-o-adjustments-vertical')
                         ->form([
