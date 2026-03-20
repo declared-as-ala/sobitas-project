@@ -24,8 +24,9 @@ class FactureTvaResource extends Resource
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-document-duplicate';
     protected static string | \UnitEnum | null $navigationGroup = 'Facturation & Tickets';
     protected static ?int $navigationSort = 2;
-    protected static ?string $modelLabel = 'Facture TVA';
-    protected static ?string $pluralModelLabel = 'Factures TVA';
+    protected static ?string $navigationLabel = 'Factures';
+    protected static ?string $modelLabel = 'Facture';
+    protected static ?string $pluralModelLabel = 'Factures';
     protected static ?string $recordTitleAttribute = 'numero';
 
     public static function getGloballySearchableAttributes(): array

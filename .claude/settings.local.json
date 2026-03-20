@@ -13,7 +13,8 @@
       "Bash(grep -v \"CREATE\\\\|INSERT INTO \\\\`coord\\\\|ENGINE\\\\|COLLATE\\\\|KEY\\\\|PRIMARY\\\\|UNIQUE\")",
       "Bash(find C:UsersAlaDesktopsobitas-projectfilamentdatabasemigrations -name *coordinate*)",
       "Bash(grep 'CREATE TABLE \\\\`coordinates\\\\`' C:UsersAlaDesktopsobitas-projectprotein_db_backup.sql -A 60)",
-      "Bash(grep -E \"\\\\.php$\")"
+      "Bash(grep -E \"\\\\.php$\")",
+      "Bash(find C:/Users/Ala/Desktop/sobitas-project/filament/database/migrations/ -name *coord*)"
     ]
   }
 }
