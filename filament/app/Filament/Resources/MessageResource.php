@@ -48,7 +48,7 @@ class MessageResource extends Resource
                         Forms\Components\Textarea::make('msg_passez_commande')
                             ->label('Msg Passez Commande')
                             ->rows(4)
-                            ->helperText('Envoyé à la création de commande. Variables: [nom], [prenom], [num_commande]')
+                            ->helperText('Envoyé à la création de commande. Variables: [nom], [prenom], [num_commande], [etat], [produits], [total]')
                             ->columnSpanFull(),
                     ]),
             ]);

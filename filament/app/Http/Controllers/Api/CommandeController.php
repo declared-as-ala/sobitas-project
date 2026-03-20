@@ -235,11 +235,23 @@ class CommandeController extends Controller
                 $msg = Message::getCached();
                 $template = $msg ? trim((string) ($msg->msg_passez_commande ?? '')) : '';
 
+                $commande->loadMissing('details.product:id,designation_fr');
+                $products = $commande->details
+                    ->take(4)
+                    ->map(fn ($d) => $d->product->designation_fr ?? 'Produit')
+                    ->filter()
+                    ->implode(', ');
+                $more = $commande->details->count() > 4
+                    ? ' (+' . ($commande->details->count() - 4) . ')'
+                    : '';
+                $productsText = trim($products . $more);
+                $etatLabel = Commande::getStatusLabel((string) ($commande->etat ?? 'nouvelle_commande'));
+
                 if ($template !== '') {
-                    // Use admin-configured template (supports [nom], [prenom], [num_commande])
+                    // Admin template: [nom], [prenom], [num_commande], [etat], [produits], [total]
                     $sms = str_replace(
-                        ['[nom]', '[prenom]', '[num_commande]'],
-                        [$nom, $prenom, $numero],
+                        ['[nom]', '[prenom]', '[num_commande]', '[etat]', '[produits]', '[total]'],
+                        [$nom, $prenom, $numero, $etatLabel, $productsText, $total],
                         $template
                     );
                 } else {

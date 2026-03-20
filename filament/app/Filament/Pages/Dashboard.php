@@ -18,6 +18,16 @@ class Dashboard extends BaseDashboard
 
     protected static ?string $title = 'Tableau de bord';
 
+    /**
+     * Kept as a public property so that stale Livewire browser snapshots
+     * (from sessions before the DashboardHeaderActions trait was removed) can
+     * still call $set('preset', ...) without throwing a
+     * "Public property not found" exception.  It is intentionally unused —
+     * the real source of truth is session('dashboard.filter.preset'),
+     * managed entirely by DashboardHeaderWidget.
+     */
+    public string $preset = '30d';
+
     public function mount(): void
     {
         $period = request()->query('period');
