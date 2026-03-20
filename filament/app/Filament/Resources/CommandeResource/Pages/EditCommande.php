@@ -8,6 +8,7 @@ use App\Filament\Widgets\DocumentTimelineWidget;
 use App\Models\Commande;
 use Filament\Actions;
 use Filament\Actions\ActionGroup;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Support\Enums\Width;
 
@@ -62,6 +63,23 @@ class EditCommande extends EditRecord
                 ->visible(fn () => (bool) $this->record->user_id)
                 ->url(fn () => ClientResource::getUrl('edit', ['record' => $this->record->user_id]))
                 ->openUrlInNewTab(),
+            Actions\Action::make('createBl')
+                ->label('Convertir en bon de livraison')
+                ->icon('heroicon-o-document-text')
+                ->color('success')
+                ->requiresConfirmation()
+                ->modalHeading('Créer un bon de livraison')
+                ->modalSubmitActionLabel('Confirmer')
+                ->modalCancelActionLabel('Annuler')
+                ->visible(fn () => ! $this->record->factures()->exists())
+                ->action(function () {
+                    $bl = app(\App\Services\DocumentConversion\OrderToBlService::class)->createBlFromOrder($this->record);
+                    Notification::make()
+                        ->title('Conversion réussie — BL #' . $bl->numero)
+                        ->success()
+                        ->send();
+                    return redirect(route('factures.print', ['facture' => $bl->id]));
+                }),
             ActionGroup::make([
                 Actions\DeleteAction::make()->label('Supprimer la commande'),
             ])->label('')->icon('heroicon-o-ellipsis-vertical'),

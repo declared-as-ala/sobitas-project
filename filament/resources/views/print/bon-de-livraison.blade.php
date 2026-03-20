@@ -10,13 +10,32 @@
         <h5 class="text-gray-light">INFORMATIONS DU CLIENT</h5>
         <hr class="custom-hr">
 
-        @if(isset($client) && $client)
-            <b class="to"><b>Nom :</b> {{ $client->name ?? '' }}</b>
-            <div class="address"><b>Adresse :</b> {{ $client->adresse ?? '' }}</div>
-            @if(!empty($client->matricule))
-                <div class="email"><b>Matricule</b> : {{ $client->matricule }}</div>
-            @endif
-            <div class="email"><b>Numéro de téléphone :</b> {{ $client->phone_1 ?? '' }}</div>
+        @php
+            $livrNom    = trim(($facture->livraison_nom ?? '') . ' ' . ($facture->livraison_prenom ?? ''));
+            $livrAdr    = $facture->livraison_adresse1 ?? '';
+            $livrVille  = trim(($facture->livraison_ville ?? '') . ' ' . ($facture->livraison_region ?? '') . ' ' . ($facture->livraison_code_postale ?? ''));
+            $livrEmail  = $facture->livraison_email ?? '';
+            $livrPhone  = $facture->livraison_phone ?? '';
+
+            $displayNom   = $livrNom   ?: ($client->name    ?? '');
+            $displayAdr   = $livrAdr   ?: ($client->adresse ?? '');
+            $displayPhone = $livrPhone ?: ($client->phone_1 ?? '');
+        @endphp
+        <b class="to"><b>Nom :</b> {{ $displayNom }}</b>
+        @if($displayAdr)
+            <div class="address"><b>Adresse :</b> {{ $displayAdr }}</div>
+        @endif
+        @if($livrVille)
+            <div class="address">{{ $livrVille }}</div>
+        @endif
+        @if($livrEmail)
+            <div class="email"><b>Email :</b> {{ $livrEmail }}</div>
+        @endif
+        @if(!empty($client->matricule ?? null))
+            <div class="email"><b>Matricule :</b> {{ $client->matricule }}</div>
+        @endif
+        @if($displayPhone)
+            <div class="email"><b>Numéro de téléphone :</b> {{ $displayPhone }}</div>
         @endif
     </div>
 </div>
