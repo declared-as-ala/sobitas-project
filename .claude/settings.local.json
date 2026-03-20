@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(find C:UsersAlaDesktopsobitas-projectfilamentvendorfilamentfilamentsrcView -name *.php)"
+      "Bash(find C:UsersAlaDesktopsobitas-projectfilamentvendorfilamentfilamentsrcView -name *.php)",
+      "Bash(xargs grep:*)",
+      "Bash(find C:UsersAlaDesktopsobitas-projectbackendresources -name *.blade.php)",
+      "Bash(find C:UsersAlaDesktopsobitas-projectbackend -name *.blade.php)",
+      "Bash(find C:UsersAlaDesktopsobitas-projectbackendpublic -name *.jpg -o -name *.png -o -name *.webp)",
+      "Bash(find C:UsersAlaDesktopsobitas-projectbackenddatabase -name *.php -o -name *.sql)"
     ]
   }
 }
