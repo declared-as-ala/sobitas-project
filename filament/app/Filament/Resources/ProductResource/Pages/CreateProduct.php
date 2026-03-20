@@ -5,11 +5,28 @@ namespace App\Filament\Resources\ProductResource\Pages;
 use App\Filament\Resources\ProductResource;
 use App\Services\Media\ConvertUploadedImageToWebp;
 use Filament\Resources\Pages\CreateRecord;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class CreateProduct extends CreateRecord
 {
+    /** @var array<string, bool> */
+    private static array $productColumnsCache = [];
+
     protected static string $resource = ProductResource::class;
+
+    private static function hasProductColumn(string $column): bool
+    {
+        if (array_key_exists($column, self::$productColumnsCache)) {
+            return self::$productColumnsCache[$column];
+        }
+
+        try {
+            return self::$productColumnsCache[$column] = Schema::hasColumn('products', $column);
+        } catch (\Throwable) {
+            return self::$productColumnsCache[$column] = false;
+        }
+    }
 
     /**
      * When rupture is true, force qte = 0 so it persists on create.
@@ -33,6 +50,19 @@ class CreateProduct extends CreateRecord
         }
 
         unset($data['_slug_auto_source']);
+
+        // Deployment safety: if migrations were skipped, don't write unknown columns.
+        foreach ([
+            'faq',
+            'nutrition_values',
+            'seo_schema_description',
+            'seo_review',
+            'seo_aggregate_rating',
+        ] as $column) {
+            if (! self::hasProductColumn($column)) {
+                unset($data[$column]);
+            }
+        }
 
         $converter = app(ConvertUploadedImageToWebp::class);
         if (! empty($data['cover'])) {

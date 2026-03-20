@@ -77,11 +77,11 @@ class QuotationSent extends Mailable
      */
     public function attachments(): array
     {
-        if (!class_exists(\Barryvdh\DomPDF\Facade\Pdf::class)) {
+        if (! app()->bound('dompdf.wrapper')) {
             return [];
         }
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('print.devis', $this->sharedData)->output();
+        $pdf = app('dompdf.wrapper')->loadView('print.devis', $this->sharedData)->output();
 
         $numero = (string) ($this->quotation->numero ?? $this->quotation->id);
         $safeNumero = str_replace('/', '-', $numero);

@@ -11,7 +11,7 @@ use Livewire\Attributes\On;
 
 class TopProductsWidget extends ChartWidget
 {
-    protected static ?int $sort = 3;
+    protected static ?int $sort = 50;
 
     protected static bool $isLazy = true;
 

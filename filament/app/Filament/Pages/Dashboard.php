@@ -3,17 +3,14 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Support\DashboardHeaderActions;
-use App\Filament\Widgets\DashboardAlertsWidget;
+use App\Filament\Widgets\ClientHistoriqueSearchWidget;
 use App\Filament\Widgets\DashboardHeaderWidget;
 use App\Filament\Widgets\GeographicChart;
-use App\Filament\Widgets\LatestCommandes;
 use App\Filament\Widgets\MarketplaceKpis;
-use App\Filament\Widgets\MonthlyRevenueComparison;
 use App\Filament\Widgets\QuickActionsWidget;
 use App\Filament\Widgets\RevenueBySourcePieChart;
 use App\Filament\Widgets\RevenueChart;
 use App\Filament\Widgets\StatsOverview;
-use App\Filament\Widgets\TopCategoriesChart;
 use App\Filament\Widgets\TopCustomersTable;
 use App\Filament\Widgets\TopProductsWidget;
 use Filament\Pages\Dashboard as BaseDashboard;
@@ -52,7 +49,6 @@ class Dashboard extends BaseDashboard
     public function getHeaderWidgets(): array
     {
         return [
-            \App\Filament\Widgets\ClientHistoriqueSearchWidget::class,
             DashboardHeaderWidget::class,
         ];
     }
@@ -61,21 +57,13 @@ class Dashboard extends BaseDashboard
     {
         return [
             QuickActionsWidget::class,
-            DashboardAlertsWidget::class,
-
             StatsOverview::class,
             MarketplaceKpis::class,
-
             RevenueChart::class,
-            TopCategoriesChart::class,
-            MonthlyRevenueComparison::class,
-            GeographicChart::class,
-
-            // Section Analyses (7j/30j/90j via filtre global)
-            RevenueBySourcePieChart::class,
-
-            LatestCommandes::class,
             TopProductsWidget::class,
+            RevenueBySourcePieChart::class,
+            GeographicChart::class,
+            ClientHistoriqueSearchWidget::class,
             TopCustomersTable::class,
         ];
     }

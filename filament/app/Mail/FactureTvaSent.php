@@ -86,8 +86,8 @@ class FactureTvaSent extends Mailable
         $filename = "Facture_{$safeNumero}.pdf";
 
         $pdf = null;
-        if (class_exists(\Barryvdh\DomPDF\Facade\Pdf::class)) {
-            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('print.facture-tva', $data);
+        if (app()->bound('dompdf.wrapper')) {
+            $pdf = app('dompdf.wrapper')->loadView('print.facture-tva', $data);
         }
 
         $mail = $this

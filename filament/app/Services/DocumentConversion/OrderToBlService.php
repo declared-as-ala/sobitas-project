@@ -216,8 +216,10 @@ class OrderToBlService
      */
     protected function buildDeliveryAddressFromOrder(Commande $order, ?Client $client): string
     {
-        $parts = [];
-
+        // Return only the street/address line.
+        // Ville, region, and code_postale are stored in their own columns
+        // (livraison_ville, livraison_region, livraison_code_postale) and rendered
+        // separately in the print template — do NOT include them here to avoid duplication.
         $street = trim(((string) ($order->livraison_adresse1 ?? '')) . ' ' . ((string) ($order->livraison_adresse2 ?? '')));
         if ($street === '') {
             $street = trim(((string) ($order->adresse1 ?? '')) . ' ' . ((string) ($order->adresse2 ?? '')));
@@ -225,26 +227,7 @@ class OrderToBlService
         if ($street === '' && $client) {
             $street = trim((string) ($client->adresse ?? ''));
         }
-        if ($street !== '') {
-            $parts[] = $street;
-        }
-
-        $ville = trim((string) ($order->livraison_ville ?? $order->ville ?? ($client->ville ?? '')));
-        if ($ville !== '') {
-            $parts[] = $ville;
-        }
-
-        $region = trim((string) ($order->livraison_region ?? $order->region ?? ($client->region ?? '')));
-        if ($region !== '') {
-            $parts[] = $region;
-        }
-
-        $cp = trim((string) ($order->livraison_code_postale ?? $order->code_postale ?? ($client->code_postale ?? '')));
-        if ($cp !== '') {
-            $parts[] = $cp;
-        }
-
-        return implode(' - ', $parts);
+        return $street;
     }
 
     protected function audit(string $action, $entity, array $after = []): void

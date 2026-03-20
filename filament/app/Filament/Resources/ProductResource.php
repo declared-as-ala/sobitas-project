@@ -17,9 +17,13 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Schema as DbSchema;
 
 class ProductResource extends Resource
 {
+    /** @var array<string, bool> */
+    private static array $productColumnsCache = [];
+
     protected static ?string $model = Product::class;
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-cube';
@@ -29,6 +33,19 @@ class ProductResource extends Resource
     protected static ?int $navigationSort = 1;
 
     protected static ?string $recordTitleAttribute = 'designation_fr';
+
+    private static function hasProductColumn(string $column): bool
+    {
+        if (array_key_exists($column, self::$productColumnsCache)) {
+            return self::$productColumnsCache[$column];
+        }
+
+        try {
+            return self::$productColumnsCache[$column] = DbSchema::hasColumn('products', $column);
+        } catch (\Throwable) {
+            return self::$productColumnsCache[$column] = false;
+        }
+    }
 
     public static function form(Schema $schema): Schema
     {
@@ -177,6 +194,8 @@ class ProductResource extends Resource
                                 ->schema([
                                     Forms\Components\Repeater::make('faq')
                                         ->label('Questions (FAQ)')
+                                        ->visible(fn (): bool => self::hasProductColumn('faq'))
+                                        ->dehydrated(fn (): bool => self::hasProductColumn('faq'))
                                         ->schema([
                                             Forms\Components\TextInput::make('q')
                                                 ->label('Question')
@@ -191,6 +210,8 @@ class ProductResource extends Resource
                                         ->columnSpanFull(),
                                     Forms\Components\Textarea::make('nutrition_values')
                                         ->label('Nutrition Values')
+                                        ->visible(fn (): bool => self::hasProductColumn('nutrition_values'))
+                                        ->dehydrated(fn (): bool => self::hasProductColumn('nutrition_values'))
                                         ->rows(6)
                                         ->columnSpanFull(),
                                 ]),
@@ -215,14 +236,20 @@ class ProductResource extends Resource
                                             ->maxLength(500),
                                         Forms\Components\Textarea::make('seo_schema_description')
                                             ->label('Schema description (SEO)')
+                                            ->visible(fn (): bool => self::hasProductColumn('seo_schema_description'))
+                                            ->dehydrated(fn (): bool => self::hasProductColumn('seo_schema_description'))
                                             ->rows(3)
                                             ->columnSpanFull(),
                                         Forms\Components\Textarea::make('seo_review')
                                             ->label('Review (SEO)')
+                                            ->visible(fn (): bool => self::hasProductColumn('seo_review'))
+                                            ->dehydrated(fn (): bool => self::hasProductColumn('seo_review'))
                                             ->rows(3)
                                             ->columnSpanFull(),
                                         Forms\Components\TextInput::make('seo_aggregate_rating')
                                             ->label('AggregateRating (SEO)')
+                                            ->visible(fn (): bool => self::hasProductColumn('seo_aggregate_rating'))
+                                            ->dehydrated(fn (): bool => self::hasProductColumn('seo_aggregate_rating'))
                                             ->maxLength(512)
                                             ->columnSpanFull(),
                                     ]),

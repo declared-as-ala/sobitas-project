@@ -16,9 +16,9 @@ class QuickActionsWidget extends Widget
 {
     protected string $view = 'filament.widgets.quick-actions-widget';
 
-    protected static ?int $sort = -99;
+    protected static ?int $sort = 10;
 
-    protected int | string | array $columnSpan = 1;
+    protected int | string | array $columnSpan = 'full';
     
     protected static bool $isLazy = false;
 

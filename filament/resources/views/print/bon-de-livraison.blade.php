@@ -13,7 +13,11 @@
         @php
             $livrNom    = trim(($facture->livraison_nom ?? '') . ' ' . ($facture->livraison_prenom ?? ''));
             $livrAdr    = $facture->livraison_adresse1 ?? '';
-            $livrVille  = trim(($facture->livraison_ville ?? '') . ' ' . ($facture->livraison_region ?? '') . ' ' . ($facture->livraison_code_postale ?? ''));
+            $livrVille  = implode(' ', array_filter([
+                $facture->livraison_ville ?? '',
+                $facture->livraison_region ?? '',
+                $facture->livraison_code_postale ?? '',
+            ], fn($v) => $v !== ''));
             $livrEmail  = $facture->livraison_email ?? '';
             $livrPhone  = $facture->livraison_phone ?? '';
 

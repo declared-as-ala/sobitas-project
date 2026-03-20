@@ -125,12 +125,27 @@
                             </div>
 
                             {{-- Recipients table --}}
-                            @php $paginator = $this->getPaginatedSmsRecipients(); @endphp
+                            @php
+                                $paginator = $this->getPaginatedSmsRecipients();
+                                $smsPageItems = $paginator->items();
+                                $smsAllPageSelected = count($smsPageItems) > 0 && collect($smsPageItems)->every(fn($r) => in_array($r['row_id'], $this->selectedSmsRowIds, true));
+                            @endphp
                             <div class="sms-table-wrap">
                                 <table class="sms-table">
                                     <thead>
                                         <tr>
-                                            <th class="sms-th-check"></th>
+                                            <th class="sms-th-check">
+                                                <span
+                                                    wire:click="{{ $smsAllPageSelected ? 'deselectAllSms' : 'selectAllSms' }}"
+                                                    class="sms-checkbox {{ $smsAllPageSelected ? 'sms-checkbox--checked' : '' }}"
+                                                    title="{{ $smsAllPageSelected ? 'Tout décocher' : 'Sélectionner tous' }}"
+                                                    style="cursor:pointer"
+                                                >
+                                                    @if($smsAllPageSelected)
+                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="10" height="10"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+                                                    @endif
+                                                </span>
+                                            </th>
                                             <th>Nom</th>
                                             <th>Téléphone</th>
                                             <th>Type</th>
@@ -250,7 +265,7 @@
                                 <span class="sms-btn-count">{{ $recipientCount }}</span>
                             @endif
                         </span>
-                        <span wire:loading wire:target="send" class="sms-btn-send-inner">
+                        <span wire:loading wire:target="send" class="sms-btn-send-inner" style="display:none">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="18" height="18" class="sms-spin"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
                             Envoi en cours…
                         </span>

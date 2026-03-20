@@ -2,6 +2,8 @@
     $logoUrl  = config('marketing.logo_url', rtrim(config('app.url'), '/') . '/logo.png');
     $co       = $coordonnee ?? null;
     $cl       = $client ?? $facture->client ?? null;
+    $companyName = $co ? ($co->name ?? $co->nom ?? null) : null;
+    $clientPhone = $cl ? ($cl->phone_1 ?? $cl->phone ?? null) : null;
     $rows     = $invoice_rows ?? [];
     $totals   = $totals ?? [];
     $lastIdx  = count($totals) - 1;
@@ -66,8 +68,8 @@
                         <td class="col-half" style="width:48%;vertical-align:top;padding-right:16px;border-right:1px solid #e2e8f0;">
                             <p style="margin:0 0 7px;font-size:10px;font-weight:700;color:#ff4a00;text-transform:uppercase;letter-spacing:.1em;">De</p>
                             @if($co)
-                                @if(!empty($co->name ?? $co->nom ?? null))
-                                    <p style="margin:0 0 2px;font-size:14px;font-weight:700;color:#0f172a;">{{ $co->name ?? $co->nom }}</p>
+                                @if(!empty($companyName))
+                                    <p style="margin:0 0 2px;font-size:14px;font-weight:700;color:#0f172a;">{{ $companyName }}</p>
                                 @endif
                                 @if(!empty($co->adresse_fr))
                                     <p style="margin:2px 0;font-size:12px;color:#64748b;">{{ $co->adresse_fr }}</p>
@@ -97,8 +99,8 @@
                                 @if(!empty($cl->adresse))
                                     <p style="margin:2px 0;font-size:12px;color:#64748b;">{{ $cl->adresse }}</p>
                                 @endif
-                                @if(!empty($cl->phone_1 ?? $cl->phone ?? null))
-                                    <p style="margin:2px 0;font-size:12px;color:#64748b;">Tél : {{ $cl->phone_1 ?? $cl->phone }}</p>
+                                @if(!empty($clientPhone))
+                                    <p style="margin:2px 0;font-size:12px;color:#64748b;">Tél : {{ $clientPhone }}</p>
                                 @endif
                                 @if(!empty($cl->email))
                                     <p style="margin:2px 0;font-size:12px;color:#64748b;">{{ $cl->email }}</p>

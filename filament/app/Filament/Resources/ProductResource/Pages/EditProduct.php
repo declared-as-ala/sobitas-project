@@ -6,11 +6,28 @@ use App\Filament\Resources\ProductResource;
 use App\Services\Media\ConvertUploadedImageToWebp;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class EditProduct extends EditRecord
 {
+    /** @var array<string, bool> */
+    private static array $productColumnsCache = [];
+
     protected static string $resource = ProductResource::class;
+
+    private static function hasProductColumn(string $column): bool
+    {
+        if (array_key_exists($column, self::$productColumnsCache)) {
+            return self::$productColumnsCache[$column];
+        }
+
+        try {
+            return self::$productColumnsCache[$column] = Schema::hasColumn('products', $column);
+        } catch (\Throwable) {
+            return self::$productColumnsCache[$column] = false;
+        }
+    }
 
     protected function getHeaderActions(): array
     {
@@ -53,6 +70,19 @@ class EditProduct extends EditRecord
         }
 
         unset($data['_slug_auto_source']);
+
+        // Deployment safety: if migrations were skipped, don't write unknown columns.
+        foreach ([
+            'faq',
+            'nutrition_values',
+            'seo_schema_description',
+            'seo_review',
+            'seo_aggregate_rating',
+        ] as $column) {
+            if (! self::hasProductColumn($column)) {
+                unset($data[$column]);
+            }
+        }
 
         $converter = app(ConvertUploadedImageToWebp::class);
         if (! empty($data['cover'])) {

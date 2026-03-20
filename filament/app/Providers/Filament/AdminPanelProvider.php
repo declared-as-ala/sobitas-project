@@ -11,11 +11,6 @@ use App\Filament\Pages\HistoriqueClient;
 use App\Filament\Pages\SendEmail;
 use App\Filament\Pages\SendSms;
 use App\Filament\Pages\Stock\StockDashboard;
-use App\Filament\Pages\Stock\StockProductsPage;
-use App\Filament\Pages\Stock\StockMovementsPage;
-use App\Filament\Pages\Stock\StockAlertsPage;
-use App\Filament\Pages\Stock\StockAdjustmentsPage;
-use App\Filament\Pages\Stock\StockReportsPage;
 use App\Filament\Pages\MediaPage;
 use App\Filament\Resources\AnnonceResource;
 use App\Filament\Resources\ArticleResource;
@@ -176,11 +171,7 @@ class AdminPanelProvider extends PanelProvider
                 HistoriqueClient::class,
                 SendSms::class,
                 SendEmail::class,
-                // Gestion de stock
                 StockDashboard::class,
-                StockProductsPage::class,
-                StockAlertsPage::class,
-                StockReportsPage::class,
             ])
             ->widgets([
                 AccountWidget::class,
