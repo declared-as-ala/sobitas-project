@@ -101,56 +101,59 @@ class FactureResource extends Resource
     {
         return $table
             ->modifyQueryUsing(fn (Builder $query) => $query
-                ->select(['factures.id', 'factures.numero', 'factures.client_id', 'factures.prix_ht', 'factures.remise', 'factures.pourcentage_remise', 'factures.frais_livraison', 'factures.net_a_payer', 'factures.created_at'])
+                ->select(['factures.id', 'factures.numero', 'factures.client_id', 'factures.prix_ht', 'factures.remise', 'factures.pourcentage_remise', 'factures.tva', 'factures.timbre', 'factures.net_a_payer', 'factures.created_at'])
                 ->with('client:id,name')
             )
             ->columns([
                 Tables\Columns\TextColumn::make('numero')
-                    ->label('N°')
+                    ->label('Numéro B.L')
                     ->searchable()
                     ->sortable()
                     ->weight(\Filament\Support\Enums\FontWeight::Bold),
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('Date de Facture')
+                    ->dateTime('d/m/Y')
+                    ->sortable()
+                    ->color('gray'),
                 Tables\Columns\TextColumn::make('client.name')
-                    ->label('Client')
+                    ->label('Clients')
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('prix_ht')
-                    ->label('Montant Total HT')
+                    ->label('Prix HT')
                     ->money('TND', divideBy: 1)
                     ->sortable()
                     ->alignEnd(),
                 Tables\Columns\TextColumn::make('remise')
-                    ->label('Montant Remise')
+                    ->label('Remise')
                     ->money('TND', divideBy: 1)
                     ->sortable()
                     ->alignEnd()
-                    ->placeholder('—')
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->placeholder('—'),
                 Tables\Columns\TextColumn::make('pourcentage_remise')
-                    ->label('Remise %')
+                    ->label('Pourcentage Remise')
                     ->suffix(' %')
                     ->sortable()
                     ->alignEnd()
-                    ->placeholder('—')
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('frais_livraison')
-                    ->label('Frais Livraison')
+                    ->placeholder('—'),
+                Tables\Columns\TextColumn::make('tva')
+                    ->label('TVA')
                     ->money('TND', divideBy: 1)
                     ->sortable()
                     ->alignEnd()
-                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->placeholder('—'),
+                Tables\Columns\TextColumn::make('timbre')
+                    ->label('Timbre')
+                    ->money('TND', divideBy: 1)
+                    ->sortable()
+                    ->alignEnd()
                     ->placeholder('—'),
                 Tables\Columns\TextColumn::make('net_a_payer')
-                    ->label('Montant Totale TTC')
+                    ->label('Prix TTC')
                     ->money('TND', divideBy: 1)
                     ->sortable()
                     ->alignEnd()
                     ->weight(\Filament\Support\Enums\FontWeight::Bold),
-                Tables\Columns\TextColumn::make('created_at')
-                    ->label('Date')
-                    ->dateTime('d/m/Y')
-                    ->sortable()
-                    ->color('gray'),
             ])
             ->defaultSort('created_at', 'desc')
             ->defaultPaginationPageOption(25)
