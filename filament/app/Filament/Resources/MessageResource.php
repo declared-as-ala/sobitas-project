@@ -16,15 +16,15 @@ class MessageResource extends Resource
 {
     protected static ?string $model = Message::class;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-chat-bubble-bottom-center-text';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-chat-bubble-bottom-center-text';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Marketing';
+    protected static string|\UnitEnum|null $navigationGroup = 'Marketing';
 
-    protected static ?string $navigationLabel = 'Templates SMS';
+    protected static ?string $navigationLabel = 'Messages';
 
-    protected static ?string $modelLabel = 'Template SMS';
+    protected static ?string $modelLabel = 'Message';
 
-    protected static ?string $pluralModelLabel = 'Templates SMS';
+    protected static ?string $pluralModelLabel = 'Messages';
 
     protected static ?int $navigationSort = 3;
 
@@ -33,16 +33,23 @@ class MessageResource extends Resource
         return $schema
             ->schema([
                 Section::make('Templates de messages SMS')
-                    ->description('Variables: [nom], [prenom], [num_commande], [etat], [produits], [total]')
+                    ->description('Variables disponibles : [nom], [prenom], [num_commande], [etat], [produits], [total]')
                     ->schema([
+                        Forms\Components\Textarea::make('msg_welcome')
+                            ->label('Msg bienvenue')
+                            ->rows(4)
+                            ->helperText('Message envoyé pour accueillir le client. Ex: Cher(e) client(e), nous vous remercions de votre confiance.')
+                            ->columnSpanFull(),
                         Forms\Components\Textarea::make('msg_etat_commande')
-                            ->label('Message état commande')
+                            ->label('Msg Etat Commande')
                             ->rows(4)
-                            ->helperText('Envoyé quand le statut change. Ex: Bonjour [prenom], votre commande [num_commande] est [etat]. Produits: [produits]. Total: [total] TND.'),
-                        Forms\Components\Textarea::make('msg_inscription')
-                            ->label('Message inscription')
+                            ->helperText('Envoyé quand le statut change. Variables: [prenom], [nom], [num_commande], [etat], [produits], [total]')
+                            ->columnSpanFull(),
+                        Forms\Components\Textarea::make('msg_passez_commande')
+                            ->label('Msg Passez Commande')
                             ->rows(4)
-                            ->helperText('Envoyé lors de la création de commande'),
+                            ->helperText('Envoyé à la création de commande. Variables: [nom], [prenom], [num_commande]')
+                            ->columnSpanFull(),
                     ]),
             ]);
     }
@@ -51,20 +58,32 @@ class MessageResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('id')
-                    ->label('ID'),
+                Tables\Columns\TextColumn::make('msg_welcome')
+                    ->label('Msg bienvenue')
+                    ->limit(80)
+                    ->wrap(),
                 Tables\Columns\TextColumn::make('msg_etat_commande')
-                    ->label('Message commande')
-                    ->limit(60),
-                Tables\Columns\TextColumn::make('msg_inscription')
-                    ->label('Message inscription')
-                    ->limit(60),
-                Tables\Columns\TextColumn::make('updated_at')
-                    ->label('Modifié le')
-                    ->dateTime('d/m/Y H:i'),
+                    ->label('Msg Etat Commande')
+                    ->limit(80)
+                    ->wrap(),
+                Tables\Columns\TextColumn::make('msg_passez_commande')
+                    ->label('Msg Passez Commande')
+                    ->limit(80)
+                    ->wrap(),
             ])
             ->actions([
-                Actions\EditAction::make(),
+                Actions\ViewAction::make()
+                    ->label('Vue'),
+                Actions\EditAction::make()
+                    ->label('Editer'),
+                Actions\DeleteAction::make()
+                    ->label('Supprimer'),
+            ])
+            ->bulkActions([
+                Actions\BulkActionGroup::make([
+                    Actions\DeleteBulkAction::make()
+                        ->label('Supprimer la sélection'),
+                ]),
             ]);
     }
 
@@ -75,4 +94,3 @@ class MessageResource extends Resource
         ];
     }
 }
-

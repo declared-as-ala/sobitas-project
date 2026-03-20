@@ -9,7 +9,7 @@ class ClientHistoriqueSearchWidget extends Widget
 {
     protected string $view = 'filament.widgets.client-historique-search-widget';
 
-    protected static ?int $sort = 25;
+    protected static ?int $sort = -150;
 
     protected int | string | array $columnSpan = 'full';
 

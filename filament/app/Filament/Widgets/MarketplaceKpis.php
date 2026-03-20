@@ -16,7 +16,7 @@ class MarketplaceKpis extends BaseWidget
 
     protected static bool $isLazy = true;
 
-    protected int | string | array $columnSpan = 1;
+    protected int | string | array $columnSpan = 'full';
 
     protected ?string $pollingInterval = null; // Manual refresh only
 
