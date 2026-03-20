@@ -273,4 +273,20 @@ Route::middleware(['auth'])->group(function () {
             'code_postale' => $c->code_postale
         ])]);
     })->name('api.pos-clients');
+
+    Route::post('/api/pos-clients', function() {
+        $data = request()->validate([
+            'name'      => 'required|string|max:255',
+            'phone_1'   => 'nullable|string|max:50',
+            'adresse'   => 'nullable|string|max:500',
+            'matricule' => 'nullable|string|max:255',
+        ]);
+        $client = \App\Models\Client::create($data);
+        return response()->json([
+            'id'      => $client->id,
+            'text'    => $client->name . ' (' . ($client->phone_1 ?? '') . ')',
+            'phone_1' => $client->phone_1,
+            'adresse' => $client->adresse,
+        ]);
+    })->name('api.pos-clients.store');
 });

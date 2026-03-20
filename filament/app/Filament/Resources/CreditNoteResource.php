@@ -84,12 +84,6 @@ class CreditNoteResource extends Resource
                 Tables\Columns\TextColumn::make('numero')->label('N°')->searchable()->sortable(),
                 Tables\Columns\TextColumn::make('factureTva.numero')->label('Facture')->sortable(),
                 Tables\Columns\TextColumn::make('total_ttc')->label('Montant TTC')->money('TND')->sortable(),
-                Tables\Columns\TextColumn::make('status')
-                    ->label('Statut')
-                    ->badge()
-                    ->formatStateUsing(fn ($state) => $state?->label() ?? (is_string($state) ? $state : '—'))
-                    ->color(fn ($state) => ($state?->value ?? '') === 'issued' ? 'success' : 'gray')
-                    ->toggleable(),
                 Tables\Columns\TextColumn::make('issued_at')->label('Émis le')->dateTime('d/m/Y')->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('created_at')->label('Créé le')->dateTime('d/m/Y')->sortable(),
             ])

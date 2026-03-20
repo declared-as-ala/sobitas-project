@@ -61,7 +61,7 @@ class FactureTvaResource extends Resource
     {
         return $table
             ->modifyQueryUsing(fn (Builder $query) => $query
-                ->select(['facture_tvas.id', 'facture_tvas.numero', 'facture_tvas.status', 'facture_tvas.client_id', 'facture_tvas.prix_ht', 'facture_tvas.remise', 'facture_tvas.tva', 'facture_tvas.timbre', 'facture_tvas.prix_ttc', 'facture_tvas.created_at'])
+                ->select(['facture_tvas.id', 'facture_tvas.numero', 'facture_tvas.client_id', 'facture_tvas.prix_ht', 'facture_tvas.remise', 'facture_tvas.tva', 'facture_tvas.timbre', 'facture_tvas.prix_ttc', 'facture_tvas.created_at'])
                 ->with('client:id,name')
             )
             ->columns([
@@ -102,18 +102,6 @@ class FactureTvaResource extends Resource
                     ->sortable()
                     ->alignEnd()
                     ->placeholder('—'),
-                Tables\Columns\TextColumn::make('status')
-                    ->label('Statut')
-                    ->badge()
-                    ->formatStateUsing(fn ($state) => $state?->label() ?? (is_string($state) ? $state : '—'))
-                    ->color(fn ($state) => match ($state?->value ?? '') {
-                        'issued' => 'success',
-                        'paid' => 'success',
-                        'partially_paid' => 'warning',
-                        'canceled' => 'danger',
-                        default => 'gray',
-                    })
-                    ->toggleable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Date')
                     ->dateTime('d/m/Y')

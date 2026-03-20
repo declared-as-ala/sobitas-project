@@ -90,11 +90,6 @@ class PageResource extends Resource
                     ->label('Slug')
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('status')
-                    ->label('Statut')
-                    ->badge()
-                    ->formatStateUsing(fn (string $state): string => Page::getStatusOptions()[$state] ?? $state)
-                    ->color(fn (string $state): string => $state === Page::STATUS_ACTIVE ? 'success' : 'gray'),
                 Tables\Columns\TextColumn::make('updated_at')
                     ->label('Modifié le')
                     ->dateTime('d/m/Y H:i')

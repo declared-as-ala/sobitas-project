@@ -70,6 +70,11 @@ class CreateFacture extends CreateRecord
         ]));
     }
 
+    public function save(bool $shouldRedirect = true, bool $shouldSendSavedNotification = true): void
+    {
+        $this->create();
+    }
+
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         $nb = Facture::whereYear('created_at', date('Y'))->count() + 1;

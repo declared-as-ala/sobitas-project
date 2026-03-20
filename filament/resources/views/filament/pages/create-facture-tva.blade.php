@@ -186,6 +186,9 @@ body:has(.ftva-page) .fi-form-actions { display: none !important; }
                         <label style="font-size:12px;">Matricule Fiscal</label>
                         <input class="fc-input" style="background:#fff;" id="new_mf">
                     </div>
+                    <div style="text-align:right;margin-top:12px;">
+                        <button type="button" class="btn-ajouter-client" onclick="ftvaCreateClient()">Créer le client</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -618,6 +621,49 @@ function ftvaAnnulerClient() {
     document.getElementById('ftva-add-client').style.display    = 'none';
     ['new_name','new_adresse','new_phone','new_mf'].forEach(function (id) {
         var el = document.getElementById(id); if (el) el.value = '';
+    });
+}
+
+// ── Create new client via API ─────────────────────────────────────────────────
+function ftvaCreateClient() {
+    var name    = (document.getElementById('new_name').value || '').trim();
+    var phone   = (document.getElementById('new_phone').value || '').trim();
+    var adresse = (document.getElementById('new_adresse').value || '').trim();
+    var mf      = (document.getElementById('new_mf').value || '').trim();
+
+    if (!name) { Swal.fire('Erreur', 'Le nom du client est obligatoire', 'warning'); return; }
+
+    var btn = document.querySelector('#ftva-add-client .btn-ajouter-client');
+    if (btn) { btn.disabled = true; btn.textContent = 'En cours…'; }
+
+    var csrfToken = document.querySelector('meta[name="csrf-token"]');
+    fetch('/api/pos-clients', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': csrfToken ? csrfToken.getAttribute('content') : ''
+        },
+        body: JSON.stringify({ name: name, phone_1: phone, adresse: adresse, matricule: mf })
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(client) {
+        if (!client.id) throw new Error('Création échouée');
+
+        var $sel = $('#ftva_client_id');
+        $sel.append(new Option(client.text, client.id, true, true)).trigger('change.select2');
+        document.getElementById('ftva_adr').value   = client.adresse || '';
+        document.getElementById('ftva_phone').value = client.phone_1 || '';
+
+        ftvaAnnulerClient();
+        Swal.fire({ icon: 'success', title: 'Client créé', timer: 1200, showConfirmButton: false });
+    })
+    .catch(function(err) {
+        console.error('ftvaCreateClient error', err);
+        Swal.fire('Erreur', 'Impossible de créer le client. Vérifiez les informations.', 'error');
+    })
+    .finally(function() {
+        if (btn) { btn.disabled = false; btn.textContent = 'Créer le client'; }
     });
 }
 

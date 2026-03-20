@@ -89,7 +89,7 @@ class QuotationResource extends Resource
         return $table
             // PERF: Select only needed columns + eager load client
             ->modifyQueryUsing(fn (Builder $query) => $query
-                ->select(['quotations.id', 'quotations.numero', 'quotations.client_id', 'quotations.prix_ht', 'quotations.remise', 'quotations.tva', 'quotations.prix_ttc', 'quotations.net_a_payer', 'quotations.created_at', 'quotations.statut'])
+                ->select(['quotations.id', 'quotations.numero', 'quotations.client_id', 'quotations.prix_ht', 'quotations.remise', 'quotations.tva', 'quotations.prix_ttc', 'quotations.net_a_payer', 'quotations.created_at'])
                 ->with('client:id,name')
             )
             ->striped()
@@ -131,23 +131,6 @@ class QuotationResource extends Resource
                     ->sortable()
                     ->alignEnd()
                     ->weight(\Filament\Support\Enums\FontWeight::Bold),
-                Tables\Columns\TextColumn::make('statut')
-                    ->label('Statut')
-                    ->badge()
-                    ->formatStateUsing(fn (?string $state): string => match ($state) {
-                        'brouillon' => 'Brouillon',
-                        'valide' => 'Validé',
-                        'refuse' => 'Refusé',
-                        'en_attente' => 'En attente',
-                        default => '—',
-                    })
-                    ->color(fn (?string $state): string => match ($state) {
-                        'brouillon' => 'gray',
-                        'valide' => 'success',
-                        'refuse' => 'danger',
-                        'en_attente' => 'warning',
-                        default => 'gray',
-                    }),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Date')
                     ->dateTime('d/m/Y')
