@@ -24,7 +24,7 @@ class RevenueBySourcePieChart extends ChartWidget
         'xl'      => 1,
     ];
 
-    protected ?string $maxHeight = '320px';
+    protected ?string $maxHeight = '380px';
 
     protected ?string $pollingInterval = null;
 
@@ -65,12 +65,18 @@ class RevenueBySourcePieChart extends ChartWidget
                 'datasets' => [[
                     'data' => $data,
                     'backgroundColor' => [
-                        'rgba(245, 158, 11, 0.85)',
-                        'rgba(239, 68, 68, 0.85)',
-                        'rgba(16, 185, 129, 0.85)',
+                        'rgba(99,  102, 241, 0.88)',  // indigo  – Tickets caisse
+                        'rgba(245, 158,  11, 0.88)',  // amber   – Bons de livraison
+                        'rgba( 16, 185, 129, 0.88)',  // emerald – Factures TVA
                     ],
-                    'borderWidth' => 1,
-                    'hoverOffset' => 4,
+                    'hoverBackgroundColor' => [
+                        'rgba(99,  102, 241, 1)',
+                        'rgba(245, 158,  11, 1)',
+                        'rgba( 16, 185, 129, 1)',
+                    ],
+                    'borderColor'  => '#ffffff',
+                    'borderWidth'  => 3,
+                    'hoverOffset'  => 8,
                 ]],
                 'labels' => $labels,
             ];
@@ -79,16 +85,44 @@ class RevenueBySourcePieChart extends ChartWidget
 
     protected function getType(): string
     {
-        return 'pie';
+        return 'doughnut';
     }
 
     protected function getOptions(): array
     {
         return [
+            'cutout' => '62%',
+            'animation' => [
+                'animateRotate' => true,
+                'animateScale'  => false,
+                'duration'      => 700,
+                'easing'        => 'easeInOutQuart',
+            ],
             'plugins' => [
                 'legend' => [
-                    'display' => true,
+                    'display'  => true,
                     'position' => 'bottom',
+                    'labels'   => [
+                        'padding'     => 16,
+                        'boxWidth'    => 12,
+                        'boxHeight'   => 12,
+                        'borderRadius'=> 4,
+                        'usePointStyle' => false,
+                        'font'        => ['size' => 12, 'weight' => '500'],
+                        'color'       => '#6b7280',
+                    ],
+                ],
+                'tooltip' => [
+                    'enabled'     => true,
+                    'padding'     => 10,
+                    'cornerRadius'=> 8,
+                    'callbacks'   => [
+                        'label' => "function(ctx){
+                            var total=ctx.dataset.data.reduce(function(a,b){return a+b;},0);
+                            var pct=total>0?(ctx.parsed/total*100).toFixed(1):'0.0';
+                            return ' '+ctx.label.split(' — ')[0]+': '+Number(ctx.parsed).toLocaleString('fr-TN',{minimumFractionDigits:3})+' DT ('+pct+'%)';
+                        }",
+                    ],
                 ],
             ],
         ];
