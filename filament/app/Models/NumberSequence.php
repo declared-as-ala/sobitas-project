@@ -17,16 +17,26 @@ class NumberSequence extends Model
     ];
 
     /**
-     * Get next number for the given prefix and year (e.g. BL, 2026) with lock.
+     * Get next number for the given prefix and year (e.g. CMD, 2026) with lock.
+     *
+     * Uses INSERT IGNORE before lockForUpdate so concurrent requests never both
+     * see "no row" and try to create it simultaneously (which would produce a
+     * race condition despite the UNIQUE constraint on name+year).
      */
     public static function getNextFor(string $name, int $year): int
     {
         return (int) DB::transaction(function () use ($name, $year) {
-            $seq = self::where('name', $name)->where('year', $year)->lockForUpdate()->first();
-            if (!$seq) {
-                $seq = self::create(['name' => $name, 'year' => $year, 'last_number' => 0]);
-            }
+            // Ensure the row exists (INSERT IGNORE is a no-op if it already does).
+            DB::statement(
+                'INSERT IGNORE INTO number_sequences (name, year, last_number, created_at, updated_at)
+                 VALUES (?, ?, 0, NOW(), NOW())',
+                [$name, $year]
+            );
+
+            // Lock the row for the duration of this transaction then increment.
+            $seq = self::where('name', $name)->where('year', $year)->lockForUpdate()->firstOrFail();
             $seq->increment('last_number');
+
             return $seq->fresh()->last_number;
         });
     }

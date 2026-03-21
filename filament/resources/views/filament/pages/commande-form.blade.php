@@ -1,14 +1,33 @@
 @php
     $coordinate = \App\Models\Coordinate::getCached();
     $data   = $this->form->getRawState();
-    
-    $selProductIds = collect($data['details'] ?? [])->pluck('produit_id')->filter()->toArray();
+
+    $record = $this->record;
+    $isEdit = $record !== null;
+
+    // Load details directly from the Eloquent relationship in edit mode.
+    // Reading from getRawState()['details'] is unreliable: Livewire serialises
+    // nested arrays in Hidden fields to JSON and may return null/empty on the
+    // first render before JS hydration completes.
+    if ($isEdit && $record) {
+        $record->loadMissing('details');
+        $detailsRows = $record->details->map(fn ($d) => [
+            'produit_id'    => $d->produit_id,
+            'qte'           => $d->qte,
+            'prix_unitaire' => $d->prix_unitaire,
+        ])->toArray();
+    } else {
+        $detailsRows = [];
+    }
+
+    $selProductIds = collect($detailsRows)->pluck('produit_id')->filter()->toArray();
     $selProducts = [];
     if (!empty($selProductIds)) {
         $selProducts = \App\Models\Product::whereIn('id', $selProductIds)->get(['id','designation_fr','code_product','qte'])->keyBy('id');
     }
-    
-    $selClientId = $data['user_id'] ?? null;
+
+    // Resolve client for display (user_id holds the client FK on commandes)
+    $selClientId = $record?->user_id ?? $data['user_id'] ?? null;
     $selClient = $selClientId ? \App\Models\Client::find($selClientId) : null;
     $max = 100;
 
@@ -16,9 +35,6 @@
     $logoSrc  = is_file($logoPath)
         ? 'data:' . (mime_content_type($logoPath) ?: 'image/png') . ';base64,' . base64_encode(file_get_contents($logoPath))
         : null;
-
-    $record = $this->record;
-    $isEdit = $record !== null;
 @endphp
 
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
@@ -312,7 +328,7 @@ $(document).ready(function() {
     // }
 
     var selProducts = @json($selProducts);
-    var existingLines = @json($data['details'] ?? []);
+    var existingLines = @json($detailsRows);
     if (existingLines.length > 0) {
         existingLines.forEach(function(line) {
             if (line.produit_id && j < cmdMax) {
