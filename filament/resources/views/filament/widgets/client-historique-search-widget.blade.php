@@ -50,7 +50,7 @@
         gap: 0.75rem;
         align-items: end;
     }
-    @media (max-width: 640px) {
+    @@media (max-width: 640px) {
         .chs-form { grid-template-columns: 1fr; }
         .chs-or-sep { display: none; }
     }
@@ -250,7 +250,8 @@
 
                 <div class="chs-actions">
                     <button
-                        type="submit"
+                        type="button"
+                        wire:click="submitClientHistoriqueSearch"
                         wire:loading.attr="disabled"
                         wire:target="submitClientHistoriqueSearch"
                         class="chs-btn-primary"
