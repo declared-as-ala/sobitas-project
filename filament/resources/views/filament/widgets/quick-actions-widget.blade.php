@@ -11,6 +11,7 @@
     ];
 @endphp
 
+<x-filament-widgets::widget>
 <style>
     /* ── Quick Actions ── */
     .qa-wrap { display: flex; flex-direction: column; gap: 1rem; }
@@ -107,7 +108,6 @@
     }
 </style>
 
-<x-filament-widgets::widget>
     <x-filament::section>
         <div class="qa-wrap">
             <div class="qa-header">

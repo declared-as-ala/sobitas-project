@@ -1,3 +1,4 @@
+<x-filament-widgets::widget>
 <style>
     /* ── Dashboard Header ── */
     .dh-bar {
@@ -165,9 +166,20 @@
     }
 </style>
 
-<x-filament-widgets::widget>
     <x-filament::section>
-        <div class="dh-bar">
+        {{--
+            Alpine manages the active-button highlight and badge text client-side.
+            DashboardHeaderWidget calls skipRender() in updatedPreset() so there is
+            NO Livewire DOM morph when a preset is clicked — eliminating the multi-root
+            morph bug that was wiping out sibling widgets.
+        --}}
+        <div
+            class="dh-bar"
+            x-data="{
+                preset: '{{ $this->preset }}',
+                labels: @js($this->getPresets())
+            }"
+        >
             {{-- Brand --}}
             <div class="dh-brand">
                 <div class="dh-brand-badge">
@@ -183,10 +195,10 @@
 
             {{-- Controls --}}
             <div class="dh-controls">
-                {{-- Period badge --}}
+                {{-- Period badge — text driven by Alpine so it updates without a server re-render --}}
                 <span class="dh-period-badge">
                     <span class="dh-period-dot"></span>
-                    {{ \App\Services\DateRangeFilterService::getPresets()[$this->preset] ?? $this->preset }}
+                    <span x-text="labels[preset] || preset"></span>
                 </span>
 
                 <span class="dh-sep"></span>
@@ -196,10 +208,9 @@
                     @foreach($this->getPresets() as $value => $label)
                         <button
                             type="button"
-                            wire:click="$set('preset', '{{ $value }}')"
-                            wire:loading.attr="disabled"
-                            wire:loading.class="opacity-50"
-                            class="dh-preset-btn {{ $this->preset === $value ? 'dh-preset-btn--active' : '' }}"
+                            @click="preset = '{{ $value }}'; $wire.set('preset', '{{ $value }}')"
+                            class="dh-preset-btn"
+                            :class="{ 'dh-preset-btn--active': preset === '{{ $value }}' }"
                         >
                             {{ $label }}
                         </button>

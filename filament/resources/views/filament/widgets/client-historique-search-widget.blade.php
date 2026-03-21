@@ -1,3 +1,4 @@
+<x-filament-widgets::widget>
 <style>
     /* ── Client Search Widget ── */
     .chs-wrap {
@@ -187,7 +188,6 @@
     .chs-btn-ghost svg { width: 14px; height: 14px; }
 </style>
 
-<x-filament-widgets::widget>
     <x-filament::section>
         <div class="chs-wrap">
             {{-- Header --}}

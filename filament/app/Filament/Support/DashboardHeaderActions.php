@@ -37,6 +37,11 @@ trait DashboardHeaderActions
         // Do NOT use replaceState/pushState here — URL manipulation from a Livewire
         // component can trigger Livewire's navigate router and cause a full page swap,
         // which destroys all widgets. Session is the source of truth for the period.
+        //
+        // skipRender() prevents the DashboardHeaderWidget from performing a DOM morph
+        // on preset changes. The active-button state and period badge are managed by
+        // Alpine.js in the blade, so no server re-render is needed.
+        $this->skipRender();
     }
 
     public function refreshStats(): void
