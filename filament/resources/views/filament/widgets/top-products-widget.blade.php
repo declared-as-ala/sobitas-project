@@ -9,178 +9,161 @@
                 $topByQty    = collect($topProducts)->sortByDesc('total_qty')->first();
                 $topByRev    = $topProducts[0] ?? null;
                 $topByOrders = collect($topProducts)->sortByDesc('total_orders')->first();
-                $maxRevenue  = (float) ($topProducts[0]['total_revenue_ht'] ?? 1);
-                $maxQty      = collect($topProducts)->max('total_qty') ?: 1;
+                $maxRevenue  = max((float) ($topProducts[0]['total_revenue_ht'] ?? 1), 0.01);
             @endphp
 
-            {{-- ── Podium: top 3 highlight cards ─────────────────────────────── --}}
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+            {{-- ── Top 3 highlight cards ──────────────────────────────────────── --}}
+            <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:20px;">
 
-                {{-- Best revenue --}}
                 @if ($topByRev)
-                <div class="relative overflow-hidden rounded-2xl border border-amber-200 dark:border-amber-800/60 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/30 p-4">
-                    <div class="absolute top-0 right-0 w-16 h-16 opacity-10 text-6xl flex items-center justify-center select-none">💰</div>
-                    <span class="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-900/50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-amber-700 dark:text-amber-400 mb-2">
+                <div style="position:relative; overflow:hidden; border-radius:14px; border:1px solid #fde68a; background:linear-gradient(135deg,#fffbeb,#fff7ed); padding:14px 16px;">
+                    <div style="position:absolute;top:-4px;right:6px;font-size:52px;opacity:.08;line-height:1;pointer-events:none;user-select:none;">💰</div>
+                    <span style="display:inline-flex;align-items:center;gap:4px;background:#fef3c7;color:#92400e;border-radius:999px;padding:2px 10px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;">
                         🥇 Meilleur revenu
                     </span>
-                    <p class="font-semibold text-gray-900 dark:text-gray-100 text-sm leading-snug truncate" title="{{ $topByRev['name'] }}">
-                        {{ $topByRev['name'] }}
+                    <p style="font-size:13px;font-weight:600;color:#1f2937;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px;" title="{{ $topByRev['name'] }}">{{ $topByRev['name'] }}</p>
+                    <p style="font-size:20px;font-weight:800;color:#d97706;letter-spacing:-.5px;line-height:1.1;">
+                        {{ number_format((float)$topByRev['total_revenue_ht'], 3, ',', ' ') }}
+                        <span style="font-size:11px;font-weight:600;color:#b45309;">DT HT</span>
                     </p>
-                    <p class="mt-1.5 text-xl font-extrabold text-amber-600 dark:text-amber-400 tabular-nums leading-none">
-                        {{ number_format((float) $topByRev['total_revenue_ht'], 3, ',', ' ') }}
-                        <span class="text-xs font-semibold text-amber-500">DT HT</span>
-                    </p>
-                    <p class="mt-1 text-[11px] text-amber-700/70 dark:text-amber-400/70">
-                        {{ number_format((float) $topByRev['total_qty'], 0, ',', ' ') }} unités ·
-                        {{ number_format((int) $topByRev['total_orders'], 0, ',', ' ') }} docs
+                    <p style="font-size:11px;color:#92400e;opacity:.7;margin-top:3px;">
+                        {{ number_format((float)$topByRev['total_qty'], 0, ',', ' ') }} unités &middot; {{ number_format((int)$topByRev['total_orders'], 0, ',', ' ') }} docs
                     </p>
                 </div>
                 @endif
 
-                {{-- Most sold by qty --}}
                 @if ($topByQty)
-                <div class="relative overflow-hidden rounded-2xl border border-blue-200 dark:border-blue-800/60 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/30 p-4">
-                    <div class="absolute top-0 right-0 w-16 h-16 opacity-10 text-6xl flex items-center justify-center select-none">📦</div>
-                    <span class="inline-flex items-center gap-1 rounded-full bg-blue-100 dark:bg-blue-900/50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-blue-700 dark:text-blue-400 mb-2">
+                <div style="position:relative; overflow:hidden; border-radius:14px; border:1px solid #bfdbfe; background:linear-gradient(135deg,#eff6ff,#eef2ff); padding:14px 16px;">
+                    <div style="position:absolute;top:-4px;right:6px;font-size:52px;opacity:.08;line-height:1;pointer-events:none;user-select:none;">📦</div>
+                    <span style="display:inline-flex;align-items:center;gap:4px;background:#dbeafe;color:#1e40af;border-radius:999px;padding:2px 10px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;">
                         📦 Plus vendu (qté)
                     </span>
-                    <p class="font-semibold text-gray-900 dark:text-gray-100 text-sm leading-snug truncate" title="{{ $topByQty['name'] }}">
-                        {{ $topByQty['name'] }}
+                    <p style="font-size:13px;font-weight:600;color:#1f2937;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px;" title="{{ $topByQty['name'] }}">{{ $topByQty['name'] }}</p>
+                    <p style="font-size:20px;font-weight:800;color:#2563eb;letter-spacing:-.5px;line-height:1.1;">
+                        {{ number_format((float)$topByQty['total_qty'], 0, ',', ' ') }}
+                        <span style="font-size:11px;font-weight:600;color:#1d4ed8;">unités</span>
                     </p>
-                    <p class="mt-1.5 text-xl font-extrabold text-blue-600 dark:text-blue-400 tabular-nums leading-none">
-                        {{ number_format((float) $topByQty['total_qty'], 0, ',', ' ') }}
-                        <span class="text-xs font-semibold text-blue-500">unités</span>
-                    </p>
-                    <p class="mt-1 text-[11px] text-blue-700/70 dark:text-blue-400/70">
-                        {{ number_format((float) $topByQty['total_revenue_ht'], 3, ',', ' ') }} DT ·
-                        {{ number_format((int) $topByQty['total_orders'], 0, ',', ' ') }} docs
+                    <p style="font-size:11px;color:#1e40af;opacity:.7;margin-top:3px;">
+                        {{ number_format((float)$topByQty['total_revenue_ht'], 3, ',', ' ') }} DT &middot; {{ number_format((int)$topByQty['total_orders'], 0, ',', ' ') }} docs
                     </p>
                 </div>
                 @endif
 
-                {{-- Most documents --}}
                 @if ($topByOrders)
-                <div class="relative overflow-hidden rounded-2xl border border-emerald-200 dark:border-emerald-800/60 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/40 dark:to-teal-950/30 p-4">
-                    <div class="absolute top-0 right-0 w-16 h-16 opacity-10 text-6xl flex items-center justify-center select-none">📋</div>
-                    <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-900/50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-400 mb-2">
+                <div style="position:relative; overflow:hidden; border-radius:14px; border:1px solid #a7f3d0; background:linear-gradient(135deg,#ecfdf5,#f0fdfa); padding:14px 16px;">
+                    <div style="position:absolute;top:-4px;right:6px;font-size:52px;opacity:.08;line-height:1;pointer-events:none;user-select:none;">📋</div>
+                    <span style="display:inline-flex;align-items:center;gap:4px;background:#d1fae5;color:#065f46;border-radius:999px;padding:2px 10px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;">
                         📋 Forte demande
                     </span>
-                    <p class="font-semibold text-gray-900 dark:text-gray-100 text-sm leading-snug truncate" title="{{ $topByOrders['name'] }}">
-                        {{ $topByOrders['name'] }}
+                    <p style="font-size:13px;font-weight:600;color:#1f2937;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px;" title="{{ $topByOrders['name'] }}">{{ $topByOrders['name'] }}</p>
+                    <p style="font-size:20px;font-weight:800;color:#059669;letter-spacing:-.5px;line-height:1.1;">
+                        {{ number_format((int)$topByOrders['total_orders'], 0, ',', ' ') }}
+                        <span style="font-size:11px;font-weight:600;color:#047857;">documents</span>
                     </p>
-                    <p class="mt-1.5 text-xl font-extrabold text-emerald-600 dark:text-emerald-400 tabular-nums leading-none">
-                        {{ number_format((int) $topByOrders['total_orders'], 0, ',', ' ') }}
-                        <span class="text-xs font-semibold text-emerald-500">documents</span>
-                    </p>
-                    <p class="mt-1 text-[11px] text-emerald-700/70 dark:text-emerald-400/70">
-                        {{ number_format((float) $topByOrders['total_qty'], 0, ',', ' ') }} unités ·
-                        {{ number_format((float) $topByOrders['total_revenue_ht'], 3, ',', ' ') }} DT
+                    <p style="font-size:11px;color:#065f46;opacity:.7;margin-top:3px;">
+                        {{ number_format((float)$topByOrders['total_qty'], 0, ',', ' ') }} unités &middot; {{ number_format((float)$topByOrders['total_revenue_ht'], 3, ',', ' ') }} DT
                     </p>
                 </div>
                 @endif
 
             </div>
 
-            {{-- ── Column headers ──────────────────────────────────────────────── --}}
-            <div class="hidden sm:grid sm:grid-cols-[2rem_1fr_5rem_5rem_7rem] gap-x-3 px-3 mb-1">
-                <div></div>
-                <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">Produit</p>
-                <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 text-right">Qté</p>
-                <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 text-right">Docs</p>
-                <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 text-right">Revenu HT</p>
-            </div>
+            {{-- ── Ranked product table ────────────────────────────────────────── --}}
+            <div style="border-radius:12px;border:1px solid #f3f4f6;overflow:hidden;">
+                <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                    <thead>
+                        <tr style="background:#f9fafb;border-bottom:1px solid #e5e7eb;">
+                            <th style="padding:9px 14px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9ca3af;width:40px;">#</th>
+                            <th style="padding:9px 14px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9ca3af;">Produit</th>
+                            <th style="padding:9px 14px;text-align:right;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9ca3af;width:80px;">Qté</th>
+                            <th style="padding:9px 14px;text-align:right;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9ca3af;width:60px;">Docs</th>
+                            <th style="padding:9px 14px;text-align:right;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9ca3af;width:130px;">Revenu HT</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($topProducts as $index => $product)
+                            @php
+                                $rank    = $index + 1;
+                                $barPct  = round(((float)$product['total_revenue_ht'] / $maxRevenue) * 100);
 
-            {{-- ── Ranked product list ──────────────────────────────────────────── --}}
-            <div class="space-y-1.5">
-                @foreach ($topProducts as $index => $product)
-                    @php
-                        $rank     = $index + 1;
-                        $barPct   = $maxRevenue > 0 ? round(((float) $product['total_revenue_ht'] / $maxRevenue) * 100) : 0;
+                                [$rankBg, $rankColor, $rankRing, $rowBg, $barColor] = match($rank) {
+                                    1 => ['#fef3c7', '#92400e', '#fbbf24', '#fffdf7', 'linear-gradient(90deg,#f59e0b,#fb923c)'],
+                                    2 => ['#f3f4f6', '#6b7280', '#9ca3af', '#fafafa', 'linear-gradient(90deg,#9ca3af,#d1d5db)'],
+                                    3 => ['#ffedd5', '#9a3412', '#fb923c', '#fffbf8', 'linear-gradient(90deg,#f97316,#fb923c)'],
+                                    default => ['#f9fafb', '#6b7280', '#e5e7eb', '#ffffff', 'linear-gradient(90deg,#6366f1,#818cf8)'],
+                                };
 
-                        // Rank styling
-                        [$rankRing, $rankNumClass, $rankBg] = match($rank) {
-                            1 => ['ring-amber-300 dark:ring-amber-600',  'text-amber-600 dark:text-amber-400 font-extrabold', 'bg-amber-50 dark:bg-amber-900/20'],
-                            2 => ['ring-gray-300  dark:ring-gray-500',   'text-gray-500  dark:text-gray-400  font-bold',      'bg-gray-50  dark:bg-gray-800/30'],
-                            3 => ['ring-orange-300 dark:ring-orange-600','text-orange-500 dark:text-orange-400 font-bold',    'bg-orange-50 dark:bg-orange-900/20'],
-                            default => ['ring-gray-200 dark:ring-gray-700', 'text-gray-400 dark:text-gray-500 font-semibold',''],
-                        };
+                                $isTopRev    = $topByRev    && $product['name'] === $topByRev['name'];
+                                $isTopQty    = $topByQty    && $product['name'] === $topByQty['name'];
+                                $isTopOrders = $topByOrders && $product['name'] === $topByOrders['name'];
+                                $rowStyle    = $rank <= 3 ? "background:{$rowBg};" : '';
+                                $borderStyle = $index < count($topProducts) - 1 ? 'border-bottom:1px solid #f3f4f6;' : '';
+                            @endphp
+                            <tr style="{{ $rowStyle }}{{ $borderStyle }}">
 
-                        $barColor = match($rank) {
-                            1 => 'bg-gradient-to-r from-amber-400 to-orange-400',
-                            2 => 'bg-gradient-to-r from-gray-400 to-gray-300',
-                            3 => 'bg-gradient-to-r from-orange-400 to-orange-300',
-                            default => 'bg-gradient-to-r from-primary-400 to-primary-300',
-                        };
+                                {{-- Rank --}}
+                                <td style="padding:11px 14px;text-align:center;">
+                                    <span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:{{ $rankBg }};border:2px solid {{ $rankRing }};font-size:11px;font-weight:800;color:{{ $rankColor }};">
+                                        {{ $rank }}
+                                    </span>
+                                </td>
 
-                        // Smart badges
-                        $badges = [];
-                        if ($topByRev && $product['name'] === $topByRev['name'])    $badges[] = ['💰', 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400'];
-                        if ($topByQty && $product['name'] === $topByQty['name'])    $badges[] = ['📦', 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400'];
-                        if ($topByOrders && $product['name'] === $topByOrders['name']) $badges[] = ['📋', 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'];
-                    @endphp
+                                {{-- Product name + bar + badges --}}
+                                <td style="padding:11px 14px;">
+                                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:5px;">
+                                        <span style="font-size:13px;font-weight:600;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px;display:inline-block;" title="{{ $product['name'] }}">
+                                            {{ $product['name'] }}
+                                        </span>
+                                        @if ($isTopRev)
+                                            <span style="background:#fef3c7;color:#92400e;border-radius:999px;padding:1px 7px;font-size:10px;font-weight:700;white-space:nowrap;">💰</span>
+                                        @endif
+                                        @if ($isTopQty)
+                                            <span style="background:#dbeafe;color:#1e40af;border-radius:999px;padding:1px 7px;font-size:10px;font-weight:700;white-space:nowrap;">📦</span>
+                                        @endif
+                                        @if ($isTopOrders)
+                                            <span style="background:#d1fae5;color:#065f46;border-radius:999px;padding:1px 7px;font-size:10px;font-weight:700;white-space:nowrap;">📋</span>
+                                        @endif
+                                    </div>
+                                    <div style="height:4px;border-radius:999px;background:#f3f4f6;overflow:hidden;max-width:320px;">
+                                        <div style="height:4px;border-radius:999px;background:{{ $barColor }};width:{{ $barPct }}%;"></div>
+                                    </div>
+                                </td>
 
-                    <div class="group grid grid-cols-[2rem_1fr] sm:grid-cols-[2rem_1fr_5rem_5rem_7rem] items-center gap-x-3 rounded-xl border border-transparent hover:border-gray-200 dark:hover:border-gray-700 hover:bg-white dark:hover:bg-gray-800/50 px-3 py-2.5 transition-all duration-150 {{ $rank <= 3 ? $rankBg : '' }}">
+                                {{-- Qty --}}
+                                <td style="padding:11px 14px;text-align:right;white-space:nowrap;">
+                                    <span style="font-size:13px;font-weight:600;color:#374151;font-variant-numeric:tabular-nums;">
+                                        {{ number_format((float)$product['total_qty'], 0, ',', ' ') }}
+                                    </span>
+                                    <span style="font-size:10px;color:#9ca3af;margin-left:2px;">u.</span>
+                                </td>
 
-                        {{-- Rank --}}
-                        <div class="flex items-center justify-center w-7 h-7 rounded-full ring-2 {{ $rankRing }} bg-white dark:bg-gray-900 flex-shrink-0">
-                            <span class="text-xs {{ $rankNumClass }}">{{ $rank }}</span>
-                        </div>
+                                {{-- Docs --}}
+                                <td style="padding:11px 14px;text-align:right;white-space:nowrap;">
+                                    <span style="font-size:13px;font-weight:600;color:#374151;font-variant-numeric:tabular-nums;">
+                                        {{ number_format((int)$product['total_orders'], 0, ',', ' ') }}
+                                    </span>
+                                </td>
 
-                        {{-- Name + bar + badges --}}
-                        <div class="min-w-0">
-                            <div class="flex items-center gap-1.5 flex-wrap">
-                                <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate leading-tight" title="{{ $product['name'] }}">
-                                    {{ $product['name'] }}
-                                </p>
-                                @foreach ($badges as [$icon, $cls])
-                                    <span class="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold {{ $cls }}">{{ $icon }}</span>
-                                @endforeach
-                            </div>
-                            <div class="mt-1.5 h-1 w-full rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
-                                <div class="h-1 rounded-full {{ $barColor }} transition-all duration-300" style="width: {{ $barPct }}%"></div>
-                            </div>
-                            {{-- Mobile-only stats --}}
-                            <div class="flex items-center gap-3 mt-1 sm:hidden text-[11px] text-gray-500 dark:text-gray-400">
-                                <span>{{ number_format((float) $product['total_qty'], 0, ',', ' ') }} unités</span>
-                                <span>{{ number_format((int) $product['total_orders'], 0, ',', ' ') }} docs</span>
-                                <span class="font-bold text-primary-600 dark:text-primary-400">{{ number_format((float) $product['total_revenue_ht'], 3, ',', ' ') }} DT</span>
-                            </div>
-                        </div>
+                                {{-- Revenue --}}
+                                <td style="padding:11px 14px;text-align:right;white-space:nowrap;">
+                                    <span style="font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;color:{{ $rank === 1 ? '#d97706' : '#4f46e5' }};">
+                                        {{ number_format((float)$product['total_revenue_ht'], 3, ',', ' ') }}
+                                    </span>
+                                    <span style="font-size:10px;color:#9ca3af;margin-left:2px;">DT</span>
+                                </td>
 
-                        {{-- Qty --}}
-                        <div class="hidden sm:block text-right">
-                            <span class="text-sm font-semibold text-gray-700 dark:text-gray-300 tabular-nums">
-                                {{ number_format((float) $product['total_qty'], 0, ',', ' ') }}
-                            </span>
-                            <span class="text-[10px] text-gray-400 ml-0.5">u.</span>
-                        </div>
-
-                        {{-- Docs --}}
-                        <div class="hidden sm:flex items-center justify-end gap-1">
-                            <x-filament::icon icon="heroicon-o-document-text" class="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
-                            <span class="text-sm font-semibold text-gray-700 dark:text-gray-300 tabular-nums">
-                                {{ number_format((int) $product['total_orders'], 0, ',', ' ') }}
-                            </span>
-                        </div>
-
-                        {{-- Revenue --}}
-                        <div class="hidden sm:block text-right">
-                            <span class="text-sm font-bold tabular-nums {{ $rank === 1 ? 'text-amber-600 dark:text-amber-400' : 'text-primary-600 dark:text-primary-400' }}">
-                                {{ number_format((float) $product['total_revenue_ht'], 3, ',', ' ') }}
-                            </span>
-                            <span class="text-[10px] text-gray-400 ml-0.5">DT</span>
-                        </div>
-
-                    </div>
-                @endforeach
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
 
         @else
-            <div class="flex flex-col items-center justify-center py-12 text-center gap-3">
-                <div class="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-3xl">📊</div>
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 0;text-align:center;gap:12px;">
+                <div style="width:56px;height:56px;border-radius:16px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:28px;">📊</div>
                 <div>
-                    <p class="text-sm font-semibold text-gray-600 dark:text-gray-400">Aucune donnée disponible</p>
-                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Aucun produit vendu sur la période sélectionnée.</p>
+                    <p style="font-size:14px;font-weight:600;color:#6b7280;margin:0;">Aucune donnée disponible</p>
+                    <p style="font-size:12px;color:#9ca3af;margin:4px 0 0;">Aucun produit vendu sur la période sélectionnée.</p>
                 </div>
             </div>
         @endif
