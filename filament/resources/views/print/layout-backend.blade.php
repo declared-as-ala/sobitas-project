@@ -322,7 +322,7 @@
                 <header>
                     <div class="row">
                         <div class="col">
-                            <img src="{{ $logoUrl }}" alt="SOBITAS Logo" style="height: 300px; max-width: 580px; object-fit: contain; margin-bottom: 6px;" />
+                            <img src="{{ $logoUrl }}" alt="SOBITAS Logo" style="width: 220px; object-fit: contain; margin-bottom: 6px;" />
                             
                             <div class="header-info">
                                 @if(isset($coordonnee))
