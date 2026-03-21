@@ -117,18 +117,6 @@ class AdminPanelProvider extends PanelProvider
                 }
             )
             ->renderHook(
-                PanelsRenderHook::HEAD_END,
-                function (): string {
-                    $bg       = $this->resolveLoginBackgroundUrl();
-                    $bgCss    = $bg !== ''
-                        ? 'background-image:url(' . json_encode($bg) . ');background-size:cover;background-position:center;'
-                        : 'background-image:none;background-color:#111827;';
-
-                    return '<style>.fi-simple-layout{' . $bgCss . '}</style>';
-                },
-                scopes: \App\Filament\Pages\Auth\Login::class,
-            )
-            ->renderHook(
                 PanelsRenderHook::BODY_END,
                 fn (): string => implode("\n", [
                     '<script src="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.min.js"></script>',

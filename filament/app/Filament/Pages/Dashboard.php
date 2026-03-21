@@ -4,7 +4,6 @@ namespace App\Filament\Pages;
 
 use App\Filament\Widgets\ClientHistoriqueSearchWidget;
 use App\Filament\Widgets\DashboardHeaderWidget;
-use App\Filament\Widgets\MarketplaceKpis;
 use App\Filament\Widgets\QuickActionsWidget;
 use App\Filament\Widgets\RevenueBySourcePieChart;
 use App\Filament\Widgets\RevenueChart;
@@ -54,19 +53,23 @@ class Dashboard extends BaseDashboard
     public function getWidgets(): array
     {
         return [
-            QuickActionsWidget::class,          // sort=-200  — Action buttons (very top)
-            ClientHistoriqueSearchWidget::class, // sort=-150  — Client search
-            DashboardHeaderWidget::class,       // sort=-100  — Period filter
-            StatsOverview::class,              // sort=4     — 4 KPI cards (CA, Produits, Clients, Commandes)
-            MarketplaceKpis::class,            // sort=5     — Commandes / Nouveaux Clients KPI cards
-            RevenueChart::class,               // sort=6     — Évolution des ventes (bar, full-width)
-            RevenueBySourcePieChart::class,    // sort=7     — Répartition par source (col=1)
-            TopProductsWidget::class,          // sort=8     — Top 5 produits (full)
+            QuickActionsWidget::class,           // sort=-200 — Action buttons (very top)
+            ClientHistoriqueSearchWidget::class,  // sort=-150 — Client search
+            DashboardHeaderWidget::class,        // sort=-100 — Period filter
+            StatsOverview::class,               // sort=4    — 4 KPI cards (span=2 of 3 cols)
+            RevenueBySourcePieChart::class,     // sort=5    — Répartition HT (span=1, same row)
+            RevenueChart::class,                // sort=6    — Évolution des ventes (full-width)
+            TopProductsWidget::class,           // sort=8    — Top Produits table (full-width)
         ];
     }
 
     public function getColumns(): int | array
     {
-        return 2;
+        return [
+            'default' => 1,
+            'sm'      => 1,
+            'md'      => 3,
+            'xl'      => 3,
+        ];
     }
 }

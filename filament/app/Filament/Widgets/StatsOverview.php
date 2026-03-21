@@ -22,7 +22,12 @@ class StatsOverview extends BaseWidget
 
     protected static bool $isLazy = true;
 
-    protected int | string | array $columnSpan = 'full';
+    protected int | string | array $columnSpan = [
+        'default' => 1,
+        'sm'      => 1,
+        'md'      => 2,
+        'xl'      => 2,
+    ];
 
     protected ?string $pollingInterval = '60s';
 

@@ -4,12 +4,12 @@ namespace App\Filament\Widgets;
 
 use App\Services\DateRangeFilterService;
 use Carbon\Carbon;
-use Filament\Widgets\ChartWidget;
+use Filament\Widgets\Widget;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\On;
 
-class TopProductsWidget extends ChartWidget
+class TopProductsWidget extends Widget
 {
     protected static ?int $sort = 8;
 
@@ -17,95 +17,116 @@ class TopProductsWidget extends ChartWidget
 
     protected static bool $isLazy = true;
 
-    protected ?string $maxHeight = '250px';
+    protected static string $view = 'filament.widgets.top-products-widget';
 
-    protected ?string $pollingInterval = null;
+    public array $topProducts = [];
+
+    public string $periodLabel = 'Période';
 
     #[On('dashboardFilterUpdated')]
     public function refresh(): void
     {
+        $this->loadData();
     }
 
-    public function getHeading(): ?string
+    public function mount(): void
     {
-        $period = $this->getCurrentPeriod();
-        $label = $period['label'] ?? 'Période';
-
-        return "Top 5 Produits ({$label})";
+        $this->loadData();
     }
 
-    protected function getData(): array
+    private function loadData(): void
     {
         $period = $this->getCurrentPeriod();
-        $cacheKey = "dashboard:top_products:{$period['start']->format('Ymd')}_{$period['end']->format('Ymd')}";
+        $this->periodLabel = $period['label'] ?? 'Période';
+        $cacheKey = "dashboard:top_products_v2:{$period['start']->format('Ymd')}_{$period['end']->format('Ymd')}";
 
-        return Cache::remember($cacheKey, 300, function () use ($period) {
-            return $this->buildChartData($period);
+        $this->topProducts = Cache::remember($cacheKey, 300, function () use ($period) {
+            return $this->fetchTopProducts($period['start'], $period['end']);
         });
     }
 
-    private function buildChartData(array $period): array
+    private function fetchTopProducts(Carbon $start, Carbon $end): array
     {
-        $start = $period['start'];
-        $end = $period['end'];
-
         try {
-            $topProducts = DB::select("
+            $rows = DB::select("
                 SELECT
                     p.id,
-                    SUBSTRING(p.designation_fr, 1, 20) as name,
-                    ROUND(SUM(sales.prix_ttc), 2) as revenue
+                    p.designation_fr                          AS name,
+                    SUM(sales.qte)                            AS total_qty,
+                    ROUND(SUM(sales.revenue_ht), 3)           AS total_revenue_ht,
+                    COUNT(DISTINCT sales.source_id)           AS total_orders
                 FROM (
-                    SELECT df.produit_id, df.prix_ttc
+
+                    -- Factures (Bons de livraison)
+                    SELECT
+                        df.produit_id,
+                        df.qte,
+                        COALESCE(df.prix_ht, df.prix_ttc, 0) AS revenue_ht,
+                        CONCAT('f_', f.id)                    AS source_id
                     FROM details_factures df
                     INNER JOIN factures f ON df.facture_id = f.id
                     WHERE f.created_at BETWEEN ? AND ?
 
                     UNION ALL
 
-                    SELECT dft.produit_id, dft.prix_ttc
+                    -- Factures TVA standalone
+                    SELECT
+                        dft.produit_id,
+                        dft.qte,
+                        COALESCE(dft.prix_ht, dft.prix_ttc, 0) AS revenue_ht,
+                        CONCAT('ft_', ft.id)                    AS source_id
                     FROM details_facture_tvas dft
                     INNER JOIN facture_tvas ft ON dft.facture_tva_id = ft.id
                     WHERE ft.created_at BETWEEN ? AND ?
 
                     UNION ALL
 
-                    SELECT dt.produit_id, dt.prix_ttc
+                    -- Tickets caisse
+                    SELECT
+                        dt.produit_id,
+                        dt.qte,
+                        COALESCE(dt.prix_ht, dt.prix_ttc, 0) AS revenue_ht,
+                        CONCAT('t_', t.id)                   AS source_id
                     FROM details_tickets dt
                     INNER JOIN tickets t ON dt.ticket_id = t.id
                     WHERE t.created_at BETWEEN ? AND ?
+
+                    UNION ALL
+
+                    -- Commandes
+                    SELECT
+                        cd.produit_id,
+                        cd.qte,
+                        COALESCE(cd.prix_ht, cd.prix_unitaire, 0) AS revenue_ht,
+                        CONCAT('c_', c.id)                         AS source_id
+                    FROM commande_details cd
+                    INNER JOIN commandes c ON cd.commande_id = c.id
+                    WHERE c.created_at BETWEEN ? AND ?
+                      AND c.etat NOT IN ('annuler')
+
                 ) AS sales
                 INNER JOIN products p ON p.id = sales.produit_id
                 GROUP BY p.id, p.designation_fr
-                ORDER BY revenue DESC
-                LIMIT 5
-            ", [$start, $end, $start, $end, $start, $end]);
-        } catch (\Exception $e) {
-            return ['datasets' => [['data' => []]], 'labels' => []];
-        }
+                ORDER BY total_revenue_ht DESC
+                LIMIT 10
+            ", [$start, $end, $start, $end, $start, $end, $start, $end]);
 
-        return [
-            'datasets' => [
-                [
-                    'data' => array_column($topProducts, 'revenue'),
-                    'backgroundColor' => ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'],
-                ],
-            ],
-            'labels' => array_column($topProducts, 'name'),
-        ];
+            return array_map(fn ($r) => (array) $r, $rows);
+        } catch (\Exception $e) {
+            return [];
+        }
     }
 
     private function getCurrentPeriod(): array
     {
         $preset = session('dashboard.filter.preset', '30d');
-        $customStart = session('dashboard.filter.custom_start') ? Carbon::parse(session('dashboard.filter.custom_start')) : null;
-        $customEnd = session('dashboard.filter.custom_end') ? Carbon::parse(session('dashboard.filter.custom_end')) : null;
+        $customStart = session('dashboard.filter.custom_start')
+            ? Carbon::parse(session('dashboard.filter.custom_start'))
+            : null;
+        $customEnd = session('dashboard.filter.custom_end')
+            ? Carbon::parse(session('dashboard.filter.custom_end'))
+            : null;
 
         return DateRangeFilterService::getPeriod($preset, $customStart, $customEnd);
-    }
-
-    protected function getType(): string
-    {
-        return 'bar';
     }
 }
