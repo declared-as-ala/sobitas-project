@@ -207,7 +207,7 @@
 
             <div class="receipt_header">
                 <img src="{{ $logoUrl }}" data-holder-rendered="true"
-                    style="width:280px; margin:auto; display:block; float:none;" />
+                    style="width:320px; margin:auto; display:block; float:none;" />
                 <h1> {{ $coordonnee->short_description_ticket ?? '' }}</h1>
                 <h2>Adresse: {{ $coordonnee->adresse_fr ?? '' }} <span>Tel: {{ $coordonnee->phone_1 ?? '' }} @if (@$coordonnee->phone_2)
                             / {{ $coordonnee->phone_2 }}

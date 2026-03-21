@@ -6,7 +6,7 @@
     grid-template-columns: 1fr 1fr;
     gap: 1.25rem;
 }
-@media (max-width: 900px) { .tr-wrap { grid-template-columns: 1fr; } }
+@@media (max-width: 900px) { .tr-wrap { grid-template-columns: 1fr; } }
 
 .tr-panel {
     background: #fff;
@@ -265,13 +265,7 @@
         <div class="tr-list">
             @forelse ($regions as $i => $r)
                 <div class="tr-row">
-                    <div @class([
-                        'tr-rank',
-                        'r1' => $i === 0,
-                        'r2' => $i === 1,
-                        'r3' => $i === 2,
-                        'rn' => $i > 2,
-                    ])>
+                    <div class="tr-rank {{ $i === 0 ? 'r1' : ($i === 1 ? 'r2' : ($i === 2 ? 'r3' : 'rn')) }}">
                         {{ $i + 1 }}
                     </div>
 
