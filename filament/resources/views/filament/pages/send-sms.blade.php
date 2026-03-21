@@ -71,32 +71,6 @@
 
                         {{-- ── LIST / MULTI MODE ── --}}
                         @else
-                            @php $selectedRows = $this->getSelectedRows(); @endphp
-
-                            {{-- Chips of selected recipients --}}
-                            @if($selectedRows->isNotEmpty())
-                                <div class="sms-chips-wrap">
-                                    <div class="sms-chips">
-                                        @foreach($selectedRows as $row)
-                                            <span class="sms-chip">
-                                                <span class="sms-chip-body">
-                                                    <span class="sms-chip-name">{{ $row['name'] ?? $row['phone'] }}</span>
-                                                    <span class="sms-chip-phone">{{ $row['phone'] }}</span>
-                                                </span>
-                                                <button
-                                                    type="button"
-                                                    wire:click="removeSelectedRecipient('{{ $row['row_id'] }}')"
-                                                    class="sms-chip-remove"
-                                                    title="Retirer"
-                                                >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="10" height="10"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
-                                                </button>
-                                            </span>
-                                        @endforeach
-                                    </div>
-                                </div>
-                            @endif
-
                             {{-- Search + bulk actions row --}}
                             <div class="sms-controls-row">
                                 <div class="sms-search-wrap">
