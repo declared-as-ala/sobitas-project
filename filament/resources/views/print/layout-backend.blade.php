@@ -15,7 +15,7 @@
         }
 
         #invoice {
-            padding: 30px;
+            padding: 20px 30px;
             max-width: 1000px;
             margin: 0 auto;
         }
@@ -23,14 +23,14 @@
         .invoice {
             position: relative;
             background-color: #FFF;
-            min-height: 297mm;
-            padding: 15px;
+            /* REMOVED min-height: 297mm — was forcing blank space that pushed table to page 2 */
+            padding: 10px;
         }
 
         .invoice header {
-            padding: 10px 10px;
-            margin-bottom: 20px;
-            border-bottom: 1px solid #ff4a00; /* SOBITAS Orange separator */
+            padding: 8px 10px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #ff4a00;
             background: #f9fafb !important;
         }
 
@@ -42,7 +42,7 @@
 
         .col {
             flex: 1;
-            padding: 0 15px;
+            padding: 0 10px;
         }
 
         .col.company-details {
@@ -59,7 +59,7 @@
         }
 
         .invoice .contacts {
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
 
         .invoice .invoice-to {
@@ -72,37 +72,37 @@
         }
 
         .company-details .invoice-id {
-            margin: 0 0 10px 0;
+            margin: 0 0 6px 0;
             text-transform: uppercase;
-            font-size: 2rem;
+            font-size: 1.8rem;
             color: #333;
         }
 
         .date, .number {
             font-size: 1rem;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
         }
 
         .invoice main {
-            padding-bottom: 10px;
+            padding-bottom: 6px;
         }
 
         .invoice main .notices {
             padding-left: 6px;
-            font-size: 12pt;
-            border-left: 6px solid #ff4a00; /* SOBITAS Orange */
-            margin-top: 30px;
+            font-size: 11pt;
+            border-left: 6px solid #ff4a00;
+            margin-top: 15px;
         }
 
         .invoice main .notices .notice {
-            font-size: 12pt;
+            font-size: 11pt;
         }
 
         .invoice table {
             width: 100%;
             border-collapse: collapse;
             border-spacing: 0;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
 
         .invoice table td,
@@ -124,8 +124,8 @@
             border-bottom: none;
             white-space: nowrap;
             text-align: right;
-            padding: 8px 15px;
-            font-size: 11pt;
+            padding: 5px 12px;
+            font-size: 10pt;
             border-top: 1px solid #aaa;
         }
 
@@ -142,8 +142,9 @@
             text-align: center;
             color: #555;
             border-top: 1px solid #aaa;
-            padding: 8px 0;
+            padding: 6px 0;
             font-size: 9pt;
+            margin-top: 10px;
         }
 
         .table1 {
@@ -151,12 +152,12 @@
         }
 
         thead th {
-            background: #ff4a00 !important; /* SOBITAS Orange */
+            background: #ff4a00 !important;
             background-color: #ff4a00 !important;
             color: #fff !important;
             font-weight: 600 !important;
             text-transform: uppercase !important;
-            padding: 5px 6px !important;
+            padding: 4px 6px !important;
             text-align: left;
             border: 1px solid #ff4a00 !important;
         }
@@ -167,7 +168,7 @@
         .table1 td {
             border-right: 1px solid #b4b4b4;
             border-left: 1px solid #b4b4b4;
-            padding: 4px 6px !important;
+            padding: 3px 6px !important;
             font-size: 9pt;
         }
 
@@ -176,7 +177,7 @@
 
         tfoot td, tfoot th {
             text-align: right;
-            padding: 8px;
+            padding: 5px 8px;
             font-size: 10pt;
         }
 
@@ -186,12 +187,12 @@
         }
 
         tfoot tr:last-child th:last-child {
-            background: #ffebe0 !important; /* Highlight background */
+            background: #ffebe0 !important;
             border-top: 2px solid black !important;
             font-weight: bold;
             font-size: 11pt;
         }
-        
+
         tfoot .bt {
             border-top: 2px solid black !important;
             font-weight: bold;
@@ -199,8 +200,8 @@
 
         .text-gray-light {
             color: #555;
-            font-size: 11pt;
-            margin-bottom: 5px;
+            font-size: 10pt;
+            margin-bottom: 4px;
             margin-top: 0;
             text-transform: uppercase;
         }
@@ -209,8 +210,8 @@
         .contacts .email,
         .contacts .to {
             font-weight: normal;
-            font-size: 10pt;
-            line-height: 1.5;
+            font-size: 9.5pt;
+            line-height: 1.4;
         }
 
         .contacts b {
@@ -218,23 +219,23 @@
         }
 
         hr.custom-hr {
-            margin: 5px 0 10px 0;
+            margin: 4px 0 8px 0;
             border: 0;
             border-top: 1px solid #eee;
         }
-        
+
         .header-info {
-            font-size: 9pt;
-            line-height: 1.4;
+            font-size: 8.5pt;
+            line-height: 1.35;
             color: #444;
         }
 
         .hidden-print { display: block; }
 
-        @media print {
+        @@media print {
             .hidden-print { display: none !important; }
-            @page {
-                margin: 8mm;
+            @@page {
+                margin: 8mm 8mm 12mm 8mm;
             }
             body {
                 background-color: #fff;
@@ -246,17 +247,22 @@
                 max-width: none;
             }
             .invoice {
-                overflow: hidden !important;
+                /* REMOVED overflow:hidden — was clipping content across pages */
                 padding: 0;
             }
             .invoice footer {
-                position: fixed;
-                bottom: 0;
+                /* REMOVED position:fixed — was reserving bottom space and breaking layout */
+                margin-top: 8px;
             }
-            header, .client-info-block, .table1 {
+            header {
                 page-break-inside: avoid;
                 break-inside: avoid;
             }
+            .client-info-block {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+            /* table1 intentionally NOT avoided — large tables must break across pages */
             thead {
                 display: table-header-group;
             }
@@ -276,12 +282,13 @@
             thead th {
                 -webkit-print-color-adjust: exact;
                 color-adjust: exact;
+                print-color-adjust: exact;
             }
             tfoot tr:last-child th:last-child {
                 -webkit-print-color-adjust: exact;
                 color-adjust: exact;
+                print-color-adjust: exact;
             }
-            /* Suppress printed URL */
             a[href]:after {
                 content: "" !important;
             }
@@ -322,8 +329,8 @@
                 <header>
                     <div class="row">
                         <div class="col">
-                            <img src="{{ $logoUrl }}" alt="SOBITAS Logo" style="width: 220px; object-fit: contain; margin-bottom: 6px;" />
-                            
+                            <img src="{{ $logoUrl }}" alt="SOBITAS Logo" style="width: 260px; object-fit: contain; margin-bottom: 4px;" />
+
                             <div class="header-info">
                                 @if(isset($coordonnee))
                                     @if($coordonnee->email)
@@ -333,7 +340,7 @@
                                         <div><b>Adresse :</b> {{ $coordonnee->adresse_fr }}</div>
                                     @endif
                                     @if($coordonnee->phone_1)
-                                        <div><b>Tél :</b> {{ $coordonnee->phone_1 }} 
+                                        <div><b>Tél :</b> {{ $coordonnee->phone_1 }}
                                             @if($coordonnee->phone_2) / {{ $coordonnee->phone_2 }} @endif
                                         </div>
                                     @endif
@@ -344,7 +351,6 @@
                                         <div><b>MF :</b> {{ $coordonnee->matricule }}</div>
                                     @endif
                                 @else
-                                    <!-- Fallback if coordonnee is not available -->
                                     <div><b>Email :</b> contact@protein.tn</div>
                                     <div><b>Adresse :</b> Rue Ribat, 4000 Sousse Tunisie</div>
                                     <div><b>Tél :</b> +216 27 612 500 / +216 73 200 169</div>
@@ -357,7 +363,7 @@
                             <h1 class="invoice-id">{{ mb_strtoupper($documentTitle ?? 'DOCUMENT') }}</h1>
                             <div class="date"><b>Date :</b> {{ $documentDate ?? date('d/m/Y') }}</div>
                             <div class="number"><b>Numéro:</b> {{ $documentNumber ?? '' }}</div>
-                            
+
                             @yield('client-info-header')
                         </div>
                     </div>
