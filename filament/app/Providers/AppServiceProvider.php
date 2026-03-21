@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Filament\Widgets\TopCategoriesListWidget;
+use App\Filament\Widgets\TopRegionsWidget;
 use App\Models\Commande;
 use App\Models\Review;
 use App\Models\User;
@@ -29,8 +30,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Ensure Livewire can resolve the widget (avoids "Unable to find component" after deploy/cache)
+        // Ensure Livewire can resolve Filament widgets (avoids "Unable to find component" after deploy/cache)
         Livewire::component(TopCategoriesListWidget::class);
+        Livewire::component(TopRegionsWidget::class);
 
         // Set custom password reset URL for Filament panel
         ResetPassword::createUrlUsing(function ($notifiable, $token) {
