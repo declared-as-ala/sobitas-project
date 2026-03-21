@@ -13,7 +13,7 @@ use Livewire\Attributes\On;
 
 class StatsOverview extends BaseWidget
 {
-    protected static string $view = 'filament.widgets.stats-overview';
+    protected string $view = 'filament.widgets.stats-overview';
 
     #[On('dashboardFilterUpdated')]
     public function refresh(): void
