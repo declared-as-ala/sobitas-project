@@ -245,12 +245,16 @@ body:has(.bl-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !importa
                         <td><input class="tot-input" id="bl_pourcent_remise" value="0" step="0.001"
                                    onkeyup="blCalculate('pourcen_remise')" onchange="blCalculate('pourcen_remise')"></td>
                     </tr>
+                    <tr>
+                        <td>Frais de livraison</td>
+                        <td><input class="tot-input" id="bl_frais_livraison" value="0.000" step="0.001"
+                                   onkeyup="blCalculate()" onchange="blCalculate()"></td>
+                    </tr>
                     <tr class="bl-net-row">
                         <td>Net à payer</td>
                         <td><input class="tot-input" id="bl_net" disabled value="0.000"></td>
                     </tr>
                 </table>
-                <input type="hidden" id="bl_frais_livraison" value="0">
                 <input type="hidden" id="bl_apres_remise" value="0">
             </div>
         </div>
@@ -559,7 +563,8 @@ function blCalculate(typeRemise) {
 
     document.getElementById('bl_apres_remise').value = (totalHt - totRemise).toFixed(3);
 
-    var net = Math.max(0, totalHt - totRemise);
+    var frais = parseFloat(document.getElementById('bl_frais_livraison').value) || 0;
+    var net = Math.max(0, totalHt - totRemise + frais);
 
     document.getElementById('bl_p_ht').value = totalHt.toFixed(3);
     document.getElementById('bl_net').value  = net.toFixed(3);

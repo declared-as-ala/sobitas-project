@@ -9,6 +9,7 @@ use App\Filament\Widgets\RevenueBySourcePieChart;
 use App\Filament\Widgets\RevenueChart;
 use App\Filament\Widgets\StatsOverview;
 use App\Filament\Widgets\TopProductsWidget;
+use App\Filament\Widgets\TopRegionsWidget;
 use Filament\Pages\Dashboard as BaseDashboard;
 
 class Dashboard extends BaseDashboard
@@ -60,6 +61,7 @@ class Dashboard extends BaseDashboard
             RevenueBySourcePieChart::class,     // sort=5    — Répartition HT (span=1, same row)
             RevenueChart::class,                // sort=6    — Évolution des ventes (full-width)
             TopProductsWidget::class,           // sort=8    — Top Produits table (full-width)
+            TopRegionsWidget::class,            // sort=9    — Top Régions + Top Clients (full-width)
         ];
     }
 

@@ -79,10 +79,11 @@
     </tbody>
     <tfoot>
         @php
-            $totalHt = $calc_total_ht ?? $facture->prix_ht ?? 0;
-            $remise = $calc_remise ?? $facture->remise ?? 0;
+            $totalHt           = $calc_total_ht ?? $facture->prix_ht ?? 0;
+            $remise            = $calc_remise ?? $facture->remise ?? 0;
             $pourcentageRemise = $calc_pourcentage_remise ?? $facture->pourcentage_remise ?? 0;
-            $montantTtc = $calc_net_a_payer ?? ($totalHt - $remise);
+            $fraisLivraison    = $calc_frais ?? $facture->frais_livraison ?? 0;
+            $montantTtc        = $calc_net_a_payer ?? ($totalHt - $remise + $fraisLivraison);
         @endphp
 
         <tr>
@@ -100,6 +101,13 @@
             <th>Poucentage Remise %</th>
             <th class="text-right">{{ number_format((float) $pourcentageRemise, 1, '.', '') }} %</th>
         </tr>
+        @if((float)$fraisLivraison > 0)
+        <tr>
+            <td colspan="3"></td>
+            <th>Frais de livraison</th>
+            <th class="text-right">{{ $fmt($fraisLivraison) }}</th>
+        </tr>
+        @endif
         <tr>
             <td colspan="3"></td>
             <th class="bt">Montant Totale TTC</th>
@@ -162,7 +170,7 @@
     }
     
     document.addEventListener('DOMContentLoaded', function() {
-        var total = "{{ $fmt($calc_net_a_payer ?? (isset($facture) ? ($facture->prix_ttc ?? ($facture->prix_ht - $facture->remise)) : 0)) }}";
+        var total = "{{ $fmt($montantTtc) }}";
         total = total.replace(/\s+/g, '');
         var el = document.getElementById("words_{{ $documentNumber ?? 'doc' }}");
         if(el && total && parseFloat(total) > 0) {
