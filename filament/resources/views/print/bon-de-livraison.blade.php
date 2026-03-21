@@ -133,39 +133,51 @@
 @section('scripts')
 <script>
     function inWords(num) {
-        var a = ['', 'un ', 'deux ', 'trois ', 'quatre ', 'cinq ', 'six ', 'sept ', 'huit ', 'neuf ', 'dix ', 'onze ', 'douze ', 'treize ', 'quatorze ', 'quinze ', 'seize ', 'dix-sept ', 'dix-huit ', 'dix-neuf '];
-        var b = ['', '', 'vingt ', 'trente ', 'quarante ', 'cinquante ', 'soixante ', 'soixante-dix ', 'quatre-vingt ', 'quatre-vingt-dix '];
-        
-        if ((num = num.toString()).length > 9) return 'overflow';
-        
-        let tab = num.split('.');
-        let n = ('000000000' + tab[0]).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
-        
-        if (!n) return '';
-        
-        var str = '';
-        str += (n[1] != 0) ? (a[Number(n[1])] || b[n[1][0]] + a[n[1][1]]) : '';
-        str += (n[2] != 0) ? (str != '' ? '' : '') + (a[Number(n[2])] || b[n[2][0]] + a[n[2][1]]) + 'mille ' : '';
-        str += (n[3] != 0) ? (str != '' ? '' : '') + (a[Number(n[3])] || b[n[3][0]] + a[n[3][1]]) + 'cents ' : '';
-        str += (n[4] != 0) ? (str != '' ? '' : '') + (a[Number(n[4])] || b[n[4][0]] + a[n[4][1]]) : '';
-        str += (n[5] != 0) ? (str != '' ? '' : '') + (a[Number(n[5])] || b[n[5][0]] + a[n[5][1]]) : '';
-        
-        // Handle specific syntax cleaning
-        str = str.replace('un mille', 'mille');
-        str = str.replace('un cents', 'cent');
-        str = str.replace('cents ', 'cent ');
-        if (str.trim().endsWith('cent') && tab[0].endsWith('00')) str += 's'; // simple plural rule for cent
-        
-        let result = str.trim();
-        if (result == '') result = 'zéro';
-        
-        result += ' dinars';
-        
-        if (tab.length > 1) {
-            let nb = tab[1].padEnd(3, '0');
-            return result + ' et ' + Number(nb) + ' millimes';
+        var units = ['', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf',
+                     'dix', 'onze', 'douze', 'treize', 'quatorze', 'quinze', 'seize',
+                     'dix-sept', 'dix-huit', 'dix-neuf'];
+        var tens  = ['', '', 'vingt', 'trente', 'quarante', 'cinquante',
+                     'soixante', 'soixante', 'quatre-vingt', 'quatre-vingt'];
+
+        function below100(n) {
+            if (n < 20) return units[n];
+            var t = Math.floor(n / 10), u = n % 10;
+            if (t === 7) return 'soixante-' + units[10 + u];
+            if (t === 9) return 'quatre-vingt-' + units[10 + u];
+            if (t === 8) return u === 0 ? 'quatre-vingts' : 'quatre-vingt-' + units[u];
+            if (u === 0) return tens[t];
+            return tens[t] + (u === 1 ? ' et un' : '-' + units[u]);
         }
-        
+
+        function below1000(n, centsPlural) {
+            if (n < 100) return below100(n);
+            var h = Math.floor(n / 100), rest = n % 100;
+            if (rest === 0) return (h === 1 ? 'cent' : units[h] + (centsPlural && h > 1 ? ' cents' : ' cent'));
+            return (h === 1 ? 'cent' : units[h] + ' cent') + ' ' + below100(rest);
+        }
+
+        function convert(n) {
+            if (n === 0) return 'zéro';
+            if (n < 1000) return below1000(n, true);
+            if (n < 1000000) {
+                var th = Math.floor(n / 1000), rest = n % 1000;
+                var thWord = th === 1 ? 'mille' : below1000(th, false) + ' mille';
+                return rest === 0 ? thWord : thWord + ' ' + below1000(rest, true);
+            }
+            if (n < 1000000000) {
+                var m = Math.floor(n / 1000000), rest = n % 1000000;
+                var mWord = m === 1 ? 'un million' : below1000(m, true) + ' millions';
+                return rest === 0 ? mWord : mWord + ' ' + convert(rest);
+            }
+            return 'overflow';
+        }
+
+        var parts = num.toString().replace(',', '.').split('.');
+        var dinars   = parseInt(parts[0], 10) || 0;
+        var millimes = parseInt(((parts[1] || '') + '000').substring(0, 3), 10);
+
+        var result = convert(dinars) + (dinars <= 1 ? ' dinar' : ' dinars');
+        if (millimes > 0) result += ' et ' + millimes + (millimes === 1 ? ' millime' : ' millimes');
         return result;
     }
     
