@@ -45,12 +45,41 @@
     /* Form row */
     .chs-form {
         display: grid;
-        grid-template-columns: 1fr 1fr auto;
+        grid-template-columns: 1fr auto 1fr auto;
         gap: 0.75rem;
         align-items: end;
     }
     @media (max-width: 640px) {
         .chs-form { grid-template-columns: 1fr; }
+        .chs-or-sep { display: none; }
+    }
+
+    /* OR separator */
+    .chs-or-sep {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding-bottom: 0.35rem;
+    }
+    .chs-or-badge {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: #f3f4f6;
+        border: 1.5px solid #e5e7eb;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.68rem;
+        font-weight: 700;
+        color: #6b7280;
+        letter-spacing: 0.02em;
+        flex-shrink: 0;
+    }
+    .dark .chs-or-badge {
+        background: rgba(255,255,255,0.07);
+        border-color: rgba(255,255,255,0.12);
+        color: #9ca3af;
     }
 
     .chs-field {}
@@ -185,7 +214,7 @@
                         <input
                             id="chs-tel"
                             type="tel"
-                            wire:model.live.debounce.300ms="tel"
+                            wire:model="tel"
                             wire:loading.attr="readonly"
                             placeholder="Ex: 97 991 266"
                             inputmode="numeric"
@@ -193,6 +222,10 @@
                             class="chs-input"
                         />
                     </div>
+                </div>
+
+                <div class="chs-or-sep">
+                    <div class="chs-or-badge">OU</div>
                 </div>
 
                 <div class="chs-field">
@@ -204,7 +237,7 @@
                         <input
                             id="chs-name"
                             type="text"
-                            wire:model.live.debounce.300ms="name"
+                            wire:model="name"
                             wire:loading.attr="readonly"
                             placeholder="Ex: Mohamed Trabelsi"
                             autocomplete="name"
