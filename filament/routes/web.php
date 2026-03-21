@@ -218,6 +218,13 @@ Route::middleware(['auth'])->group(function () {
         ->name('email-campaign.preview');
     Route::get('dashboard/export', [\App\Http\Controllers\DashboardExportController::class, 'export'])
         ->name('dashboard.export');
+    // Stock product-list export (tab-aware: ?tab=all|in_stock|rupture|low_stock|inconsistent)
+    Route::get('stock/export/pdf', [\App\Http\Controllers\StockExportController::class, 'pdf'])
+        ->name('stock.export.pdf');
+    Route::get('stock/export/csv', [\App\Http\Controllers\StockExportController::class, 'csv'])
+        ->name('stock.export.csv');
+
+    // Legacy aggregate report exports (kept for backward compat)
     Route::get('stock/reports/export/pdf', [\App\Http\Controllers\StockReportExportController::class, 'pdf'])
         ->name('stock.reports.export.pdf');
     Route::get('stock/reports/export/csv', [\App\Http\Controllers\StockReportExportController::class, 'csv'])
