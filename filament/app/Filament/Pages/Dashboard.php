@@ -10,7 +10,6 @@ use App\Filament\Widgets\RevenueBySourcePieChart;
 use App\Filament\Widgets\RevenueChart;
 use App\Filament\Widgets\StatsOverview;
 use App\Filament\Widgets\TopProductsWidget;
-use Filament\Notifications\Notification;
 use Filament\Pages\Dashboard as BaseDashboard;
 
 class Dashboard extends BaseDashboard
@@ -19,9 +18,7 @@ class Dashboard extends BaseDashboard
 
     protected static ?string $title = 'Tableau de bord';
 
-    // ── Dashboard state (incl. client search widget) ────────────────────────
-    // Filament renders dashboard widgets’ Blade *inside* this Livewire page, so
-    // wire:model / wire:submit on widget views bind here — not on the Widget class.
+    // ── Stale-snapshot shims (see ClientHistoriqueSearchWidget for real search) ─
     public string $preset = '30d';
 
     public ?string $tel = null;
@@ -32,49 +29,11 @@ class Dashboard extends BaseDashboard
 
     public bool $isExporting = false;
 
-    public function submitClientHistoriqueSearch(): mixed
-    {
-        $tel = trim((string) $this->tel);
-        $name = trim((string) $this->name);
-        if ($tel === '' && $name === '') {
-            Notification::make()
-                ->title('Saisissez un numéro de téléphone ou un nom')
-                ->warning()
-                ->send();
+    /** @deprecated Old browser snapshots only */
+    public function searchHistorique(): void {}
 
-            return null;
-        }
-
-        $params = array_filter([
-            'tel' => $tel !== '' ? $tel : null,
-            'name' => $name !== '' ? $name : null,
-        ]);
-
-        return $this->redirect(HistoriqueClient::getUrl($params), navigate: false);
-    }
-
-    public function clearClientHistoriqueFields(): void
-    {
-        $this->tel = null;
-        $this->name = null;
-    }
-
-    public function hasSearchCriteria(): bool
-    {
-        return trim((string) $this->tel) !== '' || trim((string) $this->name) !== '';
-    }
-
-    /** @deprecated Old Livewire snapshots — forwards to {@see submitClientHistoriqueSearch()} */
-    public function searchHistorique(): void
-    {
-        $this->submitClientHistoriqueSearch();
-    }
-
-    /** @deprecated Old Livewire snapshots — forwards to {@see clearClientHistoriqueFields()} */
-    public function clearHistorique(): void
-    {
-        $this->clearClientHistoriqueFields();
-    }
+    /** @deprecated Old browser snapshots only */
+    public function clearHistorique(): void {}
 
     public function refreshStats(): void {}
     // ────────────────────────────────────────────────────────────────────────

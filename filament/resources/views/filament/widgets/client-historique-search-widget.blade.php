@@ -203,8 +203,8 @@
                 </div>
             </div>
 
-            {{-- Form --}}
-            <form wire:submit.prevent="submitClientHistoriqueSearch" class="chs-form">
+            {{-- Nested Livewire: use wire:click (not form submit) so the action stays on this widget, not the Dashboard parent. --}}
+            <div class="chs-form">
                 <div class="chs-field">
                     <label for="chs-tel" class="chs-label">Téléphone</label>
                     <div class="chs-input-wrap">
@@ -215,6 +215,7 @@
                             id="chs-tel"
                             type="tel"
                             wire:model="tel"
+                            wire:keydown.enter.prevent="submitClientHistoriqueSearch"
                             wire:loading.attr="readonly"
                             placeholder="Ex: 97 991 266"
                             inputmode="numeric"
@@ -238,6 +239,7 @@
                             id="chs-name"
                             type="text"
                             wire:model="name"
+                            wire:keydown.enter.prevent="submitClientHistoriqueSearch"
                             wire:loading.attr="readonly"
                             placeholder="Ex: Mohamed Trabelsi"
                             autocomplete="name"
@@ -261,7 +263,7 @@
                         <span wire:loading wire:target="submitClientHistoriqueSearch" style="display:none">…</span>
                     </button>
 
-                    @if($this->hasSearchCriteria())
+                    @if(trim((string) ($tel ?? '')) !== '' || trim((string) ($name ?? '')) !== '')
                         <button
                             type="button"
                             wire:click="clearClientHistoriqueFields"
@@ -274,7 +276,7 @@
                         </button>
                     @endif
                 </div>
-            </form>
+            </div>
         </div>
     </x-filament::section>
 </x-filament-widgets::widget>
