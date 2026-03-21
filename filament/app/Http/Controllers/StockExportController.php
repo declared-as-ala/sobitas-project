@@ -74,12 +74,25 @@ class StockExportController extends Controller
             'statusLabel'  => fn (Product $p) => self::stockStatusLabel($p),
         ];
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('filament.pages.stock.stock-export-pdf', $data)
-            ->setPaper('a4', 'portrait');
-
         $filename = 'stock-' . $tab . '-' . Carbon::now()->format('Y-m-d') . '.pdf';
 
-        return $pdf->download($filename);
+        try {
+            if (! class_exists(\Barryvdh\DomPDF\Facade\Pdf::class)) {
+                // Fallback: return HTML for browser printing
+                return response(view('filament.pages.stock.stock-export-pdf', $data)->render())
+                    ->header('Content-Type', 'text/html; charset=UTF-8');
+            }
+
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('filament.pages.stock.stock-export-pdf', $data)
+                ->setPaper('a4', 'portrait');
+
+            return $pdf->download($filename);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('StockExportController::pdf', ['error' => $e->getMessage()]);
+
+            return response(view('filament.pages.stock.stock-export-pdf', $data)->render())
+                ->header('Content-Type', 'text/html; charset=UTF-8');
+        }
     }
 
     // ── CSV ────────────────────────────────────────────────────────────────────
