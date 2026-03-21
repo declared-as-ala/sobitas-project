@@ -146,32 +146,14 @@ class Coordinate extends Model
     /**
      * Absolute URL for the login page background image.
      *
-     * Resolution order:
-     *   1. `public/images/auth/gym-bg.jpg` when present.
-     *   2. `public/images/auth/image.png` / `image.jpg` — bundled fallbacks (before Voyager so
-     *      the repo asset always wins when present).
-     *   3. Voyager `settings.admin.bg_image` — legacy admin upload.
-     *   4. Default URL `…/images/auth/image.png` — always returned so CSS never falls back to
-     *      solid grey when disk checks fail (Docker/symlink quirks); browser may 404 if missing.
+     * Resolution order (mirrors Voyager's `admin.bg_image` setting):
+     *   1. `settings` table key `admin.bg_image` – same source Voyager uses.
+     *   2. `public/images/auth/gym-bg.jpg`        – static fallback.
+     *   3. ''                                      – caller renders solid colour.
      */
     public static function publicLoginBackgroundUrl(): string
     {
-        $origin = rtrim(static::originRootUrl(), '/');
-
-        $staticCandidates = [
-            'images/auth/gym-bg.jpg',
-            'images/auth/image.png',
-            'images/auth/image.jpg',
-        ];
-
-        foreach ($staticCandidates as $rel) {
-            $full = public_path($rel);
-            if (file_exists($full) && is_file($full)) {
-                return $origin . '/' . str_replace('\\', '/', $rel);
-            }
-        }
-
-        // Voyager last — only when no bundled file was found on disk
+        // ── 1. Voyager shared settings table ────────────────────────────────
         $raw = static::voyagerSetting('admin.bg_image');
         if ($raw !== null) {
             $url = static::storageUrl($raw);
@@ -180,6 +162,13 @@ class Coordinate extends Model
             }
         }
 
-        return $origin . '/images/auth/image.png';
+        // ── 2. Static fallbacks (no symlink required) ─────────────────────
+        foreach (['images/auth/gym-bg.jpg', 'images/auth/image.png', 'images/auth/image.jpg'] as $rel) {
+            if (is_file(public_path($rel))) {
+                return rtrim(static::originRootUrl(), '/') . '/' . str_replace('\\', '/', $rel);
+            }
+        }
+
+        return '';
     }
 }
