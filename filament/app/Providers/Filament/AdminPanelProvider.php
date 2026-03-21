@@ -107,12 +107,30 @@ class AdminPanelProvider extends PanelProvider
                 function (): string {
                     $origin = rtrim(Coordinate::originRootUrl(), '/');
 
+                    // Login background: must use full URL (not /images/...) so it works behind subpaths & Docker.
+                    $bgUrl = Coordinate::publicLoginBackgroundUrl();
+                    if ($bgUrl === '') {
+                        foreach (['images/auth/gym-bg.jpg', 'images/auth/image.png', 'images/auth/image.jpg'] as $rel) {
+                            if (is_file(public_path($rel))) {
+                                $bgUrl = $origin . '/' . str_replace('\\', '/', $rel);
+                                break;
+                            }
+                        }
+                    }
+                    $loginBgStyle = $bgUrl !== ''
+                        ? '.fi-simple-layout{'
+                        . 'background-image:url(' . json_encode($bgUrl, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . ') !important;'
+                        . 'background-size:cover !important;background-position:center !important;'
+                        . 'background-repeat:no-repeat !important;min-height:100vh !important;}'
+                        : '.fi-simple-layout{background-color:#111827 !important;min-height:100vh !important;}';
+
                     return implode("\n", [
                         '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.min.css" />',
                         view('filament.components.custom-admin-styles')->render(),
                         '<link rel="stylesheet" href="' . $origin . '/css/filament/topbar.css" />',
                         '<link rel="stylesheet" href="' . $origin . '/css/filament/doc-edit.css" />',
                         '<link rel="stylesheet" href="' . $origin . '/css/filament/auth.css" />',
+                        '<style id="filament-login-background">' . $loginBgStyle . '</style>',
                     ]);
                 }
             )

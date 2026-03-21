@@ -162,9 +162,11 @@ class Coordinate extends Model
             }
         }
 
-        // ── 2. Static fallback (no symlink required) ─────────────────────────
-        if (is_file(public_path('images/auth/gym-bg.jpg'))) {
-            return rtrim(static::originRootUrl(), '/') . '/images/auth/gym-bg.jpg';
+        // ── 2. Static fallbacks (no symlink required) ─────────────────────
+        foreach (['images/auth/gym-bg.jpg', 'images/auth/image.png', 'images/auth/image.jpg'] as $rel) {
+            if (is_file(public_path($rel))) {
+                return rtrim(static::originRootUrl(), '/') . '/' . str_replace('\\', '/', $rel);
+            }
         }
 
         return '';

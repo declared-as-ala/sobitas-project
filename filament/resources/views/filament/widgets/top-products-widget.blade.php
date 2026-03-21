@@ -60,7 +60,7 @@
                                 </td>
                                 <td class="py-3 px-3 text-right">
                                     <span class="inline-flex items-center gap-1 text-gray-600 dark:text-gray-400">
-                                        <x-heroicon-m-document-text class="w-3.5 h-3.5" />
+                                        <x-filament::icon icon="heroicon-o-document-text" class="h-3.5 w-3.5" />
                                         {{ number_format((int) $product['total_orders'], 0, ',', ' ') }}
                                     </span>
                                 </td>
