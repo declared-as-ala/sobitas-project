@@ -17,7 +17,7 @@ class TopProductsWidget extends Widget
 
     protected static bool $isLazy = true;
 
-    protected static string $view = 'filament.widgets.top-products-widget';
+    protected string $view = 'filament.widgets.top-products-widget';
 
     public array $topProducts = [];
 
