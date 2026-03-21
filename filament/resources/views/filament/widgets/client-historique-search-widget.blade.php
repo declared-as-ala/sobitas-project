@@ -204,7 +204,7 @@
             </div>
 
             {{-- Form --}}
-            <form wire:submit="searchHistorique" class="chs-form">
+            <form wire:submit.prevent="submitClientHistoriqueSearch" class="chs-form">
                 <div class="chs-field">
                     <label for="chs-tel" class="chs-label">Téléphone</label>
                     <div class="chs-input-wrap">
@@ -250,21 +250,21 @@
                     <button
                         type="submit"
                         wire:loading.attr="disabled"
-                        wire:target="searchHistorique"
+                        wire:target="submitClientHistoriqueSearch"
                         class="chs-btn-primary"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"
-                            wire:loading.class="animate-spin" wire:target="searchHistorique">
+                            wire:loading.class="animate-spin" wire:target="submitClientHistoriqueSearch">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
                         </svg>
-                        <span wire:loading.remove wire:target="searchHistorique">Chercher</span>
-                        <span wire:loading wire:target="searchHistorique" style="display:none">…</span>
+                        <span wire:loading.remove wire:target="submitClientHistoriqueSearch">Chercher</span>
+                        <span wire:loading wire:target="submitClientHistoriqueSearch" style="display:none">…</span>
                     </button>
 
                     @if($this->hasSearchCriteria())
                         <button
                             type="button"
-                            wire:click="clearHistorique"
+                            wire:click="clearClientHistoriqueFields"
                             class="chs-btn-ghost"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">

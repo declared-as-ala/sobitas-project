@@ -29,7 +29,10 @@ class Dashboard extends BaseDashboard
     public bool    $isRefreshing = false;
     public bool    $isExporting  = false;
 
+    /** @deprecated Old Livewire snapshots only — real search lives in {@see ClientHistoriqueSearchWidget::submitClientHistoriqueSearch} */
     public function searchHistorique(): void {}
+
+    /** @deprecated Old Livewire snapshots only — use {@see ClientHistoriqueSearchWidget::clearClientHistoriqueFields} */
     public function clearHistorique(): void {}
     public function refreshStats(): void {}
     // ────────────────────────────────────────────────────────────────────────

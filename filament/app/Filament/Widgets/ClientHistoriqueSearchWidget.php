@@ -19,7 +19,11 @@ class ClientHistoriqueSearchWidget extends Widget
 
     public ?string $name = null;
 
-    public function searchHistorique(): void
+    /**
+     * Named distinctly from Dashboard stubs (searchHistorique/clearHistorique no-ops)
+     * so Livewire never dispatches this action to the parent page by mistake.
+     */
+    public function submitClientHistoriqueSearch(): mixed
     {
         $tel = trim((string) $this->tel);
         $name = trim((string) $this->name);
@@ -28,17 +32,20 @@ class ClientHistoriqueSearchWidget extends Widget
                 ->title('Saisissez un numéro de téléphone ou un nom')
                 ->warning()
                 ->send();
-            return;
+
+            return null;
         }
 
         $params = array_filter([
             'tel' => $tel !== '' ? $tel : null,
             'name' => $name !== '' ? $name : null,
         ]);
-        $this->redirect(HistoriqueClient::getUrl($params));
+
+        // Full navigation — Filament SPA redirect from widgets can otherwise no-op / refresh dashboard.
+        return $this->redirect(HistoriqueClient::getUrl($params), navigate: false);
     }
 
-    public function clearHistorique(): void
+    public function clearClientHistoriqueFields(): void
     {
         $this->tel = null;
         $this->name = null;
