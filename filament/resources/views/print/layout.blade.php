@@ -22,6 +22,9 @@
                 <svg class="print-btn-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m3.84 1.86c-.899.96-2.099 1.44-3.3 1.44s-2.403-.48-3.3-1.44m3.3-1.44c.899.96 2.099 1.44 3.3 1.44s2.403-.48 3.3-1.44m-6.6-12.48c-.899.96-2.099 1.44-3.3 1.44s-2.403-.48-3.3-1.44M12 15.66h.01" /></svg>
                 Imprimer
             </button>
+            @if(!empty($backUrl))
+            <a href="{{ $backUrl }}" class="print-btn print-btn-ghost">Retour</a>
+            @endif
             <button type="button" onclick="window.close()" class="print-btn print-btn-ghost">Fermer</button>
         </div>
     </div>

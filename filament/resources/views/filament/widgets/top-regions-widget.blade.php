@@ -263,10 +263,10 @@
         </div>
 
         <div class="tr-list">
-            @forelse ($regions as $i => $r)
+            @forelse ($regions as $r)
                 <div class="tr-row">
-                    <div class="tr-rank {{ $i === 0 ? 'r1' : ($i === 1 ? 'r2' : ($i === 2 ? 'r3' : 'rn')) }}">
-                        {{ $i + 1 }}
+                    <div class="tr-rank {{ $loop->index === 0 ? 'r1' : ($loop->index === 1 ? 'r2' : ($loop->index === 2 ? 'r3' : 'rn')) }}">
+                        {{ $loop->iteration }}
                     </div>
 
                     <div class="tr-region-info">
@@ -316,9 +316,9 @@
         </div>
 
         <div class="tr-list">
-            @forelse ($clients as $i => $c)
+            @forelse ($clients as $c)
                 <div class="tr-row">
-                    <div class="tr-avatar av-{{ $i % 8 }}">{{ $c['initials'] }}</div>
+                    <div class="tr-avatar av-{{ $loop->index % 8 }}">{{ $c['initials'] }}</div>
 
                     <div class="tr-client-info">
                         <div class="tr-client-name">{{ $c['name'] }}</div>
