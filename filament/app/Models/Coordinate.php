@@ -146,14 +146,22 @@ class Coordinate extends Model
     /**
      * Absolute URL for the login page background image.
      *
-     * Resolution order (mirrors Voyager's `admin.bg_image` setting):
-     *   1. `settings` table key `admin.bg_image` – same source Voyager uses.
-     *   2. `public/images/auth/gym-bg.jpg`        – static fallback.
-     *   3. ''                                      – caller renders solid colour.
+     * Resolution order:
+     *   1. `public/images/auth/gym-bg.jpg` when present — Filament default (not overridden by DB).
+     *   2. Voyager `settings.admin.bg_image` — legacy admin upload (only if gym-bg is absent).
+     *   3. `public/images/auth/image.png` / `image.jpg` — optional fallbacks.
+     *   4. '' — caller uses solid colour.
      */
     public static function publicLoginBackgroundUrl(): string
     {
-        // ── 1. Voyager shared settings table ────────────────────────────────
+        $origin = rtrim(static::originRootUrl(), '/');
+
+        // ── 1. Bundled default (always wins over Voyager when file exists on disk) ──
+        if (is_file(public_path('images/auth/gym-bg.jpg'))) {
+            return $origin . '/images/auth/gym-bg.jpg';
+        }
+
+        // ── 2. Voyager shared settings (same DB as legacy admin) ───────────────────
         $raw = static::voyagerSetting('admin.bg_image');
         if ($raw !== null) {
             $url = static::storageUrl($raw);
@@ -162,10 +170,10 @@ class Coordinate extends Model
             }
         }
 
-        // ── 2. Static fallbacks (no symlink required) ─────────────────────
-        foreach (['images/auth/gym-bg.jpg', 'images/auth/image.png', 'images/auth/image.jpg'] as $rel) {
+        // ── 3. Other static files in public/images/auth ─────────────────────────────
+        foreach (['images/auth/image.png', 'images/auth/image.jpg'] as $rel) {
             if (is_file(public_path($rel))) {
-                return rtrim(static::originRootUrl(), '/') . '/' . str_replace('\\', '/', $rel);
+                return $origin . '/' . str_replace('\\', '/', $rel);
             }
         }
 

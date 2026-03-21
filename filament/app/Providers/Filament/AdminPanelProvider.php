@@ -107,16 +107,8 @@ class AdminPanelProvider extends PanelProvider
                 function (): string {
                     $origin = rtrim(Coordinate::originRootUrl(), '/');
 
-                    // Login background: must use full URL (not /images/...) so it works behind subpaths & Docker.
+                    // Login background: full URL from Coordinate (gym-bg preferred; see Coordinate::publicLoginBackgroundUrl).
                     $bgUrl = Coordinate::publicLoginBackgroundUrl();
-                    if ($bgUrl === '') {
-                        foreach (['images/auth/gym-bg.jpg', 'images/auth/image.png', 'images/auth/image.jpg'] as $rel) {
-                            if (is_file(public_path($rel))) {
-                                $bgUrl = $origin . '/' . str_replace('\\', '/', $rel);
-                                break;
-                            }
-                        }
-                    }
                     $loginBgStyle = $bgUrl !== ''
                         ? '.fi-simple-layout{'
                         . 'background-image:url(' . json_encode($bgUrl, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . ') !important;'
