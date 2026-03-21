@@ -73,10 +73,14 @@ done
 echo "Publishing Filament assets..."
 php artisan filament:assets 2>/dev/null || true
 
+# ── Regenerate autoloader (picks up any new classes added since image build) ──
+composer dump-autoload --optimize --quiet 2>/dev/null || true
+
 # ── Build caches for FAST boot ─────────────────────────────
 # These caches prevent PHP from scanning filesystem on every request
 # CRITICAL: These write to bootstrap/cache (on named volume, fast)
 echo "Building performance caches..."
+php artisan optimize:clear 2>/dev/null || true
 php artisan config:cache 2>/dev/null || true
 php artisan route:cache 2>/dev/null || true
 php artisan view:cache 2>/dev/null || true
