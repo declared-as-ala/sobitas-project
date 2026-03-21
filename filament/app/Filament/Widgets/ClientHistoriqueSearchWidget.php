@@ -35,7 +35,7 @@ class ClientHistoriqueSearchWidget extends Widget
             'tel' => $tel !== '' ? $tel : null,
             'name' => $name !== '' ? $name : null,
         ]);
-        $this->redirect(HistoriqueClient::getUrl($params), navigate: true);
+        $this->redirect(HistoriqueClient::getUrl($params));
     }
 
     public function clearHistorique(): void
