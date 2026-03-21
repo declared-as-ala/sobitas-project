@@ -10,6 +10,7 @@ use App\Filament\Widgets\RevenueBySourcePieChart;
 use App\Filament\Widgets\RevenueChart;
 use App\Filament\Widgets\StatsOverview;
 use App\Filament\Widgets\TopProductsWidget;
+use Filament\Notifications\Notification;
 use Filament\Pages\Dashboard as BaseDashboard;
 
 class Dashboard extends BaseDashboard
@@ -18,22 +19,63 @@ class Dashboard extends BaseDashboard
 
     protected static ?string $title = 'Tableau de bord';
 
-    // ── Stale-snapshot compatibility shims ──────────────────────────────────
-    // Old browser sessions may still hold Livewire snapshots where these
-    // properties/methods belonged to the Dashboard page (before the widget
-    // split). Keeping them as no-ops prevents "property/method not found"
-    // exceptions without re-introducing the old double-dispatch bugs.
-    public string  $preset      = '30d';
-    public ?string $tel         = null;
-    public ?string $name        = null;
-    public bool    $isRefreshing = false;
-    public bool    $isExporting  = false;
+    // ── Dashboard state (incl. client search widget) ────────────────────────
+    // Filament renders dashboard widgets’ Blade *inside* this Livewire page, so
+    // wire:model / wire:submit on widget views bind here — not on the Widget class.
+    public string $preset = '30d';
 
-    /** @deprecated Old Livewire snapshots only — real search lives in {@see ClientHistoriqueSearchWidget::submitClientHistoriqueSearch} */
-    public function searchHistorique(): void {}
+    public ?string $tel = null;
 
-    /** @deprecated Old Livewire snapshots only — use {@see ClientHistoriqueSearchWidget::clearClientHistoriqueFields} */
-    public function clearHistorique(): void {}
+    public ?string $name = null;
+
+    public bool $isRefreshing = false;
+
+    public bool $isExporting = false;
+
+    public function submitClientHistoriqueSearch(): mixed
+    {
+        $tel = trim((string) $this->tel);
+        $name = trim((string) $this->name);
+        if ($tel === '' && $name === '') {
+            Notification::make()
+                ->title('Saisissez un numéro de téléphone ou un nom')
+                ->warning()
+                ->send();
+
+            return null;
+        }
+
+        $params = array_filter([
+            'tel' => $tel !== '' ? $tel : null,
+            'name' => $name !== '' ? $name : null,
+        ]);
+
+        return $this->redirect(HistoriqueClient::getUrl($params), navigate: false);
+    }
+
+    public function clearClientHistoriqueFields(): void
+    {
+        $this->tel = null;
+        $this->name = null;
+    }
+
+    public function hasSearchCriteria(): bool
+    {
+        return trim((string) $this->tel) !== '' || trim((string) $this->name) !== '';
+    }
+
+    /** @deprecated Old Livewire snapshots — forwards to {@see submitClientHistoriqueSearch()} */
+    public function searchHistorique(): void
+    {
+        $this->submitClientHistoriqueSearch();
+    }
+
+    /** @deprecated Old Livewire snapshots — forwards to {@see clearClientHistoriqueFields()} */
+    public function clearHistorique(): void
+    {
+        $this->clearClientHistoriqueFields();
+    }
+
     public function refreshStats(): void {}
     // ────────────────────────────────────────────────────────────────────────
 
