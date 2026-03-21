@@ -265,7 +265,7 @@
         <div class="tr-list">
             @forelse ($regions as $r)
                 <div class="tr-row">
-                    <div class="tr-rank {{ $loop->index === 0 ? 'r1' : ($loop->index === 1 ? 'r2' : ($loop->index === 2 ? 'r3' : 'rn')) }}">
+                    <div class="tr-rank @if ($loop->index === 0) r1 @elseif ($loop->index === 1) r2 @elseif ($loop->index === 2) r3 @else rn @endif">
                         {{ $loop->iteration }}
                     </div>
 
