@@ -1,3 +1,11 @@
+# Builds & pushes ghcr.io/declared-as-ala/sobitas-frontend-2 and restarts the VPS container.
+#
+# Triggers:
+#   • Push to `main` that touches frontend-2/, docker-compose.yml, or this file.
+#   • Manual: Actions → Deploy Frontend-2 → Run workflow (no extra inputs required).
+#
+# If your push does NOT start this workflow: merge to `main`, and ensure changed paths
+# are under `frontend-2/` (GitHub path filters ignore commits that only touch e.g. `filament/`).
 name: Deploy Frontend-2 (Docker Image)
 
 on:
@@ -8,11 +16,6 @@ on:
       - "docker-compose.yml"
       - ".github/workflows/deploy-frontend-2.yml"
   workflow_dispatch:
-    inputs:
-      enabled:
-        description: 'Force enable this workflow (set to "true" to run)'
-        required: false
-        default: 'false'
 
 env:
   REGISTRY: ghcr.io
@@ -21,9 +24,6 @@ env:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    if: |
-      github.event_name == 'push' ||
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.enabled == 'true')
     permissions:
       contents: read
       packages: write

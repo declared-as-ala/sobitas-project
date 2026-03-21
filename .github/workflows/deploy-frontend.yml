@@ -8,11 +8,6 @@ on:
       - "docker-compose.yml"
       - ".github/workflows/deploy-frontend.yml"
   workflow_dispatch:
-    inputs:
-      enabled:
-        description: 'Force enable this workflow (set to "true" to run)'
-        required: false
-        default: 'false'
 
 env:
   REGISTRY: ghcr.io
@@ -21,9 +16,6 @@ env:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    if: |
-      github.event_name == 'push' ||
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.enabled == 'true')
     permissions:
       contents: read
       packages: write
