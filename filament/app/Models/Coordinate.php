@@ -147,21 +147,31 @@ class Coordinate extends Model
      * Absolute URL for the login page background image.
      *
      * Resolution order:
-     *   1. `public/images/auth/gym-bg.jpg` when present — Filament default (not overridden by DB).
-     *   2. Voyager `settings.admin.bg_image` — legacy admin upload (only if gym-bg is absent).
-     *   3. `public/images/auth/image.png` / `image.jpg` — optional fallbacks.
-     *   4. '' — caller uses solid colour.
+     *   1. `public/images/auth/gym-bg.jpg` when present.
+     *   2. `public/images/auth/image.png` / `image.jpg` — bundled fallbacks (before Voyager so
+     *      the repo asset always wins when present).
+     *   3. Voyager `settings.admin.bg_image` — legacy admin upload.
+     *   4. Default URL `…/images/auth/image.png` — always returned so CSS never falls back to
+     *      solid grey when disk checks fail (Docker/symlink quirks); browser may 404 if missing.
      */
     public static function publicLoginBackgroundUrl(): string
     {
         $origin = rtrim(static::originRootUrl(), '/');
 
-        // ── 1. Bundled default (always wins over Voyager when file exists on disk) ──
-        if (is_file(public_path('images/auth/gym-bg.jpg'))) {
-            return $origin . '/images/auth/gym-bg.jpg';
+        $staticCandidates = [
+            'images/auth/gym-bg.jpg',
+            'images/auth/image.png',
+            'images/auth/image.jpg',
+        ];
+
+        foreach ($staticCandidates as $rel) {
+            $full = public_path($rel);
+            if (file_exists($full) && is_file($full)) {
+                return $origin . '/' . str_replace('\\', '/', $rel);
+            }
         }
 
-        // ── 2. Voyager shared settings (same DB as legacy admin) ───────────────────
+        // Voyager last — only when no bundled file was found on disk
         $raw = static::voyagerSetting('admin.bg_image');
         if ($raw !== null) {
             $url = static::storageUrl($raw);
@@ -170,13 +180,6 @@ class Coordinate extends Model
             }
         }
 
-        // ── 3. Other static files in public/images/auth ─────────────────────────────
-        foreach (['images/auth/image.png', 'images/auth/image.jpg'] as $rel) {
-            if (is_file(public_path($rel))) {
-                return $origin . '/' . str_replace('\\', '/', $rel);
-            }
-        }
-
-        return '';
+        return $origin . '/images/auth/image.png';
     }
 }
