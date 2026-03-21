@@ -77,9 +77,9 @@ class CreateFacture extends CreateRecord
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        $nb = Facture::whereYear('created_at', date('Y'))->count() + 1;
-        $nb = str_pad((string) $nb, 4, '0', STR_PAD_LEFT);
-        $data['numero'] = date('Y') . '/' . $nb;
+        $year = (int) date('Y');
+        $nb   = \App\Models\NumberSequence::getNextFor('BL', $year);
+        $data['numero'] = $year . '/' . str_pad((string) $nb, 4, '0', STR_PAD_LEFT);
 
         $details = $data['details'] ?? [];
         $remise = (float) ($data['remise'] ?? 0);

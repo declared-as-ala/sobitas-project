@@ -79,8 +79,9 @@ class CreateFactureTva extends CreateRecord
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        $nb = FactureTva::whereYear('created_at', date('Y'))->count() + 1;
-        $data['numero'] = date('Y') . '/' . str_pad((string) $nb, 4, '0', STR_PAD_LEFT);
+        $year = (int) date('Y');
+        $nb   = \App\Models\NumberSequence::getNextFor('FA', $year);
+        $data['numero'] = $year . '/' . str_pad((string) $nb, 4, '0', STR_PAD_LEFT);
         $data['status'] = \App\Enums\InvoiceStatus::Issued->value;
 
         $details = $data['details'] ?? [];

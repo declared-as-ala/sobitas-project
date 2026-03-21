@@ -265,7 +265,13 @@
         <div class="tr-list">
             @forelse ($regions as $i => $r)
                 <div class="tr-row">
-                    <div class="tr-rank {{ match($i) { 0 => 'r1', 1 => 'r2', 2 => 'r3', default => 'rn' } }}">
+                    <div @class([
+                        'tr-rank',
+                        'r1' => $i === 0,
+                        'r2' => $i === 1,
+                        'r3' => $i === 2,
+                        'rn' => $i > 2,
+                    ])>
                         {{ $i + 1 }}
                     </div>
 

@@ -102,17 +102,9 @@ class CommandeController extends Controller
             $new_facture->etat = Commande::STATUS_NEW;
             $new_facture->order_token = bin2hex(random_bytes(32));
 
-            // LOW-07: Atomic order number via sequence table (no race condition)
+            // Atomic order number via number_sequences table (lockForUpdate, no race condition)
             $year = (int) date('Y');
-            DB::table('order_sequences')->updateOrInsert(
-                ['year' => $year],
-                ['next_num' => 0]
-            );
-            $affected = DB::update(
-                'UPDATE order_sequences SET next_num = LAST_INSERT_ID(next_num + 1) WHERE year = ?',
-                [$year]
-            );
-            $nextNum = $affected > 0 ? (int) DB::selectOne('SELECT LAST_INSERT_ID() AS n')->n : 1;
+            $nextNum = \App\Models\NumberSequence::getNextFor('CMD', $year);
             $new_facture->numero = $year . '/' . str_pad((string) $nextNum, 4, '0', STR_PAD_LEFT);
 
             $new_facture->save();

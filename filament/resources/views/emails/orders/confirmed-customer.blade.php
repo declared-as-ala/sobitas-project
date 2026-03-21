@@ -24,7 +24,8 @@
         'card' => 'Carte bancaire (en ligne)',
         default => $commande->payment_method ?? 'Non précisé',
     };
-    $contactEmail = config('mail.reply_to.address', 'contact@sobitas.tn');
+    $coordonnee   = \App\Models\Coordinate::getCached();
+    $contactEmail = ($coordonnee && !empty($coordonnee->email)) ? $coordonnee->email : 'contact@sobitas.tn';
 @endphp
 <!DOCTYPE html>
 <html lang="fr">

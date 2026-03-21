@@ -77,8 +77,9 @@ class CreateQuotation extends CreateRecord
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        $nb = Quotation::whereYear('created_at', date('Y'))->count() + 1;
-        $data['numero'] = date('Y') . '/' . str_pad((string) $nb, 4, '0', STR_PAD_LEFT);
+        $year = (int) date('Y');
+        $nb   = \App\Models\NumberSequence::getNextFor('DV', $year);
+        $data['numero'] = $year . '/' . str_pad((string) $nb, 4, '0', STR_PAD_LEFT);
 
         $details = $data['details'] ?? [];
         

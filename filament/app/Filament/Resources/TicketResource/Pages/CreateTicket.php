@@ -78,8 +78,9 @@ class CreateTicket extends CreateRecord
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        $nb = Ticket::whereYear('created_at', date('Y'))->count() + 1;
-        $data['numero'] = date('Y') . '/' . str_pad((string) $nb, 4, '0', STR_PAD_LEFT);
+        $year = (int) date('Y');
+        $nb   = \App\Models\NumberSequence::getNextFor('TK', $year);
+        $data['numero'] = $year . '/' . str_pad((string) $nb, 4, '0', STR_PAD_LEFT);
 
         $type = $data['type'] ?? Ticket::TYPE_TICKET_CAISSE;
         if ($type === Ticket::TYPE_TICKET_CAISSE) {

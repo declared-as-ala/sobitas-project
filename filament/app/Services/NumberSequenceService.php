@@ -27,10 +27,12 @@ class NumberSequenceService
     protected function fallbackNext(string $prefix, int $year): int
     {
         $count = match (strtoupper($prefix)) {
-            'FA' => \App\Models\FactureTva::whereYear('created_at', $year)->count(),
-            'BL' => \App\Models\Facture::whereYear('created_at', $year)->count(),
-            'DV' => \App\Models\Quotation::whereYear('created_at', $year)->count(),
-            'AV' => \App\Models\CreditNote::whereYear('created_at', $year)->count(),
+            'FA'  => \App\Models\FactureTva::whereYear('created_at', $year)->count(),
+            'BL'  => \App\Models\Facture::whereYear('created_at', $year)->count(),
+            'DV'  => \App\Models\Quotation::whereYear('created_at', $year)->count(),
+            'AV'  => \App\Models\CreditNote::whereYear('created_at', $year)->count(),
+            'CMD' => \App\Models\Commande::whereYear('created_at', $year)->count(),
+            'TK'  => \App\Models\Ticket::whereYear('created_at', $year)->count(),
             default => 0,
         };
 
