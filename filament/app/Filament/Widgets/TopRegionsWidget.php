@@ -11,7 +11,7 @@ use Livewire\Attributes\On;
 
 class TopRegionsWidget extends Widget
 {
-    protected static string $view = 'filament.widgets.top-regions-widget';
+    protected string $view = 'filament.widgets.top-regions-widget';
 
     protected static ?int $sort = 9;
 

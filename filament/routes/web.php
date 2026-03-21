@@ -71,6 +71,7 @@ Route::middleware(['auth'])->group(function () {
             'calc_pourcentage_remise' => (float) ($facture->pourcentage_remise ?? 0),
             'footerNote' => $coordonnee && !empty($coordonnee->note) ? $coordonnee->note : null,
             'paymentTerms' => 'Paiement à la livraison ou par virement.',
+            'backUrl' => '/admin/factures/' . $facture->id . '/edit',
         ]);
     })->name('factures.print');
 
@@ -90,6 +91,7 @@ Route::middleware(['auth'])->group(function () {
                 ? \Carbon\Carbon::parse($ticket->date_ticket)->format('d/m/Y')
                 : ($ticket->created_at?->format('d/m/Y') ?? ''),
             'documentTime'   => $ticket->created_at?->format('H:i') ?? '',
+            'backUrl'        => '/admin/tickets/' . $ticket->id . '/edit',
         ]);
     })->name('tickets.print');
 
@@ -138,6 +140,7 @@ Route::middleware(['auth'])->group(function () {
             'client' => $factureTva->client,
             'calcTotals' => $calcTotals,
             'footerNote' => $coordonnee && ! empty($coordonnee->note) ? $coordonnee->note : null,
+            'backUrl' => '/admin/facture-tvas/' . $factureTva->id . '/edit',
         ]);
     })->name('facture-tvas.print');
 
@@ -166,6 +169,7 @@ Route::middleware(['auth'])->group(function () {
             ],
             'footerNote' => $coordonnee && !empty($coordonnee->note) ? $coordonnee->note : null,
             'paymentTerms' => 'Prix valables à la date d\'édition. Sous réserve de disponibilité.',
+            'backUrl' => '/admin/product-price-lists/' . $productPriceList->id . '/edit',
         ]);
     })->name('product-price-lists.print');
 
@@ -195,6 +199,7 @@ Route::middleware(['auth'])->group(function () {
             ],
             'footerNote' => $coordonnee && !empty($coordonnee->note) ? $coordonnee->note : null,
             'paymentTerms' => 'Valable 30 jours. Paiement à la commande ou à la livraison.',
+            'backUrl' => '/admin/quotations/' . $quotation->id . '/edit',
         ]);
     })->name('quotations.print');
 
