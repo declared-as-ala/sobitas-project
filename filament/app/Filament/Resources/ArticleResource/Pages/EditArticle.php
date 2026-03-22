@@ -12,6 +12,20 @@ class EditArticle extends EditRecord
 
     protected function getHeaderActions(): array
     {
-        return [Actions\DeleteAction::make()];
+        return [
+            Actions\Action::make('view_list')
+                ->label('Retour à la liste')
+                ->icon('heroicon-o-arrow-left')
+                ->color('gray')
+                ->url(ArticleResource::getUrl('index')),
+
+            Actions\DeleteAction::make()
+                ->label('Supprimer'),
+        ];
+    }
+
+    protected function getSavedNotificationTitle(): ?string
+    {
+        return 'Article enregistré';
     }
 }

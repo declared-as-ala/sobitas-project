@@ -40,32 +40,30 @@ class ArticleResource extends Resource
     {
         return $schema->schema([
 
-            // ═══════════════════════════════════════════════════════════════
-            // 5-column grid: main = 3 cols, sidebar = 2 cols
-            // Gives sidebar enough room for image upload and fields
-            // ═══════════════════════════════════════════════════════════════
-            Grid::make(['default' => 1, 'lg' => 5])
+            // ═══════════════════════════════════════════════════════════════════
+            // Editorial layout — 3-column grid: main (2) + sidebar (1)
+            // Main gets 66% of the page — editor dominates the workspace
+            // Sidebar gets 33% — settings compact and out of the way
+            // ═══════════════════════════════════════════════════════════════════
+            Grid::make(['default' => 1, 'lg' => 3])
                 ->schema([
 
-                    // ───────────────────────────────────────────────────────
-                    // MAIN CONTENT — left 3 columns
-                    // ───────────────────────────────────────────────────────
+                    // ══════════════════════════════════════════════════════════
+                    // MAIN CONTENT — 2/3 width — the editorial workspace
+                    // ══════════════════════════════════════════════════════════
                     Grid::make(1)
-                        ->columnSpan(['default' => 1, 'lg' => 3])
+                        ->columnSpan(['default' => 1, 'lg' => 2])
                         ->schema([
 
-                            // ── Titre & Slug ──────────────────────────────
+                            // ── 1. Titre & Slug ───────────────────────────────
                             Section::make()
                                 ->schema([
                                     Forms\Components\TextInput::make('designation_fr')
-                                        ->label('Titre')
+                                        ->label('Titre de l\'article')
                                         ->placeholder('Donnez un titre accrocheur à votre article…')
                                         ->required()
                                         ->maxLength(255)
                                         ->columnSpanFull()
-                                        ->extraInputAttributes([
-                                            'style' => 'font-size: 1.25rem; font-weight: 600; padding: 0.75rem 1rem;',
-                                        ])
                                         ->live(onBlur: true)
                                         ->afterStateUpdated(function (string $operation, $state, Set $set, Get $get): void {
                                             if ($operation === 'create' || ($operation === 'edit' && empty($get('slug')))) {
@@ -74,70 +72,64 @@ class ArticleResource extends Resource
                                         }),
 
                                     Forms\Components\TextInput::make('slug')
-                                        ->label('Slug (URL)')
-                                        ->placeholder('titre-de-larticle')
+                                        ->label('Slug')
+                                        ->placeholder('mon-article-de-blog')
                                         ->required()
                                         ->maxLength(255)
                                         ->unique(ignoreRecord: true)
                                         ->prefix('/')
-                                        ->helperText('Généré depuis le titre · Modifiable manuellement')
+                                        ->helperText('Auto-généré depuis le titre — modifiable manuellement')
                                         ->columnSpanFull(),
-                                ])
-                                ->extraAttributes(['style' => 'padding-bottom: 0;']),
+                                ]),
 
-                            // ── Éditeur de contenu ────────────────────────
-                            Section::make('Contenu de l\'article')
-                                ->icon('heroicon-o-document-text')
-                                ->description('Rédigez le contenu principal de votre article.')
+                            // ── 2. Éditeur de contenu ─────────────────────────
+                            Section::make('Contenu')
+                                ->icon('heroicon-o-pencil-square')
                                 ->schema([
                                     Forms\Components\RichEditor::make('description')
                                         ->label(false)
                                         ->columnSpanFull()
                                         ->toolbarButtons([
-                                            ['bold', 'italic', 'underline', 'strike', 'link'],
+                                            ['bold', 'italic', 'underline', 'strike'],
                                             ['h2', 'h3'],
+                                            ['link'],
                                             ['bulletList', 'orderedList'],
                                             ['blockquote', 'codeBlock'],
                                             ['table', 'attachFiles'],
                                             ['undo', 'redo'],
                                         ])
                                         ->extraInputAttributes([
-                                            'style' => 'min-height: 420px; font-size: 0.95rem; line-height: 1.7;',
+                                            'style' => 'min-height: 600px; line-height: 1.85; font-size: 1rem;',
                                         ]),
                                 ]),
 
-                            // ── SEO avancé ────────────────────────────────
+                            // ── 3. SEO (collapsed — non-blocking) ─────────────
                             Section::make('SEO & Référencement')
                                 ->icon('heroicon-o-magnifying-glass')
-                                ->description('Métadonnées et données structurées pour les moteurs de recherche.')
                                 ->collapsible()
                                 ->collapsed()
                                 ->schema([
                                     Forms\Components\TextInput::make('meta_description_fr')
                                         ->label('Meta description')
+                                        ->placeholder('155–160 caractères affichés dans Google…')
                                         ->maxLength(500)
-                                        ->placeholder('Courte description affichée dans les résultats Google…')
-                                        ->helperText('Idéalement 155–160 caractères.')
                                         ->columnSpanFull(),
 
                                     Forms\Components\Textarea::make('meta')
-                                        ->label('Balises meta personnalisées')
+                                        ->label('Balises meta (name;content / name;content / …)')
+                                        ->placeholder('keywords;nutrition,sport / author;Sobitas')
                                         ->rows(3)
-                                        ->columnSpanFull()
-                                        ->placeholder('keywords;sport,nutrition/author;Sobitas')
-                                        ->helperText('Format : name;content — une balise par ligne, séparées par /'),
+                                        ->columnSpanFull(),
 
                                     Forms\Components\Textarea::make('content_seo')
                                         ->label('Schema JSON-LD')
-                                        ->rows(6)
-                                        ->columnSpanFull()
-                                        ->placeholder('{"@context":"https://schema.org","@type":"Article","name":"…"}')
-                                        ->helperText('Données structurées injectées dans <head> pour Google Rich Results.'),
+                                        ->placeholder('{"@context":"https://schema.org","@type":"Article"}')
+                                        ->rows(5)
+                                        ->columnSpanFull(),
 
                                     Forms\Components\TextInput::make('review')
                                         ->label('Review (seo)')
-                                        ->maxLength(500)
-                                        ->placeholder('Texte de review structuré…'),
+                                        ->maxLength(500),
 
                                     Forms\Components\TextInput::make('aggregateRating')
                                         ->label('AggregateRating (seo)')
@@ -147,29 +139,29 @@ class ArticleResource extends Resource
                                 ->columns(2),
                         ]),
 
-                    // ───────────────────────────────────────────────────────
-                    // SIDEBAR — right 2 columns
-                    // ───────────────────────────────────────────────────────
+                    // ══════════════════════════════════════════════════════════
+                    // SIDEBAR — 1/3 width — settings, compact and out of the way
+                    // ══════════════════════════════════════════════════════════
                     Grid::make(1)
-                        ->columnSpan(['default' => 1, 'lg' => 2])
+                        ->columnSpan(['default' => 1, 'lg' => 1])
                         ->schema([
 
-                            // ── Statut de publication ─────────────────────
+                            // ── A. Statut ──────────────────────────────────────
                             Section::make('Statut')
                                 ->icon('heroicon-o-signal')
+                                ->compact()
                                 ->schema([
                                     Forms\Components\Toggle::make('publier')
-                                        ->label(fn (?bool $state): string => $state ? 'Publié — visible sur le site' : 'Brouillon — non visible')
-                                        ->live()
+                                        ->label('Publier l\'article')
                                         ->default(true)
                                         ->onColor('success')
-                                        ->offColor('gray'),
+                                        ->offColor('gray')
+                                        ->helperText('Désactivez pour passer en brouillon.'),
                                 ]),
 
-                            // ── Image de couverture ───────────────────────
-                            Section::make('Image de couverture')
+                            // ── B. Image de couverture ─────────────────────────
+                            Section::make('Couverture')
                                 ->icon('heroicon-o-photo')
-                                ->description('Image principale affichée en haut de l\'article.')
                                 ->schema([
                                     Forms\Components\FileUpload::make('cover')
                                         ->label(false)
@@ -193,16 +185,14 @@ class ArticleResource extends Resource
                                         }),
 
                                     Forms\Components\TextInput::make('alt_cover')
-                                        ->label('Texte alternatif (alt)')
+                                        ->label('Texte alt')
                                         ->maxLength(255)
-                                        ->placeholder('Ex: Protéine whey chocolat 1kg')
-                                        ->helperText('Décrit l\'image pour l\'accessibilité et le SEO.'),
+                                        ->placeholder('Description de l\'image…'),
 
                                     Forms\Components\TextInput::make('description_cover')
-                                        ->label('Légende de l\'image')
+                                        ->label('Légende')
                                         ->maxLength(255)
-                                        ->placeholder('Ex: Photo du produit phare…')
-                                        ->helperText('Légende affichée sous l\'image sur le site.'),
+                                        ->placeholder('Légende sous l\'image…'),
                                 ]),
                         ]),
                 ]),
@@ -222,7 +212,7 @@ class ArticleResource extends Resource
                     ->height(64)
                     ->width(64)
                     ->defaultImageUrl(function ($record) {
-                        if (!$record->cover) {
+                        if (! $record->cover) {
                             return null;
                         }
                         if (str_starts_with($record->cover, 'http://') || str_starts_with($record->cover, 'https://')) {
@@ -230,14 +220,17 @@ class ArticleResource extends Resource
                         }
                         return asset('storage/' . ltrim($record->cover, '/'));
                     }),
+
                 Tables\Columns\TextColumn::make('designation_fr')
                     ->label('Titre')
                     ->searchable()
                     ->sortable()
-                    ->limit(50),
+                    ->limit(60),
+
                 Tables\Columns\IconColumn::make('publier')
                     ->label('Publié')
                     ->boolean(),
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Date')
                     ->dateTime('d/m/Y')
