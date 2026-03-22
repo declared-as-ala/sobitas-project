@@ -7,11 +7,11 @@ use App\Models\Article;
 use Filament\Forms;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\Grid;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Actions;
 use Filament\Tables\Table;
+use Illuminate\Support\Str;
 
 class ArticleResource extends Resource
 {
@@ -36,26 +36,42 @@ class ArticleResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
+
+            // ── Section 1: Informations générales ────────────────────────
             Section::make('Informations générales')
                 ->schema([
                     Forms\Components\TextInput::make('designation_fr')
-                        ->label('Titre')
+                        ->label('Désignation / Titre')
                         ->required()
                         ->maxLength(255)
-                        ->columnSpanFull(),
+                        ->columnSpanFull()
+                        ->live(onBlur: true)
+                        ->afterStateUpdated(function (string $operation, $state, Forms\Set $set, Forms\Get $get): void {
+                            // Auto-generate slug on create, or on edit only if slug is empty
+                            if ($operation === 'create' || ($operation === 'edit' && empty($get('slug')))) {
+                                $set('slug', Str::slug($state));
+                            }
+                        }),
+
                     Forms\Components\TextInput::make('slug')
                         ->label('Slug (URL)')
                         ->required()
                         ->maxLength(255)
                         ->unique(ignoreRecord: true)
-                        ->helperText('Identifiant unique dans l\'URL (ex: mon-article)'),
+                        ->helperText('Généré automatiquement depuis le titre. Modifiable manuellement.')
+                        ->rules(['regex:/^[a-z0-9\-]+$/'])
+                        ->validationMessages(['regex' => 'Le slug ne peut contenir que des lettres minuscules, chiffres et tirets.']),
+
                     Forms\Components\Toggle::make('publier')
-                        ->label('Publié')
+                        ->label('Publier')
+                        ->onLabel('Publier')
+                        ->offLabel('Non publier')
                         ->default(true),
                 ])
                 ->columns(2),
 
-            Section::make('Image de couverture')
+            // ── Section 2: Image de couverture ───────────────────────────
+            Section::make('Couverture')
                 ->schema([
                     Forms\Components\FileUpload::make('cover')
                         ->label('Image de couverture')
@@ -77,21 +93,24 @@ class ArticleResource extends Resource
                             $path = (string) $file->store('articles', 'public');
                             return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp($path) ?? $path;
                         }),
+
                     Forms\Components\TextInput::make('alt_cover')
-                        ->label('Texte alternatif (alt)')
+                        ->label('Alt Cover (SEO)')
                         ->maxLength(255)
-                        ->helperText('Description de l\'image pour l\'accessibilité et le SEO'),
+                        ->helperText('Texte alternatif de l\'image pour l\'accessibilité et le référencement.'),
+
                     Forms\Components\TextInput::make('description_cover')
-                        ->label('Légende de l\'image')
+                        ->label('Description Cover (SEO)')
                         ->maxLength(255)
-                        ->helperText('Légende affichée sous l\'image'),
+                        ->helperText('Légende ou description de l\'image de couverture.'),
                 ])
                 ->columns(2),
 
-            Section::make('Contenu')
+            // ── Section 3: Contenu ────────────────────────────────────────
+            Section::make('Description / Contenu')
                 ->schema([
-                    Forms\Components\RichEditor::make('description_fr')
-                        ->label('Contenu de l\'article')
+                    Forms\Components\RichEditor::make('description')
+                        ->label('Description')
                         ->columnSpanFull()
                         ->toolbarButtons([
                             'heading',
@@ -112,24 +131,37 @@ class ArticleResource extends Resource
                         ->extraInputAttributes(['style' => 'min-height: 500px;']),
                 ]),
 
+            // ── Section 4: SEO & Métadonnées ─────────────────────────────
             Section::make('SEO & Métadonnées')
                 ->schema([
-                    Forms\Components\TextInput::make('meta_title')
-                        ->label('Titre SEO (meta title)')
-                        ->maxLength(255)
-                        ->helperText('Titre affiché dans les résultats de recherche (60 caractères recommandés)'),
-                    Forms\Components\TextInput::make('meta_description')
-                        ->label('Description SEO (meta description)')
-                        ->maxLength(255)
-                        ->helperText('Description affichée dans les résultats de recherche (160 caractères recommandés)'),
                     Forms\Components\TextInput::make('meta_description_fr')
-                        ->label('Description meta (FR)')
-                        ->maxLength(255),
-                    Forms\Components\Textarea::make('content_seo')
-                        ->label('Contenu SEO')
+                        ->label('Meta Description')
+                        ->maxLength(500)
+                        ->helperText('Description affichée dans les résultats de recherche (160 caractères recommandés).')
+                        ->columnSpanFull(),
+
+                    Forms\Components\Textarea::make('meta')
+                        ->label('Meta (name;content/name;content/...)')
                         ->rows(4)
                         ->columnSpanFull()
-                        ->helperText('Contenu optimisé SEO (non visible sur la page)'),
+                        ->helperText('Format: name;content séparés par / — ex: keywords;seo,filament/author;sobitas'),
+
+                    Forms\Components\Textarea::make('content_seo')
+                        ->label('Schema description (seo)')
+                        ->rows(5)
+                        ->columnSpanFull()
+                        ->helperText('Balisage JSON-LD ou description structurée pour les moteurs de recherche.'),
+
+                    Forms\Components\TextInput::make('review')
+                        ->label('Review (seo)')
+                        ->maxLength(500)
+                        ->helperText('Contenu de review pour le schéma structuré SEO.'),
+
+                    Forms\Components\TextInput::make('aggregateRating')
+                        ->label('AggregateRating (seo)')
+                        ->maxLength(500)
+                        ->helperText('Données JSON de notation agrégée pour le schéma structuré SEO.')
+                        ->placeholder('{"@type":"AggregateRating","ratingValue":"4.5","reviewCount":"12"}'),
                 ])
                 ->columns(2)
                 ->collapsible()
@@ -140,7 +172,6 @@ class ArticleResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            // ✅ OPTIMIZATION: Select only needed columns to reduce memory and DB time
             ->modifyQueryUsing(fn (\Illuminate\Database\Eloquent\Builder $query) => $query
                 ->select(['id', 'designation_fr', 'slug', 'cover', 'publier', 'created_at'])
             )
@@ -154,13 +185,9 @@ class ArticleResource extends Resource
                         if (!$record->cover) {
                             return null;
                         }
-                        
-                        // If already full URL, return as-is
                         if (str_starts_with($record->cover, 'http://') || str_starts_with($record->cover, 'https://')) {
                             return $record->cover;
                         }
-                        
-                        // Local storage
                         return asset('storage/' . ltrim($record->cover, '/'));
                     }),
                 Tables\Columns\TextColumn::make('designation_fr')
@@ -196,4 +223,3 @@ class ArticleResource extends Resource
         ];
     }
 }
-
