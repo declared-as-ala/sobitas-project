@@ -4,16 +4,16 @@ namespace App\Filament\Resources\ArticleResource\Pages;
 
 use App\Filament\Resources\ArticleResource;
 use Filament\Resources\Pages\CreateRecord;
-use Filament\Support\Enums\MaxWidth;
+use Filament\Support\Enums\Width;
 
 class CreateArticle extends CreateRecord
 {
     protected static string $resource = ArticleResource::class;
 
     // Use the full page width — editorial workspace needs maximum horizontal space
-    public function getMaxContentWidth(): MaxWidth | string | null
+    public function getMaxContentWidth(): Width | string | null
     {
-        return MaxWidth::Full;
+        return Width::Full;
     }
 
     // After creating, go to the edit page (standard editorial workflow)
