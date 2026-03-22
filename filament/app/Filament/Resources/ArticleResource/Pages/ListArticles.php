@@ -13,14 +13,14 @@ class ListArticles extends ListRecords
     public function getBreadcrumbs(): array
     {
         return [
-            ArticleResource::getUrl('index') => 'Articles',
+            ArticleResource::getUrl('index') => 'Blog',
             null => 'Liste',
         ];
     }
 
     public function getTitle(): string
     {
-        return 'Articles';
+        return 'Blog';
     }
 
     protected function getHeaderActions(): array
