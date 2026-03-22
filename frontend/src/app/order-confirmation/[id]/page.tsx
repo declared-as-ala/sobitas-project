@@ -10,7 +10,7 @@ import { CheckCircle2, Package, Truck, Home, FileText, Download, Printer, Mail, 
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { getOrderDetails, getStorageUrl } from '@/services/api';
+import { getOrderDetails, getStorageUrl, getSiteLogoUrlResolved } from '@/services/api';
 import type { Order } from '@/types';
 import { toast } from 'sonner';
 
@@ -76,7 +76,7 @@ export default function OrderConfirmationPage() {
     return method;
   };
 
-  const handlePrintPDF = () => {
+  const handlePrintPDF = async () => {
     if (!printRef.current) return;
 
     const printWindow = window.open('', '_blank');
@@ -85,7 +85,7 @@ export default function OrderConfirmationPage() {
       return;
     }
 
-    const logoUrl = getStorageUrl('coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp');
+    const logoUrl = await getSiteLogoUrlResolved();
     
     printWindow.document.write(`
       <!DOCTYPE html>

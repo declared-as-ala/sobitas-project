@@ -7,17 +7,17 @@ import { Facebook, Instagram, Linkedin, Mail, Phone, MapPin, Sparkles, Loader2, 
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { motion } from 'motion/react';
-import { subscribeNewsletter, getStorageUrl, getCmsPages } from '@/services/api';
+import { subscribeNewsletter, getCmsPages } from '@/services/api';
+import { useSiteLogos } from '@/hooks/useSiteLogos';
 import { toast } from 'sonner';
 import type { CmsPage } from '@/services/api';
-
-const LOGO_STORAGE_PATH = 'coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp';
 
 interface FooterClientProps {
   pages?: CmsPage[];
 }
 
 export function FooterClient({ pages: pagesProp }: FooterClientProps) {
+  const { footerLogoUrl } = useSiteLogos();
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [shouldLoadMap, setShouldLoadMap] = useState(false);
@@ -96,7 +96,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
             >
               <Link href="/" className="block max-w-[140px] opacity-90 hover:opacity-100 transition-opacity duration-300">
                 <Image
-                  src={getStorageUrl(LOGO_STORAGE_PATH)}
+                  src={footerLogoUrl}
                   alt="Protein.tn - SOBITAS"
                   width={140}
                   height={45}
@@ -230,7 +230,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
           <div className="space-y-6">
             <div className="relative h-8 w-auto mb-6 shrink-0 flex items-center">
               <Image
-                src={getStorageUrl(LOGO_STORAGE_PATH)}
+                src={footerLogoUrl}
                 alt="Protein.tn"
                 width={150}
                 height={48}

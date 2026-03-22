@@ -15,9 +15,10 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { toast } from 'sonner';
 import { LoadingSpinner } from '@/app/components/LoadingSpinner';
-import { getStorageUrl } from '@/services/api';
+import { useSiteLogos } from '@/hooks/useSiteLogos';
 
 export default function RegisterPage() {
+  const { headerLogoUrl } = useSiteLogos();
   const router = useRouter();
   const { register, isAuthenticated, isLoading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
@@ -96,7 +97,7 @@ export default function RegisterPage() {
               <div className="flex justify-center mb-6">
                 <Link href="/" className="flex items-center justify-center">
                   <Image
-                    src={getStorageUrl('coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp')}
+                    src={headerLogoUrl}
                     alt="Sobitas Logo"
                     width={140}
                     height={45}

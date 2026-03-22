@@ -7,7 +7,7 @@ import { Footer } from '@/app/components/Footer';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { useCart } from '@/app/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { createOrder, getStorageUrl, getOrderDetails, applyCoupon, removeCoupon } from '@/services/api';
+import { createOrder, getStorageUrl, getOrderDetails, applyCoupon, removeCoupon, getSiteLogoUrlResolved } from '@/services/api';
 import { buildBackendOrderPayload } from '@/lib/orderPayload';
 import type { Order } from '@/types';
 import Image from 'next/image';
@@ -401,7 +401,7 @@ export default function CheckoutPage() {
     });
   };
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     if (!printRef.current || !orderData) return;
 
     const printWindow = window.open('', '_blank');
@@ -410,7 +410,7 @@ export default function CheckoutPage() {
       return;
     }
 
-    const logoUrl = getStorageUrl('coordonnees/September2023/OXC3oL0LreP3RCsgR3k6.webp');
+    const logoUrl = await getSiteLogoUrlResolved();
     const order = orderData.order;
     const details = orderData.orderDetails;
 
