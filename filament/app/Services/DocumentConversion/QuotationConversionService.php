@@ -97,7 +97,8 @@ class QuotationConversionService
             $nb = Ticket::whereYear('created_at', $year)->count() + 1;
             $ticket->numero = $year . '/' . str_pad((string) $nb, 4, '0', STR_PAD_LEFT);
             $remise = (float) ($quotation->remise ?? 0);
-            $timbre = (float) ($quotation->timbre ?? 0);
+            // Ticket is HT only: no timbre, no TVA, no frais livraison
+            $timbre = 0.0;
 
             $details = [];
             foreach ($quotation->details as $line) {
@@ -111,8 +112,7 @@ class QuotationConversionService
                     'tva_pct' => 0,
                 ];
             }
-            // Tickets are completely HT, dropping TVA and frais livraison
-            $totals = InvoiceCalculator::calculate($details, $remise, $timbre, 0, 0, true);
+            $totals = InvoiceCalculator::calculate($details, $remise, 0, 0, 0, true);
 
             $ticket->prix_ht = $totals['total_ht_brut'];
             $ticket->prix_ttc = $totals['net_a_payer'];
@@ -248,7 +248,6 @@ class QuotationConversionService
             $quotation->load('details.product');
 
             $remise = (float) ($quotation->remise ?? 0);
-            $timbre = (float) ($quotation->timbre ?? 0);
 
             $details = [];
             foreach ($quotation->details as $line) {
@@ -262,10 +261,8 @@ class QuotationConversionService
                     'tva_pct' => 0,
                 ];
             }
-            $total_items_ht = collect($details)->reduce(fn($c, $row) => $c + ($row['qte'] * $row['prix_unitaire']), 0);
-            $frais_livraison = $total_items_ht > 300 ? 0 : 10;
-
-            $totals = InvoiceCalculator::calculate($details, $remise, $timbre, 0, $frais_livraison, true);
+            // BL is HT only: no timbre, no automatic frais_livraison (user adds them manually after conversion)
+            $totals = InvoiceCalculator::calculate($details, $remise, 0, 0, 0, true);
 
             $bl = new Facture();
             $bl->commande_id = null;

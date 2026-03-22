@@ -365,9 +365,8 @@ class ProductResource extends Resource
                 Actions\DeleteAction::make(),
             ])
             ->bulkActions([
-                Actions\BulkActionGroup::make([
-                    Actions\DeleteBulkAction::make(),
-                ]),
+                Actions\DeleteBulkAction::make()
+                    ->label('Supprimer sélection'),
             ]);
     }
 

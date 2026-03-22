@@ -263,28 +263,30 @@
         </div>
 
         <div class="tr-list">
-            @forelse ($regions as $r)
-                <div class="tr-row">
-                    <div class="tr-rank @if ($loop->index === 0) r1 @elseif ($loop->index === 1) r2 @elseif ($loop->index === 2) r3 @else rn @endif">
-                        {{ $loop->iteration }}
-                    </div>
+            @if (count($regions) > 0)
+                @foreach ($regions as $index => $r)
+                    <div class="tr-row" wire:key="region-{{ $index }}">
+                        <div class="tr-rank {{ $this->rankClass((int) $index) }}">
+                            {{ (int) $index + 1 }}
+                        </div>
 
-                    <div class="tr-region-info">
-                        <div class="tr-region-name">{{ $r['region'] }}</div>
-                        <div class="tr-bar-wrap">
-                            <div class="tr-bar-fill" style="width: {{ $r['pct'] }}%"></div>
+                        <div class="tr-region-info">
+                            <div class="tr-region-name">{{ $r['region'] }}</div>
+                            <div class="tr-bar-wrap">
+                                <div class="tr-bar-fill" style="width: {{ $r['pct'] }}%"></div>
+                            </div>
+                        </div>
+
+                        <div class="tr-region-stats">
+                            <span class="tr-stat-main">{{ number_format($r['total_ht'], 3, ',', ' ') }} DT</span>
+                            <span class="tr-stat-sub">
+                                {{ $r['total_commandes'] }} cmd
+                                · {{ $r['total_clients'] }} client{{ $r['total_clients'] > 1 ? 's' : '' }}
+                            </span>
                         </div>
                     </div>
-
-                    <div class="tr-region-stats">
-                        <span class="tr-stat-main">{{ number_format($r['total_ht'], 3, ',', ' ') }} DT</span>
-                        <span class="tr-stat-sub">
-                            {{ $r['total_commandes'] }} cmd
-                            · {{ $r['total_clients'] }} client{{ $r['total_clients'] > 1 ? 's' : '' }}
-                        </span>
-                    </div>
-                </div>
-            @empty
+                @endforeach
+            @else
                 <div class="tr-empty">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                          stroke-width="1.5" stroke="currentColor" width="36" height="36">
@@ -295,7 +297,7 @@
                     </svg>
                     <span>Aucune donnée régionale pour cette période</span>
                 </div>
-            @endforelse
+            @endif
         </div>
     </div>
 
@@ -316,14 +318,15 @@
         </div>
 
         <div class="tr-list">
-            @forelse ($clients as $c)
-                <div class="tr-row">
+            @if (count($clients) > 0)
+                @foreach ($clients as $c)
+                    <div class="tr-row" wire:key="client-{{ $c['id'] }}">
                     <div class="tr-avatar av-{{ $loop->index % 8 }}">{{ $c['initials'] }}</div>
 
                     <div class="tr-client-info">
                         <div class="tr-client-name">{{ $c['name'] }}</div>
                         <div class="tr-client-meta">
-                            @if ($c['region'] && $c['region'] !== 'N/A')
+                            @if ($this->shouldShowClientRegion($c['region'] ?? null))
                                 <span class="tr-client-region">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                          stroke-width="2" stroke="currentColor" width="11" height="11">
@@ -343,8 +346,9 @@
                         <div class="tr-client-ttc">{{ number_format($c['total_ttc'], 3, ',', ' ') }} DT</div>
                         <div class="tr-client-last">{{ $c['last_order'] }}</div>
                     </div>
-                </div>
-            @empty
+                    </div>
+                @endforeach
+            @else
                 <div class="tr-empty">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                          stroke-width="1.5" stroke="currentColor" width="36" height="36">
@@ -353,7 +357,7 @@
                     </svg>
                     <span>Aucun client pour cette période</span>
                 </div>
-            @endforelse
+            @endif
         </div>
     </div>
 

@@ -24,6 +24,29 @@ class TopRegionsWidget extends Widget
     #[On('dashboardFilterUpdated')]
     public function refresh(): void {}
 
+    /**
+     * CSS class for rank badge (avoid Blade/Livewire issues with "===" in the view).
+     */
+    public function rankClass(int $index): string
+    {
+        return match ($index) {
+            0 => 'r1',
+            1 => 'r2',
+            2 => 'r3',
+            default => 'rn',
+        };
+    }
+
+    /**
+     * Whether to show region pill on client row (keeps Blade free of !== / ===).
+     */
+    public function shouldShowClientRegion(?string $region): bool
+    {
+        $r = $region !== null ? trim($region) : '';
+
+        return $r !== '' && $r !== 'N/A';
+    }
+
     private function getCurrentPeriod(): array
     {
         $preset      = session('dashboard.filter.preset', '30d');

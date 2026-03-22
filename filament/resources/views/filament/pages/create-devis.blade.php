@@ -293,27 +293,28 @@ function dvInitializeForm() {
     }
 }
 
-// Run on initial page load
-$(document).ready(function () {
-    dvInitializeForm();
-});
+var _dvBootTimer = null;
+function dvBootstrap() {
+    if (!document.querySelector('.devis-page')) return;
+    // Debounce: cancel any in-flight init, schedule a single one.
+    // This collapses concurrent calls from document.ready + livewire:navigated
+    // + spa-navigation-fix into exactly one dvInitializeForm() execution.
+    clearTimeout(_dvBootTimer);
+    _dvBootTimer = setTimeout(dvInitializeForm, 60);
+}
 
-// Re-initialize when SPA navigates to this page
-// This hook is called by spa-navigation-fix.blade.php after every SPA navigation
-window.dvFormReinit = function() {
-    // Small delay to ensure DOM is fully updated
-    setTimeout(function() {
-        dvInitializeForm();
-    }, 50);
-};
+// Full page load
+$(document).ready(dvBootstrap);
 
-// Ensure Livewire re-initializes on component initialization
-if (typeof window.Livewire !== 'undefined') {
-    document.addEventListener('livewire:initialized', function() {
-        setTimeout(function() {
-            dvInitializeForm();
-        }, 50);
-    });
+// SPA navigation hook (called by spa-navigation-fix.blade.php on every navigation)
+window.dvFormReinit = dvBootstrap;
+
+// Register livewire:navigated listener only ONCE regardless of how many times
+// this script block executes (every SPA navigation re-executes blade scripts).
+// Without the guard, listeners accumulate and fire N times concurrently.
+if (!window._dvNavListenerActive) {
+    window._dvNavListenerActive = true;
+    document.addEventListener('livewire:navigated', dvBootstrap);
 }
 
 function dvHydrate(data, selProducts) {

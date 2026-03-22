@@ -159,6 +159,16 @@ docker-compose up -d
 docker-compose ps
 ```
 
+### Dashboard: `top-regions-widget` / “syntax error, unexpected token =”
+
+Livewire’s Blade compiler can choke on **`===`**, **`!==`**, **`match` in `{{ }}`**, and **`@forelse (... as $k => $v)`** in widget views. The `TopRegionsWidget` uses **PHP helpers** (`rankClass()`, `shouldShowClientRegion()`) and **`@foreach` + `@if (count())`** instead.
+
+After deploying a fix, clear compiled views on the server:
+
+```bash
+docker exec -it sobitas-backend-v2 php artisan view:clear
+```
+
 ---
 
 **Please share the actual error message** from `docker logs sobitas-backend` or the output when running `php artisan tinker` so I can provide a more specific fix.

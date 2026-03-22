@@ -357,26 +357,31 @@ function ftvaInitializeForm() {
     }
 }
 
+var _ftvaBootTimer = null;
 function ftvaBootstrap() {
     if (!document.querySelector('.ftva-page')) return;
-    ftvaInitializeForm();
+    // Debounce: collapse concurrent calls (document.ready + livewire:navigated
+    // + spa-navigation-fix ftvaFormReinit) into exactly one ftvaInitializeForm() call.
+    clearTimeout(_ftvaBootTimer);
+    _ftvaBootTimer = setTimeout(ftvaInitializeForm, 60);
 }
 
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', ftvaBootstrap);
+    document.addEventListener('DOMContentLoaded', ftvaBootstrap, { once: true });
 } else {
-    setTimeout(ftvaBootstrap, 10);
+    ftvaBootstrap();
 }
 
-window.ftvaFormReinit = function () {
-    setTimeout(ftvaBootstrap, 50);
-};
+// SPA navigation hook (called by spa-navigation-fix.blade.php on every navigation)
+window.ftvaFormReinit = ftvaBootstrap;
 
-document.addEventListener('livewire:navigated', function () {
-    if (document.querySelector('.ftva-page')) {
-        setTimeout(ftvaBootstrap, 80);
-    }
-});
+// Register livewire:navigated listener only ONCE regardless of how many times
+// this script block executes (every SPA navigation re-executes blade scripts).
+// Without the guard, listeners accumulate and fire N times concurrently.
+if (!window._ftvaNavListenerActive) {
+    window._ftvaNavListenerActive = true;
+    document.addEventListener('livewire:navigated', ftvaBootstrap);
+}
 
 // ── Hydrate form on edit ──────────────────────────────────────────────────────
 function ftvaHydrate(data, selProducts) {
