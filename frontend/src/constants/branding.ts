@@ -1,5 +1,5 @@
 /**
- * Fallback logo path under Laravel public disk (NEXT_PUBLIC_STORAGE_URL + path).
- * Used when /api/coordonnees is slow or fails. Update if you replace the default asset in admin.
+ * Site wordmark in `public/` — used for navbar, footer, and print (not loaded from API).
+ * File: `frontend/public/sobitas-logo.png`
  */
-export const DEFAULT_LOGO_STORAGE_PATH = 'coordonnees/March2026/GsHOdGUxE1NEjQTLaEJb.png';
+export const SITE_LOGO_PUBLIC_PATH = '/sobitas-logo.png';

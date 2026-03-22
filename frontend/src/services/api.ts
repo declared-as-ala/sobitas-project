@@ -25,7 +25,7 @@ import type {
   Review,
 } from '@/types';
 import type { BackendOrderPayload } from '@/lib/orderPayload';
-import { DEFAULT_LOGO_STORAGE_PATH } from '@/constants/branding';
+import { SITE_LOGO_PUBLIC_PATH } from '@/constants/branding';
 
 // In browser on localhost: use same-origin API proxy to avoid CORS (next.config.js rewrites /api-proxy to backend).
 // Storage URL is always production so server and client render the same image URLs (avoids hydration mismatch).
@@ -290,30 +290,13 @@ export const getCoordinates = async (): Promise<Coordinate> => {
   return response.data;
 };
 
-const COORDINATES_CACHE_TTL_MS = 60_000;
-let coordinatesCache: { data: Coordinate; at: number } | null = null;
-
-/** Same as /coordonnees but cached briefly (avoids duplicate calls from Header + Footer). */
-export async function getCoordinatesCached(): Promise<Coordinate> {
-  if (coordinatesCache && Date.now() - coordinatesCache.at < COORDINATES_CACHE_TTL_MS) {
-    return coordinatesCache.data;
-  }
-  const data = await getCoordinates();
-  coordinatesCache = { data, at: Date.now() };
-  return data;
-}
-
-/** Full URL for site logo (for print/PDF). Uses `logo` from /coordonnees or {@link DEFAULT_LOGO_STORAGE_PATH}. */
+/** Absolute URL for site logo in print/PDF — uses static `public/sobitas-logo.png`. */
 export async function getSiteLogoUrlResolved(): Promise<string> {
-  try {
-    const c = await getCoordinatesCached();
-    if (c?.logo && String(c.logo).trim()) {
-      return getStorageUrl(String(c.logo).trim());
-    }
-  } catch {
-    // fall through
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin}${SITE_LOGO_PUBLIC_PATH}`;
   }
-  return getStorageUrl(DEFAULT_LOGO_STORAGE_PATH);
+  const base = (process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn').replace(/\/$/, '');
+  return `${base}${SITE_LOGO_PUBLIC_PATH}`;
 }
 
 // Products
