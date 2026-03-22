@@ -85,21 +85,14 @@ class ArticleResource extends Resource
                                     Forms\Components\RichEditor::make('description')
                                         ->label(false)
                                         ->columnSpanFull()
+                                        // Filament v4: no "heading" button — use h2/h3; toolbar is grouped arrays
                                         ->toolbarButtons([
-                                            'heading',
-                                            'bold',
-                                            'italic',
-                                            'underline',
-                                            'strike',
-                                            'link',
-                                            'bulletList',
-                                            'orderedList',
-                                            'blockquote',
-                                            'codeBlock',
-                                            'table',
-                                            'attachFiles',
-                                            'undo',
-                                            'redo',
+                                            ['bold', 'italic', 'underline', 'strike', 'link'],
+                                            ['h2', 'h3'],
+                                            ['bulletList', 'orderedList'],
+                                            ['blockquote', 'codeBlock'],
+                                            ['table', 'attachFiles'],
+                                            ['undo', 'redo'],
                                         ])
                                         ->extraAttributes(['class' => 'article-editor']),
                                 ]),
@@ -156,9 +149,9 @@ class ArticleResource extends Resource
                                 ->icon('heroicon-o-paper-airplane')
                                 ->schema([
                                     Forms\Components\Toggle::make('publier')
-                                        ->label('Publier l\'article')
-                                        ->onLabel('Publié')
-                                        ->offLabel('Brouillon')
+                                        ->label(fn (?bool $state): string => $state ? 'Publié' : 'Brouillon')
+                                        ->live()
+                                        ->helperText('Activez pour publier l\'article.')
                                         ->default(true)
                                         ->onColor('success')
                                         ->offColor('warning'),
