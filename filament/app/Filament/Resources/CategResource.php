@@ -75,6 +75,10 @@ class CategResource extends Resource
                             Storage::disk('public')->delete($oldPath);
                         }
                     }
+                })
+                ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
+                    $path = (string) $file->store('categories', 'public');
+                    return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp($path) ?? $path;
                 }),
             Forms\Components\TextInput::make('meta_title')
                 ->label('Meta Title')

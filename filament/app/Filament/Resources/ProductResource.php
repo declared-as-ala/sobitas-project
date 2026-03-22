@@ -107,7 +107,11 @@ class ProductResource extends Resource
                                         ->directory('products')
                                         ->image()
                                         ->imageEditor()
-                                        ->maxSize(4096),
+                                        ->maxSize(4096)
+                                        ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
+                                            $path = (string) $file->store('products', 'public');
+                                            return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp($path) ?? $path;
+                                        }),
                                     FileUpload::make('images')
                                         ->label('Gallery (images secondaires)')
                                         ->disk('public')
@@ -115,7 +119,11 @@ class ProductResource extends Resource
                                         ->image()
                                         ->multiple()
                                         ->reorderable()
-                                        ->maxSize(4096),
+                                        ->maxSize(4096)
+                                        ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
+                                            $path = (string) $file->store('products', 'public');
+                                            return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp($path) ?? $path;
+                                        }),
                                 ]),
                             Section::make('Flags produit')
                                 ->schema([

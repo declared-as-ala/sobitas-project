@@ -146,7 +146,11 @@ class CoordinateResource extends Resource
                                     ->image()
                                     ->imageEditor()
                                     ->maxSize(2048)
-                                    ->columnSpanFull(),
+                                    ->columnSpanFull()
+                                    ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
+                                        $path = (string) $file->store('coordonnees', 'public');
+                                        return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp($path) ?? $path;
+                                    }),
                                 Forms\Components\Placeholder::make('logo_facture_preview')
                                     ->label('Logo Facture actuel')
                                     ->content(function ($record): HtmlString|string {
@@ -175,7 +179,11 @@ class CoordinateResource extends Resource
                                     ->image()
                                     ->imageEditor()
                                     ->maxSize(2048)
-                                    ->columnSpanFull(),
+                                    ->columnSpanFull()
+                                    ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
+                                        $path = (string) $file->store('coordonnees', 'public');
+                                        return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp($path) ?? $path;
+                                    }),
                             ]),
                         ]),
 

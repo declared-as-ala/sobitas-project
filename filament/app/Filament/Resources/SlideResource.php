@@ -56,6 +56,10 @@ class SlideResource extends Resource
                             Storage::disk('public')->delete($oldPath);
                         }
                     }
+                })
+                ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
+                    $path = (string) $file->store('slides', 'public');
+                    return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp($path) ?? $path;
                 }),
             Forms\Components\TextInput::make('titre')->label('Titre')->maxLength(255),
             Forms\Components\TextInput::make('lien')->label('Lien')->maxLength(500),

@@ -73,8 +73,8 @@
         </tr>
         <tr>
             <td colspan="2"></td>
-            <th colspan="3" class="bt">Totale TTC</th>
-            <th class="text-right bt">{{ number_format((float) ($calcTotals['prix_ttc'] ?? $facture->prix_ttc ?? 0), 3, '.', '') }}</th>
+            <th colspan="3" class="bt">Net à Payer</th>
+            <th class="text-right bt">{{ number_format((float) ($calcTotals['net_a_payer'] ?? $facture->net_a_payer ?? 0), 3, '.', '') }}</th>
         </tr>
     </tfoot>
 </table>
@@ -82,7 +82,7 @@
 
 @section('notices')
 @php
-    $totalTtcValue = (float) ($calcTotals['prix_ttc'] ?? $facture->prix_ttc ?? 0);
+    $totalTtcValue = (float) ($calcTotals['net_a_payer'] ?? $facture->net_a_payer ?? 0);
 @endphp
 @if(isset($coordonnee) && !empty($coordonnee->note))
 <div class="notices">

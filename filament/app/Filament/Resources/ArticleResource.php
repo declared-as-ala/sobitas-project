@@ -51,7 +51,11 @@ class ArticleResource extends Resource
                 ->maxSize(5120) // 5MB
                 ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
                 ->helperText('Formats acceptés: JPEG, PNG, WebP. Taille max: 5MB')
-                ->columnSpanFull(),
+                ->columnSpanFull()
+                ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
+                    $path = (string) $file->store('articles', 'public');
+                    return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp($path) ?? $path;
+                }),
             Forms\Components\RichEditor::make('description_fr')
                 ->label('Contenu')
                 ->columnSpanFull(),

@@ -4,23 +4,11 @@ namespace App\Providers;
 
 use App\Filament\Widgets\TopCategoriesListWidget;
 use App\Filament\Widgets\TopRegionsWidget;
-use App\Models\Article;
-use App\Models\Categ;
 use App\Models\Commande;
-use App\Models\Coordinate;
-use App\Models\Page;
-use App\Models\Product;
 use App\Models\Review;
-use App\Models\Slide;
 use App\Models\User;
-use App\Observers\ArticleImageObserver;
-use App\Observers\CategImageObserver;
 use App\Observers\CommandeObserver;
-use App\Observers\CoordinateImageObserver;
-use App\Observers\PageImageObserver;
-use App\Observers\ProductImageObserver;
 use App\Observers\ReviewObserver;
-use App\Observers\SlideImageObserver;
 use App\Observers\UserObserver;
 use Filament\Facades\Filament;
 use Illuminate\Auth\Notifications\ResetPassword;
@@ -56,13 +44,5 @@ class AppServiceProvider extends ServiceProvider
         Commande::observe(CommandeObserver::class);
         Review::observe(ReviewObserver::class);
         User::observe(UserObserver::class);
-
-        // Automatic WebP conversion on image upload
-        Product::observe(ProductImageObserver::class);
-        Article::observe(ArticleImageObserver::class);
-        Categ::observe(CategImageObserver::class);
-        Slide::observe(SlideImageObserver::class);
-        Page::observe(PageImageObserver::class);
-        Coordinate::observe(CoordinateImageObserver::class);
     }
 }
