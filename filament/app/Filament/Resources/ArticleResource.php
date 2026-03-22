@@ -111,21 +111,14 @@ class ArticleResource extends Resource
                     Forms\Components\RichEditor::make('description')
                         ->label('Description')
                         ->columnSpanFull()
+                        // Filament v4: use h1/h2/h3 (not "heading"); groups are nested arrays
                         ->toolbarButtons([
-                            'heading',
-                            'bold',
-                            'italic',
-                            'underline',
-                            'strike',
-                            'link',
-                            'bulletList',
-                            'orderedList',
-                            'blockquote',
-                            'codeBlock',
-                            'table',
-                            'attachFiles',
-                            'undo',
-                            'redo',
+                            ['bold', 'italic', 'underline', 'strike', 'link'],
+                            ['h2', 'h3'],
+                            ['bulletList', 'orderedList'],
+                            ['blockquote', 'codeBlock'],
+                            ['table', 'attachFiles'],
+                            ['undo', 'redo'],
                         ])
                         ->extraInputAttributes(['style' => 'min-height: 500px;']),
                 ]),
