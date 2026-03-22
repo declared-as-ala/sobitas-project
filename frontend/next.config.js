@@ -64,10 +64,13 @@ const nextConfig = {
         source: '/favicon.ico',
         headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000' }],
       },
-      {
-        source: '/favicon-*.png',
-        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000' }],
-      },
+      // One rule per file — Next.js `source` does not support globs like /favicon-*.png
+      ...['/favicon-16x16.png', '/favicon-32x32.png', '/favicon-192x192.png', '/favicon-512x512.png'].map(
+        (source) => ({
+          source,
+          headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000' }],
+        })
+      ),
       {
         source: '/apple-touch-icon.png',
         headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000' }],

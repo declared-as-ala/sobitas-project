@@ -23,7 +23,7 @@ import {
 } from '@/app/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/app/components/ui/sheet';
 import { cn } from '@/app/components/ui/utils';
-import { searchProducts } from '@/services/api';
+import { searchProducts, getStorageUrl } from '@/services/api';
 import { useSiteLogos } from '@/hooks/useSiteLogos';
 import { getPriceDisplay } from '@/util/productPrice';
 import { useDebounce } from '@/util/debounce';
