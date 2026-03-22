@@ -5,10 +5,17 @@ namespace App\Filament\Resources\ArticleResource\Pages;
 use App\Filament\Resources\ArticleResource;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
+use Filament\Support\Enums\MaxWidth;
 
 class EditArticle extends EditRecord
 {
     protected static string $resource = ArticleResource::class;
+
+    // Use the full page width — editorial workspace needs maximum horizontal space
+    public function getMaxContentWidth(): MaxWidth | string | null
+    {
+        return MaxWidth::Full;
+    }
 
     protected function getHeaderActions(): array
     {

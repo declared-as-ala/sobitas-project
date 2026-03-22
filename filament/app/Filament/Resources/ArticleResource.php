@@ -97,9 +97,6 @@ class ArticleResource extends Resource
                                             ['blockquote', 'codeBlock'],
                                             ['table', 'attachFiles'],
                                             ['undo', 'redo'],
-                                        ])
-                                        ->extraInputAttributes([
-                                            'style' => 'min-height: 600px; line-height: 1.85; font-size: 1rem;',
                                         ]),
                                 ]),
 
