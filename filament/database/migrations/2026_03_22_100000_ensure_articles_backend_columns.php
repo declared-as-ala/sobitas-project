@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Schema;
  * Columns guaranteed by backend:
  *   designation_fr, cover, description, publier, slug,
  *   alt_cover, description_cover, meta_description_fr,
- *   meta, content_seo, review, aggregateRating
+ *   meta, meta_title, content_seo, review, aggregateRating
  */
 return new class extends Migration
 {

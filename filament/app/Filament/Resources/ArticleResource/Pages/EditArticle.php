@@ -27,7 +27,8 @@ class EditArticle extends EditRecord
                 ->url(ArticleResource::getUrl('index')),
 
             Actions\DeleteAction::make()
-                ->label('Supprimer'),
+                ->label('Supprimer')
+                ->color('danger'),
         ];
     }
 

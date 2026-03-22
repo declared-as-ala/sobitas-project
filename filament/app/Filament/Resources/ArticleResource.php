@@ -40,30 +40,16 @@ class ArticleResource extends Resource
     {
         return $schema->schema([
 
-            // ═══════════════════════════════════════════════════════════════
-            // ONE flat Grid — 3 columns (lg) — sections paired as columns:
-            //
-            //  [  Title + Slug  — span 2  ] [ Status       — span 1 ]
-            //  [  Content       — span 2  ] [ Cover image  — span 1 ]
-            //  [  SEO section   — span 2  ] [                       ]
-            //
-            // This is the established pattern in this project.
-            // Sections directly inside the Grid with columnSpan.
-            // No nested Grid wrappers.
-            // ═══════════════════════════════════════════════════════════════
-            Grid::make(['default' => 1, 'lg' => 3])
+            // ── Titre + Slug (two columns, like reference) ─────────────
+            Section::make()
                 ->schema([
-
-                    // ── Row 1 LEFT: Titre & Slug ──────────────────────────
-                    Section::make()
-                        ->columnSpan(['default' => 1, 'lg' => 2])
+                    Grid::make(2)
                         ->schema([
                             Forms\Components\TextInput::make('designation_fr')
-                                ->label('Titre de l\'article')
-                                ->placeholder('Donnez un titre accrocheur…')
+                                ->label('Titre')
+                                ->placeholder('Titre de l\'article')
                                 ->required()
                                 ->maxLength(255)
-                                ->columnSpanFull()
                                 ->live(onBlur: true)
                                 ->afterStateUpdated(function (string $operation, $state, Set $set, Get $get): void {
                                     if ($operation === 'create' || ($operation === 'edit' && empty($get('slug')))) {
@@ -73,105 +59,118 @@ class ArticleResource extends Resource
 
                             Forms\Components\TextInput::make('slug')
                                 ->label('Slug')
-                                ->placeholder('titre-de-larticle')
+                                ->placeholder('url-de-l-article')
                                 ->required()
                                 ->maxLength(255)
                                 ->unique(ignoreRecord: true)
-                                ->prefix('/')
-                                ->helperText('Auto-généré depuis le titre — modifiable manuellement')
-                                ->columnSpanFull(),
+                                ->helperText('Généré depuis le titre — modifiable.')
+                                ->rules(['regex:/^[a-z0-9\-]+$/'])
+                                ->validationMessages(['regex' => 'Lettres minuscules, chiffres et tirets uniquement.']),
                         ]),
+                ]),
 
-                    // ── Row 1 RIGHT: Statut ───────────────────────────────
-                    Section::make('Statut')
-                        ->columnSpan(1)
-                        ->icon('heroicon-o-signal')
-                        ->compact()
+            // ── Image de couverture ──────────────────────────────────────
+            Section::make('Image de couverture')
+                ->icon('heroicon-o-photo')
+                ->schema([
+                    Forms\Components\FileUpload::make('cover')
+                        ->label('Image de couverture')
+                        ->disk('public')
+                        ->directory('articles')
+                        ->image()
+                        ->imageEditor()
+                        ->imageEditorAspectRatios([null, '16:9', '4:3', '1:1'])
+                        ->maxSize(5120)
+                        ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+                        ->helperText('Formats acceptés : JPEG, PNG, WebP. Taille max : 5 Mo.')
+                        ->columnSpanFull()
+                        ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
+                            $path = (string) $file->store('articles', 'public');
+
+                            return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp($path) ?? $path;
+                        }),
+
+                    Grid::make(2)
                         ->schema([
-                            Forms\Components\Toggle::make('publier')
-                                ->label('Publier l\'article')
-                                ->default(true)
-                                ->onColor('success')
-                                ->offColor('gray')
-                                ->helperText('Désactivez pour mettre en brouillon.'),
-                        ]),
-
-                    // ── Row 2 LEFT: Éditeur de contenu ───────────────────
-                    Section::make('Contenu')
-                        ->columnSpan(['default' => 1, 'lg' => 2])
-                        ->icon('heroicon-o-pencil-square')
-                        ->schema([
-                            Forms\Components\RichEditor::make('description')
-                                ->label(false)
-                                ->columnSpanFull()
-                                ->toolbarButtons([
-                                    ['bold', 'italic', 'underline', 'strike'],
-                                    ['h2', 'h3'],
-                                    ['link'],
-                                    ['bulletList', 'orderedList'],
-                                    ['blockquote', 'codeBlock'],
-                                    ['table', 'attachFiles'],
-                                    ['undo', 'redo'],
-                                ]),
-                        ]),
-
-                    // ── Row 2 RIGHT: Couverture ───────────────────────────
-                    Section::make('Couverture')
-                        ->columnSpan(1)
-                        ->icon('heroicon-o-photo')
-                        ->schema([
-                            Forms\Components\FileUpload::make('cover')
-                                ->label(false)
-                                ->disk('public')
-                                ->directory('articles')
-                                ->image()
-                                ->imageEditor()
-                                ->imageEditorAspectRatios([null, '16:9', '4:3', '1:1'])
-                                ->maxSize(5120)
-                                ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
-                                ->helperText('JPEG · PNG · WebP — max 5 MB')
-                                ->columnSpanFull()
-                                ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
-                                    $path = (string) $file->store('articles', 'public');
-                                    return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp($path) ?? $path;
-                                }),
-
                             Forms\Components\TextInput::make('alt_cover')
-                                ->label('Texte alt')
+                                ->label('Texte alt (SEO)')
                                 ->maxLength(255)
-                                ->placeholder('Description de l\'image…'),
+                                ->placeholder('Description de l\'image'),
 
                             Forms\Components\TextInput::make('description_cover')
                                 ->label('Légende')
                                 ->maxLength(255)
-                                ->placeholder('Légende sous l\'image…'),
+                                ->placeholder('Légende sous l\'image'),
                         ]),
+                ]),
 
-                    // ── Row 3 LEFT: SEO (collapsed) ───────────────────────
-                    Section::make('SEO & Référencement')
-                        ->columnSpan(['default' => 1, 'lg' => 2])
-                        ->icon('heroicon-o-magnifying-glass')
-                        ->collapsible()
-                        ->collapsed()
+            // ── Contenu (full-width editor) ──────────────────────────────
+            Section::make('Contenu')
+                ->icon('heroicon-o-document-text')
+                ->schema([
+                    Forms\Components\RichEditor::make('description')
+                        ->label('Contenu')
+                        ->columnSpanFull()
+                        ->toolbarButtons([
+                            ['bold', 'italic', 'underline', 'strike', 'subscript', 'superscript', 'link'],
+                            ['h2', 'h3'],
+                            ['alignStart', 'alignCenter', 'alignEnd'],
+                            ['blockquote', 'codeBlock', 'bulletList', 'orderedList'],
+                            ['table', 'attachFiles'],
+                            ['undo', 'redo'],
+                        ]),
+                ]),
+
+            // ── Publié + Meta title (two columns) ────────────────────
+            Section::make()
+                ->schema([
+                    Grid::make(2)
                         ->schema([
-                            Forms\Components\TextInput::make('meta_description_fr')
-                                ->label('Meta description')
-                                ->placeholder('155–160 caractères affichés dans Google…')
-                                ->maxLength(500)
-                                ->columnSpanFull(),
+                            Forms\Components\Toggle::make('publier')
+                                ->label('Publié')
+                                ->default(true)
+                                ->onColor('primary')
+                                ->offColor('gray')
+                                ->helperText('Désactivé = brouillon.'),
 
-                            Forms\Components\Textarea::make('meta')
-                                ->label('Balises meta (name;content / name;content / …)')
-                                ->placeholder('keywords;nutrition,sport / author;Sobitas')
-                                ->rows(3)
-                                ->columnSpanFull(),
+                            Forms\Components\TextInput::make('meta_title')
+                                ->label('Meta title')
+                                ->maxLength(255)
+                                ->placeholder('Titre pour les moteurs de recherche (optionnel)')
+                                ->helperText('Si vide, le titre de l\'article peut être utilisé côté site.'),
+                        ]),
+                ]),
 
-                            Forms\Components\Textarea::make('content_seo')
-                                ->label('Schema JSON-LD')
-                                ->placeholder('{"@context":"https://schema.org","@type":"Article"}')
-                                ->rows(5)
-                                ->columnSpanFull(),
+            Section::make()
+                ->schema([
+                    Forms\Components\Textarea::make('meta_description_fr')
+                        ->label('Meta description')
+                        ->placeholder('Résumé affiché dans Google (≈ 155–160 caractères)')
+                        ->maxLength(500)
+                        ->rows(3)
+                        ->columnSpanFull(),
+                ]),
 
+            // ── SEO avancé (collapsed) ─────────────────────────────────
+            Section::make('SEO avancé')
+                ->icon('heroicon-o-magnifying-glass')
+                ->collapsible()
+                ->collapsed()
+                ->schema([
+                    Forms\Components\Textarea::make('meta')
+                        ->label('Balises meta (name;content / …)')
+                        ->placeholder('keywords;nutrition / author;Sobitas')
+                        ->rows(3)
+                        ->columnSpanFull(),
+
+                    Forms\Components\Textarea::make('content_seo')
+                        ->label('Schema JSON-LD')
+                        ->placeholder('{"@context":"https://schema.org","@type":"Article"}')
+                        ->rows(5)
+                        ->columnSpanFull(),
+
+                    Grid::make(2)
+                        ->schema([
                             Forms\Components\TextInput::make('review')
                                 ->label('Review (seo)')
                                 ->maxLength(500),
@@ -179,11 +178,9 @@ class ArticleResource extends Resource
                             Forms\Components\TextInput::make('aggregateRating')
                                 ->label('AggregateRating (seo)')
                                 ->maxLength(500)
-                                ->placeholder('{"@type":"AggregateRating","ratingValue":"4.8","reviewCount":"24"}'),
-                        ])
-                        ->columns(2),
+                                ->placeholder('{"@type":"AggregateRating","ratingValue":"4.8"}'),
+                        ]),
                 ]),
-
         ]);
     }
 
@@ -206,6 +203,7 @@ class ArticleResource extends Resource
                         if (str_starts_with($record->cover, 'http://') || str_starts_with($record->cover, 'https://')) {
                             return $record->cover;
                         }
+
                         return asset('storage/' . ltrim($record->cover, '/'));
                     }),
 
