@@ -63,9 +63,8 @@ class ArticleResource extends Resource
                         ->validationMessages(['regex' => 'Le slug ne peut contenir que des lettres minuscules, chiffres et tirets.']),
 
                     Forms\Components\Toggle::make('publier')
-                        ->label('Publier')
-                        ->onLabel('Publier')
-                        ->offLabel('Non publier')
+                        ->label(fn (?bool $state): string => $state ? 'Publier' : 'Non publier')
+                        ->live()
                         ->default(true),
                 ])
                 ->columns(2),
