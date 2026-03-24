@@ -4,7 +4,7 @@
 **Current Performance**: 3+ seconds per page  
 **Target Performance**: < 500ms (0.5s) to 1.2s per page  
 **Expected Improvement**: 60-75% faster (3x-4x faster)  
-**Deployment Complexity**: Low (no code changes required for basic optimization)  
+**Deployment Complexity**: Low (sno code changes required for basic optimization)  
 **Deployment Time**: 30-45 minutes  
 
 ---
