@@ -2,10 +2,61 @@
     $coordinate = \App\Models\Coordinate::getCached();
     $max = 100;
 
-    // Get current Livewire form data (create or edit) so we can hydrate Select2 and totals.
-    $getLwData = method_exists($getLivewire(), 'getRecord') && $getLivewire()->getRecord()
-        ? $getLivewire()->data
-        : [];
+    $livewire = $getLivewire();
+    $getLwData = [];
+
+    if (method_exists($livewire, 'getRecord') && $livewire->getRecord()) {
+        if (isset($livewire->data) && is_array($livewire->data)) {
+            $getLwData = $livewire->data;
+        }
+        if ($getLwData === [] && method_exists($livewire, 'form')) {
+            try {
+                $raw = $livewire->form->getRawState();
+                $getLwData = is_array($raw) ? $raw : [];
+            } catch (\Throwable) {
+                $getLwData = [];
+            }
+        }
+    } elseif (method_exists($livewire, 'form')) {
+        try {
+            $raw = $livewire->form->getRawState();
+            $getLwData = is_array($raw) ? $raw : [];
+        } catch (\Throwable) {
+            $getLwData = [];
+        }
+        if ($getLwData === [] && isset($livewire->data) && is_array($livewire->data)) {
+            $getLwData = $livewire->data;
+        }
+    }
+
+    $detailsRaw = $getLwData['details'] ?? null;
+    if (is_string($detailsRaw)) {
+        $detailsRaw = json_decode($detailsRaw, true) ?? [];
+    }
+    $getLwData['details'] = is_array($detailsRaw) ? $detailsRaw : [];
+
+    if (method_exists($livewire, 'getRecord') && ($rec = $livewire->getRecord())) {
+        $rec->loadMissing('details', 'client');
+        if (empty($getLwData['client_id']) && $rec->client_id) {
+            $getLwData['client_id'] = $rec->client_id;
+        }
+        if ($getLwData['details'] === [] && $rec->details->isNotEmpty()) {
+            $getLwData['details'] = $rec->details->map(fn ($d) => [
+                'produit_id' => $d->produit_id,
+                'qte' => $d->qte ?? $d->quantite ?? 0,
+                'prix_unitaire' => $d->prix_unitaire,
+            ])->toArray();
+        }
+        if (! array_key_exists('remise', $getLwData) || $getLwData['remise'] === null) {
+            $getLwData['remise'] = (float) ($rec->remise ?? 0);
+        }
+        if (! array_key_exists('pourcentage_remise', $getLwData) || $getLwData['pourcentage_remise'] === null) {
+            $getLwData['pourcentage_remise'] = (float) ($rec->pourcentage_remise ?? 0);
+        }
+        if (! array_key_exists('frais_livraison', $getLwData) || $getLwData['frais_livraison'] === null) {
+            $getLwData['frais_livraison'] = (float) ($rec->frais_livraison ?? 0);
+        }
+    }
 
     // Preload selected products so Select2 can show proper labels immediately on edit.
     $selProductIds = collect($getLwData['details'] ?? [])->pluck('produit_id')->filter()->toArray();
@@ -312,15 +363,11 @@ function blInitializeForm() {
         if (!_blIsHydrating) blSelectClient();
     });
 
-    @php
-        $formData = method_exists($getLivewire(), 'getRecord') && $getLivewire()->getRecord()
-            ? $getLivewire()->data
-            : [];
-    @endphp
-    var initData = @json($formData);
+    var initData = @json($getLwData);
     var selProducts = @json($selProducts);
+    var blHasDetailLines = initData && initData.details && (Array.isArray(initData.details) ? initData.details.some(function (r) { return r && r.produit_id; }) : false);
 
-    if (initData && initData.client_id) {
+    if (initData && (initData.client_id || blHasDetailLines)) {
         blHydrate(initData, selProducts);
     } else {
         blInitSelect2(1);

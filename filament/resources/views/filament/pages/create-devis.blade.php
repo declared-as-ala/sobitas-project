@@ -1,15 +1,74 @@
 @php
     $coordinate = \App\Models\Coordinate::getCached();
-    $getLwData = method_exists($getLivewire(), 'getRecord') && $getLivewire()->getRecord() ? $getLivewire()->data : [];
+    $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
+
+    $livewire = $getLivewire();
+    $getLwData = [];
+
+    if (method_exists($livewire, 'getRecord') && $livewire->getRecord()) {
+        if (isset($livewire->data) && is_array($livewire->data)) {
+            $getLwData = $livewire->data;
+        }
+        if ($getLwData === [] && method_exists($livewire, 'form')) {
+            try {
+                $raw = $livewire->form->getRawState();
+                $getLwData = is_array($raw) ? $raw : [];
+            } catch (\Throwable) {
+                $getLwData = [];
+            }
+        }
+    } elseif (method_exists($livewire, 'form')) {
+        try {
+            $raw = $livewire->form->getRawState();
+            $getLwData = is_array($raw) ? $raw : [];
+        } catch (\Throwable) {
+            $getLwData = [];
+        }
+        if ($getLwData === [] && isset($livewire->data) && is_array($livewire->data)) {
+            $getLwData = $livewire->data;
+        }
+    }
+
+    $detailsRaw = $getLwData['details'] ?? null;
+    if (is_string($detailsRaw)) {
+        $detailsRaw = json_decode($detailsRaw, true) ?? [];
+    }
+    $getLwData['details'] = is_array($detailsRaw) ? $detailsRaw : [];
+
+    if (method_exists($livewire, 'getRecord') && ($rec = $livewire->getRecord())) {
+        $rec->loadMissing('details', 'client');
+        if (empty($getLwData['client_id']) && $rec->client_id) {
+            $getLwData['client_id'] = $rec->client_id;
+        }
+        if ($getLwData['details'] === [] && $rec->details->isNotEmpty()) {
+            $getLwData['details'] = $rec->details->map(fn ($d) => [
+                'produit_id' => $d->produit_id,
+                'qte' => $d->qte ?? $d->quantite ?? 0,
+                'prix_unitaire' => $d->prix_unitaire,
+                'tva_pct' => $d->tva ?? $defaultTva,
+            ])->toArray();
+        }
+        if (! array_key_exists('remise', $getLwData) || $getLwData['remise'] === null) {
+            $getLwData['remise'] = (float) ($rec->remise ?? 0);
+        }
+        if (! array_key_exists('pourcentage_remise', $getLwData) || $getLwData['pourcentage_remise'] === null) {
+            $getLwData['pourcentage_remise'] = (float) ($rec->pourcentage_remise ?? 0);
+        }
+        if (! array_key_exists('timbre', $getLwData) || $getLwData['timbre'] === null) {
+            $getLwData['timbre'] = (float) ($rec->timbre ?? 0);
+        }
+    }
+
     $selProductIds = collect($getLwData['details'] ?? [])->pluck('produit_id')->filter()->toArray();
     $selProducts = [];
-    if (!empty($selProductIds)) {
-        $selProducts = \App\Models\Product::whereIn('id', $selProductIds)->get(['id','designation_fr','qte'])->keyBy('id');
+    if (! empty($selProductIds)) {
+        $selProducts = \App\Models\Product::whereIn('id', $selProductIds)
+            ->get(['id', 'designation_fr', 'qte', 'code_product'])
+            ->keyBy('id');
     }
     $selClientId = $getLwData['client_id'] ?? null;
     $selClient = $selClientId ? \App\Models\Client::find($selClientId) : null;
     $max = 100;
-    $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
     // Embed logo as base64 so it always works (no 404, no asset path issues)
     $logoPath = public_path('logo.png');
     $logoSrc  = is_file($logoPath)
@@ -267,14 +326,11 @@ function dvInitializeForm() {
     // Initialize all product selects dynamically
     // for (let i = 1; i <= dvMax; i++) { dvInitSelect2(i); }
     
-    // Hydrate existing data if in Edit/Create mode
-    @php
-        $formData = method_exists($getLivewire(), 'getRecord') && $getLivewire()->getRecord() ? $getLivewire()->data : [];
-    @endphp
-    var initData = @json($formData);
+    var initData = @json($getLwData);
     var selProducts = @json($selProducts);
-    
-    if (initData && initData.client_id) {
+    var dvHasDetailLines = initData && initData.details && Array.isArray(initData.details) && initData.details.some(function (r) { return r && r.produit_id; });
+
+    if (initData && (initData.client_id || dvHasDetailLines)) {
         dvHydrate(initData, selProducts);
     } else {
         dvInitSelect2(1);

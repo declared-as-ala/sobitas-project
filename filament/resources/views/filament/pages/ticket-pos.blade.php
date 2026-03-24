@@ -16,8 +16,23 @@
     
     $productsJson = '[]';
 
+    // Ticket POS uses Livewire public $lines; if SPA/state leaves it empty while editing, hydrate from DB.
+    $lines = isset($lines) && is_array($lines) ? $lines : [];
+    $hasRealProductLines = collect($lines)->contains(fn ($l) => ! empty($l['produit_id'] ?? null));
+    if (! empty($ticketId) && ! $hasRealProductLines) {
+        $t = \App\Models\Ticket::with(['details.product'])->find($ticketId);
+        if ($t && $t->details->isNotEmpty()) {
+            $lines = $t->details->map(fn ($d) => [
+                'produit_id' => $d->produit_id,
+                'designation' => $d->product->designation_fr ?? '—',
+                'qte' => (float) $d->qte,
+                'prix_unitaire' => (float) ($d->prix_unitaire ?? 0),
+            ])->toArray();
+        }
+    }
+
     // Start lines loaded from Livewire (either existing ticket or 1 empty line)
-    $startLines = (isset($lines) && is_array($lines) && count($lines) > 0) ? $lines : [['produit_id' => '', 'qte' => 1, 'prix_unitaire' => 0]];
+    $startLines = count($lines) > 0 ? $lines : [['produit_id' => '', 'qte' => 1, 'prix_unitaire' => 0]];
     $maxRows = 100;
     $startProductIds = collect($startLines)->pluck('produit_id')->filter()->values()->all();
     $startProductMeta = [];
