@@ -10,13 +10,12 @@ class CreateArticle extends CreateRecord
 {
     protected static string $resource = ArticleResource::class;
 
-    // Use the full page width — editorial workspace needs maximum horizontal space
     public function getMaxContentWidth(): Width | string | null
     {
         return Width::Full;
     }
 
-    // After creating, go to the edit page (standard editorial workflow)
+    // After creating, redirect to the edit page (continue editing workflow)
     protected function getRedirectUrl(): string
     {
         return $this->getResource()::getUrl('edit', ['record' => $this->getRecord()]);
