@@ -61,7 +61,7 @@ class FactureTvaResource extends Resource
     {
         return $table
             ->modifyQueryUsing(fn (Builder $query) => $query
-                ->select(['facture_tvas.id', 'facture_tvas.numero', 'facture_tvas.client_id', 'facture_tvas.prix_ht', 'facture_tvas.remise', 'facture_tvas.tva', 'facture_tvas.timbre', 'facture_tvas.prix_ttc', 'facture_tvas.created_at'])
+                ->select(['facture_tvas.id', 'facture_tvas.numero', 'facture_tvas.client_id', 'facture_tvas.remise', 'facture_tvas.prix_ttc', 'facture_tvas.created_at'])
                 ->with('client:id,name')
             )
             ->columns([
@@ -74,11 +74,6 @@ class FactureTvaResource extends Resource
                     ->label('Client')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('prix_ht')
-                    ->label('Montant Total HT')
-                    ->money('TND')
-                    ->sortable()
-                    ->alignEnd(),
                 Tables\Columns\TextColumn::make('remise')
                     ->label('Montant Remise')
                     ->money('TND')
@@ -86,22 +81,11 @@ class FactureTvaResource extends Resource
                     ->alignEnd()
                     ->placeholder('—')
                     ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('tva')
-                    ->label('Montant TVA')
-                    ->money('TND')
-                    ->sortable()
-                    ->alignEnd(),
                 Tables\Columns\TextColumn::make('prix_ttc')
                     ->label('Montant TTC')
                     ->money('TND')
                     ->sortable()
                     ->alignEnd(),
-                Tables\Columns\TextColumn::make('timbre')
-                    ->label('Timbre Fiscal')
-                    ->money('TND')
-                    ->sortable()
-                    ->alignEnd()
-                    ->placeholder('—'),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Date')
                     ->dateTime('d/m/Y')

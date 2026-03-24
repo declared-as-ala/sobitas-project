@@ -145,10 +145,10 @@
     
     document.addEventListener('DOMContentLoaded', function() {
         @php
-            $totalTtc = 0;
-            if(isset($totals)) {
-                $ttcRow = collect($totals)->last();
-                if($ttcRow) {
+            $totalTtc = isset($calcTotals) ? (float) ($calcTotals['prix_ttc'] ?? 0) : 0;
+            if ($totalTtc <= 0 && isset($totals)) {
+                $ttcRow = collect($totals)->firstWhere('label', 'Total TTC') ?? collect($totals)->last();
+                if ($ttcRow) {
                     $totalTtc = (float) str_replace([' DT', ' ', ','], ['', '', '.'], $ttcRow['value']);
                 }
             }

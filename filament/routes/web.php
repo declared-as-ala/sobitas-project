@@ -106,7 +106,7 @@ Route::middleware(['auth'])->group(function () {
             ->with('product:id,designation_fr')
             ->get();
         $coordonnee = \App\Models\Coordinate::getCached();
-        $defaultTva = (float) ($factureTva->tva ?? 19);
+        $defaultTva = $coordonnee && isset($coordonnee->tva) ? (float) $coordonnee->tva : 19;
         $calcTotals = \App\Services\InvoiceCalculator::calculate(
             $details_facture->toArray(),
             (float) ($factureTva->remise ?? 0),
@@ -187,21 +187,43 @@ Route::middleware(['auth'])->group(function () {
         $defaultTva = $coordonnee && isset($coordonnee->tva) ? (float) $coordonnee->tva : 19;
         $devis_lines = \App\Services\DevisCalculator::lines($details_facture, $defaultTva)['lines'];
 
+        $detailsForCalc = $details_facture->map(fn ($d) => [
+            'produit_id' => $d->produit_id,
+            'qte' => (int) ($d->qte ?? $d->quantite ?? 1),
+            'prix_unitaire' => (float) ($d->prix_unitaire ?? 0),
+            'tva_pct' => (float) ($d->tva ?? $defaultTva),
+        ])->toArray();
+        $calcTotals = \App\Services\InvoiceCalculator::calculate(
+            $detailsForCalc,
+            (float) ($quotation->remise ?? 0),
+            (float) ($quotation->timbre ?? 0),
+            $defaultTva
+        );
+
+        $totals = [
+            ['label' => 'Total HT', 'value' => number_format($calcTotals['total_ht_brut'], 3, ',', ' ') . ' DT'],
+        ];
+        if ($calcTotals['remise'] > 0) {
+            $totals[] = ['label' => 'Remise', 'value' => number_format($calcTotals['remise'], 3, ',', ' ') . ' DT'];
+        }
+        $totals[] = ['label' => 'TVA', 'value' => number_format($calcTotals['tva'], 3, ',', ' ') . ' DT'];
+        if ($calcTotals['timbre'] > 0) {
+            $totals[] = ['label' => 'Timbre fiscal', 'value' => number_format($calcTotals['timbre'], 3, ',', ' ') . ' DT'];
+        }
+        $totals[] = ['label' => 'Total TTC', 'value' => number_format($calcTotals['prix_ttc'], 3, ',', ' ') . ' DT', 'class' => 'ttc'];
+
         return view('print.devis', [
             'facture' => $quotation,
             'details_facture' => $details_facture,
             'devis_lines' => $devis_lines,
+            'calcTotals' => $calcTotals,
             'coordonnee' => $coordonnee,
             'company' => $coordonnee,
             'documentTitle' => 'Devis',
             'documentNumber' => $quotation->numero ?? '',
             'documentDate' => $quotation->date_quotation ? \Carbon\Carbon::parse($quotation->date_quotation)->format('d/m/Y') : ($quotation->created_at?->format('d/m/Y') ?? ''),
             'client' => $quotation->client,
-            'totals' => [
-                ['label' => 'Total HT', 'value' => number_format((float)($quotation->prix_ht ?? $quotation->prix_total ?? 0), 3, ',', ' ') . ' DT'],
-                ['label' => 'TVA', 'value' => number_format((float)($quotation->tva ?? 0), 3, ',', ' ') . ' DT'],
-                ['label' => 'Net à payer TTC', 'value' => number_format((float)($quotation->prix_ttc ?? $quotation->prix_total ?? 0), 3, ',', ' ') . ' DT', 'class' => 'ttc'],
-            ],
+            'totals' => $totals,
             'footerNote' => $coordonnee && !empty($coordonnee->note) ? $coordonnee->note : null,
             'paymentTerms' => 'Valable 30 jours. Paiement à la commande ou à la livraison.',
             'backUrl' => route('filament.admin.resources.quotations.index'),

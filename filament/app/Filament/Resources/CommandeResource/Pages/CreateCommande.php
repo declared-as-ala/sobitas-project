@@ -23,18 +23,28 @@ class CreateCommande extends CreateRecord
     {
         Log::info('filament.commande.create.start', ['source' => 'admin_form', 'data_keys' => array_keys($data)]);
 
-        // If client fields are empty, copy them from livraison fields
-        $data['nom'] = $data['nom'] ?? ($data['livraison_nom'] ?? null);
-        $data['prenom'] = $data['prenom'] ?? ($data['livraison_prenom'] ?? null);
-        $data['phone'] = $data['phone'] ?? ($data['livraison_phone'] ?? null);
-        $data['email'] = $data['email'] ?? ($data['livraison_email'] ?? null);
-        $data['region'] = $data['region'] ?? ($data['livraison_region'] ?? null);
-        $data['ville'] = $data['ville'] ?? ($data['livraison_ville'] ?? null);
-        $data['adresse1'] = $data['adresse1'] ?? ($data['livraison_adresse1'] ?? null);
-        $data['code_postale'] = $data['code_postale'] ?? ($data['livraison_code_postale'] ?? null);
+        // If facturation fields are empty (or whitespace), copy from livraison — `??` alone misses '' from the form JS.
+        $pick = static function (?string $primary, ?string $fallback): ?string {
+            $p = $primary !== null ? trim($primary) : '';
+            if ($p !== '') {
+                return $primary;
+            }
+            $f = $fallback !== null ? trim($fallback) : '';
 
-        // Auto find-or-create client from livraison data when no client_id provided
-        if (empty($data['client_id'])) {
+            return $f !== '' ? trim($fallback) : null;
+        };
+
+        $data['nom'] = $pick($data['nom'] ?? null, $data['livraison_nom'] ?? null);
+        $data['prenom'] = $pick($data['prenom'] ?? null, $data['livraison_prenom'] ?? null);
+        $data['phone'] = $pick($data['phone'] ?? null, $data['livraison_phone'] ?? null);
+        $data['email'] = $pick($data['email'] ?? null, $data['livraison_email'] ?? null);
+        $data['region'] = $pick($data['region'] ?? null, $data['livraison_region'] ?? null);
+        $data['ville'] = $pick($data['ville'] ?? null, $data['livraison_ville'] ?? null);
+        $data['adresse1'] = $pick($data['adresse1'] ?? null, $data['livraison_adresse1'] ?? null);
+        $data['code_postale'] = $pick($data['code_postale'] ?? null, $data['livraison_code_postale'] ?? null);
+
+        // Auto find-or-create client when no client is selected (form sends user_id, not client_id)
+        if (empty($data['client_id']) && empty($data['user_id'])) {
             /** @var ClientService $clientService */
             $clientService = app(ClientService::class);
             $client = $clientService->findOrCreateClientFromDeliveryInfo($data);

@@ -3,10 +3,59 @@
     $max         = 100;
     $defaultTva  = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
 
-    // Get current Livewire form data (create or edit) so we can hydrate selects and totals.
-    $getLwData = method_exists($getLivewire(), 'getRecord') && $getLivewire()->getRecord()
-        ? $getLivewire()->data
-        : [];
+    $livewire = $getLivewire();
+    $getLwData = [];
+
+    if (method_exists($livewire, 'getRecord') && $livewire->getRecord()) {
+        if (isset($livewire->data) && is_array($livewire->data)) {
+            $getLwData = $livewire->data;
+        }
+        if ($getLwData === [] && method_exists($livewire, 'form')) {
+            try {
+                $raw = $livewire->form->getRawState();
+                $getLwData = is_array($raw) ? $raw : [];
+            } catch (\Throwable) {
+                $getLwData = [];
+            }
+        }
+    } elseif (method_exists($livewire, 'form')) {
+        try {
+            $raw = $livewire->form->getRawState();
+            $getLwData = is_array($raw) ? $raw : [];
+        } catch (\Throwable) {
+            $getLwData = [];
+        }
+        if ($getLwData === [] && isset($livewire->data) && is_array($livewire->data)) {
+            $getLwData = $livewire->data;
+        }
+    }
+
+    $detailsRaw = $getLwData['details'] ?? null;
+    if (is_string($detailsRaw)) {
+        $detailsRaw = json_decode($detailsRaw, true) ?? [];
+    }
+    $getLwData['details'] = is_array($detailsRaw) ? $detailsRaw : [];
+
+    if (method_exists($livewire, 'getRecord') && ($rec = $livewire->getRecord())) {
+        $rec->loadMissing('details', 'client');
+        if (empty($getLwData['client_id']) && $rec->client_id) {
+            $getLwData['client_id'] = $rec->client_id;
+        }
+        if ($getLwData['details'] === [] && $rec->details->isNotEmpty()) {
+            $getLwData['details'] = $rec->details->map(fn ($d) => [
+                'produit_id' => $d->produit_id,
+                'qte' => $d->qte ?? $d->quantite ?? 0,
+                'prix_unitaire' => $d->prix_unitaire,
+                'tva_pct' => $d->tva ?? $defaultTva,
+            ])->toArray();
+        }
+        if (! array_key_exists('remise', $getLwData) || $getLwData['remise'] === null) {
+            $getLwData['remise'] = (float) ($rec->remise ?? 0);
+        }
+        if (! array_key_exists('timbre', $getLwData) || $getLwData['timbre'] === null) {
+            $getLwData['timbre'] = (float) ($rec->timbre ?? 0);
+        }
+    }
 
     // Preload selected products so Select2 can show proper labels immediately on edit.
     $selProductIds = collect($getLwData['details'] ?? [])->pluck('produit_id')->filter()->toArray();
@@ -317,15 +366,11 @@ function ftvaInitializeForm() {
         ftvaSelectClient();
     });
 
-    @php
-        $formData = method_exists($getLivewire(), 'getRecord') && $getLivewire()->getRecord()
-            ? $getLivewire()->data
-            : [];
-    @endphp
-    var initData    = @json($formData);
+    var initData    = @json($getLwData);
     var selProducts = @json($selProducts);
+    var hasDetailLines = initData && initData.details && Array.isArray(initData.details) && initData.details.some(function (r) { return r && r.produit_id; });
 
-    if (initData && initData.client_id) {
+    if (initData && (initData.client_id || hasDetailLines)) {
         ftvaHydrate(initData, selProducts);
     } else {
         ftvaInitSelect2(1);

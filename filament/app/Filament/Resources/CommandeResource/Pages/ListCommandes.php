@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\CommandeResource\Pages;
 
 use App\Filament\Resources\CommandeResource;
-use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 
 class ListCommandes extends ListRecords
@@ -12,6 +11,6 @@ class ListCommandes extends ListRecords
 
     protected function getHeaderActions(): array
     {
-        return [Actions\CreateAction::make()];
+        return [];
     }
 }

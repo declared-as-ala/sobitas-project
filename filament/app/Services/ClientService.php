@@ -56,12 +56,12 @@ class ClientService
         $nom = $deliveryData['livraison_nom'] ?? $deliveryData['nom'] ?? null;
         $prenom = $deliveryData['livraison_prenom'] ?? $deliveryData['prenom'] ?? null;
         $fullName = trim(($nom ?? '') . ' ' . ($prenom ?? ''));
-        $adresse1 = $deliveryData['livraison_adresse1'] ?? $deliveryData['adresse1'] ?? null;
-        $adresse2 = $deliveryData['livraison_adresse2'] ?? $deliveryData['adresse2'] ?? null;
-        $adresse = trim(($adresse1 ?? '') . ($adresse2 ? ' ' . $adresse2 : ''));
         $region = $deliveryData['livraison_region'] ?? $deliveryData['region'] ?? null;
         $ville = $deliveryData['livraison_ville'] ?? $deliveryData['ville'] ?? null;
         $codePostale = $deliveryData['livraison_code_postale'] ?? $deliveryData['code_postale'] ?? null;
+
+        // Fiche client `adresse` = adresse de livraison réelle (rue + ville + région + CP), pas seulement facturation vide.
+        $adresse = $this->composeDeliveryAddressLine($deliveryData);
 
         $normalized = $this->normalizePhone($phone);
 
@@ -93,7 +93,7 @@ class ClientService
                 $client->name = $fullName;
                 $dirty = true;
             }
-            if (($client->adresse === null || trim($client->adresse) === '') && $adresse !== '') {
+            if (($client->adresse === null || trim((string) $client->adresse) === '') && $adresse !== null && $adresse !== '') {
                 $client->adresse = $adresse;
                 $dirty = true;
             }
@@ -125,7 +125,7 @@ class ClientService
         if (! $isQuickOrderEmail) {
             $client->email = $email;
         }
-        $client->adresse = $adresse ?: null;
+        $client->adresse = ($adresse !== null && $adresse !== '') ? $adresse : null;
         $client->region = $region ?: null;
         $client->ville = $ville ?: null;
         if ($codePostale !== null && trim((string) $codePostale) !== '') {
@@ -136,6 +136,37 @@ class ClientService
         $client->save();
 
         return $client;
+    }
+
+    /**
+     * Ligne d’adresse pour `clients.adresse` : priorité livraison, puis facturation ; concat ville / région / CP.
+     *
+     * @param  array<string, mixed>  $deliveryData
+     */
+    private function composeDeliveryAddressLine(array $deliveryData): ?string
+    {
+        $street = trim((string) ($deliveryData['livraison_adresse1'] ?? ''));
+        if ($street === '') {
+            $street = trim((string) ($deliveryData['livraison_adresse2'] ?? ''));
+        }
+        if ($street === '') {
+            $street = trim((string) ($deliveryData['adresse1'] ?? ''));
+        }
+        if ($street === '') {
+            $street = trim((string) ($deliveryData['adresse2'] ?? ''));
+        }
+
+        $ville = trim((string) ($deliveryData['livraison_ville'] ?? $deliveryData['ville'] ?? ''));
+        $region = trim((string) ($deliveryData['livraison_region'] ?? $deliveryData['region'] ?? ''));
+        $cp = trim((string) ($deliveryData['livraison_code_postale'] ?? $deliveryData['code_postale'] ?? ''));
+
+        $parts = array_values(array_filter([$street, $ville, $region, $cp], static fn (string $p): bool => $p !== ''));
+
+        if ($parts === []) {
+            return null;
+        }
+
+        return implode(', ', $parts);
     }
 
     /**

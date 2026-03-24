@@ -103,7 +103,7 @@ class DocumentPdfController extends Controller
                 ->with('product:id,designation_fr')
                 ->get();
             $coordonnee = \App\Models\Coordinate::first();
-            $defaultTva = (float) ($factureTva->tva ?? 19);
+            $defaultTva = $coordonnee && isset($coordonnee->tva) ? (float) $coordonnee->tva : 19;
             $calcTotals = \App\Services\InvoiceCalculator::calculate(
                 $details_facture->toArray(),
                 (float) ($factureTva->remise ?? 0),
@@ -130,10 +130,24 @@ class DocumentPdfController extends Controller
                 ];
             })->all();
 
+            $totalsPdf = [
+                ['label' => 'Total HT', 'value' => number_format($calcTotals['total_ht_brut'], 3, ',', ' ') . ' DT'],
+            ];
+            if ($calcTotals['remise'] > 0) {
+                $totalsPdf[] = ['label' => 'Remise', 'value' => number_format($calcTotals['remise'], 3, ',', ' ') . ' DT'];
+            }
+            $totalsPdf[] = ['label' => 'TVA', 'value' => number_format($calcTotals['tva'], 3, ',', ' ') . ' DT'];
+            $totalsPdf[] = ['label' => 'Total TTC', 'value' => number_format($calcTotals['prix_ttc'], 3, ',', ' ') . ' DT', 'class' => 'ttc'];
+            if ($calcTotals['timbre'] > 0) {
+                $totalsPdf[] = ['label' => 'Timbre fiscal', 'value' => number_format($calcTotals['timbre'], 3, ',', ' ') . ' DT'];
+                $totalsPdf[] = ['label' => 'Total dû (TTC + timbre)', 'value' => number_format($calcTotals['net_a_payer'], 3, ',', ' ') . ' DT'];
+            }
+
             $data = [
                 'facture' => $factureTva,
                 'details_facture' => $details_facture,
                 'invoice_rows' => $invoice_rows,
+                'calcTotals' => $calcTotals,
                 'coordonnee' => $coordonnee,
                 'company' => $coordonnee,
                 'documentTitle' => 'Facture',
@@ -142,14 +156,7 @@ class DocumentPdfController extends Controller
                 'client' => $factureTva->client,
                 'status' => $factureTva->status ? $factureTva->status->value : null,
                 'status_label' => $factureTva->status ? $factureTva->status->label() : null,
-                'totals' => [
-                    ['label' => 'Total HT', 'value' => number_format($calcTotals['total_ht_brut'], 3, ',', ' ') . ' DT'],
-                    ['label' => 'Remise', 'value' => number_format($calcTotals['remise'], 3, ',', ' ') . ' DT'],
-                    ['label' => 'TVA', 'value' => number_format($calcTotals['tva'], 3, ',', ' ') . ' DT'],
-                    ['label' => 'Timbre', 'value' => number_format($calcTotals['timbre'], 3, ',', ' ') . ' DT'],
-                    ['label' => 'TOTAL TTC', 'value' => number_format($calcTotals['prix_ttc'], 3, ',', ' ') . ' DT'],
-                    ['label' => 'NET À PAYER', 'value' => number_format($calcTotals['net_a_payer'], 3, ',', ' ') . ' DT', 'class' => 'net-a-payer'],
-                ],
+                'totals' => $totalsPdf,
                 'footerNote' => $coordonnee && ! empty($coordonnee->note) ? $coordonnee->note : null,
                 'paymentTerms' => 'Paiement à réception. Virement bancaire ou espèces. Merci de préciser le n° de facture.',
                 'forPdf' => true,
@@ -184,21 +191,43 @@ class DocumentPdfController extends Controller
             $defaultTva = $coordonnee && isset($coordonnee->tva) ? (float) $coordonnee->tva : 19;
             $devis_lines = \App\Services\DevisCalculator::lines($details_facture, $defaultTva)['lines'];
 
+            $detailsForCalc = $details_facture->map(fn ($d) => [
+                'produit_id' => $d->produit_id,
+                'qte' => (int) ($d->qte ?? $d->quantite ?? 1),
+                'prix_unitaire' => (float) ($d->prix_unitaire ?? 0),
+                'tva_pct' => (float) ($d->tva ?? $defaultTva),
+            ])->toArray();
+            $calcTotals = \App\Services\InvoiceCalculator::calculate(
+                $detailsForCalc,
+                (float) ($quotation->remise ?? 0),
+                (float) ($quotation->timbre ?? 0),
+                $defaultTva
+            );
+
+            $totals = [
+                ['label' => 'Total HT', 'value' => number_format($calcTotals['total_ht_brut'], 3, ',', ' ') . ' DT'],
+            ];
+            if ($calcTotals['remise'] > 0) {
+                $totals[] = ['label' => 'Remise', 'value' => number_format($calcTotals['remise'], 3, ',', ' ') . ' DT'];
+            }
+            $totals[] = ['label' => 'TVA', 'value' => number_format($calcTotals['tva'], 3, ',', ' ') . ' DT'];
+            if ($calcTotals['timbre'] > 0) {
+                $totals[] = ['label' => 'Timbre fiscal', 'value' => number_format($calcTotals['timbre'], 3, ',', ' ') . ' DT'];
+            }
+            $totals[] = ['label' => 'Total TTC', 'value' => number_format($calcTotals['prix_ttc'], 3, ',', ' ') . ' DT', 'class' => 'ttc'];
+
             $data = [
                 'facture' => $quotation,
                 'details_facture' => $details_facture,
                 'devis_lines' => $devis_lines,
+                'calcTotals' => $calcTotals,
                 'coordonnee' => $coordonnee,
                 'company' => $coordonnee,
                 'documentTitle' => 'Devis',
                 'documentNumber' => $quotation->numero ?? '',
                 'documentDate' => $quotation->date_quotation ? \Carbon\Carbon::parse($quotation->date_quotation)->format('d/m/Y') : ($quotation->created_at?->format('d/m/Y') ?? ''),
                 'client' => $quotation->client,
-                'totals' => [
-                    ['label' => 'Total HT', 'value' => number_format((float) ($quotation->prix_ht ?? $quotation->prix_total ?? 0), 3, ',', ' ') . ' DT'],
-                    ['label' => 'TVA', 'value' => number_format((float) ($quotation->tva ?? 0), 3, ',', ' ') . ' DT'],
-                    ['label' => 'Net à payer TTC', 'value' => number_format((float) ($quotation->prix_ttc ?? $quotation->prix_total ?? 0), 3, ',', ' ') . ' DT', 'class' => 'ttc'],
-                ],
+                'totals' => $totals,
                 'footerNote' => $coordonnee && ! empty($coordonnee->note) ? $coordonnee->note : null,
                 'paymentTerms' => 'Valable 30 jours. Paiement à la commande ou à la livraison.',
                 'forPdf' => true,

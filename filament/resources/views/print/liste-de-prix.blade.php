@@ -194,16 +194,16 @@
                         <div class="row">
                             <div class="col">
                                 @php
-                                    $logoInvoice = $coordonnee
-                                        ? \App\Models\Coordinate::publicLogoFacturePrintUrl($coordonnee)
+                                    $logoPath = public_path('logo.png');
+                                    $logoInvoice = is_file($logoPath)
+                                        ? rtrim(\App\Models\Coordinate::originRootUrl(), '/') . '/logo.png'
                                         : null;
                                 @endphp
                                 @if ($logoInvoice)
-                                    {{-- Même source que backend imprimer_pricelist : Voyager::image(logo_facture) --}}
                                     <img src="{{ $logoInvoice }}"
                                         data-holder-rendered="true"
                                         style="width: 220px"
-                                        alt="">
+                                        alt="{{ $coordonnee->abbreviation ?? 'Logo' }}">
                                 @endif
                                 @if ($coordonnee)
                                     <h4 class="name">{{ $coordonnee->abbreviation }}</h4>
