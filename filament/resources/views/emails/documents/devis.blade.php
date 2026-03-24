@@ -2,9 +2,10 @@
     $logoUrl  = config('marketing.logo_url', rtrim(config('app.url'), '/') . '/logo.png');
     $co       = $coordonnee ?? null;
     $cl       = $client ?? $facture->client ?? null;
+    $companyName = $co ? ($co->name ?? $co->nom ?? null) : null;
+    $clientPhone = $cl ? ($cl->phone_1 ?? $cl->phone ?? null) : null;
     $lines    = $devis_lines ?? [];
     $totals   = $totals ?? [];
-    $lastIdx  = count($totals) - 1;
     $customMessage = $customMessage ?? null;
 @endphp
 <!DOCTYPE html>
@@ -71,8 +72,8 @@
                         <td class="col-half" style="width:48%;vertical-align:top;padding-right:16px;border-right:1px solid #e2e8f0;">
                             <p style="margin:0 0 7px;font-size:10px;font-weight:700;color:#ff4a00;text-transform:uppercase;letter-spacing:.1em;">De</p>
                             @if($co)
-                                @if(!empty($co->name ?? $co->nom ?? null))
-                                    <p style="margin:0 0 2px;font-size:14px;font-weight:700;color:#0f172a;">{{ $co->name ?? $co->nom }}</p>
+                                @if(!empty($companyName))
+                                    <p style="margin:0 0 2px;font-size:14px;font-weight:700;color:#0f172a;">{{ $companyName }}</p>
                                 @endif
                                 @if(!empty($co->adresse_fr))
                                     <p style="margin:2px 0;font-size:12px;color:#64748b;">{{ $co->adresse_fr }}</p>
@@ -102,8 +103,8 @@
                                 @if(!empty($cl->adresse))
                                     <p style="margin:2px 0;font-size:12px;color:#64748b;">{{ $cl->adresse }}</p>
                                 @endif
-                                @if(!empty($cl->phone_1 ?? $cl->phone ?? null))
-                                    <p style="margin:2px 0;font-size:12px;color:#64748b;">Tél : {{ $cl->phone_1 ?? $cl->phone }}</p>
+                                @if(!empty($clientPhone))
+                                    <p style="margin:2px 0;font-size:12px;color:#64748b;">Tél : {{ $clientPhone }}</p>
                                 @endif
                                 @if(!empty($cl->email))
                                     <p style="margin:2px 0;font-size:12px;color:#64748b;">{{ $cl->email }}</p>
@@ -142,7 +143,15 @@
                         @forelse($lines as $line)
                         @php
                             $d = $line['detail'];
-                            $designation = collect(explode('-', $d->product->designation_fr ?? '—'))->map(fn($v) => trim($v))->implode(' - ');
+                            $designationSource = (string) ($d->product->designation_fr ?? '—');
+                            $designationParts = array_map('trim', explode('-', $designationSource));
+                            $designationParts = array_values(array_filter($designationParts, function ($v) {
+                                return $v !== '';
+                            }));
+                            $designation = implode(' - ', $designationParts);
+                            if ($designation === '') {
+                                $designation = '—';
+                            }
                             $qte = $d->qte ?? $d->quantite ?? 0;
                             $bgRow = $i % 2 === 0 ? '#ffffff' : '#f8fafc';
                             $i++;
@@ -164,10 +173,10 @@
 
                 {{-- ── Totals block (right-aligned) ──────────────────────── --}}
                 <table role="presentation" cellpadding="0" cellspacing="0" align="right" style="min-width:280px;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:24px;">
-                    @foreach($totals as $i => $row)
+                    @foreach($totals as $row)
                     @php
-                        $isLast     = ($i === $lastIdx);
-                        $rowBg      = $isLast ? '#fff7ed' : ($i % 2 === 0 ? '#ffffff' : '#f8fafc');
+                        $isLast     = $loop->last;
+                        $rowBg      = $isLast ? '#fff7ed' : ($loop->odd ? '#ffffff' : '#f8fafc');
                         $topBorder  = $isLast ? '2px solid #ff4a00' : '1px solid #f1f5f9';
                         $labelSize  = $isLast ? '14px' : '12px';
                         $valueSize  = $isLast ? '16px' : '13px';

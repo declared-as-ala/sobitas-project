@@ -140,7 +140,7 @@ body:has(.bl-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !importa
             <div class="bl-client">
                 <div class="bl-client-head">
                     <label>Client</label>
-                    <button type="button" class="btn-ajouter-client" onclick="blAddClient()">Ajouter Client(e)</button>
+                    <button type="button" id="bl-btn-add-client" class="btn-ajouter-client">Ajouter Client(e)</button>
                 </div>
                 <div id="bl-select-client">
                     <div class="form-field">
@@ -177,7 +177,7 @@ body:has(.bl-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !importa
                 </div>
                 <div id="bl-add-client">
                     <div style="margin-bottom:8px;text-align:right;">
-                        <button type="button" class="btn-annuler-client" onclick="blAnnulerClient()">Annuler</button>
+                        <button type="button" id="bl-btn-cancel-client" class="btn-annuler-client">Annuler</button>
                     </div>
                     <div class="form-field"><label style="font-size:12px;">Nom et Prénom</label>
                         <input class="bl-input" style="background:#fff;" id="bl_new_name" name="new_client_name" placeholder="Nom..."></div>
@@ -185,6 +185,9 @@ body:has(.bl-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !importa
                         <input class="bl-input" style="background:#fff;" id="bl_new_adresse" name="new_client_adresse"></div>
                     <div class="form-field"><label style="font-size:12px;">Téléphone</label>
                         <input class="bl-input" style="background:#fff;" id="bl_new_phone" name="new_client_phone"></div>
+                    <div style="text-align:right;margin-top:12px;">
+                        <button type="button" id="bl-btn-create-client" class="btn-ajouter-client">Créer le client</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -317,6 +320,7 @@ function blInitializeForm() {
             cache: false
         }
     });
+    blBindClientButtons();
 
     // Fires on every client change; hydration flag suppresses side-effects during programmatic init
     $('#bl_client_id').off('change.bl').on('change.bl', function () {
@@ -627,6 +631,57 @@ function blAnnulerClient() {
     document.getElementById('bl-select-client').style.display = '';
     document.getElementById('bl-add-client').style.display    = 'none';
     ['bl_new_name','bl_new_adresse','bl_new_phone'].forEach(id => { var el = document.getElementById(id); if(el) el.value = ''; });
+}
+
+function blBindClientButtons() {
+    var addBtn = document.getElementById('bl-btn-add-client');
+    var cancelBtn = document.getElementById('bl-btn-cancel-client');
+    var createBtn = document.getElementById('bl-btn-create-client');
+    if (addBtn) addBtn.onclick = blAddClient;
+    if (cancelBtn) cancelBtn.onclick = blAnnulerClient;
+    if (createBtn) createBtn.onclick = blCreateClient;
+}
+
+function blCreateClient() {
+    var name = (document.getElementById('bl_new_name').value || '').trim();
+    var phone = (document.getElementById('bl_new_phone').value || '').trim();
+    var adresse = (document.getElementById('bl_new_adresse').value || '').trim();
+
+    if (!name) { Swal.fire('Erreur', 'Le nom du client est obligatoire', 'warning'); return; }
+
+    var btn = document.getElementById('bl-btn-create-client');
+    if (btn) { btn.disabled = true; btn.textContent = 'En cours...'; }
+
+    var csrfToken = document.querySelector('meta[name="csrf-token"]');
+    fetch('/api/pos-clients', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': csrfToken ? csrfToken.getAttribute('content') : ''
+        },
+        body: JSON.stringify({ name: name, phone_1: phone, adresse: adresse })
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(client) {
+        if (!client || !client.id) throw new Error('Création échouée');
+
+        var label = client.text || (client.name ? client.name + (client.phone_1 ? ' (' + client.phone_1 + ')' : '') : ('Client #' + client.id));
+        var $sel = $('#bl_client_id');
+        $sel.append(new Option(label, client.id, true, true)).trigger('change.select2');
+        document.getElementById('bl_adr').value = client.adresse || '';
+        document.getElementById('bl_phone').value = client.phone_1 || '';
+
+        blAnnulerClient();
+        Swal.fire({ icon: 'success', title: 'Client créé', timer: 1200, showConfirmButton: false });
+    })
+    .catch(function(err) {
+        console.error('blCreateClient error', err);
+        Swal.fire('Erreur', 'Impossible de créer le client. Vérifiez les informations.', 'error');
+    })
+    .finally(function() {
+        if (btn) { btn.disabled = false; btn.textContent = 'Créer le client'; }
+    });
 }
 
 function blSave() {

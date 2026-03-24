@@ -140,7 +140,7 @@ body:has(.ftva-page) .fi-form-actions { display: none !important; }
             <div class="ftva-client">
                 <div class="ftva-client-head">
                     <label>Client</label>
-                    <button type="button" class="btn-ajouter-client" onclick="ftvaAddClient()">Ajouter Client(e)</button>
+                    <button type="button" id="ftva-btn-add-client" class="btn-ajouter-client">Ajouter Client(e)</button>
                 </div>
 
                 <div id="ftva-select-client">
@@ -168,7 +168,7 @@ body:has(.ftva-page) .fi-form-actions { display: none !important; }
 
                 <div id="ftva-add-client">
                     <div style="margin-bottom:8px;text-align:right;">
-                        <button type="button" class="btn-annuler-client" onclick="ftvaAnnulerClient()">Annuler</button>
+                        <button type="button" id="ftva-btn-cancel-client" class="btn-annuler-client">Annuler</button>
                     </div>
                     <div class="form-field">
                         <label style="font-size:12px;">Nom et Prénom</label>
@@ -187,7 +187,7 @@ body:has(.ftva-page) .fi-form-actions { display: none !important; }
                         <input class="fc-input" style="background:#fff;" id="new_mf">
                     </div>
                     <div style="text-align:right;margin-top:12px;">
-                        <button type="button" class="btn-ajouter-client" onclick="ftvaCreateClient()">Créer le client</button>
+                        <button type="button" id="ftva-btn-create-client" class="btn-ajouter-client">Créer le client</button>
                     </div>
                 </div>
             </div>
@@ -336,6 +336,7 @@ function ftvaInitializeForm() {
             cache: true
         }
     });
+    ftvaBindClientButtons();
 
     $('#ftva_client_id').off('change.ftva').on('change.ftva', function () {
         ftvaSelectClient();
@@ -629,6 +630,15 @@ function ftvaAnnulerClient() {
     });
 }
 
+function ftvaBindClientButtons() {
+    var addBtn = document.getElementById('ftva-btn-add-client');
+    var cancelBtn = document.getElementById('ftva-btn-cancel-client');
+    var createBtn = document.getElementById('ftva-btn-create-client');
+    if (addBtn) addBtn.onclick = ftvaAddClient;
+    if (cancelBtn) cancelBtn.onclick = ftvaAnnulerClient;
+    if (createBtn) createBtn.onclick = ftvaCreateClient;
+}
+
 // ── Create new client via API ─────────────────────────────────────────────────
 function ftvaCreateClient() {
     var name    = (document.getElementById('new_name').value || '').trim();
@@ -638,7 +648,7 @@ function ftvaCreateClient() {
 
     if (!name) { Swal.fire('Erreur', 'Le nom du client est obligatoire', 'warning'); return; }
 
-    var btn = document.querySelector('#ftva-add-client .btn-ajouter-client');
+    var btn = document.getElementById('ftva-btn-create-client');
     if (btn) { btn.disabled = true; btn.textContent = 'En cours…'; }
 
     var csrfToken = document.querySelector('meta[name="csrf-token"]');

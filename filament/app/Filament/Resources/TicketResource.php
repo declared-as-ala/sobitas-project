@@ -53,6 +53,27 @@ class TicketResource extends Resource
                                     ->getOptionLabelFromRecordUsing(fn ($record) => (string) ($record->name ?? 'Client #' . $record->id))
                                     ->getSearchResultsUsing(fn (string $search): array => \App\Models\Client::where('name', 'like', "%{$search}%")->orWhere('phone_1', 'like', "%{$search}%")->limit(30)->pluck('name', 'id')->toArray())
                                     ->getOptionLabelUsing(fn ($value): ?string => \App\Models\Client::find($value)?->name)
+                                    ->createOptionForm([
+                                        Forms\Components\TextInput::make('name')
+                                            ->label('Nom et prénom')
+                                            ->required()
+                                            ->maxLength(255),
+                                        Forms\Components\TextInput::make('phone_1')
+                                            ->label('Téléphone')
+                                            ->maxLength(255),
+                                        Forms\Components\TextInput::make('adresse')
+                                            ->label('Adresse')
+                                            ->maxLength(255),
+                                    ])
+                                    ->createOptionUsing(function (array $data): int {
+                                        $client = Client::create([
+                                            'name' => (string) ($data['name'] ?? ''),
+                                            'phone_1' => $data['phone_1'] ?? null,
+                                            'adresse' => $data['adresse'] ?? null,
+                                        ]);
+
+                                        return (int) $client->id;
+                                    })
                                     ->searchable()
                                     ->nullable()
                                     ->rules(['nullable', 'exists:clients,id'])

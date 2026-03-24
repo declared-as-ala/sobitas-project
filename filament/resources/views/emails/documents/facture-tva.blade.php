@@ -6,8 +6,6 @@
     $clientPhone = $cl ? ($cl->phone_1 ?? $cl->phone ?? null) : null;
     $rows     = $invoice_rows ?? [];
     $totals   = $totals ?? [];
-    $lastIdx  = count($totals) - 1;
-    $preLastIdx = $lastIdx - 1; // NET À PAYER is last, TOTAL TTC is pre-last
 @endphp
 <!DOCTYPE html>
 <html lang="fr">
@@ -154,11 +152,11 @@
 
                 {{-- ── Totals block (right-aligned) ──────────────────────── --}}
                 <table role="presentation" cellpadding="0" cellspacing="0" align="right" style="min-width:280px;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:24px;">
-                    @foreach($totals as $i => $row)
+                    @foreach($totals as $row)
                     @php
-                        $isLast     = ($i === $lastIdx);
-                        $isPreLast  = ($i === $preLastIdx);
-                        $rowBg      = $isLast ? '#fff7ed' : ($isPreLast ? '#f8fafc' : ($i % 2 === 0 ? '#ffffff' : '#f8fafc'));
+                        $isLast     = $loop->last;
+                        $isPreLast  = ($loop->remaining === 1);
+                        $rowBg      = $isLast ? '#fff7ed' : ($isPreLast ? '#f8fafc' : ($loop->odd ? '#ffffff' : '#f8fafc'));
                         $topBorder  = $isLast ? '2px solid #ff4a00' : '1px solid #f1f5f9';
                         $labelSize  = $isLast ? '14px' : '12px';
                         $valueSize  = $isLast ? '16px' : '13px';

@@ -120,7 +120,7 @@ body:has(.devis-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !impo
             <div class="dv-client">
                 <div class="dv-client-head">
                     <label>Client</label>
-                    <button type="button" class="btn-ajouter-client" onclick="dvAddClient()">Ajouter Client(e)</button>
+                    <button type="button" id="dv-btn-add-client" class="btn-ajouter-client">Ajouter Client(e)</button>
                 </div>
                 <div id="dv-select-client">
                     <div class="form-field">
@@ -146,7 +146,7 @@ body:has(.devis-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !impo
                 </div>
                 <div id="dv-add-client">
                     <div style="margin-bottom:8px;text-align:right;">
-                        <button type="button" class="btn-annuler-client" onclick="dvAnnulerClient()">Annuler</button>
+                        <button type="button" id="dv-btn-cancel-client" class="btn-annuler-client">Annuler</button>
                     </div>
                     <div class="form-field"><label style="font-size:12px;">Nom et Prénom</label>
                         <input class="dv-input" style="background:#fff;" id="dv_new_name" placeholder="Nom..."></div>
@@ -154,6 +154,9 @@ body:has(.devis-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !impo
                         <input class="dv-input" style="background:#fff;" id="dv_new_adresse"></div>
                     <div class="form-field"><label style="font-size:12px;">Téléphone</label>
                         <input class="dv-input" style="background:#fff;" id="dv_new_phone"></div>
+                    <div style="text-align:right;margin-top:12px;">
+                        <button type="button" id="dv-btn-create-client" class="btn-ajouter-client">Créer le client</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -274,6 +277,7 @@ function dvInitializeForm() {
             cache: true
         }
     });
+    dvBindClientButtons();
     
     // Initialize all product selects dynamically
     // for (let i = 1; i <= dvMax; i++) { dvInitSelect2(i); }
@@ -527,6 +531,61 @@ function dvAddClient() {
 function dvAnnulerClient() {
     document.getElementById('dv-select-client').style.display = '';
     document.getElementById('dv-add-client').style.display    = 'none';
+    ['dv_new_name', 'dv_new_adresse', 'dv_new_phone'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+}
+
+function dvBindClientButtons() {
+    var addBtn = document.getElementById('dv-btn-add-client');
+    var cancelBtn = document.getElementById('dv-btn-cancel-client');
+    var createBtn = document.getElementById('dv-btn-create-client');
+    if (addBtn) addBtn.onclick = dvAddClient;
+    if (cancelBtn) cancelBtn.onclick = dvAnnulerClient;
+    if (createBtn) createBtn.onclick = dvCreateClient;
+}
+
+function dvCreateClient() {
+    var name = (document.getElementById('dv_new_name').value || '').trim();
+    var phone = (document.getElementById('dv_new_phone').value || '').trim();
+    var adresse = (document.getElementById('dv_new_adresse').value || '').trim();
+
+    if (!name) { Swal.fire('Erreur', 'Le nom du client est obligatoire', 'warning'); return; }
+
+    var btn = document.getElementById('dv-btn-create-client');
+    if (btn) { btn.disabled = true; btn.textContent = 'En cours...'; }
+
+    var csrfToken = document.querySelector('meta[name="csrf-token"]');
+    fetch('/api/pos-clients', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': csrfToken ? csrfToken.getAttribute('content') : ''
+        },
+        body: JSON.stringify({ name: name, phone_1: phone, adresse: adresse })
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(client) {
+        if (!client || !client.id) throw new Error('Création échouée');
+
+        var label = client.text || (client.name ? client.name + (client.phone_1 ? ' (' + client.phone_1 + ')' : '') : ('Client #' + client.id));
+        var $sel = $('#dv_client_id');
+        $sel.append(new Option(label, client.id, true, true)).trigger('change.select2');
+        document.getElementById('dv_adr').value = client.adresse || '';
+        document.getElementById('dv_phone').value = client.phone_1 || '';
+
+        dvAnnulerClient();
+        Swal.fire({ icon: 'success', title: 'Client créé', timer: 1200, showConfirmButton: false });
+    })
+    .catch(function(err) {
+        console.error('dvCreateClient error', err);
+        Swal.fire('Erreur', 'Impossible de créer le client. Vérifiez les informations.', 'error');
+    })
+    .finally(function() {
+        if (btn) { btn.disabled = false; btn.textContent = 'Créer le client'; }
+    });
 }
 
 function dvSave() {
