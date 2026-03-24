@@ -414,7 +414,12 @@
         {{-- RIGHT: Client block --}}
         <div class="pos-client-block">
             <div class="pos-field">
-                <label>Client (optionnel)</label>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;">
+                    <label style="margin:0;">Client (optionnel)</label>
+                    <button type="button" id="pos-btn-add-client" class="pos-btn-add-row" style="padding:6px 10px;font-size:12px;">
+                        Ajouter Client(e)
+                    </button>
+                </div>
                 <select id="client_select" style="width:100%" onchange="selectClient()">
                     <option value="">— Choisir —</option>
                     @foreach($clients as $c)
@@ -586,6 +591,8 @@
         } catch (e) {}
 
         $('#client_select').select2();
+        var addClientBtn = document.getElementById('pos-btn-add-client');
+        if (addClientBtn) addClientBtn.onclick = createTicketClient;
 
         // Initialize visible rows
         for (var i = 0; i < maxRows; i++) {
@@ -659,6 +666,56 @@
             document.getElementById('client_adresse').value = '';
             document.getElementById('client_phone').value = '';
         }
+    }
+
+    function createTicketClient() {
+        Swal.fire({
+            title: 'Ajouter Client(e)',
+            html:
+                '<input id="pos_sw_name" class="swal2-input" placeholder="Nom et Prénom">' +
+                '<input id="pos_sw_adresse" class="swal2-input" placeholder="Adresse">' +
+                '<input id="pos_sw_phone" class="swal2-input" placeholder="Téléphone">',
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: 'Créer le client',
+            cancelButtonText: 'Annuler',
+            preConfirm: function () {
+                var name = (document.getElementById('pos_sw_name')?.value || '').trim();
+                var adresse = (document.getElementById('pos_sw_adresse')?.value || '').trim();
+                var phone = (document.getElementById('pos_sw_phone')?.value || '').trim();
+                if (!name) {
+                    Swal.showValidationMessage('Le nom du client est obligatoire');
+                    return false;
+                }
+                return { name: name, adresse: adresse, phone_1: phone };
+            }
+        }).then(function (result) {
+            if (!result.isConfirmed || !result.value) return;
+            var csrfToken = document.querySelector('meta[name="csrf-token"]');
+            fetch('/api/pos-clients', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken ? csrfToken.getAttribute('content') : ''
+                },
+                body: JSON.stringify(result.value)
+            })
+            .then(function (res) { return res.json(); })
+            .then(function (client) {
+                if (!client || !client.id) throw new Error('Création échouée');
+                var label = client.text || (client.name ? client.name + (client.phone_1 ? ' (' + client.phone_1 + ')' : '') : ('Client #' + client.id));
+                var $sel = $('#client_select');
+                $sel.append(new Option(label, client.id, true, true)).trigger('change');
+                document.getElementById('client_adresse').value = client.adresse || '';
+                document.getElementById('client_phone').value = client.phone_1 || '';
+                Swal.fire({ icon: 'success', title: 'Client créé', timer: 1200, showConfirmButton: false });
+            })
+            .catch(function (err) {
+                console.error('createTicketClient error', err);
+                Swal.fire('Erreur', 'Impossible de créer le client. Vérifiez les informations.', 'error');
+            });
+        });
     }
 
     // Product Selection

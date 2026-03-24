@@ -75,7 +75,6 @@ body:has(.ftva-page) .fi-form-actions { display: none !important; }
 .ftva-client input.fc-input{width:100%;border:1px solid #e2e8f0;border-radius:6px;padding:7px 10px;font-size:13px;color:#374151;background:#f8fafc}
 .ftva-client input.fc-input:disabled{background:#f1f5f9;color:#64748b}
 
-#ftva-add-client{display:none}
 .btn-ajouter-client{background:#2563eb;color:#fff;border:none;border-radius:6px;padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer}
 .btn-annuler-client{background:#ef4444;color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer}
 .btn-ajouter-client:hover{background:#1d4ed8}
@@ -166,30 +165,6 @@ body:has(.ftva-page) .fi-form-actions { display: none !important; }
                     </div>
                 </div>
 
-                <div id="ftva-add-client">
-                    <div style="margin-bottom:8px;text-align:right;">
-                        <button type="button" id="ftva-btn-cancel-client" class="btn-annuler-client">Annuler</button>
-                    </div>
-                    <div class="form-field">
-                        <label style="font-size:12px;">Nom et Prénom</label>
-                        <input class="fc-input" style="background:#fff;" id="new_name" placeholder="Nom...">
-                    </div>
-                    <div class="form-field">
-                        <label style="font-size:12px;">Adresse</label>
-                        <input class="fc-input" style="background:#fff;" id="new_adresse">
-                    </div>
-                    <div class="form-field">
-                        <label style="font-size:12px;">Téléphone</label>
-                        <input class="fc-input" style="background:#fff;" id="new_phone">
-                    </div>
-                    <div class="form-field">
-                        <label style="font-size:12px;">Matricule Fiscal</label>
-                        <input class="fc-input" style="background:#fff;" id="new_mf">
-                    </div>
-                    <div style="text-align:right;margin-top:12px;">
-                        <button type="button" id="ftva-btn-create-client" class="btn-ajouter-client">Créer le client</button>
-                    </div>
-                </div>
             </div>
         </div>
 
@@ -617,68 +592,63 @@ function ftvaScanner() {
         });
 }
 
-// ── Add / cancel new client ───────────────────────────────────────────────────
-function ftvaAddClient() {
-    document.getElementById('ftva-select-client').style.display = 'none';
-    document.getElementById('ftva-add-client').style.display    = '';
-}
-function ftvaAnnulerClient() {
-    document.getElementById('ftva-select-client').style.display = '';
-    document.getElementById('ftva-add-client').style.display    = 'none';
-    ['new_name','new_adresse','new_phone','new_mf'].forEach(function (id) {
-        var el = document.getElementById(id); if (el) el.value = '';
-    });
-}
-
 function ftvaBindClientButtons() {
     var addBtn = document.getElementById('ftva-btn-add-client');
-    var cancelBtn = document.getElementById('ftva-btn-cancel-client');
-    var createBtn = document.getElementById('ftva-btn-create-client');
-    if (addBtn) addBtn.onclick = ftvaAddClient;
-    if (cancelBtn) cancelBtn.onclick = ftvaAnnulerClient;
-    if (createBtn) createBtn.onclick = ftvaCreateClient;
+    if (addBtn) addBtn.onclick = ftvaCreateClient;
 }
 
 // ── Create new client via API ─────────────────────────────────────────────────
 function ftvaCreateClient() {
-    var name    = (document.getElementById('new_name').value || '').trim();
-    var phone   = (document.getElementById('new_phone').value || '').trim();
-    var adresse = (document.getElementById('new_adresse').value || '').trim();
-    var mf      = (document.getElementById('new_mf').value || '').trim();
-
-    if (!name) { Swal.fire('Erreur', 'Le nom du client est obligatoire', 'warning'); return; }
-
-    var btn = document.getElementById('ftva-btn-create-client');
-    if (btn) { btn.disabled = true; btn.textContent = 'En cours…'; }
-
-    var csrfToken = document.querySelector('meta[name="csrf-token"]');
-    fetch('/api/pos-clients', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-CSRF-TOKEN': csrfToken ? csrfToken.getAttribute('content') : ''
-        },
-        body: JSON.stringify({ name: name, phone_1: phone, adresse: adresse, matricule: mf })
-    })
-    .then(function(res) { return res.json(); })
-    .then(function(client) {
-        if (!client.id) throw new Error('Création échouée');
-
-        var $sel = $('#ftva_client_id');
-        $sel.append(new Option(client.text, client.id, true, true)).trigger('change.select2');
-        document.getElementById('ftva_adr').value   = client.adresse || '';
-        document.getElementById('ftva_phone').value = client.phone_1 || '';
-
-        ftvaAnnulerClient();
-        Swal.fire({ icon: 'success', title: 'Client créé', timer: 1200, showConfirmButton: false });
-    })
-    .catch(function(err) {
-        console.error('ftvaCreateClient error', err);
-        Swal.fire('Erreur', 'Impossible de créer le client. Vérifiez les informations.', 'error');
-    })
-    .finally(function() {
-        if (btn) { btn.disabled = false; btn.textContent = 'Créer le client'; }
+    Swal.fire({
+        title: 'Ajouter Client(e)',
+        html:
+            '<input id="ftva_sw_name" class="swal2-input" placeholder="Nom et Prénom">' +
+            '<input id="ftva_sw_adresse" class="swal2-input" placeholder="Adresse">' +
+            '<input id="ftva_sw_phone" class="swal2-input" placeholder="Téléphone">' +
+            '<input id="ftva_sw_mf" class="swal2-input" placeholder="Matricule Fiscal">',
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'Créer le client',
+        cancelButtonText: 'Annuler',
+        preConfirm: function () {
+            var name = (document.getElementById('ftva_sw_name')?.value || '').trim();
+            var adresse = (document.getElementById('ftva_sw_adresse')?.value || '').trim();
+            var phone = (document.getElementById('ftva_sw_phone')?.value || '').trim();
+            var matricule = (document.getElementById('ftva_sw_mf')?.value || '').trim();
+            if (!name) {
+                Swal.showValidationMessage('Le nom du client est obligatoire');
+                return false;
+            }
+            return { name: name, adresse: adresse, phone_1: phone, matricule: matricule };
+        }
+    }).then(function (result) {
+        if (!result.isConfirmed || !result.value) return;
+        var payload = result.value;
+        var csrfToken = document.querySelector('meta[name="csrf-token"]');
+        Swal.showLoading();
+        fetch('/api/pos-clients', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken ? csrfToken.getAttribute('content') : ''
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(function (res) { return res.json(); })
+        .then(function (client) {
+            if (!client || !client.id) throw new Error('Création échouée');
+            var label = client.text || (client.name ? client.name + (client.phone_1 ? ' (' + client.phone_1 + ')' : '') : ('Client #' + client.id));
+            var $sel = $('#ftva_client_id');
+            $sel.append(new Option(label, client.id, true, true)).trigger('change');
+            document.getElementById('ftva_adr').value = client.adresse || '';
+            document.getElementById('ftva_phone').value = client.phone_1 || '';
+            Swal.fire({ icon: 'success', title: 'Client créé', timer: 1200, showConfirmButton: false });
+        })
+        .catch(function (err) {
+            console.error('ftvaCreateClient error', err);
+            Swal.fire('Erreur', 'Impossible de créer le client. Vérifiez les informations.', 'error');
+        });
     });
 }
 
