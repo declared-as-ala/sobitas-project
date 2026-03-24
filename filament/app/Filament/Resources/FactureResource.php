@@ -101,7 +101,7 @@ class FactureResource extends Resource
     {
         return $table
             ->modifyQueryUsing(fn (Builder $query) => $query
-                ->select(['factures.id', 'factures.numero', 'factures.client_id', 'factures.prix_ht', 'factures.remise', 'factures.pourcentage_remise', 'factures.tva', 'factures.timbre', 'factures.net_a_payer', 'factures.created_at'])
+                ->select(['factures.id', 'factures.numero', 'factures.client_id', 'factures.net_a_payer', 'factures.created_at'])
                 ->with('client:id,name')
             )
             ->columns([
@@ -119,35 +119,6 @@ class FactureResource extends Resource
                     ->label('Clients')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('prix_ht')
-                    ->label('Prix HT')
-                    ->money('TND', divideBy: 1)
-                    ->sortable()
-                    ->alignEnd(),
-                Tables\Columns\TextColumn::make('remise')
-                    ->label('Remise')
-                    ->money('TND', divideBy: 1)
-                    ->sortable()
-                    ->alignEnd()
-                    ->placeholder('—'),
-                Tables\Columns\TextColumn::make('pourcentage_remise')
-                    ->label('Pourcentage Remise')
-                    ->suffix(' %')
-                    ->sortable()
-                    ->alignEnd()
-                    ->placeholder('—'),
-                Tables\Columns\TextColumn::make('tva')
-                    ->label('TVA')
-                    ->money('TND', divideBy: 1)
-                    ->sortable()
-                    ->alignEnd()
-                    ->placeholder('—'),
-                Tables\Columns\TextColumn::make('timbre')
-                    ->label('Timbre')
-                    ->money('TND', divideBy: 1)
-                    ->sortable()
-                    ->alignEnd()
-                    ->placeholder('—'),
                 Tables\Columns\TextColumn::make('net_a_payer')
                     ->label('Prix TTC')
                     ->money('TND', divideBy: 1)

@@ -1,9 +1,41 @@
 @php
     $coordinate = \App\Models\Coordinate::getCached();
 
-    $getLwData = method_exists($getLivewire(), 'getRecord') && $getLivewire()->getRecord()
-        ? $getLivewire()->data
-        : [];
+    $livewire = $getLivewire();
+    $getLwData = [];
+
+    if (method_exists($livewire, 'getRecord') && $livewire->getRecord()) {
+        if (isset($livewire->data) && is_array($livewire->data)) {
+            $getLwData = $livewire->data;
+        }
+        if ($getLwData === [] && method_exists($livewire, 'form')) {
+            try {
+                $raw = $livewire->form->getRawState();
+                $getLwData = is_array($raw) ? $raw : [];
+            } catch (\Throwable) {
+                $getLwData = [];
+            }
+        }
+    }
+
+    $detailsRaw = $getLwData['details'] ?? null;
+    if (is_string($detailsRaw)) {
+        $detailsRaw = json_decode($detailsRaw, true) ?? [];
+    }
+    $getLwData['details'] = is_array($detailsRaw) ? $detailsRaw : [];
+
+    // Edit: if form state lost encoding / wrong path, hydrate from DB so rows and labels load
+    if (method_exists($livewire, 'getRecord') && ($rec = $livewire->getRecord())) {
+        $rec->loadMissing('details');
+        if ($getLwData['details'] === [] && $rec->details->isNotEmpty()) {
+            $getLwData['designation'] = $getLwData['designation'] ?? $rec->designation;
+            $getLwData['details'] = $rec->details->map(fn ($d) => [
+                'produit_id' => $d->product_id,
+                'prix_unitaire' => $d->prix_unitaire,
+                'prix_gros' => $d->prix_gros ?? 0,
+            ])->toArray();
+        }
+    }
 
     $selProductIds = collect($getLwData['details'] ?? [])->pluck('produit_id')->filter()->toArray();
     $selProducts = [];
@@ -16,12 +48,14 @@
 
     $max = 200;
 
+    $logoUrl = \App\Models\Coordinate::publicBrandLogoUrl();
     $logoPath = public_path('logo.png');
     $logoSrc  = is_file($logoPath)
         ? 'data:' . (mime_content_type($logoPath) ?: 'image/png') . ';base64,' . base64_encode(file_get_contents($logoPath))
         : null;
 @endphp
 
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css"/>
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
@@ -45,128 +79,116 @@ body:has(.lp-page) .fi-page-header { display: none !important; }
 body:has(.lp-page) .fi-form-actions { display: none !important; }
 body:has(.lp-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !important; }
 
-.lp-wrap { font-family: 'Inter', Arial, sans-serif; padding: 16px 24px; background: #f9fafb; min-height: 100vh; }
-.lp-form { background: #fff; border-radius: 12px; box-shadow: 0 1px 8px rgba(0,0,0,.08); padding: 24px; }
+/* ── Aligné sur backend/resources/views/admin/price_lists.blade.php (Voyager) ── */
+.lp-wrap { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; padding: 16px 24px; background: #f5f5f5; min-height: 100vh; }
+.lp-form { background: #fff; border: 1px solid #e3e3e3; border-radius: 4px; padding: 20px; }
 
-.lp-top { display: flex; gap: 24px; margin-bottom: 20px; align-items: flex-start; }
-.lp-company { flex: 0 0 42%; }
-.lp-company img { height: 80px; object-fit: contain; margin-bottom: 8px; display: block; }
-.lp-company h4 { font-size: 16px; font-weight: 700; margin: 0 0 4px; color: #1e293b; }
-.lp-company p { font-size: 13px; color: #475569; margin: 2px 0; }
+.lp-header-row { margin-left: 3px; margin-bottom: 3%; }
+.lp-company img { height: 100px; object-fit: contain; display: block; margin-bottom: 8px; }
+.lp-company h4 { font-size: 1.1rem; font-weight: 700; margin: 0 0 6px; }
+.lp-company p { font-size: 14px; margin: 0; }
 
-.lp-header-right { flex: 1; display: flex; flex-direction: column; gap: 12px; }
-.lp-title-block h2 { font-size: 22px; font-weight: 800; color: #1e293b; margin: 0 0 4px; text-transform: uppercase; letter-spacing: .04em; }
-.lp-title-block p { font-size: 13px; color: #64748b; margin: 0; }
+.lp-desig-block label { font-weight: 600; }
+.lp-barcode label { font-weight: 600; display: block; margin-bottom: 6px; }
 
-.lp-desig-block label { font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 6px; }
-.lp-desig-block input { width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; padding: 9px 14px; font-size: 14px; color: #1e293b; background: #fff; }
-.lp-desig-block input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,.2); }
+.lp-table-wrap { overflow-x: auto; margin-bottom: 12px; }
+.lp-table { width: 100%; font-size: 13px; margin-bottom: 0; }
+.lp-table thead th {
+    background: #ff4000 !important;
+    color: #fff !important;
+    font-weight: 600 !important;
+    text-transform: none;
+    padding: 10px 8px !important;
+    border-color: #ff4000 !important;
+    vertical-align: middle;
+}
+.lp-table tbody td { padding: 8px; vertical-align: middle; border-top: 1px solid #dee2e6; }
+.lp-table tbody tr:nth-child(odd) { background: #fafafa; }
+.lp-table td .select2-container { min-width: 260px; width: 100% !important; }
+.lp-table td .select2-container--default .select2-selection--single { min-height: 38px; border: 1px solid #ced4da; border-radius: 4px; }
+.lp-table td .select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 36px; padding-left: 8px; }
+.lp-table td .select2-container--default .select2-selection--single .select2-selection__arrow { height: 36px; }
+.lp-table td input.tbl-input { width: 100%; max-width: 140px; text-align: right; }
+.lp-table td input.code-input { background: #e9ecef; }
 
-.lp-barcode { margin-bottom: 16px; }
-.lp-barcode label { font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 6px; }
-.lp-barcode input { width: 100%; border: 1px solid #fdba74; border-radius: 6px; padding: 9px 14px; font-size: 15px; background: #fff7ed; }
-.lp-barcode input:focus { outline: none; border-color: #f97316; box-shadow: 0 0 0 2px rgba(249,115,22,.2); }
-
-.lp-table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 12px; }
-.lp-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.lp-table thead th { background: #f8fafc; color: #334155; font-weight: 700; text-transform: uppercase; padding: 10px 8px; text-align: left; font-size: 11px; letter-spacing: .05em; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
-.lp-table tbody tr:nth-child(even) { background: #fafaf9; }
-.lp-table tbody td { padding: 6px 8px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
-.lp-table td .select2-container { min-width: 240px; width: 100% !important; }
-.lp-table td .select2-container--default .select2-selection--single { border: 1px solid #cbd5e1; border-radius: 6px; height: 34px; }
-.lp-table td .select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 32px; font-size: 13px; }
-.lp-table td .select2-container--default .select2-selection--single .select2-selection__arrow { height: 32px; }
-.lp-table td input.tbl-input { border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 8px; font-size: 13px; width: 110px; text-align: right; background: #fff; height: 34px; }
-.lp-table td input.tbl-input:disabled { background: #f1f5f9; color: #64748b; border-color: transparent; font-weight: 600; }
-.lp-table td input.code-input { border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 8px; font-size: 12px; width: 120px; background: #f8fafc; height: 34px; color: #64748b; }
-
-.btn-add-row { background: #ecfdf5; color: #059669; border: 1px dashed #34d399; border-radius: 6px; padding: 8px 20px; font-size: 13px; font-weight: 600; cursor: pointer; margin-bottom: 24px; }
-.btn-add-row:hover { background: #d1fae5; border-color: #10b981; }
-.btn-del-row { background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; border-radius: 6px; padding: 5px 10px; cursor: pointer; font-size: 12px; }
-.btn-del-row:hover { background: #fee2e2; }
-
-.lp-footer { margin-top: 24px; text-align: right; border-top: 1px solid #e2e8f0; padding-top: 16px; display: flex; justify-content: space-between; align-items: center; }
-.lp-count { font-size: 13px; color: #64748b; }
-.lp-count strong { color: #1e293b; }
-.btn-save { background: #2563eb; color: #fff; border: none; border-radius: 8px; padding: 10px 32px; font-size: 15px; font-weight: 700; cursor: pointer; }
-.btn-save:hover { background: #1d4ed8; }
-.btn-save:disabled { background: #93c5fd; cursor: not-allowed; }
+.lp-add-wrap { float: left; margin-bottom: 24px; }
+.lp-footer { clear: both; margin-top: 16px; padding-top: 16px; border-top: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: center; }
+.lp-count { font-size: 14px; color: #6c757d; }
+.lp-count strong { color: #212529; }
 </style>
 
 <div class="lp-page" wire:ignore>
-<div class="lp-wrap">
-    <div class="lp-form">
+<div class="lp-wrap page-content">
+    <div class="lp-form panel-body">
 
-        {{-- ── Top: company left + title/designation right ── --}}
-        <div class="lp-top">
-            <div class="lp-company">
-                @if($logoSrc)
+        <div class="row lp-header-row">
+            <div class="col-md-5 lp-company">
+                @if($logoUrl)
+                    <img src="{{ $logoUrl }}" alt="{{ $coordinate->abbreviation ?? 'Sobitas' }}">
+                @elseif($logoSrc)
                     <img src="{{ $logoSrc }}" alt="Sobitas">
                 @endif
                 @if($coordinate)
                     <h4>{{ $coordinate->abbreviation ?? $coordinate->name_fr ?? '' }}</h4>
-                    <p>{{ $coordinate->phone_1 }}@if($coordinate->phone_2) / {{ $coordinate->phone_2 }}@endif</p>
-                    <p>{{ $coordinate->adresse_fr ?? $coordinate->adresse ?? '' }}</p>
+                    <p><span></span> {{ $coordinate->phone_1 }}@if($coordinate->phone_2) / {{ $coordinate->phone_2 }}@endif</p>
                 @endif
             </div>
-
-            <div class="lp-header-right">
-                <div class="lp-title-block">
-                    <h2>Liste de Prix</h2>
-                    <p>Tarification produits</p>
-                </div>
-                <div class="lp-desig-block">
-                    <label for="lp_designation">Désignation de la liste *</label>
-                    <input type="text" id="lp_designation" placeholder="Ex : Prix Détail 2025"
+            <div class="col-md-2 d-none d-md-block"></div>
+            <div class="col-md-5">
+                <div class="lp-desig-block mb-3">
+                    <label for="lp_designation" class="form-label">Désignation Liste de Prix</label>
+                    <input type="text" class="form-control" id="lp_designation" placeholder="Ex: Prix Détail 2025" required
                            value="{{ $getLwData['designation'] ?? '' }}"
                            oninput="lpUpdateCount()">
                 </div>
             </div>
         </div>
 
-        {{-- ── Barcode scanner ── --}}
-        <div class="lp-barcode">
+        <div class="lp-barcode mb-3">
             <label>Scanner code à barre</label>
-            <input type="number" id="lp_barcode" placeholder="Scannez ou saisissez un code barre..." autocomplete="off" onchange="lpScanner()">
+            <input type="text" class="form-control" id="lp_barcode" placeholder="barcode" autocomplete="off" onchange="lpScanner()">
         </div>
 
-        {{-- ── Products table ── --}}
         <div class="lp-table-wrap">
-            <table class="lp-table">
+            <table class="table lp-table">
                 <thead>
                     <tr>
-                        <th style="width:30px">#</th>
-                        <th style="min-width:260px">Produit</th>
-                        <th style="min-width:120px">Code Barre</th>
-                        <th style="min-width:120px">Prix Gros</th>
-                        <th style="min-width:120px">Prix Unitaire</th>
-                        <th style="width:50px"></th>
+                        <th scope="col" style="width:2.5rem">#</th>
+                        <th scope="col">Produits</th>
+                        <th scope="col">Code Barre</th>
+                        <th scope="col">Prix Gros</th>
+                        <th scope="col">Prix Unitaire</th>
+                        <th scope="col" style="width:3rem"></th>
                     </tr>
                 </thead>
                 <tbody>
                     @for($i = 1; $i <= $max; $i++)
                     <tr id="lp-row-{{ $i }}" style="{{ $i > 1 ? 'display:none;' : '' }}">
-                        <td style="color:#94a3b8;font-size:12px;text-align:center;">{{ $i }}</td>
-                        <td>
-                            <select id="lp_prod_{{ $i }}" style="width:100%" onchange="lpSelectProd({{ $i }})">
+                        <td class="text-muted text-center small">{{ $i }}</td>
+                        <td style="min-width:300px">
+                            <select id="lp_prod_{{ $i }}" class="form-control" style="width:100%" onchange="lpSelectProd({{ $i }})">
                                 <option value="">— Choisir —</option>
                             </select>
                         </td>
-                        <td><input type="text" class="code-input" id="lp_code_{{ $i }}" disabled value="" placeholder="—"></td>
-                        <td><input type="number" class="tbl-input" id="lp_gros_{{ $i }}" value="0" min="0" step="0.001"></td>
-                        <td><input type="number" class="tbl-input" id="lp_pu_{{ $i }}" value="0" min="0" step="0.001"></td>
-                        <td><button type="button" class="btn-del-row" onclick="lpRemoveRow({{ $i }})">✕</button></td>
+                        <td><input type="text" class="form-control code-input" id="lp_code_{{ $i }}" disabled value="" placeholder="—"></td>
+                        <td><input type="number" class="form-control tbl-input" id="lp_gros_{{ $i }}" value="0" min="0" step="0.001"></td>
+                        <td><input type="number" class="form-control tbl-input" id="lp_pu_{{ $i }}" value="0" min="0" step="0.001"></td>
+                        <td>
+                            <button type="button" class="btn btn-danger btn-sm" onclick="lpRemoveRow({{ $i }})" title="Supprimer">✕</button>
+                        </td>
                     </tr>
                     @endfor
                 </tbody>
             </table>
         </div>
-        <button type="button" class="btn-add-row" onclick="lpAddRow()">+ Ajouter un produit</button>
 
-        {{-- ── Footer ── --}}
-        <div class="lp-footer">
+        <div class="lp-add-wrap">
+            <button type="button" class="btn btn-primary" onclick="lpAddRow()">+ Ajouter</button>
+        </div>
+
+        <div class="panel-footer lp-footer">
             <div class="lp-count">Total produits : <strong id="lp_count">0</strong></div>
-            <button type="button" class="btn-save" id="lp_save_btn" onclick="lpSave()">💾 Enregistrer</button>
+            <button type="button" class="btn btn-primary save" id="lp_save_btn" onclick="lpSave()">Enregistrer</button>
         </div>
 
     </div>
@@ -187,6 +209,9 @@ function lpInitializeForm() {
     var initData  = @json($getLwData);
     var selProds  = @json($selProducts);
 
+    if (initData && initData.details && typeof initData.details === 'string') {
+        try { initData.details = JSON.parse(initData.details); } catch (e) { initData.details = []; }
+    }
     if (initData && initData.details && Array.isArray(initData.details) && initData.details.length > 0) {
         lpHydrate(initData, selProds);
     } else {
@@ -242,7 +267,7 @@ function lpInitSelect2(i) {
         allowClear: true,
         width: '100%',
         ajax: {
-            url: '/api/pos-products',
+            url: @json(route('api.pos-products')),
             dataType: 'json',
             delay: 250,
             data: function(params) { return { q: params.term || '' }; },
@@ -305,7 +330,7 @@ function lpScanner() {
     var code = (parseInt(raw) + 1) + '';
     barcodeInput.disabled = true;
 
-    fetch('/api/pos-barcode?code=' + encodeURIComponent(code))
+    fetch(@json(url(route('api.pos-barcode'))) + '?code=' + encodeURIComponent(code))
         .then(res => res.json())
         .then(found => {
             barcodeInput.disabled = false;

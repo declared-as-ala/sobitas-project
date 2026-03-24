@@ -22,6 +22,8 @@ class EditProductPriceList extends EditRecord
      */
     protected function mutateFormDataBeforeFill(array $data): array
     {
+        $this->record->loadMissing('details');
+
         $data['details'] = $this->record->details->map(fn ($d) => [
             'produit_id'    => $d->product_id,
             'prix_unitaire' => $d->prix_unitaire,

@@ -30,7 +30,9 @@ class ProductPriceListResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema->schema([
+        return $schema
+            ->statePath('data')
+            ->schema([
             Forms\Components\ViewField::make('custom_lp_view')
                 ->hiddenLabel()
                 ->view('filament.pages.create-liste-prix')
