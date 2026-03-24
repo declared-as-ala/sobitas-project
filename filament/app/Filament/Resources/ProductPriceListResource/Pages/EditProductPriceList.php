@@ -23,7 +23,7 @@ class EditProductPriceList extends EditRecord
     protected function mutateFormDataBeforeFill(array $data): array
     {
         $data['details'] = $this->record->details->map(fn ($d) => [
-            'produit_id'    => $d->produit_id,
+            'produit_id'    => $d->product_id,
             'prix_unitaire' => $d->prix_unitaire,
             'prix_gros'     => $d->prix_gros ?? 0,
         ])->toArray();
@@ -47,12 +47,13 @@ class EditProductPriceList extends EditRecord
         $this->record->details()->delete();
 
         foreach ($details as $row) {
-            if (empty($row['produit_id'])) {
+            $productId = $row['produit_id'] ?? $row['product_id'] ?? null;
+            if (empty($productId)) {
                 continue;
             }
             DetailsProductPriceList::create([
                 'product_price_list_id' => $this->record->id,
-                'produit_id'            => $row['produit_id'],
+                'product_id'            => (int) $productId,
                 'prix_unitaire'         => (float) ($row['prix_unitaire'] ?? 0),
                 'prix_gros'             => (float) ($row['prix_gros'] ?? 0),
             ]);

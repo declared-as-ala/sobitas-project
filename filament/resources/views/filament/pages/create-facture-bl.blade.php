@@ -619,7 +619,8 @@ function blCreateClient() {
         html:
             '<input id="bl_sw_name" class="swal2-input" placeholder="Nom et Prénom">' +
             '<input id="bl_sw_adresse" class="swal2-input" placeholder="Adresse">' +
-            '<input id="bl_sw_phone" class="swal2-input" placeholder="Téléphone">',
+            '<input id="bl_sw_phone" class="swal2-input" placeholder="Téléphone">' +
+            '<input id="bl_sw_email" class="swal2-input" placeholder="Email (optionnel)">',
         focusConfirm: false,
         showCancelButton: true,
         confirmButtonText: 'Créer le client',
@@ -628,11 +629,12 @@ function blCreateClient() {
             var name = (document.getElementById('bl_sw_name')?.value || '').trim();
             var adresse = (document.getElementById('bl_sw_adresse')?.value || '').trim();
             var phone = (document.getElementById('bl_sw_phone')?.value || '').trim();
+            var email = (document.getElementById('bl_sw_email')?.value || '').trim();
             if (!name) {
                 Swal.showValidationMessage('Le nom du client est obligatoire');
                 return false;
             }
-            return { name: name, adresse: adresse, phone_1: phone };
+            return { name: name, adresse: adresse, phone_1: phone, email: email || null };
         }
     }).then(function (result) {
         if (!result.isConfirmed || !result.value) return;

@@ -19,6 +19,7 @@ return [
         'telescope*',
         'horizon*',
         'api/*', // CRITICAL: Disable debugbar for all API routes (performance)
+        'livewire/*', // Avoid Debugbar mutating Livewire requests (Filament panels, login, notifications)
     ],
 
     /*

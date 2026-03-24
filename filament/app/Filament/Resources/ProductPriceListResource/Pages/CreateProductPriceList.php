@@ -34,12 +34,13 @@ class CreateProductPriceList extends CreateRecord
         }
 
         foreach ($details as $row) {
-            if (empty($row['produit_id'])) {
+            $productId = $row['produit_id'] ?? $row['product_id'] ?? null;
+            if (empty($productId)) {
                 continue;
             }
             DetailsProductPriceList::create([
                 'product_price_list_id' => $this->record->id,
-                'produit_id'            => $row['produit_id'],
+                'product_id'            => (int) $productId,
                 'prix_unitaire'         => (float) ($row['prix_unitaire'] ?? 0),
                 'prix_gros'             => (float) ($row['prix_gros'] ?? 0),
             ]);

@@ -14,6 +14,7 @@ class DetailsProductPriceList extends Model
     protected $casts = [
         'quantite' => 'integer',
         'prix_unitaire' => 'float',
+        'prix_gros' => 'float',
     ];
 
     public $timestamps = false;
@@ -25,6 +26,6 @@ class DetailsProductPriceList extends Model
 
     public function product(): BelongsTo
     {
-        return $this->belongsTo(Product::class, 'produit_id');
+        return $this->belongsTo(Product::class, 'product_id');
     }
 }

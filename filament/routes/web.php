@@ -296,6 +296,7 @@ Route::middleware(['auth'])->group(function () {
             'name'      => 'required|string|max:255',
             'phone_1'   => 'nullable|string|max:50',
             'adresse'   => 'nullable|string|max:500',
+            'email'     => 'nullable|email|max:255',
             'matricule' => 'nullable|string|max:255',
         ]);
         $client = \App\Models\Client::create($data);
@@ -304,6 +305,7 @@ Route::middleware(['auth'])->group(function () {
             'text'    => $client->name . ' (' . ($client->phone_1 ?? '') . ')',
             'phone_1' => $client->phone_1,
             'adresse' => $client->adresse,
+            'email'   => $client->email,
         ]);
     })->name('api.pos-clients.store');
 });
