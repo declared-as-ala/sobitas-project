@@ -2,6 +2,7 @@
 
 @php
     $fmt = fn($n) => number_format((float)$n, 3, '.', ' ');
+    $notePrefix = trim((string) ($footerNote ?? 'Arrête la présente facture à la somme de :'));
 @endphp
 
 @section('client-info')
@@ -65,14 +66,14 @@
                 $designation = $details->product->designation_fr ?? '—';
                 $qte = $details->qte ?? $details->quantite ?? 1;
                 $pu = $details->prix_unitaire ?? $details->prix_ht ?? 0;
-                $pttc = $details->prix_ttc ?? ($qte * $pu);
+                $lineTotal = (float) $qte * (float) $pu;
             @endphp
             <tr style="{{ $bg }}">
                 <td class="text-center">{{ $i }}</td>
                 <td>{{ collect(explode('-', $designation))->map(fn($v) => trim($v))->implode(' - ') }}</td>
                 <td class="text-center">{{ $qte }}</td>
                 <td class="text-right">{{ $fmt($pu) }}</td>
-                <td class="text-right">{{ $fmt($qte * $pu) }}</td>
+                <td class="text-right">{{ $fmt($lineTotal) }}</td>
             </tr>
             @php $i++; @endphp
         @endforeach
@@ -111,7 +112,7 @@
         <tr>
             <td colspan="3"></td>
             <th class="bt">Montant Totale TTC</th>
-            <th class="text-right">{{ $fmt($montantTtc) }}</th>
+            <th class="text-right" style="font-weight: 800; background: #f4e7db;">{{ $fmt($montantTtc) }}</th>
         </tr>
     </tfoot>
 </table>
@@ -121,12 +122,9 @@
 <div class="notices" style="page-break-inside: avoid; break-inside: avoid;">
     <div><b>Note :</b></div>
     <div class="notice">
-        Arrête la présente facture à la somme de :
+        {{ rtrim($notePrefix, " :") }} :
         <span id="words_{{ $documentNumber ?? 'doc' }}"></span> DT
     </div>
-    @if(isset($footerNote) && $footerNote)
-        <div class="notice" style="margin-top: 4px; color: #555;">{{ $footerNote }}</div>
-    @endif
 </div>
 @endsection
 

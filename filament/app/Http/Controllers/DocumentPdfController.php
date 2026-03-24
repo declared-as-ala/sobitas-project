@@ -43,12 +43,17 @@ class DocumentPdfController extends Controller
             $details_facture = DetailsFacture::where('facture_id', $facture->id)
                 ->with('product:id,designation_fr,cover')
                 ->get();
-            $totalHt = $details_facture->sum(fn($d) => ($d->qte ?? $d->quantite ?? 1) * ($d->prix_unitaire ?? $d->prix_ht ?? 0));
+            $toFloat = static fn ($value): float => (float) str_replace(' ', '', (string) ($value ?? 0));
+            $totalHt = $details_facture->sum(function ($d) use ($toFloat) {
+                $qte = (float) ($d->qte ?? $d->quantite ?? 1);
+                $pu = $toFloat($d->prix_unitaire ?? $d->prix_ht ?? 0);
+                return $qte * $pu;
+            });
             $remise = (float) ($facture->remise ?? 0);
             $frais = (float) ($facture->frais_livraison ?? 0);
-            // Assuming no TVA for BL based on current logic, so TTC = HT. 
-            // If the system has prix_ttc per line, we sum that. If not, it falls back to HT.
-            $totalTtc = $details_facture->sum(fn($d) => ($d->qte ?? $d->quantite ?? 1) * ($d->prix_ttc ?? $d->prix_unitaire ?? $d->prix_ht ?? 0));
+            // BL is HT-only in this app, so TTC line total must stay qte * prix_unitaire.
+            // This avoids multiplying an already-aggregated prix_ttc by quantity again.
+            $totalTtc = $totalHt;
             $netAPayer = max($totalTtc - $remise + $frais, 0);
 
             $data = [
