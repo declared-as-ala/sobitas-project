@@ -49,7 +49,10 @@
         </tr>
     </thead>
     <tbody>
-        @forelse(($price_list_rows ?? []) as $row)
+        @php
+            $priceListRows = $price_list_rows ?? [];
+        @endphp
+        @forelse($priceListRows as $row)
         <tr>
             <td class="idx">{{ $row['index'] }}</td>
             <td class="prod">{{ $row['designation'] }}</td>
