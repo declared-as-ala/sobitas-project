@@ -97,6 +97,34 @@ class Coordinate extends Model
     }
 
     /**
+     * Logo d’impression facture / liste de prix : **uniquement** `coordinates.logo_facture`,
+     * comme `Voyager::image($coordonnee->logo_facture)` dans le backend (imprimer_pricelist).
+     * Ne pas utiliser `site.logo` — sinon l’impression Filament ne montre pas le même fichier que Voyager.
+     */
+    public static function publicLogoFacturePrintUrl(?self $coordinate = null): ?string
+    {
+        $c = $coordinate ?? static::getCached();
+        $raw = $c?->logo_facture;
+        if ($raw === null || trim((string) $raw) === '') {
+            return null;
+        }
+
+        $raw = trim((string) $raw);
+
+        if (preg_match('#^https?://#i', $raw)) {
+            return $raw;
+        }
+
+        $path = str_replace('\\', '/', $raw);
+        $path = ltrim($path, '/');
+        if (str_starts_with($path, 'storage/')) {
+            $path = substr($path, strlen('storage/'));
+        }
+
+        return asset('storage/'.$path);
+    }
+
+    /**
      * Absolute URL for the Filament panel logo / favicon / login logo.
      *
      * Resolution order (mirrors how Voyager resolves the logo):
