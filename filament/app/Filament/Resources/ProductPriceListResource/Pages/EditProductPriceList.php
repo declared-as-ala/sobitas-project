@@ -6,14 +6,23 @@ use App\Filament\Resources\ProductPriceListResource;
 use App\Models\DetailsProductPriceList;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
+use Filament\Support\Enums\Width;
 
 class EditProductPriceList extends EditRecord
 {
     protected static string $resource = ProductPriceListResource::class;
 
-    public function getMaxContentWidth(): \Filament\Support\Enums\Width|string|null
+    public function getMaxContentWidth(): Width|string|null
     {
-        return \Filament\Support\Enums\Width::Full;
+        return Width::Full;
+    }
+
+    /**
+     * Same layout class as BL / Devis / Facture so shared doc-edit.css topbar rules apply.
+     */
+    public function getPageClasses(): array
+    {
+        return array_merge(parent::getPageClasses(), ['fi-page-edit-product-price-list']);
     }
 
     /**

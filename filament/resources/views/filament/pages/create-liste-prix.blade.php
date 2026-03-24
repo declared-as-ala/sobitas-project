@@ -55,18 +55,17 @@
         : null;
 @endphp
 
-<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css"/>
+{{-- No Bootstrap here: global Bootstrap CSS breaks Filament .fi-topbar flex (logo + user menu stuck left). --}}
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <style>
-/* ── Force FULL WIDTH on Liste de Prix Pages ──────────────────────────────── */
+/* ── Force FULL WIDTH on Liste de Prix (do NOT target `form` — breaks Filament layout) ── */
 body:has(.lp-page) .fi-main-ctn,
 body:has(.lp-page) .fi-page,
 body:has(.lp-page) .fi-resource-page,
-body:has(.lp-page) form,
 body:has(.lp-page) .fi-fo-component-ctn,
 body:has(.lp-page) .fi-fo-view,
 body:has(.lp-page) .fi-fo-view > div {
@@ -79,11 +78,75 @@ body:has(.lp-page) .fi-page-header { display: none !important; }
 body:has(.lp-page) .fi-form-actions { display: none !important; }
 body:has(.lp-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !important; }
 
+/* ── Restore Filament topbar: logo/start left, notifications + profile right ── */
+body:has(.lp-page) .fi-topbar-ctn {
+    width: 100% !important;
+}
+body:has(.lp-page) nav.fi-topbar {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    width: 100% !important;
+    justify-content: flex-start !important;
+}
+body:has(.lp-page) .fi-topbar-end {
+    margin-inline-start: auto !important;
+    display: flex !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+    gap: 0.35rem;
+}
+
 /* ── Aligné sur backend/resources/views/admin/price_lists.blade.php (Voyager) ── */
 .lp-wrap { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; padding: 16px 24px; background: #f5f5f5; min-height: 100vh; }
 .lp-form { background: #fff; border: 1px solid #e3e3e3; border-radius: 4px; padding: 20px; }
 
-.lp-header-row { margin-left: 3px; margin-bottom: 3%; }
+.lp-header-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    margin-left: 3px;
+    margin-bottom: 3%;
+    align-items: flex-start;
+}
+.lp-header-row .lp-company { flex: 1 1 260px; min-width: 200px; max-width: 100%; }
+.lp-header-row .lp-desig-col { flex: 1 1 260px; min-width: 200px; max-width: 100%; }
+.lp-mb-3 { margin-bottom: 1rem; }
+.lp-form-control {
+    width: 100%;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    padding: 0.375rem 0.75rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    background: #fff;
+    color: #212529;
+}
+.lp-form-control:focus {
+    outline: none;
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+}
+.lp-btn {
+    display: inline-block;
+    font-weight: 400;
+    text-align: center;
+    vertical-align: middle;
+    padding: 0.375rem 0.75rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    cursor: pointer;
+}
+.lp-btn-primary { color: #fff; background-color: #007bff; border-color: #007bff; }
+.lp-btn-primary:hover { background-color: #0069d9; border-color: #0062cc; }
+.lp-btn-primary:disabled { opacity: 0.65; cursor: not-allowed; }
+.lp-btn-danger { color: #fff; background-color: #dc3545; border-color: #dc3545; padding: 0.25rem 0.5rem; font-size: 0.875rem; }
+.lp-btn-danger:hover { background-color: #c82333; }
+.lp-td-num { color: #6c757d; text-align: center; font-size: 12px; }
+
 .lp-company img { height: 100px; object-fit: contain; display: block; margin-bottom: 8px; }
 .lp-company h4 { font-size: 1.1rem; font-weight: 700; margin: 0 0 6px; }
 .lp-company p { font-size: 14px; margin: 0; }
@@ -118,11 +181,11 @@ body:has(.lp-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !importa
 </style>
 
 <div class="lp-page" wire:ignore>
-<div class="lp-wrap page-content">
-    <div class="lp-form panel-body">
+<div class="lp-wrap">
+    <div class="lp-form">
 
-        <div class="row lp-header-row">
-            <div class="col-md-5 lp-company">
+        <div class="lp-header-row">
+            <div class="lp-company">
                 @if($logoUrl)
                     <img src="{{ $logoUrl }}" alt="{{ $coordinate->abbreviation ?? 'Sobitas' }}">
                 @elseif($logoSrc)
@@ -133,24 +196,23 @@ body:has(.lp-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !importa
                     <p><span></span> {{ $coordinate->phone_1 }}@if($coordinate->phone_2) / {{ $coordinate->phone_2 }}@endif</p>
                 @endif
             </div>
-            <div class="col-md-2 d-none d-md-block"></div>
-            <div class="col-md-5">
-                <div class="lp-desig-block mb-3">
-                    <label for="lp_designation" class="form-label">Désignation Liste de Prix</label>
-                    <input type="text" class="form-control" id="lp_designation" placeholder="Ex: Prix Détail 2025" required
+            <div class="lp-desig-col">
+                <div class="lp-desig-block lp-mb-3">
+                    <label for="lp_designation">Désignation Liste de Prix</label>
+                    <input type="text" class="lp-form-control" id="lp_designation" placeholder="Ex: Prix Détail 2025" required
                            value="{{ $getLwData['designation'] ?? '' }}"
                            oninput="lpUpdateCount()">
                 </div>
             </div>
         </div>
 
-        <div class="lp-barcode mb-3">
+        <div class="lp-barcode lp-mb-3">
             <label>Scanner code à barre</label>
-            <input type="text" class="form-control" id="lp_barcode" placeholder="barcode" autocomplete="off" onchange="lpScanner()">
+            <input type="text" class="lp-form-control" id="lp_barcode" placeholder="barcode" autocomplete="off" onchange="lpScanner()">
         </div>
 
         <div class="lp-table-wrap">
-            <table class="table lp-table">
+            <table class="lp-table">
                 <thead>
                     <tr>
                         <th scope="col" style="width:2.5rem">#</th>
@@ -164,17 +226,17 @@ body:has(.lp-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !importa
                 <tbody>
                     @for($i = 1; $i <= $max; $i++)
                     <tr id="lp-row-{{ $i }}" style="{{ $i > 1 ? 'display:none;' : '' }}">
-                        <td class="text-muted text-center small">{{ $i }}</td>
+                        <td class="lp-td-num">{{ $i }}</td>
                         <td style="min-width:300px">
-                            <select id="lp_prod_{{ $i }}" class="form-control" style="width:100%" onchange="lpSelectProd({{ $i }})">
+                            <select id="lp_prod_{{ $i }}" class="lp-form-control" style="width:100%" onchange="lpSelectProd({{ $i }})">
                                 <option value="">— Choisir —</option>
                             </select>
                         </td>
-                        <td><input type="text" class="form-control code-input" id="lp_code_{{ $i }}" disabled value="" placeholder="—"></td>
-                        <td><input type="number" class="form-control tbl-input" id="lp_gros_{{ $i }}" value="0" min="0" step="0.001"></td>
-                        <td><input type="number" class="form-control tbl-input" id="lp_pu_{{ $i }}" value="0" min="0" step="0.001"></td>
+                        <td><input type="text" class="lp-form-control code-input" id="lp_code_{{ $i }}" disabled value="" placeholder="—"></td>
+                        <td><input type="number" class="lp-form-control tbl-input" id="lp_gros_{{ $i }}" value="0" min="0" step="0.001"></td>
+                        <td><input type="number" class="lp-form-control tbl-input" id="lp_pu_{{ $i }}" value="0" min="0" step="0.001"></td>
                         <td>
-                            <button type="button" class="btn btn-danger btn-sm" onclick="lpRemoveRow({{ $i }})" title="Supprimer">✕</button>
+                            <button type="button" class="lp-btn lp-btn-danger" onclick="lpRemoveRow({{ $i }})" title="Supprimer">✕</button>
                         </td>
                     </tr>
                     @endfor
@@ -183,12 +245,12 @@ body:has(.lp-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !importa
         </div>
 
         <div class="lp-add-wrap">
-            <button type="button" class="btn btn-primary" onclick="lpAddRow()">+ Ajouter</button>
+            <button type="button" class="lp-btn lp-btn-primary" onclick="lpAddRow()">+ Ajouter</button>
         </div>
 
-        <div class="panel-footer lp-footer">
+        <div class="lp-footer">
             <div class="lp-count">Total produits : <strong id="lp_count">0</strong></div>
-            <button type="button" class="btn btn-primary save" id="lp_save_btn" onclick="lpSave()">Enregistrer</button>
+            <button type="button" class="lp-btn lp-btn-primary save" id="lp_save_btn" onclick="lpSave()">Enregistrer</button>
         </div>
 
     </div>

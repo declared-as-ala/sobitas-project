@@ -5,14 +5,20 @@ namespace App\Filament\Resources\ProductPriceListResource\Pages;
 use App\Filament\Resources\ProductPriceListResource;
 use App\Models\DetailsProductPriceList;
 use Filament\Resources\Pages\CreateRecord;
+use Filament\Support\Enums\Width;
 
 class CreateProductPriceList extends CreateRecord
 {
     protected static string $resource = ProductPriceListResource::class;
 
-    public function getMaxContentWidth(): \Filament\Support\Enums\Width|string|null
+    public function getMaxContentWidth(): Width|string|null
     {
-        return \Filament\Support\Enums\Width::Full;
+        return Width::Full;
+    }
+
+    public function getPageClasses(): array
+    {
+        return array_merge(parent::getPageClasses(), ['fi-page-edit-product-price-list']);
     }
 
     public function save(bool $shouldRedirect = true, bool $shouldSendSavedNotification = true): void

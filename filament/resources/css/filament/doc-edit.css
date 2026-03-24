@@ -313,14 +313,17 @@
 .fi-page-edit-facture .fi-header,
 .fi-page-edit-quotation .fi-header,
 .fi-page-edit-ticket .fi-header,
+.fi-page-edit-product-price-list .fi-header,
 .fi-page-edit-facture-tva .fi-topbar-ctn,
 .fi-page-edit-facture .fi-topbar-ctn,
 .fi-page-edit-quotation .fi-topbar-ctn,
 .fi-page-edit-ticket .fi-topbar-ctn,
+.fi-page-edit-product-price-list .fi-topbar-ctn,
 .fi-page-edit-facture-tva .fi-topbar,
 .fi-page-edit-facture .fi-topbar,
 .fi-page-edit-quotation .fi-topbar,
-.fi-page-edit-ticket .fi-topbar {
+.fi-page-edit-ticket .fi-topbar,
+.fi-page-edit-product-price-list .fi-topbar {
     position: static !important;
     z-index: 0 !important;
 }

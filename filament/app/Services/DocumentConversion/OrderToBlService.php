@@ -93,16 +93,17 @@ class OrderToBlService
 
             $details = [];
             foreach ($order->details as $line) {
-                if (! $line->produit_id) {
+                $produitId = $line->produit_id ?? ($line->getAttributes()['product_id'] ?? null);
+                if (! $produitId) {
                     continue;
                 }
-                $qte = $quantities[$line->id] ?? $quantities[$line->produit_id] ?? $line->qte;
+                $qte = $quantities[$line->id] ?? $quantities[$produitId] ?? $line->qte;
                 $qte = (int) $qte;
                 if ($qte <= 0) {
                     continue;
                 }
                 $details[] = [
-                    'produit_id' => $line->produit_id,
+                    'produit_id' => (int) $produitId,
                     'qte' => $qte,
                     'prix_unitaire' => (float) $line->prix_unitaire,
                     'tva_pct' => 0,
@@ -125,20 +126,44 @@ class OrderToBlService
 
             $totals = InvoiceCalculator::calculate($details, $remise, $timbre, 0, $fraisLivraison, true);
 
+            $orderTtc = (float) ($order->prix_ttc ?? 0);
+            $orderHt = (float) ($order->prix_ht ?? 0);
+
+            /*
+             * If lines did not contribute HT (missing produit_id, zero PU, etc.) the calculator
+             * returns 0 — net_a_payer / prix_ttc stay 0 and the BL list shows "Prix TTC" empty.
+             * Fall back to the commande totals so the BL matches what was actually ordered.
+             */
+            $computedHtBrut = (float) ($totals['total_ht_brut'] ?? 0);
+            if ($computedHtBrut <= 0.0005 && $orderTtc > 0) {
+                $baseHt = $orderHt > 0 ? $orderHt : $orderTtc;
+                $appliedRemise = min($remise, $baseHt);
+                $htApres = round(max(0, $baseHt - $appliedRemise), 3);
+                $totals['total_ht_brut'] = round($baseHt, 3);
+                $totals['remise'] = $appliedRemise;
+                $totals['pourcentage_remise'] = $baseHt > 0
+                    ? round(($appliedRemise / $baseHt) * 100, 2)
+                    : 0.0;
+                $totals['prix_ht_apres_remise'] = $htApres;
+                $totals['tva'] = 0.0;
+                $totals['prix_ttc'] = $htApres;
+                $totals['net_a_payer'] = round($htApres + $timbre + $fraisLivraison, 3);
+            }
+
             $bl = new Facture();
             $bl->commande_id = $order->id;
             $bl->client_id = $clientId;
             $bl->numero = $this->numberSequence->nextBl();
             $bl->status = BlStatus::Draft;
-            $bl->prix_ht = $totals['total_ht_brut'];
-            $bl->remise = $totals['remise'];
-            $bl->pourcentage_remise = $totals['pourcentage_remise'];
-            $bl->prix_ht_apres_remise = $totals['prix_ht_apres_remise'];
-            $bl->tva = $totals['tva'];
-            $bl->timbre = $totals['timbre'];
-            $bl->frais_livraison = $totals['frais_livraison'];
-            $bl->prix_ttc = $totals['prix_ttc'];
-            $bl->net_a_payer = max(0, $totals['net_a_payer']);
+            $bl->prix_ht = round((float) ($totals['total_ht_brut'] ?? 0), 3);
+            $bl->remise = round((float) ($totals['remise'] ?? 0), 3);
+            $bl->pourcentage_remise = round((float) ($totals['pourcentage_remise'] ?? 0), 2);
+            $bl->prix_ht_apres_remise = round((float) ($totals['prix_ht_apres_remise'] ?? 0), 3);
+            $bl->tva = round((float) ($totals['tva'] ?? 0), 3);
+            $bl->timbre = round((float) ($totals['timbre'] ?? 0), 3);
+            $bl->frais_livraison = round((float) ($totals['frais_livraison'] ?? 0), 3);
+            $bl->prix_ttc = round((float) ($totals['prix_ttc'] ?? 0), 3);
+            $bl->net_a_payer = round(max(0.0, (float) ($totals['net_a_payer'] ?? 0)), 3);
 
             // Do not map billing fields to BL, only keep livraison fields as requested
             $bl->nom = null;
@@ -181,10 +206,11 @@ class OrderToBlService
             $bl->save();
 
             foreach ($order->details as $line) {
-                if (! $line->produit_id) {
+                $produitId = $line->produit_id ?? ($line->getAttributes()['product_id'] ?? null);
+                if (! $produitId) {
                     continue;
                 }
-                $qte = $quantities[$line->id] ?? $quantities[$line->produit_id] ?? $line->qte;
+                $qte = $quantities[$line->id] ?? $quantities[$produitId] ?? $line->qte;
                 $qte = (int) $qte;
                 if ($qte <= 0) {
                     continue;
@@ -192,7 +218,7 @@ class OrderToBlService
                 $pu = (float) $line->prix_unitaire;
                 $detail = new DetailsFacture();
                 $detail->facture_id = $bl->id;
-                $detail->produit_id = $line->produit_id;
+                $detail->produit_id = (int) $produitId;
                 $detail->qte = $qte;
                 $detail->prix_unitaire = $pu;
                 if (Schema::hasColumn('details_factures', 'prix_ttc')) {
