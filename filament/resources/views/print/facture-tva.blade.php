@@ -70,9 +70,16 @@
             $ftTimbre = (float) ($calcTotals['timbre'] ?? $facture->timbre ?? 0);
             $ftNet = (float) ($calcTotals['net_a_payer'] ?? $facture->net_a_payer ?? 0);
         @endphp
+        @if($ftTimbre > 0)
         <tr>
             <td colspan="2"></td>
-            <th colspan="3" class="bt">Total TTC @if($ftTimbre > 0)<span style="font-weight:600;font-size:8pt;">(timbre inclus)</span>@endif</th>
+            <th colspan="3">Timbre</th>
+            <th class="text-right">{{ number_format($ftTimbre, 3, '.', '') }}</th>
+        </tr>
+        @endif
+        <tr>
+            <td colspan="2"></td>
+            <th colspan="3" class="bt">Total TTC</th>
             <th class="text-right bt">{{ number_format($ftNet, 3, '.', '') }}</th>
         </tr>
     </tfoot>

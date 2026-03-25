@@ -295,8 +295,7 @@ class ArticleResource extends Resource
                                             ->nullable()
                                             ->native(false)
                                             ->helperText('Optionnel. Les articles sans type restent classés par mots-clés comme avant.')
-                                            ->columnSpanFull()
-                                            ->visible(fn (): bool => Article::hasBlogTypeColumn()),
+                                            ->columnSpanFull(),
 
                                         Forms\Components\Toggle::make('publier')
                                             ->label('Publier cet article')
