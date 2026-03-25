@@ -145,13 +145,11 @@ class CreateFacture extends CreateRecord
     }
 
     /**
-     * Footer form actions (bottom buttons).
-     * Only keep \"Enregistrer\" and \"Annuler\" for BL create.
+     * Custom BL view has its own Enregistrer — avoid duplicate Filament footer button.
      */
     protected function getFormActions(): array
     {
         return [
-            $this->getCreateFormAction()->label('Enregistrer'),
             $this->getCancelFormAction()->label('Annuler'),
         ];
     }

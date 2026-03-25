@@ -261,13 +261,11 @@ class EditFacture extends EditRecord
     }
 
     /**
-     * Native Filament form footer actions with French labels.
-     * Only keep \"Enregistrer\" and \"Annuler\".
+     * Custom BL layout has its own Enregistrer — keep only Annuler in the footer.
      */
     protected function getFormActions(): array
     {
         return [
-            $this->getSaveFormAction()->label('Enregistrer')->icon('heroicon-o-check'),
             $this->getCancelFormAction()->label('Annuler'),
         ];
     }

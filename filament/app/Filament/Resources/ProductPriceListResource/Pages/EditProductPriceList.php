@@ -48,6 +48,13 @@ class EditProductPriceList extends EditRecord
         return $data;
     }
 
+    protected function getFormActions(): array
+    {
+        return [
+            $this->getCancelFormAction()->label('Annuler'),
+        ];
+    }
+
     protected function afterSave(): void
     {
         $details = $this->form->getState()['details'] ?? [];
@@ -69,11 +76,8 @@ class EditProductPriceList extends EditRecord
                 'prix_gros'             => (float) ($row['prix_gros'] ?? 0),
             ]);
         }
-    }
 
-    protected function getRedirectUrl(): string
-    {
-        return route('product-price-lists.print', $this->record->id);
+        $this->dispatch('open-url-new-tab', url: route('product-price-lists.print', $this->record->id));
     }
 
     protected function getHeaderActions(): array

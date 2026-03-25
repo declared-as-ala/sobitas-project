@@ -216,7 +216,6 @@ class EditFactureTva extends EditRecord
     protected function getFormActions(): array
     {
         return [
-            $this->getSaveFormAction()->label('Enregistrer les modifications')->icon('heroicon-o-check'),
             $this->getCancelFormAction()->label('Annuler'),
         ];
     }

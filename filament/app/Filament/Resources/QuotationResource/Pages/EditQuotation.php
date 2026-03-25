@@ -160,6 +160,8 @@ class EditQuotation extends EditRecord
             'net_a_payer' => $calcTotals['net_a_payer'],
             'prix_total' => $calcTotals['prix_ttc'], // Backwards compatibility if used elsewhere
         ]);
+
+        $this->dispatch('open-url-new-tab', url: route('quotations.print', ['quotation' => $this->record->id]));
     }
 
     /**
@@ -349,7 +351,6 @@ class EditQuotation extends EditRecord
     protected function getFormActions(): array
     {
         return [
-            $this->getSaveFormAction()->label('Enregistrer')->icon('heroicon-o-check-circle'),
             $this->getCancelFormAction()->label('Annuler')->icon('heroicon-o-x-circle'),
         ];
     }

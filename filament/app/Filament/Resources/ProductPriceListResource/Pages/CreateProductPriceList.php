@@ -26,6 +26,11 @@ class CreateProductPriceList extends CreateRecord
         $this->create();
     }
 
+    protected function getFormActions(): array
+    {
+        return [];
+    }
+
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         unset($data['details']);
@@ -51,10 +56,7 @@ class CreateProductPriceList extends CreateRecord
                 'prix_gros'             => (float) ($row['prix_gros'] ?? 0),
             ]);
         }
-    }
 
-    protected function getRedirectUrl(): string
-    {
-        return route('product-price-lists.print', $this->record->id);
+        $this->dispatch('open-url-new-tab', url: route('product-price-lists.print', $this->record->id));
     }
 }

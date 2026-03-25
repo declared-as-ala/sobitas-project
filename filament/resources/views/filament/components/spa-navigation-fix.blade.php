@@ -98,14 +98,21 @@
 
     /**
      * Open URL in new tab without Livewire/SPA intercepting (avoids "Component not found" when
-     * downloading PDF or opening print view). Listen for dispatch('open-url-new-tab', url: ...).
+     * downloading PDF or opening print view). Register once; livewire:initialized may already
+     * have fired before this script runs on some navigations.
      */
-    document.addEventListener('livewire:initialized', function () {
-        if (typeof window.Livewire === 'undefined') return;
+    function registerOpenUrlNewTabListener() {
+        if (typeof window.Livewire === 'undefined' || window.__filamentOpenUrlNewTabHooked) return;
+        window.__filamentOpenUrlNewTabHooked = true;
         window.Livewire.on('open-url-new-tab', function (payload) {
             var url = (payload && payload.url) ? payload.url : (payload && payload.detail && payload.detail.url) ? payload.detail.url : null;
             if (url) window.open(url, '_blank', 'noopener');
         });
-    });
+    }
+    document.addEventListener('livewire:init', registerOpenUrlNewTabListener);
+    document.addEventListener('livewire:initialized', registerOpenUrlNewTabListener);
+    if (typeof window.Livewire !== 'undefined') {
+        registerOpenUrlNewTabListener();
+    }
 })();
 </script>

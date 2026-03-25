@@ -50,6 +50,11 @@ class CreateQuotation extends CreateRecord
         $this->recalculateTotals();
     }
 
+    protected function getFormActions(): array
+    {
+        return [];
+    }
+
     public function recalculateTotals(): void
     {
         $state = $this->form->getState();
@@ -172,8 +177,7 @@ class CreateQuotation extends CreateRecord
                 ->success()
                 ->send();
 
-            // Redirect to the print page
-            $this->dispatch('navigate', url: route('quotations.print', $this->record));
+            $this->dispatch('open-url-new-tab', url: route('quotations.print', ['quotation' => $this->record->id]));
             
             return null;
         } catch (\Illuminate\Database\QueryException $e) {

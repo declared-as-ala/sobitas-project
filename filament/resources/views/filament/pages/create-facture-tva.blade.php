@@ -735,6 +735,9 @@ function ftvaSave() {
 
     var saveBtn = document.querySelector('.ftva-page .btn-save');
     if (saveBtn) saveBtn.disabled = true;
+    function ftvaReleaseSaveBtn() {
+        if (saveBtn) saveBtn.disabled = false;
+    }
 
     var formData = {
         client_id:            clientId,
@@ -754,12 +757,19 @@ function ftvaSave() {
             wire.set('data.' + key, formData[key]);
         }
         setTimeout(function () {
-            wire.call('save');
+            var req = wire.call('save');
+            if (req && typeof req.finally === 'function') {
+                req.finally(ftvaReleaseSaveBtn);
+            } else if (req && typeof req.then === 'function') {
+                req.then(ftvaReleaseSaveBtn).catch(ftvaReleaseSaveBtn);
+            } else {
+                setTimeout(ftvaReleaseSaveBtn, 1200);
+            }
         }, 200);
     } catch (e) {
         console.error('FTVA save error', e);
         Swal.fire('Erreur', 'Erreur lors de la sauvegarde. Rechargez la page.', 'error');
-        if (saveBtn) saveBtn.disabled = false;
+        ftvaReleaseSaveBtn();
     }
 }
 

@@ -657,9 +657,11 @@ function dvSave() {
         return; 
     }
 
-    // Disable the save button to prevent double-submission
-    var saveBtn = document.querySelector('.btn-save');
+    var saveBtn = document.querySelector('.devis-page .btn-save');
     if (saveBtn) saveBtn.disabled = true;
+    function dvReleaseSaveBtn() {
+        if (saveBtn) saveBtn.disabled = false;
+    }
 
     // Prepare form data object
     var formData = {
@@ -681,14 +683,20 @@ function dvSave() {
             @this.set('data.' + key, formData[key]);
         }
 
-        // Call the save method
-        setTimeout(() => {
-            @this.call('save');
+        setTimeout(function () {
+            var req = @this.call('save');
+            if (req && typeof req.finally === 'function') {
+                req.finally(dvReleaseSaveBtn);
+            } else if (req && typeof req.then === 'function') {
+                req.then(dvReleaseSaveBtn).catch(dvReleaseSaveBtn);
+            } else {
+                setTimeout(dvReleaseSaveBtn, 1200);
+            }
         }, 100);
     } catch (e) {
         console.error('Error saving form', e);
         Swal.fire('Erreur', 'Erreur lors de la sauvegarde: ' + (e.message || 'Erreur inconnue'), 'error');
-        if (saveBtn) saveBtn.disabled = false;
+        dvReleaseSaveBtn();
     }
 }
 

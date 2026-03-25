@@ -77,6 +77,14 @@ class CreateFactureTva extends CreateRecord
         $this->create();
     }
 
+    /**
+     * Custom POS layout provides its own “Enregistrer” — hide Filament’s duplicate footer button.
+     */
+    protected function getFormActions(): array
+    {
+        return [];
+    }
+
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         $year = (int) date('Y');

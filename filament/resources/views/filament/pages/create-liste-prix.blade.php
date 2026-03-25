@@ -459,17 +459,27 @@ function lpSave() {
 
     var saveBtn = document.getElementById('lp_save_btn');
     if (saveBtn) saveBtn.disabled = true;
+    function lpReleaseSaveBtn() {
+        if (saveBtn) saveBtn.disabled = false;
+    }
 
     try {
         @this.set('data.designation', designation);
         @this.set('data.details', lines);
         setTimeout(function() {
-            @this.call('save');
+            var req = @this.call('save');
+            if (req && typeof req.finally === 'function') {
+                req.finally(lpReleaseSaveBtn);
+            } else if (req && typeof req.then === 'function') {
+                req.then(lpReleaseSaveBtn).catch(lpReleaseSaveBtn);
+            } else {
+                setTimeout(lpReleaseSaveBtn, 1200);
+            }
         }, 100);
     } catch(e) {
         console.error('Error saving', e);
         Swal.fire('Erreur', 'Erreur lors de la sauvegarde: ' + (e.message || 'Erreur inconnue'), 'error');
-        if (saveBtn) saveBtn.disabled = false;
+        lpReleaseSaveBtn();
     }
 }
 

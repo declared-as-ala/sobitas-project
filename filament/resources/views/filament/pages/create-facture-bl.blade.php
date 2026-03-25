@@ -740,8 +740,11 @@ function blSave() {
         return;
     }
 
-    var saveBtn = document.querySelector('.btn-save');
+    var saveBtn = document.querySelector('.bl-page .btn-save');
     if (saveBtn) saveBtn.disabled = true;
+    function blReleaseSaveBtn() {
+        if (saveBtn) saveBtn.disabled = false;
+    }
 
     var formData = {
         client_id: clientId,
@@ -776,12 +779,19 @@ function blSave() {
             wire.set('data.' + key, formData[key]);
         }
         setTimeout(function () {
-            wire.call('save');
+            var req = wire.call('save');
+            if (req && typeof req.finally === 'function') {
+                req.finally(blReleaseSaveBtn);
+            } else if (req && typeof req.then === 'function') {
+                req.then(blReleaseSaveBtn).catch(blReleaseSaveBtn);
+            } else {
+                setTimeout(blReleaseSaveBtn, 1200);
+            }
         }, 200);
     } catch (e) {
         console.error('BL save error', e);
         Swal.fire('Erreur', 'Erreur lors de la sauvegarde. Rechargez la page.', 'error');
-        if (saveBtn) saveBtn.disabled = false;
+        blReleaseSaveBtn();
     }
 }
 
