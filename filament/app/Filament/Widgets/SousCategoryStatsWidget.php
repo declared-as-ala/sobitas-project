@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Resources\SousCategoryResource\Widgets;
+namespace App\Filament\Widgets;
 
 use App\Models\Product;
 use App\Models\SousCategory;

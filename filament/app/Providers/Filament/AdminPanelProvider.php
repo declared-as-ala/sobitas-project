@@ -63,6 +63,7 @@ use App\Filament\Widgets\LowStockTable;
 use App\Filament\Widgets\TopCustomersTable;
 use App\Filament\Widgets\ReturnsRefundsTable;
 use App\Filament\Widgets\StatusCardsWidget;
+use App\Filament\Widgets\SousCategoryStatsWidget;
 use App\Filament\Widgets\StockKpisWidget;
 use App\Filament\Widgets\StockMovementChartWidget;
 use App\Http\Middleware\Authenticate;
@@ -204,6 +205,7 @@ class AdminPanelProvider extends PanelProvider
                 RevenueBySourcePieChart::class,
                 ProductsStockPieChart::class,
                 StatusCardsWidget::class,
+                SousCategoryStatsWidget::class,
             ])
             ->unsavedChangesAlerts()
             ->brandLogo(function (): \Illuminate\Support\HtmlString|null {

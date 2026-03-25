@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\SousCategoryResource\Pages;
 
 use App\Filament\Resources\SousCategoryResource;
-use App\Filament\Resources\SousCategoryResource\Widgets\SousCategoryStatsWidget;
+use App\Filament\Widgets\SousCategoryStatsWidget;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 
