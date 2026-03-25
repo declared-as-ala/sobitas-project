@@ -72,6 +72,9 @@ class QuotationResource extends Resource
 
             Forms\Components\Hidden::make('numero'),
             Forms\Components\Hidden::make('client_id'),
+            Forms\Components\Hidden::make('client_adresse')->dehydrated(false),
+            Forms\Components\Hidden::make('client_phone')->dehydrated(false),
+            Forms\Components\Hidden::make('client_email')->dehydrated(false),
             Forms\Components\Hidden::make('details'),
             Forms\Components\Hidden::make('prix_ht'),
             Forms\Components\Hidden::make('remise')->default(0),

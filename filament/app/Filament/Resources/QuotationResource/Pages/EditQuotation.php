@@ -234,8 +234,7 @@ class EditQuotation extends EditRecord
     }
 
     // -------------------------------------------------------------------------
-    // Header actions — Filament v4 (SPA mode)
-    // IMPORTANT: Save/Cancel are native in getFormActions() (footer).
+    // Header actions — Filament v4 (SPA mode). Footer: custom devis UI only (getFormActions() empty).
     // -------------------------------------------------------------------------
     protected function getHeaderActions(): array
     {
@@ -346,13 +345,11 @@ class EditQuotation extends EditRecord
     }
 
     /**
-     * Native Filament form footer actions with French labels.
+     * Custom devis layout — no Filament footer (no Annuler).
      */
     protected function getFormActions(): array
     {
-        return [
-            $this->getCancelFormAction()->label('Annuler')->icon('heroicon-o-x-circle'),
-        ];
+        return [];
     }
 
     private function getStatutLabel(?string $statut): string

@@ -40,6 +40,18 @@
         if (empty($getLwData['client_id']) && $rec->client_id) {
             $getLwData['client_id'] = $rec->client_id;
         }
+        $c = $rec->client;
+        if ($c) {
+            if (($getLwData['client_adresse'] ?? '') === '' || ($getLwData['client_adresse'] ?? null) === null) {
+                $getLwData['client_adresse'] = $c->adresse ?? '';
+            }
+            if (($getLwData['client_phone'] ?? '') === '' || ($getLwData['client_phone'] ?? null) === null) {
+                $getLwData['client_phone'] = $c->phone_1 ?? '';
+            }
+            if (($getLwData['client_email'] ?? '') === '' || ($getLwData['client_email'] ?? null) === null) {
+                $getLwData['client_email'] = $c->email ?? '';
+            }
+        }
         if ($getLwData['details'] === [] && $rec->details->isNotEmpty()) {
             $getLwData['details'] = $rec->details->map(fn ($d) => [
                 'produit_id' => $d->produit_id,
@@ -186,20 +198,24 @@ body:has(.devis-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !impo
                             <option value="">— Choisir un client —</option>
                             @if($selClient)
                                 <option value="{{ $selClient->id }}" selected
-                                    data-adresse="{{ $selClient->adresse }}"
-                                    data-phone="{{ $selClient->phone_1 }}">
+                                    data-adresse="{{ e($selClient->adresse) }}"
+                                    data-phone="{{ e($selClient->phone_1) }}">
                                     {{ $selClient->name }} ({{ $selClient->phone_1 }})
                                 </option>
                             @endif
                         </select>
                     </div>
+                    @php
+                        $dvAdr = $getLwData['client_adresse'] ?? ($selClient?->adresse ?? '');
+                        $dvPhone = $getLwData['client_phone'] ?? ($selClient?->phone_1 ?? '');
+                    @endphp
                     <div class="form-field">
                         <label style="font-size:12px;color:#64748b;">Adresse</label>
-                        <input class="dv-input" id="dv_adr" disabled value="">
+                        <input class="dv-input" id="dv_adr" disabled value="{{ e($dvAdr) }}">
                     </div>
                     <div class="form-field">
                         <label style="font-size:12px;color:#64748b;">N°Tél</label>
-                        <input class="dv-input" id="dv_phone" disabled value="">
+                        <input class="dv-input" id="dv_phone" disabled value="{{ e($dvPhone) }}">
                     </div>
                 </div>
             </div>
@@ -366,6 +382,16 @@ function dvHydrate(data, selProducts) {
     if (data.client_id) {
         // Option is natively rendered, just let select2 pick it up, although we can trigger it too in case
         $('#dv_client_id').val(data.client_id).trigger('change');
+        // Form state / server may carry contact fields; Select2 often omits them on preloaded options
+        var adr = data.client_adresse || '';
+        var tel = data.client_phone || '';
+        if (!adr || !tel) {
+            var $opt = $('#dv_client_id option:selected');
+            if (!adr) adr = $opt.data('adresse') || '';
+            if (!tel) tel = $opt.data('phone') || '';
+        }
+        document.getElementById('dv_adr').value = adr;
+        document.getElementById('dv_phone').value = tel;
     }
     
     if (data.details && Array.isArray(data.details)) {
@@ -426,10 +452,20 @@ function dvInitSelect2(i) {
 }
 
 function dvSelectClient() {
+    var adr = '';
+    var phone = '';
     var sel = $('#dv_client_id').select2('data')[0];
-    if (!sel) return;
-    document.getElementById('dv_adr').value   = sel.adresse || '';
-    document.getElementById('dv_phone').value = sel.phone_1 || '';
+    if (sel) {
+        adr = sel.adresse || sel.adresse_client || '';
+        phone = sel.phone_1 || sel.phone || '';
+    }
+    if (!adr && !phone) {
+        var $opt = $('#dv_client_id option:selected');
+        adr = $opt.data('adresse') || '';
+        phone = $opt.data('phone') || '';
+    }
+    document.getElementById('dv_adr').value = adr;
+    document.getElementById('dv_phone').value = phone;
 }
 $('#dv_client_id').on('change', function() { dvSelectClient(); });
 

@@ -213,11 +213,12 @@ class EditFactureTva extends EditRecord
         $this->dispatch('open-url-new-tab', url: route('facture-tvas.print', ['factureTva' => $this->record->id]));
     }
 
+    /**
+     * Custom facture TVA layout — no Filament footer (no Annuler).
+     */
     protected function getFormActions(): array
     {
-        return [
-            $this->getCancelFormAction()->label('Annuler'),
-        ];
+        return [];
     }
 
     protected function getHeaderActions(): array

@@ -106,7 +106,7 @@ class CreateQuotation extends CreateRecord
         $data['net_a_payer'] = $calcTotals['net_a_payer'];
         $data['prix_total'] = $calcTotals['prix_ttc'];
         
-        unset($data['details'], $data['client_adresse'], $data['client_phone'], $data['css_injector']);
+        unset($data['details'], $data['client_adresse'], $data['client_phone'], $data['client_email'], $data['css_injector']);
         return $data;
     }
 
