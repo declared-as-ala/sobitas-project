@@ -3,15 +3,18 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\SousCategoryResource\Pages;
+use App\Filament\Resources\ProductResource;
 use App\Models\Categ;
 use App\Models\SousCategory;
 use Filament\Actions;
 use Filament\Forms;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 class SousCategoryResource extends Resource
 {
@@ -185,7 +188,13 @@ class SousCategoryResource extends Resource
                     ->label('Sans produits')
                     ->query(fn (Builder $query) => $query->doesntHave('products')),
             ])
-            ->filtersLayout(Tables\Enums\FiltersLayout::AboveContent)
+            ->filtersLayout(Tables\Enums\FiltersLayout::AboveContentCollapsible)
+            ->filtersTriggerAction(
+                fn (Actions\Action $action) => $action
+                    ->button()
+                    ->label('Filtres')
+                    ->icon('heroicon-o-funnel')
+            )
 
             // ── Search ────────────────────────────────────────────────────────
             ->searchPlaceholder('Rechercher une sous-catégorie...')
@@ -194,19 +203,67 @@ class SousCategoryResource extends Resource
             ->defaultSort('designation_fr', 'asc')
             ->striped()
             ->defaultPaginationPageOption(25)
-            ->paginationPageOptions([25, 50, 100])
+            ->paginationPageOptions([10, 25, 50, 100])
+
+            ->emptyStateHeading('Aucune sous-catégorie')
+            ->emptyStateDescription('Créez une sous-catégorie pour ranger vos produits (ex. Créatine, BCAA, Vitamines).')
+            ->emptyStateIcon('heroicon-o-rectangle-group')
+            ->emptyStateActions([
+                Actions\CreateAction::make()
+                    ->label('Créer une sous-catégorie')
+                    ->icon('heroicon-o-plus'),
+            ])
 
             // ── Actions ───────────────────────────────────────────────────────
             ->actions([
-                Actions\EditAction::make()
-                    ->iconButton()
-                    ->tooltip('Modifier'),
-                Actions\DeleteAction::make()
-                    ->iconButton()
-                    ->tooltip('Supprimer'),
+                Actions\ActionGroup::make([
+                    Actions\EditAction::make()
+                        ->label('Modifier')
+                        ->icon('heroicon-o-pencil-square'),
+                    Actions\Action::make('viewProducts')
+                        ->label('Voir les produits')
+                        ->icon('heroicon-o-shopping-bag')
+                        ->color('gray')
+                        ->url(fn (SousCategory $record): string => ProductResource::getUrl('index', [
+                            'tableFilters' => [
+                                'sous_categorie_id' => ['value' => $record->id],
+                            ],
+                        ])),
+                    Actions\DeleteAction::make()
+                        ->label('Supprimer'),
+                ])
+                    ->label('Actions')
+                    ->icon('heroicon-m-ellipsis-vertical')
+                    ->size('sm')
+                    ->color('gray')
+                    ->button()
+                    ->tooltip('Actions'),
             ])
             ->bulkActions([
-                Actions\DeleteBulkAction::make(),
+                Actions\BulkAction::make('assignCategorie')
+                    ->label('Attribuer une catégorie')
+                    ->icon('heroicon-o-tag')
+                    ->form([
+                        Forms\Components\Select::make('categorie_id')
+                            ->label('Catégorie parente')
+                            ->options(fn (): array => Categ::query()
+                                ->orderBy('designation_fr')
+                                ->pluck('designation_fr', 'id')
+                                ->all())
+                            ->searchable()
+                            ->required(),
+                    ])
+                    ->action(function (Collection $records, array $data): void {
+                        $id = (int) $data['categorie_id'];
+                        $records->each(fn (SousCategory $sc) => $sc->update(['categorie_id' => $id]));
+                        Notification::make()
+                            ->title($records->count() . ' sous-catégorie(s) mise(s) à jour')
+                            ->success()
+                            ->send();
+                    })
+                    ->deselectRecordsAfterCompletion(),
+                Actions\DeleteBulkAction::make()
+                    ->label('Supprimer la sélection'),
             ]);
     }
 

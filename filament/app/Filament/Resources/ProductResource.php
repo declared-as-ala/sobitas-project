@@ -367,6 +367,11 @@ class ProductResource extends Resource
                     ->label('Marque')
                     ->relationship('brand', 'designation_fr')
                     ->searchable(),
+                Tables\Filters\SelectFilter::make('sous_categorie_id')
+                    ->label('Sous-catégorie')
+                    ->relationship('sousCategorie', 'designation_fr')
+                    ->searchable()
+                    ->preload(),
             ])
             ->actions([
                 Actions\EditAction::make(),
