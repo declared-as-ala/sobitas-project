@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\BlogArticleType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Support\Facades\Schema;
 
 class Article extends Model
 {
@@ -12,11 +13,30 @@ class Article extends Model
 
     protected $guarded = ['id'];
 
+    /**
+     * True when migration adding `blog_type` has been applied (avoids SQL errors on older DBs).
+     */
+    public static function hasBlogTypeColumn(): bool
+    {
+        static $cached = null;
+        if ($cached !== null) {
+            return $cached;
+        }
+        try {
+            return $cached = Schema::hasTable('articles') && Schema::hasColumn('articles', 'blog_type');
+        } catch (\Throwable) {
+            return $cached = false;
+        }
+    }
+
     protected function casts(): array
     {
-        return [
-            'blog_type' => BlogArticleType::class,
-        ];
+        $casts = [];
+        if (static::hasBlogTypeColumn()) {
+            $casts['blog_type'] = BlogArticleType::class;
+        }
+
+        return $casts;
     }
 
     public function scopePublished($query)

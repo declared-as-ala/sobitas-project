@@ -57,10 +57,16 @@ class ApisController extends Controller
         'qte', 'rupture', 'brand_id', 'sous_categorie_id',
     ];
 
-    // Article list columns — exclude description_fr (can be huge HTML)
-    private const ARTICLE_LIST_COLUMNS = [
-        'id', 'slug', 'designation_fr', 'cover', 'publier', 'blog_type', 'created_at',
-    ];
+    // Article list columns — exclude description_fr (can be huge HTML); blog_type only if migrated
+    private function articleListSelectColumns(): array
+    {
+        $base = ['id', 'slug', 'designation_fr', 'cover', 'publier', 'created_at'];
+        if (Article::hasBlogTypeColumn()) {
+            array_splice($base, 5, 0, ['blog_type']);
+        }
+
+        return $base;
+    }
 
     private function resolvePerPage(Request $request, int $default = self::DEFAULT_PER_PAGE): int
     {
@@ -526,7 +532,7 @@ class ApisController extends Controller
         $perPage = $this->resolvePerPage($request);
 
         $articles = Article::where('publier', 1)
-            ->select(self::ARTICLE_LIST_COLUMNS)
+            ->select($this->articleListSelectColumns())
             ->latest('created_at')
             ->paginate($perPage);
 
@@ -546,9 +552,14 @@ class ApisController extends Controller
 
     public function latestArticles()
     {
+        $cols = ['id', 'slug', 'designation_fr', 'cover', 'created_at'];
+        if (Article::hasBlogTypeColumn()) {
+            $cols = ['id', 'slug', 'designation_fr', 'cover', 'blog_type', 'created_at'];
+        }
+
         return Article::where('publier', 1)
             ->latest('created_at')
-            ->select('id', 'slug', 'designation_fr', 'cover', 'blog_type', 'created_at')
+            ->select($cols)
             ->limit(4)
             ->get();
     }

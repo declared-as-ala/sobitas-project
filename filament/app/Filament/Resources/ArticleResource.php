@@ -295,7 +295,8 @@ class ArticleResource extends Resource
                                             ->nullable()
                                             ->native(false)
                                             ->helperText('Optionnel. Les articles sans type restent classés par mots-clés comme avant.')
-                                            ->columnSpanFull(),
+                                            ->columnSpanFull()
+                                            ->visible(fn (): bool => Article::hasBlogTypeColumn()),
 
                                         Forms\Components\Toggle::make('publier')
                                             ->label('Publier cet article')
@@ -312,59 +313,66 @@ class ArticleResource extends Resource
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->modifyQueryUsing(fn (\Illuminate\Database\Eloquent\Builder $query) => $query
-                ->select(['id', 'designation_fr', 'slug', 'cover', 'publier', 'blog_type', 'created_at'])
-            )
-            ->columns([
-                Tables\Columns\ImageColumn::make('cover')
-                    ->label('Image')
-                    ->circular()
-                    ->height(48)
-                    ->width(48)
-                    ->defaultImageUrl(function ($record) {
-                        if (! $record->cover) {
-                            return null;
-                        }
-                        if (str_starts_with($record->cover, 'http://') || str_starts_with($record->cover, 'https://')) {
-                            return $record->cover;
-                        }
+        $selectCols = ['id', 'designation_fr', 'slug', 'cover', 'publier', 'created_at'];
+        if (Article::hasBlogTypeColumn()) {
+            $selectCols = ['id', 'designation_fr', 'slug', 'cover', 'publier', 'blog_type', 'created_at'];
+        }
 
-                        return asset('storage/' . ltrim($record->cover, '/'));
-                    }),
+        $columns = [
+            Tables\Columns\ImageColumn::make('cover')
+                ->label('Image')
+                ->circular()
+                ->height(48)
+                ->width(48)
+                ->defaultImageUrl(function ($record) {
+                    if (! $record->cover) {
+                        return null;
+                    }
+                    if (str_starts_with($record->cover, 'http://') || str_starts_with($record->cover, 'https://')) {
+                        return $record->cover;
+                    }
 
-                Tables\Columns\TextColumn::make('designation_fr')
-                    ->label('Titre')
-                    ->searchable()
-                    ->sortable()
-                    ->limit(70)
-                    ->description(fn ($record) => $record->slug),
+                    return asset('storage/' . ltrim($record->cover, '/'));
+                }),
 
-                Tables\Columns\TextColumn::make('blog_type')
-                    ->label('Type')
-                    ->formatStateUsing(function ($state): string {
-                        if ($state === null) {
-                            return '—';
-                        }
-                        if ($state instanceof BlogArticleType) {
-                            return $state->label();
-                        }
+            Tables\Columns\TextColumn::make('designation_fr')
+                ->label('Titre')
+                ->searchable()
+                ->sortable()
+                ->limit(70)
+                ->description(fn ($record) => $record->slug),
+        ];
 
-                        return BlogArticleType::tryFrom((string) $state)?->label() ?? '—';
-                    })
-                    ->badge()
-                    ->color(fn ($state): string => $state === null ? 'gray' : 'info')
-                    ->toggleable(),
+        if (Article::hasBlogTypeColumn()) {
+            $columns[] = Tables\Columns\TextColumn::make('blog_type')
+                ->label('Type')
+                ->formatStateUsing(function ($state): string {
+                    if ($state === null) {
+                        return '—';
+                    }
+                    if ($state instanceof BlogArticleType) {
+                        return $state->label();
+                    }
 
-                Tables\Columns\IconColumn::make('publier')
+                    return BlogArticleType::tryFrom((string) $state)?->label() ?? '—';
+                })
+                ->badge()
+                ->color(fn ($state): string => $state === null ? 'gray' : 'info')
+                ->toggleable();
+        }
+
+        $columns[] = Tables\Columns\IconColumn::make('publier')
                     ->label('Publié')
                     ->boolean(),
 
-                Tables\Columns\TextColumn::make('created_at')
-                    ->label('Date de création')
-                    ->dateTime('d/m/Y')
-                    ->sortable(),
-            ])
+        $columns[] = Tables\Columns\TextColumn::make('created_at')
+            ->label('Date de création')
+            ->dateTime('d/m/Y')
+            ->sortable();
+
+        return $table
+            ->modifyQueryUsing(fn (\Illuminate\Database\Eloquent\Builder $query) => $query->select($selectCols))
+            ->columns($columns)
             ->defaultSort('created_at', 'desc')
             ->defaultPaginationPageOption(25)
             ->actions([
