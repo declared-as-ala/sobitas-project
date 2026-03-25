@@ -53,7 +53,8 @@ class SousCategoryResource extends Resource
                 ->label('Catégorie')
                 ->relationship('categorie', 'designation_fr')
                 ->required()
-                ->searchable(),
+                ->searchable()
+                ->preload(),
             Forms\Components\TextInput::make('designation_fr')
                 ->label('Désignation')
                 ->required()
