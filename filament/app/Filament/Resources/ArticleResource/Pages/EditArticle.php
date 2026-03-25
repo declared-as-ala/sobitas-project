@@ -12,6 +12,17 @@ class EditArticle extends EditRecord
 {
     protected static string $resource = ArticleResource::class;
 
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        $data['_slug_auto_source'] = $data['designation_fr'] ?? '';
+
+        return $data;
+    }
+
     public function getMaxContentWidth(): Width | string | null
     {
         return Width::Full;
@@ -42,12 +53,19 @@ class EditArticle extends EditRecord
                         ->send();
                 }),
 
-            // Preview in new tab
+            // Preview on public site (uses current form slug when possible)
             Actions\Action::make('preview')
                 ->label('Aperçu')
                 ->icon('heroicon-o-eye')
                 ->color('info')
-                ->url(fn (): string => '/blog/' . $this->record->slug)
+                ->url(function (): string {
+                    $slug = trim((string) ($this->form->getRawState()['slug'] ?? $this->record->slug ?? ''));
+                    if ($slug === '') {
+                        return ArticleResource::BLOG_PUBLIC_BASE_URL;
+                    }
+
+                    return rtrim(ArticleResource::BLOG_PUBLIC_BASE_URL, '/') . '/' . $slug;
+                })
                 ->openUrlInNewTab(),
 
             // Danger: delete

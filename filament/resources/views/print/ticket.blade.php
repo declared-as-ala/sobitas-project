@@ -23,6 +23,7 @@
             padding: 0;
             box-sizing: border-box;
             font-family: 'Source Sans Pro', sans-serif;
+            color: #000;
         }
 
         .container {
@@ -33,6 +34,9 @@
             padding: 25px;
             margin: 50px auto 0;
             box-shadow: 0 3px 10px rgb(0 0 0 / 0.2);
+            font-size: 13px;
+            font-weight: 500;
+            line-height: 1.45;
         }
 
         .receipt_header {
@@ -45,6 +49,7 @@
             font-size: 20px;
             margin-bottom: 5px;
             text-transform: uppercase;
+            font-weight: 700;
         }
 
         .receipt_header h1 span {
@@ -55,7 +60,7 @@
         .receipt_header h2 {
             font-size: 14px;
             color: #000000;
-            font-weight: 300;
+            font-weight: 600;
         }
 
         .receipt_header h2 span {
@@ -68,6 +73,21 @@
 
         table {
             width: 100%;
+        }
+
+        thead th {
+            font-weight: 700;
+            font-size: 12px;
+        }
+
+        tbody td {
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        tfoot td {
+            font-weight: 600;
+            font-size: 13px;
         }
 
         thead,
@@ -123,14 +143,16 @@
 
         tfoot tr:last-child td:first-child,
         tfoot tr:last-child td:last-child {
-            font-weight: bold;
-            font-size: 20px;
+            font-weight: 800;
+            font-size: 21px;
         }
 
         .date_time_con {
             display: flex;
             justify-content: center;
             column-gap: 25px;
+            font-weight: 600;
+            font-size: 13px;
         }
 
         .items {
@@ -142,6 +164,13 @@
             padding-top: 10px;
             margin-top: 25px;
             text-align: center;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        h4 {
+            font-weight: 600;
+            font-size: 13px;
         }
 
         .qr-zone {
@@ -155,8 +184,9 @@
         }
 
         .qr-zone p {
-            font-size: 10px;
-            color: #555;
+            font-size: 11px;
+            font-weight: 600;
+            color: #000;
             margin-top: 4px;
         }
 
@@ -168,6 +198,15 @@
 
             .hide_print {
                 display: none
+            }
+
+            .container {
+                font-size: 12px;
+                font-weight: 600;
+            }
+
+            tbody td, tfoot td {
+                font-weight: 700;
             }
         }
 
@@ -223,10 +262,11 @@
 
                 </div>
                 <div class="time"
-                    style="    text-align: center;
-                font-weight: 600;
+                    style="text-align: center;
+                font-weight: 800;
                 padding: 12px;
-                font-size: 13pt;">
+                font-size: 14pt;
+                color: #000;">
                     Ticket n°{{ $ticket->numero }}</div>
                 <div class="items">
                     <table>
@@ -300,7 +340,7 @@
             <br><br>
             <h4>{{ $coordonnee->footer_ticket ?? '' }}</h4>
             <h3 style="text-transform:uppercase;">Notre Site web</h3>
-            <div style="text-align:center; font-size:12px; margin-top:4px;">
+            <div style="text-align:center; font-size:13px; font-weight:700; margin-top:4px; color:#000;">
                 {{ $coordonnee->site_web ?? '' }}
             </div>
 

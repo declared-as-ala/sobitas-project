@@ -64,14 +64,12 @@ class FactureTvaSent extends Mailable
             'client' => $factureTva->client,
             'status' => $factureTva->status ? $factureTva->status->value : null,
             'status_label' => $factureTva->status ? $factureTva->status->label() : null,
-            'totals' => [
+            'totals' => array_values(array_filter([
                 ['label' => 'Total HT', 'value' => number_format($calcTotals['total_ht_brut'], 3, ',', ' ') . ' DT'],
-                ['label' => 'Remise', 'value' => number_format($calcTotals['remise'], 3, ',', ' ') . ' DT'],
+                $calcTotals['remise'] > 0 ? ['label' => 'Remise', 'value' => number_format($calcTotals['remise'], 3, ',', ' ') . ' DT'] : null,
                 ['label' => 'TVA', 'value' => number_format($calcTotals['tva'], 3, ',', ' ') . ' DT'],
-                ['label' => 'Timbre', 'value' => number_format($calcTotals['timbre'], 3, ',', ' ') . ' DT'],
-                ['label' => 'TOTAL TTC', 'value' => number_format($calcTotals['prix_ttc'], 3, ',', ' ') . ' DT'],
-                ['label' => 'NET À PAYER', 'value' => number_format($calcTotals['net_a_payer'], 3, ',', ' ') . ' DT', 'class' => 'net-a-payer'],
-            ],
+                ['label' => 'Total TTC', 'value' => number_format($calcTotals['net_a_payer'], 3, ',', ' ') . ' DT', 'class' => 'net-a-payer'],
+            ])),
             'footerNote' => $coordonnee && ! empty($coordonnee->note) ? $coordonnee->note : null,
             'paymentTerms' => 'Paiement à réception. Virement bancaire ou espèces. Merci de préciser le n° de facture.',
             'forPdf' => true,

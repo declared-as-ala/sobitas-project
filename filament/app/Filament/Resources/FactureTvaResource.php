@@ -61,7 +61,7 @@ class FactureTvaResource extends Resource
     {
         return $table
             ->modifyQueryUsing(fn (Builder $query) => $query
-                ->select(['facture_tvas.id', 'facture_tvas.numero', 'facture_tvas.client_id', 'facture_tvas.remise', 'facture_tvas.prix_ttc', 'facture_tvas.created_at'])
+                ->select(['facture_tvas.id', 'facture_tvas.numero', 'facture_tvas.client_id', 'facture_tvas.remise', 'facture_tvas.net_a_payer', 'facture_tvas.created_at'])
                 ->with('client:id,name')
             )
             ->columns([
@@ -81,7 +81,7 @@ class FactureTvaResource extends Resource
                     ->alignEnd()
                     ->placeholder('—')
                     ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('prix_ttc')
+                Tables\Columns\TextColumn::make('net_a_payer')
                     ->label('Montant TTC')
                     ->money('TND')
                     ->sortable()

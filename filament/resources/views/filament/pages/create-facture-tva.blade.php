@@ -287,9 +287,8 @@ body:has(.ftva-page) .fi-form-actions { display: none !important; }
                         <td>Montant Totale TVA</td>
                         <td><input class="tot-input" id="ftva_m_tt_tva" disabled value="0.000"></td>
                     </tr>
-                    <tr>
-                        <td>Montant Totale TTC</td>
-                        <td><input class="tot-input" id="ftva_m_tt_ttc" disabled value="0.000"></td>
+                    <tr style="display:none" aria-hidden="true">
+                        <td colspan="2"><input type="hidden" id="ftva_m_tt_ttc" value="0.000"></td>
                     </tr>
                     <tr>
                         <td>Timbre Fiscal</td>
@@ -297,7 +296,7 @@ body:has(.ftva-page) .fi-form-actions { display: none !important; }
                                    onkeyup="ftvaCalculate()" onchange="ftvaCalculate()"></td>
                     </tr>
                     <tr class="ftva-net-row">
-                        <td>Net à payer</td>
+                        <td>Total TTC</td>
                         <td><input class="tot-input" id="ftva_net" disabled value="0.000"></td>
                     </tr>
                 </table>

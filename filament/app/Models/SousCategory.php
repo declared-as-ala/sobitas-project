@@ -12,6 +12,10 @@ class SousCategory extends Model
 
     protected $guarded = ['id'];
 
+    protected $casts = [
+        'faq' => 'array',
+    ];
+
     public function categorie(): BelongsTo
     {
         return $this->belongsTo(Categ::class, 'categorie_id');

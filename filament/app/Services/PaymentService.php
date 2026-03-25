@@ -32,7 +32,7 @@ class PaymentService
             $payment->save();
 
             $totalPaid = (float) $invoice->payments()->where('status', PaymentStatus::Succeeded)->sum('amount');
-            $totalTtc = (float) ($invoice->prix_ttc ?? $invoice->prix_total ?? 0);
+            $totalTtc = (float) ($invoice->net_a_payer ?? $invoice->prix_ttc ?? $invoice->prix_total ?? 0);
 
             if ($totalPaid >= $totalTtc) {
                 $invoice->status = InvoiceStatus::Paid;

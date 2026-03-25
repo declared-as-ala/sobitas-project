@@ -21,6 +21,9 @@ use Illuminate\Support\Str;
 
 class ArticleResource extends Resource
 {
+    /** Public blog base URL (frontend) — must match production routes. */
+    public const BLOG_PUBLIC_BASE_URL = 'https://protein.tn/blog';
+
     protected static ?string $model = Article::class;
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-newspaper';
@@ -220,7 +223,7 @@ class ArticleResource extends Resource
 
                                                         $title = htmlspecialchars($rawTitle, ENT_QUOTES, 'UTF-8');
                                                         $desc  = htmlspecialchars($rawDesc,  ENT_QUOTES, 'UTF-8');
-                                                        $url   = htmlspecialchars('votresite.com/blog/' . $slug, ENT_QUOTES, 'UTF-8');
+                                                        $url   = htmlspecialchars(parse_url(self::BLOG_PUBLIC_BASE_URL, PHP_URL_HOST) . '/blog/' . $slug, ENT_QUOTES, 'UTF-8');
 
                                                         return new HtmlString(
                                                             '<div style="font-family:arial,sans-serif;padding:14px 16px;border:1px solid #dadce0;border-radius:10px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.06);">'

@@ -10,11 +10,14 @@ use Filament\Actions;
 use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 class SousCategoryResource extends Resource
 {
@@ -49,36 +52,147 @@ class SousCategoryResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            Forms\Components\Select::make('categorie_id')
-                ->label('Catégorie')
-                ->relationship('categorie', 'designation_fr')
-                ->required()
-                ->searchable()
-                ->preload(),
-            Forms\Components\TextInput::make('designation_fr')
-                ->label('Désignation')
-                ->required()
-                ->maxLength(255),
-            Forms\Components\TextInput::make('slug')
-                ->required()
-                ->maxLength(255)
-                ->unique(ignoreRecord: true),
-            Forms\Components\Textarea::make('description_fr')
-                ->label('Description')
-                ->maxLength(65535)
+            Forms\Components\Hidden::make('_slug_auto_source')
+                ->dehydrated(false),
+
+            Section::make('Catégories')
+                ->schema([
+                    Forms\Components\Select::make('categorie_id')
+                        ->label('Catégories')
+                        ->relationship('categorie', 'designation_fr')
+                        ->required()
+                        ->searchable()
+                        ->preload()
+                        ->columnSpanFull(),
+                ])
                 ->columnSpanFull(),
-            Forms\Components\TextInput::make('cover')
-                ->label('Image')
-                ->maxLength(500),
-            Forms\Components\TextInput::make('alt_cover')
-                ->label('Alt Cover')
-                ->maxLength(255),
-            Forms\Components\TextInput::make('review_seo')
-                ->label('Review (seo)')
-                ->maxLength(255),
-            Forms\Components\TextInput::make('aggregate_rating_seo')
-                ->label('AggregateRating (seo)')
-                ->maxLength(255),
+
+            Section::make('Désignation → Slug')
+                ->schema([
+                    Grid::make(2)->schema([
+                        Forms\Components\TextInput::make('designation_fr')
+                            ->label('Désignation')
+                            ->required()
+                            ->maxLength(255)
+                            ->live(debounce: 400)
+                            ->afterStateUpdated(function ($state, callable $set, callable $get): void {
+                                $des = (string) ($state ?? '');
+                                $newSlug = Str::slug($des);
+                                $slug = (string) ($get('slug') ?? '');
+                                $syncFrom = (string) ($get('_slug_auto_source') ?? '');
+                                $expected = Str::slug($syncFrom);
+                                if ($slug === '' || $slug === $expected) {
+                                    $set('slug', $newSlug);
+                                }
+                                $set('_slug_auto_source', $des);
+                            }),
+                        Forms\Components\TextInput::make('slug')
+                            ->label('Slug')
+                            ->required()
+                            ->maxLength(255)
+                            ->unique(ignoreRecord: true)
+                            ->helperText('Généré automatiquement à partir de la désignation (modifiable).'),
+                    ]),
+                ])
+                ->columnSpanFull(),
+
+            Section::make('📝 DESCRIPTION')
+                ->schema([
+                    Forms\Components\RichEditor::make('description_fr')
+                        ->label('Description')
+                        ->columnSpanFull(),
+                ])
+                ->columnSpanFull(),
+
+            Section::make('🖼️ SEO IMAGE')
+                ->schema([
+                    Forms\Components\TextInput::make('cover')
+                        ->label('Image')
+                        ->maxLength(500)
+                        ->columnSpanFull(),
+                    Grid::make(2)->schema([
+                        Forms\Components\TextInput::make('alt_cover')
+                            ->label('Alt Cover (SEO)')
+                            ->maxLength(255),
+                        Forms\Components\TextInput::make('description_cover')
+                            ->label('Description Cover (SEO)')
+                            ->maxLength(500),
+                    ]),
+                ])
+                ->columnSpanFull(),
+
+            Section::make('🔍 SEO META')
+                ->description('Meta (name;content) — ex. title;… / description;… / keywords;…')
+                ->schema([
+                    Grid::make(2)->schema([
+                        Forms\Components\TextInput::make('meta_title')
+                            ->label('title')
+                            ->maxLength(255),
+                        Forms\Components\TextInput::make('meta_description')
+                            ->label('description')
+                            ->maxLength(500),
+                    ]),
+                    Forms\Components\TextInput::make('meta_keywords')
+                        ->label('keywords')
+                        ->maxLength(500)
+                        ->columnSpanFull(),
+                ])
+                ->columnSpanFull(),
+
+            Section::make('📊 SEO STRUCTURED DATA')
+                ->schema([
+                    Forms\Components\Textarea::make('seo_schema_description')
+                        ->label('Schema Description (SEO)')
+                        ->rows(4)
+                        ->columnSpanFull(),
+                    Grid::make(2)->schema([
+                        Forms\Components\Textarea::make('review_seo')
+                            ->label('Review (SEO)')
+                            ->rows(3)
+                            ->maxLength(255),
+                        Forms\Components\TextInput::make('aggregate_rating_seo')
+                            ->label('AggregateRating (SEO)')
+                            ->maxLength(255),
+                    ]),
+                ])
+                ->columnSpanFull(),
+
+            Section::make('🥗 PRODUCT DETAILS')
+                ->schema([
+                    Forms\Components\Textarea::make('nutrition_values')
+                        ->label('Nutrition Values')
+                        ->rows(8)
+                        ->columnSpanFull(),
+                ])
+                ->columnSpanFull(),
+
+            Section::make('❓ FAQ')
+                ->schema([
+                    Forms\Components\Repeater::make('faq')
+                        ->label('Questions')
+                        ->schema([
+                            Forms\Components\TextInput::make('q')
+                                ->label('Question')
+                                ->required(),
+                            Forms\Components\Textarea::make('a')
+                                ->label('Réponse')
+                                ->rows(3)
+                                ->required(),
+                        ])
+                        ->default([])
+                        ->collapsible()
+                        ->columnSpanFull(),
+                ])
+                ->columnSpanFull(),
+
+            Section::make('📌 MORE DETAILS')
+                ->schema([
+                    Forms\Components\Textarea::make('more_details')
+                        ->label('More Details')
+                        ->rows(8)
+                        ->columnSpanFull(),
+                ])
+                ->columnSpanFull(),
         ]);
     }
 
@@ -143,10 +257,10 @@ class SousCategoryResource extends Resource
                 Tables\Columns\TextColumn::make('products_count')
                     ->label('Produits')
                     ->badge()
-                    ->color(fn (int $state): string => match(true) {
-                        $state === 0   => 'gray',
-                        $state <= 5    => 'warning',
-                        default        => 'success',
+                    ->color(fn (int $state): string => match (true) {
+                        $state === 0 => 'gray',
+                        $state <= 5 => 'warning',
+                        default => 'success',
                     })
                     ->sortable()
                     ->alignCenter(),
@@ -271,9 +385,9 @@ class SousCategoryResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index'  => Pages\ListSousCategories::route('/'),
+            'index' => Pages\ListSousCategories::route('/'),
             'create' => Pages\CreateSousCategory::route('/create'),
-            'edit'   => Pages\EditSousCategory::route('/{record}/edit'),
+            'edit' => Pages\EditSousCategory::route('/{record}/edit'),
         ];
     }
 }
