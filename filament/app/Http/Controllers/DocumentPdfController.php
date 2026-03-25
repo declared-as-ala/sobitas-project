@@ -210,7 +210,7 @@ class DocumentPdfController extends Controller
             if ($calcTotals['timbre'] > 0) {
                 $totals[] = ['label' => 'Timbre fiscal', 'value' => number_format($calcTotals['timbre'], 3, ',', ' ') . ' DT'];
             }
-            $totals[] = ['label' => 'Total TTC', 'value' => number_format($calcTotals['prix_ttc'], 3, ',', ' ') . ' DT', 'class' => 'ttc'];
+            $totals[] = ['label' => 'Total TTC', 'value' => number_format($calcTotals['net_a_payer'], 3, ',', ' ') . ' DT', 'class' => 'ttc'];
 
             $data = [
                 'facture' => $quotation,

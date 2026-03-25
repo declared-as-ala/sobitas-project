@@ -145,9 +145,11 @@
     
     document.addEventListener('DOMContentLoaded', function() {
         @php
-            $totalTtc = isset($calcTotals) ? (float) ($calcTotals['prix_ttc'] ?? 0) : 0;
+            $totalTtc = isset($calcTotals) ? (float) ($calcTotals['net_a_payer'] ?? $calcTotals['prix_ttc'] ?? 0) : 0;
             if ($totalTtc <= 0 && isset($totals)) {
-                $ttcRow = collect($totals)->firstWhere('label', 'Total TTC') ?? collect($totals)->last();
+                $ttcRow = collect($totals)->firstWhere('label', 'Total TTC')
+                    ?? collect($totals)->firstWhere('label', 'Net à payer TTC')
+                    ?? collect($totals)->last();
                 if ($ttcRow) {
                     $totalTtc = (float) str_replace([' DT', ' ', ','], ['', '', '.'], $ttcRow['value']);
                 }
