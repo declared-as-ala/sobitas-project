@@ -13,7 +13,7 @@ class SousCategoryStatsWidget extends BaseWidget
 
     protected int|string|array $columnSpan = 'full';
 
-    public function getStats(): array
+    protected function getStats(): array
     {
         $total = SousCategory::count();
         $withProducts = SousCategory::has('products')->count();
