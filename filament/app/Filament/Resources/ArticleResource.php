@@ -362,8 +362,8 @@ class ArticleResource extends Resource
         }
 
         $columns[] = Tables\Columns\IconColumn::make('publier')
-                    ->label('Publié')
-                    ->boolean(),
+            ->label('Publié')
+            ->boolean();
 
         $columns[] = Tables\Columns\TextColumn::make('created_at')
             ->label('Date de création')
