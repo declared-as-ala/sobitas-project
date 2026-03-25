@@ -26,7 +26,7 @@ class ClientExporter extends Exporter
 
     public static function getCompletedNotificationBody(Export $export): string
     {
-        $body = 'Export clients termineé : ' . number_format($export->successful_rows) . ' ligne(s) exportée(s).';
+        $body = 'Export clients terminé : ' . number_format($export->successful_rows) . ' ligne(s) exportée(s).';
 
         if ($failedRowsCount = $export->getFailedRowsCount()) {
             $body .= ' ' . number_format($failedRowsCount) . ' ligne(s) ont échoué.';
