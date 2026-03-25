@@ -59,7 +59,7 @@ class ApisController extends Controller
 
     // Article list columns — exclude description_fr (can be huge HTML)
     private const ARTICLE_LIST_COLUMNS = [
-        'id', 'slug', 'designation_fr', 'cover', 'publier', 'created_at',
+        'id', 'slug', 'designation_fr', 'cover', 'publier', 'blog_type', 'created_at',
     ];
 
     private function resolvePerPage(Request $request, int $default = self::DEFAULT_PER_PAGE): int
@@ -548,7 +548,7 @@ class ApisController extends Controller
     {
         return Article::where('publier', 1)
             ->latest('created_at')
-            ->select('id', 'slug', 'designation_fr', 'cover', 'created_at')
+            ->select('id', 'slug', 'designation_fr', 'cover', 'blog_type', 'created_at')
             ->limit(4)
             ->get();
     }

@@ -116,6 +116,8 @@ export interface Article {
   created_at?: string;
   updated_at?: string; // Added for cache busting
   publier?: number;
+  /** Admin-set blog category (complements | lifestyle | nutrition | recettes | sport). Legacy articles may omit. */
+  blog_type?: string | null;
   /** Optional: category slug for product recommendations (e.g. "whey") */
   category_slug?: string;
   /** Optional: tags/keywords for matching products */

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Enums\BlogArticleType;
 use App\Filament\Resources\ArticleResource\Pages;
 use App\Models\Article;
 use Filament\Forms;
@@ -287,6 +288,15 @@ class ArticleResource extends Resource
                                     ->icon('heroicon-o-signal')
                                     ->description('Contrôlez la visibilité de cet article sur votre site.')
                                     ->schema([
+                                        Forms\Components\Select::make('blog_type')
+                                            ->label('Type d\'article')
+                                            ->options(BlogArticleType::options())
+                                            ->placeholder('— Non défini (filtre par mots-clés sur le site) —')
+                                            ->nullable()
+                                            ->native(false)
+                                            ->helperText('Optionnel. Les articles sans type restent classés par mots-clés comme avant.')
+                                            ->columnSpanFull(),
+
                                         Forms\Components\Toggle::make('publier')
                                             ->label('Publier cet article')
                                             ->default(false)
@@ -304,7 +314,7 @@ class ArticleResource extends Resource
     {
         return $table
             ->modifyQueryUsing(fn (\Illuminate\Database\Eloquent\Builder $query) => $query
-                ->select(['id', 'designation_fr', 'slug', 'cover', 'publier', 'created_at'])
+                ->select(['id', 'designation_fr', 'slug', 'cover', 'publier', 'blog_type', 'created_at'])
             )
             ->columns([
                 Tables\Columns\ImageColumn::make('cover')
@@ -329,6 +339,22 @@ class ArticleResource extends Resource
                     ->sortable()
                     ->limit(70)
                     ->description(fn ($record) => $record->slug),
+
+                Tables\Columns\TextColumn::make('blog_type')
+                    ->label('Type')
+                    ->formatStateUsing(function ($state): string {
+                        if ($state === null) {
+                            return '—';
+                        }
+                        if ($state instanceof BlogArticleType) {
+                            return $state->label();
+                        }
+
+                        return BlogArticleType::tryFrom((string) $state)?->label() ?? '—';
+                    })
+                    ->badge()
+                    ->color(fn ($state): string => $state === null ? 'gray' : 'info')
+                    ->toggleable(),
 
                 Tables\Columns\IconColumn::make('publier')
                     ->label('Publié')

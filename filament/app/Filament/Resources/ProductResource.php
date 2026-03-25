@@ -21,6 +21,9 @@ use Illuminate\Support\Facades\Schema as DbSchema;
 
 class ProductResource extends Resource
 {
+    /** Public shop product URL base (frontend). */
+    public const SHOP_PUBLIC_BASE_URL = 'https://protein.tn/shop';
+
     /** @var array<string, bool> */
     private static array $productColumnsCache = [];
 

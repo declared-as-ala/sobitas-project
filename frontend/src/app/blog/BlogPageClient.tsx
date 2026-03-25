@@ -142,6 +142,10 @@ function articleMatchesCategory(article: Article, categoryId: string): boolean {
   if (categoryId === 'all') return true;
   const cat = BLOG_CATEGORIES.find(c => c.id === categoryId);
   if (!cat?.keywords?.length) return true;
+  const typed = article.blog_type != null && String(article.blog_type).trim() !== '';
+  if (typed) {
+    return String(article.blog_type).trim() === categoryId;
+  }
   const searchText = [
     article.designation_fr || '',
     stripHtml(article.description || ''),

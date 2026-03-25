@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\BlogArticleType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 
@@ -10,6 +11,13 @@ class Article extends Model
     protected $table = 'articles';
 
     protected $guarded = ['id'];
+
+    protected function casts(): array
+    {
+        return [
+            'blog_type' => BlogArticleType::class,
+        ];
+    }
 
     public function scopePublished($query)
     {

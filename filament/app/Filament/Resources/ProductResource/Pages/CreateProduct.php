@@ -4,6 +4,7 @@ namespace App\Filament\Resources\ProductResource\Pages;
 
 use App\Filament\Resources\ProductResource;
 use App\Services\Media\ConvertUploadedImageToWebp;
+use Filament\Actions;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -14,6 +15,26 @@ class CreateProduct extends CreateRecord
     private static array $productColumnsCache = [];
 
     protected static string $resource = ProductResource::class;
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Actions\Action::make('viewShop')
+                ->label('Voir le produit')
+                ->icon('heroicon-o-arrow-top-right-on-square')
+                ->color('info')
+                ->url(function (): string {
+                    $slug = trim((string) ($this->form->getRawState()['slug'] ?? ''));
+                    if ($slug === '') {
+                        return ProductResource::SHOP_PUBLIC_BASE_URL;
+                    }
+
+                    return rtrim(ProductResource::SHOP_PUBLIC_BASE_URL, '/') . '/' . $slug;
+                })
+                ->openUrlInNewTab()
+                ->disabled(fn (): bool => trim((string) ($this->form->getRawState()['slug'] ?? '')) === ''),
+        ];
+    }
 
     private static function hasProductColumn(string $column): bool
     {
