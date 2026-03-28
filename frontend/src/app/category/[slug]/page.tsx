@@ -164,7 +164,7 @@ export default async function CategoryPage({ params }: PageProps) {
         brands: sub.brands ?? [],
         categories: [],
       };
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://sobitas.tn';
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
       const parentCat = sub.sous_category?.categorie;
       const breadcrumbItems = [
         { name: 'Accueil', url: '/' },
@@ -261,7 +261,7 @@ export default async function CategoryPage({ params }: PageProps) {
         brands: cat.brands ?? [],
         categories: [],
       };
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://sobitas.tn';
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
       const breadcrumbItems = [
         { name: 'Accueil', url: '/' },
         { name: cat.category?.designation_fr || canonicalSlug, url: `/category/${canonicalSlug}` },

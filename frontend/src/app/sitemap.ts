@@ -3,12 +3,11 @@ import { getSitemapEntries } from '@/util/sitemapData';
 
 /**
  * Next.js metadata file: serves /sitemap.xml as valid XML (Content-Type: application/xml).
- * Force dynamic so the sitemap is generated at request time (not at build), avoiding
- * build timeout when the API is slow or unreachable during Docker/build.
- * Google Search Console will get a fresh sitemap when it crawls.
+ * ISR with 1-hour revalidation: sitemap is generated on first request then cached,
+ * reducing API load and ensuring Cloudflare serves a cached copy to crawlers.
+ * On-demand revalidation available via /api/revalidate.
  */
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return getSitemapEntries();

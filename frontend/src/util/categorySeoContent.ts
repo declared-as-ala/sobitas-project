@@ -14,13 +14,26 @@ const CONTENT_DIR = 'content/categories';
  * Ensures one JSON can serve multiple URL slugs (e.g. proteines + whey).
  */
 export const CONTENT_SLUG_ALIASES: Record<string, string> = {
+  // Mass / gainer
   'prise-de-masse': 'mass-gainer',
   'mass-gainer': 'mass-gainer',
+  // Pre-workout
   'pre-workout': 'pre-workout',
   'pre-workout-tunisie': 'pre-workout',
+  // Whey – all common URL variants map to the same content file
   'isolat-whey': 'whey-protein',
   'isolate-whey': 'whey-protein',
   'proteine-whey': 'whey-protein',
+  'whey-tunisie': 'whey-protein',
+  'proteines-whey': 'whey-protein',
+  'whey-protein-tunisie': 'whey-protein',
+  // Creatine – common URL variants
+  'creatine-monohydrate': 'creatine',
+  'creatine-tunisie': 'creatine',
+  'creatine-musculation': 'creatine',
+  // Proteins – general
+  'proteine': 'proteines',
+  'proteines-tunisie': 'proteines',
 };
 
 function getContentPath(contentSlug: string): string {

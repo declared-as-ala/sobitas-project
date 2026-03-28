@@ -78,7 +78,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     }
 
     const filteredRelated = relatedArticles.filter(a => a.slug !== slug).slice(0, 3);
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://sobitas.tn';
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
     const articleImageUrl = article.cover ? getStorageUrl(article.cover) : undefined;
     const articleSchema = buildArticleSchema(article, baseUrl, articleImageUrl);
 

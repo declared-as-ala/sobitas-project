@@ -53,7 +53,10 @@ function productTitle(product: { designation_fr?: string; slug?: string }): stri
 
 /** Meta description: benefit + authenticity + delivery + location (Tunisie). Max 160 chars. */
 function productDescription(product: { meta_description_fr?: string; description_fr?: string; designation_fr?: string }, productName: string): string {
-  if (product.meta_description_fr?.trim()) return product.meta_description_fr.slice(0, 160);
+  if (product.meta_description_fr?.trim()) {
+    const plain = product.meta_description_fr.replace(/<[^>]*>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim();
+    if (plain) return plain.slice(0, 160);
+  }
   const plain = (product.description_fr || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
   if (plain) return `${plain} Prix Tunisie. Produits authentiques. Livraison 24-72h. SOBITAS Protein.tn`;
   return `Acheter ${productName} en Tunisie – Meilleur prix, livraison rapide, produits authentiques. Sousse, Tunis, toute la Tunisie. Protein.tn`;
@@ -82,7 +85,7 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
         ? { url: imageUrl, width: 1200, height: 1200, alt: productName }
         : undefined;
       return {
-        title,
+        title: { absolute: title },
         description,
         robots: { index: true, follow: true },
         alternates: { canonical: canonicalUrl },

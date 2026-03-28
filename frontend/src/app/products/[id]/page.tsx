@@ -70,7 +70,7 @@ function buildProductJsonLd(product: Product, baseUrl: string) {
 
 export default async function ProductDetailPage({ params }: ProductPageProps) {
   const { id } = await params;
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://sobitas.tn';
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
 
   if (!id?.trim()) {
     notFound();

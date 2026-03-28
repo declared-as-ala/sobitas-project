@@ -585,11 +585,11 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 </div>
               </motion.div>
 
-              {/* 1. Title (H1) — max 2 lines */}
+              {/* 1. Title — mobile mirror of desktop H1; rendered as <p> to avoid duplicate H1 in DOM */}
               <div className="min-w-0 px-1">
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight break-words line-clamp-2">
+                <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight break-words line-clamp-2">
                   {product.designation_fr}
-                </h1>
+                </p>
               </div>
 
               {/* 2. Rating - stars + value + count (clickable → #reviews) */}
