@@ -1,131 +1,115 @@
 @extends('print.layout-backend')
 
 @php
-    $fmt = fn($n) => number_format((float)$n, 3, '.', ' ');
-    $notePrefix = trim((string) ($footerNote ?? 'Arrête la présente facture à la somme de :'));
+    $fmt = fn($n) => number_format((float)$n, 3, '.', '');
 @endphp
 
 @section('client-info')
+@if(isset($client) && $client)
 <div class="row contacts">
     <div class="col invoice-to">
         <h5 class="text-gray-light">INFORMATIONS DU CLIENT</h5>
-        <hr class="custom-hr">
-
+        <hr style="margin: 9px">
         @php
-            $livrNom    = trim(($facture->livraison_nom ?? '') . ' ' . ($facture->livraison_prenom ?? ''));
-            $livrAdr    = $facture->livraison_adresse1 ?? '';
-            $livrVille  = implode(' ', array_filter([
-                $facture->livraison_ville ?? '',
-                $facture->livraison_region ?? '',
-                $facture->livraison_code_postale ?? '',
-            ], fn($v) => $v !== ''));
-            $livrEmail  = $facture->livraison_email ?? '';
-            $livrPhone  = $facture->livraison_phone ?? '';
+            $livrNom   = trim(($facture->livraison_nom ?? '') . ' ' . ($facture->livraison_prenom ?? ''));
+            $livrAdr   = $facture->livraison_adresse1 ?? '';
+            $livrPhone = $facture->livraison_phone ?? '';
 
             $displayNom   = $livrNom   ?: ($client->name    ?? '');
             $displayAdr   = $livrAdr   ?: ($client->adresse ?? '');
             $displayPhone = $livrPhone ?: ($client->phone_1 ?? '');
         @endphp
         <b class="to"><b>Nom :</b> {{ $displayNom }}</b>
-        @if($displayAdr)
-            <div class="address"><b>Adresse :</b> {{ $displayAdr }}</div>
+        <div class="address"><b>Adresse :</b> {{ $displayAdr }}</div>
+        @if(!empty($client->matricule))
+            <div class="email"><a><b>Matricule</b> : {{ $client->matricule }}</a></div>
         @endif
-        @if($livrVille)
-            <div class="address">{{ $livrVille }}</div>
-        @endif
-        @if($livrEmail)
-            <div class="email"><b>Email :</b> {{ $livrEmail }}</div>
-        @endif
-        @if(!empty($client->matricule ?? null))
-            <div class="email"><b>Matricule :</b> {{ $client->matricule }}</div>
-        @endif
-        @if($displayPhone)
-            <div class="email"><b>Numéro de téléphone :</b> {{ $displayPhone }}</div>
-        @endif
+        <div class="email"><a><b>Numéro de téléphone :</b> {{ $displayPhone }}</a></div>
     </div>
+    <div class="col invoice-details"></div>
 </div>
+@endif
 @endsection
 
 @section('document-body')
-<table cellspacing="0" cellpadding="0">
+<table class="table" cellspacing="0" cellpadding="0">
     <thead>
         <tr>
-            <th style="width: 5%;" class="text-center">#</th>
-            <th style="width: 40%;">Produit</th>
-            <th style="width: 15%;" class="text-center">Quantité</th>
-            <th style="width: 20%;" class="text-right">Prix.U</th>
-            <th style="width: 20%;" class="text-right">Prix T.TTC</th>
+            <th style="width: 5%; background: #ff4000 !important">#</th>
+            <th style="width: 40%; background: #ff4000 !important">Produit</th>
+            <th style="width: 15%; background: #ff4000 !important">Quantité</th>
+            <th style="width: 20%; background: #ff4000 !important">Prix.U</th>
+            <th style="width: 20%; background: #ff4000 !important">Prix T.TTC</th>
         </tr>
     </thead>
     <tbody>
         @php $i = 1; @endphp
         @foreach($details_facture ?? [] as $details)
-            @php
-                $bg = ($i % 2 == 0) ? 'background-color: #f5f5f5 !important;' : '';
-                
-                $designation = $details->product->designation_fr ?? '—';
-                $qte = $details->qte ?? $details->quantite ?? 1;
-                $pu = $details->prix_unitaire ?? $details->prix_ht ?? 0;
-                $lineTotal = (float) $qte * (float) $pu;
-            @endphp
-            <tr style="{{ $bg }}">
-                <td class="text-center">{{ $i }}</td>
-                <td>{{ collect(explode('-', $designation))->map(fn($v) => trim($v))->implode(' - ') }}</td>
-                <td class="text-center">{{ $qte }}</td>
-                <td class="text-right">{{ $fmt($pu) }}</td>
-                <td class="text-right">{{ $fmt($lineTotal) }}</td>
-            </tr>
-            @php $i++; @endphp
+        @php
+            $bg       = ($i % 2 != 0) ? 'background-color: #eee !important' : '';
+            $qte      = $details->qte ?? $details->quantite ?? 1;
+            $pu       = (float) ($details->prix_unitaire ?? 0);
+            $lineTotal = (float) $qte * $pu;
+        @endphp
+        <tr>
+            <td @if($bg) style="{{ $bg }}" @endif>{{ $i }}</td>
+            <td @if($bg) style="{{ $bg }}" @endif>{{ $details->product->designation_fr ?? '—' }}</td>
+            <td class="text-center" @if($bg) style="{{ $bg }}" @endif>{{ $qte }}</td>
+            <td class="text-right" @if($bg) style="{{ $bg }}" @endif>{{ $fmt($pu) }}</td>
+            <td class="text-right" @if($bg) style="{{ $bg }}" @endif>{{ $fmt($lineTotal) }}</td>
+        </tr>
+        @php $i++; @endphp
         @endforeach
     </tbody>
     <tfoot>
         @php
-            $totalHt           = $calc_total_ht ?? $facture->prix_ht ?? 0;
-            $remise            = $calc_remise ?? $facture->remise ?? 0;
-            $pourcentageRemise = $calc_pourcentage_remise ?? $facture->pourcentage_remise ?? 0;
-            $fraisLivraison    = $calc_frais ?? $facture->frais_livraison ?? 0;
-            $montantTtc        = $calc_net_a_payer ?? ($totalHt - $remise + $fraisLivraison);
+            $totalHt           = (float) ($calc_total_ht          ?? $facture->prix_ht           ?? 0);
+            $remise            = (float) ($calc_remise             ?? $facture->remise            ?? 0);
+            $pourcentageRemise = (float) ($calc_pourcentage_remise ?? $facture->pourcentage_remise ?? 0);
+            $fraisLivraison    = (float) ($calc_frais              ?? $facture->frais_livraison   ?? 0);
+            $montantTtc        = (float) ($calc_net_a_payer        ?? ($totalHt - $remise + $fraisLivraison));
         @endphp
-
         <tr>
-            <td colspan="3"></td>
-            <th>Montant Total HT</th>
+            <td colspan="3" style="width: 50%"></td>
+            <th colspan="1">Montant Total HT</th>
             <th class="text-right">{{ $fmt($totalHt) }}</th>
         </tr>
         <tr>
             <td colspan="3"></td>
-            <th>Montant Remise</th>
+            <th colspan="1">Montant Remise</th>
             <th class="text-right">{{ $fmt($remise) }}</th>
         </tr>
         <tr>
             <td colspan="3"></td>
-            <th>Poucentage Remise %</th>
-            <th class="text-right">{{ number_format((float) $pourcentageRemise, 1, '.', '') }} %</th>
+            <th colspan="1">Poucentage Remise %</th>
+            <th class="text-right">{{ number_format($pourcentageRemise, 1, '.', '') }} %</th>
         </tr>
-        @if((float)$fraisLivraison > 0)
+        @if($fraisLivraison > 0)
         <tr>
             <td colspan="3"></td>
-            <th>Frais de livraison</th>
+            <th colspan="1">Frais de livraison</th>
             <th class="text-right">{{ $fmt($fraisLivraison) }}</th>
         </tr>
         @endif
         <tr>
             <td colspan="3"></td>
-            <th class="bt">Montant Totale TTC</th>
-            <th class="text-right" style="font-weight: 800; background: #f4e7db;">{{ $fmt($montantTtc) }}</th>
+            <th class="bt" colspan="1">Montant à payer</th>
+            <th class="text-right" style="background: #fd582033 !important;">{{ $fmt($montantTtc) }}</th>
         </tr>
     </tfoot>
 </table>
 @endsection
 
 @section('notices')
-<div class="notices" style="page-break-inside: avoid; break-inside: avoid;">
-    <div><b>Note :</b></div>
-    <div class="notice">
-        {{ rtrim($notePrefix, " :") }} :
-        <span id="words_{{ $documentNumber ?? 'doc' }}"></span> DT
+@if(isset($coordonnee) && !empty($coordonnee->note))
+<div class="notices">
+    <div>Note:</div>
+    <div class="notice">{{ $coordonnee->note }}
+        <span id="words_{{ $documentNumber ?? 'doc' }}"></span>
     </div>
 </div>
+<br>
+@endif
 @endsection
 
 @section('scripts')
@@ -178,15 +162,13 @@
         if (millimes > 0) result += ' et ' + millimes + (millimes === 1 ? ' millime' : ' millimes');
         return result;
     }
-    
+
     document.addEventListener('DOMContentLoaded', function() {
         var total = "{{ $fmt($montantTtc) }}";
-        total = total.replace(/\s+/g, '');
         var el = document.getElementById("words_{{ $documentNumber ?? 'doc' }}");
-        if(el && total && parseFloat(total) > 0) {
+        if (el && total && parseFloat(total) > 0) {
             el.innerHTML = inWords(total);
         }
     });
 </script>
 @endsection
-

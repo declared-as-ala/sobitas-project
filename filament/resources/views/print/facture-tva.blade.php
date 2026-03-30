@@ -1,86 +1,87 @@
 @extends('print.layout-backend')
 
 @section('client-info')
+@if(isset($client) && $client)
 <div class="row contacts">
     <div class="col invoice-to">
         <h5 class="text-gray-light">INFORMATIONS DU CLIENT</h5>
-        <hr class="custom-hr">
-
-        @if(isset($client) && $client)
-            <b class="to"><b>Nom :</b> {{ $client->name ?? ($client->raison_sociale ?? '') }}</b>
-            <div class="address"><b>Adresse :</b> {{ $client->adresse ?? '' }}</div>
-            @if(!empty($client->matricule))
-                <div class="email"><b>Matricule :</b> {{ $client->matricule }}</div>
-            @endif
-            <div class="email"><b>Numéro de téléphone:</b> {{ $client->phone_1 ?? '' }}</div>
+        <hr style="margin: 9px">
+        <b class="to"><b>Nom :</b> {{ $client->name ?? ($client->raison_sociale ?? '') }}</b>
+        <div class="address"><b>Adresse :</b> {{ $client->adresse ?? '' }}</div>
+        @if(!empty($client->matricule))
+            <div class="email"><a><b>Matricule :</b> {{ $client->matricule }}</a></div>
         @endif
+        <div class="email"><a><b>Numéro de téléphone:</b> {{ $client->phone_1 ?? '' }}</a></div>
     </div>
+    <div class="col invoice-details"></div>
 </div>
+@endif
 @endsection
 
 @section('document-body')
-<table cellspacing="0" cellpadding="0">
+<table class="table" cellspacing="0" cellpadding="0">
     <thead>
         <tr>
-            <th style="width:5%" class="text-center">#</th>
-            <th style="width:25%">Produit</th>
-            <th class="text-center" style="width:10%">Qte</th>
-            <th class="text-right" style="width:15%">P.U.HT</th>
-            <th class="text-right" style="width:15%">TVA</th>
-            <th class="text-right" style="width:15%">Totale HT</th>
+            <th style="width: 5%; background: #ff4000 !important">#</th>
+            <th style="width: 25%; background: #ff4000 !important">Produit</th>
+            <th style="width: 10%; background: #ff4000 !important">Qte</th>
+            <th style="width: 15%; background: #ff4000 !important">P.U.HT</th>
+            <th style="width: 15%; background: #ff4000 !important">TVA</th>
+            <th style="width: 15%; background: #ff4000 !important">Totale HT</th>
         </tr>
     </thead>
     <tbody>
         @php $i = 1; @endphp
         @foreach ($invoice_rows ?? [] as $row)
-        @php
-            $bg = ($i % 2 == 0) ? 'background-color: #f5f5f5 !important;' : '';
-        @endphp
-        <tr style="{{ $bg }}">
-            <td class="text-center">{{ $row['index'] }}</td>
-            <td>{{ collect(explode('-', $row['produit']))->map(fn($v) => trim($v))->implode(' - ') }}</td>
-            <td class="text-center">{{ $row['qte'] }}</td>
-            <td class="text-right">{{ number_format($row['pu_ht'], 3, '.', '') }}</td>
-            <td class="text-right">{{ number_format($row['tva_pct'], 0) }} %</td>
-            <td class="text-right">{{ number_format($row['total_ht'], 3, '.', '') }}</td>
+        @php $bg = ($i % 2 != 0) ? 'background-color: #eee !important' : ''; @endphp
+        <tr>
+            <td @if($bg) style="{{ $bg }}" @endif>{{ $row['index'] }}</td>
+            <td @if($bg) style="{{ $bg }}" @endif>{{ $row['produit'] }}</td>
+            <td class="text-center" @if($bg) style="{{ $bg }}" @endif>{{ $row['qte'] }}</td>
+            <td class="text-right" @if($bg) style="{{ $bg }}" @endif>{{ number_format($row['pu_ht'], 3, '.', '') }}</td>
+            <td class="text-right" @if($bg) style="{{ $bg }}" @endif>{{ number_format($row['tva_pct'], 0) }} %</td>
+            <td class="text-right" @if($bg) style="{{ $bg }}" @endif>{{ number_format($row['total_ht'], 3, '.', '') }}</td>
         </tr>
         @php $i++; @endphp
         @endforeach
     </tbody>
     <tfoot>
-        <tr><td>&nbsp;</td></tr>
+        <tr>
+            <td>&nbsp;</td>
+        </tr>
+        @php
+            $ftHt     = (float) ($calcTotals['total_ht_brut'] ?? $facture->prix_ht ?? 0);
+            $ftRemise = (float) ($calcTotals['remise']        ?? $facture->remise  ?? 0);
+            $ftTva    = (float) ($calcTotals['tva']           ?? $facture->tva     ?? 0);
+            $ftTimbre = (float) ($calcTotals['timbre']        ?? $facture->timbre  ?? 0);
+            $ftNet    = (float) ($calcTotals['net_a_payer']   ?? $facture->prix_ttc ?? 0);
+        @endphp
         <tr>
             <td colspan="2"></td>
-            <th colspan="3">Totale HT</th>
-            <th class="text-right">{{ number_format((float) ($calcTotals['total_ht_brut'] ?? $facture->prix_ht ?? 0), 3, '.', '') }}</th>
+            <th colspan="3" style="border-top: none">Totale HT</th>
+            <th class="text-right">{{ number_format($ftHt, 3, '.', '') }}</th>
         </tr>
-        @if(($calcTotals['remise'] ?? $facture->remise ?? 0) > 0)
+        @if($ftRemise > 0)
         <tr>
             <td colspan="2"></td>
             <th colspan="3">Remise</th>
-            <th class="text-right">{{ number_format((float) ($calcTotals['remise'] ?? $facture->remise ?? 0), 3, '.', '') }}</th>
+            <th class="text-right">{{ number_format($ftRemise, 3, '.', '') }}</th>
         </tr>
         @endif
         <tr>
             <td colspan="2"></td>
             <th colspan="3">TVA</th>
-            <th class="text-right">{{ number_format((float) ($calcTotals['tva'] ?? $facture->tva ?? 0), 3, '.', '') }}</th>
+            <th class="text-right">{{ number_format($ftTva, 3, '.', '') }}</th>
         </tr>
-        @php
-            $ftTimbre = (float) ($calcTotals['timbre'] ?? $facture->timbre ?? 0);
-            $ftNet = (float) ($calcTotals['net_a_payer'] ?? $facture->net_a_payer ?? 0);
-        @endphp
-        @if($ftTimbre > 0)
         <tr>
             <td colspan="2"></td>
             <th colspan="3">Timbre</th>
             <th class="text-right">{{ number_format($ftTimbre, 3, '.', '') }}</th>
         </tr>
-        @endif
         <tr>
             <td colspan="2"></td>
-            <th colspan="3" class="bt">Total TTC</th>
-            <th class="text-right bt">{{ number_format($ftNet, 3, '.', '') }}</th>
+            <th colspan="3">Totale TTC</th>
+            <th class="text-right">{{ number_format($ftNet, 3, '.', '') }}</th>
         </tr>
     </tfoot>
 </table>
@@ -88,15 +89,18 @@
 
 @section('notices')
 @php
-    $totalTtcValue = (float) ($calcTotals['net_a_payer'] ?? $facture->net_a_payer ?? $facture->prix_ttc ?? 0);
+    $totalTtcValue = (float) ($calcTotals['net_a_payer'] ?? $facture->prix_ttc ?? 0);
 @endphp
 @if(isset($coordonnee) && !empty($coordonnee->note))
 <div class="notices">
     <div>Note:</div>
-    <div class="notice">{{ $coordonnee->note }} <span id="words_{{ $documentNumber ?? 'doc' }}"></span></div>
+    <div class="notice">{{ $coordonnee->note }}
+        <span id="words_{{ $documentNumber ?? 'doc' }}"></span>
+    </div>
 </div>
+<br>
 @endif
-<div style="margin-left: 140px; text-decoration: underline; margin-top: 30px;">
+<div style="margin-left: 140px; text-decoration: underline;">
     Signature et cachet
 </div>
 @endsection
@@ -155,7 +159,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         var total = "{{ number_format((float) $totalTtcValue, 3, '.', '') }}";
         var el = document.getElementById("words_{{ $documentNumber ?? 'doc' }}");
-        if(el && total && parseFloat(total) > 0) {
+        if (el && total && parseFloat(total) > 0) {
             el.innerHTML = inWords(total);
         }
     });

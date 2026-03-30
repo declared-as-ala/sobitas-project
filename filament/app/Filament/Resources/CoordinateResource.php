@@ -118,6 +118,8 @@ class CoordinateResource extends Resource
                     Tab::make('Logos')
                         ->schema([
                             Section::make()->schema([
+
+                                // ── Logo principal ───────────────────────────
                                 Forms\Components\Placeholder::make('logo_preview')
                                     ->label('Logo actuel')
                                     ->content(function ($record): HtmlString|string {
@@ -151,6 +153,8 @@ class CoordinateResource extends Resource
                                         $path = (string) $file->store('coordonnees', 'public');
                                         return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp($path) ?? $path;
                                     }),
+
+                                // ── Logo Facture ─────────────────────────────
                                 Forms\Components\Placeholder::make('logo_facture_preview')
                                     ->label('Logo Facture actuel')
                                     ->content(function ($record): HtmlString|string {
@@ -184,6 +188,108 @@ class CoordinateResource extends Resource
                                         $path = (string) $file->store('coordonnees', 'public');
                                         return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp($path) ?? $path;
                                     }),
+
+                                // ── Photo / Cover ────────────────────────────
+                                Forms\Components\Placeholder::make('cover_preview')
+                                    ->label('Photo / Cover actuelle')
+                                    ->content(function ($record): HtmlString|string {
+                                        $raw = $record?->cover;
+                                        if (empty($raw)) {
+                                            return 'Aucune photo enregistrée.';
+                                        }
+                                        $path = ltrim(str_replace('\\', '/', trim((string) $raw)), '/');
+                                        if (str_starts_with($path, 'storage/')) {
+                                            $path = substr($path, 8);
+                                        }
+                                        if (! Storage::disk('public')->exists($path)) {
+                                            return 'Fichier introuvable : ' . $path;
+                                        }
+                                        $url = rtrim(Coordinate::originRootUrl(), '/') . '/storage/' . $path;
+
+                                        return new HtmlString(
+                                            '<img src="' . e($url) . '" alt="Cover" style="max-height:120px;height:auto;width:auto;border-radius:6px;">'
+                                        );
+                                    })
+                                    ->columnSpanFull(),
+                                FileUpload::make('cover')
+                                    ->label('Photo / Cover (remplacer)')
+                                    ->disk('public')
+                                    ->directory('coordonnees')
+                                    ->image()
+                                    ->imageEditor()
+                                    ->maxSize(4096)
+                                    ->columnSpanFull()
+                                    ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
+                                        $path = (string) $file->store('coordonnees', 'public');
+                                        return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp($path) ?? $path;
+                                    }),
+
+                                // ── Logo Footer ──────────────────────────────
+                                Forms\Components\Placeholder::make('logo_footer_preview')
+                                    ->label('Logo Footer actuel')
+                                    ->content(function ($record): HtmlString|string {
+                                        $raw = $record?->logo_footer;
+                                        if (empty($raw)) {
+                                            return 'Aucun logo footer enregistré.';
+                                        }
+                                        $path = ltrim(str_replace('\\', '/', trim((string) $raw)), '/');
+                                        if (str_starts_with($path, 'storage/')) {
+                                            $path = substr($path, 8);
+                                        }
+                                        if (! Storage::disk('public')->exists($path)) {
+                                            return 'Fichier introuvable : ' . $path;
+                                        }
+                                        $url = rtrim(Coordinate::originRootUrl(), '/') . '/storage/' . $path;
+
+                                        return new HtmlString(
+                                            '<img src="' . e($url) . '" alt="Logo Footer" style="max-height:120px;height:auto;width:auto;border-radius:6px;">'
+                                        );
+                                    })
+                                    ->columnSpanFull(),
+                                FileUpload::make('logo_footer')
+                                    ->label('Logo Footer (remplacer)')
+                                    ->disk('public')
+                                    ->directory('coordonnees')
+                                    ->image()
+                                    ->imageEditor()
+                                    ->maxSize(2048)
+                                    ->columnSpanFull()
+                                    ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
+                                        $path = (string) $file->store('coordonnees', 'public');
+                                        return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp($path) ?? $path;
+                                    }),
+
+                                // ── Favicon ──────────────────────────────────
+                                Forms\Components\Placeholder::make('favicon_preview')
+                                    ->label('Favicon actuel')
+                                    ->content(function ($record): HtmlString|string {
+                                        $raw = $record?->favicon;
+                                        if (empty($raw)) {
+                                            return 'Aucun favicon enregistré.';
+                                        }
+                                        $path = ltrim(str_replace('\\', '/', trim((string) $raw)), '/');
+                                        if (str_starts_with($path, 'storage/')) {
+                                            $path = substr($path, 8);
+                                        }
+                                        if (! Storage::disk('public')->exists($path)) {
+                                            return 'Fichier introuvable : ' . $path;
+                                        }
+                                        $url = rtrim(Coordinate::originRootUrl(), '/') . '/storage/' . $path;
+
+                                        return new HtmlString(
+                                            '<img src="' . e($url) . '" alt="Favicon" style="max-height:64px;height:auto;width:auto;border-radius:4px;">'
+                                        );
+                                    })
+                                    ->columnSpanFull(),
+                                FileUpload::make('favicon')
+                                    ->label('Favicon (remplacer)')
+                                    ->disk('public')
+                                    ->directory('coordonnees')
+                                    ->image()
+                                    ->maxSize(512)
+                                    ->acceptedFileTypes(['image/png', 'image/x-icon', 'image/vnd.microsoft.icon', 'image/jpeg', 'image/webp'])
+                                    ->columnSpanFull(),
+
                             ]),
                         ]),
 

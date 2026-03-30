@@ -5,11 +5,14 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\BrandResource\Pages;
 use App\Models\Brand;
 use Filament\Forms;
+use Filament\Forms\Components\FileUpload;
 use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Actions;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\HtmlString;
 
 class BrandResource extends Resource
 {
@@ -36,9 +39,39 @@ class BrandResource extends Resource
                 ->label('Nom')
                 ->required()
                 ->maxLength(255),
-            Forms\Components\TextInput::make('logo')
-                ->label('Logo (chemin)')
-                ->maxLength(500),
+
+            Forms\Components\Placeholder::make('logo_preview')
+                ->label('Logo actuel')
+                ->content(function ($record): HtmlString|string {
+                    $raw = $record?->logo;
+                    if (empty($raw)) {
+                        return 'Aucun logo enregistré.';
+                    }
+                    $path = ltrim(str_replace('\\', '/', trim((string) $raw)), '/');
+                    if (str_starts_with($path, 'storage/')) {
+                        $path = substr($path, 8);
+                    }
+                    if (! Storage::disk('public')->exists($path)) {
+                        return 'Fichier introuvable : ' . $path;
+                    }
+                    $url = Storage::disk('public')->url($path);
+                    return new HtmlString(
+                        '<img src="' . e($url) . '" alt="Logo" style="max-height:100px;height:auto;width:auto;border-radius:6px;">'
+                    );
+                }),
+
+            FileUpload::make('logo')
+                ->label('Logo (uploader / remplacer)')
+                ->disk('public')
+                ->directory('brands')
+                ->image()
+                ->imageEditor()
+                ->maxSize(2048)
+                ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
+                    $path = (string) $file->store('brands', 'public');
+                    return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp($path) ?? $path;
+                }),
+
             Forms\Components\TextInput::make('alt_cover')
                 ->label('Alt image')
                 ->maxLength(255),
@@ -55,6 +88,7 @@ class BrandResource extends Resource
             ->columns([
                 Tables\Columns\ImageColumn::make('logo')
                     ->label('Logo')
+                    ->disk('public')
                     ->circular()
                     ->size(88),
                 Tables\Columns\TextColumn::make('designation_fr')

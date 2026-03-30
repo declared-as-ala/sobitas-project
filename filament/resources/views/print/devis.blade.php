@@ -1,110 +1,102 @@
 @extends('print.layout-backend')
 
 @section('client-info')
+@if(isset($client) && $client)
 <div class="row contacts">
     <div class="col invoice-to">
         <h5 class="text-gray-light">INFORMATIONS DU CLIENT</h5>
-        <hr class="custom-hr">
-        
-        @if(isset($client) && $client)
-            <div class="to"><b>Nom :</b> {{ $client->name ?? ($client->raison_sociale ?? '') }}</div>
-            @if(!empty($client->adresse))
-                <div class="address"><b>Adresse :</b> {{ $client->adresse }}</div>
-            @endif
-            @if(!empty($client->matricule))
-                <div class="email"><b>Matricule :</b> {{ $client->matricule }}</div>
-            @endif
-            @if(!empty($client->phone_1) || !empty($client->phone_2))
-                <div class="address"><b>Numéro de téléphone :</b> {{ $client->phone_1 ?? '' }}@if(!empty($client->phone_2)) / {{ $client->phone_2 }}@endif</div>
-            @elseif(!empty($client->phone))
-                <div class="address"><b>Numéro de téléphone :</b> {{ $client->phone }}</div>
-            @endif
-        @elseif(isset($devis) && ($devis->client ?? false))
-            <div class="to"><b>Nom :</b> {{ $devis->client->name ?? ($devis->client->raison_sociale ?? '') }}</div>
-            @if(!empty($devis->client->adresse))
-                <div class="address"><b>Adresse :</b> {{ $devis->client->adresse }}</div>
-            @endif
-            @if(!empty($devis->client->phone))
-                <div class="address"><b>Numéro de téléphone :</b> {{ $devis->client->phone }}</div>
-            @endif
+        <hr style="margin: 9px">
+        <b class="to"><b>Nom :</b> {{ $client->name ?? ($client->raison_sociale ?? '') }}</b>
+        <div class="address"><b>Adresse :</b> {{ $client->adresse ?? '' }}</div>
+        @if(!empty($client->matricule))
+            <div class="email"><a><b>Matricule :</b> {{ $client->matricule }}</a></div>
         @endif
+        <div class="email"><a><b>Numéro de téléphone:</b> {{ $client->phone_1 ?? '' }}</a></div>
     </div>
+    <div class="col invoice-details"></div>
 </div>
+@endif
 @endsection
 
 @section('document-body')
-<table cellspacing="0" cellpadding="0">
+@php $defaultTva = (float) ($coordonnee->tva ?? 19); @endphp
+<table class="table" cellspacing="0" cellpadding="0">
     <thead>
         <tr>
-            <th style="width:4%" class="text-center">#</th>
-            <th style="width:32%">DÉSIGNATION</th>
-            <th class="text-center" style="width:8%">QTÉ</th>
-            <th class="text-right" style="width:12%">P.U HT</th>
-            <th class="text-right" style="width:14%">TOTAL HT</th>
-            <th class="text-right" style="width:14%">TVA (DT)</th>
-            <th class="text-right" style="width:16%">TOTAL TTC</th>
+            <th style="width: 5%; background: #ff4000 !important">#</th>
+            <th style="width: 25%; background: #ff4000 !important">Produit</th>
+            <th style="width: 10%; background: #ff4000 !important">Qte</th>
+            <th style="width: 15%; background: #ff4000 !important">P.U.HT</th>
+            <th style="width: 15%; background: #ff4000 !important">TVA</th>
+            <th style="width: 15%; background: #ff4000 !important">Totale HT</th>
         </tr>
     </thead>
     <tbody>
         @php $i = 1; @endphp
         @foreach ($devis_lines ?? [] as $line)
-        @php 
-            $d = $line['detail']; 
-            $bg = ($i % 2 == 0) ? 'background-color: #f5f5f5 !important;' : '';
+        @php
+            $d  = $line['detail'];
+            $bg = ($i % 2 != 0) ? 'background-color: #eee !important' : '';
         @endphp
-        <tr style="{{ $bg }}">
-            <td class="text-center">{{ $i++ }}</td>
-            <td>{{ collect(explode('-', $d->product->designation_fr ?? '—'))->map(fn($v) => trim($v))->implode(' - ') }}</td>
-            <td class="text-center">{{ $d->qte ?? $d->quantite ?? 0 }}</td>
-            <td class="text-right">{{ number_format((float)($d->prix_unitaire ?? 0), 3, '.', '') }}</td>
-            <td class="text-right">{{ number_format((float)($line['line_total_ht'] ?? 0), 3, '.', '') }}</td>
-            <td class="text-right">{{ number_format((float)($line['line_tva_dt'] ?? 0), 3, '.', '') }}</td>
-            <td class="text-right">{{ number_format((float)($line['line_total_ttc'] ?? 0), 3, '.', '') }}</td>
+        <tr>
+            <td @if($bg) style="{{ $bg }}" @endif>{{ $i }}</td>
+            <td @if($bg) style="{{ $bg }}" @endif>{{ $d->product->designation_fr ?? '—' }}</td>
+            <td class="text-center" @if($bg) style="{{ $bg }}" @endif>{{ $d->qte ?? $d->quantite ?? 0 }}</td>
+            <td class="text-right" @if($bg) style="{{ $bg }}" @endif>{{ number_format((float)($d->prix_unitaire ?? 0), 3, '.', '') }}</td>
+            <td class="text-right" @if($bg) style="{{ $bg }}" @endif>{{ $d->tva ?? $defaultTva }} %</td>
+            <td class="text-right" @if($bg) style="{{ $bg }}" @endif>{{ number_format((float)($line['line_total_ht'] ?? 0), 3, '.', '') }}</td>
         </tr>
+        @php $i++; @endphp
         @endforeach
     </tbody>
     <tfoot>
-        @if(isset($totals) && count($totals) > 0)
-            @foreach($totals as $index => $row)
-                <tr>
-                    <td colspan="5"></td>
-                    <th colspan="1" class="{{ $index === count($totals) - 1 ? 'bt' : '' }}">{{ $row['label'] }}</th>
-                    <th class="text-right {{ $index === count($totals) - 1 ? 'bt' : '' }}">
-                        {{ str_replace(',', '.', str_replace(' DT', '', str_replace(' ', '', $row['value']))) }}
-                    </th>
-                </tr>
-            @endforeach
+        <tr>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td colspan="2"></td>
+            <th colspan="3" style="border-top: none">Totale HT</th>
+            <th class="text-right">{{ number_format((float)($calcTotals['total_ht_brut'] ?? 0), 3, '.', '') }}</th>
+        </tr>
+        @if(($calcTotals['remise'] ?? 0) > 0)
+        <tr>
+            <td colspan="2"></td>
+            <th colspan="3">Remise</th>
+            <th class="text-right">{{ number_format((float)($calcTotals['remise'] ?? 0), 3, '.', '') }}</th>
+        </tr>
         @endif
+        <tr>
+            <td colspan="2"></td>
+            <th colspan="3">TVA</th>
+            <th class="text-right">{{ number_format((float)($calcTotals['tva'] ?? 0), 3, '.', '') }}</th>
+        </tr>
+        <tr>
+            <td colspan="2"></td>
+            <th colspan="3">Totale TTC</th>
+            <th class="text-right">{{ number_format((float)($calcTotals['net_a_payer'] ?? 0), 3, '.', '') }}</th>
+        </tr>
     </tfoot>
 </table>
 @endsection
 
 @section('notices')
+@if(isset($coordonnee) && !empty($coordonnee->note))
 <div class="notices">
-    <div>Note :</div>
-    <div class="notice">
-        Arrête le présent devis à la somme de :
-        <span id="words_{{ $documentNumber ?? 'doc' }}"></span> DT
+    <div>Note:</div>
+    <div class="notice">{{ $coordonnee->note }}
+        <span id="words_{{ $documentNumber ?? 'doc' }}"></span>
     </div>
 </div>
-
-@if(isset($footerNote) && $footerNote)
-    <div class="notices" style="border-left-color: #777; margin-top: 10px;">
-        <div class="notice">{{ $footerNote }}</div>
-    </div>
+<br>
 @endif
 
 @if(isset($noteDevis) && $noteDevis)
-    <div class="notices" style="border-left-color: #aaa; margin-top: 10px;">
-        <div class="notice">{{ $noteDevis }}</div>
-    </div>
+<div class="notice">{{ $noteDevis }}</div>
+<br>
 @endif
 
-<div style="margin-top: 10px;">
-    <span>Devis valable 30 jours à partir de la date de création</span>
-</div>
-
-<div style="margin-left: 140px; text-decoration: underline; margin-top: 20px;">
+<span>Devis valable 30 jours à partir de la date de création</span>
+<div style="margin-left: 140px; text-decoration: underline;">
     Signature et cachet
 </div>
 @endsection
@@ -159,22 +151,14 @@
         if (millimes > 0) result += ' et ' + millimes + (millimes === 1 ? ' millime' : ' millimes');
         return result;
     }
-    
+
     document.addEventListener('DOMContentLoaded', function() {
         @php
-            $totalTtc = isset($calcTotals) ? (float) ($calcTotals['net_a_payer'] ?? $calcTotals['prix_ttc'] ?? 0) : 0;
-            if ($totalTtc <= 0 && isset($totals)) {
-                $ttcRow = collect($totals)->firstWhere('label', 'Total TTC')
-                    ?? collect($totals)->firstWhere('label', 'Net à payer TTC')
-                    ?? collect($totals)->last();
-                if ($ttcRow) {
-                    $totalTtc = (float) str_replace([' DT', ' ', ','], ['', '', '.'], $ttcRow['value']);
-                }
-            }
+            $totalTtc = (float) ($calcTotals['net_a_payer'] ?? 0);
         @endphp
         var total = "{{ number_format((float) $totalTtc, 3, '.', '') }}";
         var el = document.getElementById("words_{{ $documentNumber ?? 'doc' }}");
-        if(el && total && total > 0) {
+        if (el && total && parseFloat(total) > 0) {
             el.innerHTML = inWords(total);
         }
     });

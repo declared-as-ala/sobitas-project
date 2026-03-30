@@ -221,7 +221,7 @@ class AdminPanelProvider extends PanelProvider
                 return new \Illuminate\Support\HtmlString(
                     '<img src="' . e($url) . '"'
                     . ' alt="' . e(config('app.name', 'Sobitas')) . '"'
-                    . ' style="max-height:2.2rem;height:auto;width:auto;">'
+                    . ' style="max-height:8rem;height:auto;width:auto;">'
                 );
             })
             ->favicon(fn (): ?string => $this->resolveBrandLogoUrl())
