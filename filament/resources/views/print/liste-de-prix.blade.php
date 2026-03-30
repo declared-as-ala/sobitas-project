@@ -194,10 +194,7 @@
                         <div class="row">
                             <div class="col">
                                 @php
-                                    $logoPath = public_path('logo.png');
-                                    $logoInvoice = is_file($logoPath)
-                                        ? rtrim(\App\Models\Coordinate::originRootUrl(), '/') . '/logo.png'
-                                        : null;
+                                    $logoInvoice = \App\Models\Coordinate::publicLogoFacturePrintUrl($coordonnee);
                                 @endphp
                                 @if ($logoInvoice)
                                     <img src="{{ $logoInvoice }}"

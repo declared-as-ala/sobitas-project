@@ -1,8 +1,12 @@
 @php
-    $logoPath = public_path('logo.png');
-    $logoUrl = is_file($logoPath)
-        ? 'data:' . (mime_content_type($logoPath) ?: 'image/png') . ';base64,' . base64_encode(file_get_contents($logoPath))
-        : asset('logo.png');
+    $coordonnee = $coordonnee ?? \App\Models\Coordinate::getCached();
+    $logoUrl = \App\Models\Coordinate::publicLogoFacturePrintUrl($coordonnee);
+    if (! $logoUrl) {
+        $logoPath = public_path('logo.png');
+        $logoUrl = is_file($logoPath)
+            ? 'data:' . (mime_content_type($logoPath) ?: 'image/png') . ';base64,' . base64_encode(file_get_contents($logoPath))
+            : asset('logo.png');
+    }
 @endphp
 <!DOCTYPE html>
 <html lang="fr">
@@ -258,7 +262,7 @@
 
         <br><br>
         <h4>{{ $coordonnee->footer_ticket ?? '' }}</h4>
-        <h3>Visitez notre site web <br>{{ $coordonnee->site_web ?? '' }}</h3>
+        <h3>Notre Site web <br>{{ $coordonnee->site_web ?? '' }}</h3>
 
         @php $siteUrl = $coordonnee->site_web ?? ''; @endphp
         @if($siteUrl)

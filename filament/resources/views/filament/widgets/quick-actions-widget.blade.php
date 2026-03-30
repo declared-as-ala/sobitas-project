@@ -15,13 +15,13 @@
 <style>
     /* ── Page header: pull title closer to top ── */
     .fi-header-heading { padding-top: 0 !important; margin-top: 0 !important; }
-    .fi-page-header    { padding-top: 0.25rem !important; padding-bottom: 0.5rem !important; }
+    .fi-page-header    { padding-top: 0 !important; margin-top: -6px !important; padding-bottom: 0.9rem !important; }
 
     /* ── Widget card shell: no extra top gap ── */
     .qa-card {
         background: #fff;
         border-radius: 20px;
-        padding: 1.5rem 1.75rem 1.75rem;
+        padding: 1.75rem 1.9rem 2rem;
         box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 20px rgba(0,0,0,.07);
         border: 1px solid rgba(0,0,0,.06);
     }
@@ -35,7 +35,7 @@
         display: flex;
         align-items: center;
         gap: .75rem;
-        margin-bottom: 1.375rem;
+        margin-bottom: 1.7rem;
     }
     .qa-header-icon {
         width: 40px; height: 40px;
@@ -58,13 +58,14 @@
 
     /* ── Grid: 4 columns → 2 rows of 4 ── */
     .qa-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 1.125rem;
+        display: grid !important;
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+        grid-auto-flow: row !important;
+        gap: 1.35rem;
     }
-    @media (max-width: 1024px) { .qa-grid { grid-template-columns: repeat(4, 1fr); gap: .875rem; } }
-    @media (max-width: 700px)  { .qa-grid { grid-template-columns: repeat(2, 1fr); } }
-    @media (max-width: 380px)  { .qa-grid { grid-template-columns: 1fr 1fr; gap: .625rem; } }
+    @media (max-width: 1024px) { .qa-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 1rem; } }
+    @media (max-width: 700px)  { .qa-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } }
+    @media (max-width: 380px)  { .qa-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: .7rem; } }
 
     /* ── Button ── */
     .qa-btn {
@@ -74,7 +75,7 @@
         align-items: center;
         justify-content: center;
         gap: .875rem;
-        padding: 2rem 1rem 1.75rem;
+        padding: 2.15rem 1rem 1.85rem;
         border-radius: 18px;
         text-decoration: none;
         color: #fff;
@@ -83,7 +84,7 @@
         text-align: center;
         line-height: 1.35;
         overflow: hidden;
-        min-height: 140px;
+        min-height: 148px;
         background: linear-gradient(160deg, var(--qa-from) 0%, var(--qa-mid) 55%, var(--qa-to) 100%);
         box-shadow:
             0 4px 20px rgba(var(--qa-shadow), .38),

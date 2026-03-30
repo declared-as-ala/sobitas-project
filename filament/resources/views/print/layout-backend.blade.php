@@ -14,10 +14,13 @@
 
 <body>
     @php
-        $logoPath = public_path('logo.png');
-        $logoUrl = is_file($logoPath)
-            ? 'data:' . (mime_content_type($logoPath) ?: 'image/png') . ';base64,' . base64_encode(file_get_contents($logoPath))
-            : asset('logo.png');
+        $logoUrl = \App\Models\Coordinate::publicLogoFacturePrintUrl($coordonnee ?? null);
+        if (! $logoUrl) {
+            $logoPath = public_path('logo.png');
+            $logoUrl = is_file($logoPath)
+                ? 'data:' . (mime_content_type($logoPath) ?: 'image/png') . ';base64,' . base64_encode(file_get_contents($logoPath))
+                : asset('logo.png');
+        }
     @endphp
 
     <style>
@@ -176,7 +179,7 @@
 
         .table1 {}
 
-        @@media print {
+        @media print {
             .invoice {
                 overflow: hidden !important
             }
