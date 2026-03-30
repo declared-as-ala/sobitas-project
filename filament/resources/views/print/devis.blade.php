@@ -11,6 +11,9 @@
             @if(!empty($client->adresse))
                 <div class="address"><b>Adresse :</b> {{ $client->adresse }}</div>
             @endif
+            @if(!empty($client->matricule))
+                <div class="email"><b>Matricule :</b> {{ $client->matricule }}</div>
+            @endif
             @if(!empty($client->phone_1) || !empty($client->phone_2))
                 <div class="address"><b>Numéro de téléphone :</b> {{ $client->phone_1 ?? '' }}@if(!empty($client->phone_2)) / {{ $client->phone_2 }}@endif</div>
             @elseif(!empty($client->phone))
@@ -80,7 +83,7 @@
 <div class="notices">
     <div>Note :</div>
     <div class="notice">
-        Arrête le présent devis à la somme de : 
+        Arrête le présent devis à la somme de :
         <span id="words_{{ $documentNumber ?? 'doc' }}"></span> DT
     </div>
 </div>
@@ -90,6 +93,20 @@
         <div class="notice">{{ $footerNote }}</div>
     </div>
 @endif
+
+@if(isset($noteDevis) && $noteDevis)
+    <div class="notices" style="border-left-color: #aaa; margin-top: 10px;">
+        <div class="notice">{{ $noteDevis }}</div>
+    </div>
+@endif
+
+<div style="margin-top: 10px;">
+    <span>Devis valable 30 jours à partir de la date de création</span>
+</div>
+
+<div style="margin-left: 140px; text-decoration: underline; margin-top: 20px;">
+    Signature et cachet
+</div>
 @endsection
 
 @section('scripts')

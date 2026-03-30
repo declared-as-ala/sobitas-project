@@ -225,6 +225,7 @@ class DocumentPdfController extends Controller
                 'client' => $quotation->client,
                 'totals' => $totals,
                 'footerNote' => $coordonnee && ! empty($coordonnee->note) ? $coordonnee->note : null,
+                'noteDevis' => $coordonnee ? ($coordonnee->note_devis ?? null) : null,
                 'paymentTerms' => 'Valable 30 jours. Paiement à la commande ou à la livraison.',
                 'forPdf' => true,
             ];
