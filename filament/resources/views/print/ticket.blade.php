@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ticket {{ $ticket->numero ?? '' }}</title>
+    <title>Ticket {{ @$ticket->numero }}</title>
 </head>
 
 <body>
@@ -180,7 +180,6 @@
 
     <body>
 
-        @if(empty($forPdf ?? false))
         <div class="toolbar hidden-print hide_print ">
             <div class="text-right">
                 <button id="printInvoice" class="btn btn-info" onclick="print()"><i class="fa fa-print"></i>
@@ -190,8 +189,6 @@
             </div>
             <hr>
         </div>
-        @endif
-
         <div class="container">
 
             <div class="receipt_header">
@@ -202,7 +199,7 @@
                 float: none;" />
                 @endif
                 <h1> {{ $coordonnee->short_description_ticket ?? '' }}</h1>
-                <h2>Adresse: {{ $coordonnee->adresse_fr ?? '' }} <span>Tel: {{ $coordonnee->phone_1 ?? '' }} @if (!empty($coordonnee->phone_2 ?? ''))
+                <h2>Adresse: {{ $coordonnee->adresse_fr ?? '' }} <span>Tel: {{ $coordonnee->phone_1 ?? '' }} @if ($coordonnee->phone_2 ?? '')
                             / {{ $coordonnee->phone_2 }}
                         @endif
                     </span></h2>
@@ -220,7 +217,7 @@
                 font-weight: 600;
                 padding: 12px;
                 font-size: 13pt;">
-                    Ticket n°{{ $ticket->numero ?? '' }}</div>
+                    Ticket n°{{ $ticket->numero }}</div>
                 <div class="items">
                     <table>
 
@@ -233,7 +230,7 @@
                         <tbody>
                             @foreach ($details_ticket as $details)
                                 <tr>
-                                    <td> {{ $details->product->designation_fr ?? '' }}</td>
+                                    <td> {{ @$details->product->designation_fr }}</td>
                                     <td>{{ $details->qte }}</td>
                                     <td> {{ number_format((float) $details->prix_ttc, 3, '.', '') }}</td>
                                 </tr>
@@ -245,28 +242,28 @@
                             <tr>
                                 <td>Totale </td>
                                 <td></td>
-                                <td>{{ number_format((float) ($ticket->prix_ht ?? 0), 3, '.', '') }}</td>
+                                <td>{{ number_format((float) @$ticket->prix_ht, 3, '.', '') }}</td>
                             </tr>
                             <tr>
 
-                                <td>Remise</td>
+                                <td >Remise</td>
                                 <td></td>
-                                <td>
-                                    {{ number_format((float) ($ticket->remise ?? 0), 3, '.', '') }}</td>
+                                <td >
+                                    {{ number_format((float) @$ticket->remise, 3, '.', '') }}</td>
                             </tr>
 
                             <tr>
 
-                                <td>Pourcentage remise %</td>
+                                <td >Pourcentage remise %</td>
                                 <td></td>
-                                <td>
-                                    {{ number_format((float) ($ticket->pourcentage_remise ?? 0), 1, '.', '') }}</td>
+                                <td >
+                                    {{ number_format((float) @$ticket->pourcentage_remise, 1, '.', '') }}</td>
                             </tr>
 
                             <tr>
                                 <td>Totale HT</td>
                                 <td></td>
-                                <td>{{ number_format((float) ($ticket->prix_ttc ?? 0), 3, '.', '') }}</td>
+                                <td>{{ number_format((float) @$ticket->prix_ttc, 3, '.', '') }}</td>
                             </tr>
                         </tfoot>
 

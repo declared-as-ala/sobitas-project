@@ -8,18 +8,13 @@
     <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-    <title>Facture {{ $documentNumber ?? ($facture->numero ?? '') }}</title>
+    <title>Facture {{ @$facture->numero }}</title>
 </head>
 
 <body>
 
     @php
-        $logoUrl  = \App\Models\Coordinate::publicLogoFacturePrintUrl($coordonnee ?? null);
-        $ftHt     = (float) ($calcTotals['total_ht_brut'] ?? $facture->prix_ht  ?? 0);
-        $ftRemise = (float) ($calcTotals['remise']        ?? $facture->remise   ?? 0);
-        $ftTva    = (float) ($calcTotals['tva']           ?? $facture->tva      ?? 0);
-        $ftTimbre = (float) ($calcTotals['timbre']        ?? $facture->timbre   ?? 0);
-        $ftNet    = (float) ($calcTotals['net_a_payer']   ?? $facture->prix_ttc ?? 0);
+        $logoUrl = \App\Models\Coordinate::publicLogoFacturePrintUrl($coordonnee ?? null);
     @endphp
 
     <style>
@@ -172,8 +167,7 @@
         }
 
         .invoice footer {
-            font-size: 18px;
-            width: 100%;
+            font-size: 18px width: 100%;
             text-align: center;
             color: #000;
             border-top: 1px solid #aaa;
@@ -283,7 +277,6 @@
 
         <div id="invoice">
 
-            @if(empty($forPdf ?? false))
             <div class="toolbar hidden-print hide_print ">
                 <div class="text-right">
                     <button id="printInvoice" class="btn btn-info" onclick="print()"><i class="fa fa-print"></i>
@@ -293,8 +286,6 @@
                 </div>
                 <hr>
             </div>
-            @endif
-
             <div class="invoice overflow-auto">
                 <div style="min-width: 600px">
                     <header style="background: #eeeeee !important;">
@@ -312,44 +303,57 @@
                                 </h4>
                                 <div><b>Email : </b> &nbsp; {{ $coordonnee->email ?? '' }}</div>
                                 <div><b>Adresse : </b> &nbsp; {{ $coordonnee->adresse_fr ?? '' }}</div>
-                                <div><b>Tél : </b> &nbsp;{{ $coordonnee->phone_1 ?? '' }} @if (!empty($coordonnee->phone_2 ?? ''))
+                                <div><b>Tél : </b> &nbsp;{{ $coordonnee->phone_1 ?? '' }} @if ($coordonnee->phone_2 ?? '')
                                         <span>/ {{ $coordonnee->phone_2 }}</span>
                                     @endif
                                 </div>
-                                @if (!empty($coordonnee->registre_commerce ?? ''))
+                                @if (@$coordonnee->registre_commerce)
                                     <div> <b>RC : </b>&nbsp; {{ $coordonnee->registre_commerce }}</div>
                                 @endif
-                                @if (!empty($coordonnee->matricule ?? ''))
+                                @if (@$coordonnee->matricule)
                                     <div> <b>MF : </b>&nbsp; {{ $coordonnee->matricule }}</div>
                                 @endif
 
                             </div>
                             <div class="col company-details">
                                 <h1 class="invoice-id">Facture </h1>
-                                <div class="date"><b>Date :</b> {{ $documentDate ?? $facture->created_at?->format('d-m-Y') }}
+                                <div class="date"><b>Date :</b> {{ $facture->created_at?->format('d-m-Y') }}
                                 </div>
-                                <div class="date"> <b>Numéro:</b> {{ $documentNumber ?? $facture->numero ?? '' }}
+                                <div class="date"> <b>Numéro:</b> {{ $facture->numero ?? '' }}
                                 </div>
+
+
                             </div>
                         </div>
                     </header>
                     <main>
-                        @if (isset($client) && $client)
+                        @if (@$facture->client)
                             <div class="row contacts">
                                 <div class="col invoice-to">
+
+
+
                                     <h5 class="text-gray-light">INFORMATIONS DU CLIENT </h5>
                                     <hr style="margin : 9px">
-                                    <b class="to"> <b>Nom :</b> {{ $client->name ?? '' }}</b>
+                                    <b class="to"> <b>Nom :</b> {{ @$facture->client->name }}</b>
                                     <div class="address"><b>Adresse :</b>
-                                        {{ $client->adresse ?? '' }}</div>
-                                    @if (!empty($client->matricule ?? ''))
+                                        {{ @$facture->client->adresse }}</div>
+                                    @if ($facture->client->matricule)
                                         <div class="email"><a><b>Matricule :</b>
-                                                {{ $client->matricule }}</a></div>
+                                                {{ @$facture->client->matricule }}</a></div>
                                     @endif
-                                    <div class="email"><a><b>Numéro de téléphone:</b> {{ $client->phone_1 ?? '' }}</a>
+                                    <div class="email"><a><b>Numéro de téléphone:</b> {{ @$facture->client->phone_1 }}</a>
                                     </div>
+
+
+
+
                                 </div>
                                 <div class="col invoice-details">
+
+
+
+
                                 </div>
                             </div>
                         @endif
@@ -364,6 +368,8 @@
                                         <th style="width : 15% ;background: #ff4000 !important">P.U.HT</th>
                                         <th style="width : 15% ;background: #ff4000 !important">TVA</th>
                                         <th style="width : 15% ;background: #ff4000 !important">Totale HT</th>
+
+                                        {{--   <th style="width : 15% ;background: #ff4000 !important">Prix TTC</th> --}}
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -371,29 +377,27 @@
                                         $i = 1;
                                     @endphp
                                     @foreach ($details_facture as $details)
-                                        @php
-                                            $lineHt = (float) ($details->prix_ht ?? ($details->qte * ($details->prix_unitaire ?? 0)));
-                                        @endphp
                                         <tr>
                                             <td
                                                 @if ($i % 2 != 0) style="background-color: #eee !important" @endif>
                                                 {{ $i }}</td>
                                             <td
                                                 @if ($i % 2 != 0) style="background-color: #eee !important" @endif>
-                                                {{ $details->product->designation_fr ?? '' }}
+                                                {{ @$details->product->designation_fr }}
                                             </td>
                                             <td class="text-center"
                                                 @if ($i % 2 != 0) style="background-color: #eee !important" @endif>
                                                 {{ $details->qte }}</td>
                                             <td class="text-right"
                                                 @if ($i % 2 != 0) style="background-color: #eee !important" @endif>
-                                                {{ number_format((float) ($details->prix_unitaire ?? 0), 3, '.', '') }}</td>
+                                                {{ number_format((float) @$details->prix_unitaire, 3, '.', '') }}</td>
                                             <td class="text-right"
                                                 @if ($i % 2 != 0) style="background-color: #eee !important" @endif>
-                                                {{ $details->tva ?? '' }} %</td>
+                                                {{ @$details->tva }} %</td>
                                             <td class="text-right"
                                                 @if ($i % 2 != 0) style="background-color: #eee !important" @endif>
-                                                {{ number_format($lineHt, 3, '.', '') }}</td>
+                                                {{ number_format((float) ($details->prix_ht ?? ($details->qte * ($details->prix_unitaire ?? 0))), 3, '.', '') }}</td>
+
                                         </tr>
                                         @php
                                             $i++;
@@ -409,43 +413,45 @@
                                         <td colspan="2"></td>
                                         <th colspan="3" style="border-top : none"> Totale HT</th>
                                         <th class="text-right">
-                                            {{ number_format($ftHt, 3, '.', '') }}</th>
+                                            {{ number_format((float) @$facture->prix_ht, 3, '.', '') }}</th>
                                     </tr>
 
-                                    @if ($ftRemise > 0)
+                                    @if ($facture->remise)
                                         <tr>
                                             <td colspan="2"></td>
                                             <th colspan="3">Remise</th>
                                             <th class="text-right">
-                                                {{ number_format($ftRemise, 3, '.', '') }}</th>
+                                                {{ number_format((float) @$facture->remise, 3, '.', '') }}</th>
                                         </tr>
                                     @endif
 
                                     <tr>
                                         <td colspan="2"></td>
                                         <th colspan="3">TVA</th>
-                                        <th class="text-right">{{ number_format($ftTva, 3, '.', '') }}
+                                        <th class="text-right">{{ number_format((float) @$facture->tva, 3, '.', '') }}
                                         </th>
+
+
                                     </tr>
 
                                     <tr>
                                         <td colspan="2"></td>
                                         <th colspan="3">Timbre</th>
                                         <th class="text-right">
-                                            {{ number_format($ftTimbre, 3, '.', '') }}</th>
+                                            {{ number_format((float) @$facture->timbre, 3, '.', '') }}</th>
                                     </tr>
                                     <tr>
                                         <td colspan="2"></td>
                                         <th colspan="3">Totale TTC</th>
                                         <th class="text-right">
-                                            {{ number_format($ftNet, 3, '.', '') }}</th>
+                                            {{ number_format((float) @$facture->prix_ttc, 3, '.', '') }}</th>
                                     </tr>
                                 </tfoot>
                             </table>
                         </div>
-                        <input type="hidden" id="totale" value="{{ number_format($ftNet, 3, '.', '') }}">
-
-                        @if (!empty($coordonnee->note ?? ''))
+                        <input type="hidden" id="totale" value="{{ $facture->prix_ttc }}">
+                        {{--    <div class="thanks">Merci !</div> --}}
+                        @if (@$coordonnee->note)
                             <div class="notices">
                                 <div>Note:</div>
                                 <div class="notice"> {{ $coordonnee->note }}
@@ -468,8 +474,11 @@
             </div>
         </div>
     </div>
-
+    {{--  script motant en toute lettre  --}}
     <script>
+        console.log('r', document.getElementById('totale').value)
+
+
         var a = ['', 'un ', 'deux', 'trois ', 'quatre ', 'cinq ', 'six ', 'sept ', 'huit ', 'neuf ', 'dix ', 'onze ',
             'douze ', 'treize ', 'quatorze ', 'quinze ', 'seize ', 'dix-sept ', 'dix-huit ', 'dix-neuf '
         ];
@@ -477,21 +486,25 @@
             'quatre-vingt-dix'
         ];
 
-        document.addEventListener('DOMContentLoaded', function () {
-            var el = document.getElementById('words');
-            var totalEl = document.getElementById('totale');
-            if (el && totalEl) {
-                el.innerHTML = inWords(totalEl.value);
-            }
-        });
+        document.getElementById('words').innerHTML = inWords(document.getElementById('totale').value);
 
         function inWords(num) {
+
+            console.log('t', num)
+            console.log(num.toString().split('.'))
             let tab = num.toString().split('.')
+
+            console.log('tab', tab)
+            console.log('t', num)
+
             if ((num = num.toString()).length > 9) return 'overflow';
             n = ('000000000' + tab[0]).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+
+            console.log('n', n)
             if (!n) return;
             var str = '';
             str += (n[1] != 0) ? (a[Number(n[1])] || b[n[1][0]] + ' ' + a[n[1][1]]) + ' ' : '';
+            console.log('str', str)
             str += (n[2] != 0) ? (a[Number(n[2])] || b[n[2][0]] + ' ' + a[n[2][1]]) + ' ' : '';
             str += (n[3] != 0) ? (a[Number(n[3])] || b[n[3][0]] + ' ' + a[n[3][1]]) + 'milles ' : '';
             str += (n[4] != 0) ? (a[Number(n[4])] || b[n[4][0]] + ' ' + a[n[4][1]]) + 'cents ' : '';
@@ -507,6 +520,7 @@
                 return str + ' et ' + nb + ' millimes'
             } else {
                 return str;
+
             }
         }
     </script>
