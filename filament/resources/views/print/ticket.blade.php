@@ -12,12 +12,6 @@
 
     @php
         $logoUrl = \App\Models\Coordinate::publicLogoFacturePrintUrl($coordonnee ?? null);
-        if (!$logoUrl) {
-            $logoPath = public_path('logo.png');
-            $logoUrl = is_file($logoPath)
-                ? 'data:' . (mime_content_type($logoPath) ?: 'image/png') . ';base64,' . base64_encode(file_get_contents($logoPath))
-                : asset('logo.png');
-        }
     @endphp
 
     <style>
@@ -160,6 +154,7 @@
         }
 
         @media print {
+
             .hide_print {
                 display: none
             }
@@ -183,111 +178,131 @@
         }
     </style>
 
-    @if(empty($forPdf ?? false))
-    <div class="toolbar hidden-print hide_print">
-        <div class="text-right" style="text-align: right;">
-            <button id="printInvoice" class="btn btn-info" onclick="print()">Imprimer</button>
-            <a class="btn btn-info" href="{{ $backUrl ?? route('filament.admin.resources.tickets.index') }}">Retour</a>
-        </div>
-        <hr>
-    </div>
-    @endif
+    <body>
 
-    <div class="container">
-
-        <div class="receipt_header">
-            <img src="{{ $logoUrl }}" data-holder-rendered="true"
-                style="width: 220px; margin: auto; display: block; float: none;" />
-            <h1>{{ $coordonnee->short_description_ticket ?? '' }}</h1>
-            <h2>Adresse: {{ $coordonnee->adresse_fr ?? '' }}
-                <span>Tel: {{ $coordonnee->phone_1 ?? '' }}
-                    @if(!empty($coordonnee->phone_2 ?? ''))
-                        / {{ $coordonnee->phone_2 }}
-                    @endif
-                </span>
-            </h2>
-        </div>
-
-        <div class="receipt_body">
-
-            <div class="date_time_con">
-                <div class="date">{{ $ticket->created_at?->format('d/m/Y') }}</div>
-                <div class="time">{{ $ticket->created_at?->format('H:i') }}</div>
+        @if(empty($forPdf ?? false))
+        <div class="toolbar hidden-print hide_print ">
+            <div class="text-right">
+                <button id="printInvoice" class="btn btn-info" onclick="print()"><i class="fa fa-print"></i>
+                    Imprimer</button>
+                <a class="btn btn-info" href="{{ $backUrl ?? route('filament.admin.resources.tickets.index') }}"><i class="fa fa-file-pdf-o"></i>
+                    Retour</a>
             </div>
-            <div class="time" style="text-align: center; font-weight: 600; padding: 12px; font-size: 13pt;">
-                Ticket n°{{ $ticket->numero }}
-            </div>
-
-            <div class="items">
-                <table>
-                    <thead>
-                        <th>Produit</th>
-                        <th>Qte</th>
-                        <th>Totale</th>
-                    </thead>
-
-                    <tbody>
-                        @foreach($details_ticket as $details)
-                        <tr>
-                            <td>{{ $details->product->designation_fr ?? '' }}</td>
-                            <td>{{ $details->qte }}</td>
-                            <td>{{ number_format((float)$details->prix_ttc, 3, '.', '') }}</td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-
-                    <tfoot>
-                        <tr>
-                            <td>Totale</td>
-                            <td></td>
-                            <td>{{ number_format((float)($ticket->prix_ht ?? 0), 3, '.', '') }}</td>
-                        </tr>
-                        <tr>
-                            <td>Remise</td>
-                            <td></td>
-                            <td>{{ number_format((float)($ticket->remise ?? 0), 3, '.', '') }}</td>
-                        </tr>
-                        <tr>
-                            <td>Pourcentage remise %</td>
-                            <td></td>
-                            <td>{{ number_format((float)($ticket->pourcentage_remise ?? 0), 1, '.', '') }}</td>
-                        </tr>
-                        <tr>
-                            <td>Totale HT</td>
-                            <td></td>
-                            <td>{{ number_format((float)($ticket->prix_ttc ?? 0), 3, '.', '') }}</td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-
-        </div>
-
-        <br><br>
-        <h4>{{ $coordonnee->footer_ticket ?? '' }}</h4>
-
-        @php $siteUrl = $coordonnee->site_web ?? ''; @endphp
-        @if($siteUrl)
-        <div style="margin-top: 16px; text-align: center;">
-            <img
-                src="https://api.qrserver.com/v1/create-qr-code/?size=110x110&data={{ urlencode($siteUrl) }}"
-                alt="QR Code"
-                style="width: 110px; height: 110px;"
-            >
-            <p style="font-size: 11px; margin-top: 4px;">Scannez pour visiter notre site</p>
+            <hr>
         </div>
         @endif
 
-    </div>
+        <div class="container">
 
-    <script>
-        window.print();
+            <div class="receipt_header">
+                @if($logoUrl)
+                <img src="{{ $logoUrl }}" data-holder-rendered="true"
+                    style="width : 220px ;     margin: auto;
+                display: block;
+                float: none;" />
+                @endif
+                <h1> {{ $coordonnee->short_description_ticket ?? '' }}</h1>
+                <h2>Adresse: {{ $coordonnee->adresse_fr ?? '' }} <span>Tel: {{ $coordonnee->phone_1 ?? '' }} @if (!empty($coordonnee->phone_2 ?? ''))
+                            / {{ $coordonnee->phone_2 }}
+                        @endif
+                    </span></h2>
+            </div>
 
-        function print() {
-            window.print();
-        }
-    </script>
+            <div class="receipt_body">
 
-</body>
+                <div class="date_time_con">
+                    <div class="date">{{ $ticket->created_at?->format('d/m/Y') }}</div>
+                    <div class="time"> {{ $ticket->created_at?->format('H:i') }}</div>
+
+                </div>
+                <div class="time"
+                    style="    text-align: center;
+                font-weight: 600;
+                padding: 12px;
+                font-size: 13pt;">
+                    Ticket n°{{ $ticket->numero ?? '' }}</div>
+                <div class="items">
+                    <table>
+
+                        <thead>
+                            <th>Produit</th>
+                            <th>Qte</th>
+                            <th>Totale</th>
+                        </thead>
+
+                        <tbody>
+                            @foreach ($details_ticket as $details)
+                                <tr>
+                                    <td> {{ $details->product->designation_fr ?? '' }}</td>
+                                    <td>{{ $details->qte }}</td>
+                                    <td> {{ number_format((float) $details->prix_ttc, 3, '.', '') }}</td>
+                                </tr>
+                            @endforeach
+
+                        </tbody>
+
+                        <tfoot>
+                            <tr>
+                                <td>Totale </td>
+                                <td></td>
+                                <td>{{ number_format((float) ($ticket->prix_ht ?? 0), 3, '.', '') }}</td>
+                            </tr>
+                            <tr>
+
+                                <td>Remise</td>
+                                <td></td>
+                                <td>
+                                    {{ number_format((float) ($ticket->remise ?? 0), 3, '.', '') }}</td>
+                            </tr>
+
+                            <tr>
+
+                                <td>Pourcentage remise %</td>
+                                <td></td>
+                                <td>
+                                    {{ number_format((float) ($ticket->pourcentage_remise ?? 0), 1, '.', '') }}</td>
+                            </tr>
+
+                            <tr>
+                                <td>Totale HT</td>
+                                <td></td>
+                                <td>{{ number_format((float) ($ticket->prix_ttc ?? 0), 3, '.', '') }}</td>
+                            </tr>
+                        </tfoot>
+
+                    </table>
+                </div>
+
+            </div>
+
+            <br><br>
+            <h4>{{ $coordonnee->footer_ticket ?? '' }}</h4>
+            <h3>Notre Site web <br>
+                {{ $coordonnee->site_web ?? '' }}</h3>
+
+            @php $siteUrl = $coordonnee->site_web ?? ''; @endphp
+            @if($siteUrl)
+            <div style="margin-top: 16px; text-align: center;">
+                <img
+                    src="https://api.qrserver.com/v1/create-qr-code/?size=110x110&data={{ urlencode($siteUrl) }}"
+                    alt="QR Code"
+                    style="width: 110px; height: 110px;"
+                >
+                <p style="font-size: 11px; margin-top: 4px;">Scannez pour visiter notre site</p>
+            </div>
+            @endif
+
+        </div>
+
+        <script>
+            window.print()
+
+            function print() {
+
+                window.print()
+            }
+        </script>
+
+    </body>
 
 </html>

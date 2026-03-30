@@ -13,16 +13,6 @@
 </head>
 
 <body>
-    @php
-        $logoUrl = \App\Models\Coordinate::publicLogoFacturePrintUrl($coordonnee ?? null);
-        if (! $logoUrl) {
-            $logoPath = public_path('logo.png');
-            $logoUrl = is_file($logoPath)
-                ? 'data:' . (mime_content_type($logoPath) ?: 'image/png') . ';base64,' . base64_encode(file_get_contents($logoPath))
-                : asset('logo.png');
-        }
-    @endphp
-
     <style>
         #invoice {
             padding: 30px;
@@ -295,7 +285,6 @@
                     <header style="background: #eeeeee !important;">
                         <div class="row">
                             <div class="col">
-                                <img src="{{ $logoUrl }}" style="width: 220px" />
                                 @if(isset($coordonnee) && !empty($coordonnee->abbreviation))
                                     <h4 class="name">{{ $coordonnee->abbreviation }}</h4>
                                 @endif
