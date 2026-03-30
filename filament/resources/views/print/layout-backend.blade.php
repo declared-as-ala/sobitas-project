@@ -13,6 +13,7 @@
 </head>
 
 <body>
+    @include('print._logo')
     <style>
         #invoice {
             padding: 30px;
@@ -285,6 +286,9 @@
                     <header style="background: #eeeeee !important;">
                         <div class="row">
                             <div class="col">
+                                @if($logoUrl ?? null)
+                                <img src="{{ $logoUrl }}" data-holder-rendered="true" style="width: 220px" />
+                                @endif
                                 @if(isset($coordonnee) && !empty($coordonnee->abbreviation))
                                     <h4 class="name">{{ $coordonnee->abbreviation }}</h4>
                                 @endif

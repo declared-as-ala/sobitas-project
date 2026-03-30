@@ -13,9 +13,7 @@
 
 <body>
 
-    @php
-        $logoUrl = \App\Models\Coordinate::publicLogoFacturePrintUrl($coordonnee ?? null);
-    @endphp
+    @include('print._logo')
 
     <style>
         #invoice {

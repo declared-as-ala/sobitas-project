@@ -10,9 +10,7 @@
 
 <body>
 
-    @php
-        $logoUrl = \App\Models\Coordinate::publicLogoFacturePrintUrl($coordonnee ?? null);
-    @endphp
+    @include('print._logo')
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro&display=swap');
