@@ -179,6 +179,11 @@
 
         .table1 {}
 
+        @page {
+            size: auto;
+            margin: 0mm;
+        }
+
         @media print {
             .invoice {
                 overflow: hidden !important

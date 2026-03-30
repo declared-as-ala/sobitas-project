@@ -39,7 +39,7 @@
             <th style="width: 40%; background: #ff4000 !important">Produit</th>
             <th style="width: 15%; background: #ff4000 !important">Quantité</th>
             <th style="width: 20%; background: #ff4000 !important">Prix.U</th>
-            <th style="width: 20%; background: #ff4000 !important">Prix T.TTC</th>
+            <th style="width: 20%; background: #ff4000 !important">Montant à payer</th>
         </tr>
     </thead>
     <tbody>

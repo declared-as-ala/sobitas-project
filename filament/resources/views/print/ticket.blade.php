@@ -1,15 +1,5 @@
-@php
-    $coordonnee = $coordonnee ?? \App\Models\Coordinate::getCached();
-    $logoUrl = \App\Models\Coordinate::publicLogoFacturePrintUrl($coordonnee);
-    if (! $logoUrl) {
-        $logoPath = public_path('logo.png');
-        $logoUrl = is_file($logoPath)
-            ? 'data:' . (mime_content_type($logoPath) ?: 'image/png') . ';base64,' . base64_encode(file_get_contents($logoPath))
-            : asset('logo.png');
-    }
-@endphp
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
@@ -19,6 +9,17 @@
 </head>
 
 <body>
+
+    @php
+        $logoUrl = \App\Models\Coordinate::publicLogoFacturePrintUrl($coordonnee ?? null);
+        if (!$logoUrl) {
+            $logoPath = public_path('logo.png');
+            $logoUrl = is_file($logoPath)
+                ? 'data:' . (mime_content_type($logoPath) ?: 'image/png') . ';base64,' . base64_encode(file_get_contents($logoPath))
+                : asset('logo.png');
+        }
+    @endphp
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro&display=swap');
 
@@ -153,6 +154,11 @@
             display: block
         }
 
+        @page {
+            size: auto;
+            margin: 0mm;
+        }
+
         @media print {
             .hide_print {
                 display: none
@@ -180,12 +186,8 @@
     @if(empty($forPdf ?? false))
     <div class="toolbar hidden-print hide_print">
         <div class="text-right" style="text-align: right;">
-            <button id="printInvoice" class="btn btn-info" onclick="window.print()">
-                Imprimer
-            </button>
-            <a class="btn btn-info" href="{{ $backUrl ?? route('filament.admin.resources.tickets.index') }}">
-                Retour
-            </a>
+            <button id="printInvoice" class="btn btn-info" onclick="print()">Imprimer</button>
+            <a class="btn btn-info" href="{{ $backUrl ?? route('filament.admin.resources.tickets.index') }}">Retour</a>
         </div>
         <hr>
     </div>
@@ -194,11 +196,12 @@
     <div class="container">
 
         <div class="receipt_header">
-            <img src="{{ $logoUrl }}" style="width: 220px; margin: auto; display: block; float: none;" />
+            <img src="{{ $logoUrl }}" data-holder-rendered="true"
+                style="width: 220px; margin: auto; display: block; float: none;" />
             <h1>{{ $coordonnee->short_description_ticket ?? '' }}</h1>
             <h2>Adresse: {{ $coordonnee->adresse_fr ?? '' }}
                 <span>Tel: {{ $coordonnee->phone_1 ?? '' }}
-                    @if(!empty($coordonnee->phone_2))
+                    @if(!empty($coordonnee->phone_2 ?? ''))
                         / {{ $coordonnee->phone_2 }}
                     @endif
                 </span>
@@ -208,8 +211,8 @@
         <div class="receipt_body">
 
             <div class="date_time_con">
-                <div class="date">{{ $ticket->created_at->format('d/m/Y') }}</div>
-                <div class="time">{{ $ticket->created_at->format('H:i') }}</div>
+                <div class="date">{{ $ticket->created_at?->format('d/m/Y') }}</div>
+                <div class="time">{{ $ticket->created_at?->format('H:i') }}</div>
             </div>
             <div class="time" style="text-align: center; font-weight: 600; padding: 12px; font-size: 13pt;">
                 Ticket n°{{ $ticket->numero }}
@@ -224,11 +227,11 @@
                     </thead>
 
                     <tbody>
-                        @foreach ($details_ticket as $details)
+                        @foreach($details_ticket as $details)
                         <tr>
                             <td>{{ $details->product->designation_fr ?? '' }}</td>
                             <td>{{ $details->qte }}</td>
-                            <td>{{ number_format((float) $details->prix_ttc, 3, '.', '') }}</td>
+                            <td>{{ number_format((float)$details->prix_ttc, 3, '.', '') }}</td>
                         </tr>
                         @endforeach
                     </tbody>
@@ -237,22 +240,22 @@
                         <tr>
                             <td>Totale</td>
                             <td></td>
-                            <td>{{ number_format((float) ($ticket->prix_ht ?? 0), 3, '.', '') }}</td>
+                            <td>{{ number_format((float)($ticket->prix_ht ?? 0), 3, '.', '') }}</td>
                         </tr>
                         <tr>
                             <td>Remise</td>
                             <td></td>
-                            <td>{{ number_format((float) ($ticket->remise ?? 0), 3, '.', '') }}</td>
+                            <td>{{ number_format((float)($ticket->remise ?? 0), 3, '.', '') }}</td>
                         </tr>
                         <tr>
                             <td>Pourcentage remise %</td>
                             <td></td>
-                            <td>{{ number_format((float) ($ticket->pourcentage_remise ?? 0), 1, '.', '') }}</td>
+                            <td>{{ number_format((float)($ticket->pourcentage_remise ?? 0), 1, '.', '') }}</td>
                         </tr>
                         <tr>
                             <td>Totale HT</td>
                             <td></td>
-                            <td>{{ number_format((float) ($ticket->prix_ttc ?? 0), 3, '.', '') }}</td>
+                            <td>{{ number_format((float)($ticket->prix_ttc ?? 0), 3, '.', '') }}</td>
                         </tr>
                     </tfoot>
                 </table>
@@ -262,7 +265,6 @@
 
         <br><br>
         <h4>{{ $coordonnee->footer_ticket ?? '' }}</h4>
-        <h3>Notre Site web <br>{{ $coordonnee->site_web ?? '' }}</h3>
 
         @php $siteUrl = $coordonnee->site_web ?? ''; @endphp
         @if($siteUrl)
@@ -279,11 +281,11 @@
     </div>
 
     <script>
-        window.addEventListener('load', function() {
-            if (!window.location.search.includes('embed=true') && !window.location.search.includes('embed=1')) {
-                window.print();
-            }
-        });
+        window.print();
+
+        function print() {
+            window.print();
+        }
     </script>
 
 </body>
