@@ -7,9 +7,28 @@
     <title>Ticket {{ $ticket->numero ?? $ticket->id }}</title>
 </head>
 <body>
-@include('print._logo')
 @php
     $coordonnee = $coordonnee ?? $company ?? null;
+
+    // Resolve logo URL (prefer static logo_print.png, then coordinate logo_facture)
+    $logoUrl = null;
+    $staticLogoPath = resource_path('views/print/logo_print.png');
+    if (is_file($staticLogoPath)) {
+        $mime    = @mime_content_type($staticLogoPath) ?: 'image/png';
+        $logoUrl = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($staticLogoPath));
+    } elseif ($coordonnee) {
+        $rawLogo = $coordonnee->logo_facture ?? null;
+        if ($rawLogo && trim((string) $rawLogo) !== '') {
+            $rawLogo = trim((string) $rawLogo);
+            if (preg_match('#^https?://#i', $rawLogo)) {
+                $logoUrl = $rawLogo;
+            } else {
+                $logoPath = ltrim(str_replace('\\', '/', $rawLogo), '/');
+                $logoUrl  = asset('storage/' . $logoPath);
+            }
+        }
+    }
+
     $dateStr = $documentDate ?? ($ticket->date_ticket ? \Carbon\Carbon::parse($ticket->date_ticket)->format('d/m/Y') : $ticket->created_at?->format('d/m/Y') ?? '');
     $timeStr = $documentTime ?? $ticket->created_at?->format('H:i') ?? '';
     $prixHt = (float) ($ticket->prix_ht ?? $ticket->prix_total ?? 0);

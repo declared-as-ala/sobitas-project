@@ -11,9 +11,28 @@
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js"></script>
 </head>
 <body>
-@include('print._logo')
 @php
     $coordonnee = $coordonnee ?? $company ?? null;
+
+    // Resolve logo URL (prefer static logo_print.png, then coordinate logo_facture)
+    $logoUrl = null;
+    $staticLogoPath = resource_path('views/print/logo_print.png');
+    if (is_file($staticLogoPath)) {
+        $mime    = @mime_content_type($staticLogoPath) ?: 'image/png';
+        $logoUrl = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($staticLogoPath));
+    } elseif ($coordonnee) {
+        $rawLogo = $coordonnee->logo_facture ?? null;
+        if ($rawLogo && trim((string) $rawLogo) !== '') {
+            $rawLogo = trim((string) $rawLogo);
+            if (preg_match('#^https?://#i', $rawLogo)) {
+                $logoUrl = $rawLogo;
+            } else {
+                $logoPath = ltrim(str_replace('\\', '/', $rawLogo), '/');
+                $logoUrl  = asset('storage/' . $logoPath);
+            }
+        }
+    }
+
     $ct = $calcTotals ?? null;
     $footerTotalHt = $ct['total_ht_brut'] ?? (float) ($facture->prix_ht ?? 0);
     $footerRemise = $ct['remise'] ?? (float) ($facture->remise ?? 0);
