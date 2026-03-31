@@ -101,7 +101,14 @@ class FactureResource extends Resource
     {
         return $table
             ->modifyQueryUsing(fn (Builder $query) => $query
-                ->select(['factures.id', 'factures.numero', 'factures.client_id', 'factures.net_a_payer', 'factures.created_at'])
+                ->select([
+                    'factures.id',
+                    'factures.numero',
+                    'factures.client_id',
+                    'factures.prix_ttc',
+                    'factures.timbre',
+                    'factures.created_at',
+                ])
                 ->with('client:id,name')
             )
             ->columns([
@@ -119,10 +126,13 @@ class FactureResource extends Resource
                     ->label('Clients')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('net_a_payer')
-                    ->label('Prix TTC')
+                Tables\Columns\TextColumn::make('montant_a_payer')
+                    ->label('Montant à payer')
+                    ->state(fn (Facture $record): float => max(
+                        (float) ($record->prix_ttc ?? 0) - (float) ($record->timbre ?? 0),
+                        0,
+                    ))
                     ->money('TND', divideBy: 1)
-                    ->sortable()
                     ->alignEnd()
                     ->weight(\Filament\Support\Enums\FontWeight::Bold),
             ])

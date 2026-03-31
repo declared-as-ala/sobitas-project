@@ -236,7 +236,9 @@
                     <span>Devis valable 30 jours à partir de la date de création</span>
                     <div style="margin-left: 140px; text-decoration: underline;">Signature et cachet</div>
                 </main>
-                <footer>{{ $coordonnee->rib ?? '' }}</footer>
+                <footer style="text-align: left; font-size: 14px; padding-left: 5px;">
+                    {{ $coordonnee->rib ?? '' }}
+                </footer>
             </div>
             <div></div>
         </div>

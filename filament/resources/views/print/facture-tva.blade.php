@@ -209,7 +209,9 @@
                     @endif
                     <div style="margin-left: 140px; text-decoration: underline;">Signature et cachet</div>
                 </main>
-                <footer>{{ $coordonnee->rib ?? '' }}</footer>
+                <footer style="text-align: left; font-size: 12px; padding-left: 5px;">
+                    {{ $coordonnee->rib ?? '' }}
+                </footer>
             </div>
             <div></div>
         </div>

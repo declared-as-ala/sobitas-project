@@ -613,7 +613,8 @@ function dvCreateClient() {
             '<input id="dv_sw_name" class="swal2-input" placeholder="Nom et Prénom">' +
             '<input id="dv_sw_adresse" class="swal2-input" placeholder="Adresse">' +
             '<input id="dv_sw_phone" class="swal2-input" placeholder="Téléphone">' +
-            '<input id="dv_sw_email" class="swal2-input" placeholder="Email (optionnel)">',
+            '<input id="dv_sw_email" class="swal2-input" placeholder="Email (optionnel)">' +
+            '<input id="dv_sw_mf" class="swal2-input" placeholder="Matricule Fiscal">',
         focusConfirm: false,
         showCancelButton: true,
         confirmButtonText: 'Créer le client',
@@ -623,11 +624,12 @@ function dvCreateClient() {
             var adresse = (document.getElementById('dv_sw_adresse')?.value || '').trim();
             var phone = (document.getElementById('dv_sw_phone')?.value || '').trim();
             var email = (document.getElementById('dv_sw_email')?.value || '').trim();
+            var matricule = (document.getElementById('dv_sw_mf')?.value || '').trim();
             if (!name) {
                 Swal.showValidationMessage('Le nom du client est obligatoire');
                 return false;
             }
-            return { name: name, adresse: adresse, phone_1: phone, email: email || null };
+            return { name: name, adresse: adresse, phone_1: phone, email: email || null, matricule: matricule };
         }
     }).then(function (result) {
         if (!result.isConfirmed || !result.value) return;

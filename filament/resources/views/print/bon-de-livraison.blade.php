@@ -185,7 +185,9 @@
                         <br>
                     @endif
                 </main>
-                <footer>{{ $coordonnee->rib ?? '' }}</footer>
+                <footer style="text-align: left; font-size: 14px; padding-left: 5px;">
+                    {{ $coordonnee->rib ?? '' }}
+                </footer>
             </div>
             <div></div>
         </div>
