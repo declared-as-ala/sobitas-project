@@ -33,25 +33,11 @@
     .invoice table td, .invoice table th { border-bottom: 1px solid #fff; }
     .invoice table th { white-space: nowrap; font-size: 13pt; }
     .invoice table tbody tr:last-child td { border-bottom: 1px solid #b4b4b4; }
-    .invoice footer {
-        font-size: 14px;
-        width: 100%;
-        text-align: left !important;
-        color: #000;
-        border-top: 1px solid #aaa;
-        padding: 8px 0 8px 5px;
-    }
+    .invoice footer { font-size: 18px; width: 100%; text-align: center; color: #000; border-top: 1px solid #aaa; padding: 8px 0; }
     .hide_print { display: initial; }
     @media print {
         .invoice { overflow: hidden !important; }
-        .invoice footer {
-            position: absolute;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            text-align: left !important;
-            page-break-after: always;
-        }
+        .invoice footer { position: absolute; bottom: 35px; page-break-after: always; }
         .hide_print { display: none; }
         .invoice > div:last-child { page-break-before: always; }
         .table1 { min-height: 10cm; }
@@ -199,7 +185,7 @@
                         <br>
                     @endif
                 </main>
-                <footer>
+                <footer style="text-align: left; font-size: 14px; padding-left: 5px;">
                     {{ $coordonnee->rib ?? '' }}
                 </footer>
             </div>
