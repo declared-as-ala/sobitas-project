@@ -180,9 +180,9 @@
 
         <div class="toolbar hidden-print hide_print ">
             <div class="text-right">
-                <button id="printInvoice" class="btn btn-info" onclick="print()"><i class="fa fa-print"></i>
+                <button id="printInvoice" class="btn btn-info" onclick="print()">
                     Imprimer</button>
-                <a class="btn btn-info" href="{{ $backUrl ?? route('filament.admin.resources.tickets.index') }}"><i class="fa fa-file-pdf-o"></i>
+                <a class="btn btn-info" href="{{ $backUrl ?? route('filament.admin.resources.tickets.index') }}">
                     Retour</a>
             </div>
             <hr>
@@ -190,7 +190,7 @@
         <div class="container">
 
             <div class="receipt_header">
-                @if($logoUrl)
+                @if($logoUrl ?? null)
                 <img src="{{ $logoUrl }}" data-holder-rendered="true"
                     style="width : 220px ;     margin: auto;
                 display: block;
@@ -293,7 +293,6 @@
             window.print()
 
             function print() {
-
                 window.print()
             }
         </script>

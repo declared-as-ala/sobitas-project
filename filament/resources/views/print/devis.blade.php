@@ -9,9 +9,7 @@
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css">
     <title> Devis {{ @$facture->numero }}</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
-
     <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
-
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js"></script>
 </head>
 
@@ -66,7 +64,6 @@
         .company-details .invoice-id {
             margin: 26px;
             text-transform: uppercase;
-
         }
 
         .invoice main {
@@ -98,20 +95,17 @@
 
         .invoice table td,
         .invoice table th {
-
             border-bottom: 1px solid #fff
         }
 
         .invoice table th {
             white-space: nowrap;
-
             font-size: 13pt
         }
 
         .invoice table td h3 {
             margin: 0;
             font-weight: 400;
-            /* code */
             color: #ff4000;
             font-size: 16pt
         }
@@ -126,7 +120,6 @@
         .invoice table .no {
             color: #fff;
             font-size: 1.6em;
-            /* background: #fd5820; */
             background: #ff4000;
         }
 
@@ -135,7 +128,6 @@
         }
 
         .invoice table .total {
-            /* background: #fd5820; */
             background: #ff4000;
             color: #fff
         }
@@ -159,9 +151,7 @@
         }
 
         .invoice table tfoot tr:last-child td {
-
             font-size: 1.4em;
-
         }
 
         .invoice table tfoot tr td:first-child {
@@ -169,7 +159,8 @@
         }
 
         .invoice footer {
-            font-size: 18px width: 100%;
+            font-size: 18px;
+            width: 100%;
             text-align: center;
             color: #000;
             border-top: 1px solid #aaa;
@@ -189,7 +180,6 @@
 
         @media print {
             .invoice {
-
                 overflow: hidden !important
             }
 
@@ -217,9 +207,7 @@
         }
 
         thead th {
-            /* background: #fd5820 !important; */
             background: #ff4000 !important;
-
             background-color: #ff4000 !important;
             color: #fff !important;
             font-weight: 600 !important;
@@ -248,7 +236,6 @@
         tfoot tr:last-child th:last-child {
             background: #fd582033;
             border-top: 2px solid black !important;
-
         }
 
         .bt {
@@ -256,12 +243,8 @@
         }
 
         .bggray {
-
             background-color: gray !important;
-
         }
-
-        /* a copier  */
 
         .contacts .address,
         .contacts .email,
@@ -273,6 +256,14 @@
         tbody {
             font-size: 10pt !important;
         }
+
+        .btn-info {
+            background: #3e46df;
+            border: 0;
+            border-radius: 3px;
+            color: #fff;
+            opacity: .9;
+        }
     </style>
 
     <div class="page-content">
@@ -281,10 +272,10 @@
 
             <div class="toolbar hidden-print hide_print ">
                 <div class="text-right">
-                    <button id="printInvoice" class="btn btn-info" onclick="print()"><i class="fa fa-print"></i>
+                    <button id="printInvoice" class="btn btn-info" onclick="print()">
                         Imprimer</button>
-                    <a class="btn btn-info" href="{{ $backUrl ?? route('filament.admin.resources.quotations.index') }}"><i
-                            class="fa fa-file-pdf-o"></i> Retour</a>
+                    <a class="btn btn-info" href="{{ route('filament.admin.resources.quotations.index') }}">
+                        Retour</a>
                 </div>
                 <hr>
             </div>
@@ -294,14 +285,12 @@
                         <div class="row">
                             <div class="col">
 
-                                @if($logoUrl)
+                                @if($logoUrl ?? null)
                                 <img src="{{ $logoUrl }}" data-holder-rendered="true"
                                     style="width : 220px" />
                                 @endif
                                 <h4 class="name">
-
                                     {{ $coordonnee->abbreviation ?? '' }}
-
                                 </h4>
                                 <div><b>Email : </b> &nbsp; {{ $coordonnee->email ?? '' }}</div>
                                 <div><b>Adresse : </b> &nbsp; {{ $coordonnee->adresse_fr ?? '' }}</div>
@@ -319,12 +308,10 @@
                             </div>
                             <div class="col company-details">
                                 <h1 class="invoice-id">Devis </h1>
-                                <div class="date"><b>Date :</b> {{ $facture->created_at?->format('d-m-Y') }}
+                                <div class="date"><b>Date :</b> {{ $facture->created_at->format('d-m-Y') }}
                                 </div>
                                 <div class="date"> <b>Numéro:</b> {{ $facture->numero }}
                                 </div>
-
-
                             </div>
                         </div>
                     </header>
@@ -332,8 +319,6 @@
                         @if (@$facture->client)
                             <div class="row contacts">
                                 <div class="col invoice-to">
-
-
 
                                     <h5 class="text-gray-light">INFORMATIONS DU CLIENT </h5>
                                     <hr style="margin : 9px">
@@ -346,8 +331,6 @@
                                     @endif
                                     <div class="email"><a><b>Numéro de téléphone:</b> {{ @$facture->client->phone_1 }}</a>
                                     </div>
-
-
 
                                 </div>
                                 <div class="col invoice-details">
@@ -366,8 +349,6 @@
                                         <th style="width : 15% ;background: #ff4000 !important">P.U.HT</th>
                                         <th style="width : 15% ;background: #ff4000 !important">TVA</th>
                                         <th style="width : 15% ;background: #ff4000 !important">Totale HT</th>
-
-                                        {{--   <th style="width : 15% ;background: #ff4000 !important">Prix TTC</th> --}}
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -394,8 +375,7 @@
                                                 {{ @$details->tva }} %</td>
                                             <td class="text-right"
                                                 @if ($i % 2 != 0) style="background-color: #eee !important" @endif>
-                                                {{ number_format((float) ($details->prix_ht ?? ($details->qte * ($details->prix_unitaire ?? 0))), 3, '.', '') }}</td>
-
+                                                {{ number_format((float) @$details->prix_ht, 3, '.', '') }}</td>
                                         </tr>
                                         @php
                                             $i++;
@@ -422,16 +402,12 @@
                                                 {{ number_format((float) @$facture->remise, 3, '.', '') }}</th>
                                         </tr>
                                     @endif
-
                                     <tr>
                                         <td colspan="2"></td>
                                         <th colspan="3">TVA</th>
                                         <th class="text-right">{{ number_format((float) @$facture->tva, 3, '.', '') }}
                                         </th>
-
-
                                     </tr>
-
                                     <tr>
                                         <td colspan="2"></td>
                                         <th colspan="3">Totale TTC</th>
@@ -442,7 +418,6 @@
                             </table>
                         </div>
                         <input type="hidden" id="totale" value="{{ $facture->prix_ttc }}">
-                        {{--    <div class="thanks">Merci !</div> --}}
                         @if (@$coordonnee->note)
                             <div class="notices">
                                 <div>Note:</div>
@@ -451,15 +426,14 @@
                                 </div>
                             </div>
                             <br>
-
                         @endif
 
-                         @if (@$coordonnee->note_devis)
+                        @if (@$coordonnee->note_devis)
                             <div class="notice"> {{ $coordonnee->note_devis }}
                             </div>
                             <br>
                         @endif
-                         <span>Devis valable 30 jours à partir de la date de création</span>
+                        <span>Devis valable 30 jours à partir de la date de création</span>
                         <div style="    margin-left: 140px;
                         text-decoration: underline;">
                             Signature et cachet
@@ -474,10 +448,9 @@
             </div>
         </div>
     </div>
-    {{--  script motant en toute lettre  --}}
+
     <script>
         console.log('r', document.getElementById('totale').value)
-
 
         var a = ['', 'un ', 'deux', 'trois ', 'quatre ', 'cinq ', 'six ', 'sept ', 'huit ', 'neuf ', 'dix ', 'onze ',
             'douze ', 'treize ', 'quatorze ', 'quinze ', 'seize ', 'dix-sept ', 'dix-huit ', 'dix-neuf '
@@ -489,17 +462,14 @@
         document.getElementById('words').innerHTML = inWords(document.getElementById('totale').value);
 
         function inWords(num) {
-
             console.log('t', num)
             console.log(num.toString().split('.'))
             let tab = num.toString().split('.')
-
             console.log('tab', tab)
             console.log('t', num)
 
             if ((num = num.toString()).length > 9) return 'overflow';
             n = ('000000000' + tab[0]).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
-
             console.log('n', n)
             if (!n) return;
             var str = '';
@@ -520,16 +490,14 @@
                 return str + ' et ' + nb + ' millimes'
             } else {
                 return str;
-
             }
         }
-    </script>
 
-    <script>
         function print() {
             window.print()
         }
-        window.addEventListener('load', function () {
+
+        window.addEventListener('load', function() {
             if (!window.location.search.includes('embed=true') && !window.location.search.includes('embed=1')) {
                 window.print();
             }

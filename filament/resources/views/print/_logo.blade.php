@@ -23,10 +23,13 @@
             }
 
             // Candidate locations – Filament storage first, then backend storage
+            $projectRoot = dirname(base_path());
+            $sep = DIRECTORY_SEPARATOR;
+            $logoPathNative = str_replace('/', $sep, $logoPath);
             $candidates = [
                 public_path('storage/' . $logoPath),
-                base_path('../backend/public/storage/' . $logoPath),
-                base_path('../backend/storage/app/public/' . $logoPath),
+                $projectRoot . $sep . 'backend' . $sep . 'public' . $sep . 'storage' . $sep . $logoPathNative,
+                $projectRoot . $sep . 'backend' . $sep . 'storage' . $sep . 'app' . $sep . 'public' . $sep . $logoPathNative,
             ];
 
             $foundPath = null;
