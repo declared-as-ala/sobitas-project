@@ -8,9 +8,9 @@
     <title>Facture {{ $facture->numero ?? '' }}</title>
 </head>
 <body>
+@include('print._logo')
 @php
     $coordonnee = $coordonnee ?? $company ?? null;
-    $logoUrl = \App\Models\Coordinate::publicLogoFacturePrintUrl($coordonnee) ?? asset('logo.png');
     if (!isset($calcTotals) && isset($facture, $details_facture)) {
         $defaultTva = $coordonnee && isset($coordonnee->tva) ? (float) $coordonnee->tva : 19;
         $calcTotals = \App\Services\InvoiceCalculator::calculate(

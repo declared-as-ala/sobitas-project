@@ -8,9 +8,9 @@
     <title>Bon de livraison {{ $facture->numero ?? $facture->id }}</title>
 </head>
 <body>
+@include('print._logo')
 @php
     $coordonnee = $coordonnee ?? $company ?? null;
-    $logoUrl = \App\Models\Coordinate::publicLogoFacturePrintUrl($coordonnee) ?? asset('logo.png');
     $client = $client ?? $facture->client;
     $clientAddress = trim((string) ($facture->formatted_delivery_address ?? '')) !== ''
         ? $facture->formatted_delivery_address
@@ -168,7 +168,7 @@
                                 @endif
                                 <tr>
                                     <td colspan="3"></td>
-                                    <th class="bt" colspan="1">Montant Totale TTC</th>
+                                    <th class="bt" colspan="1">Montant à payer</th>
                                     <th class="text-right" style="background: #fd582033 !important;">
                                         {{ number_format((float) ($calc_net_a_payer ?? max((float)($facture->prix_ttc ?? 0) - (float)($facture->timbre ?? 0), 0)), 3, '.', '') }}
                                     </th>

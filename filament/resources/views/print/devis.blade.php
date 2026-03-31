@@ -11,9 +11,9 @@
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js"></script>
 </head>
 <body>
+@include('print._logo')
 @php
     $coordonnee = $coordonnee ?? $company ?? null;
-    $logoUrl = \App\Models\Coordinate::publicLogoFacturePrintUrl($coordonnee) ?? asset('logo.png');
     $ct = $calcTotals ?? null;
     $footerTotalHt = $ct['total_ht_brut'] ?? (float) ($facture->prix_ht ?? 0);
     $footerRemise = $ct['remise'] ?? (float) ($facture->remise ?? 0);

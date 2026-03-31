@@ -11,11 +11,10 @@
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js"></script>
 </head>
 <body>
+@include('print._logo')
 @php
     $coordonnee = $coordonnee ?? $company ?? null;
-    $logoUrl = \App\Models\Coordinate::publicLogoFacturePrintUrl($coordonnee) ?? asset('logo.png');
 @endphp
-
 <style>
     #invoice { padding: 30px; }
     .invoice { position: relative; background-color: #FFF; min-height: 680px; padding: 15px; }

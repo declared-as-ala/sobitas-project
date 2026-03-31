@@ -7,9 +7,9 @@
     <title>Ticket {{ $ticket->numero ?? $ticket->id }}</title>
 </head>
 <body>
+@include('print._logo')
 @php
     $coordonnee = $coordonnee ?? $company ?? null;
-    $logoUrl = \App\Models\Coordinate::publicLogoFacturePrintUrl($coordonnee) ?? asset('logo.png');
     $dateStr = $documentDate ?? ($ticket->date_ticket ? \Carbon\Carbon::parse($ticket->date_ticket)->format('d/m/Y') : $ticket->created_at?->format('d/m/Y') ?? '');
     $timeStr = $documentTime ?? $ticket->created_at?->format('H:i') ?? '';
     $prixHt = (float) ($ticket->prix_ht ?? $ticket->prix_total ?? 0);
@@ -120,7 +120,16 @@
     </div>
     <br><br>
     <h4>{{ $coordonnee->footer_ticket ?? '' }}</h4>
-    <h3>Notre Site web <br>{{ $coordonnee->site_web ?? '' }}</h3>
+    <h3>Notre site web <br>{{ $coordonnee->site_web ?? '' }}</h3>
+    @if (!empty($coordonnee->site_web))
+        <div style="margin-top: 8px; text-align: center;">
+            <img
+                src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data={{ urlencode($coordonnee->site_web) }}"
+                alt="QR code site web"
+                style="width: 120px; height: 120px;"
+            >
+        </div>
+    @endif
 </div>
 </body>
 </html>
