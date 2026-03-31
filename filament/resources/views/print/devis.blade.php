@@ -14,23 +14,12 @@
 @php
     $coordonnee = $coordonnee ?? $company ?? null;
 
-    // Resolve logo URL (prefer static logo_print.png, then coordinate logo_facture)
+    // Always use static logo_print.png (base64); no URL fallback to avoid 404.
     $logoUrl = null;
     $staticLogoPath = resource_path('views/print/logo_print.png');
     if (is_file($staticLogoPath)) {
         $mime    = @mime_content_type($staticLogoPath) ?: 'image/png';
         $logoUrl = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($staticLogoPath));
-    } elseif ($coordonnee) {
-        $rawLogo = $coordonnee->logo_facture ?? null;
-        if ($rawLogo && trim((string) $rawLogo) !== '') {
-            $rawLogo = trim((string) $rawLogo);
-            if (preg_match('#^https?://#i', $rawLogo)) {
-                $logoUrl = $rawLogo;
-            } else {
-                $logoPath = ltrim(str_replace('\\', '/', $rawLogo), '/');
-                $logoUrl  = asset('storage/' . $logoPath);
-            }
-        }
     }
 
     $ct = $calcTotals ?? null;
