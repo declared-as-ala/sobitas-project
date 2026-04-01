@@ -1,170 +1,158 @@
 @php
     $gradients = [
-        'blue'    => ['from' => '#60a5fa', 'mid' => '#3b82f6', 'to' => '#2563eb', 'shadow' => '59,130,246'],
-        'green'   => ['from' => '#4ade80', 'mid' => '#22c55e', 'to' => '#16a34a', 'shadow' => '34,197,94'],
-        'emerald' => ['from' => '#34d399', 'mid' => '#10b981', 'to' => '#059669', 'shadow' => '16,185,129'],
-        'red'     => ['from' => '#f87171', 'mid' => '#ef4444', 'to' => '#dc2626', 'shadow' => '239,68,68'],
-        'purple'  => ['from' => '#c084fc', 'mid' => '#a855f7', 'to' => '#9333ea', 'shadow' => '168,85,247'],
-        'indigo'  => ['from' => '#818cf8', 'mid' => '#6366f1', 'to' => '#4f46e5', 'shadow' => '99,102,241'],
-        'teal'    => ['from' => '#2dd4bf', 'mid' => '#14b8a6', 'to' => '#0d9488', 'shadow' => '20,184,166'],
-        'amber'   => ['from' => '#fbbf24', 'mid' => '#f59e0b', 'to' => '#d97706', 'shadow' => '245,158,11'],
+        'blue'    => ['from' => '#3b82f6', 'mid' => '#2563eb', 'to' => '#1e40af', 'shadow' => '59,130,246'],
+        'green'   => ['from' => '#22c55e', 'mid' => '#16a34a', 'to' => '#15803d', 'shadow' => '34,197,94'],
+        'emerald' => ['from' => '#34d399', 'mid' => '#059669', 'to' => '#047857', 'shadow' => '5,150,105'],
+        'red'     => ['from' => '#f87171', 'mid' => '#dc2626', 'to' => '#991b1b', 'shadow' => '220,38,38'],
+        'purple'  => ['from' => '#c084fc', 'mid' => '#9333ea', 'to' => '#7e22ce', 'shadow' => '147,51,234'],
+        'indigo'  => ['from' => '#818cf8', 'mid' => '#4f46e5', 'to' => '#3730a3', 'shadow' => '79,70,229'],
+        'teal'    => ['from' => '#2dd4bf', 'mid' => '#0d9488', 'to' => '#0f766e', 'shadow' => '13,148,136'],
+        'amber'   => ['from' => '#fbbf24', 'mid' => '#d97706', 'to' => '#92400e', 'shadow' => '217,119,6'],
     ];
 @endphp
 
 <x-filament-widgets::widget>
 <style>
-    /* ── Hide the generic page header ("Tableau de bord") completely ── */
-    body:has(.qa-card) .fi-header {
-        display: none !important;
-    }
-    /* Pull content closer to the top to reduce empty vertical space */
-    body:has(.qa-card) .fi-main {
-        padding-top: 1.5rem !important;
-    }
+    /* ── Page header: pull title closer to top ── */
+    .fi-header-heading { padding-top: 0 !important; margin-top: 0 !important; }
+    .fi-page-header    { padding-top: 0 !important; margin-top: -6px !important; padding-bottom: 0.9rem !important; }
 
-    /* ── Widget card shell ── */
+    /* ── Widget card shell: no extra top gap ── */
     .qa-card {
         background: #fff;
-        border-radius: 16px;
-        padding: 1.5rem;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05); /* Premium soft shadow */
-        border: 1px solid rgba(0,0,0,.05);
-        opacity: 0;
-        animation: fadeUp 0.6s ease-out forwards; /* Subtle animation on load */
+        border-radius: 20px;
+        padding: 1.75rem 1.9rem 2rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 20px rgba(0,0,0,.07);
+        border: 1px solid rgba(0,0,0,.06);
     }
-    
-    @keyframes fadeUp {
-        0% { opacity: 0; transform: translateY(15px); }
-        100% { opacity: 1; transform: translateY(0); }
-    }
-
     .dark .qa-card {
-        background: #1e293b;
-        border-color: rgba(255,255,255,.05);
+        background: #1e2433;
+        border-color: rgba(255,255,255,.07);
     }
 
     /* ── Header ── */
     .qa-header {
         display: flex;
         align-items: center;
-        gap: .875rem;
-        margin-bottom: 1.5rem; /* Clean gap before items */
+        gap: .75rem;
+        margin-bottom: 1.7rem;
     }
     .qa-header-icon {
-        width: 44px; height: 44px;
-        border-radius: 12px;
+        width: 40px; height: 40px;
+        border-radius: 11px;
         background: linear-gradient(135deg, #f97316, #ef4444);
         display: flex; align-items: center; justify-content: center;
         flex-shrink: 0;
-        box-shadow: 0 4px 10px rgba(239,68,68,.3);
+        box-shadow: 0 3px 10px rgba(239,68,68,.4);
     }
-    .qa-header-icon svg { width: 22px; height: 22px; color: #fff; }
+    .qa-header-icon svg { width: 20px; height: 20px; color: #fff; }
     .qa-header-title {
-        font-size: 1.125rem;
-        font-weight: 700;
+        font-size: 1rem;
+        font-weight: 800;
         color: #0f172a;
         line-height: 1.2;
+        letter-spacing: -.02em;
     }
     .dark .qa-header-title { color: #f1f5f9; }
-    .qa-header-sub { font-size: .8125rem; color: #64748b; margin-top: 2px; font-weight: 500; }
-    .dark .qa-header-sub { color: #94a3b8; }
+    .qa-header-sub { font-size: .75rem; color: #94a3b8; margin-top: 1px; }
 
-    /* ── Grid Layout ── */
+    /* ── Grid: 4 columns → 2 rows of 4 ── */
     .qa-grid {
         display: grid !important;
-        grid-template-columns: repeat(4, 1fr) !important;
-        gap: 1.15rem; /* ~18px gap */
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+        grid-auto-flow: row !important;
+        gap: 1.35rem;
     }
-    @media (max-width: 1024px) { 
-        .qa-grid { grid-template-columns: repeat(4, 1fr) !important; gap: 1rem; } 
-    }
-    @media (max-width: 768px) { 
-        .qa-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 1rem; } 
-    }
-    @media (max-width: 480px) { 
-        .qa-grid { grid-template-columns: repeat(1, 1fr) !important; gap: 0.85rem; } 
-    }
+    @media (max-width: 1024px) { .qa-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 1rem; } }
+    @media (max-width: 700px)  { .qa-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } }
+    @media (max-width: 380px)  { .qa-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: .7rem; } }
 
-    /* ── Button Action Cards ── */
+    /* ── Button ── */
     .qa-btn {
         position: relative;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 1rem; /* Better spacing inside */
-        padding: 1.5rem 1rem;
-        border-radius: 16px; /* Smooth rounded corners */
-        text-decoration: none !important;
-        color: #fff !important;
-        font-weight: 700; /* Bold title */
-        font-size: 0.95rem; /* Improved typography */
+        gap: .875rem;
+        padding: 2.15rem 1rem 1.85rem;
+        border-radius: 18px;
+        text-decoration: none;
+        color: #fff;
+        font-weight: 800;
+        font-size: .875rem;
         text-align: center;
         line-height: 1.35;
         overflow: hidden;
-        min-height: 135px;
-        background: linear-gradient(135deg, var(--qa-from) 0%, var(--qa-mid) 60%, var(--qa-to) 100%);
-        box-shadow: 0 4px 15px rgba(var(--qa-shadow), 0.25);
-        transition: all 0.2s ease-in-out;
-        cursor: pointer;
+        min-height: 148px;
+        background: linear-gradient(160deg, var(--qa-from) 0%, var(--qa-mid) 55%, var(--qa-to) 100%);
+        box-shadow:
+            0 4px 20px rgba(var(--qa-shadow), .38),
+            0 1px 0 rgba(255,255,255,.22) inset,
+            0 -1px 0 rgba(0,0,0,.12) inset;
+        transition: transform .22s cubic-bezier(.34,1.56,.64,1), box-shadow .22s ease, filter .2s ease;
     }
-
-    /* Subtle glowing glass effect top */
+    /* top gloss shine */
     .qa-btn::before {
         content: '';
         position: absolute;
         top: 0; left: 0; right: 0;
-        height: 1.75rem;
-        background: linear-gradient(180deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 100%);
+        height: 55%;
+        background: linear-gradient(180deg, rgba(255,255,255,.22) 0%, rgba(255,255,255,0) 100%);
         border-radius: inherit;
         pointer-events: none;
     }
-
-    /* ── Hover Effects ── */
-    .qa-btn:hover {
-        transform: translateY(-4px) scale(1.02);
-        box-shadow: 0 12px 25px rgba(var(--qa-shadow), 0.35); /* scale + elevation */
+    /* bottom depth strip */
+    .qa-btn::after {
+        content: '';
+        position: absolute;
+        bottom: 0; left: 0; right: 0;
+        height: 4px;
+        background: rgba(0,0,0,.18);
+        border-radius: 0 0 18px 18px;
+        pointer-events: none;
     }
-
+    .qa-btn:hover {
+        transform: translateY(-6px) scale(1.03);
+        box-shadow:
+            0 14px 36px rgba(var(--qa-shadow), .45),
+            0 1px 0 rgba(255,255,255,.25) inset;
+        filter: brightness(1.08);
+        color: #fff;
+        text-decoration: none;
+    }
     .qa-btn:active {
-        transform: translateY(0) scale(0.98);
-        box-shadow: 0 4px 10px rgba(var(--qa-shadow), 0.2);
+        transform: translateY(-2px) scale(1.01);
+        box-shadow: 0 6px 16px rgba(var(--qa-shadow), .35);
     }
 
     /* ── Icon circle ── */
     .qa-btn-icon-wrap {
-        width: 52px; height: 52px;
+        width: 56px; height: 56px;
         border-radius: 50%;
-        background: rgba(255,255,255,0.2) !important; /* Soft background inner circle */
+        background: rgba(255,255,255,.22);
         display: flex; align-items: center; justify-content: center;
         flex-shrink: 0;
-        /* backdrop-filter: blur(4px); */
+        backdrop-filter: blur(6px);
+        border: 1.5px solid rgba(255,255,255,.35);
+        box-shadow: 0 2px 8px rgba(0,0,0,.12);
     }
-    .qa-btn-icon-wrap svg { 
-        width: 28px; height: 28px; /* Slightly bigger */
-        color: #fff; 
-    }
+    .qa-btn-icon-wrap svg { width: 26px; height: 26px; color: #fff; }
 
     /* ── Label ── */
     .qa-btn-label {
         max-width: 100%;
-        text-shadow: 0 1px 2px rgba(0,0,0,0.15); /* Boost readability */
+        font-size: .84rem;
+        font-weight: 800;
+        letter-spacing: -.02em;
+        text-shadow: 0 1px 3px rgba(0,0,0,.2);
+        line-height: 1.3;
         word-break: break-word;
-        letter-spacing: 0.01em;
     }
-
-    /* ── Staggered Reveal Animation ── */
-    .qa-btn:nth-child(1) { animation: fadeUp 0.6s 0.05s ease-out forwards; opacity: 0; }
-    .qa-btn:nth-child(2) { animation: fadeUp 0.6s 0.10s ease-out forwards; opacity: 0; }
-    .qa-btn:nth-child(3) { animation: fadeUp 0.6s 0.15s ease-out forwards; opacity: 0; }
-    .qa-btn:nth-child(4) { animation: fadeUp 0.6s 0.20s ease-out forwards; opacity: 0; }
-    .qa-btn:nth-child(5) { animation: fadeUp 0.6s 0.25s ease-out forwards; opacity: 0; }
-    .qa-btn:nth-child(6) { animation: fadeUp 0.6s 0.30s ease-out forwards; opacity: 0; }
-    .qa-btn:nth-child(7) { animation: fadeUp 0.6s 0.35s ease-out forwards; opacity: 0; }
-    .qa-btn:nth-child(8) { animation: fadeUp 0.6s 0.40s ease-out forwards; opacity: 0; }
 </style>
 
     <div class="qa-card">
+
         {{-- Header --}}
         <div class="qa-header">
             <div class="qa-header-icon">
@@ -178,7 +166,7 @@
             </div>
         </div>
 
-        {{-- Grid --}}
+        {{-- 4 × 2 grid --}}
         <div class="qa-grid">
             @foreach($this->getActions() as $action)
                 @php
@@ -201,5 +189,6 @@
                 </a>
             @endforeach
         </div>
+
     </div>
 </x-filament-widgets::widget>

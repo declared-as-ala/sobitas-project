@@ -208,7 +208,7 @@ Route::middleware(['auth'])->group(function () {
         }
         $totals[] = ['label' => 'TVA', 'value' => number_format($calcTotals['tva'], 3, ',', ' ') . ' DT'];
         if ($calcTotals['timbre'] > 0) {
-            $totals[] = ['label' => 'Timbre', 'value' => number_format($calcTotals['timbre'], 3, ',', ' ') . ' DT'];
+            $totals[] = ['label' => 'Timbre fiscal', 'value' => number_format($calcTotals['timbre'], 3, ',', ' ') . ' DT'];
         }
         // Total à payer = TTC lignes + timbre (aligné sur net_a_payer / écran devis)
         $totals[] = ['label' => 'TOTAL TTC (Net à payer)', 'value' => number_format($calcTotals['net_a_payer'], 3, ',', ' ') . ' DT', 'class' => 'ttc'];

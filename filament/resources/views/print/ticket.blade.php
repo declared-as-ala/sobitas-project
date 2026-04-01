@@ -22,7 +22,6 @@
     $timeStr = $documentTime ?? $ticket->created_at?->format('H:i') ?? '';
     $prixHt = (float) ($ticket->prix_ht ?? $ticket->prix_total ?? 0);
     $prixTtc = (float) ($ticket->prix_ttc ?? $ticket->prix_total ?? 0);
-    $siteWebLower = mb_strtolower((string) ($coordonnee->site_web ?? ''), 'UTF-8');
 @endphp
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro&display=swap');
@@ -48,39 +47,7 @@
     tfoot tr:last-child td:first-child, tfoot tr:last-child td:last-child { font-weight: bold; font-size: 20px; }
     .date_time_con { display: flex; justify-content: center; column-gap: 25px; }
     .items { margin-top: 25px; }
-    .ticket-site-block { text-align: center; max-width: 100%; }
-    .ticket-site-heading {
-        border-top: 1px dashed #000;
-        padding-top: 10px;
-        margin-top: 25px;
-        text-align: center;
-        text-transform: uppercase;
-        font-size: 1em;
-        font-weight: 600;
-    }
-    .ticket-site-url {
-        display: block;
-        margin-top: 8px;
-        margin-bottom: 12px;
-        text-transform: none;
-        font-weight: 600;
-        font-size: 14px;
-        line-height: 1.35;
-        word-break: break-word;
-        color: #000;
-    }
-    .ticket-qr-wrap {
-        margin: 0 auto;
-        display: inline-block;
-        line-height: 0;
-    }
-    .ticket-site-hint {
-        margin-top: 10px;
-        font-size: 9.5px;
-        font-weight: 400;
-        line-height: 1.35;
-        color: #444;
-    }
+    h3 { border-top: 1px dashed #000; padding-top: 10px; margin-top: 25px; text-align: center; text-transform: uppercase; }
     .hide_print { display: block; }
     @media print { .hide_print { display: none; } }
     .btn { -webkit-font-smoothing: subpixel-antialiased; border-radius: 3px; font-size: 14px; line-height: 1.57142857; padding: 6px 15px; text-decoration: none; display: inline-block; }
@@ -161,22 +128,16 @@
     </div>
     <br><br>
     <h4>{{ $coordonnee->footer_ticket ?? '' }}</h4>
-    <div class="ticket-site-block">
-        <h3 class="ticket-site-heading">Notre site web</h3>
-        @if (!empty($coordonnee->site_web))
-            <span class="ticket-site-url">{{ $siteWebLower }}</span>
-            <div class="ticket-qr-wrap">
-                <img
-                    src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data={{ urlencode($coordonnee->site_web) }}"
-                    alt="QR code site web"
-                    width="120"
-                    height="120"
-                    style="width: 120px; height: 120px; max-width: 100%; display: block;"
-                >
-            </div>
-            <p class="ticket-site-hint">Scanner pour visiter le site web</p>
-        @endif
-    </div>
+    <h3>Notre site web <br>{{ $coordonnee->site_web ?? '' }}</h3>
+    @if (!empty($coordonnee->site_web))
+        <div style="margin-top: 8px; text-align: center;">
+            <img
+                src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data={{ urlencode($coordonnee->site_web) }}"
+                alt="QR code site web"
+                style="width: 120px; height: 120px;"
+            >
+        </div>
+    @endif
 </div>
 </body>
 </html>
