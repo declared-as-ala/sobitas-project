@@ -8,9 +8,15 @@
     <title>Facture {{ $facture->numero ?? '' }}</title>
 </head>
 <body>
-@include('print._logo')
 @php
     $coordonnee = $coordonnee ?? $company ?? null;
+    // Logo must be set here; @include('print._logo') runs in a child scope and does not expose $logoUrl to this view.
+    $logoUrl = null;
+    $staticLogoPath = resource_path('views/print/logo_print.png');
+    if (is_file($staticLogoPath)) {
+        $mime    = @mime_content_type($staticLogoPath) ?: 'image/png';
+        $logoUrl = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($staticLogoPath));
+    }
     if (!isset($calcTotals) && isset($facture, $details_facture)) {
         $defaultTva = $coordonnee && isset($coordonnee->tva) ? (float) $coordonnee->tva : 19;
         $calcTotals = \App\Services\InvoiceCalculator::calculate(

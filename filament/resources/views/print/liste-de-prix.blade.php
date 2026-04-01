@@ -11,9 +11,14 @@
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js"></script>
 </head>
 <body>
-@include('print._logo')
 @php
     $coordonnee = $coordonnee ?? $company ?? null;
+    $logoUrl = null;
+    $staticLogoPath = resource_path('views/print/logo_print.png');
+    if (is_file($staticLogoPath)) {
+        $mime    = @mime_content_type($staticLogoPath) ?: 'image/png';
+        $logoUrl = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($staticLogoPath));
+    }
 @endphp
 <style>
     #invoice { padding: 30px; }

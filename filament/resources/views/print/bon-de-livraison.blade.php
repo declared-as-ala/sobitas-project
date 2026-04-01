@@ -8,9 +8,14 @@
     <title>Bon de livraison {{ $facture->numero ?? $facture->id }}</title>
 </head>
 <body>
-@include('print._logo')
 @php
     $coordonnee = $coordonnee ?? $company ?? null;
+    $logoUrl = null;
+    $staticLogoPath = resource_path('views/print/logo_print.png');
+    if (is_file($staticLogoPath)) {
+        $mime    = @mime_content_type($staticLogoPath) ?: 'image/png';
+        $logoUrl = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($staticLogoPath));
+    }
     $client = $client ?? $facture->client;
     $clientAddress = trim((string) ($facture->formatted_delivery_address ?? '')) !== ''
         ? $facture->formatted_delivery_address
