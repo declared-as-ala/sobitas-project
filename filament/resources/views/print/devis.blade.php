@@ -14,8 +14,15 @@
 @php
     $coordonnee = $coordonnee ?? $company ?? null;
 
-    $logoFactureUrl = $coordonnee ? \App\Models\Coordinate::publicLogoFacturePrintUrl($coordonnee) : null;
-    $logoUrl = $logoFactureUrl;
+    $logoUrl = null;
+    $publicLogoPath = public_path('logo.png');
+    if (is_file($publicLogoPath)) {
+        $mime = @mime_content_type($publicLogoPath) ?: 'image/png';
+        $logoUrl = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($publicLogoPath));
+    }
+    if ($logoUrl === null && $coordonnee) {
+        $logoUrl = \App\Models\Coordinate::publicLogoFacturePrintUrl($coordonnee);
+    }
     if ($logoUrl === null) {
         $staticLogoPath = resource_path('views/print/logo_print.png');
         if (is_file($staticLogoPath)) {
