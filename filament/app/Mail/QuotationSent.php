@@ -29,10 +29,35 @@ class QuotationSent extends Mailable
         $defaultTva = $coordonnee && isset($coordonnee->tva) ? (float) $coordonnee->tva : 19;
         $devis_lines = \App\Services\DevisCalculator::lines($this->quotation->details, $defaultTva)['lines'];
 
+        $detailsForCalc = $this->quotation->details->map(fn ($d) => [
+            'produit_id' => $d->produit_id,
+            'qte' => (int) ($d->qte ?? $d->quantite ?? 1),
+            'prix_unitaire' => (float) ($d->prix_unitaire ?? 0),
+            'tva_pct' => (float) ($d->tva ?? $defaultTva),
+        ])->toArray();
+        $calcTotals = \App\Services\InvoiceCalculator::calculate(
+            $detailsForCalc,
+            (float) ($this->quotation->remise ?? 0),
+            (float) ($this->quotation->timbre ?? 0),
+            $defaultTva
+        );
+
+        $totals = [
+            ['label' => 'Total HT', 'value' => number_format($calcTotals['total_ht_brut'], 3, ',', ' ') . ' DT'],
+        ];
+        if ($calcTotals['remise'] > 0) {
+            $totals[] = ['label' => 'Remise', 'value' => number_format($calcTotals['remise'], 3, ',', ' ') . ' DT'];
+        }
+        $totals[] = ['label' => 'TVA', 'value' => number_format($calcTotals['tva'], 3, ',', ' ') . ' DT'];
+        $totals[] = ['label' => 'Timbre fiscal', 'value' => number_format($calcTotals['timbre'], 3, ',', ' ') . ' DT'];
+        $totals[] = ['label' => 'TOTAL TTC (Net à payer)', 'value' => number_format($calcTotals['net_a_payer'], 3, ',', ' ') . ' DT', 'class' => 'ttc'];
+
         $this->sharedData = [
             'facture' => $this->quotation,
             'details_facture' => $this->quotation->details,
             'devis_lines' => $devis_lines,
+            'calcTotals' => $calcTotals,
+            'totals' => $totals,
             'coordonnee' => $coordonnee,
             'company' => $coordonnee,
             'documentTitle' => 'Devis',
@@ -40,12 +65,7 @@ class QuotationSent extends Mailable
             'documentDate' => $this->quotation->date_quotation ? \Carbon\Carbon::parse($this->quotation->date_quotation)->format('d/m/Y') : ($this->quotation->created_at?->format('d/m/Y') ?? ''),
             'client' => $this->quotation->client,
             'customMessage' => $customMessage,
-            'totals' => [
-                ['label' => 'Total HT', 'value' => number_format((float)($this->quotation->prix_ht ?? $this->quotation->prix_total ?? 0), 3, ',', ' ') . ' DT'],
-                ['label' => 'TVA', 'value' => number_format((float)($this->quotation->tva ?? 0), 3, ',', ' ') . ' DT'],
-                ['label' => 'Net à payer TTC', 'value' => number_format((float)($this->quotation->net_a_payer ?? $this->quotation->prix_ttc ?? $this->quotation->prix_total ?? 0), 3, ',', ' ') . ' DT', 'class' => 'net-a-payer'],
-            ],
-            'footerNote' => $coordonnee && !empty($coordonnee->note) ? $coordonnee->note : null,
+            'noteDevis' => $coordonnee ? ($coordonnee->note_devis ?? null) : null,
             'paymentTerms' => 'Valable 30 jours. Paiement à la commande ou à la livraison.',
             'forPdf' => true,
         ];

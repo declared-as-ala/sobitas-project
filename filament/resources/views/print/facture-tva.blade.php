@@ -268,15 +268,16 @@
                 </header>
 
                 <main>
-                    @if ($facture->client ?? null)
+                    @php $printClient = $client ?? $facture->client ?? null; @endphp
+                    @if ($printClient)
                         <section class="inv-client">
                             <h2>Informations du client</h2>
-                            <p><b>Nom :</b> {{ $facture->client->name }}</p>
-                            <p><b>Adresse :</b> {{ $facture->client->adresse }}</p>
-                            @if ($facture->client->matricule)
-                                <p><b>Matricule :</b> {{ $facture->client->matricule }}</p>
+                            <p><b>Nom :</b> {{ $printClient->name }}</p>
+                            <p><b>Adresse :</b> {{ $printClient->adresse }}</p>
+                            @if (filled($printClient->matricule))
+                                <p><b>Matricule :</b> {{ $printClient->matricule }}</p>
                             @endif
-                            <p><b>Numéro de téléphone :</b> {{ $facture->client->phone_1 }}</p>
+                            <p><b>Numéro de téléphone :</b> {{ $printClient->phone_1 }}</p>
                         </section>
                     @endif
 
