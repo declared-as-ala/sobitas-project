@@ -23,40 +23,26 @@ class QuotationSent extends Mailable
     {
         $this->quotation = $quotation;
         $this->customMessage = $customMessage;
-        
+
         $this->quotation->load('client', 'details.product:id,designation_fr');
         $coordonnee = \App\Models\Coordinate::first();
         $defaultTva = $coordonnee && isset($coordonnee->tva) ? (float) $coordonnee->tva : 19;
         $devis_lines = \App\Services\DevisCalculator::lines($this->quotation->details, $defaultTva)['lines'];
 
-        $detailsForCalc = $this->quotation->details->map(fn ($d) => [
-            'produit_id' => $d->produit_id,
-            'qte' => (int) ($d->qte ?? $d->quantite ?? 1),
-            'prix_unitaire' => (float) ($d->prix_unitaire ?? 0),
-            'tva_pct' => (float) ($d->tva ?? $defaultTva),
-        ])->toArray();
-        $calcTotals = \App\Services\InvoiceCalculator::calculate(
-            $detailsForCalc,
-            (float) ($this->quotation->remise ?? 0),
-            (float) ($this->quotation->timbre ?? 0),
-            $defaultTva
-        );
-
+        $q = $this->quotation;
         $totals = [
-            ['label' => 'Total HT', 'value' => number_format($calcTotals['total_ht_brut'], 3, ',', ' ') . ' DT'],
+            ['label' => 'Totale HT', 'value' => number_format((float) ($q->prix_ht ?? 0), 3, ',', ' ') . ' DT'],
         ];
-        if ($calcTotals['remise'] > 0) {
-            $totals[] = ['label' => 'Remise', 'value' => number_format($calcTotals['remise'], 3, ',', ' ') . ' DT'];
+        if (($q->remise ?? 0) > 0) {
+            $totals[] = ['label' => 'Remise', 'value' => number_format((float) $q->remise, 3, ',', ' ') . ' DT'];
         }
-        $totals[] = ['label' => 'TVA', 'value' => number_format($calcTotals['tva'], 3, ',', ' ') . ' DT'];
-        $totals[] = ['label' => 'Timbre fiscal', 'value' => number_format($calcTotals['timbre'], 3, ',', ' ') . ' DT'];
-        $totals[] = ['label' => 'TOTAL TTC (Net à payer)', 'value' => number_format($calcTotals['net_a_payer'], 3, ',', ' ') . ' DT', 'class' => 'ttc'];
+        $totals[] = ['label' => 'TVA', 'value' => number_format((float) ($q->tva ?? 0), 3, ',', ' ') . ' DT'];
+        $totals[] = ['label' => 'Totale TTC', 'value' => number_format((float) ($q->prix_ttc ?? 0), 3, ',', ' ') . ' DT', 'class' => 'ttc'];
 
         $this->sharedData = [
             'facture' => $this->quotation,
             'details_facture' => $this->quotation->details,
             'devis_lines' => $devis_lines,
-            'calcTotals' => $calcTotals,
             'totals' => $totals,
             'coordonnee' => $coordonnee,
             'company' => $coordonnee,
