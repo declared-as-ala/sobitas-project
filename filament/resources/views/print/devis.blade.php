@@ -45,8 +45,8 @@
 
     $dateStr = $documentDate
         ?? ($facture->date_quotation
-            ? \Carbon\Carbon::parse($facture->date_quotation)->format('d-m-Y')
-            : ($facture->created_at?->format('d-m-Y') ?? ''));
+            ? \Carbon\Carbon::parse($facture->date_quotation)->format('d/m/Y')
+            : ($facture->created_at?->format('d/m/Y') ?? ''));
 
     $devisLineList = is_array($devis_lines ?? null) ? $devis_lines : [];
 @endphp
@@ -102,16 +102,15 @@
                     @endif
 
                     <div class="doc-a4-table-wrap">
-                        <table class="doc-a4-lines doc-a4-lines--7">
+                        <table class="doc-a4-lines">
                             <thead>
                                 <tr>
                                     <th class="doc-a4-col-num">#</th>
                                     <th class="doc-a4-col-prod">Produit</th>
                                     <th class="doc-a4-col-numcell">Qté</th>
                                     <th class="doc-a4-col-numcell">P.U. HT</th>
+                                    <th class="doc-a4-col-numcell">TVA</th>
                                     <th class="doc-a4-col-numcell">Total HT</th>
-                                    <th class="doc-a4-col-numcell">TVA (DT)</th>
-                                    <th class="doc-a4-col-numcell">Total TTC</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -123,18 +122,16 @@
                                             @php
                                                 $qte = (int) ($d->qte ?? $d->quantite ?? 0);
                                                 $puHt = (float) ($d->prix_unitaire ?? 0);
+                                                $tp = (float) ($line['line_tva_pct'] ?? $defaultTva);
                                                 $ltHt = (float) ($line['line_total_ht'] ?? round($qte * $puHt, 3));
-                                                $ltTvaDt = (float) ($line['line_tva_dt'] ?? round($ltHt * ($line['line_tva_pct'] ?? $defaultTva) / 100, 3));
-                                                $ltTtc = (float) ($line['line_total_ttc'] ?? round($ltHt + $ltTvaDt, 3));
                                             @endphp
                                             <tr>
                                                 <td class="doc-a4-td-num">{{ $rowNum }}</td>
                                                 <td class="doc-a4-td-prod">{{ $d->product->designation_fr ?? '—' }}</td>
                                                 <td class="doc-a4-td-right">{{ $qte }}</td>
                                                 <td class="doc-a4-td-right">{{ number_format($puHt, 3, '.', '') }}</td>
+                                                <td class="doc-a4-td-right">{{ $tp }} %</td>
                                                 <td class="doc-a4-td-right">{{ number_format($ltHt, 3, '.', '') }}</td>
-                                                <td class="doc-a4-td-right">{{ number_format($ltTvaDt, 3, '.', '') }}</td>
-                                                <td class="doc-a4-td-right">{{ number_format($ltTtc, 3, '.', '') }}</td>
                                             </tr>
                                             @php $rowNum++; @endphp
                                         @endif
@@ -146,17 +143,14 @@
                                             $puHt = (float) ($details->prix_unitaire ?? 0);
                                             $tp = (float) ($details->tva ?? ($coordonnee->tva ?? 19));
                                             $ltHt = round($qte * $puHt, 3);
-                                            $ltTvaDt = round($ltHt * $tp / 100, 3);
-                                            $ltTtc = round($ltHt + $ltTvaDt, 3);
                                         @endphp
                                         <tr>
                                             <td class="doc-a4-td-num">{{ $rowNum }}</td>
                                             <td class="doc-a4-td-prod">{{ $details->product->designation_fr ?? '—' }}</td>
                                             <td class="doc-a4-td-right">{{ $qte }}</td>
                                             <td class="doc-a4-td-right">{{ number_format($puHt, 3, '.', '') }}</td>
+                                            <td class="doc-a4-td-right">{{ $tp }} %</td>
                                             <td class="doc-a4-td-right">{{ number_format($ltHt, 3, '.', '') }}</td>
-                                            <td class="doc-a4-td-right">{{ number_format($ltTvaDt, 3, '.', '') }}</td>
-                                            <td class="doc-a4-td-right">{{ number_format($ltTtc, 3, '.', '') }}</td>
                                         </tr>
                                         @php $rowNum++; @endphp
                                     @endforeach
@@ -182,7 +176,7 @@
                                 <td>{{ number_format($footerTva, 3, '.', '') }}</td>
                             </tr>
                             <tr>
-                                <td>Timbre</td>
+                                <td>Timbre fiscal</td>
                                 <td>{{ number_format($footerTimbre, 3, '.', '') }}</td>
                             </tr>
                             <tr class="doc-a4-totals__grand">
@@ -200,9 +194,6 @@
                     </div>
                     @if (! empty($noteDevis ?? $coordonnee->note_devis ?? null))
                         <div class="doc-a4-note-extra">{{ $noteDevis ?? $coordonnee->note_devis }}</div>
-                    @endif
-                    @if (! empty($footerNote ?? null))
-                        <div class="doc-a4-note-extra">{{ $footerNote }}</div>
                     @endif
                     @if (! empty($paymentTerms ?? null))
                         <p class="doc-a4-payment-terms">{{ $paymentTerms }}</p>

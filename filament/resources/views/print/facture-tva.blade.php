@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" rel="stylesheet">
     <title>Facture {{ $facture->numero ?? '' }}</title>
 </head>
 <body class="doc-a4-print @if(!empty($forPdf)) is-pdf-print @endif">
@@ -50,7 +49,7 @@
         </div>
         @endif
 
-        <div class="invoice overflow-auto">
+        <div class="invoice">
             <div class="doc-a4-main-wrap" style="min-width: 600px">
                 <header class="doc-a4-header">
                     <div class="doc-a4-header__brand">
@@ -155,7 +154,7 @@
                                 <td>{{ number_format($footerTva, 3, '.', '') }}</td>
                             </tr>
                             <tr>
-                                <td>Timbre</td>
+                                <td>Timbre fiscal</td>
                                 <td>{{ number_format($footerTimbre, 3, '.', '') }}</td>
                             </tr>
                             <tr class="doc-a4-totals__grand">

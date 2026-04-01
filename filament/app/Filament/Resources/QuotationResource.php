@@ -92,7 +92,7 @@ class QuotationResource extends Resource
         return $table
             // PERF: Select only needed columns + eager load client
             ->modifyQueryUsing(fn (Builder $query) => $query
-                ->select(['quotations.id', 'quotations.numero', 'quotations.client_id', 'quotations.remise', 'quotations.prix_ht', 'quotations.prix_ttc', 'quotations.tva', 'quotations.timbre', 'quotations.pourcentage_remise', 'quotations.created_at'])
+                ->select(['quotations.id', 'quotations.numero', 'quotations.client_id', 'quotations.prix_ttc', 'quotations.created_at'])
                 ->with('client:id,name')
             )
             ->striped()
@@ -106,35 +106,6 @@ class QuotationResource extends Resource
                     ->label('Client')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('prix_ht')
-                    ->label('Total HT')
-                    ->money('TND', divideBy: 1)
-                    ->sortable()
-                    ->alignEnd(),
-                Tables\Columns\TextColumn::make('remise')
-                    ->label('Remise')
-                    ->money('TND', divideBy: 1)
-                    ->sortable()
-                    ->alignEnd()
-                    ->placeholder('—'),
-                Tables\Columns\TextColumn::make('pourcentage_remise')
-                    ->label('Remise %')
-                    ->suffix(' %')
-                    ->sortable()
-                    ->alignEnd()
-                    ->placeholder('—'),
-                Tables\Columns\TextColumn::make('tva')
-                    ->label('TVA')
-                    ->money('TND', divideBy: 1)
-                    ->sortable()
-                    ->alignEnd()
-                    ->placeholder('—'),
-                Tables\Columns\TextColumn::make('timbre')
-                    ->label('Timbre')
-                    ->money('TND', divideBy: 1)
-                    ->sortable()
-                    ->alignEnd()
-                    ->placeholder('—'),
                 Tables\Columns\TextColumn::make('prix_ttc')
                     ->label('Net à payer')
                     ->money('TND', divideBy: 1)

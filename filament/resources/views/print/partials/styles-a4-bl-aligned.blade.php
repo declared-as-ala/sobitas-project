@@ -34,6 +34,11 @@
     body.doc-a4-print.is-pdf-print #invoice.doc-a4-shell .doc-a4-main-wrap {
         flex: 1 1 auto;
         min-height: 0;
+        display: flex;
+        flex-direction: column;
+    }
+    body.doc-a4-print.is-pdf-print #invoice.doc-a4-shell .doc-a4-main-wrap > main {
+        flex: 1 1 auto;
     }
 
     .doc-a4-toolbar { text-align: right; margin-bottom: 10px; }
@@ -116,9 +121,6 @@
     table.doc-a4-lines thead th.doc-a4-col-num { width: 5%; text-align: center; }
     table.doc-a4-lines thead th.doc-a4-col-prod { width: 34%; }
     table.doc-a4-lines thead th.doc-a4-col-numcell { width: 11%; text-align: right; }
-    /* Devis 7 columns: tighter product, more numeric cols */
-    table.doc-a4-lines.doc-a4-lines--7 thead th.doc-a4-col-prod { width: 22%; }
-    table.doc-a4-lines.doc-a4-lines--7 thead th.doc-a4-col-numcell { width: 9.5%; }
     table.doc-a4-lines tbody td {
         padding: 9px 10px;
         border: 1px solid #e2e8f0;
