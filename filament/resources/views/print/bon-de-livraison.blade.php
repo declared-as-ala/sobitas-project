@@ -21,8 +21,7 @@
         ? $facture->formatted_delivery_address
         : ($client?->adresse ?? '');
     $frais = (float) ($calc_frais ?? $facture->frais_livraison ?? 0);
-    $netPay = (float) ($calc_net_a_payer ?? max((float) ($facture->prix_ttc ?? 0) - (float) ($facture->timbre ?? 0), 0));
-    $dateStr = $documentDate ?? ($facture->created_at?->format('d-m-Y') ?? '');
+    $netAPayer = (float) ($calc_net_a_payer ?? max((float) ($facture->prix_ttc ?? 0) - (float) ($facture->timbre ?? 0), 0));
 @endphp
 
 <style>
@@ -37,8 +36,9 @@
         background: #fff;
     }
     #invoice { padding: 24px 28px 32px; max-width: 900px; margin: 0 auto; }
-    .inv-toolbar { text-align: right; margin-bottom: 12px; }
-    .btn-inv {
+
+    .bl-toolbar { text-align: right; margin-bottom: 10px; }
+    .bl-btn {
         display: inline-block;
         background: #2563eb;
         color: #fff !important;
@@ -50,47 +50,49 @@
         text-decoration: none;
         margin-left: 8px;
     }
-    .btn-inv--muted { background: #64748b; }
+    .bl-btn--muted { background: #64748b; }
 
-    .inv-header {
+    .bl-header {
         display: table;
         width: 100%;
-        margin-bottom: 20px;
-        padding-bottom: 16px;
+        margin-bottom: 16px;
+        padding-bottom: 14px;
         border-bottom: 3px solid #ff4000;
     }
-    .inv-header__brand { display: table-cell; vertical-align: top; width: 58%; }
-    .inv-header__meta { display: table-cell; vertical-align: top; width: 42%; text-align: right; }
-    .inv-header__meta h1 {
+    .bl-header__brand { display: table-cell; vertical-align: top; width: 58%; }
+    .bl-header__meta { display: table-cell; vertical-align: top; width: 42%; text-align: right; }
+    .bl-header__meta h1 {
         margin: 0 0 8px;
-        font-size: 26pt;
+        font-size: 22pt;
         font-weight: 800;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.03em;
         color: #0f172a;
+        text-transform: uppercase;
     }
-    .inv-header__meta .inv-meta-line { font-size: 10.5pt; color: #334155; line-height: 1.6; }
-    .inv-co-name { font-size: 13pt; font-weight: 700; margin: 8px 0 6px; color: #0f172a; }
-    .inv-co-line { font-size: 9.5pt; color: #475569; line-height: 1.55; }
+    .bl-header__meta .bl-meta-line { font-size: 10.5pt; color: #334155; line-height: 1.6; }
+    .bl-co-name { font-size: 13pt; font-weight: 700; margin: 8px 0 6px; color: #0f172a; }
+    .bl-co-line { font-size: 9.5pt; color: #475569; line-height: 1.55; }
 
-    .inv-client {
-        margin: 18px 0 16px;
-        padding: 12px 14px;
+    .bl-client {
+        margin: 14px 0 12px;
+        padding: 10px 12px;
         background: #f8fafc;
         border-radius: 6px;
         border-left: 4px solid #ff4000;
     }
-    .inv-client h2 {
-        margin: 0 0 10px;
+    .bl-client h2 {
+        margin: 0 0 8px;
         font-size: 9pt;
         font-weight: 700;
         letter-spacing: 0.08em;
         text-transform: uppercase;
         color: #64748b;
     }
-    .inv-client p { margin: 0 0 4px; font-size: 10pt; color: #334155; }
+    .bl-client p { margin: 0 0 4px; font-size: 10pt; color: #334155; }
 
-    .inv-table-wrap { width: 100%; margin: 0; overflow: visible; }
-    table.inv-lines {
+    /* Lines: single table, full grid — no tfoot colspan bugs */
+    .bl-table-wrap { width: 100%; margin: 0 0 0; }
+    table.bl-lines {
         width: 100%;
         border-collapse: collapse;
         border-spacing: 0;
@@ -98,14 +100,14 @@
         font-size: 10pt;
         border: 1px solid #e2e8f0;
     }
-    table.inv-lines thead th {
+    table.bl-lines thead th {
         background: #ff4000 !important;
         background-color: #ff4000 !important;
         color: #fff !important;
         font-weight: 700;
         font-size: 8.5pt;
         text-transform: uppercase;
-        letter-spacing: 0.06em;
+        letter-spacing: 0.05em;
         padding: 10px 10px;
         text-align: left;
         border: 1px solid #ff4000;
@@ -113,64 +115,56 @@
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
     }
-    table.inv-lines thead th.inv-col-num { width: 6%; text-align: center; }
-    table.inv-lines thead th.inv-col-prod { width: 38%; }
-    table.inv-lines.inv-lines--bl thead th.inv-col-numcell { width: 14%; text-align: right; }
-    table.inv-lines tbody td {
+    table.bl-lines thead th.bl-col-num { width: 6%; text-align: center; }
+    table.bl-lines thead th.bl-col-prod { width: 38%; }
+    table.bl-lines thead th.bl-col-numcell { width: 14%; text-align: right; }
+    table.bl-lines tbody td {
         padding: 9px 10px;
         border: 1px solid #e2e8f0;
         vertical-align: middle;
         background: #fff;
     }
-    table.inv-lines tbody tr:nth-child(even) td { background: #f8fafc; }
-    table.inv-lines .inv-td-num { text-align: center; color: #64748b; font-weight: 600; }
-    table.inv-lines .inv-td-prod { text-align: left; font-weight: 600; color: #0f172a; word-wrap: break-word; }
-    table.inv-lines .inv-td-right { text-align: right; font-variant-numeric: tabular-nums; }
+    table.bl-lines tbody tr:nth-child(even) td { background: #f8fafc; }
+    table.bl-lines .bl-td-num { text-align: center; color: #64748b; font-weight: 600; }
+    table.bl-lines .bl-td-prod { text-align: left; font-weight: 600; color: #0f172a; word-wrap: break-word; }
+    table.bl-lines .bl-td-right { text-align: right; font-variant-numeric: tabular-nums; }
 
-    .inv-totals-wrap {
-        width: 100%;
-        margin-top: 14px;
-        margin-bottom: 8px;
-    }
-    table.inv-totals {
+    /* Totals: delivery note — HT, remise, %, frais, montant à payer (no TTC invoice branding) */
+    .bl-totals-wrap { width: 100%; margin-top: 12px; margin-bottom: 6px; }
+    table.bl-totals {
         width: 100%;
         max-width: 360px;
         margin-left: auto;
         border-collapse: collapse;
         font-size: 10.5pt;
     }
-    table.inv-totals td {
-        padding: 6px 0 6px 12px;
+    table.bl-totals td {
+        padding: 5px 0 5px 8px;
         border: none;
         vertical-align: middle;
     }
-    table.inv-totals td:first-child {
+    table.bl-totals td:first-child {
         text-align: left;
         color: #475569;
         font-weight: 500;
-        padding-left: 0;
-        white-space: nowrap;
     }
-    table.inv-totals td:last-child {
+    table.bl-totals td:last-child {
         text-align: right;
         font-variant-numeric: tabular-nums;
         font-weight: 600;
         color: #0f172a;
-        width: 38%;
+        width: 42%;
     }
-    table.inv-totals tr.inv-totals__grand td {
-        padding-top: 12px;
-        padding-bottom: 10px;
+    table.bl-totals tr.bl-totals__grand td {
+        padding-top: 10px;
+        padding-bottom: 8px;
         border-top: 2px solid #0f172a;
         font-size: 12pt;
         font-weight: 800;
         color: #0f172a;
     }
-    table.inv-totals tr.inv-totals__grand td:first-child {
-        color: #0f172a;
-        font-weight: 800;
-    }
-    table.inv-totals tr.inv-totals__grand td:last-child {
+    table.bl-totals tr.bl-totals__grand td:first-child { font-weight: 800; color: #0f172a; }
+    table.bl-totals tr.bl-totals__grand td:last-child {
         background: #fff7ed !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
@@ -179,8 +173,8 @@
         border-radius: 4px;
     }
 
-    .inv-note {
-        margin: 18px 0 12px;
+    .bl-note {
+        margin: 14px 0 10px;
         padding: 10px 12px 10px 14px;
         border-left: 4px solid #ff4000;
         background: #fffbeb;
@@ -188,9 +182,9 @@
         color: #334155;
         line-height: 1.45;
     }
-    .inv-note strong { color: #c2410c; font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.05em; }
-    .inv-signature {
-        margin: 16px 0 8px;
+    .bl-note strong { color: #c2410c; font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.05em; }
+    .bl-signature {
+        margin: 12px 0 6px;
         padding-left: 140px;
         font-size: 10pt;
         font-weight: 600;
@@ -200,13 +194,13 @@
 
     .hide_print { display: initial; }
     @media print {
-        html, body, table.inv-lines thead th, table.inv-totals tr.inv-totals__grand td:last-child {
+        html, body, table.bl-lines thead th, table.bl-totals tr.bl-totals__grand td:last-child {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
         }
         .hide_print { display: none !important; }
         #invoice { padding: 0; max-width: none; }
-        .inv-toolbar { display: none; }
+        .bl-toolbar { display: none; }
         body { background: #fff; }
     }
 
@@ -216,40 +210,40 @@
 <div class="page-content">
     <div id="invoice">
         @if (empty($forPdf))
-        <div class="inv-toolbar hide_print">
-            <button type="button" class="btn-inv" onclick="window.print()">Imprimer</button>
-            <a class="btn-inv btn-inv--muted" href="{{ $backUrl ?? url()->previous() }}">Retour</a>
+        <div class="bl-toolbar hide_print">
+            <button type="button" class="bl-btn" onclick="window.print()">Imprimer</button>
+            <a class="bl-btn bl-btn--muted" href="{{ $backUrl ?? url()->previous() }}">Retour</a>
         </div>
         @endif
 
         <div class="invoice overflow-auto">
             <div style="min-width: 600px">
-                <header class="inv-header">
-                    <div class="inv-header__brand">
+                <header class="bl-header">
+                    <div class="bl-header__brand">
                         @if ($logoUrl)
                             <img src="{{ $logoUrl }}" alt="" style="max-width: 200px; height: auto; display: block; margin-bottom: 8px;">
                         @endif
-                        <div class="inv-co-name">{{ $coordonnee->abbreviation ?? '' }}</div>
-                        <div class="inv-co-line"><b>Email :</b> {{ $coordonnee->email ?? '' }}</div>
-                        <div class="inv-co-line"><b>Adresse :</b> {{ $coordonnee->adresse_fr ?? '' }}</div>
-                        <div class="inv-co-line"><b>Tél :</b> {{ $coordonnee->phone_1 ?? '' }}@if (!empty($coordonnee->phone_2)) / {{ $coordonnee->phone_2 }}@endif</div>
+                        <div class="bl-co-name">{{ $coordonnee->abbreviation ?? '' }}</div>
+                        <div class="bl-co-line"><b>Email :</b> {{ $coordonnee->email ?? '' }}</div>
+                        <div class="bl-co-line"><b>Adresse :</b> {{ $coordonnee->adresse_fr ?? '' }}</div>
+                        <div class="bl-co-line"><b>Tél :</b> {{ $coordonnee->phone_1 ?? '' }}@if (!empty($coordonnee->phone_2)) / {{ $coordonnee->phone_2 }}@endif</div>
                         @if (!empty($coordonnee->registre_commerce))
-                            <div class="inv-co-line"><b>RC :</b> {{ $coordonnee->registre_commerce }}</div>
+                            <div class="bl-co-line"><b>RC :</b> {{ $coordonnee->registre_commerce }}</div>
                         @endif
                         @if (!empty($coordonnee->matricule))
-                            <div class="inv-co-line"><b>MF :</b> {{ $coordonnee->matricule }}</div>
+                            <div class="bl-co-line"><b>MF :</b> {{ $coordonnee->matricule }}</div>
                         @endif
                     </div>
-                    <div class="inv-header__meta">
-                        <h1>BON DE LIVRAISON</h1>
-                        <div class="inv-meta-line"><b>Date :</b> {{ $dateStr }}</div>
-                        <div class="inv-meta-line"><b>Numéro :</b> {{ $facture->numero }}</div>
+                    <div class="bl-header__meta">
+                        <h1>Bon de livraison</h1>
+                        <div class="bl-meta-line"><b>Date :</b> {{ $documentDate ?? $facture->created_at?->format('d-m-Y') }}</div>
+                        <div class="bl-meta-line"><b>Numéro :</b> {{ $facture->numero }}</div>
                     </div>
                 </header>
 
                 <main>
                     @if ($client)
-                        <section class="inv-client">
+                        <section class="bl-client">
                             <h2>Informations du client</h2>
                             <p><b>Nom :</b> {{ $client->name }}</p>
                             <p><b>Adresse :</b> {{ $clientAddress }}</p>
@@ -260,15 +254,15 @@
                         </section>
                     @endif
 
-                    <div class="inv-table-wrap">
-                        <table class="inv-lines inv-lines--bl">
+                    <div class="bl-table-wrap">
+                        <table class="bl-lines">
                             <thead>
                                 <tr>
-                                    <th class="inv-col-num">#</th>
-                                    <th class="inv-col-prod">Produit</th>
-                                    <th class="inv-col-numcell">Quantité</th>
-                                    <th class="inv-col-numcell">Prix.U</th>
-                                    <th class="inv-col-numcell">Prix T.TTC</th>
+                                    <th class="bl-col-num">#</th>
+                                    <th class="bl-col-prod">Produit</th>
+                                    <th class="bl-col-numcell">Quantité</th>
+                                    <th class="bl-col-numcell">Prix U</th>
+                                    <th class="bl-col-numcell">Prix total</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -277,14 +271,14 @@
                                     @php
                                         $qte = (float) ($details->qte ?? $details->quantite ?? 0);
                                         $pu = (float) ($details->prix_unitaire ?? 0);
-                                        $lineTtc = isset($details->prix_ttc) ? (float) $details->prix_ttc : $qte * $pu;
+                                        $lineTotal = isset($details->prix_ttc) ? (float) $details->prix_ttc : $qte * $pu;
                                     @endphp
                                     <tr>
-                                        <td class="inv-td-num">{{ $i }}</td>
-                                        <td class="inv-td-prod">{{ $details->product->designation_fr ?? '—' }}</td>
-                                        <td class="inv-td-right">{{ $details->qte ?? $details->quantite }}</td>
-                                        <td class="inv-td-right">{{ number_format($pu, 3, '.', '') }}</td>
-                                        <td class="inv-td-right">{{ number_format($lineTtc, 3, '.', '') }}</td>
+                                        <td class="bl-td-num">{{ $i }}</td>
+                                        <td class="bl-td-prod">{{ $details->product->designation_fr ?? '—' }}</td>
+                                        <td class="bl-td-right">{{ $details->qte ?? $details->quantite }}</td>
+                                        <td class="bl-td-right">{{ number_format($pu, 3, '.', '') }}</td>
+                                        <td class="bl-td-right">{{ number_format($lineTotal, 3, '.', '') }}</td>
                                     </tr>
                                     @php $i++; @endphp
                                 @endforeach
@@ -292,14 +286,14 @@
                         </table>
                     </div>
 
-                    <div class="inv-totals-wrap">
-                        <table class="inv-totals">
+                    <div class="bl-totals-wrap">
+                        <table class="bl-totals">
                             <tr>
                                 <td>Montant total HT</td>
                                 <td>{{ number_format((float) ($calc_total_ht ?? $facture->prix_ht ?? 0), 3, '.', '') }}</td>
                             </tr>
                             <tr>
-                                <td>Montant remise</td>
+                                <td>Remise</td>
                                 <td>{{ number_format((float) ($calc_remise ?? $facture->remise ?? 0), 3, '.', '') }}</td>
                             </tr>
                             <tr>
@@ -312,21 +306,21 @@
                                     <td>{{ number_format($frais, 3, '.', '') }}</td>
                                 </tr>
                             @endif
-                            <tr class="inv-totals__grand">
-                                <td>TOTAL TTC (Net à payer)</td>
-                                <td>{{ number_format($netPay, 3, '.', '') }}</td>
+                            <tr class="bl-totals__grand">
+                                <td>Montant total à payer</td>
+                                <td>{{ number_format($netAPayer, 3, '.', '') }}</td>
                             </tr>
                         </table>
                     </div>
 
-                    <input type="hidden" id="totale" value="{{ $netPay }}">
-                    @if (!empty($footerNote) || (!empty($coordonnee->note)))
-                        <div class="inv-note">
+                    <input type="hidden" id="totale" value="{{ $netAPayer }}">
+                    @if (!empty($footerNote) || (!empty($coordonnee) && !empty($coordonnee->note)))
+                        <div class="bl-note">
                             <strong>Note</strong><br>
                             {{ $footerNote ?? $coordonnee->note }}<span id="words"></span>
                         </div>
                     @endif
-                    <div class="inv-signature">Signature et cachet</div>
+                    <div class="bl-signature">Signature et cachet</div>
                 </main>
                 @include('print.partials.footer-rib-numero', ['documentNumero' => $facture->numero ?? ''])
             </div>

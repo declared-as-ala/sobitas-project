@@ -28,7 +28,7 @@
     $footerTva = $ct['tva'] ?? (float) ($facture->tva ?? 0);
     $footerTimbre = $ct['timbre'] ?? (float) ($facture->timbre ?? 0);
     $footerTtc = $ct['net_a_payer'] ?? (float) ($facture->prix_ttc ?? $facture->net_a_payer ?? 0);
-    $devisLineList = $devis_lines ?? [];
+    $devisLineList = is_array($devis_lines ?? null) ? $devis_lines : [];
 @endphp
 <style>
     html {
@@ -164,21 +164,25 @@
                             </thead>
                             <tbody>
                                 @php $i = 1; @endphp
-                                @forelse ($devisLineList as $line)
-                                    @php
-                                        $d = $line['detail'];
-                                        $qte = (int) ($d->qte ?? $d->quantite ?? 0);
-                                    @endphp
-                                    <tr>
-                                        <td @if($i % 2 != 0) style="background-color: #eee !important" @endif>{{ $i }}</td>
-                                        <td @if($i % 2 != 0) style="background-color: #eee !important" @endif>{{ $d->product->designation_fr ?? '—' }}</td>
-                                        <td class="text-center" @if($i % 2 != 0) style="background-color: #eee !important" @endif>{{ $qte }}</td>
-                                        <td class="text-right" @if($i % 2 != 0) style="background-color: #eee !important" @endif>{{ number_format((float) ($d->prix_unitaire ?? 0), 3, '.', '') }}</td>
-                                        <td class="text-right" @if($i % 2 != 0) style="background-color: #eee !important" @endif>{{ $line['line_tva_pct'] }} %</td>
-                                        <td class="text-right" @if($i % 2 != 0) style="background-color: #eee !important" @endif>{{ number_format($line['line_total_ht'], 3, '.', '') }}</td>
-                                    </tr>
-                                    @php $i++; @endphp
-                                @empty
+                                @if (! empty($devisLineList))
+                                    @foreach ($devisLineList as $line)
+                                        @php
+                                            $d = $line['detail'] ?? null;
+                                            $qte = $d ? (int) ($d->qte ?? $d->quantite ?? 0) : 0;
+                                        @endphp
+                                        @if ($d)
+                                            <tr>
+                                                <td @if(($i % 2) != 0) style="background-color: #eee !important" @endif>{{ $i }}</td>
+                                                <td @if(($i % 2) != 0) style="background-color: #eee !important" @endif>{{ $d->product->designation_fr ?? '—' }}</td>
+                                                <td class="text-center" @if(($i % 2) != 0) style="background-color: #eee !important" @endif>{{ $qte }}</td>
+                                                <td class="text-right" @if(($i % 2) != 0) style="background-color: #eee !important" @endif>{{ number_format((float) ($d->prix_unitaire ?? 0), 3, '.', '') }}</td>
+                                                <td class="text-right" @if(($i % 2) != 0) style="background-color: #eee !important" @endif>{{ $line['line_tva_pct'] ?? '' }} %</td>
+                                                <td class="text-right" @if(($i % 2) != 0) style="background-color: #eee !important" @endif>{{ number_format((float) ($line['line_total_ht'] ?? 0), 3, '.', '') }}</td>
+                                            </tr>
+                                            @php $i++; @endphp
+                                        @endif
+                                    @endforeach
+                                @else
                                     @foreach ($details_facture ?? [] as $details)
                                         @php
                                             $qte = (int) ($details->qte ?? $details->quantite ?? 0);
@@ -187,16 +191,16 @@
                                             $lineHt = round($qte * $pu, 3);
                                         @endphp
                                         <tr>
-                                            <td @if($i % 2 != 0) style="background-color: #eee !important" @endif>{{ $i }}</td>
-                                            <td @if($i % 2 != 0) style="background-color: #eee !important" @endif>{{ $details->product->designation_fr ?? '—' }}</td>
-                                            <td class="text-center" @if($i % 2 != 0) style="background-color: #eee !important" @endif>{{ $qte }}</td>
-                                            <td class="text-right" @if($i % 2 != 0) style="background-color: #eee !important" @endif>{{ number_format($pu, 3, '.', '') }}</td>
-                                            <td class="text-right" @if($i % 2 != 0) style="background-color: #eee !important" @endif>{{ $tvaPct }} %</td>
-                                            <td class="text-right" @if($i % 2 != 0) style="background-color: #eee !important" @endif>{{ number_format($lineHt, 3, '.', '') }}</td>
+                                            <td @if(($i % 2) != 0) style="background-color: #eee !important" @endif>{{ $i }}</td>
+                                            <td @if(($i % 2) != 0) style="background-color: #eee !important" @endif>{{ $details->product->designation_fr ?? '—' }}</td>
+                                            <td class="text-center" @if(($i % 2) != 0) style="background-color: #eee !important" @endif>{{ $qte }}</td>
+                                            <td class="text-right" @if(($i % 2) != 0) style="background-color: #eee !important" @endif>{{ number_format($pu, 3, '.', '') }}</td>
+                                            <td class="text-right" @if(($i % 2) != 0) style="background-color: #eee !important" @endif>{{ $tvaPct }} %</td>
+                                            <td class="text-right" @if(($i % 2) != 0) style="background-color: #eee !important" @endif>{{ number_format($lineHt, 3, '.', '') }}</td>
                                         </tr>
                                         @php $i++; @endphp
                                     @endforeach
-                                @endforelse
+                                @endif
                             </tbody>
                             <tfoot>
                                 <tr><td>&nbsp;</td></tr>

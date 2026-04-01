@@ -119,10 +119,10 @@
                                 @php $i = 1; @endphp
                                 @foreach ($price_list_rows ?? [] as $row)
                                     <tr>
-                                        <td @if($i % 2 != 0) style="background-color: #eee !important" @endif>{{ $row['index'] ?? $i }}</td>
-                                        <td @if($i % 2 != 0) style="background-color: #eee !important" @endif>{{ $row['designation'] ?? '—' }}</td>
-                                        <td class="text-right" @if($i % 2 != 0) style="background-color: #eee !important" @endif>{{ number_format((float) ($row['prix_gros'] ?? 0), 3, '.', '') }} DT</td>
-                                        <td class="text-right" @if($i % 2 != 0) style="background-color: #eee !important" @endif>{{ number_format((float) ($row['prix_unitaire'] ?? 0), 3, '.', '') }} DT</td>
+                                        <td @if(($i % 2) != 0) style="background-color: #eee !important" @endif>{{ $row['index'] ?? $i }}</td>
+                                        <td @if(($i % 2) != 0) style="background-color: #eee !important" @endif>{{ $row['designation'] ?? '—' }}</td>
+                                        <td class="text-right" @if(($i % 2) != 0) style="background-color: #eee !important" @endif>{{ number_format((float) ($row['prix_gros'] ?? 0), 3, '.', '') }} DT</td>
+                                        <td class="text-right" @if(($i % 2) != 0) style="background-color: #eee !important" @endif>{{ number_format((float) ($row['prix_unitaire'] ?? 0), 3, '.', '') }} DT</td>
                                     </tr>
                                     @php $i++; @endphp
                                 @endforeach
