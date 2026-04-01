@@ -11,20 +11,10 @@
 @php
     $coordonnee = $coordonnee ?? $company ?? null;
     $logoUrl = null;
-    $publicLogoPath = public_path('logo.png');
-    if (is_file($publicLogoPath)) {
-        $mime = @mime_content_type($publicLogoPath) ?: 'image/png';
-        $logoUrl = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($publicLogoPath));
-    }
-    if ($logoUrl === null && $coordonnee) {
-        $logoUrl = \App\Models\Coordinate::publicLogoFacturePrintUrl($coordonnee);
-    }
-    if ($logoUrl === null) {
-        $staticLogoPath = resource_path('views/print/logo_print.png');
-        if (is_file($staticLogoPath)) {
-            $mime = @mime_content_type($staticLogoPath) ?: 'image/png';
-            $logoUrl = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($staticLogoPath));
-        }
+    $staticLogoPath = resource_path('views/print/logo_print.png');
+    if (is_file($staticLogoPath)) {
+        $mime = @mime_content_type($staticLogoPath) ?: 'image/png';
+        $logoUrl = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($staticLogoPath));
     }
     if (! isset($calcTotals) && isset($facture, $details_facture)) {
         $defaultTva = $coordonnee && isset($coordonnee->tva) ? (float) $coordonnee->tva : 19;

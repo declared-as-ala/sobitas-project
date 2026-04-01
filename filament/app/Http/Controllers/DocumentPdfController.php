@@ -184,16 +184,46 @@ class DocumentPdfController extends Controller
                 ->with('product:id,designation_fr')
                 ->get();
             $coordonnee = \App\Models\Coordinate::first();
+            $defaultTva = $coordonnee && isset($coordonnee->tva) ? (float) $coordonnee->tva : 19;
+            $devis_lines = \App\Services\DevisCalculator::lines($details_facture, $defaultTva)['lines'];
+
+            $detailsForCalc = $details_facture->map(fn ($d) => [
+                'produit_id' => $d->produit_id,
+                'qte' => (int) ($d->qte ?? $d->quantite ?? 1),
+                'prix_unitaire' => (float) ($d->prix_unitaire ?? 0),
+                'tva_pct' => (float) ($d->tva ?? $defaultTva),
+            ])->toArray();
+            $calcTotals = \App\Services\InvoiceCalculator::calculate(
+                $detailsForCalc,
+                (float) ($quotation->remise ?? 0),
+                (float) ($quotation->timbre ?? 0),
+                $defaultTva
+            );
+
+            $totals = [
+                ['label' => 'Total HT', 'value' => number_format($calcTotals['total_ht_brut'], 3, ',', ' ') . ' DT'],
+            ];
+            if ($calcTotals['remise'] > 0) {
+                $totals[] = ['label' => 'Remise', 'value' => number_format($calcTotals['remise'], 3, ',', ' ') . ' DT'];
+            }
+            $totals[] = ['label' => 'TVA', 'value' => number_format($calcTotals['tva'], 3, ',', ' ') . ' DT'];
+            if ($calcTotals['timbre'] > 0) {
+                $totals[] = ['label' => 'Timbre', 'value' => number_format($calcTotals['timbre'], 3, ',', ' ') . ' DT'];
+            }
+            $totals[] = ['label' => 'TOTAL TTC (Net à payer)', 'value' => number_format($calcTotals['net_a_payer'], 3, ',', ' ') . ' DT', 'class' => 'ttc'];
 
             $data = [
                 'facture' => $quotation,
                 'details_facture' => $details_facture,
+                'devis_lines' => $devis_lines,
+                'calcTotals' => $calcTotals,
                 'coordonnee' => $coordonnee,
                 'company' => $coordonnee,
                 'documentTitle' => 'Devis',
                 'documentNumber' => $quotation->numero ?? '',
                 'documentDate' => $quotation->date_quotation ? \Carbon\Carbon::parse($quotation->date_quotation)->format('d/m/Y') : ($quotation->created_at?->format('d/m/Y') ?? ''),
                 'client' => $quotation->client,
+                'totals' => $totals,
                 'footerNote' => $coordonnee && ! empty($coordonnee->note) ? $coordonnee->note : null,
                 'noteDevis' => $coordonnee ? ($coordonnee->note_devis ?? null) : null,
                 'paymentTerms' => 'Valable 30 jours. Paiement à la commande ou à la livraison.',
