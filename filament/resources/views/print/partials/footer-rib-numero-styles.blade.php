@@ -1,8 +1,8 @@
-{{-- Shared CSS for RIB footer: screen, browser print (fixed to A4 bottom), PDF fallback --}}
+{{-- Shared CSS for RIB footer: always in normal flow, pushed to bottom via flexbox --}}
 @php $isPdf = !empty($forPdf); @endphp
 
 .print-doc-footer-wrap {
-    margin-top: 28px;
+    margin-top: auto;
     padding-top: 0;
     border-top: 2px solid #ff4000;
     text-align: center;
@@ -31,56 +31,21 @@
     font-size: 11px;
 }
 
-@if ($isPdf)
-body.is-pdf-print .print-doc-footer-wrap {
-    position: static !important;
-    left: auto !important;
-    right: auto !important;
-    bottom: auto !important;
-    margin-top: 24px;
-    padding-top: 0;
-    border-top: 2px solid #ff4000;
-    width: 100%;
-    max-width: 100%;
-}
-@endif
-
 @media print {
     @page {
         size: A4;
         margin: 12mm;
     }
 
-    body:not(.is-pdf-print) #invoice,
-    body:not(.is-pdf-print) .page-content {
-        padding-bottom: 28mm !important;
-    }
-
-    body:not(.is-pdf-print) .print-doc-footer-wrap {
-        position: fixed;
-        left: 12mm;
-        right: 12mm;
-        bottom: 8mm;
-        width: auto;
-        max-width: calc(100% - 24mm);
-        margin-top: 0;
+    .print-doc-footer-wrap {
+        margin-top: auto;
         padding-top: 0;
         border-top: 2px solid #ff4000;
-        z-index: 9999;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }
 
-    body:not(.is-pdf-print) .print-doc-footer {
+    .print-doc-footer {
         padding: 6px 0 2px;
-    }
-
-    body.is-pdf-print .print-doc-footer-wrap {
-        position: static !important;
-        left: auto !important;
-        right: auto !important;
-        bottom: auto !important;
-        margin-top: 20px;
-        border-top: 2px solid #ff4000;
     }
 }

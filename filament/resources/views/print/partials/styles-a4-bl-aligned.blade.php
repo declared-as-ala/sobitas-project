@@ -58,7 +58,22 @@
         box-shadow: 0 2px 12px rgba(0,0,0,.1);
     }
 
-    /* ── PDF flex layout ── */
+    /* ── Flex layout (universal — screen, print, and PDF) ── */
+    #invoice.doc-a4-shell > .invoice {
+        display: flex;
+        flex-direction: column;
+        min-height: 100%;
+    }
+    .doc-a4-main-wrap {
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+    .doc-a4-main-wrap > main {
+        flex: 1 1 auto;
+    }
+
     body.doc-a4-print.is-pdf-print {
         background: #fff;
     }
@@ -69,20 +84,6 @@
         flex-direction: column;
         box-shadow: none;
         border-radius: 0;
-    }
-    body.doc-a4-print.is-pdf-print #invoice.doc-a4-shell > .invoice {
-        flex: 1 1 auto;
-        display: flex;
-        flex-direction: column;
-    }
-    body.doc-a4-print.is-pdf-print #invoice.doc-a4-shell .doc-a4-main-wrap {
-        flex: 1 1 auto;
-        min-height: 0;
-        display: flex;
-        flex-direction: column;
-    }
-    body.doc-a4-print.is-pdf-print #invoice.doc-a4-shell .doc-a4-main-wrap > main {
-        flex: 1 1 auto;
     }
 
     /* ── Toolbar (screen only) ── */
@@ -144,12 +145,12 @@
     }
     .doc-a4-header__meta h1 {
         margin: 0 0 8px;
-        font-size: 22pt;
-        font-weight: 800;
-        letter-spacing: 0.04em;
+        font-size: 15pt;
+        font-weight: 700;
+        letter-spacing: 0.03em;
         color: #0f172a;
         text-transform: uppercase;
-        line-height: 1.1;
+        line-height: 1.2;
     }
     .doc-a4-meta-line {
         font-size: 10pt;
@@ -179,13 +180,12 @@
 
     /* ── Client block ── */
     .doc-a4-client {
-        margin: 18px 0 16px;
-        padding: 14px 16px;
+        margin: 16px 0 14px;
+        padding: 12px 14px;
         background: #f8fafc;
-        border-radius: 8px;
-        border-left: 4px solid #ff4000;
         border: 1px solid #e2e8f0;
         border-left: 4px solid #ff4000;
+        border-radius: 6px;
     }
     .doc-a4-client h2 {
         margin: 0 0 10px;
@@ -227,8 +227,8 @@
         font-weight: 700;
         font-size: 8pt;
         text-transform: uppercase;
-        letter-spacing: 0.07em;
-        padding: 11px 10px;
+        letter-spacing: 0.06em;
+        padding: 9px 10px;
         text-align: left;
         border: 1px solid #e65100;
         vertical-align: middle;
@@ -239,7 +239,7 @@
     table.doc-a4-lines thead th.doc-a4-col-prod { width: 34%; }
     table.doc-a4-lines thead th.doc-a4-col-numcell { width: 11%; text-align: right; padding-right: 12px; }
     table.doc-a4-lines tbody td {
-        padding: 9px 10px;
+        padding: 7px 10px;
         border: 1px solid #e2e8f0;
         vertical-align: middle;
         background: #fff;
@@ -287,7 +287,7 @@
         overflow: hidden;
     }
     table.doc-a4-totals td {
-        padding: 7px 14px;
+        padding: 6px 12px;
         border-bottom: 1px solid #f1f5f9;
         vertical-align: middle;
     }
@@ -308,10 +308,10 @@
         color: #0f172a;
     }
     table.doc-a4-totals tr.doc-a4-totals__grand td {
-        padding: 10px 14px;
+        padding: 8px 12px;
         border-top: 2px solid #ff4000;
         border-bottom: none;
-        font-size: 11pt;
+        font-size: 10.5pt;
         font-weight: 800;
         color: #0f172a;
     }
@@ -327,19 +327,19 @@
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
         color: #c2410c;
-        font-size: 12pt;
+        font-size: 11pt;
     }
 
     /* ── Note / Signature ── */
     .doc-a4-note {
-        margin: 18px 0 10px;
-        padding: 12px 16px;
+        margin: 14px 0 8px;
+        padding: 10px 14px;
         border-left: 4px solid #ff4000;
         background: #fffbeb;
         border-radius: 0 6px 6px 0;
         font-size: 9.5pt;
         color: #334155;
-        line-height: 1.55;
+        line-height: 1.5;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
     }
@@ -364,10 +364,10 @@
         font-style: italic;
     }
     .doc-a4-signature {
-        margin: 16px 0 8px;
+        margin: 12px 0 6px;
         text-align: right;
         padding-right: 40px;
-        font-size: 10pt;
+        font-size: 9.5pt;
         font-weight: 600;
         text-decoration: underline;
         text-underline-offset: 4px;
@@ -405,7 +405,6 @@
         }
         .doc-a4-print .page-content {
             padding: 0;
-            min-height: auto;
         }
         .doc-a4-print #invoice {
             padding: 0;
@@ -413,15 +412,16 @@
             box-shadow: none;
             border-radius: 0;
         }
+        .doc-a4-print #invoice.doc-a4-shell {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
         .doc-a4-toolbar { display: none !important; }
     }
 
-    /* ── Footer positioning ── */
-    body.doc-a4-print:not(.is-pdf-print) #invoice.doc-a4-shell,
-    body.doc-a4-print:not(.is-pdf-print) .page-content {
-        padding-bottom: 28mm !important;
-    }
-    body.doc-a4-print.is-pdf-print .doc-a4-footer-wrap {
+    /* ── Footer positioning (flow-based, never fixed) ── */
+    .doc-a4-footer-wrap {
         margin-top: auto;
         padding-top: 16px;
     }

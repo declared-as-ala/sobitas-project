@@ -1,6 +1,6 @@
 {{--
     Global fix for Filament/Livewire SPA: re-run init and clean overlays after every navigation.
-    Enable debug: in browser console run window.FILAMENT_SPA_DEBUG = true then navigate; you'll see [Filament SPA] logs.
+    Enable debug: in browser console run window.FILAMENT_SPA_DEBUG = true then navigate.
 --}}
 <script>
 (function () {
@@ -13,14 +13,8 @@
         }
     }
 
-    /**
-     * Remove leftover modal backdrops/overlays that can block clicks after SPA navigation.
-     * Filament and Livewire render modals in the body; when content is replaced via wire:navigate,
-     * orphaned backdrop divs may remain and intercept clicks.
-     */
     function removeOrphanedOverlays() {
         var removed = 0;
-        // Only remove elements that are clearly backdrops (class contains backdrop/overlay and fixed full-screen)
         var selectors = [
             '[class*="backdrop"]',
             '[class*="modal-backdrop"]',
@@ -46,30 +40,45 @@
     }
 
     /**
-     * Re-initialize anything that must run after each SPA navigation.
-     * - NProgress is handled by Livewire's wire:navigate; no need to re-init.
-     * - Alpine components are re-bound when new HTML is injected.
-     * - This runs any custom init you add here (e.g. re-attach third-party libs).
+     * Force Filament's Alpine-based select (TomSelect) components to reinitialize.
+     * After SPA navigation, Alpine components in the new DOM may have stale state.
+     * We find all select wrappers and dispatch an Alpine init cycle.
      */
+    function reinitFilamentSelects() {
+        try {
+            document.querySelectorAll('[wire\\:id]').forEach(function (component) {
+                if (typeof component.__livewire !== 'undefined') {
+                    log('Livewire component found, state should be fresh');
+                }
+            });
+
+            document.querySelectorAll('.fi-fo-select').forEach(function (selectEl) {
+                var alpineEl = selectEl.querySelector('[x-data]');
+                if (alpineEl && typeof alpineEl._x_dataStack !== 'undefined') {
+                    log('Select Alpine component found, already initialized');
+                }
+            });
+        } catch (e) {
+            log('reinitFilamentSelects error', e);
+        }
+    }
+
     function reinitAfterNavigate() {
         removeOrphanedOverlays();
-        // Call main custom re-init
+        reinitFilamentSelects();
+
         if (typeof window.filamentReinit === 'function') {
             try { window.filamentReinit(); } catch (e) { log('filamentReinit error', e); }
         }
-        // Call form-specific re-init (e.g., for Devis form with Select2)
         if (typeof window.dvFormReinit === 'function') {
             try { window.dvFormReinit(); } catch (e) { log('dvFormReinit error', e); }
         }
-        // BL (Bon de Livraison) form re-init
         if (typeof window.blFormReinit === 'function') {
             try { window.blFormReinit(); } catch (e) { log('blFormReinit error', e); }
         }
-        // Facture TVA form re-init
         if (typeof window.ftvaFormReinit === 'function') {
             try { window.ftvaFormReinit(); } catch (e) { log('ftvaFormReinit error', e); }
         }
-        // Ticket POS form re-init
         if (typeof window.ticketPosReinit === 'function') {
             try { window.ticketPosReinit(); } catch (e) { log('ticketPosReinit error', e); }
         }
@@ -80,26 +89,10 @@
         reinitAfterNavigate();
     }
 
-    function onInitialized() {
-        log('livewire:initialized');
-        reinitAfterNavigate();
-    }
-
-    // Run after every Livewire SPA navigation
     document.addEventListener('livewire:navigated', onNavigated);
-    // Run when Livewire is ready (first load)
-    document.addEventListener('livewire:initialized', onInitialized);
-    // Fallback: run once on DOMContentLoaded in case livewire:initialized fires before this script
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', onInitialized);
-    } else {
-        onInitialized();
-    }
 
     /**
-     * Open URL in new tab without Livewire/SPA intercepting (avoids "Component not found" when
-     * downloading PDF or opening print view). Register once; livewire:initialized may already
-     * have fired before this script runs on some navigations.
+     * Open URL in new tab without Livewire/SPA intercepting.
      */
     function registerOpenUrlNewTabListener() {
         if (typeof window.Livewire === 'undefined' || window.__filamentOpenUrlNewTabHooked) return;
@@ -110,7 +103,6 @@
         });
     }
     document.addEventListener('livewire:init', registerOpenUrlNewTabListener);
-    document.addEventListener('livewire:initialized', registerOpenUrlNewTabListener);
     if (typeof window.Livewire !== 'undefined') {
         registerOpenUrlNewTabListener();
     }

@@ -53,6 +53,7 @@ class TicketResource extends Resource
                                     ->getOptionLabelFromRecordUsing(fn ($record) => (string) ($record->name ?? 'Client #' . $record->id))
                                     ->getSearchResultsUsing(fn (string $search): array => \App\Models\Client::where('name', 'like', "%{$search}%")->orWhere('phone_1', 'like', "%{$search}%")->limit(30)->pluck('name', 'id')->toArray())
                                     ->getOptionLabelUsing(fn ($value): ?string => \App\Models\Client::find($value)?->name)
+                                    ->preload()
                                     ->createOptionForm([
                                         Forms\Components\TextInput::make('name')
                                             ->label('Nom et prénom')

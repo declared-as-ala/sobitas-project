@@ -11,14 +11,29 @@
     .dark .fi-topbar {
         background: var(--fi-body-bg);
     }
-    /* Main content: top padding so content does not render under the sticky header */
     .fi-main-ctn {
         padding-top: 0;
     }
     .fi-main-ctn .fi-main {
-        padding-top: 4rem;
-        padding-left: 1.5rem;
-        padding-right: 1.5rem;
+        padding-top: 1rem;
+        padding-left: 1.25rem;
+        padding-right: 1.25rem;
+    }
+    /* Dashboard: tighter top, wider content */
+    .fi-page.fi-dashboard .fi-page-header { display: none !important; }
+    .fi-page.fi-dashboard .fi-header { display: none !important; }
+    .fi-page.fi-dashboard .fi-main {
+        padding-top: 0.75rem;
+    }
+    .fi-page.fi-dashboard .fi-widgets {
+        gap: 0.75rem;
+    }
+    @media (min-width: 1280px) {
+        .fi-page.fi-dashboard .fi-main {
+            max-width: 1440px;
+            margin-left: auto;
+            margin-right: auto;
+        }
     }
     /* Ensure dropdowns (e.g. global search, user menu) appear above content */
     .fi-topbar [x-data],

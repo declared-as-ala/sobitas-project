@@ -45,7 +45,8 @@ class CreditNoteResource extends Resource
                         ->relationship('factureTva', 'numero')
                         ->getOptionLabelFromRecordUsing(fn ($r) => $r->numero . ' — ' . ($r->client?->name ?? '') . ' — ' . number_format((float) $r->prix_ttc, 2, ',', ' ') . ' DT')
                         ->required()
-                        ->searchable(),
+                        ->searchable()
+                        ->preload(),
                     Forms\Components\TextInput::make('numero')
                         ->label('N° Avoir')
                         ->required()

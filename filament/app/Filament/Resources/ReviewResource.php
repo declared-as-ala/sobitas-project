@@ -27,11 +27,13 @@ class ReviewResource extends Resource
             Forms\Components\Select::make('product_id')
                 ->label('Produit')
                 ->relationship('product', 'designation_fr')
-                ->searchable(),
+                ->searchable()
+                ->preload(),
             Forms\Components\Select::make('user_id')
                 ->label('Utilisateur')
                 ->relationship('user', 'name')
-                ->searchable(),
+                ->searchable()
+                ->preload(),
             Forms\Components\TextInput::make('stars')->label('Note')->numeric()->minValue(1)->maxValue(5),
             Forms\Components\Textarea::make('comment')->label('Commentaire'),
             Forms\Components\Toggle::make('publier')->label('Publié')->default(true),

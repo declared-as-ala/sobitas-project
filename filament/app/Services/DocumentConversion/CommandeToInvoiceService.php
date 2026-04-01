@@ -8,6 +8,7 @@ use App\Models\Commande;
 use App\Models\Coordinate;
 use App\Models\DetailsFactureTva;
 use App\Models\FactureTva;
+use App\Services\InvoiceCalculator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -37,25 +38,32 @@ class CommandeToInvoiceService
             if (Schema::hasColumn('facture_tvas', 'date_facture')) {
                 $invoice->date_facture = now()->toDateString();
             }
-            $invoice->prix_ht = (float) $order->prix_ht;
-            $invoice->timbre = (float) ($order->timbre ?? 0);
-            $invoice->remise = (float) ($order->remise ?? 0);
+            $remise = (float) ($order->remise ?? 0);
+            $timbre = (float) ($order->timbre ?? 0);
 
-            $totalHt = 0.0;
-            $totalTva = 0.0;
-            foreach ($order->details as $line) {
-                if (! $line->produit_id) {
-                    continue;
-                }
-                $qte = (int) $line->qte;
-                $pu = (float) $line->prix_unitaire;
-                $lineHt = $qte * $pu;
-                $tvaAmount = $lineHt * $defaultTvaPct / 100;
-                $totalHt += $lineHt;
-                $totalTva += $tvaAmount;
+            $details = $order->details
+                ->filter(fn ($line) => !empty($line->produit_id))
+                ->map(fn ($line) => [
+                    'produit_id' => $line->produit_id,
+                    'qte' => (int) $line->qte,
+                    'prix_unitaire' => (float) $line->prix_unitaire,
+                    'tva_pct' => $defaultTvaPct,
+                ])->values()->toArray();
+
+            $calc = InvoiceCalculator::calculate($details, $remise, $timbre, $defaultTvaPct);
+
+            $invoice->prix_ht = $calc['total_ht_brut'];
+            $invoice->remise = $calc['remise'];
+            $invoice->pourcentage_remise = $calc['pourcentage_remise'];
+            $invoice->tva = $calc['tva'];
+            $invoice->timbre = $calc['timbre'];
+            $invoice->prix_ttc = $calc['prix_ttc'];
+            if (Schema::hasColumn('facture_tvas', 'prix_ht_apres_remise')) {
+                $invoice->prix_ht_apres_remise = $calc['prix_ht_apres_remise'];
             }
-            $invoice->tva = $totalTva;
-            $invoice->prix_ttc = $totalHt + $totalTva - (float) $invoice->remise + (float) $invoice->timbre;
+            if (Schema::hasColumn('facture_tvas', 'net_a_payer')) {
+                $invoice->net_a_payer = $calc['net_a_payer'];
+            }
             $invoice->save();
 
             foreach ($order->details as $line) {

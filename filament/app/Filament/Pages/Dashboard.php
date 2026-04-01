@@ -16,7 +16,12 @@ class Dashboard extends BaseDashboard
 {
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-presentation-chart-line';
 
-    protected static ?string $title = 'Tableau de bord';
+    protected static ?string $title = '';
+
+    public function getHeading(): string
+    {
+        return '';
+    }
 
     // ── Stale-snapshot shims (see ClientHistoriqueSearchWidget for real search) ─
     public string $preset = '30d';
