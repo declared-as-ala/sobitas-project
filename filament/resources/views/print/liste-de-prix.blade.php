@@ -25,17 +25,17 @@
     <div id="invoice" class="doc-a4-shell">
         @if (empty($forPdf))
         <div class="doc-a4-toolbar hide_print">
-            <button type="button" class="doc-a4-btn" onclick="window.print()">Imprimer</button>
-            <a class="doc-a4-btn doc-a4-btn--muted" href="{{ $backUrl ?? url()->previous() }}">Retour</a>
+            <button type="button" class="doc-a4-btn" onclick="window.print()"><i class="bi bi-printer me-1"></i>Imprimer</button>
+            <a class="doc-a4-btn doc-a4-btn--muted" href="{{ $backUrl ?? url()->previous() }}"><i class="bi bi-arrow-left me-1"></i>Retour</a>
         </div>
         @endif
 
         <div class="invoice">
-            <div class="doc-a4-main-wrap" style="min-width: 600px">
+            <div class="doc-a4-main-wrap">
                 <header class="doc-a4-header">
                     <div class="doc-a4-header__brand">
                         @if ($logoUrl)
-                            <img src="{{ $logoUrl }}" alt="" style="max-width: 200px; height: auto; display: block; margin-bottom: 8px;">
+                            <img src="{{ $logoUrl }}" alt="Logo" class="mb-2" style="max-width: 180px; height: auto; display: block;">
                         @endif
                         <div class="doc-a4-co-name">{{ $coordonnee->abbreviation ?? '' }}</div>
                         <div class="doc-a4-co-line"><b>Email :</b> {{ $coordonnee->email ?? '' }}</div>
@@ -101,7 +101,6 @@
                     @include('print.partials.footer-rib-numero', ['documentNumero' => $documentNumber ?? ''])
                 </div>
             </div>
-            <div></div>
         </div>
     </div>
 </div>

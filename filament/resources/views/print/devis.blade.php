@@ -59,17 +59,17 @@
     <div id="invoice" class="doc-a4-shell">
         @if (empty($forPdf))
         <div class="doc-a4-toolbar hide_print">
-            <button type="button" class="doc-a4-btn" onclick="window.print()">Imprimer</button>
-            <a class="doc-a4-btn doc-a4-btn--muted" href="{{ $backUrl ?? url()->previous() }}">Retour</a>
+            <button type="button" class="doc-a4-btn" onclick="window.print()"><i class="bi bi-printer me-1"></i>Imprimer</button>
+            <a class="doc-a4-btn doc-a4-btn--muted" href="{{ $backUrl ?? url()->previous() }}"><i class="bi bi-arrow-left me-1"></i>Retour</a>
         </div>
         @endif
 
         <div class="invoice">
-            <div class="doc-a4-main-wrap" style="min-width: 600px">
+            <div class="doc-a4-main-wrap">
                 <header class="doc-a4-header">
                     <div class="doc-a4-header__brand">
                         @if ($logoUrl)
-                            <img src="{{ $logoUrl }}" alt="" style="max-width: 200px; height: auto; display: block; margin-bottom: 8px;">
+                            <img src="{{ $logoUrl }}" alt="Logo" class="mb-2" style="max-width: 180px; height: auto; display: block;">
                         @endif
                         <div class="doc-a4-co-name">{{ $coordonnee->abbreviation ?? '' }}</div>
                         <div class="doc-a4-co-line"><b>Email :</b> {{ $coordonnee->email ?? '' }}</div>
@@ -99,7 +99,7 @@
                             @if (filled($printClient->matricule))
                                 <p><b>Matricule :</b> {{ $printClient->matricule }}</p>
                             @endif
-                            <p><b>Numéro de téléphone :</b> {{ $printClient->phone_1 }}</p>
+                            <p><b>Tél :</b> {{ $printClient->phone_1 }}</p>
                         </section>
                     @endif
 
@@ -206,7 +206,6 @@
                     @include('print.partials.footer-rib-numero', ['documentNumero' => $facture->numero ?? ''])
                 </div>
             </div>
-            <div></div>
         </div>
     </div>
 </div>
@@ -218,7 +217,7 @@
     if (!el || !words) return;
     var a = ['', 'un ', 'deux', 'trois ', 'quatre ', 'cinq ', 'six ', 'sept ', 'huit ', 'neuf ', 'dix ', 'onze ',
         'douze ', 'treize ', 'quatorze ', 'quinze ', 'seize ', 'dix-sept ', 'dix-huit ', 'dix-neuf '];
-    var b = ['', '', 'vingt', 'trante', 'quarante', 'cinquante', 'soixante', 'soixante-dix', 'quatre-vingt', 'quatre-vingt-dix'];
+    var b = ['', '', 'vingt', 'trente', 'quarante', 'cinquante', 'soixante', 'soixante-dix', 'quatre-vingt', 'quatre-vingt-dix'];
     words.innerHTML = inWords(el.value);
     function inWords(num) {
         num = parseFloat(num);

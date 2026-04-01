@@ -1,8 +1,8 @@
 {{--
-    Universal A4 print styles for ALL SOBITAS documents:
-    Facture TVA, Devis, Bon de Livraison, Liste de Prix.
-    Single source of truth for layout, typography, colors, and print/PDF behavior.
+    Universal A4 print styles for ALL SOBITAS documents.
+    Bootstrap 5 for grid/utilities + custom SOBITAS design tokens.
 --}}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <style>
     *, *::before, *::after { box-sizing: border-box; }
     html {
@@ -10,26 +10,38 @@
         print-color-adjust: exact;
     }
     body.doc-a4-print {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-        font-size: 11pt;
-        color: #1a1a1a;
-        background: #fff;
+        font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        font-size: 10.5pt;
+        color: #1e293b;
+        background: #f1f5f9;
         margin: 0;
         padding: 0;
     }
+
+    /* ── Page shell ── */
+    .doc-a4-print .page-content {
+        padding: 20px 0;
+    }
     .doc-a4-print #invoice {
-        padding: 24px 28px 32px;
-        max-width: 900px;
+        padding: 32px 36px 28px;
+        max-width: 860px;
         margin: 0 auto;
-        box-sizing: border-box;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 1px 6px rgba(0,0,0,.08);
     }
 
-    /* ── PDF: flex column so footer is pushed down on short documents ── */
+    /* ── PDF flex layout ── */
+    body.doc-a4-print.is-pdf-print {
+        background: #fff;
+    }
     body.doc-a4-print.is-pdf-print #invoice.doc-a4-shell {
-        min-height: 280mm;
-        padding-bottom: 20mm;
+        min-height: 282mm;
+        padding-bottom: 18mm;
         display: flex;
         flex-direction: column;
+        box-shadow: none;
+        border-radius: 0;
     }
     body.doc-a4-print.is-pdf-print #invoice.doc-a4-shell > .invoice {
         flex: 1 1 auto;
@@ -47,89 +59,104 @@
     }
 
     /* ── Toolbar (screen only) ── */
-    .doc-a4-toolbar { text-align: right; margin-bottom: 10px; }
+    .doc-a4-toolbar {
+        text-align: right;
+        margin-bottom: 14px;
+        padding-bottom: 10px;
+    }
     .doc-a4-btn {
         display: inline-block;
-        background: #2563eb;
+        background: #ff4000;
         color: #fff !important;
         border: none;
         border-radius: 6px;
-        padding: 8px 18px;
+        padding: 9px 22px;
         font-size: 10pt;
         font-weight: 600;
         text-decoration: none;
         margin-left: 8px;
         cursor: pointer;
         line-height: 1.4;
+        transition: background .15s;
     }
-    .doc-a4-btn:hover { background: #1d4ed8; }
+    .doc-a4-btn:hover { background: #e03800; }
     .doc-a4-btn--muted { background: #64748b; }
     .doc-a4-btn--muted:hover { background: #475569; }
 
     /* ── Header ── */
     .doc-a4-header {
-        display: table;
-        width: 100%;
-        margin-bottom: 16px;
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 18px;
         padding-bottom: 14px;
         border-bottom: 3px solid #ff4000;
     }
     .doc-a4-header__brand {
-        display: table-cell;
-        vertical-align: top;
-        width: 58%;
+        flex: 0 1 58%;
     }
     .doc-a4-header__meta {
-        display: table-cell;
-        vertical-align: top;
-        width: 42%;
+        flex: 0 1 40%;
         text-align: right;
     }
     .doc-a4-header__meta h1 {
-        margin: 0 0 8px;
-        font-size: 22pt;
+        margin: 0 0 6px;
+        font-size: 24pt;
         font-weight: 800;
-        letter-spacing: 0.03em;
+        letter-spacing: 0.04em;
         color: #0f172a;
         text-transform: uppercase;
     }
     .doc-a4-meta-line {
-        font-size: 10.5pt;
+        font-size: 10pt;
+        color: #475569;
+        line-height: 1.7;
+    }
+    .doc-a4-meta-line b {
         color: #334155;
-        line-height: 1.6;
     }
     .doc-a4-co-name {
-        font-size: 13pt;
+        font-size: 12pt;
         font-weight: 700;
-        margin: 8px 0 6px;
+        margin: 6px 0 5px;
         color: #0f172a;
     }
     .doc-a4-co-line {
-        font-size: 9.5pt;
+        font-size: 9pt;
+        color: #64748b;
+        line-height: 1.6;
+    }
+    .doc-a4-co-line b {
         color: #475569;
-        line-height: 1.55;
+        font-weight: 600;
     }
 
     /* ── Client block ── */
     .doc-a4-client {
-        margin: 14px 0 12px;
-        padding: 10px 12px;
+        margin: 16px 0 14px;
+        padding: 12px 14px;
         background: #f8fafc;
-        border-radius: 6px;
+        border-radius: 8px;
         border-left: 4px solid #ff4000;
     }
     .doc-a4-client h2 {
         margin: 0 0 8px;
-        font-size: 9pt;
+        font-size: 8.5pt;
         font-weight: 700;
-        letter-spacing: 0.08em;
+        letter-spacing: 0.1em;
         text-transform: uppercase;
-        color: #64748b;
+        color: #94a3b8;
     }
     .doc-a4-client p {
-        margin: 0 0 4px;
-        font-size: 10pt;
+        margin: 0 0 3px;
+        font-size: 9.5pt;
         color: #334155;
+    }
+    .doc-a4-client p b {
+        color: #475569;
+        font-weight: 600;
+        min-width: 140px;
+        display: inline-block;
     }
 
     /* ── Product / lines table ── */
@@ -139,17 +166,19 @@
         border-collapse: collapse;
         border-spacing: 0;
         table-layout: fixed;
-        font-size: 10pt;
+        font-size: 9.5pt;
         border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        overflow: hidden;
     }
     table.doc-a4-lines thead th {
         background: #ff4000 !important;
         background-color: #ff4000 !important;
         color: #fff !important;
         font-weight: 700;
-        font-size: 8.5pt;
+        font-size: 8pt;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.06em;
         padding: 10px 10px;
         text-align: left;
         border: 1px solid #ff4000;
@@ -161,18 +190,23 @@
     table.doc-a4-lines thead th.doc-a4-col-prod { width: 34%; }
     table.doc-a4-lines thead th.doc-a4-col-numcell { width: 11%; text-align: right; }
     table.doc-a4-lines tbody td {
-        padding: 9px 10px;
+        padding: 8px 10px;
         border: 1px solid #e2e8f0;
         vertical-align: middle;
         background: #fff;
+        font-size: 9.5pt;
     }
     table.doc-a4-lines tbody tr:nth-child(even) td {
         background: #f8fafc;
     }
+    table.doc-a4-lines tbody tr:hover td {
+        background: #fff7ed;
+    }
     table.doc-a4-lines .doc-a4-td-num {
         text-align: center;
-        color: #64748b;
-        font-weight: 600;
+        color: #94a3b8;
+        font-weight: 700;
+        font-size: 9pt;
     }
     table.doc-a4-lines .doc-a4-td-prod {
         text-align: left;
@@ -183,40 +217,42 @@
     table.doc-a4-lines .doc-a4-td-right {
         text-align: right;
         font-variant-numeric: tabular-nums;
+        color: #334155;
     }
 
     /* ── Totals block ── */
-    .doc-a4-totals-wrap { width: 100%; margin-top: 12px; margin-bottom: 6px; }
+    .doc-a4-totals-wrap { width: 100%; margin-top: 14px; margin-bottom: 6px; }
     table.doc-a4-totals {
         width: 100%;
-        max-width: 360px;
+        max-width: 380px;
         margin-left: auto;
         border-collapse: collapse;
-        font-size: 10.5pt;
+        font-size: 10pt;
     }
     table.doc-a4-totals td {
-        padding: 5px 0 5px 8px;
+        padding: 5px 0 5px 10px;
         border: none;
         vertical-align: middle;
     }
     table.doc-a4-totals td:first-child {
-        text-align: left;
-        color: #475569;
+        text-align: right;
+        color: #64748b;
         font-weight: 500;
         white-space: nowrap;
+        padding-right: 16px;
     }
     table.doc-a4-totals td:last-child {
         text-align: right;
         font-variant-numeric: tabular-nums;
         font-weight: 600;
         color: #0f172a;
-        width: 42%;
+        width: 40%;
     }
     table.doc-a4-totals tr.doc-a4-totals__grand td {
         padding-top: 10px;
-        padding-bottom: 8px;
+        padding-bottom: 10px;
         border-top: 2px solid #0f172a;
-        font-size: 12pt;
+        font-size: 11.5pt;
         font-weight: 800;
         color: #0f172a;
     }
@@ -228,52 +264,57 @@
         background: #fff7ed !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
-        padding-left: 12px;
-        padding-right: 12px;
-        border-radius: 4px;
+        padding: 8px 14px;
+        border-radius: 6px;
+        color: #c2410c;
+        font-size: 12pt;
     }
 
     /* ── Note / Signature ── */
     .doc-a4-note {
-        margin: 14px 0 10px;
-        padding: 10px 12px 10px 14px;
+        margin: 16px 0 10px;
+        padding: 10px 14px 10px 16px;
         border-left: 4px solid #ff4000;
         background: #fffbeb;
-        font-size: 10pt;
+        border-radius: 0 6px 6px 0;
+        font-size: 9.5pt;
         color: #334155;
-        line-height: 1.45;
+        line-height: 1.5;
     }
     .doc-a4-note strong {
         color: #c2410c;
-        font-size: 8.5pt;
+        font-size: 8pt;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.06em;
     }
     .doc-a4-note-extra {
         margin-top: 8px;
-        font-size: 9.5pt;
-        color: #475569;
+        font-size: 9pt;
+        color: #64748b;
     }
     .doc-a4-payment-terms {
         margin: 10px 0 6px;
-        font-size: 9.5pt;
-        color: #64748b;
+        font-size: 9pt;
+        color: #94a3b8;
+        font-style: italic;
     }
     .doc-a4-signature {
-        margin: 12px 0 6px;
-        padding-left: 140px;
+        margin: 14px 0 6px;
+        text-align: right;
+        padding-right: 40px;
         font-size: 10pt;
         font-weight: 600;
         text-decoration: underline;
+        text-underline-offset: 4px;
         color: #0f172a;
     }
 
-    /* ── Summary info line (e.g. "Nombre de références: 12") ── */
+    /* ── Summary line ── */
     .doc-a4-summary {
         margin-top: 14px;
         text-align: right;
-        font-size: 10.5pt;
-        color: #334155;
+        font-size: 10pt;
+        color: #475569;
     }
     .doc-a4-summary strong {
         font-weight: 700;
@@ -290,9 +331,19 @@
             print-color-adjust: exact !important;
         }
         .hide_print { display: none !important; }
-        .doc-a4-print #invoice { padding: 0; max-width: none; }
+        body.doc-a4-print {
+            background: #fff;
+        }
+        .doc-a4-print #invoice {
+            padding: 0;
+            max-width: none;
+            box-shadow: none;
+            border-radius: 0;
+        }
+        .doc-a4-print .page-content {
+            padding: 0;
+        }
         .doc-a4-toolbar { display: none; }
-        body.doc-a4-print { background: #fff; }
     }
 
     /* ── Footer positioning ── */
