@@ -31,6 +31,10 @@
     $devisLineList = $devis_lines ?? [];
 @endphp
 <style>
+    html {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
     #invoice { padding: 30px; }
     .invoice { position: relative; background-color: #FFF; min-height: 680px; padding: 15px; }
     .invoice header { padding: 10px 10px; margin-bottom: 20px; border-bottom: 1px solid #ff4000; }
@@ -62,6 +66,10 @@
     .hide_print { display: initial; }
     .table1 {}
     @media print {
+        html, body, #invoice, .invoice, thead th, .table thead th, tfoot tr:last-child th:last-child {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
         .invoice { overflow: hidden !important; }
         .invoice footer { position: absolute; bottom: 35px; page-break-after: always; }
         .hide_print { display: none; }
@@ -69,10 +77,13 @@
         .table1 { min-height: 10cm; }
         .page-content { zoom: 100%; }
     }
-    thead th {
+    thead th,
+    .table thead th {
         background: #ff4000 !important; background-color: #ff4000 !important; color: #fff !important;
         font-weight: 600 !important; text-transform: uppercase !important; padding: 5px !important;
         text-align: center !important; border: 1px solid #ff4000 !important; border-top: 1px solid #ff4000 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
     }
     .table1 td { border-right: 1px solid #b4b4b4; border-left: 1px solid #b4b4b4; padding: 6px !important; }
     tfoot td, tfoot th { text-align: right; }

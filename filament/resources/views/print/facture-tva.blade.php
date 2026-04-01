@@ -34,6 +34,11 @@
 <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
+    html {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
     body {
         font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
         font-size: 10pt;
@@ -144,6 +149,7 @@
     }
     .items-table thead tr th {
         background: #ff4000;
+        background-color: #ff4000;
         color: #fff;
         font-weight: 700;
         text-transform: uppercase;
@@ -152,6 +158,8 @@
         padding: 8px 10px;
         text-align: center;
         border: none;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
     }
     .items-table thead tr th:first-child { text-align: center; border-radius: 0; }
     .items-table thead tr th.col-product  { text-align: left; }
@@ -162,7 +170,7 @@
         vertical-align: middle;
     }
     .items-table tbody tr:nth-child(even) td { background: #f7f7f7; }
-    .items-table tbody tr:last-child td { border-bottom: 2px solid #ddd; }
+    .items-table tbody tr:last-child td { border-bottom: 1px solid #e5e5e5; }
 
     .items-table td.col-num    { text-align: center; color: #888; font-size: 8.5pt; width: 5%; }
     .items-table td.col-product{ text-align: left;   font-weight: 600; width: 35%; }
@@ -188,7 +196,7 @@
     }
     .totals-row .tl { display: table-cell; padding: 6px 10px; font-size: 9.5pt; color: #444; text-align: right; width: 60%; }
     .totals-row .tv { display: table-cell; padding: 6px 10px; font-size: 9.5pt; font-weight: 600; text-align: right; width: 40%; min-width: 90px; }
-    .totals-row.total-final { background: #fff3f0; border-top: 2px solid #1a1a1a; border-bottom: none; }
+    .totals-row.total-final { background: #fff3f0; border-top: 1px solid #1a1a1a; border-bottom: none; }
     .totals-row.total-final .tl { font-size: 10.5pt; font-weight: 700; color: #1a1a1a; }
     .totals-row.total-final .tv { font-size: 11pt; font-weight: 800; color: #ff4000; }
 
@@ -224,12 +232,14 @@
         letter-spacing: 0.3px;
     }
 
-    /* ── RIB footer ────────────────────────────────────────── */
+    /* ── RIB footer (in-flow + print: pinned bottom-left like BL; no full-width rule) ── */
     .doc-footer {
-        position: absolute;
-        bottom: 24px;
-        left: 40px;
-        right: 40px;
+        margin-top: 32px;
+        padding: 0;
+        text-align: left !important;
+        border: none !important;
+        box-shadow: none !important;
+        max-width: 100%;
     }
     .doc-footer .rib-label {
         font-size: 7.5pt;
@@ -237,31 +247,53 @@
         text-transform: uppercase;
         letter-spacing: 1px;
         margin-bottom: 2px;
+        text-align: left !important;
     }
     .doc-footer .rib-value {
         font-size: 9pt;
-        color: #555;
-        font-family: 'Courier New', monospace;
-        letter-spacing: 1.5px;
+        color: #444;
+        font-family: 'Courier New', Consolas, monospace;
+        letter-spacing: 1.2px;
+        text-align: left !important;
+        display: block;
+        width: fit-content;
+        max-width: 100%;
     }
 
     /* ── Print overrides ───────────────────────────────────── */
     @media print {
+        html, body, .page-wrap, .doc-header, .client-section, .note-block,
+        .items-table thead tr th, .totals-row.total-final {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
         body { background: #fff; }
         .toolbar { display: none; }
         .page-wrap {
             max-width: 100%;
             margin: 0;
-            padding: 20px 28px 80px;
-            min-height: 100vh;
+            padding: 16mm 14mm 22mm 14mm;
+            min-height: 0;
             box-shadow: none;
         }
+        /* Pin RIB bottom-left on A4; do not span full width (avoids “full line” look) */
         .doc-footer {
-            position: fixed;
-            bottom: 16px;
-            left: 28px;
-            right: 28px;
+            position: absolute;
+            left: 14mm;
+            right: auto;
+            bottom: 12mm;
+            width: auto;
+            margin-top: 0;
+            margin-right: 0;
         }
+    }
+
+    /* DomPDF often ignores @media print — keep RIB left, no rule, in-flow for PDF */
+    .page-wrap.is-pdf .doc-footer {
+        position: static !important;
+        margin-top: 28px !important;
+        left: auto !important;
+        bottom: auto !important;
     }
 </style>
 
@@ -272,7 +304,7 @@
 </div>
 @endif
 
-<div class="page-wrap">
+<div class="page-wrap{{ !empty($forPdf) ? ' is-pdf' : '' }}">
 
     {{-- ── HEADER ── --}}
     <div class="doc-header">

@@ -23,6 +23,11 @@
     $frais = (float) ($calc_frais ?? $facture->frais_livraison ?? 0);
 @endphp
 <style>
+    /* Browsers default to hiding backgrounds when printing → white text on “missing” orange = invisible headers */
+    html {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
     #invoice { padding: 30px; }
     .invoice { position: relative; background-color: #FFF; min-height: 680px; padding: 15px; }
     .invoice header { padding: 10px 10px; margin-bottom: 20px; border-bottom: 1px solid #ff4000; }
@@ -38,9 +43,28 @@
     .invoice table td, .invoice table th { border-bottom: 1px solid #fff; }
     .invoice table th { white-space: nowrap; font-size: 13pt; }
     .invoice table tbody tr:last-child td { border-bottom: 1px solid #b4b4b4; }
-    .invoice footer { font-size: 14px; width: 100%; text-align: left; color: #000; border-top: 1px solid #ccc; padding: 8px 0 8px 5px; }
+    .invoice footer { font-size: 14px; width: auto; max-width: 100%; text-align: left !important; color: #000; border: none !important; padding: 8px 0 8px 5px; }
     .hide_print { display: initial; }
     @media print {
+        html, body, #invoice, .invoice, .table1 table {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        thead th {
+            background-color: #ff4000 !important;
+            color: #fff !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        tfoot tr:last-child th:last-child,
+        tfoot tr:last-child th.text-right {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        .invoice header[style*="background"] {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
         .invoice { overflow: hidden !important; }
         .invoice footer { position: absolute; bottom: 35px; page-break-after: always; }
         .hide_print { display: none; }
@@ -48,10 +72,18 @@
         .table1 { min-height: 10cm; }
         .page-content { zoom: 100%; }
     }
-    thead th {
-        background: #ff4000 !important; color: #fff !important; font-weight: 600 !important;
-        text-transform: uppercase !important; padding: 5px !important; text-align: center !important;
+    thead th,
+    .table thead th {
+        background: #ff4000 !important;
+        background-color: #ff4000 !important;
+        color: #fff !important;
+        font-weight: 600 !important;
+        text-transform: uppercase !important;
+        padding: 5px !important;
+        text-align: center !important;
         border: 1px solid #ff4000 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
     }
     .table1 td { border-right: 1px solid #b4b4b4; border-left: 1px solid #b4b4b4; padding: 6px !important; }
     tfoot td, tfoot th { text-align: right; }
