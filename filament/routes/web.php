@@ -40,7 +40,7 @@ Route::get('unsubscribe', function () {
 
 Route::redirect('login-redirect', 'login')->name('login');
 
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'no.cache.print'])->group(function () {
     Route::get('factures/{facture}/print', function (Facture $facture) {
         $facture->load('client');
         $details_facture = DetailsFacture::where('facture_id', $facture->id)

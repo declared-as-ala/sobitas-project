@@ -92,5 +92,6 @@ class Kernel extends HttpKernel
         'signed' => ValidateSignature::class,
         'throttle' => ThrottleRequests::class,
         'verified' => EnsureEmailIsVerified::class,
+        'no.cache.print' => \App\Http\Middleware\DisableBrowserCacheForPrintDocuments::class,
     ];
 }

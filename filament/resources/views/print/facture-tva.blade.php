@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Facture {{ $facture->numero ?? '' }}</title>
 </head>
@@ -34,8 +36,8 @@
     $tvaRateDisplay = ($tvaRateLabel == floor($tvaRateLabel)) ? (string) (int) $tvaRateLabel : (string) $tvaRateLabel;
     $dateStr = $documentDate
         ?? ($facture->date_facture
-            ? \Carbon\Carbon::parse($facture->date_facture)->format('d-m-Y')
-            : ($facture->created_at?->format('d-m-Y') ?? ''));
+            ? \Carbon\Carbon::parse($facture->date_facture)->format('d/m/Y')
+            : ($facture->created_at?->format('d/m/Y') ?? ''));
 @endphp
 
 @include('print.partials.styles-a4-bl-aligned', ['forPdf' => $forPdf ?? null])

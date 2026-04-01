@@ -1,8 +1,10 @@
 {{--
-    Shared A4 print styles for Facture TVA + Devis — aligned with Bon de livraison visual language.
-    Does not replace BL templates; BL keeps its own bl-* classes.
+    Universal A4 print styles for ALL SOBITAS documents:
+    Facture TVA, Devis, Bon de Livraison, Liste de Prix.
+    Single source of truth for layout, typography, colors, and print/PDF behavior.
 --}}
 <style>
+    *, *::before, *::after { box-sizing: border-box; }
     html {
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
@@ -12,6 +14,8 @@
         font-size: 11pt;
         color: #1a1a1a;
         background: #fff;
+        margin: 0;
+        padding: 0;
     }
     .doc-a4-print #invoice {
         padding: 24px 28px 32px;
@@ -19,7 +23,8 @@
         margin: 0 auto;
         box-sizing: border-box;
     }
-    /* DomPDF / short pages: fill page so footer sits lower; browser print uses flex column below */
+
+    /* ── PDF: flex column so footer is pushed down on short documents ── */
     body.doc-a4-print.is-pdf-print #invoice.doc-a4-shell {
         min-height: 280mm;
         padding-bottom: 20mm;
@@ -41,6 +46,7 @@
         flex: 1 1 auto;
     }
 
+    /* ── Toolbar (screen only) ── */
     .doc-a4-toolbar { text-align: right; margin-bottom: 10px; }
     .doc-a4-btn {
         display: inline-block;
@@ -48,14 +54,19 @@
         color: #fff !important;
         border: none;
         border-radius: 6px;
-        padding: 8px 16px;
+        padding: 8px 18px;
         font-size: 10pt;
         font-weight: 600;
         text-decoration: none;
         margin-left: 8px;
+        cursor: pointer;
+        line-height: 1.4;
     }
+    .doc-a4-btn:hover { background: #1d4ed8; }
     .doc-a4-btn--muted { background: #64748b; }
+    .doc-a4-btn--muted:hover { background: #475569; }
 
+    /* ── Header ── */
     .doc-a4-header {
         display: table;
         width: 100%;
@@ -63,8 +74,17 @@
         padding-bottom: 14px;
         border-bottom: 3px solid #ff4000;
     }
-    .doc-a4-header__brand { display: table-cell; vertical-align: top; width: 58%; }
-    .doc-a4-header__meta { display: table-cell; vertical-align: top; width: 42%; text-align: right; }
+    .doc-a4-header__brand {
+        display: table-cell;
+        vertical-align: top;
+        width: 58%;
+    }
+    .doc-a4-header__meta {
+        display: table-cell;
+        vertical-align: top;
+        width: 42%;
+        text-align: right;
+    }
     .doc-a4-header__meta h1 {
         margin: 0 0 8px;
         font-size: 22pt;
@@ -73,10 +93,24 @@
         color: #0f172a;
         text-transform: uppercase;
     }
-    .doc-a4-header__meta .doc-a4-meta-line { font-size: 10.5pt; color: #334155; line-height: 1.6; }
-    .doc-a4-co-name { font-size: 13pt; font-weight: 700; margin: 8px 0 6px; color: #0f172a; }
-    .doc-a4-co-line { font-size: 9.5pt; color: #475569; line-height: 1.55; }
+    .doc-a4-meta-line {
+        font-size: 10.5pt;
+        color: #334155;
+        line-height: 1.6;
+    }
+    .doc-a4-co-name {
+        font-size: 13pt;
+        font-weight: 700;
+        margin: 8px 0 6px;
+        color: #0f172a;
+    }
+    .doc-a4-co-line {
+        font-size: 9.5pt;
+        color: #475569;
+        line-height: 1.55;
+    }
 
+    /* ── Client block ── */
     .doc-a4-client {
         margin: 14px 0 12px;
         padding: 10px 12px;
@@ -92,8 +126,13 @@
         text-transform: uppercase;
         color: #64748b;
     }
-    .doc-a4-client p { margin: 0 0 4px; font-size: 10pt; color: #334155; }
+    .doc-a4-client p {
+        margin: 0 0 4px;
+        font-size: 10pt;
+        color: #334155;
+    }
 
+    /* ── Product / lines table ── */
     .doc-a4-table-wrap { width: 100%; margin: 0; overflow: visible; }
     table.doc-a4-lines {
         width: 100%;
@@ -127,11 +166,26 @@
         vertical-align: middle;
         background: #fff;
     }
-    table.doc-a4-lines tbody tr:nth-child(even) td { background: #f8fafc; }
-    table.doc-a4-lines .doc-a4-td-num { text-align: center; color: #64748b; font-weight: 600; }
-    table.doc-a4-lines .doc-a4-td-prod { text-align: left; font-weight: 600; color: #0f172a; word-wrap: break-word; }
-    table.doc-a4-lines .doc-a4-td-right { text-align: right; font-variant-numeric: tabular-nums; }
+    table.doc-a4-lines tbody tr:nth-child(even) td {
+        background: #f8fafc;
+    }
+    table.doc-a4-lines .doc-a4-td-num {
+        text-align: center;
+        color: #64748b;
+        font-weight: 600;
+    }
+    table.doc-a4-lines .doc-a4-td-prod {
+        text-align: left;
+        font-weight: 600;
+        color: #0f172a;
+        word-wrap: break-word;
+    }
+    table.doc-a4-lines .doc-a4-td-right {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+    }
 
+    /* ── Totals block ── */
     .doc-a4-totals-wrap { width: 100%; margin-top: 12px; margin-bottom: 6px; }
     table.doc-a4-totals {
         width: 100%;
@@ -166,7 +220,10 @@
         font-weight: 800;
         color: #0f172a;
     }
-    table.doc-a4-totals tr.doc-a4-totals__grand td:first-child { font-weight: 800; color: #0f172a; }
+    table.doc-a4-totals tr.doc-a4-totals__grand td:first-child {
+        font-weight: 800;
+        color: #0f172a;
+    }
     table.doc-a4-totals tr.doc-a4-totals__grand td:last-child {
         background: #fff7ed !important;
         -webkit-print-color-adjust: exact !important;
@@ -176,6 +233,7 @@
         border-radius: 4px;
     }
 
+    /* ── Note / Signature ── */
     .doc-a4-note {
         margin: 14px 0 10px;
         padding: 10px 12px 10px 14px;
@@ -185,9 +243,22 @@
         color: #334155;
         line-height: 1.45;
     }
-    .doc-a4-note strong { color: #c2410c; font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.05em; }
-    .doc-a4-note-extra { margin-top: 8px; font-size: 9.5pt; color: #475569; }
-    .doc-a4-payment-terms { margin: 10px 0 6px; font-size: 9.5pt; color: #64748b; }
+    .doc-a4-note strong {
+        color: #c2410c;
+        font-size: 8.5pt;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    .doc-a4-note-extra {
+        margin-top: 8px;
+        font-size: 9.5pt;
+        color: #475569;
+    }
+    .doc-a4-payment-terms {
+        margin: 10px 0 6px;
+        font-size: 9.5pt;
+        color: #64748b;
+    }
     .doc-a4-signature {
         margin: 12px 0 6px;
         padding-left: 140px;
@@ -197,9 +268,24 @@
         color: #0f172a;
     }
 
+    /* ── Summary info line (e.g. "Nombre de références: 12") ── */
+    .doc-a4-summary {
+        margin-top: 14px;
+        text-align: right;
+        font-size: 10.5pt;
+        color: #334155;
+    }
+    .doc-a4-summary strong {
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    /* ── Print media ── */
     .hide_print { display: initial; }
     @media print {
-        html, body, table.doc-a4-lines thead th, table.doc-a4-totals tr.doc-a4-totals__grand td:last-child {
+        html, body,
+        table.doc-a4-lines thead th,
+        table.doc-a4-totals tr.doc-a4-totals__grand td:last-child {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
         }
@@ -209,7 +295,7 @@
         body.doc-a4-print { background: #fff; }
     }
 
-    /* Footer: wrap matches footer-rib-numero-styles.blade.php (.print-doc-footer-wrap) */
+    /* ── Footer positioning ── */
     body.doc-a4-print:not(.is-pdf-print) #invoice.doc-a4-shell,
     body.doc-a4-print:not(.is-pdf-print) .page-content {
         padding-bottom: 28mm !important;
