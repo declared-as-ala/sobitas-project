@@ -7,7 +7,7 @@
     <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" rel="stylesheet">
     <title>Bon de livraison {{ $facture->numero ?? $facture->id }}</title>
 </head>
-<body>
+<body @if(!empty($forPdf)) class="is-pdf-print" @endif>
 @php
     $coordonnee = $coordonnee ?? $company ?? null;
     $logoUrl = null;
@@ -43,17 +43,6 @@
     .invoice table td, .invoice table th { border-bottom: 1px solid #fff; }
     .invoice table th { white-space: nowrap; font-size: 13pt; }
     .invoice table tbody tr:last-child td { border-bottom: 1px solid #b4b4b4; }
-    .print-doc-footer {
-        font-size: 14px;
-        text-align: left !important;
-        color: #000;
-        border: none !important;
-        padding: 8px 0 8px 5px;
-        width: auto;
-        max-width: 100%;
-    }
-    .print-doc-footer__line { line-height: 1.5; }
-    .print-doc-footer__numero { font-weight: 600; }
     .hide_print { display: initial; }
     @media print {
         html, body, #invoice, .invoice, .table1 table {
@@ -76,15 +65,6 @@
             print-color-adjust: exact !important;
         }
         .invoice { overflow: hidden !important; }
-        .invoice .print-doc-footer {
-            position: absolute;
-            left: 12px;
-            right: auto;
-            bottom: 28px;
-            width: auto;
-            max-width: 90%;
-            page-break-after: always;
-        }
         .hide_print { display: none; }
         .invoice > div:last-child { page-break-before: always; }
         .table1 { min-height: 10cm; }
@@ -111,6 +91,8 @@
     .contacts .address, .contacts .email, .contacts .to { font-weight: 600; font-size: 12pt; }
     tbody { font-size: 10pt !important; }
     .btn-info { background: #3e46df; border: 0; border-radius: 3px; color: #fff; padding: 6px 15px; }
+
+    @include('print.partials.footer-rib-numero-styles', ['forPdf' => $forPdf ?? null])
 </style>
 
 <div class="page-content">
@@ -223,7 +205,7 @@
                                 @endif
                                 <tr>
                                     <td colspan="3"></td>
-                                    <th class="bt" colspan="1">Montant à payer</th>
+                                    <th class="bt" colspan="1">Montant total à payer</th>
                                     <th class="text-right" style="background: #fd582033 !important;">
                                         {{ number_format((float) ($calc_net_a_payer ?? max((float)($facture->prix_ttc ?? 0) - (float)($facture->timbre ?? 0), 0)), 3, '.', '') }}
                                     </th>

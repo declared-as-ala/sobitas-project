@@ -137,7 +137,7 @@ class DocumentPdfController extends Controller
                 $totalsPdf[] = ['label' => 'Remise', 'value' => number_format($calcTotals['remise'], 3, ',', ' ') . ' DT'];
             }
             $totalsPdf[] = ['label' => 'TVA', 'value' => number_format($calcTotals['tva'], 3, ',', ' ') . ' DT'];
-            $totalsPdf[] = ['label' => 'Total TTC', 'value' => number_format($calcTotals['net_a_payer'], 3, ',', ' ') . ' DT', 'class' => 'ttc'];
+            $totalsPdf[] = ['label' => 'Montant total à payer', 'value' => number_format($calcTotals['net_a_payer'], 3, ',', ' ') . ' DT', 'class' => 'ttc'];
 
             $data = [
                 'facture' => $factureTva,
@@ -210,7 +210,7 @@ class DocumentPdfController extends Controller
             if ($calcTotals['timbre'] > 0) {
                 $totals[] = ['label' => 'Timbre fiscal', 'value' => number_format($calcTotals['timbre'], 3, ',', ' ') . ' DT'];
             }
-            $totals[] = ['label' => 'Total TTC', 'value' => number_format($calcTotals['net_a_payer'], 3, ',', ' ') . ' DT', 'class' => 'ttc'];
+            $totals[] = ['label' => 'Montant total à payer', 'value' => number_format($calcTotals['net_a_payer'], 3, ',', ' ') . ' DT', 'class' => 'ttc'];
 
             $data = [
                 'facture' => $quotation,

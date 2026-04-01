@@ -7,7 +7,7 @@
     <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" rel="stylesheet">
     <title>Facture {{ $facture->numero ?? '' }}</title>
 </head>
-<body>
+<body @if(!empty($forPdf)) class="is-pdf-print" @endif>
 @php
     $coordonnee = $coordonnee ?? $company ?? null;
     $logoUrl = null;
@@ -86,14 +86,6 @@
             print-color-adjust: exact !important;
         }
         .invoice { overflow: hidden !important; }
-        .invoice .print-doc-footer {
-            position: absolute;
-            left: 12px;
-            right: auto;
-            bottom: 28px;
-            width: auto;
-            max-width: 90%;
-        }
         .hide_print { display: none; }
         .invoice > div:last-child { page-break-before: always; }
         .table1 { min-height: 10cm; }
@@ -131,18 +123,7 @@
     tbody { font-size: 10pt !important; }
     .btn-info { background: #3e46df; border: 0; border-radius: 3px; color: #fff; padding: 6px 15px; }
 
-    /* RIB + N° document — bottom left (screen + print), no full-width top rule */
-    .print-doc-footer {
-        font-size: 14px;
-        text-align: left !important;
-        color: #000;
-        border: none !important;
-        padding: 8px 0 8px 5px;
-        width: auto;
-        max-width: 100%;
-    }
-    .print-doc-footer__line { line-height: 1.5; }
-    .print-doc-footer__numero { font-weight: 600; }
+    @include('print.partials.footer-rib-numero-styles', ['forPdf' => $forPdf ?? null])
 </style>
 
 <div class="page-content">
@@ -275,7 +256,7 @@
                                 </tr>
                                 <tr>
                                     <td colspan="2"></td>
-                                    <th colspan="3">Totale TTC</th>
+                                    <th colspan="3">Montant total à payer</th>
                                     <th class="text-right">{{ number_format($footerTtc, 3, '.', '') }}</th>
                                 </tr>
                             </tfoot>

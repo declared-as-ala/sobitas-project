@@ -10,7 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js"></script>
 </head>
-<body>
+<body @if(!empty($forPdf)) class="is-pdf-print" @endif>
 @php
     $coordonnee = $coordonnee ?? $company ?? null;
 
@@ -62,17 +62,6 @@
     .invoice table tfoot tr:first-child td { border-top: none; }
     .invoice table tfoot tr:last-child td { font-size: 1.4em; }
     .invoice table tfoot tr td:first-child { border: none; }
-    .print-doc-footer {
-        font-size: 14px;
-        text-align: left !important;
-        color: #000;
-        border: none !important;
-        padding: 8px 0 8px 5px;
-        width: auto;
-        max-width: 100%;
-    }
-    .print-doc-footer__line { line-height: 1.5; }
-    .print-doc-footer__numero { font-weight: 600; }
     .hide_print { display: initial; }
     .table1 {}
     @media print {
@@ -81,15 +70,6 @@
             print-color-adjust: exact !important;
         }
         .invoice { overflow: hidden !important; }
-        .invoice .print-doc-footer {
-            position: absolute;
-            left: 12px;
-            right: auto;
-            bottom: 28px;
-            width: auto;
-            max-width: 90%;
-            page-break-after: always;
-        }
         .hide_print { display: none; }
         .invoice > div:last-child { page-break-before: always; }
         .table1 { min-height: 10cm; }
@@ -112,6 +92,8 @@
     .contacts .address, .contacts .email, .contacts .to { font-weight: 600; font-size: 12pt; }
     tbody { font-size: 10pt !important; }
     .btn-info { background: #3e46df; border: 0; border-radius: 3px; color: #fff; padding: 6px 15px; }
+
+    @include('print.partials.footer-rib-numero-styles', ['forPdf' => $forPdf ?? null])
 </style>
 
 <div class="page-content">
@@ -244,7 +226,7 @@
                                 @endif
                                 <tr>
                                     <td colspan="2"></td>
-                                    <th colspan="3">Totale TTC</th>
+                                    <th colspan="3">Montant total à payer</th>
                                     <th class="text-right">{{ number_format($footerTtc, 3, '.', '') }}</th>
                                 </tr>
                             </tfoot>
