@@ -4,259 +4,220 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css">
     <title>Devis {{ $facture->numero ?? '' }}</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js"></script>
 </head>
-<body @if(!empty($forPdf)) class="is-pdf-print" @endif>
+<body class="doc-a4-print @if(!empty($forPdf)) is-pdf-print @endif">
 @php
     $coordonnee = $coordonnee ?? $company ?? null;
-
-    // Always use static logo_print.png (base64); no URL fallback to avoid 404.
     $logoUrl = null;
     $staticLogoPath = resource_path('views/print/logo_print.png');
     if (is_file($staticLogoPath)) {
-        $mime    = @mime_content_type($staticLogoPath) ?: 'image/png';
+        $mime = @mime_content_type($staticLogoPath) ?: 'image/png';
         $logoUrl = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($staticLogoPath));
     }
 
-    $ct = $calcTotals ?? null;
+    $defaultTva = $coordonnee && isset($coordonnee->tva) ? (float) $coordonnee->tva : 19;
+
+    if (! isset($calcTotals) && isset($facture, $details_facture)) {
+        $detailsForCalc = collect($details_facture)->map(fn ($d) => [
+            'produit_id' => $d->produit_id ?? null,
+            'qte' => (int) ($d->qte ?? $d->quantite ?? 1),
+            'prix_unitaire' => (float) ($d->prix_unitaire ?? 0),
+            'tva_pct' => (float) ($d->tva ?? $defaultTva),
+        ])->toArray();
+        $calcTotals = \App\Services\InvoiceCalculator::calculate(
+            $detailsForCalc,
+            (float) ($facture->remise ?? 0),
+            (float) ($facture->timbre ?? 0),
+            $defaultTva
+        );
+    }
+
+    $ct = $calcTotals ?? [];
     $footerTotalHt = $ct['total_ht_brut'] ?? (float) ($facture->prix_ht ?? 0);
     $footerRemise = $ct['remise'] ?? (float) ($facture->remise ?? 0);
     $footerTva = $ct['tva'] ?? (float) ($facture->tva ?? 0);
     $footerTimbre = $ct['timbre'] ?? (float) ($facture->timbre ?? 0);
     $footerTtc = $ct['net_a_payer'] ?? (float) ($facture->prix_ttc ?? $facture->net_a_payer ?? 0);
+
+    $tvaRateLabel = (float) ($coordonnee->tva ?? 19);
+    $tvaRateDisplay = ($tvaRateLabel == floor($tvaRateLabel)) ? (string) (int) $tvaRateLabel : (string) $tvaRateLabel;
+
+    $dateStr = $documentDate
+        ?? ($facture->date_quotation
+            ? \Carbon\Carbon::parse($facture->date_quotation)->format('d-m-Y')
+            : ($facture->created_at?->format('d-m-Y') ?? ''));
+
     $devisLineList = is_array($devis_lines ?? null) ? $devis_lines : [];
 @endphp
-<style>
-    html {
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-    }
-    #invoice { padding: 30px; }
-    .invoice { position: relative; background-color: #FFF; min-height: 680px; padding: 15px; }
-    .invoice header { padding: 10px 10px; margin-bottom: 20px; border-bottom: 1px solid #ff4000; }
-    .invoice .company-details { text-align: right; }
-    .invoice .company-details .name { margin-top: 0; margin-bottom: 0; }
-    .invoice .contacts { margin-bottom: 20px; }
-    .invoice .invoice-to { text-align: left; }
-    .invoice .invoice-to .to { margin-top: 0; margin-bottom: 0; }
-    .invoice .invoice-details { text-align: right; }
-    .company-details .invoice-id { margin: 26px; text-transform: uppercase; }
-    .invoice main { padding-bottom: 50px; }
-    .invoice main .thanks { margin-top: -100px; font-size: 2em; margin-bottom: 50px; }
-    .invoice main .notices { padding-left: 6px; font-size: 16pt; border-left: 6px solid #ff4000; }
-    .invoice main .notices .notice { font-size: 16pt; }
-    .invoice table { width: 100%; border-collapse: collapse; border-spacing: 0; margin-bottom: 20px; }
-    .invoice table td, .invoice table th { border-bottom: 1px solid #fff; }
-    .invoice table th { white-space: nowrap; font-size: 13pt; }
-    .invoice table td h3 { margin: 0; font-weight: 400; color: #ff4000; font-size: 16pt; }
-    .invoice table .qty, .invoice table .total, .invoice table .unit { text-align: right; font-size: 16pt; }
-    .invoice table .no { color: #fff; font-size: 1.6em; background: #ff4000; }
-    .invoice table .unit { background: #ddd; }
-    .invoice table .total { background: #ff4000; color: #fff; }
-    .invoice table tbody tr:last-child td { border-bottom: 1px solid #b4b4b4; }
-    .invoice table tfoot td { background: 0 0; border-bottom: none; white-space: nowrap; text-align: right; padding: 10px 20px; font-size: 16pt; border-top: 1px solid #aaa; }
-    .invoice table tfoot tr:first-child td { border-top: none; }
-    .invoice table tfoot tr:last-child td { font-size: 1.4em; }
-    .invoice table tfoot tr td:first-child { border: none; }
-    .hide_print { display: initial; }
-    .table1 {}
-    @media print {
-        html, body, #invoice, .invoice, thead th, .table thead th, tfoot tr:last-child th:last-child {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-        }
-        .invoice { overflow: hidden !important; }
-        .hide_print { display: none; }
-        .invoice > div:last-child { page-break-before: always; }
-        .table1 { min-height: 10cm; }
-        .page-content { zoom: 100%; }
-    }
-    thead th,
-    .table thead th {
-        background: #ff4000 !important; background-color: #ff4000 !important; color: #fff !important;
-        font-weight: 600 !important; text-transform: uppercase !important; padding: 5px !important;
-        text-align: center !important; border: 1px solid #ff4000 !important; border-top: 1px solid #ff4000 !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-    .table1 td { border-right: 1px solid #b4b4b4; border-left: 1px solid #b4b4b4; padding: 6px !important; }
-    tfoot td, tfoot th { text-align: right; }
-    tfoot th:last-child { border-bottom: 1px solid #b4b4b4; }
-    tfoot tr:last-child th:last-child { background: #fd582033; border-top: 2px solid black !important; }
-    .bt { border-top: 2px solid black !important; }
-    .bggray { background-color: gray !important; }
-    .contacts .address, .contacts .email, .contacts .to { font-weight: 600; font-size: 12pt; }
-    tbody { font-size: 10pt !important; }
-    .btn-info { background: #3e46df; border: 0; border-radius: 3px; color: #fff; padding: 6px 15px; }
 
-    @include('print.partials.footer-rib-numero-styles', ['forPdf' => $forPdf ?? null])
-</style>
+@include('print.partials.styles-a4-bl-aligned', ['forPdf' => $forPdf ?? null])
 
 <div class="page-content">
-    <div id="invoice">
+    <div id="invoice" class="doc-a4-shell">
         @if (empty($forPdf))
-        <div class="toolbar hidden-print hide_print">
-            <div class="text-right">
-                <button type="button" id="printInvoice" class="btn btn-info" onclick="window.print()">Imprimer</button>
-                <a class="btn btn-info" href="{{ $backUrl ?? url()->previous() }}">Retour</a>
-            </div>
-            <hr>
+        <div class="doc-a4-toolbar hide_print">
+            <button type="button" class="doc-a4-btn" onclick="window.print()">Imprimer</button>
+            <a class="doc-a4-btn doc-a4-btn--muted" href="{{ $backUrl ?? url()->previous() }}">Retour</a>
         </div>
         @endif
-        <div class="invoice overflow-auto">
-            <div style="min-width: 600px">
-                <header style="background: #eeeeee !important;">
-                    <div class="row">
-                        <div class="col">
-                            @if ($logoUrl)
-                                <img src="{{ $logoUrl }}" alt="" style="width: 220px">
-                            @endif
-                            <h4 class="name">{{ $coordonnee->abbreviation ?? '' }}</h4>
-                            <div><b>Email :</b> &nbsp; {{ $coordonnee->email ?? '' }}</div>
-                            <div><b>Adresse :</b> &nbsp; {{ $coordonnee->adresse_fr ?? '' }}</div>
-                            <div><b>Tél :</b> &nbsp;{{ $coordonnee->phone_1 ?? '' }} @if (!empty($coordonnee->phone_2))<span>/ {{ $coordonnee->phone_2 }}</span>@endif</div>
-                            @if (!empty($coordonnee->registre_commerce))
-                                <div><b>RC :</b>&nbsp; {{ $coordonnee->registre_commerce }}</div>
-                            @endif
-                            @if (!empty($coordonnee->matricule))
-                                <div><b>MF :</b>&nbsp; {{ $coordonnee->matricule }}</div>
-                            @endif
-                        </div>
-                        <div class="col company-details">
-                            <h1 class="invoice-id">Devis</h1>
-                            <div class="date"><b>Date :</b> {{ $documentDate ?? $facture->created_at?->format('d-m-Y') }}</div>
-                            <div class="date"><b>Numéro:</b> {{ $facture->numero }}</div>
-                        </div>
+
+        <div class="invoice">
+            <div class="doc-a4-main-wrap" style="min-width: 600px">
+                <header class="doc-a4-header">
+                    <div class="doc-a4-header__brand">
+                        @if ($logoUrl)
+                            <img src="{{ $logoUrl }}" alt="" style="max-width: 200px; height: auto; display: block; margin-bottom: 8px;">
+                        @endif
+                        <div class="doc-a4-co-name">{{ $coordonnee->abbreviation ?? '' }}</div>
+                        <div class="doc-a4-co-line"><b>Email :</b> {{ $coordonnee->email ?? '' }}</div>
+                        <div class="doc-a4-co-line"><b>Adresse :</b> {{ $coordonnee->adresse_fr ?? '' }}</div>
+                        <div class="doc-a4-co-line"><b>Tél :</b> {{ $coordonnee->phone_1 ?? '' }}@if (!empty($coordonnee->phone_2)) / {{ $coordonnee->phone_2 }}@endif</div>
+                        @if (!empty($coordonnee->registre_commerce))
+                            <div class="doc-a4-co-line"><b>RC :</b> {{ $coordonnee->registre_commerce }}</div>
+                        @endif
+                        @if (!empty($coordonnee->matricule))
+                            <div class="doc-a4-co-line"><b>MF :</b> {{ $coordonnee->matricule }}</div>
+                        @endif
+                    </div>
+                    <div class="doc-a4-header__meta">
+                        <h1>DEVIS</h1>
+                        <div class="doc-a4-meta-line"><b>Date :</b> {{ $dateStr }}</div>
+                        <div class="doc-a4-meta-line"><b>Numéro :</b> {{ $facture->numero }}</div>
                     </div>
                 </header>
+
                 <main>
-                    @if ($facture->client ?? null)
-                        <div class="row contacts">
-                            <div class="col invoice-to">
-                                <h5 class="text-gray-light">INFORMATIONS DU CLIENT</h5>
-                                <hr style="margin: 9px">
-                                <b class="to"><b>Nom :</b> {{ $facture->client->name }}</b>
-                                <div class="address"><b>Adresse :</b> {{ $facture->client->adresse }}</div>
-                                @if ($facture->client->matricule)
-                                    <div class="email"><b>Matricule :</b> {{ $facture->client->matricule }}</div>
-                                @endif
-                                <div class="email"><b>Numéro de téléphone:</b> {{ $facture->client->phone_1 }}</div>
-                            </div>
-                            <div class="col invoice-details"></div>
-                        </div>
+                    @php $printClient = $client ?? $facture->client ?? null; @endphp
+                    @if ($printClient)
+                        <section class="doc-a4-client">
+                            <h2>Informations du client</h2>
+                            <p><b>Nom :</b> {{ $printClient->name }}</p>
+                            <p><b>Adresse :</b> {{ $printClient->adresse }}</p>
+                            @if (filled($printClient->matricule))
+                                <p><b>Matricule :</b> {{ $printClient->matricule }}</p>
+                            @endif
+                            <p><b>Numéro de téléphone :</b> {{ $printClient->phone_1 }}</p>
+                        </section>
                     @endif
-                    <br><br>
-                    <div class="table1">
-                        <table class="table" cellspacing="0" cellpadding="0">
+
+                    <div class="doc-a4-table-wrap">
+                        <table class="doc-a4-lines doc-a4-lines--7">
                             <thead>
                                 <tr>
-                                    <th style="width: 5%; background: #ff4000 !important">#</th>
-                                    <th style="width: 25%; background: #ff4000 !important">Produit</th>
-                                    <th style="width: 10%; background: #ff4000 !important">Qte</th>
-                                    <th style="width: 15%; background: #ff4000 !important">P.U.HT</th>
-                                    <th style="width: 15%; background: #ff4000 !important">TVA</th>
-                                    <th style="width: 15%; background: #ff4000 !important">Totale HT</th>
+                                    <th class="doc-a4-col-num">#</th>
+                                    <th class="doc-a4-col-prod">Produit</th>
+                                    <th class="doc-a4-col-numcell">Qté</th>
+                                    <th class="doc-a4-col-numcell">P.U. HT</th>
+                                    <th class="doc-a4-col-numcell">Total HT</th>
+                                    <th class="doc-a4-col-numcell">TVA (DT)</th>
+                                    <th class="doc-a4-col-numcell">Total TTC</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @php $i = 1; @endphp
+                                @php $rowNum = 1; @endphp
                                 @if (! empty($devisLineList))
                                     @foreach ($devisLineList as $line)
-                                        @php
-                                            $d = $line['detail'] ?? null;
-                                            $qte = $d ? (int) ($d->qte ?? $d->quantite ?? 0) : 0;
-                                        @endphp
+                                        @php $d = $line['detail'] ?? null; @endphp
                                         @if ($d)
+                                            @php
+                                                $qte = (int) ($d->qte ?? $d->quantite ?? 0);
+                                                $puHt = (float) ($d->prix_unitaire ?? 0);
+                                                $ltHt = (float) ($line['line_total_ht'] ?? round($qte * $puHt, 3));
+                                                $ltTvaDt = (float) ($line['line_tva_dt'] ?? round($ltHt * ($line['line_tva_pct'] ?? $defaultTva) / 100, 3));
+                                                $ltTtc = (float) ($line['line_total_ttc'] ?? round($ltHt + $ltTvaDt, 3));
+                                            @endphp
                                             <tr>
-                                                <td @if(($i % 2) != 0) style="background-color: #eee !important" @endif>{{ $i }}</td>
-                                                <td @if(($i % 2) != 0) style="background-color: #eee !important" @endif>{{ $d->product->designation_fr ?? '—' }}</td>
-                                                <td class="text-center" @if(($i % 2) != 0) style="background-color: #eee !important" @endif>{{ $qte }}</td>
-                                                <td class="text-right" @if(($i % 2) != 0) style="background-color: #eee !important" @endif>{{ number_format((float) ($d->prix_unitaire ?? 0), 3, '.', '') }}</td>
-                                                <td class="text-right" @if(($i % 2) != 0) style="background-color: #eee !important" @endif>{{ $line['line_tva_pct'] ?? '' }} %</td>
-                                                <td class="text-right" @if(($i % 2) != 0) style="background-color: #eee !important" @endif>{{ number_format((float) ($line['line_total_ht'] ?? 0), 3, '.', '') }}</td>
+                                                <td class="doc-a4-td-num">{{ $rowNum }}</td>
+                                                <td class="doc-a4-td-prod">{{ $d->product->designation_fr ?? '—' }}</td>
+                                                <td class="doc-a4-td-right">{{ $qte }}</td>
+                                                <td class="doc-a4-td-right">{{ number_format($puHt, 3, '.', '') }}</td>
+                                                <td class="doc-a4-td-right">{{ number_format($ltHt, 3, '.', '') }}</td>
+                                                <td class="doc-a4-td-right">{{ number_format($ltTvaDt, 3, '.', '') }}</td>
+                                                <td class="doc-a4-td-right">{{ number_format($ltTtc, 3, '.', '') }}</td>
                                             </tr>
-                                            @php $i++; @endphp
+                                            @php $rowNum++; @endphp
                                         @endif
                                     @endforeach
                                 @else
                                     @foreach ($details_facture ?? [] as $details)
                                         @php
                                             $qte = (int) ($details->qte ?? $details->quantite ?? 0);
-                                            $pu = (float) ($details->prix_unitaire ?? 0);
-                                            $tvaPct = (float) ($details->tva ?? 19);
-                                            $lineHt = round($qte * $pu, 3);
+                                            $puHt = (float) ($details->prix_unitaire ?? 0);
+                                            $tp = (float) ($details->tva ?? ($coordonnee->tva ?? 19));
+                                            $ltHt = round($qte * $puHt, 3);
+                                            $ltTvaDt = round($ltHt * $tp / 100, 3);
+                                            $ltTtc = round($ltHt + $ltTvaDt, 3);
                                         @endphp
                                         <tr>
-                                            <td @if(($i % 2) != 0) style="background-color: #eee !important" @endif>{{ $i }}</td>
-                                            <td @if(($i % 2) != 0) style="background-color: #eee !important" @endif>{{ $details->product->designation_fr ?? '—' }}</td>
-                                            <td class="text-center" @if(($i % 2) != 0) style="background-color: #eee !important" @endif>{{ $qte }}</td>
-                                            <td class="text-right" @if(($i % 2) != 0) style="background-color: #eee !important" @endif>{{ number_format($pu, 3, '.', '') }}</td>
-                                            <td class="text-right" @if(($i % 2) != 0) style="background-color: #eee !important" @endif>{{ $tvaPct }} %</td>
-                                            <td class="text-right" @if(($i % 2) != 0) style="background-color: #eee !important" @endif>{{ number_format($lineHt, 3, '.', '') }}</td>
+                                            <td class="doc-a4-td-num">{{ $rowNum }}</td>
+                                            <td class="doc-a4-td-prod">{{ $details->product->designation_fr ?? '—' }}</td>
+                                            <td class="doc-a4-td-right">{{ $qte }}</td>
+                                            <td class="doc-a4-td-right">{{ number_format($puHt, 3, '.', '') }}</td>
+                                            <td class="doc-a4-td-right">{{ number_format($ltHt, 3, '.', '') }}</td>
+                                            <td class="doc-a4-td-right">{{ number_format($ltTvaDt, 3, '.', '') }}</td>
+                                            <td class="doc-a4-td-right">{{ number_format($ltTtc, 3, '.', '') }}</td>
                                         </tr>
-                                        @php $i++; @endphp
+                                        @php $rowNum++; @endphp
                                     @endforeach
                                 @endif
                             </tbody>
-                            <tfoot>
-                                <tr><td>&nbsp;</td></tr>
-                                <tr>
-                                    <td colspan="2"></td>
-                                    <th colspan="3" style="border-top: none">Totale HT</th>
-                                    <th class="text-right">{{ number_format($footerTotalHt, 3, '.', '') }}</th>
-                                </tr>
-                                @if ($footerRemise > 0)
-                                    <tr>
-                                        <td colspan="2"></td>
-                                        <th colspan="3">Remise</th>
-                                        <th class="text-right">{{ number_format($footerRemise, 3, '.', '') }}</th>
-                                    </tr>
-                                @endif
-                                <tr>
-                                    <td colspan="2"></td>
-                                    <th colspan="3">TVA</th>
-                                    <th class="text-right">{{ number_format($footerTva, 3, '.', '') }}</th>
-                                </tr>
-                                @if ($footerTimbre > 0)
-                                    <tr>
-                                        <td colspan="2"></td>
-                                        <th colspan="3">Timbre</th>
-                                        <th class="text-right">{{ number_format($footerTimbre, 3, '.', '') }}</th>
-                                    </tr>
-                                @endif
-                                <tr>
-                                    <td colspan="2"></td>
-                                    <th colspan="3">TOTAL TTC (Net à payer)</th>
-                                    <th class="text-right">{{ number_format($footerTtc, 3, '.', '') }}</th>
-                                </tr>
-                            </tfoot>
                         </table>
                     </div>
+
+                    <div class="doc-a4-totals-wrap">
+                        <table class="doc-a4-totals">
+                            <tr>
+                                <td>Total HT</td>
+                                <td>{{ number_format($footerTotalHt, 3, '.', '') }}</td>
+                            </tr>
+                            @if ($footerRemise > 0)
+                                <tr>
+                                    <td>Remise</td>
+                                    <td>{{ number_format($footerRemise, 3, '.', '') }}</td>
+                                </tr>
+                            @endif
+                            <tr>
+                                <td>TVA ({{ $tvaRateDisplay }} %)</td>
+                                <td>{{ number_format($footerTva, 3, '.', '') }}</td>
+                            </tr>
+                            <tr>
+                                <td>Timbre</td>
+                                <td>{{ number_format($footerTimbre, 3, '.', '') }}</td>
+                            </tr>
+                            <tr class="doc-a4-totals__grand">
+                                <td>TOTAL TTC (Net à payer)</td>
+                                <td>{{ number_format($footerTtc, 3, '.', '') }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
                     <input type="hidden" id="totale" value="{{ $footerTtc }}">
-                    @if (!empty($coordonnee->note))
-                        <div class="notices">
-                            <div>Note:</div>
-                            <div class="notice">{{ $coordonnee->note }}<span id="words"></span></div>
-                        </div>
-                        <br>
+
+                    <div class="doc-a4-note">
+                        <strong>Note</strong><br>
+                        Arrête le présent devis à la somme de : <span id="words"></span>
+                    </div>
+                    @if (! empty($noteDevis ?? $coordonnee->note_devis ?? null))
+                        <div class="doc-a4-note-extra">{{ $noteDevis ?? $coordonnee->note_devis }}</div>
                     @endif
-                    @if (!empty($noteDevis ?? $coordonnee->note_devis ?? null))
-                        <div class="notice">{{ $noteDevis ?? $coordonnee->note_devis }}</div>
-                        <br>
+                    @if (! empty($footerNote ?? null))
+                        <div class="doc-a4-note-extra">{{ $footerNote }}</div>
                     @endif
-                    <span>Devis valable 30 jours à partir de la date de création</span>
-                    <div style="margin-left: 140px; text-decoration: underline;">Signature et cachet</div>
+                    @if (! empty($paymentTerms ?? null))
+                        <p class="doc-a4-payment-terms">{{ $paymentTerms }}</p>
+                    @endif
+                    <div class="doc-a4-signature">Signature et cachet</div>
                 </main>
-                @include('print.partials.footer-rib-numero', ['documentNumero' => $facture->numero ?? ''])
+                <div class="print-doc-footer-wrap doc-a4-footer-wrap">
+                    @include('print.partials.footer-rib-numero', ['documentNumero' => $facture->numero ?? ''])
+                </div>
             </div>
             <div></div>
         </div>
     </div>
 </div>
+
 <script>
 (function () {
     var el = document.getElementById('totale');
