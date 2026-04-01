@@ -205,7 +205,7 @@
                                 @endif
                                 <tr>
                                     <td colspan="3"></td>
-                                    <th class="bt" colspan="1">Montant total à payer</th>
+                                    <th class="bt" colspan="1">TOTAL TTC (Net à payer)</th>
                                     <th class="text-right" style="background: #fd582033 !important;">
                                         {{ number_format((float) ($calc_net_a_payer ?? max((float)($facture->prix_ttc ?? 0) - (float)($facture->timbre ?? 0), 0)), 3, '.', '') }}
                                     </th>

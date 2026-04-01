@@ -226,7 +226,7 @@
                                 @endif
                                 <tr>
                                     <td colspan="2"></td>
-                                    <th colspan="3">Montant total à payer</th>
+                                    <th colspan="3">TOTAL TTC (Net à payer)</th>
                                     <th class="text-right">{{ number_format($footerTtc, 3, '.', '') }}</th>
                                 </tr>
                             </tfoot>

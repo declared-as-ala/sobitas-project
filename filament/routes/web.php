@@ -211,7 +211,7 @@ Route::middleware(['auth'])->group(function () {
             $totals[] = ['label' => 'Timbre fiscal', 'value' => number_format($calcTotals['timbre'], 3, ',', ' ') . ' DT'];
         }
         // Total à payer = TTC lignes + timbre (aligné sur net_a_payer / écran devis)
-        $totals[] = ['label' => 'Total TTC', 'value' => number_format($calcTotals['net_a_payer'], 3, ',', ' ') . ' DT', 'class' => 'ttc'];
+        $totals[] = ['label' => 'TOTAL TTC (Net à payer)', 'value' => number_format($calcTotals['net_a_payer'], 3, ',', ' ') . ' DT', 'class' => 'ttc'];
 
         return view('print.devis', [
             'facture' => $quotation,
