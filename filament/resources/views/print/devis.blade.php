@@ -58,7 +58,7 @@
     .invoice table tfoot tr:first-child td { border-top: none; }
     .invoice table tfoot tr:last-child td { font-size: 1.4em; }
     .invoice table tfoot tr td:first-child { border: none; }
-    .invoice footer { font-size: 18px; width: 100%; text-align: center; color: #000; border-top: 1px solid #aaa; padding: 8px 0; }
+    .invoice footer { font-size: 14px; width: 100%; text-align: left; color: #000; border-top: 1px solid #ccc; padding: 8px 0 8px 5px; }
     .hide_print { display: initial; }
     .table1 {}
     @media print {
@@ -234,9 +234,9 @@
                         <br>
                     @endif
                     <span>Devis valable 30 jours à partir de la date de création</span>
-                    <div style="margin-left: 140px; text-decoration: underline;">Signature et cachet</div>
+                    <div style="text-align: center; text-decoration: underline;">Signature et cachet</div>
                 </main>
-                <footer style="text-align: left; font-size: 14px; padding-left: 5px;">
+                <footer>
                     {{ $coordonnee->rib ?? '' }}
                 </footer>
             </div>
