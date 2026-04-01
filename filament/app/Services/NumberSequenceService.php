@@ -58,4 +58,14 @@ class NumberSequenceService
     {
         return $this->getNext('AV');
     }
+
+    public function nextTicket(): string
+    {
+        return $this->getNext('TK');
+    }
+
+    public function nextCommande(): string
+    {
+        return $this->getNext('CMD');
+    }
 }

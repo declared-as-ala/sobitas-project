@@ -16,6 +16,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 
 class QuotationResource extends Resource
@@ -144,8 +145,11 @@ class QuotationResource extends Resource
                         ->label('en Ticket')
                         ->icon('heroicon-o-ticket')
                         ->requiresConfirmation()
-                        ->modalHeading('Transformer le devis en ticket')
-                        ->modalSubmitActionLabel('Confirmer')
+                        ->modalHeading('Transformer en Ticket')
+                        ->modalDescription('Vérifiez les informations avant de confirmer la conversion.')
+                        ->modalContent(fn (Quotation $record): View => static::buildConversionModalContent($record, 'Ticket de caisse', 'blue'))
+                        ->modalSubmitActionLabel('Confirmer la conversion')
+                        ->modalCancelActionLabel('Annuler')
                         ->action(function (Quotation $record) {
                             $ticket = app(\App\Services\DocumentConversion\QuotationConversionService::class)->convertToTicket($record);
                             \Filament\Notifications\Notification::make()
@@ -158,8 +162,11 @@ class QuotationResource extends Resource
                         ->label('en Facture TVA')
                         ->icon('heroicon-o-document-duplicate')
                         ->requiresConfirmation()
-                        ->modalHeading('Transformer le devis en facture TVA')
-                        ->modalSubmitActionLabel('Confirmer')
+                        ->modalHeading('Transformer en Facture TVA')
+                        ->modalDescription('Vérifiez les informations avant de confirmer la conversion.')
+                        ->modalContent(fn (Quotation $record): View => static::buildConversionModalContent($record, 'Facture TVA', 'emerald'))
+                        ->modalSubmitActionLabel('Confirmer la conversion')
+                        ->modalCancelActionLabel('Annuler')
                         ->action(function (Quotation $record) {
                             $invoice = app(\App\Services\DocumentConversion\QuotationConversionService::class)->convertToFactureTva($record);
                             \Filament\Notifications\Notification::make()
@@ -172,8 +179,11 @@ class QuotationResource extends Resource
                         ->label('en Bon de livraison')
                         ->icon('heroicon-o-document-text')
                         ->requiresConfirmation()
-                        ->modalHeading('Transformer le devis en bon de livraison')
-                        ->modalSubmitActionLabel('Confirmer')
+                        ->modalHeading('Transformer en Bon de Livraison')
+                        ->modalDescription('Vérifiez les informations avant de confirmer la conversion.')
+                        ->modalContent(fn (Quotation $record): View => static::buildConversionModalContent($record, 'Bon de Livraison', 'amber'))
+                        ->modalSubmitActionLabel('Confirmer la conversion')
+                        ->modalCancelActionLabel('Annuler')
                         ->action(function (Quotation $record) {
                             $bl = app(\App\Services\DocumentConversion\QuotationConversionService::class)->convertToBl($record);
                             \Filament\Notifications\Notification::make()
@@ -200,6 +210,41 @@ class QuotationResource extends Resource
                     Actions\DeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    public static function buildConversionModalContent(Quotation $record, string $targetLabel, string $targetColor): View
+    {
+        $coordinate = Coordinate::getCached();
+        $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
+
+        $details = $record->details->map(fn ($d) => [
+            'qte' => $d->qte ?? $d->quantite ?? 1,
+            'prix_unitaire' => $d->prix_unitaire ?? 0,
+            'tva_pct' => $d->tva ?? $defaultTva,
+        ])->toArray();
+
+        $calc = \App\Services\InvoiceCalculator::calculate(
+            $details,
+            (float) ($record->remise ?? 0),
+            (float) ($record->timbre ?? 0),
+            $defaultTva
+        );
+
+        $fmt = fn ($v) => number_format((float) $v, 3, ',', ' ') . ' DT';
+
+        return view('filament.components.convert-wizard-summary', [
+            'sourceType'   => 'Devis',
+            'sourceNumber' => $record->numero,
+            'client'       => $record->client?->name ?? '—',
+            'date'         => $record->created_at?->format('d/m/Y') ?? '—',
+            'itemsCount'   => $record->details->count(),
+            'totalHt'      => $fmt($calc['total_ht_brut']),
+            'remise'       => $calc['remise'] > 0 ? $fmt($calc['remise']) : 0,
+            'tva'          => $targetColor === 'emerald' ? $fmt($calc['tva']) : null,
+            'totalTtc'     => $fmt($calc['net_a_payer']),
+            'targetLabel'  => $targetLabel,
+            'targetColor'  => $targetColor,
+        ]);
     }
 
     public static function getRelations(): array

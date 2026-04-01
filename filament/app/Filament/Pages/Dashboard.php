@@ -18,6 +18,8 @@ class Dashboard extends BaseDashboard
 
     protected static ?string $title = '';
 
+    protected static ?string $navigationLabel = 'Tableau de bord';
+
     public function getHeading(): string
     {
         return '';

@@ -16,6 +16,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Cache;
 
@@ -186,8 +187,11 @@ class CommandeResource extends Resource
                         ->label('Convertir en Bon de livraison')
                         ->icon('heroicon-o-document-text')
                         ->requiresConfirmation()
-                        ->modalHeading('Créer un bon de livraison')
-                        ->modalSubmitActionLabel('Confirmer')
+                        ->modalHeading('Transformer en Bon de Livraison')
+                        ->modalDescription('Vérifiez les informations avant de confirmer la conversion.')
+                        ->modalContent(fn (Commande $record): View => static::buildConversionModalContent($record, 'Bon de Livraison', 'amber'))
+                        ->modalSubmitActionLabel('Confirmer la conversion')
+                        ->modalCancelActionLabel('Annuler')
                         ->action(function (Commande $record) {
                             $bl = app(\App\Services\DocumentConversion\OrderToBlService::class)->createBlFromOrder($record);
                             Notification::make()
@@ -277,6 +281,34 @@ class CommandeResource extends Resource
     /**
      * Whether the commande can be deleted: only "nouvelle_commande" or "annuler", and no linked documents (BL/facture, ticket BL).
      */
+    public static function buildConversionModalContent(Commande $record, string $targetLabel, string $targetColor): View
+    {
+        $record->loadMissing('details');
+        $totalHt = (float) ($record->prix_ht ?? 0);
+        $remise = (float) ($record->remise ?? 0);
+        $frais = (float) ($record->frais_livraison ?? 0);
+        $totalTtc = (float) ($record->prix_ttc ?? 0);
+
+        $fmt = fn ($v) => number_format((float) $v, 3, ',', ' ') . ' DT';
+        $clientName = $record->getFullNameAttribute()
+            ?: trim(($record->nom ?? '') . ' ' . ($record->prenom ?? ''))
+            ?: ($record->client?->name ?? '—');
+
+        return view('filament.components.convert-wizard-summary', [
+            'sourceType'   => 'Commande',
+            'sourceNumber' => $record->numero,
+            'client'       => $clientName,
+            'date'         => $record->created_at?->format('d/m/Y') ?? '—',
+            'itemsCount'   => $record->details->count(),
+            'totalHt'      => $fmt($totalHt > 0 ? $totalHt : $totalTtc),
+            'remise'       => $remise > 0 ? $fmt($remise) : 0,
+            'tva'          => null,
+            'totalTtc'     => $fmt($totalTtc),
+            'targetLabel'  => $targetLabel,
+            'targetColor'  => $targetColor,
+        ]);
+    }
+
     public static function canDeleteCommande(Commande $record): bool
     {
         if (! in_array($record->etat, ['nouvelle_commande', 'annuler'], true)) {

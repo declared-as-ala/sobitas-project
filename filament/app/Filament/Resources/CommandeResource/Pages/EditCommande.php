@@ -11,6 +11,7 @@ use Filament\Actions\ActionGroup;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Support\Enums\Width;
+use Illuminate\Contracts\View\View;
 
 class EditCommande extends EditRecord
 {
@@ -68,8 +69,10 @@ class EditCommande extends EditRecord
                 ->icon('heroicon-o-document-text')
                 ->color('success')
                 ->requiresConfirmation()
-                ->modalHeading('Créer un bon de livraison')
-                ->modalSubmitActionLabel('Confirmer')
+                ->modalHeading('Transformer en Bon de Livraison')
+                ->modalDescription('Vérifiez les informations avant de confirmer la conversion.')
+                ->modalContent(fn (): View => CommandeResource::buildConversionModalContent($this->record, 'Bon de Livraison', 'amber'))
+                ->modalSubmitActionLabel('Confirmer la conversion')
                 ->modalCancelActionLabel('Annuler')
                 ->visible(fn () => ! $this->record->factures()->exists())
                 ->action(function () {

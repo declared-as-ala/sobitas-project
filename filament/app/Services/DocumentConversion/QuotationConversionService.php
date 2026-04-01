@@ -37,8 +37,7 @@ class QuotationConversionService
 
             $commande = new Commande();
             $commande->quotation_id = $quotation->id;
-            $nb = Commande::whereYear('created_at', date('Y'))->count() + 1;
-            $commande->numero = date('Y') . '/' . str_pad((string) $nb, 4, '0', STR_PAD_LEFT);
+            $commande->numero = $this->numberSequence->nextCommande();
             $commande->etat = Commande::STATUS_NEW;
 
             $client = $quotation->client;
@@ -93,9 +92,7 @@ class QuotationConversionService
             $ticket->type = Ticket::TYPE_TICKET_CAISSE;
             $ticket->commande_id = null;
             $ticket->client_id = $quotation->client_id;
-            $year = date('Y');
-            $nb = Ticket::whereYear('created_at', $year)->count() + 1;
-            $ticket->numero = $year . '/' . str_pad((string) $nb, 4, '0', STR_PAD_LEFT);
+            $ticket->numero = $this->numberSequence->nextTicket();
             $remise = (float) ($quotation->remise ?? 0);
             // Ticket is HT only: no timbre, no TVA, no frais livraison
             $timbre = 0.0;

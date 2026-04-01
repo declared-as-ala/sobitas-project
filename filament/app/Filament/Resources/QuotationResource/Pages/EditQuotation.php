@@ -14,6 +14,7 @@ use Filament\Actions;
 use Filament\Actions\ActionGroup;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Contracts\View\View;
 
 class EditQuotation extends EditRecord
 {
@@ -245,9 +246,10 @@ class EditQuotation extends EditRecord
                     ->label('Transformer en Ticket')
                     ->icon('heroicon-o-ticket')
                     ->requiresConfirmation()
-                    ->modalHeading('Convertir en Ticket ?')
-                    ->modalDescription('Un nouveau ticket sera créé à partir de ce devis.')
-                    ->modalSubmitActionLabel('Confirmer')
+                    ->modalHeading('Transformer en Ticket')
+                    ->modalDescription('Vérifiez les informations avant de confirmer la conversion.')
+                    ->modalContent(fn (): View => QuotationResource::buildConversionModalContent($this->record, 'Ticket de caisse', 'blue'))
+                    ->modalSubmitActionLabel('Confirmer la conversion')
                     ->modalCancelActionLabel('Annuler')
                     ->action(function (QuotationConversionService $service) {
                         $ticket = $service->convertToTicket($this->record);
@@ -258,9 +260,10 @@ class EditQuotation extends EditRecord
                     ->label('Transformer en Facture TVA')
                     ->icon('heroicon-o-document-duplicate')
                     ->requiresConfirmation()
-                    ->modalHeading('Convertir en Facture TVA ?')
-                    ->modalDescription('Une nouvelle Facture TVA sera créée à partir de ce devis.')
-                    ->modalSubmitActionLabel('Confirmer')
+                    ->modalHeading('Transformer en Facture TVA')
+                    ->modalDescription('Vérifiez les informations avant de confirmer la conversion.')
+                    ->modalContent(fn (): View => QuotationResource::buildConversionModalContent($this->record, 'Facture TVA', 'emerald'))
+                    ->modalSubmitActionLabel('Confirmer la conversion')
                     ->modalCancelActionLabel('Annuler')
                     ->action(function (QuotationConversionService $service) {
                         $invoice = $service->convertToFactureTva($this->record);
@@ -271,9 +274,10 @@ class EditQuotation extends EditRecord
                     ->label('Transformer en Bon de Livraison')
                     ->icon('heroicon-o-document-text')
                     ->requiresConfirmation()
-                    ->modalHeading('Convertir en Bon de Livraison ?')
-                    ->modalDescription('Un nouveau BL sera créé à partir de ce devis.')
-                    ->modalSubmitActionLabel('Confirmer')
+                    ->modalHeading('Transformer en Bon de Livraison')
+                    ->modalDescription('Vérifiez les informations avant de confirmer la conversion.')
+                    ->modalContent(fn (): View => QuotationResource::buildConversionModalContent($this->record, 'Bon de Livraison', 'amber'))
+                    ->modalSubmitActionLabel('Confirmer la conversion')
                     ->modalCancelActionLabel('Annuler')
                     ->action(function (QuotationConversionService $service) {
                         $bl = $service->convertToBl($this->record);

@@ -266,11 +266,137 @@
     .doc-btn--primary:hover { background: rgb(234 88 12); color: #fff; }
     .doc-btn--sm { padding: 2px 8px; font-size: 0.6875rem; }
 
-    /* Conversion wizard summary */
-    .convert-wizard-summary { padding: 8px 0; }
-    .convert-wizard-label { font-size: 0.75rem; font-weight: 600; color: rgb(107 114 128); margin-bottom: 8px; }
-    .convert-wizard-dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; font-size: 0.875rem; }
-    .convert-wizard-dl dt { color: rgb(107 114 128); }
-    .convert-wizard-dl dd { margin: 0; }
-    .convert-wizard-hint { margin-top: 16px; font-size: 0.8125rem; color: rgb(107 114 128); }
+    /* ── Conversion wizard modal ────────────────────────────────────────── */
+    .cw-root {
+        display: flex;
+        align-items: stretch;
+        gap: 12px;
+        padding: 4px 0;
+    }
+    .cw-card {
+        flex: 1;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 14px 16px;
+    }
+    .dark .cw-card { background: rgb(30 41 59); border-color: rgb(55 65 81); }
+    .cw-card-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+    .cw-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-size: 0.6875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+    .cw-badge--source {
+        background: #e0e7ff;
+        color: #3730a3;
+    }
+    .dark .cw-badge--source { background: rgb(49 46 129 / 0.4); color: #a5b4fc; }
+    .cw-number {
+        font-size: 0.875rem;
+        font-weight: 700;
+        color: #111827;
+        font-variant-numeric: tabular-nums;
+    }
+    .dark .cw-number { color: #f1f5f9; }
+    .cw-dl {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-bottom: 12px;
+    }
+    .cw-dl-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.8125rem;
+    }
+    .cw-dl-row dt {
+        color: #6b7280;
+        font-weight: 500;
+    }
+    .cw-dl-row dd {
+        color: #111827;
+        font-weight: 500;
+        margin: 0;
+    }
+    .dark .cw-dl-row dt { color: #9ca3af; }
+    .dark .cw-dl-row dd { color: #e5e7eb; }
+    .cw-totals {
+        border-top: 1px solid #e5e7eb;
+        padding-top: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+    }
+    .dark .cw-totals { border-color: rgb(55 65 81); }
+    .cw-totals-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.8125rem;
+        color: #374151;
+    }
+    .dark .cw-totals-row { color: #d1d5db; }
+    .cw-totals-row--dim {
+        color: #9ca3af;
+        font-size: 0.75rem;
+    }
+    .cw-totals-row--total {
+        font-weight: 700;
+        font-size: 0.875rem;
+        color: #111827;
+        border-top: 1px solid #e5e7eb;
+        padding-top: 4px;
+        margin-top: 2px;
+    }
+    .dark .cw-totals-row--total { color: #f9fafb; border-color: rgb(55 65 81); }
+    .cw-arrow {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        color: #9ca3af;
+    }
+    .cw-target {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 14px 16px;
+        border-radius: 10px;
+        border: 1.5px solid;
+        min-width: 170px;
+    }
+    .cw-target-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .cw-target-label {
+        font-size: 0.875rem;
+        font-weight: 700;
+        line-height: 1.3;
+    }
+    .cw-target-hint {
+        font-size: 0.6875rem;
+        color: #6b7280;
+        margin-top: 1px;
+    }
+    .dark .cw-target-hint { color: #9ca3af; }
+    @media (max-width: 540px) {
+        .cw-root { flex-direction: column; align-items: center; }
+        .cw-arrow svg { transform: rotate(90deg); }
+        .cw-target { min-width: auto; width: 100%; }
+    }
 </style>
