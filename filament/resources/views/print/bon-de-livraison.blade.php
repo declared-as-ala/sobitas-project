@@ -43,7 +43,17 @@
     .invoice table td, .invoice table th { border-bottom: 1px solid #fff; }
     .invoice table th { white-space: nowrap; font-size: 13pt; }
     .invoice table tbody tr:last-child td { border-bottom: 1px solid #b4b4b4; }
-    .invoice footer { font-size: 14px; width: auto; max-width: 100%; text-align: left !important; color: #000; border: none !important; padding: 8px 0 8px 5px; }
+    .print-doc-footer {
+        font-size: 14px;
+        text-align: left !important;
+        color: #000;
+        border: none !important;
+        padding: 8px 0 8px 5px;
+        width: auto;
+        max-width: 100%;
+    }
+    .print-doc-footer__line { line-height: 1.5; }
+    .print-doc-footer__numero { font-weight: 600; }
     .hide_print { display: initial; }
     @media print {
         html, body, #invoice, .invoice, .table1 table {
@@ -66,7 +76,15 @@
             print-color-adjust: exact !important;
         }
         .invoice { overflow: hidden !important; }
-        .invoice footer { position: absolute; bottom: 35px; page-break-after: always; }
+        .invoice .print-doc-footer {
+            position: absolute;
+            left: 12px;
+            right: auto;
+            bottom: 28px;
+            width: auto;
+            max-width: 90%;
+            page-break-after: always;
+        }
         .hide_print { display: none; }
         .invoice > div:last-child { page-break-before: always; }
         .table1 { min-height: 10cm; }
@@ -223,9 +241,7 @@
                     @endif
                     <div style="text-align: center; text-decoration: underline;">Signature et cachet</div>
                 </main>
-                <footer>
-                    {{ $coordonnee->rib ?? '' }}
-                </footer>
+                @include('print.partials.footer-rib-numero', ['documentNumero' => $facture->numero ?? ''])
             </div>
             <div></div>
         </div>

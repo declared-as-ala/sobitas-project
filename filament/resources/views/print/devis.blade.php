@@ -62,7 +62,17 @@
     .invoice table tfoot tr:first-child td { border-top: none; }
     .invoice table tfoot tr:last-child td { font-size: 1.4em; }
     .invoice table tfoot tr td:first-child { border: none; }
-    .invoice footer { font-size: 14px; width: 100%; text-align: left; color: #000; border-top: 1px solid #ccc; padding: 8px 0 8px 5px; }
+    .print-doc-footer {
+        font-size: 14px;
+        text-align: left !important;
+        color: #000;
+        border: none !important;
+        padding: 8px 0 8px 5px;
+        width: auto;
+        max-width: 100%;
+    }
+    .print-doc-footer__line { line-height: 1.5; }
+    .print-doc-footer__numero { font-weight: 600; }
     .hide_print { display: initial; }
     .table1 {}
     @media print {
@@ -71,7 +81,15 @@
             print-color-adjust: exact !important;
         }
         .invoice { overflow: hidden !important; }
-        .invoice footer { position: absolute; bottom: 35px; page-break-after: always; }
+        .invoice .print-doc-footer {
+            position: absolute;
+            left: 12px;
+            right: auto;
+            bottom: 28px;
+            width: auto;
+            max-width: 90%;
+            page-break-after: always;
+        }
         .hide_print { display: none; }
         .invoice > div:last-child { page-break-before: always; }
         .table1 { min-height: 10cm; }
@@ -245,11 +263,9 @@
                         <br>
                     @endif
                     <span>Devis valable 30 jours à partir de la date de création</span>
-                    <div style="text-align: center; text-decoration: underline;">Signature et cachet</div>
+                    <div style="margin-left: 140px; text-decoration: underline;">Signature et cachet</div>
                 </main>
-                <footer>
-                    {{ $coordonnee->rib ?? '' }}
-                </footer>
+                @include('print.partials.footer-rib-numero', ['documentNumero' => $facture->numero ?? ''])
             </div>
             <div></div>
         </div>
