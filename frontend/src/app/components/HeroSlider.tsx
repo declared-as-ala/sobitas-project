@@ -197,7 +197,7 @@ export const HeroSlider = memo(function HeroSlider({ slides }: HeroSliderProps) 
 
   return (
     <section 
-      className="relative w-full overflow-hidden bg-gray-900 min-h-[100dvh] h-[100dvh] sm:h-[65vh] sm:min-h-0 md:h-[75vh] md:min-h-[380px] lg:h-[85vh] xl:h-[90vh]"
+      className="relative w-full overflow-hidden bg-gray-900 min-h-[100dvh] h-[100dvh] sm:h-[70vh] sm:min-h-0 md:h-[80vh] md:min-h-[420px] lg:h-[88vh] xl:h-[92vh]"
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
