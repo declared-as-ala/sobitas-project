@@ -5,7 +5,6 @@ namespace App\Console\Commands;
 use App\Models\FactureTva;
 use App\Services\InvoiceCalculator;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Schema;
 
 class BackfillFactureTvaTotals extends Command
 {
@@ -53,25 +52,16 @@ class BackfillFactureTvaTotals extends Command
 
             $calcTotals = InvoiceCalculator::calculate($detailsArray, $remise, $timbre, $globalDefaultTva);
 
-            $updateData = [
-                'prix_ht' => $calcTotals['total_ht_brut'],
-                'remise' => $calcTotals['remise'],
-                'tva' => $calcTotals['tva'],
-                'timbre' => $calcTotals['timbre'],
-                'prix_ttc' => $calcTotals['prix_ttc'],
-            ];
-
-            if (Schema::hasColumn('facture_tvas', 'prix_ht_apres_remise')) {
-                $updateData['prix_ht_apres_remise'] = $calcTotals['prix_ht_apres_remise'];
-            }
-            if (Schema::hasColumn('facture_tvas', 'pourcentage_remise')) {
-                $updateData['pourcentage_remise'] = $calcTotals['pourcentage_remise'];
-            }
-            if (Schema::hasColumn('facture_tvas', 'net_a_payer')) {
-                $updateData['net_a_payer'] = $calcTotals['net_a_payer'];
-            }
-
-            $facture->update($updateData);
+            $facture->update([
+                'prix_ht'              => $calcTotals['total_ht_brut'],
+                'remise'               => $calcTotals['remise'],
+                'pourcentage_remise'   => $calcTotals['pourcentage_remise'],
+                'prix_ht_apres_remise' => $calcTotals['prix_ht_apres_remise'],
+                'tva'                  => $calcTotals['tva'],
+                'timbre'               => $calcTotals['timbre'],
+                'prix_ttc'             => $calcTotals['prix_ttc'],
+                'net_a_payer'          => $calcTotals['net_a_payer'],
+            ]);
             $count++;
         }
 

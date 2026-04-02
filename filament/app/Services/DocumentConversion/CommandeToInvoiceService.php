@@ -55,15 +55,11 @@ class CommandeToInvoiceService
             $invoice->prix_ht = $calc['total_ht_brut'];
             $invoice->remise = $calc['remise'];
             $invoice->pourcentage_remise = $calc['pourcentage_remise'];
+            $invoice->prix_ht_apres_remise = $calc['prix_ht_apres_remise'];
             $invoice->tva = $calc['tva'];
             $invoice->timbre = $calc['timbre'];
             $invoice->prix_ttc = $calc['prix_ttc'];
-            if (Schema::hasColumn('facture_tvas', 'prix_ht_apres_remise')) {
-                $invoice->prix_ht_apres_remise = $calc['prix_ht_apres_remise'];
-            }
-            if (Schema::hasColumn('facture_tvas', 'net_a_payer')) {
-                $invoice->net_a_payer = $calc['net_a_payer'];
-            }
+            $invoice->net_a_payer = $calc['net_a_payer'];
             $invoice->save();
 
             foreach ($order->details as $line) {

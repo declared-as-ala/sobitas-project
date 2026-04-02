@@ -176,38 +176,39 @@ body:has(.commande-edit-page) .fi-form-actions { display: none !important; }
                     </div>
                 </div>
 
-                {{-- Billing & Delivery info display --}}
+                {{-- Hidden billing fields (kept for save logic / client auto-fill) --}}
+                <div style="display:none">
+                    <input id="cmd_nom"     value="{{ $data['nom']    ?? '' }}">
+                    <input id="cmd_prenom"  value="{{ $data['prenom'] ?? '' }}">
+                    <input id="cmd_email"   value="{{ $data['email']  ?? '' }}">
+                    <input id="cmd_phone"   value="{{ $data['phone']  ?? '' }}">
+                    <input id="cmd_adresse" value="{{ $data['adresse1'] ?? '' }}">
+                    <input id="cmd_ville"   value="{{ $data['ville']  ?? '' }}">
+                    <input id="cmd_region"  value="{{ $data['region'] ?? '' }}">
+                    <input id="cmd_cp"      value="{{ $data['code_postale'] ?? '' }}">
+                </div>
+
+                {{-- Delivery info --}}
                 <div class="row">
-                    <div class="col-md-6">
-                        <h5 class="text-gray-light">INFORMATIONS DE FACTURATION</h5>
+                    <div class="col-md-12">
+                        <h5 class="text-gray-light">INFORMATIONS DE LIVRAISON</h5>
                         <hr style="margin:9px">
-                        <b class="to"><b>Nom et prénom:</b>
-                            <input class="form-control" id="cmd_nom"    value="{{ $data['nom']    ?? '' }}" placeholder="Nom">
-                            <input class="form-control" id="cmd_prenom" value="{{ $data['prenom'] ?? '' }}" placeholder="Prénom">
-                        </b>
-                        <div><b>Email:</b> <input class="form-control" id="cmd_email" type="email" value="{{ $data['email'] ?? '' }}" placeholder="Email"></div>
-                        <div><b>Téléphone:</b> <input class="form-control" id="cmd_phone" value="{{ $data['phone'] ?? '' }}" placeholder="Téléphone"></div>
-                        <div><b>Adresse:</b> <input class="form-control" id="cmd_adresse" value="{{ $data['adresse1'] ?? '' }}" placeholder="Adresse"></div>
-                        <div><b>Ville:</b> <input class="form-control" id="cmd_ville" value="{{ $data['ville'] ?? '' }}" placeholder="Ville"></div>
-                        <div><b>Région (Gouvernorat):</b> <input class="form-control" id="cmd_region" value="{{ $data['region'] ?? '' }}" placeholder="Région"></div>
-                        <div><b>Code Postal:</b> <input class="form-control" id="cmd_cp" value="{{ $data['code_postale'] ?? '' }}" placeholder="Code Postal"></div>
-                    </div>
-                    <div class="col-md-6">
-                        <h5 class="text-gray-light">
-                            INFORMATIONS DE LIVRAISON
-                            <button type="button" onclick="cmdCopyFactToLiv()" style="font-size:11px;color:#337ab7;background:none;border:none;cursor:pointer;float:right;">Copier facturation →</button>
-                        </h5>
-                        <hr style="margin:9px">
-                        <b class="to"><b>Nom et prénom:</b>
-                            <input class="form-control" id="cmd_l_nom"    value="{{ $data['livraison_nom']    ?? '' }}" placeholder="Nom">
-                            <input class="form-control" id="cmd_l_prenom" value="{{ $data['livraison_prenom'] ?? '' }}" placeholder="Prénom">
-                        </b>
-                        <div><b>Email:</b> <input class="form-control" id="cmd_l_email" type="email" value="{{ $data['livraison_email'] ?? '' }}" placeholder="Email"></div>
-                        <div><b>Téléphone:</b> <input class="form-control" id="cmd_l_phone" value="{{ $data['livraison_phone'] ?? '' }}" placeholder="Téléphone"></div>
-                        <div><b>Adresse:</b> <input class="form-control" id="cmd_l_adresse" value="{{ $data['livraison_adresse1'] ?? '' }}" placeholder="Adresse"></div>
-                        <div><b>Ville:</b> <input class="form-control" id="cmd_l_ville" value="{{ $data['livraison_ville'] ?? '' }}" placeholder="Ville"></div>
-                        <div><b>Région (Gouvernorat):</b> <input class="form-control" id="cmd_l_region" value="{{ $data['livraison_region'] ?? '' }}" placeholder="Région"></div>
-                        <div><b>Code Postal:</b> <input class="form-control" id="cmd_l_cp" value="{{ $data['livraison_code_postale'] ?? '' }}" placeholder="Code Postal"></div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <b class="to"><b>Nom et prénom:</b>
+                                    <input class="form-control" id="cmd_l_nom"    value="{{ $data['livraison_nom']    ?? '' }}" placeholder="Nom">
+                                    <input class="form-control" id="cmd_l_prenom" value="{{ $data['livraison_prenom'] ?? '' }}" placeholder="Prénom">
+                                </b>
+                                <div><b>Email:</b> <input class="form-control" id="cmd_l_email" type="email" value="{{ $data['livraison_email'] ?? '' }}" placeholder="Email"></div>
+                                <div><b>Téléphone:</b> <input class="form-control" id="cmd_l_phone" value="{{ $data['livraison_phone'] ?? '' }}" placeholder="Téléphone"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <div><b>Adresse:</b> <input class="form-control" id="cmd_l_adresse" value="{{ $data['livraison_adresse1'] ?? '' }}" placeholder="Adresse"></div>
+                                <div><b>Ville:</b> <input class="form-control" id="cmd_l_ville" value="{{ $data['livraison_ville'] ?? '' }}" placeholder="Ville"></div>
+                                <div><b>Région (Gouvernorat):</b> <input class="form-control" id="cmd_l_region" value="{{ $data['livraison_region'] ?? '' }}" placeholder="Région"></div>
+                                <div><b>Code Postal:</b> <input class="form-control" id="cmd_l_cp" value="{{ $data['livraison_code_postale'] ?? '' }}" placeholder="Code Postal"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

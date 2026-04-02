@@ -54,17 +54,12 @@ class TicketToInvoiceService
 
             $invoice->prix_ht = $totals['total_ht_brut'];
             $invoice->remise = $totals['remise'];
+            $invoice->pourcentage_remise = $totals['pourcentage_remise'];
             $invoice->timbre = $totals['timbre'];
             $invoice->prix_ht_apres_remise = $totals['prix_ht_apres_remise'];
             $invoice->tva = $totals['tva'];
             $invoice->prix_ttc = $totals['prix_ttc'];
             $invoice->net_a_payer = $totals['net_a_payer'];
-            if (Schema::hasColumn('facture_tvas', 'pourcentage_remise')) {
-                $invoice->pourcentage_remise = $totals['pourcentage_remise'];
-            }
-            if (Schema::hasColumn('facture_tvas', 'prix_total')) {
-                $invoice->prix_total = $totals['prix_ttc'];
-            }
             $invoice->save();
 
             foreach ($ticket->details as $line) {

@@ -141,10 +141,7 @@ class EditFactureTva extends EditRecord
         
         $totals = InvoiceCalculator::calculate($data['details'], $remise, $timbre, $defaultTva);
 
-        if (\Illuminate\Support\Facades\Schema::hasColumn('facture_tvas', 'pourcentage_remise')) {
-            $data['pourcentage_remise'] = $totals['pourcentage_remise'];
-        }
-        
+        $data['pourcentage_remise'] = $totals['pourcentage_remise'];
         $data['remise'] = $totals['remise'];
         $data['timbre'] = $totals['timbre'];
         $data['prix_ht'] = $totals['total_ht_brut'];
@@ -191,24 +188,16 @@ class EditFactureTva extends EditRecord
         $timbre = (float) ($state['timbre'] ?? 0);
         $calcTotals = InvoiceCalculator::calculate($details, $remise, $timbre, $defaultTva);
 
-        $totals = [
-            'prix_ht' => $calcTotals['total_ht_brut'],
-            'remise' => $calcTotals['remise'],
-            'tva' => $calcTotals['tva'],
-            'timbre' => $calcTotals['timbre'],
-            'prix_ttc' => $calcTotals['prix_ttc'],
-        ];
-        
-        if (\Illuminate\Support\Facades\Schema::hasColumn('facture_tvas', 'prix_ht_apres_remise')) {
-            $totals['prix_ht_apres_remise'] = $calcTotals['prix_ht_apres_remise'];
-        }
-        if (\Illuminate\Support\Facades\Schema::hasColumn('facture_tvas', 'pourcentage_remise')) {
-            $totals['pourcentage_remise'] = $calcTotals['pourcentage_remise'];
-        }
-        if (\Illuminate\Support\Facades\Schema::hasColumn('facture_tvas', 'net_a_payer')) {
-            $totals['net_a_payer'] = $calcTotals['net_a_payer'];
-        }
-        $this->record->update($totals);
+        $this->record->update([
+            'prix_ht'              => $calcTotals['total_ht_brut'],
+            'remise'               => $calcTotals['remise'],
+            'pourcentage_remise'   => $calcTotals['pourcentage_remise'],
+            'prix_ht_apres_remise' => $calcTotals['prix_ht_apres_remise'],
+            'tva'                  => $calcTotals['tva'],
+            'timbre'               => $calcTotals['timbre'],
+            'prix_ttc'             => $calcTotals['prix_ttc'],
+            'net_a_payer'          => $calcTotals['net_a_payer'],
+        ]);
 
         $this->dispatch('open-url-new-tab', url: route('facture-tvas.print', ['factureTva' => $this->record->id]));
     }

@@ -185,17 +185,17 @@ class OrderToBlService
             $bl->livraison_email = $order->livraison_email ?: $order->email ?: ($client->email ?? '');
             $bl->livraison_phone = $order->livraison_phone ?: $order->phone ?: ($client->phone ?? $client->phone_1 ?? '');
 
-            // Build a single-line delivery address from order + client and store it.
+            // Build a single-line delivery address (street, CP, ville, region) from order + client.
             $fullAddress = $this->buildDeliveryAddressFromOrder($order, $client);
             $bl->livraison_adresse1 = $fullAddress;
             $bl->livraison_adresse2 = null;
-            // Optionally mirror to billing adresse1 for backward compatibility.
             $bl->adresse1 = $fullAddress;
             $bl->adresse2 = null;
-            
-            $bl->livraison_ville = $order->livraison_ville ?: $order->ville ?: ($client->ville ?? '');
-            $bl->livraison_region = $order->livraison_region ?: $order->region ?: ($client->region ?? '');
-            $bl->livraison_code_postale = $order->livraison_code_postale ?: $order->code_postale ?: ($client->code_postale ?? '');
+
+            // Ville/region/CP are already embedded in $fullAddress — clear separate fields to avoid duplication.
+            $bl->livraison_ville = null;
+            $bl->livraison_region = null;
+            $bl->livraison_code_postale = null;
 
             \Illuminate\Support\Facades\Log::info('BL created from commande', [
                 'commande_id' => $order->id, 
@@ -242,10 +242,6 @@ class OrderToBlService
      */
     protected function buildDeliveryAddressFromOrder(Commande $order, ?Client $client): string
     {
-        // Return only the street/address line.
-        // Ville, region, and code_postale are stored in their own columns
-        // (livraison_ville, livraison_region, livraison_code_postale) and rendered
-        // separately in the print template — do NOT include them here to avoid duplication.
         $street = trim(((string) ($order->livraison_adresse1 ?? '')) . ' ' . ((string) ($order->livraison_adresse2 ?? '')));
         if ($street === '') {
             $street = trim(((string) ($order->adresse1 ?? '')) . ' ' . ((string) ($order->adresse2 ?? '')));
@@ -253,7 +249,13 @@ class OrderToBlService
         if ($street === '' && $client) {
             $street = trim((string) ($client->adresse ?? ''));
         }
-        return $street;
+
+        $ville = $order->livraison_ville ?: $order->ville ?: ($client->ville ?? '');
+        $region = $order->livraison_region ?: $order->region ?: ($client->region ?? '');
+        $cp = $order->livraison_code_postale ?: $order->code_postale ?: ($client->code_postale ?? '');
+
+        $parts = array_filter([$street, $cp, $ville, $region], fn ($v) => trim((string) $v) !== '');
+        return implode(', ', $parts);
     }
 
     protected function audit(string $action, $entity, array $after = []): void
