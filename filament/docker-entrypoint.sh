@@ -15,23 +15,29 @@ if [ -z "$APP_KEY" ] || ! grep -q 'APP_KEY=base64:' .env 2>/dev/null; then
   php artisan key:generate --force 2>/dev/null || true
 fi
 
-# ── Sync vendor with image's composer.lock ─────────────────
-# The vendor directory lives on a persistent Docker volume.
-# On redeploy the image ships a new composer.lock but the volume
-# still holds packages from the PREVIOUS deploy.  We must always
-# run `composer install` here — BEFORE php-fpm starts — so that:
-#   1. Vendor files match the new code
-#   2. FPM's OPcache starts clean (no stale bytecode from old vendor)
-echo "========================================"
-echo " Syncing vendor packages (persistent volume → image lock) ..."
-echo "========================================"
-COMPOSER_MEMORY_LIMIT=-1 COMPOSER_ALLOW_SUPERUSER=1 \
-  composer install --no-interaction --optimize-autoloader --no-dev 2>&1 || {
-    echo "composer install failed, retrying without scripts..."
+# ── Sync vendor with image's composer.lock (only when changed) ─
+# The vendor dir is on a persistent Docker volume.  We store a hash
+# of composer.lock after each successful install.  On next startup
+# we compare — if the hash matches, skip the slow install entirely.
+LOCK_HASH=$(md5sum composer.lock 2>/dev/null | cut -d' ' -f1)
+SAVED_HASH=""
+[ -f vendor/.composer-lock-hash ] && SAVED_HASH=$(cat vendor/.composer-lock-hash 2>/dev/null)
+
+if [ ! -f vendor/autoload.php ] || [ "$LOCK_HASH" != "$SAVED_HASH" ]; then
+    echo "========================================"
+    echo " composer.lock changed — running composer install ..."
+    echo "========================================"
     COMPOSER_MEMORY_LIMIT=-1 COMPOSER_ALLOW_SUPERUSER=1 \
-      composer install --no-interaction --no-scripts --optimize-autoloader --no-dev
-    COMPOSER_ALLOW_SUPERUSER=1 composer dump-autoload --optimize
-}
+      composer install --no-interaction --optimize-autoloader --no-dev 2>&1 || {
+        echo "composer install failed, retrying without scripts..."
+        COMPOSER_MEMORY_LIMIT=-1 COMPOSER_ALLOW_SUPERUSER=1 \
+          composer install --no-interaction --no-scripts --optimize-autoloader --no-dev
+        COMPOSER_ALLOW_SUPERUSER=1 composer dump-autoload --optimize
+    }
+    echo "$LOCK_HASH" > vendor/.composer-lock-hash
+else
+    echo "✓ Vendor packages up to date (composer.lock unchanged)"
+fi
 
 # ── Ensure storage directories exist ───────────────────────
 mkdir -p storage/framework/{cache,sessions,testing,views}
@@ -78,9 +84,6 @@ done
 # ── Publish Filament assets ────────────────────────────────
 echo "Publishing Filament assets..."
 php artisan filament:assets 2>/dev/null || true
-
-# ── Regenerate autoloader (picks up any new classes added since image build) ──
-composer dump-autoload --optimize --quiet 2>/dev/null || true
 
 # ── Build caches for FAST boot ─────────────────────────────
 # ALL cache operations happen here, BEFORE php-fpm starts.

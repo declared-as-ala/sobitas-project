@@ -113,27 +113,25 @@ jobs:
             docker compose -f "$COMPOSE_FILE" up -d --force-recreate --no-deps backend-v2
 
             # ══════════════════════════════════════════════════════════
-            # 2. Wait for entrypoint to finish (composer install,
-            #    migrations, cache rebuild all happen there).
-            #    DO NOT run exec commands until the entrypoint is done
-            #    — that was causing a race condition where CI cache ops
-            #    interfered with the entrypoint's cache ops.
+            # 2. Wait for entrypoint to finish.
+            #    The entrypoint runs composer install (only if lock
+            #    changed), migrations, and cache rebuild BEFORE FPM.
+            #    We poll for the marker file it writes when done.
             # ══════════════════════════════════════════════════════════
-            echo "⏳ Waiting for backend entrypoint to finish..."
+            echo "⏳ Waiting for backend to be ready..."
             READY=0
-            for i in $(seq 1 60); do
+            for i in $(seq 1 40); do
               if docker compose -f "$COMPOSE_FILE" exec -T backend-v2 \
                    test -f /tmp/.entrypoint-ready 2>/dev/null; then
                 READY=1
                 break
               fi
-              echo "  ... entrypoint still running (attempt $i/60), waiting 5s"
-              sleep 5
+              sleep 3
             done
             if [ "$READY" -ne 1 ]; then
-              echo "⚠ Entrypoint did not finish in 300s — continuing anyway"
+              echo "⚠ Entrypoint slow (>120s) — continuing anyway"
             else
-              echo "✅ Backend entrypoint finished"
+              echo "✅ Backend ready"
             fi
 
             # ══════════════════════════════════════════════════════════
