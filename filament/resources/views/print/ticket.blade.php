@@ -128,14 +128,15 @@
     </div>
     <br><br>
     <h4>{{ $coordonnee->footer_ticket ?? '' }}</h4>
-    <h3>Notre site web <br>{{ $coordonnee->site_web ?? '' }}</h3>
     @if (!empty($coordonnee->site_web))
-        <div style="margin-top: 8px; text-align: center;">
+        <div style="border-top: 1px dashed #000; margin-top: 20px; padding-top: 14px; text-align: center;">
+            <div style="font-weight: 600; font-size: 11pt; letter-spacing: 0.02em; margin-bottom: 8px;">{{ strtolower($coordonnee->site_web) }}</div>
             <img
                 src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data={{ urlencode($coordonnee->site_web) }}"
                 alt="QR code site web"
-                style="width: 120px; height: 120px;"
+                style="width: 110px; height: 110px;"
             >
+            <div style="font-size: 8pt; color: #666; margin-top: 6px;">Scanner pour visiter le site web</div>
         </div>
     @endif
 </div>
