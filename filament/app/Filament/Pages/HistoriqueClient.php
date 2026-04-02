@@ -119,13 +119,13 @@ class HistoriqueClient extends Page
         return '7xl';
     }
 
-    public static function getUrl(array $parameters = [], bool $isAbsolute = true, ?string $panel = null, ?\Illuminate\Database\Eloquent\Model $tenant = null): string
+    public static function getUrl(array $parameters = [], bool $isAbsolute = true, ?string $panel = null, ?\Illuminate\Database\Eloquent\Model $tenant = null, bool $shouldGuessMissingParameters = false, ?string $configuration = null): string
     {
         $params = array_filter([
             'tel' => $parameters['tel'] ?? null,
             'name' => $parameters['name'] ?? null,
         ], fn ($v) => $v !== null && trim((string) $v) !== '');
-        return parent::getUrl($params, $isAbsolute, $panel, $tenant);
+        return parent::getUrl($params, $isAbsolute, $panel, $tenant, $shouldGuessMissingParameters, $configuration);
     }
 
     public function getTickets(Client $client): Collection

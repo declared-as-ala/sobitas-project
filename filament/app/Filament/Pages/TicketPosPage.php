@@ -224,7 +224,7 @@ class TicketPosPage extends Page
         return $this->redirect(route('tickets.print', ['ticket' => $this->ticketId]), navigate: false);
     }
 
-    public static function getUrl(array $parameters = [], bool $isAbsolute = true, ?string $panel = null, ?\Illuminate\Database\Eloquent\Model $tenant = null, bool $shouldGuessMissingParameters = false): string
+    public static function getUrl(array $parameters = [], bool $isAbsolute = true, ?string $panel = null, ?\Illuminate\Database\Eloquent\Model $tenant = null, bool $shouldGuessMissingParameters = false, ?string $configuration = null): string
     {
         return route('filament.admin.resources.tickets.pos', $parameters, $isAbsolute);
     }
