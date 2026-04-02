@@ -40,8 +40,7 @@ const SlideImage = memo(({
   isFirst: boolean;
   className?: string;
 }) => {
-  // Mobile: cover + center (no vertical gap). sm+: contain for full image.
-  const imageClass = 'object-cover object-center sm:object-contain';
+  const imageClass = 'object-cover object-center';
   if (!isFirst) {
     // Lazy load non-first slides for faster initial load (quality 75 for mobile PageSpeed)
     return (
@@ -209,12 +208,11 @@ export const HeroSlider = memo(function HeroSlider({ slides }: HeroSliderProps) 
         className="absolute inset-0 transition-opacity duration-300 ease-in-out"
         style={{ willChange: 'opacity' }}
       >
-        {/* Mobile: cover + centered (no letterboxing). Tablet+: contain for full image. */}
         <SlideImage
           src={currentSlideData.image}
           alt={currentSlideData.titre}
           isFirst={isFirstSlide}
-          className="object-cover object-center sm:object-contain"
+          className="object-cover object-center"
         />
         
         {/* Gradient Overlay for better text readability */}
