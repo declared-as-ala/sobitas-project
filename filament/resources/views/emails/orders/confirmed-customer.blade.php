@@ -60,8 +60,8 @@
         {{-- ── HERO HEADER ─────────────────────────────────────────────────── --}}
         <tr>
             <td style="background:linear-gradient(150deg,#b91c1c 0%,#dc2626 45%,#c2410c 100%);border-radius:16px 16px 0 0;padding:36px 32px 32px;text-align:center;">
-                <img src="{{ $logoUrl }}" alt="SOBITAS" width="160" height="auto"
-                     style="display:block;max-width:160px;margin:0 auto 20px;">
+                <img src="{{ $logoUrl }}" alt="SOBITAS" width="180" height="auto"
+                     style="display:block;max-width:180px;background:rgba(255,255,255,.95);padding:12px 16px;border-radius:14px;margin:0 auto 22px;">
                 <p style="margin:0 0 6px;font-size:28px;font-weight:800;color:#ffffff;letter-spacing:-.02em;" class="h-hero">
                     Merci, {{ $prenom ?: 'cher client' }} ! 🎉
                 </p>

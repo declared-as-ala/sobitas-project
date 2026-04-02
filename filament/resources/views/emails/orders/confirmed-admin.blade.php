@@ -55,12 +55,12 @@
 
         {{-- ── TOP ALERT BAR ─────────────────────────────────────────────── --}}
         <tr>
-            <td style="background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%);border-radius:14px 14px 0 0;padding:22px 28px;">
+            <td style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);border-radius:14px 14px 0 0;padding:26px 28px;">
                 <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                     <tr>
                         <td style="vertical-align:middle;">
-                            <img src="{{ $logoUrl }}" alt="SOBITAS" width="140" height="auto"
-                                 style="display:block;max-width:140px;margin-bottom:14px;">
+                            <img src="{{ $logoUrl }}" alt="SOBITAS" width="150" height="auto"
+                                 style="display:block;max-width:150px;background:rgba(255,255,255,.95);padding:10px 14px;border-radius:12px;margin-bottom:16px;">
                             <p style="margin:0 0 3px;font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;">Notification back-office</p>
                             <p style="margin:0;font-size:22px;font-weight:700;color:#ffffff;">🛍 Nouvelle commande reçue</p>
                             <p style="margin:6px 0 0;font-size:14px;color:#cbd5e1;">{{ $dateFormatted }}</p>
@@ -68,7 +68,7 @@
                         <td align="right" style="vertical-align:middle;padding-left:16px;">
                             <table role="presentation" cellpadding="0" cellspacing="0">
                                 <tr>
-                                    <td style="border-radius:8px;background:#3b82f6;">
+                                    <td style="border-radius:8px;background:#e94560;">
                                         <a href="{{ $adminUrl }}" class="btn" style="display:inline-block;padding:12px 22px;font-size:14px;font-weight:600;color:#ffffff!important;text-decoration:none;white-space:nowrap;">Ouvrir l'admin →</a>
                                     </td>
                                 </tr>
@@ -81,7 +81,7 @@
 
         {{-- ── QUICK STATS ROW ─────────────────────────────────────────────── --}}
         <tr>
-            <td style="background:#1e293b;padding:0 28px 20px;">
+            <td style="background:#16213e;padding:0 28px 20px;">
                 <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                     <tr>
                         <td style="width:33%;padding:16px 12px;text-align:center;border-right:1px solid #334155;">

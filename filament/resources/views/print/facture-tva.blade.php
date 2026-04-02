@@ -172,7 +172,7 @@
                             <strong>Note</strong><br>
                             Arrête la présente facture à la somme de : <span id="words"></span>
                         </div>
-                        @if (! empty($footerNote ?? null))
+                        @if (! empty($footerNote ?? null) && ! str_contains($footerNote, 'la présente facture'))
                             <div class="doc-a4-note-extra">{{ $footerNote }}</div>
                         @endif
                         <div class="doc-a4-signature">
