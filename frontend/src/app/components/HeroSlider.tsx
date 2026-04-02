@@ -40,7 +40,7 @@ const SlideImage = memo(({
   isFirst: boolean;
   className?: string;
 }) => {
-  const imageClass = 'object-cover object-center';
+  const imageClass = 'object-cover object-center sm:object-[center_20%]';
   if (!isFirst) {
     // Lazy load non-first slides for faster initial load (quality 75 for mobile PageSpeed)
     return (
@@ -212,7 +212,7 @@ export const HeroSlider = memo(function HeroSlider({ slides }: HeroSliderProps) 
           src={currentSlideData.image}
           alt={currentSlideData.titre}
           isFirst={isFirstSlide}
-          className="object-cover object-center"
+          className="object-cover object-center sm:object-[center_20%]"
         />
         
         {/* Gradient Overlay for better text readability */}
