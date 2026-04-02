@@ -167,14 +167,18 @@
                     </div>
 
                     <input type="hidden" id="totale" value="{{ $footerTtc }}">
-                    <div class="doc-a4-note">
-                        <strong>Note</strong><br>
-                        Arrête la présente facture à la somme de : <span id="words"></span>
+                    <div class="doc-a4-bottom-section">
+                        <div class="doc-a4-note">
+                            <strong>Note</strong><br>
+                            Arrête la présente facture à la somme de : <span id="words"></span>
+                        </div>
+                        @if (! empty($footerNote ?? null))
+                            <div class="doc-a4-note-extra">{{ $footerNote }}</div>
+                        @endif
+                        <div class="doc-a4-signature">
+                            <div class="doc-a4-signature__line">Signature et cachet</div>
+                        </div>
                     </div>
-                    @if (! empty($footerNote ?? null))
-                        <div class="doc-a4-note-extra">{{ $footerNote }}</div>
-                    @endif
-                    <div class="doc-a4-signature">Signature et cachet</div>
                 </main>
                 <div class="print-doc-footer-wrap doc-a4-footer-wrap">
                     @include('print.partials.footer-rib-numero', ['documentNumero' => $facture->numero ?? ''])

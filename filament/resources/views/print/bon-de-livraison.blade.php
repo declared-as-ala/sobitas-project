@@ -134,13 +134,17 @@
                     </div>
 
                     <input type="hidden" id="totale" value="{{ $netAPayer }}">
-                    @if (!empty($footerNote) || (!empty($coordonnee) && !empty($coordonnee->note)))
-                        <div class="doc-a4-note">
-                            <strong>Note</strong><br>
-                            {{ $footerNote ?? $coordonnee->note }}<span id="words"></span>
+                    <div class="doc-a4-bottom-section">
+                        @if (!empty($footerNote) || (!empty($coordonnee) && !empty($coordonnee->note)))
+                            <div class="doc-a4-note">
+                                <strong>Note</strong><br>
+                                {{ $footerNote ?? $coordonnee->note }}<span id="words"></span>
+                            </div>
+                        @endif
+                        <div class="doc-a4-signature">
+                            <div class="doc-a4-signature__line">Signature et cachet</div>
                         </div>
-                    @endif
-                    <div class="doc-a4-signature">Signature et cachet</div>
+                    </div>
                 </main>
                 <div class="print-doc-footer-wrap doc-a4-footer-wrap">
                     @include('print.partials.footer-rib-numero', ['documentNumero' => $facture->numero ?? ''])

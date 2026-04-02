@@ -363,16 +363,26 @@
         color: #94a3b8;
         font-style: italic;
     }
+    .doc-a4-bottom-section {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
     .doc-a4-signature {
-        margin: 60px 0 6px;
+        margin: 20px 0 0;
         text-align: right;
-        padding-right: 40px;
         font-size: 9.5pt;
+        color: #475569;
+        line-height: 1.4;
+    }
+    .doc-a4-signature__line {
+        display: inline-block;
+        width: 200px;
+        border-top: 1px solid #94a3b8;
+        padding-top: 6px;
+        text-align: center;
         font-weight: 600;
-        text-decoration: underline;
-        text-underline-offset: 4px;
-        text-decoration-thickness: 1px;
         color: #0f172a;
+        font-size: 9pt;
     }
 
     /* ── Summary line ── */
