@@ -254,7 +254,7 @@ class OrderToBlService
         $region = $order->livraison_region ?: $order->region ?: ($client->region ?? '');
         $cp = $order->livraison_code_postale ?: $order->code_postale ?: ($client->code_postale ?? '');
 
-        $parts = array_filter([$street, $cp, $ville, $region], fn ($v) => trim((string) $v) !== '');
+        $parts = array_filter([$street, $ville, $region, $cp], fn ($v) => trim((string) $v) !== '');
         return implode(', ', $parts);
     }
 

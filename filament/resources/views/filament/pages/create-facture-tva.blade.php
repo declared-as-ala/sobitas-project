@@ -380,27 +380,28 @@ function ftvaInitializeForm() {
 var _ftvaBootTimer = null;
 function ftvaBootstrap() {
     if (!document.querySelector('.ftva-page')) return;
-    // Debounce: collapse concurrent calls (document.ready + livewire:navigated
-    // + spa-navigation-fix ftvaFormReinit) into exactly one ftvaInitializeForm() call.
     clearTimeout(_ftvaBootTimer);
     _ftvaBootTimer = setTimeout(ftvaInitializeForm, 60);
 }
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', ftvaBootstrap, { once: true });
-} else {
-    ftvaBootstrap();
+function ftvaWaitAndBoot() {
+    if (typeof $ !== 'undefined' && $.fn && $.fn.select2) {
+        ftvaBootstrap();
+    } else {
+        setTimeout(ftvaWaitAndBoot, 80);
+    }
 }
 
-// SPA navigation hook (called by spa-navigation-fix.blade.php on every navigation)
-window.ftvaFormReinit = ftvaBootstrap;
+window.ftvaFormReinit = ftvaWaitAndBoot;
 
-// Register livewire:navigated listener only ONCE regardless of how many times
-// this script block executes (every SPA navigation re-executes blade scripts).
-// Without the guard, listeners accumulate and fire N times concurrently.
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', ftvaWaitAndBoot);
+} else {
+    ftvaWaitAndBoot();
+}
 if (!window._ftvaNavListenerActive) {
     window._ftvaNavListenerActive = true;
-    document.addEventListener('livewire:navigated', ftvaBootstrap);
+    document.addEventListener('livewire:navigated', ftvaWaitAndBoot);
 }
 
 // ── Hydrate form on edit ──────────────────────────────────────────────────────

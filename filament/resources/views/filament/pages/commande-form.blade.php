@@ -357,14 +357,17 @@ function cmdWaitAndBoot() {
     }
 }
 
-// Run on normal page load
+window.cmdFormReinit = function() { __cmdInitDone = false; cmdWaitAndBoot(); };
+
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', cmdWaitAndBoot);
 } else {
     cmdWaitAndBoot();
 }
-// Run on Livewire SPA navigation (wire:navigate)
-document.addEventListener('livewire:navigated', function() { __cmdInitDone = false; cmdWaitAndBoot(); });
+if (!window._cmdNavListenerActive) {
+    window._cmdNavListenerActive = true;
+    document.addEventListener('livewire:navigated', function() { __cmdInitDone = false; cmdWaitAndBoot(); });
+}
 
 function cmdInitSelect2(i) {
     var $el = $('#select_produit' + i);

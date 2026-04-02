@@ -141,9 +141,6 @@
                                 {{ $footerNote ?? $coordonnee->note }}<span id="words"></span>
                             </div>
                         @endif
-                        <div class="doc-a4-signature">
-                            <div class="doc-a4-signature__line">Signature et cachet</div>
-                        </div>
                     </div>
                 </main>
                 <div class="print-doc-footer-wrap doc-a4-footer-wrap">

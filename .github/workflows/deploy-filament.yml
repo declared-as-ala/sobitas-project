@@ -132,33 +132,26 @@ jobs:
             docker compose -f "$COMPOSE_FILE" up -d --force-recreate --no-deps backend-nginx-v2
 
             # ══════════════════════════════════════════════════════════
-            # 4. Post-deploy tasks (entrypoint already handled caches,
-            #    composer install, migrations, view:cache, etc.)
-            #
-            #    IMPORTANT: We do NOT re-run config:cache, route:cache,
-            #    view:cache, or composer install here. The entrypoint
-            #    already did all of this BEFORE FPM started, which
-            #    guarantees OPcache has fresh bytecode.
-            #
-            #    Previously, running these via `exec` after FPM was
-            #    already serving caused:
-            #      a) Race condition with entrypoint cache ops
-            #      b) OPcache stale bytecode (validate_timestamps=0
-            #         means FPM never rechecks changed files)
-            #      c) CLI opcache_reset() didn't affect FPM's pool
+            # 4. Post-deploy: explicit cache rebuild + FPM reload
+            #    The entrypoint already did this before FPM started,
+            #    but we redo it as a safety net in case the persistent
+            #    storage volume held stale compiled views/config.
+            #    Every command is || true so script_stop cannot abort.
             # ══════════════════════════════════════════════════════════
+            echo "🔄 Post-deploy cache safety net..."
+            docker compose -f "$COMPOSE_FILE" exec -T backend-v2 php artisan optimize:clear 2>/dev/null || true
+            docker compose -f "$COMPOSE_FILE" exec -T backend-v2 php artisan config:cache 2>/dev/null || true
+            docker compose -f "$COMPOSE_FILE" exec -T backend-v2 php artisan route:cache 2>/dev/null || true
+            docker compose -f "$COMPOSE_FILE" exec -T backend-v2 php artisan view:cache 2>/dev/null || true
+            docker compose -f "$COMPOSE_FILE" exec -T backend-v2 php artisan event:cache 2>/dev/null || true
+            docker compose -f "$COMPOSE_FILE" exec -T backend-v2 php artisan filament:assets 2>/dev/null || true
+            echo "✅ Cache rebuilt"
 
             echo "🔄 Restarting queue workers with new code..."
-            docker compose -f "$COMPOSE_FILE" exec -T backend-v2 php artisan queue:restart > /dev/null 2>&1 || true
+            docker compose -f "$COMPOSE_FILE" exec -T backend-v2 php artisan queue:restart 2>/dev/null || true
 
-            # Graceful FPM reload — tells FPM workers to finish current
-            # request then respawn. This ensures any worker that loaded
-            # stale bytecode during the brief startup window is replaced.
-            echo "♻️  Graceful PHP-FPM reload (clear any stale OPcache)..."
-            docker compose -f "$COMPOSE_FILE" exec -T backend-v2 \
-              kill -USR2 1 2>/dev/null || true
+            echo "♻️  Graceful PHP-FPM reload (clear stale OPcache)..."
+            docker compose -f "$COMPOSE_FILE" exec -T backend-v2 kill -USR2 1 2>/dev/null || true
 
             echo ""
             echo "🚀 Deploy complete!"
-            echo "  Entrypoint handled: composer install, migrations,"
-            echo "  config/route/view/event cache, Filament assets"

@@ -626,29 +626,40 @@
         calculate();
     }
 
-    document.addEventListener('DOMContentLoaded', function () {
-        ticketPosBootstrap();
+    function ticketWaitAndBoot() {
+        if (typeof $ !== 'undefined' && $.fn && $.fn.select2) {
+            ticketPosBootstrap();
+        } else {
+            setTimeout(ticketWaitAndBoot, 80);
+        }
+    }
 
-        // Prevent form submit on enter
-        window.addEventListener('keydown', function(e) {
-            if(e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
-                e.preventDefault();
-                if(e.target.id === 'barcode_input') {
-                    scanBarcode();
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () {
+            ticketWaitAndBoot();
+            window.addEventListener('keydown', function(e) {
+                if(e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+                    e.preventDefault();
+                    if(e.target.id === 'barcode_input') {
+                        scanBarcode();
+                    }
                 }
+            });
+        });
+    } else {
+        ticketWaitAndBoot();
+    }
+
+    window.ticketPosReinit = ticketWaitAndBoot;
+
+    if (!window._ticketNavListenerActive) {
+        window._ticketNavListenerActive = true;
+        document.addEventListener('livewire:navigated', function () {
+            if (document.getElementById('pos-ticket-root')) {
+                ticketWaitAndBoot();
             }
         });
-    });
-
-    window.ticketPosReinit = function () {
-        setTimeout(ticketPosBootstrap, 50);
-    };
-
-    document.addEventListener('livewire:navigated', function () {
-        if (document.getElementById('pos-ticket-root')) {
-            setTimeout(ticketPosBootstrap, 80);
-        }
-    });
+    }
 
     function initSelect2(i) {
         var $el = $('#select_produit' + i);

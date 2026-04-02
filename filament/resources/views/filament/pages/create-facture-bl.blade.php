@@ -378,27 +378,28 @@ function blInitializeForm() {
 var _blBootTimer = null;
 function blBootstrap() {
     if (!document.querySelector('.bl-page')) return;
-    // Debounce: collapse concurrent calls (document.ready + livewire:navigated
-    // + spa-navigation-fix blFormReinit) into exactly one blInitializeForm() call.
     clearTimeout(_blBootTimer);
     _blBootTimer = setTimeout(blInitializeForm, 60);
 }
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', blBootstrap, { once: true });
-} else {
-    blBootstrap();
+function blWaitAndBoot() {
+    if (typeof $ !== 'undefined' && $.fn && $.fn.select2) {
+        blBootstrap();
+    } else {
+        setTimeout(blWaitAndBoot, 80);
+    }
 }
 
-// SPA navigation hook (called by spa-navigation-fix.blade.php on every navigation)
-window.blFormReinit = blBootstrap;
+window.blFormReinit = blWaitAndBoot;
 
-// Register livewire:navigated listener only ONCE regardless of how many times
-// this script block executes (every SPA navigation re-executes blade scripts).
-// Without the guard, listeners accumulate and fire N times concurrently.
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', blWaitAndBoot);
+} else {
+    blWaitAndBoot();
+}
 if (!window._blNavListenerActive) {
     window._blNavListenerActive = true;
-    document.addEventListener('livewire:navigated', blBootstrap);
+    document.addEventListener('livewire:navigated', blWaitAndBoot);
 }
 
 function blHydrate(data, selProducts) {

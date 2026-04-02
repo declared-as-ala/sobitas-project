@@ -357,25 +357,28 @@ function dvInitializeForm() {
 var _dvBootTimer = null;
 function dvBootstrap() {
     if (!document.querySelector('.devis-page')) return;
-    // Debounce: cancel any in-flight init, schedule a single one.
-    // This collapses concurrent calls from document.ready + livewire:navigated
-    // + spa-navigation-fix into exactly one dvInitializeForm() execution.
     clearTimeout(_dvBootTimer);
     _dvBootTimer = setTimeout(dvInitializeForm, 60);
 }
 
-// Full page load
-$(document).ready(dvBootstrap);
+function dvWaitAndBoot() {
+    if (typeof $ !== 'undefined' && $.fn && $.fn.select2) {
+        dvBootstrap();
+    } else {
+        setTimeout(dvWaitAndBoot, 80);
+    }
+}
 
-// SPA navigation hook (called by spa-navigation-fix.blade.php on every navigation)
-window.dvFormReinit = dvBootstrap;
+window.dvFormReinit = dvWaitAndBoot;
 
-// Register livewire:navigated listener only ONCE regardless of how many times
-// this script block executes (every SPA navigation re-executes blade scripts).
-// Without the guard, listeners accumulate and fire N times concurrently.
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', dvWaitAndBoot);
+} else {
+    dvWaitAndBoot();
+}
 if (!window._dvNavListenerActive) {
     window._dvNavListenerActive = true;
-    document.addEventListener('livewire:navigated', dvBootstrap);
+    document.addEventListener('livewire:navigated', dvWaitAndBoot);
 }
 
 function dvHydrate(data, selProducts) {

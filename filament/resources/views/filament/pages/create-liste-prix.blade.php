@@ -282,16 +282,24 @@ function lpInitializeForm() {
     }
 }
 
-$(document).ready(function() { lpInitializeForm(); });
+function lpWaitAndBoot() {
+    if (typeof $ !== 'undefined' && $.fn && $.fn.select2) {
+        lpInitializeForm();
+    } else {
+        setTimeout(lpWaitAndBoot, 80);
+    }
+}
 
-window.lpFormReinit = function() {
-    setTimeout(function() { lpInitializeForm(); }, 50);
-};
+window.lpFormReinit = lpWaitAndBoot;
 
-if (typeof window.Livewire !== 'undefined') {
-    document.addEventListener('livewire:initialized', function() {
-        setTimeout(function() { lpInitializeForm(); }, 50);
-    });
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', lpWaitAndBoot);
+} else {
+    lpWaitAndBoot();
+}
+if (!window._lpNavListenerActive) {
+    window._lpNavListenerActive = true;
+    document.addEventListener('livewire:navigated', lpWaitAndBoot);
 }
 
 function lpHydrate(data, selProds) {

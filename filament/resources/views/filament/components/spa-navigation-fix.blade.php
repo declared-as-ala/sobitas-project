@@ -63,25 +63,35 @@
         }
     }
 
+    /**
+     * Poll until jQuery + Select2 are available, then invoke callback.
+     * Exposed globally so individual pages can reuse it for their own boot.
+     */
+    window.__spaWaitForDeps = function (fn) {
+        if (typeof $ !== 'undefined' && $.fn && $.fn.select2) {
+            fn();
+        } else {
+            setTimeout(function () { window.__spaWaitForDeps(fn); }, 80);
+        }
+    };
+
+    function callReinitHooks() {
+        var hooks = [
+            'filamentReinit', 'dvFormReinit', 'blFormReinit',
+            'ftvaFormReinit', 'ticketPosReinit', 'lpFormReinit',
+            'cmdFormReinit'
+        ];
+        hooks.forEach(function (name) {
+            if (typeof window[name] === 'function') {
+                try { window[name](); } catch (e) { log(name + ' error', e); }
+            }
+        });
+    }
+
     function reinitAfterNavigate() {
         removeOrphanedOverlays();
         reinitFilamentSelects();
-
-        if (typeof window.filamentReinit === 'function') {
-            try { window.filamentReinit(); } catch (e) { log('filamentReinit error', e); }
-        }
-        if (typeof window.dvFormReinit === 'function') {
-            try { window.dvFormReinit(); } catch (e) { log('dvFormReinit error', e); }
-        }
-        if (typeof window.blFormReinit === 'function') {
-            try { window.blFormReinit(); } catch (e) { log('blFormReinit error', e); }
-        }
-        if (typeof window.ftvaFormReinit === 'function') {
-            try { window.ftvaFormReinit(); } catch (e) { log('ftvaFormReinit error', e); }
-        }
-        if (typeof window.ticketPosReinit === 'function') {
-            try { window.ticketPosReinit(); } catch (e) { log('ticketPosReinit error', e); }
-        }
+        window.__spaWaitForDeps(callReinitHooks);
     }
 
     function onNavigated() {
