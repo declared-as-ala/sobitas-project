@@ -84,6 +84,13 @@ RUN COMPOSER_MEMORY_LIMIT=-1 COMPOSER_ALLOW_SUPERUSER=1 composer install \
 # The public/storage symlink will be created at runtime by docker-entrypoint.sh
 COPY . .
 
+# Re-sync lock file after COPY (COPY overwrites the lock that composer update fixed above).
+# This ensures the image always ships a valid composer.lock matching composer.json.
+RUN COMPOSER_MEMORY_LIMIT=-1 COMPOSER_ALLOW_SUPERUSER=1 composer install \
+    --no-scripts --no-interaction --prefer-dist --optimize-autoloader 2>/dev/null \
+    || COMPOSER_MEMORY_LIMIT=-1 COMPOSER_ALLOW_SUPERUSER=1 composer update \
+       --no-scripts --no-interaction --prefer-dist --optimize-autoloader
+
 # Build frontend assets (Vite or Laravel Mix)
 # Detect build system and build assets
 RUN if [ -f "vite.config.js" ]; then \

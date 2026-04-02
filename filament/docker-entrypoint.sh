@@ -19,22 +19,26 @@ fi
 # The vendor dir is on a persistent Docker volume.  We store a hash
 # of composer.lock after each successful install.  On next startup
 # we compare — if the hash matches, skip the slow install entirely.
+# IMPORTANT: This block must NEVER crash the container — use sub-shell.
 LOCK_HASH=$(md5sum composer.lock 2>/dev/null | cut -d' ' -f1)
 SAVED_HASH=""
 [ -f vendor/.composer-lock-hash ] && SAVED_HASH=$(cat vendor/.composer-lock-hash 2>/dev/null)
 
 if [ ! -f vendor/autoload.php ] || [ "$LOCK_HASH" != "$SAVED_HASH" ]; then
     echo "========================================"
-    echo " composer.lock changed — running composer install ..."
+    echo " composer.lock changed — syncing vendor ..."
     echo "========================================"
-    COMPOSER_MEMORY_LIMIT=-1 COMPOSER_ALLOW_SUPERUSER=1 \
-      composer install --no-interaction --optimize-autoloader --no-dev 2>&1 || {
-        echo "composer install failed, retrying without scripts..."
+    (
         COMPOSER_MEMORY_LIMIT=-1 COMPOSER_ALLOW_SUPERUSER=1 \
-          composer install --no-interaction --no-scripts --optimize-autoloader --no-dev
-        COMPOSER_ALLOW_SUPERUSER=1 composer dump-autoload --optimize
-    }
-    echo "$LOCK_HASH" > vendor/.composer-lock-hash
+          composer install --no-interaction --optimize-autoloader --no-dev 2>&1 \
+        || COMPOSER_MEMORY_LIMIT=-1 COMPOSER_ALLOW_SUPERUSER=1 \
+           composer update --no-interaction --optimize-autoloader --no-dev 2>&1 \
+        || echo "⚠ composer sync failed — continuing with existing vendor"
+    ) && echo "$LOCK_HASH" > vendor/.composer-lock-hash
+    # Even if composer fails, continue booting — the image build
+    # already installed vendor into /var/www/html/vendor (layer).
+    # The persistent volume just might be slightly out of date.
+    true
 else
     echo "✓ Vendor packages up to date (composer.lock unchanged)"
 fi
