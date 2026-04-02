@@ -42,7 +42,10 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-<script>var max = {{ $max }};</script>
+<script>
+var max = {{ $max }};
+var __cmdInitDone = false;
+</script>
 
 <style>
 /* ── Force FULL WIDTH on Commande Pages ─────────── */
@@ -297,11 +300,17 @@ var editt = {{ $isEdit ? 1 : 0 }};
 var j = 0;
 var cmdMax = {{ $max }};
 
-$(document).ready(function() {
-    // Init select2 for client
-    $('#select_client').select2({ 
-        placeholder: 'Choisir', 
-        allowClear: true, 
+function cmdBootPage() {
+    if (__cmdInitDone) return;
+    if (!document.getElementById('select_client')) return;
+    __cmdInitDone = true;
+
+    // Destroy stale Select2 instances (SPA re-visit)
+    try { $('#select_client').select2('destroy'); } catch(e) {}
+
+    $('#select_client').select2({
+        placeholder: 'Choisir',
+        allowClear: true,
         width: '100%',
         ajax: {
             url: '/api/pos-clients',
@@ -312,24 +321,9 @@ $(document).ready(function() {
         }
     });
 
-    // Init select2 for all product rows dynamically
-    // for (let i = 1; i <= cmdMax; i++) {
-    //     $('#select_produit' + i).select2({ 
-    //         placeholder: 'Choisir..', 
-    //         allowClear: true, 
-    //         width: '100%',
-    //         ajax: {
-    //             url: '/api/pos-products',
-    //             dataType: 'json',
-    //             delay: 250,
-    //             data: function (params) { return { q: params.term || '' }; },
-    //             cache: true
-    //         }
-    //     });
-    // }
-
     var selProducts = @json($selProducts);
     var existingLines = @json($detailsRows);
+    j = 0;
     if (existingLines.length > 0) {
         existingLines.forEach(function(line) {
             if (line.produit_id && j < cmdMax) {
@@ -348,20 +342,36 @@ $(document).ready(function() {
             }
         });
     } else {
-        // Show one empty row by default
         j = 1;
         document.getElementById('achat1').style.display = '';
         cmdInitSelect2(1);
     }
     calculate();
-});
+}
+
+function cmdWaitAndBoot() {
+    if (typeof $ !== 'undefined' && $.fn && $.fn.select2) {
+        cmdBootPage();
+    } else {
+        setTimeout(cmdWaitAndBoot, 100);
+    }
+}
+
+// Run on normal page load
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', cmdWaitAndBoot);
+} else {
+    cmdWaitAndBoot();
+}
+// Run on Livewire SPA navigation (wire:navigate)
+document.addEventListener('livewire:navigated', function() { __cmdInitDone = false; cmdWaitAndBoot(); });
 
 function cmdInitSelect2(i) {
     var $el = $('#select_produit' + i);
-    if ($el.hasClass('select2-hidden-accessible')) return; // Already initialized
-    $el.select2({ 
-        placeholder: 'Choisir..', 
-        allowClear: true, 
+    try { $el.select2('destroy'); } catch(e) {}
+    $el.select2({
+        placeholder: 'Choisir..',
+        allowClear: true,
         width: '100%',
         ajax: {
             url: '/api/pos-products',

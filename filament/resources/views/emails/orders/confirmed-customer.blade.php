@@ -60,8 +60,8 @@
         {{-- ── HERO HEADER ─────────────────────────────────────────────────── --}}
         <tr>
             <td style="background:linear-gradient(150deg,#b91c1c 0%,#dc2626 45%,#c2410c 100%);border-radius:16px 16px 0 0;padding:36px 32px 32px;text-align:center;">
-                <img src="{{ $logoUrl }}" alt="SOBITAS" width="100" height="auto"
-                     style="display:block;max-width:100px;background:#fff;padding:10px;border-radius:12px;margin:0 auto 20px;">
+                <img src="{{ $logoUrl }}" alt="SOBITAS" width="160" height="auto"
+                     style="display:block;max-width:160px;margin:0 auto 20px;">
                 <p style="margin:0 0 6px;font-size:28px;font-weight:800;color:#ffffff;letter-spacing:-.02em;" class="h-hero">
                     Merci, {{ $prenom ?: 'cher client' }} ! 🎉
                 </p>
@@ -208,20 +208,10 @@
         </tr>
         @endif
 
-        {{-- ── CTA BUTTON ───────────────────────────────────────────────────── --}}
+        {{-- ── CONTACT ──────────────────────────────────────────────────────── --}}
         <tr>
             <td style="background:#ffffff;padding:0 32px 32px;text-align:center;" class="pad">
-                <table role="presentation" cellpadding="0" cellspacing="0" align="center">
-                    <tr>
-                        <td style="border-radius:10px;background:#b91c1c;">
-                            <a href="{{ $orderUrl }}" class="btn"
-                               style="display:inline-block;padding:15px 40px;font-size:15px;font-weight:700;color:#ffffff!important;text-decoration:none;">
-                                Suivre ma commande →
-                            </a>
-                        </td>
-                    </tr>
-                </table>
-                <p style="margin:12px 0 0;font-size:12px;color:#94a3b8;">
+                <p style="margin:0;font-size:12px;color:#94a3b8;">
                     Un problème ? Contactez-nous : <a href="mailto:{{ $contactEmail }}" style="color:#b91c1c;text-decoration:none;">{{ $contactEmail }}</a>
                 </p>
             </td>

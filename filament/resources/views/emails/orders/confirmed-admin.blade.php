@@ -59,8 +59,8 @@
                 <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                     <tr>
                         <td style="vertical-align:middle;">
-                            <img src="{{ $logoUrl }}" alt="SOBITAS" width="90" height="auto"
-                                 style="display:block;max-width:90px;background:#ffffff;padding:8px 10px;border-radius:10px;margin-bottom:14px;">
+                            <img src="{{ $logoUrl }}" alt="SOBITAS" width="140" height="auto"
+                                 style="display:block;max-width:140px;margin-bottom:14px;">
                             <p style="margin:0 0 3px;font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;">Notification back-office</p>
                             <p style="margin:0;font-size:22px;font-weight:700;color:#ffffff;">🛍 Nouvelle commande reçue</p>
                             <p style="margin:6px 0 0;font-size:14px;color:#cbd5e1;">{{ $dateFormatted }}</p>
