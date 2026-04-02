@@ -166,7 +166,7 @@ class QuotationConversionService
             $coordinate = Coordinate::getCached();
             $defaultTvaPct = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
             $remise = (float) ($quotation->remise ?? 0);
-            $timbre = (float) ($quotation->timbre ?? 0);
+            $timbre = 1.0;
 
             $details = [];
             foreach ($quotation->details as $line) {
