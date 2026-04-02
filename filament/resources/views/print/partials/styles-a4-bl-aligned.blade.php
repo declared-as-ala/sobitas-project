@@ -364,7 +364,7 @@
         font-style: italic;
     }
     .doc-a4-signature {
-        margin: 12px 0 6px;
+        margin: 60px 0 6px;
         text-align: right;
         padding-right: 40px;
         font-size: 9.5pt;
