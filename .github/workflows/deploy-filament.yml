@@ -114,25 +114,13 @@ jobs:
 
             # ══════════════════════════════════════════════════════════
             # 2. Wait for entrypoint to finish.
-            #    The entrypoint runs composer install (only if lock
-            #    changed), migrations, and cache rebuild BEFORE FPM.
-            #    We poll for the marker file it writes when done.
+            #    The entrypoint handles: composer sync, migrations,
+            #    cache rebuild — all BEFORE starting php-fpm.
+            #    Simple sleep is reliable with script_stop: true.
             # ══════════════════════════════════════════════════════════
-            echo "⏳ Waiting for backend to be ready..."
-            READY=0
-            for i in $(seq 1 40); do
-              if docker compose -f "$COMPOSE_FILE" exec -T backend-v2 \
-                   test -f /tmp/.entrypoint-ready 2>/dev/null; then
-                READY=1
-                break
-              fi
-              sleep 3
-            done
-            if [ "$READY" -ne 1 ]; then
-              echo "⚠ Entrypoint slow (>120s) — continuing anyway"
-            else
-              echo "✅ Backend ready"
-            fi
+            echo "⏳ Waiting 45s for entrypoint to finish..."
+            sleep 45
+            echo "✅ Continuing with post-deploy tasks"
 
             # ══════════════════════════════════════════════════════════
             # 3. Copy public assets to shared nginx volume
