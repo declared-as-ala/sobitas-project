@@ -106,59 +106,73 @@ jobs:
               [ -n "$KEY" ] && echo "APP_KEY=$KEY" >> .env && echo "✓ APP_KEY added to .env"
             fi
 
-            echo "🔄 Restart backend..."
+            # ══════════════════════════════════════════════════════════
+            # 1. Recreate backend container (new image, fresh process)
+            # ══════════════════════════════════════════════════════════
+            echo "🔄 Recreating backend container..."
             docker compose -f "$COMPOSE_FILE" up -d --force-recreate --no-deps backend-v2
 
+            # ══════════════════════════════════════════════════════════
+            # 2. Wait for entrypoint to finish (composer install,
+            #    migrations, cache rebuild all happen there).
+            #    DO NOT run exec commands until the entrypoint is done
+            #    — that was causing a race condition where CI cache ops
+            #    interfered with the entrypoint's cache ops.
+            # ══════════════════════════════════════════════════════════
+            echo "⏳ Waiting for backend entrypoint to finish..."
+            READY=0
+            for i in $(seq 1 60); do
+              if docker compose -f "$COMPOSE_FILE" exec -T backend-v2 \
+                   test -f /tmp/.entrypoint-ready 2>/dev/null; then
+                READY=1
+                break
+              fi
+              echo "  ... entrypoint still running (attempt $i/60), waiting 5s"
+              sleep 5
+            done
+            if [ "$READY" -ne 1 ]; then
+              echo "⚠ Entrypoint did not finish in 300s — continuing anyway"
+            else
+              echo "✅ Backend entrypoint finished"
+            fi
+
+            # ══════════════════════════════════════════════════════════
+            # 3. Copy public assets to shared nginx volume
+            # ══════════════════════════════════════════════════════════
             echo "📋 Init public volume..."
             docker compose -f "$COMPOSE_FILE" run --rm backend-v2-public-init
 
             echo "🔄 Restart nginx..."
-            docker compose -f "$COMPOSE_FILE" up -d --no-deps backend-nginx-v2
+            docker compose -f "$COMPOSE_FILE" up -d --force-recreate --no-deps backend-nginx-v2
 
-            # ════════════════════════════════════════════════════════════════
-            # PERFORMANCE OPTIMIZATION - Automatically run on every deploy
-            # ════════════════════════════════════════════════════════════════
-            echo ""
-            echo "⚡ PERFORMANCE OPTIMIZATION - Running on deploy..."
-            echo "════════════════════════════════════════════════════════════"
+            # ══════════════════════════════════════════════════════════
+            # 4. Post-deploy tasks (entrypoint already handled caches,
+            #    composer install, migrations, view:cache, etc.)
+            #
+            #    IMPORTANT: We do NOT re-run config:cache, route:cache,
+            #    view:cache, or composer install here. The entrypoint
+            #    already did all of this BEFORE FPM started, which
+            #    guarantees OPcache has fresh bytecode.
+            #
+            #    Previously, running these via `exec` after FPM was
+            #    already serving caused:
+            #      a) Race condition with entrypoint cache ops
+            #      b) OPcache stale bytecode (validate_timestamps=0
+            #         means FPM never rechecks changed files)
+            #      c) CLI opcache_reset() didn't affect FPM's pool
+            # ══════════════════════════════════════════════════════════
 
-            # 1. Clear old caches (but NOT view cache - Filament components cause issues)
-            echo "🧹 Clearing old caches..."
-            docker compose -f "$COMPOSE_FILE" exec -T backend-v2 php artisan cache:clear > /dev/null 2>&1 || true
-            docker compose -f "$COMPOSE_FILE" exec -T backend-v2 php artisan config:clear > /dev/null 2>&1 || true
-            docker compose -f "$COMPOSE_FILE" exec -T backend-v2 php artisan route:clear > /dev/null 2>&1 || true
-
-            # 2. Build new caches (critical for performance: +50-80ms per request)
-            echo "💾 Building optimized caches (50-80ms improvement per request)..."
-            docker compose -f "$COMPOSE_FILE" exec -T backend-v2 php artisan config:cache
-            docker compose -f "$COMPOSE_FILE" exec -T backend-v2 php artisan route:cache
-
-            # 3. Run migrations (ensures database indexes for query optimization)
-            echo "📊 Running database migrations..."
-            docker compose -f "$COMPOSE_FILE" exec -T backend-v2 php artisan migrate --force > /dev/null 2>&1 || true
-
-            # 4. Build and optimize frontend assets
-            echo "📦 Building optimized frontend assets..."
-            docker compose -f "$COMPOSE_FILE" exec -T backend-v2 npm ci --only=production > /dev/null 2>&1 || true
-            docker compose -f "$COMPOSE_FILE" exec -T backend-v2 npm run build > /dev/null 2>&1 || true
-
-            # 5. Optimize composer autoloader (faster class loading)
-            echo "🔧 Optimizing PHP autoloader..."
-            docker compose -f "$COMPOSE_FILE" exec -T backend-v2 composer install --optimize-autoloader --no-dev > /dev/null 2>&1 || true
-
-            # 6. Clear opcache to ensure latest code is used
-            echo "♻️  Clearing PHP OPcache..."
-            docker compose -f "$COMPOSE_FILE" exec -T backend-v2 php -r "if (function_exists('opcache_reset')) { opcache_reset(); echo 'OPcache cleared'; } else { echo 'OPcache not available'; }" > /dev/null 2>&1 || true
-            
-            # 7. Restart queue workers with new code
-            echo "🔄 Restarting queue workers..."
+            echo "🔄 Restarting queue workers with new code..."
             docker compose -f "$COMPOSE_FILE" exec -T backend-v2 php artisan queue:restart > /dev/null 2>&1 || true
 
+            # Graceful FPM reload — tells FPM workers to finish current
+            # request then respawn. This ensures any worker that loaded
+            # stale bytecode during the brief startup window is replaced.
+            echo "♻️  Graceful PHP-FPM reload (clear any stale OPcache)..."
+            docker compose -f "$COMPOSE_FILE" exec -T backend-v2 \
+              kill -USR2 1 2>/dev/null || true
+
             echo ""
-            echo "✅ Performance optimization complete!"
-            echo "════════════════════════════════════════════════════════════"
-            echo "Expected improvements:"
-            echo "  • Dashboard:      0.8-1.2 seconds (was 3+ seconds)"
-            echo "  • Queries:        15-25 per page (was 60-80)"
-            echo "  • Response size:  80-150KB (was 500-800KB)"
-            echo "🚀 Deploy done with optimizations"
+            echo "🚀 Deploy complete!"
+            echo "  Entrypoint handled: composer install, migrations,"
+            echo "  config/route/view/event cache, Filament assets"
