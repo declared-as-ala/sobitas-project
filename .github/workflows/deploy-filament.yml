@@ -18,14 +18,10 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: declared-as-ala/sobitas-backend-v2
-  # Username for GHCR (owner of the package). Use secret GHCR_USERNAME to override.
-  GHCR_USERNAME: declared-as-ala
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    # For workflow_dispatch, only run if enabled=true
-    # For push events, paths filter in on: section already handles filtering
     if: |
       github.event_name == 'push' ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.enabled == 'true')
@@ -72,86 +68,75 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           password: ${{ secrets.VPS_PASSWORD }}
           port: ${{ secrets.VPS_PORT || 22 }}
-          command_timeout: 900s
+          command_timeout: 1200s
           script_stop: true
           script: |
-            set -e
+            set -euo pipefail
+
             APP_DIR="/root/sobitas-project"
             COMPOSE_FILE="$APP_DIR/docker-compose.yml"
+            IMAGE="ghcr.io/declared-as-ala/sobitas-backend-v2:latest"
 
             cd "$APP_DIR"
 
             [ -f .env ] || { [ -f filament/.env.example ] && cp filament/.env.example .env || touch .env; }
 
-            echo "📥 Updating docker-compose.yml..."
-            git fetch origin main || true
-            git checkout origin/main -- docker-compose.yml 2>/dev/null || true
+            echo "📥 Updating docker-compose and nginx files from repo..."
+            git fetch origin main
+            git checkout origin/main -- docker-compose.yml nginx
 
             echo "🔐 Logging in to GHCR..."
-            if [ -n "${{ secrets.GHCR_PAT }}" ]; then
-              echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u declared-as-ala --password-stdin
-            fi
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u declared-as-ala --password-stdin
 
-            echo "🧹 Docker cleanup (free disk space before pull)..."
-            docker image prune -af || true
+            echo "🧹 Docker cleanup (old dangling images only)..."
+            docker image prune -f || true
 
             echo "📦 Pull latest image..."
-            docker pull ghcr.io/declared-as-ala/sobitas-backend-v2:latest
+            docker pull "$IMAGE"
 
-            echo "🔍 Start deps..."
+            echo "🔍 Start dependencies..."
             docker compose -f "$COMPOSE_FILE" up -d mysql redis
 
             if ! grep -q 'APP_KEY=base64:' .env 2>/dev/null; then
+              echo "🔑 APP_KEY missing, generating..."
               KEY=$(docker compose -f "$COMPOSE_FILE" run --rm backend-v2 php artisan key:generate --show 2>/dev/null || true)
               [ -n "$KEY" ] && echo "APP_KEY=$KEY" >> .env && echo "✓ APP_KEY added to .env"
             fi
 
-            # ══════════════════════════════════════════════════════════
-            # 1. Recreate backend container (new image, fresh process)
-            # ══════════════════════════════════════════════════════════
-            echo "🔄 Recreating backend container..."
+            echo "🔄 Recreating backend container with latest image..."
             docker compose -f "$COMPOSE_FILE" up -d --force-recreate --no-deps backend-v2
 
-            # ══════════════════════════════════════════════════════════
-            # 2. Wait for entrypoint to finish.
-            #    The entrypoint handles: composer sync, migrations,
-            #    cache rebuild — all BEFORE starting php-fpm.
-            #    Simple sleep is reliable with script_stop: true.
-            # ══════════════════════════════════════════════════════════
-            echo "⏳ Waiting 45s for entrypoint to finish..."
-            sleep 45
-            echo "✅ Continuing with post-deploy tasks"
+            echo "⏳ Waiting for backend readiness marker..."
+            READY=0
+            for i in $(seq 1 120); do
+              if docker compose -f "$COMPOSE_FILE" exec -T backend-v2 test -f /tmp/.entrypoint-ready; then
+                READY=1
+                echo "✅ Backend is ready"
+                break
+              fi
+              sleep 2
+            done
 
-            # ══════════════════════════════════════════════════════════
-            # 3. Copy public assets to shared nginx volume
-            # ══════════════════════════════════════════════════════════
-            echo "📋 Init public volume..."
+            if [ "$READY" -ne 1 ]; then
+              echo "❌ Backend did not become ready in time"
+              docker compose -f "$COMPOSE_FILE" logs --tail=200 backend-v2 || true
+              exit 1
+            fi
+
+            echo "📋 Refreshing shared public volume..."
             docker compose -f "$COMPOSE_FILE" run --rm backend-v2-public-init
 
-            echo "🔄 Restart nginx..."
+            echo "🔄 Recreating nginx..."
             docker compose -f "$COMPOSE_FILE" up -d --force-recreate --no-deps backend-nginx-v2
 
-            # ══════════════════════════════════════════════════════════
-            # 4. Post-deploy: explicit cache rebuild + FPM reload
-            #    The entrypoint already did this before FPM started,
-            #    but we redo it as a safety net in case the persistent
-            #    storage volume held stale compiled views/config.
-            #    Every command is || true so script_stop cannot abort.
-            # ══════════════════════════════════════════════════════════
-            echo "🔄 Post-deploy cache safety net..."
-            docker compose -f "$COMPOSE_FILE" exec -T backend-v2 php artisan optimize:clear 2>/dev/null || true
-            docker compose -f "$COMPOSE_FILE" exec -T backend-v2 php artisan config:cache 2>/dev/null || true
-            docker compose -f "$COMPOSE_FILE" exec -T backend-v2 php artisan route:cache 2>/dev/null || true
-            docker compose -f "$COMPOSE_FILE" exec -T backend-v2 php artisan view:cache 2>/dev/null || true
-            docker compose -f "$COMPOSE_FILE" exec -T backend-v2 php artisan event:cache 2>/dev/null || true
-            docker compose -f "$COMPOSE_FILE" exec -T backend-v2 php artisan filament:assets 2>/dev/null || true
-            echo "✅ Cache rebuilt"
+            echo "🔄 Recreating queue worker with latest image..."
+            docker compose -f "$COMPOSE_FILE" up -d --force-recreate --no-deps backend-v2-queue
 
-            echo "🔄 Restarting queue workers with new code..."
-            docker compose -f "$COMPOSE_FILE" exec -T backend-v2 php artisan queue:restart 2>/dev/null || true
+            echo "📋 Final status:"
+            docker compose -f "$COMPOSE_FILE" ps
 
-            echo "♻️  Graceful PHP-FPM reload (clear stale OPcache)..."
-            docker compose -f "$COMPOSE_FILE" exec -T backend-v2 kill -USR2 1 2>/dev/null || true
+            echo "🩺 Last backend logs:"
+            docker compose -f "$COMPOSE_FILE" logs --tail=50 backend-v2 || true
 
             echo ""
             echo "🚀 Deploy complete!"
