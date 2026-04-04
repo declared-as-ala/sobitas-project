@@ -3,7 +3,7 @@
  * When an article slug matches, BlogSeoBlock renders FAQ section and "Lire aussi" links.
  * Create articles in CMS with these slugs to get full SEO benefit.
  */
-
+///dd
 export interface BlogSeoEntry {
   /** FAQ for FAQPage schema and on-page accordion */
   faqs: Array<{ question: string; answer: string }>;
