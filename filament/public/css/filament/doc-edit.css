@@ -1,0 +1,371 @@
+/* ============================================================
+   Document edit shared styles — BL, Facture TVA, Devis, Tickets
+   No Tailwind utilities — project convention: custom classes only
+   ============================================================ */
+
+/* ---- Sticky sidebar (the column with totaux + résumé) ---- */
+.doc-totaux-sidebar {
+    position: sticky;
+    top: 80px;
+    align-self: flex-start;
+}
+
+/* ---- Repeater: product rows ---- */
+/* NOTE: do NOT set overflow:hidden on select inputs — it clips the dropdown */
+.doc-lines-repeater .fi-select-input,
+.doc-lines-repeater select {
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/* ============================================================
+   CRITICAL FIX: Select searchable dropdown clipping
+   Root cause: overflow:hidden on repeater/section containers
+   clips the Alpine Combobox floating listbox.
+   Solution: force overflow:visible on ALL ancestor containers
+   and give the listbox a high z-index so it floats above.
+   Applied globally to all document-edit pages.
+   ============================================================ */
+
+/* All doc-lines-repeater elements must be overflow:visible */
+.doc-lines-repeater,
+.doc-lines-repeater .fi-fo-repeater-items,
+.doc-lines-repeater .fi-fo-repeater-items>div,
+.doc-lines-repeater .fi-fo-field-wrp,
+.doc-lines-repeater .fi-fo-field-wrp>div,
+.doc-lines-repeater .fi-fo-select-wrp,
+.doc-lines-repeater [x-data] {
+    overflow: visible !important;
+}
+
+/* Section content wrapper must not clip the dropdown */
+.doc-section-produits .fi-section-content-ctn,
+.doc-section-produits .fi-section-content,
+.doc-section-produits .fi-fo-field-wrp,
+.doc-section-produits [x-data] {
+    overflow: visible !important;
+}
+
+/* Make the floating listbox (Alpine Combobox) appear above all cards */
+/* Filament 4 renders the dropdown with [role="listbox"] inside the Alpine x-data scope */
+.doc-lines-repeater [role="listbox"],
+.doc-section-produits [role="listbox"] {
+    z-index: 200 !important;
+    position: absolute;
+}
+
+/* Fallback: any Alpine Combobox options panel in the repeater */
+.doc-lines-repeater [x-ref="panel"],
+.doc-section-produits [x-ref="panel"] {
+    z-index: 200 !important;
+    position: absolute;
+}
+
+/* ---- Page Edit Devis : layout pleine largeur (pas de max-width qui compresse) ---- */
+.fi-page-edit-quotation .fi-main,
+.fi-page-edit-quotation [data-slot="form"] {
+    max-width: none !important;
+    width: 100%;
+}
+
+/* ---- Blog Article create/edit : full-width editorial workspace ---- */
+.fi-page-create-article .fi-main,
+.fi-page-create-article [data-slot="form"],
+.fi-page-edit-article .fi-main,
+.fi-page-edit-article [data-slot="form"] {
+    max-width: none !important;
+    width: 100%;
+}
+
+/* ---- Blog editor: rich text area comfortable height ---- */
+.fi-page-create-article .ProseMirror,
+.fi-page-edit-article .ProseMirror {
+    min-height: 600px;
+    line-height: 1.85;
+    font-size: 1rem;
+    padding: 1rem;
+}
+
+/* ---- Blog editor: toolbar visual grouping ---- */
+.fi-page-create-article .fi-fo-rich-editor-toolbar,
+.fi-page-edit-article .fi-fo-rich-editor-toolbar {
+    gap: 2px;
+    padding: 6px 8px;
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+    border-radius: 8px 8px 0 0;
+    flex-wrap: wrap;
+}
+
+.dark .fi-page-create-article .fi-fo-rich-editor-toolbar,
+.dark .fi-page-edit-article .fi-fo-rich-editor-toolbar {
+    background: #1f2937;
+    border-color: #374151;
+}
+
+/* ---- Blog article title input: visually larger ---- */
+.fi-page-create-article #data\\.designation_fr,
+.fi-page-edit-article #data\\.designation_fr {
+    font-size: 1.25rem;
+    font-weight: 600;
+    line-height: 1.4;
+    padding: 0.625rem 0.875rem;
+    min-height: 52px;
+}
+
+/* ---- PT column: P.T total inside repeater rows — must never wrap ---- */
+.doc-line-total {
+    display: inline-block;
+    white-space: nowrap;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.875rem;
+    color: #374151;
+}
+
+.dark .doc-line-total {
+    color: #e5e7eb;
+}
+
+/* ====================================================
+   SIDEBAR: Récapitulatif & Totaux
+   Matches the screenshot left-border-DT layout
+   ==================================================== */
+
+/* Generic row inside totals sidebar (SOUS-TOTAL display) */
+.doc-sidebar-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 6px 10px;
+}
+
+.dark .doc-sidebar-row {
+    background: #1f2937;
+    border-color: #374151;
+}
+
+.doc-sidebar-prefix {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+}
+
+.doc-sidebar-amount {
+    flex: 1;
+    font-size: 1rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: #111827;
+    text-align: right;
+}
+
+.dark .doc-sidebar-amount {
+    color: #f9fafb;
+}
+
+/* ---- NET À PAYER highlight card wrapper (Filament ViewField) ---- */
+.fi-fo-net-a-payer {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 0.5rem;
+}
+
+@media (max-width: 640px) {
+    .fi-fo-net-a-payer {
+        padding-inline: 0.25rem;
+    }
+}
+
+/* ---- NET À PAYER: orange block as in screenshot ---- */
+.doc-total-net-block {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #f97316;
+    /* orange */
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-top: 2px;
+}
+
+.dark .doc-total-net-block {
+    background: #ea580c;
+}
+
+.doc-total-net-prefix {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.85);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+}
+
+.doc-total-net-amount {
+    flex: 1;
+    font-size: 1.35rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: #ffffff;
+    text-align: right;
+    letter-spacing: -0.01em;
+}
+
+/* ---- N° Document badge (monospace chip) ---- */
+.doc-numero-badge {
+    display: inline-block;
+    font-weight: 700;
+    font-family: ui-monospace, "Cascadia Code", monospace;
+    font-size: 0.85rem;
+    color: #374151;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    padding: 2px 8px;
+    letter-spacing: 0.04em;
+}
+
+.dark .doc-numero-badge {
+    color: #f9fafb;
+    background: #1f2937;
+    border-color: #374151;
+}
+
+/* ====================================================
+   SIDEBAR: Résumé Produits — right-aligned value rows
+   ==================================================== */
+.doc-resume-value {
+    display: block;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.95rem;
+    color: #374151;
+    text-align: right;
+}
+
+.dark .doc-resume-value {
+    color: #e5e7eb;
+}
+
+/* ====================================================
+   BARCODE scan block
+   ==================================================== */
+.bl-barcode {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: rgba(249, 115, 22, 0.04);
+    border: 1px solid rgba(249, 115, 22, 0.2);
+    margin-bottom: 8px;
+}
+
+.dark .bl-barcode {
+    background: rgba(251, 146, 60, 0.06);
+    border-color: rgba(251, 146, 60, 0.15);
+}
+
+.bl-barcode-title {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    min-width: 72px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #f97316;
+}
+
+.dark .bl-barcode-title {
+    color: #fb923c;
+}
+
+.bl-barcode-icon {
+    width: 20px;
+    height: 20px;
+}
+
+.bl-barcode-input {
+    flex: 1;
+}
+
+.bl-barcode-input .fi-input,
+.bl-barcode-input input[type="text"] {
+    width: 100%;
+    font-size: 0.9rem;
+    border-radius: 6px;
+    transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+.bl-barcode-input .fi-input:focus,
+.bl-barcode-input input[type="text"]:focus {
+    border-color: #f97316;
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
+}
+
+.bl-barcode-helper {
+    margin-top: 4px;
+    font-size: 0.7rem;
+    color: #9ca3af;
+}
+
+.bl-barcode-helper kbd {
+    display: inline-block;
+    border: 1px solid #d1d5db;
+    border-radius: 3px;
+    padding: 0 4px;
+    font-size: 0.65rem;
+    background: #f9fafb;
+    color: #374151;
+    font-family: inherit;
+}
+
+/* ====================================================
+   Client select: prevent vertical/broken text (BL, Devis, etc.)
+   Root cause: narrow container or flex can make the selected
+   label wrap letter-by-letter. Force single-line display.
+   Use .doc-section-client when set on the Client Section.
+   ==================================================== */
+.doc-section-client .fi-fo-select-wrp .fi-select-input,
+.doc-section-client .fi-select-input {
+    white-space: nowrap !important;
+    text-overflow: ellipsis;
+    min-width: 12rem;
+    overflow: hidden;
+}
+.doc-section-client .fi-fo-select-wrp {
+    min-width: 0;
+    overflow: visible;
+}
+
+/* ====================================================
+   Disable sticky header for ALL document edit pages
+   (BL, Facture TVA, Devis, Ticket)
+   ==================================================== */
+.fi-page-edit-facture-tva .fi-header,
+.fi-page-edit-facture .fi-header,
+.fi-page-edit-quotation .fi-header,
+.fi-page-edit-ticket .fi-header,
+.fi-page-edit-facture-tva .fi-topbar-ctn,
+.fi-page-edit-facture .fi-topbar-ctn,
+.fi-page-edit-quotation .fi-topbar-ctn,
+.fi-page-edit-ticket .fi-topbar-ctn,
+.fi-page-edit-facture-tva .fi-topbar,
+.fi-page-edit-facture .fi-topbar,
+.fi-page-edit-quotation .fi-topbar,
+.fi-page-edit-ticket .fi-topbar {
+    position: static !important;
+    z-index: 0 !important;
+}

@@ -1,0 +1,90 @@
+/* resources/css/filament/facture-pos.css */
+.facture-pos-page .fi-main {
+    max-width: 100% !important;
+    padding: 1rem 2rem;
+}
+
+/* Remove card background and borders if implemented via Group */
+.pos-client-block {
+    background: #fff;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.pos-company-block {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 1.5rem;
+}
+
+.pos-totals-panel {
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 1.5rem;
+    border: 1px solid #e2e8f0;
+    margin-left: auto;
+    width: 100%;
+    max-width: 450px;
+    position: sticky;
+    bottom: 2rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.pos-totals-panel .fi-fo-field-wrp-label {
+    min-width: 140px;
+    font-weight: 600;
+}
+
+.pos-totals-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px dashed #cbd5e1;
+}
+
+.pos-totals-row:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.pos-totals-label {
+    font-size: 14px;
+    color: #475569;
+    font-weight: 600;
+}
+
+.pos-totals-value input {
+    text-align: right !important;
+    background: #fff !important;
+    border-color: #cbd5e1 !important;
+    font-weight: 700;
+}
+
+.pos-net-payer-highlight {
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    border-radius: 6px;
+    padding: 12px;
+    margin-top: 10px;
+    text-align: right;
+}
+
+.pos-net-payer-highlight .label {
+    font-size: 12px;
+    font-weight: 800;
+    color: #ea580c;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.pos-net-payer-highlight .amount {
+    font-size: 24px;
+    font-weight: 900;
+    color: #9a3412;
+}

@@ -1,0 +1,179 @@
+/* 1. Smooth Navigation Transitions */
+main.fi-main {
+    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Page enter/leave states for Livewire/Turbo */
+.filament-page-loading {
+    opacity: 0.6;
+    pointer-events: none;
+    transform: scale(0.995);
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+/* 2. NProgress Customization */
+#nprogress .bar {
+    background: rgb(var(--primary-600)) !important;
+    height: 3px !important;
+}
+
+#nprogress .peg {
+    box-shadow: 0 0 10px rgb(var(--primary-600)), 0 0 5px rgb(var(--primary-600));
+}
+
+/* 3. Advanced Hover-Expand Sidebar */
+@media (min-width: 1024px) {
+
+    /* Base Sidebar Container */
+    .fi-sidebar {
+        width: 4.5rem !important;
+        /* Default collapsed width */
+        transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 40;
+        overflow: visible !important;
+    }
+
+    /* Inner Nav Container */
+    .fi-sidebar-nav {
+        overflow-x: hidden;
+        overflow-y: auto;
+        height: 100%;
+        width: 100%;
+        background-color: rgb(255 255 255 / 0.9);
+        /* Ensure explicit background in light mode */
+        border-right: 1px solid rgb(229 231 235);
+        /* Ensure explicit border */
+    }
+
+    html.dark .fi-sidebar-nav {
+        background-color: rgb(17 24 39 / 0.9);
+        /* Dark mode bg */
+        border-right: 1px solid rgb(55 65 81);
+        /* Dark mode border */
+    }
+
+    /* Expand on Hover or Pinned */
+    .fi-sidebar:hover,
+    .fi-sidebar.sidebar-pinned {
+        width: 17rem !important;
+        /* Expanded width */
+    }
+
+    .fi-sidebar:hover .fi-sidebar-nav,
+    .fi-sidebar.sidebar-pinned .fi-sidebar-nav {
+        background-color: rgb(255 255 255);
+        /* Fully opaque on expand */
+    }
+
+    html.dark .fi-sidebar:hover .fi-sidebar-nav,
+    html.dark .fi-sidebar.sidebar-pinned .fi-sidebar-nav {
+        background-color: rgb(17 24 39);
+    }
+
+    /* Sidebar Item - Centering Icons when Collapsed */
+    .fi-sidebar-item {
+        margin-bottom: 0.25rem;
+    }
+
+    .fi-sidebar-item-button {
+        justify-content: center !important;
+        /* Center content horizontally */
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        min-height: 2.75rem;
+        /* Ensure tap target size */
+    }
+
+    /* Icon Styling */
+    .fi-sidebar-item-icon {
+        margin-right: 0 !important;
+        width: 1.5rem;
+        height: 1.5rem;
+        transition: margin 0.3s;
+        /* Ensure icon remains visible */
+        opacity: 1 !important;
+        display: block !important;
+    }
+
+    /* Restore Layout on Expand */
+    .fi-sidebar:hover .fi-sidebar-item-button,
+    .fi-sidebar.sidebar-pinned .fi-sidebar-item-button {
+        justify-content: flex-start !important;
+        padding-left: 0.75rem !important;
+        /* Standard padding */
+        padding-right: 0.75rem !important;
+    }
+
+    .fi-sidebar:hover .fi-sidebar-item-icon,
+    .fi-sidebar.sidebar-pinned .fi-sidebar-item-icon {
+        margin-right: 0.75rem !important;
+        /* Restore gap */
+    }
+
+    /* Text Labels Transition */
+    .fi-sidebar-item-label,
+    .fi-sidebar-group-label {
+        opacity: 0;
+        visibility: hidden;
+        width: 0;
+        /* Collapse width to avoid overflow issues */
+        transform: translateX(-10px);
+        transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out, width 0.2s, visibility 0.2s;
+        white-space: nowrap;
+    }
+
+    /* Show Labels on Hover/Pin */
+    .fi-sidebar:hover .fi-sidebar-item-label,
+    .fi-sidebar:hover .fi-sidebar-group-label,
+    .fi-sidebar.sidebar-pinned .fi-sidebar-item-label,
+    .fi-sidebar.sidebar-pinned .fi-sidebar-group-label {
+        opacity: 1;
+        visibility: visible;
+        width: auto;
+        /* Auto width on expand */
+        transform: translateX(0);
+        transition-delay: 0.1s;
+    }
+
+    /* Pin Button Styling */
+    .sidebar-pin-button {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s;
+        position: absolute;
+        top: 0.75rem;
+        right: 0.75rem;
+        z-index: 50;
+    }
+
+    .fi-sidebar:hover .sidebar-pin-button,
+    .fi-sidebar.sidebar-pinned .sidebar-pin-button {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    /* Handle Main Content Shift when Pinned */
+    body.sidebar-pinned .fi-main {
+        margin-left: 12.5rem;
+    }
+
+    /* Hide Group Labels when Collapsed */
+    .fi-sidebar-group-label {
+        display: none;
+    }
+
+    .fi-sidebar:hover .fi-sidebar-group-label,
+    .fi-sidebar.sidebar-pinned .fi-sidebar-group-label {
+        display: block;
+    }
+
+    /* Collapse Sub-navigation Arrow */
+    .fi-sidebar-item-collapse-button {
+        display: none !important;
+    }
+
+    .fi-sidebar:hover .fi-sidebar-item-collapse-button,
+    .fi-sidebar.sidebar-pinned .fi-sidebar-item-collapse-button {
+        display: block !important;
+    }
+}

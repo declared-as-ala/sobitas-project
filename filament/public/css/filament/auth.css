@@ -1,0 +1,165 @@
+/* ══════════════════════════════════════════════
+   SOBITAS LOGIN PAGE — Clean & Balanced Version
+   Optimized for Filament v4
+   ══════════════════════════════════════════════ */
+
+/* Page layout — background URL is injected in AdminPanelProvider (full URL, subpath-safe) */
+.fi-simple-layout {
+    min-height: 100vh !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    position: relative !important;
+}
+
+/* Dark overlay */
+.fi-simple-layout::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+
+    background: linear-gradient(135deg,
+            rgba(0, 0, 0, 0.75) 0%,
+            rgba(10, 8, 6, 0.6) 100%);
+
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* container */
+.fi-simple-main-ctn {
+    position: relative;
+    z-index: 1;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 100%;
+    min-height: 100vh;
+    padding: 2rem;
+}
+
+/* LOGIN CARD */
+.fi-simple-main {
+
+    width: 100%;
+    max-width: 720px !important;
+
+    background: rgba(255, 255, 255, 0.97) !important;
+
+    border-radius: 20px !important;
+
+    padding: 2.5rem 2.5rem !important;
+
+    box-shadow:
+        0 25px 60px rgba(0, 0, 0, 0.45),
+        0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+
+    backdrop-filter: blur(6px) !important;
+
+}
+
+/* header spacing — login/auth pages only */
+.fi-simple-layout header {
+    margin-bottom: 2rem !important;
+}
+
+/* logo container — login/auth pages only */
+.fi-simple-layout .fi-logo,
+.fi-simple-layout .fi-brand-logo,
+.fi-simple-layout [data-slot="logo"],
+.auth-page-layout .auth-logo-wrapper {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+}
+
+/* LOGO — Filament default + custom login view (.auth-logo) */
+.fi-simple-layout .fi-logo img,
+.fi-simple-layout .fi-brand-logo img,
+.fi-simple-layout [data-slot="logo"] img,
+.auth-page-layout img.auth-logo,
+.fi-simple-layout .auth-logo {
+    width: min(520px, 92vw) !important;
+    max-width: 100% !important;
+    min-width: 200px !important;
+    height: auto !important;
+    max-height: none !important;
+    display: block !important;
+    margin: 0 auto 1.5rem auto !important;
+    object-fit: contain !important;
+    filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.2));
+}
+
+/* Dashboard sidebar logo — keep small/normal */
+.fi-sidebar .fi-logo img,
+.fi-sidebar .fi-brand-logo img,
+.fi-sidebar [data-slot="logo"] img,
+.fi-topbar .fi-logo img,
+.fi-topbar .fi-brand-logo img {
+    width: auto !important;
+    max-width: 160px !important;
+    max-height: 60px !important;
+    height: auto !important;
+    margin: 0 !important;
+    filter: none !important;
+}
+
+/* Heading */
+.fi-simple-layout .fi-auth-heading,
+.fi-simple-layout h1 {
+
+    text-align: center !important;
+
+    font-size: 1.6rem !important;
+
+    font-weight: 700 !important;
+
+    margin-bottom: 1.8rem !important;
+}
+
+/* inputs spacing */
+.fi-simple-layout .fi-input-wrapper {
+    margin-bottom: 1rem !important;
+}
+
+/* submit button */
+.fi-simple-layout .fi-btn[type="submit"] {
+
+    width: 100% !important;
+
+    margin-top: 1rem !important;
+
+    font-size: 1rem !important;
+
+    font-weight: 600 !important;
+
+    padding: 0.8rem 1.2rem !important;
+
+    border-radius: 10px !important;
+}
+
+/* MOBILE */
+@media (max-width: 768px) {
+
+    .fi-simple-main {
+
+        max-width: 92vw !important;
+
+        padding: 2rem 1.5rem !important;
+
+        border-radius: 16px !important;
+    }
+
+    .fi-simple-layout .fi-logo img,
+    .fi-simple-layout header img,
+    .auth-page-layout img.auth-logo {
+        width: min(340px, 88vw) !important;
+    }
+
+    .fi-simple-layout .fi-auth-heading {
+        font-size: 1.35rem !important;
+    }
+
+}
