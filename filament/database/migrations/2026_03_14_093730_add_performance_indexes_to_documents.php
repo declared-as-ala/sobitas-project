@@ -2,53 +2,37 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     /**
      * Run the migrations.
+     * Idempotent: skips any index that already exists.
      */
     public function up(): void
     {
-        Schema::table('tickets', function (Blueprint $table) {
-            $table->index('numero');
-            $table->index('client_id');
-            $table->index('created_at');
-        });
+        $this->addIndexesSafe('tickets', ['numero', 'client_id', 'created_at']);
+        $this->addIndexesSafe('facture_tvas', ['numero', 'client_id', 'created_at']);
+        $this->addIndexesSafe('commandes', ['numero', 'etat', 'created_at']);
+        $this->addIndexesSafe('factures', ['numero', 'client_id', 'created_at']);
+        $this->addIndexesSafe('quotations', ['numero', 'client_id', 'created_at']);
+        $this->addIndexesSafe('products', ['code_product', 'designation_fr']);
+        $this->addIndexesSafe('clients', ['phone_1', 'email']);
+    }
 
-        Schema::table('facture_tvas', function (Blueprint $table) {
-            $table->index('numero');
-            $table->index('client_id');
-            $table->index('created_at');
-        });
+    protected function addIndexesSafe(string $table, array $columns): void
+    {
+        $existing = collect(DB::select("SHOW INDEX FROM `{$table}`"))->pluck('Key_name')->unique()->toArray();
 
-        Schema::table('commandes', function (Blueprint $table) {
-            $table->index('numero');
-            $table->index('etat');
-            $table->index('created_at');
-        });
-
-        Schema::table('factures', function (Blueprint $table) {
-            $table->index('numero');
-            $table->index('client_id');
-            $table->index('created_at');
-        });
-
-        Schema::table('quotations', function (Blueprint $table) {
-            $table->index('numero');
-            $table->index('client_id');
-            $table->index('created_at');
-        });
-
-        Schema::table('products', function (Blueprint $table) {
-            $table->index('code_product');
-            $table->index('designation_fr');
-        });
-
-        Schema::table('clients', function (Blueprint $table) {
-            $table->index('phone_1');
-            $table->index('email');
+        Schema::table($table, function (Blueprint $blueprint) use ($table, $columns, $existing) {
+            foreach ($columns as $col) {
+                $indexName = "{$table}_{$col}_index";
+                if (!in_array($indexName, $existing)) {
+                    $blueprint->index($col);
+                }
+            }
         });
     }
 
@@ -57,44 +41,26 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('tickets', function (Blueprint $table) {
-            $table->dropIndex(['numero']);
-            $table->dropIndex(['client_id']);
-            $table->dropIndex(['created_at']);
-        });
+        $this->dropIndexesSafe('tickets', ['numero', 'client_id', 'created_at']);
+        $this->dropIndexesSafe('facture_tvas', ['numero', 'client_id', 'created_at']);
+        $this->dropIndexesSafe('commandes', ['numero', 'etat', 'created_at']);
+        $this->dropIndexesSafe('factures', ['numero', 'client_id', 'created_at']);
+        $this->dropIndexesSafe('quotations', ['numero', 'client_id', 'created_at']);
+        $this->dropIndexesSafe('products', ['code_product', 'designation_fr']);
+        $this->dropIndexesSafe('clients', ['phone_1', 'email']);
+    }
 
-        Schema::table('facture_tvas', function (Blueprint $table) {
-            $table->dropIndex(['numero']);
-            $table->dropIndex(['client_id']);
-            $table->dropIndex(['created_at']);
-        });
+    protected function dropIndexesSafe(string $table, array $columns): void
+    {
+        $existing = collect(DB::select("SHOW INDEX FROM `{$table}`"))->pluck('Key_name')->unique()->toArray();
 
-        Schema::table('commandes', function (Blueprint $table) {
-            $table->dropIndex(['numero']);
-            $table->dropIndex(['etat']);
-            $table->dropIndex(['created_at']);
-        });
-
-        Schema::table('factures', function (Blueprint $table) {
-            $table->dropIndex(['numero']);
-            $table->dropIndex(['client_id']);
-            $table->dropIndex(['created_at']);
-        });
-
-        Schema::table('quotations', function (Blueprint $table) {
-            $table->dropIndex(['numero']);
-            $table->dropIndex(['client_id']);
-            $table->dropIndex(['created_at']);
-        });
-
-        Schema::table('products', function (Blueprint $table) {
-            $table->dropIndex(['code_product']);
-            $table->dropIndex(['designation_fr']);
-        });
-
-        Schema::table('clients', function (Blueprint $table) {
-            $table->dropIndex(['phone_1']);
-            $table->dropIndex(['email']);
+        Schema::table($table, function (Blueprint $blueprint) use ($table, $columns, $existing) {
+            foreach ($columns as $col) {
+                $indexName = "{$table}_{$col}_index";
+                if (in_array($indexName, $existing)) {
+                    $blueprint->dropIndex([$col]);
+                }
+            }
         });
     }
 };

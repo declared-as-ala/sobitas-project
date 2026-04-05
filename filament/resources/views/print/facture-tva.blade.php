@@ -13,7 +13,7 @@
     /* ── Context ──────────────────────────────────────────────── */
     $coordonnee  = $coordonnee ?? $company ?? null;
     $isPdf       = !empty($forPdf);
-    $fmt         = fn($n) => number_format((float)$n, 3, '.', ' ');
+    $fmt         = function($n) { return number_format((float)$n, 3, '.', ' '); };
 
     /* ── Logo (base64 for PDF reliability) ───────────────────── */
     $logoUrl = null;
@@ -425,7 +425,7 @@ table.ftva-totals tr.row-grand td:last-child {
         </tr>
     </thead>
     <tbody>
-        @forelse($rows as $row)
+        @foreach($rows as $row)
         <tr>
             <td class="td-num">{{ $row['index'] }}</td>
             <td class="td-prod">{{ $row['produit'] }}</td>
@@ -437,13 +437,14 @@ table.ftva-totals tr.row-grand td:last-child {
             <td class="td-right">{{ $fmt($row['montant_tva']) }}</td>
             <td class="td-ttc">{{ $fmt($row['total_ttc']) }}</td>
         </tr>
-        @empty
+        @endforeach
+        @if(empty($rows))
         <tr>
             <td colspan="9" style="text-align:center;padding:14px;color:#94a3b8;font-style:italic;">
                 Aucune ligne de produit.
             </td>
         </tr>
-        @endforelse
+        @endif
     </tbody>
 </table>
 </div>
