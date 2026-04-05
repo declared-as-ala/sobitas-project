@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\ProductResource\Pages;
+use App\Filament\Support\ImagePath;
 use App\Models\Product;
 use Filament\Actions;
 use Filament\Forms;
@@ -111,6 +112,8 @@ class ProductResource extends Resource
                                         ->image()
                                         ->imageEditor()
                                         ->maxSize(4096)
+                                        ->afterStateHydrated(fn ($component, $state) =>
+                                            $component->state(ImagePath::normalize($state)))
                                         ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
                                             $path = (string) $file->store('products', 'public');
                                             return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp($path) ?? $path;
@@ -123,6 +126,10 @@ class ProductResource extends Resource
                                         ->multiple()
                                         ->reorderable()
                                         ->maxSize(4096)
+                                        ->afterStateHydrated(function ($component, $state) {
+                                            $arr = is_array($state) ? $state : (is_string($state) ? json_decode($state, true) : []);
+                                            $component->state(ImagePath::normalizeArray($arr ?: []));
+                                        })
                                         ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
                                             $path = (string) $file->store('products', 'public');
                                             return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp($path) ?? $path;
@@ -310,6 +317,7 @@ class ProductResource extends Resource
             ->columns([
                 Tables\Columns\ImageColumn::make('cover')
                     ->label('Image')
+                    ->getStateUsing(fn ($record) => ImagePath::normalize($record->cover))
                     ->disk('public')
                     ->circular()
                     ->size(72),

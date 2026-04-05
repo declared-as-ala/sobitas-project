@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\BrandResource\Pages;
+use App\Filament\Support\ImagePath;
 use App\Models\Brand;
 use Filament\Forms;
 use Filament\Forms\Components\FileUpload;
@@ -88,6 +89,7 @@ class BrandResource extends Resource
             ->columns([
                 Tables\Columns\ImageColumn::make('logo')
                     ->label('Logo')
+                    ->getStateUsing(fn ($record) => ImagePath::normalize($record->logo))
                     ->disk('public')
                     ->circular()
                     ->size(88),

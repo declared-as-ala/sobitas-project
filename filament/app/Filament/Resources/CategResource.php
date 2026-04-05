@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\CategResource\Pages;
+use App\Filament\Support\ImagePath;
 use App\Models\Categ;
 use Filament\Forms;
 use Filament\Schemas\Schema;
@@ -95,13 +96,13 @@ class CategResource extends Resource
             ->columns([
                 Tables\Columns\ImageColumn::make('cover')
                     ->label('Image')
+                    ->getStateUsing(fn ($record) => ImagePath::normalize($record->cover))
                     ->disk('public')
                     ->size(80)
                     ->height(60)
                     ->width(80)
                     ->circular(false)
                     ->square()
-                    ->defaultImageUrl(asset('placeholder.svg'))
                     ->extraAttributes([
                         'class' => 'rounded-lg object-cover',
                     ]),

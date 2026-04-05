@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\SlideResource\Pages;
+use App\Filament\Support\ImagePath;
 use App\Models\Slide;
 use Filament\Forms;
 use Filament\Schemas\Schema;
@@ -75,13 +76,13 @@ class SlideResource extends Resource
             ->columns([
                 Tables\Columns\ImageColumn::make('image')
                     ->label('Couverture')
+                    ->getStateUsing(fn ($record) => ImagePath::normalize($record->image))
                     ->disk('public')
                     ->size(80)
                     ->height(60)
                     ->width(80)
                     ->circular(false)
                     ->square()
-                    ->defaultImageUrl(asset('placeholder.svg'))
                     ->extraAttributes([
                         'class' => 'rounded-lg object-cover',
                     ]),

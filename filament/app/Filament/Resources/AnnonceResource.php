@@ -36,7 +36,7 @@ class AnnonceResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\ImageColumn::make('image')->label('Image'),
+                Tables\Columns\ImageColumn::make('image')->label('Image')->disk('public'),
                 Tables\Columns\TextColumn::make('texte')->limit(50),
                 Tables\Columns\TextColumn::make('lien')->limit(30),
             ])

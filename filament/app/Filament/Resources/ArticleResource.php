@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Enums\BlogArticleType;
 use App\Filament\Resources\ArticleResource\Pages;
+use App\Filament\Support\ImagePath;
 use App\Models\Article;
 use Filament\Forms;
 use Filament\Schemas\Schema;
@@ -138,6 +139,8 @@ class ArticleResource extends Resource
                                             ->maxSize(5120)
                                             ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
                                             ->columnSpanFull()
+                                            ->afterStateHydrated(fn ($component, $state) =>
+                                                $component->state(ImagePath::normalize($state)))
                                             ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
                                                 $path = (string) $file->store('articles', 'public');
                                                 return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp($path) ?? $path;
@@ -320,19 +323,11 @@ class ArticleResource extends Resource
         $columns = [
             Tables\Columns\ImageColumn::make('cover')
                 ->label('Image')
+                ->getStateUsing(fn ($record) => ImagePath::normalize($record->cover))
+                ->disk('public')
                 ->circular()
                 ->height(48)
-                ->width(48)
-                ->defaultImageUrl(function ($record) {
-                    if (! $record->cover) {
-                        return null;
-                    }
-                    if (str_starts_with($record->cover, 'http://') || str_starts_with($record->cover, 'https://')) {
-                        return $record->cover;
-                    }
-
-                    return asset('storage/' . ltrim($record->cover, '/'));
-                }),
+                ->width(48),
 
             Tables\Columns\TextColumn::make('designation_fr')
                 ->label('Titre')
