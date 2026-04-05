@@ -71,6 +71,17 @@ done
 echo "Publishing Filament assets..."
 php artisan filament:assets >/dev/null 2>&1 || true
 
+# Sync public/ to the nginx volume so static files (CSS, JS, images) are always fresh.
+# This runs on EVERY container start so new deployments are reflected immediately.
+# The nginx container reads from /mnt/nginx-public (backend-v2-public volume).
+if [ -d /mnt/nginx-public ]; then
+  echo "Syncing public assets to nginx volume..."
+  cp -a /var/www/html/public/. /mnt/nginx-public/
+  rm -f /mnt/nginx-public/storage
+  ln -s /var/www/html/storage/app/public /mnt/nginx-public/storage 2>/dev/null || true
+  echo "✓ Public assets synced to nginx volume"
+fi
+
 # Rebuild caches BEFORE php-fpm starts
 echo "Rebuilding Laravel caches..."
 php artisan optimize:clear

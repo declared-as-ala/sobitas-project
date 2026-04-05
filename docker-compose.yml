@@ -97,6 +97,8 @@ services:
     volumes:
       # Persist ONLY uploaded public files
       - backend-v2-public-files:/var/www/html/storage/app/public
+      # Sync public/ to nginx volume on every container start (entrypoint handles this)
+      - backend-v2-public:/mnt/nginx-public
 
   backend-v2-queue:
     image: ghcr.io/declared-as-ala/sobitas-backend-v2:latest
