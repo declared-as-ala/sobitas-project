@@ -24,7 +24,7 @@ class SlideResource extends Resource
     {
         return $schema->schema([
             FileUpload::make('image')
-                ->label('Image')
+                ->label('Couverture')
                 ->disk('public')
                 ->directory('slides')
                 ->image()
@@ -74,7 +74,7 @@ class SlideResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\ImageColumn::make('image')
-                    ->label('Image')
+                    ->label('Couverture')
                     ->disk('public')
                     ->size(80)
                     ->height(60)
