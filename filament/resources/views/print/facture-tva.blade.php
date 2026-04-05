@@ -37,7 +37,7 @@
     $totalHtBrut = (float)($ct['total_ht_brut'] ?? $facture->prix_ht ?? 0);
     $totalRemise = (float)($ct['remise']         ?? $facture->remise ?? 0);
 
-    // Coupon breakdown: remise = manual_remise + coupon_discount_ht (invariant)
+    /* Coupon breakdown: remise = manual_remise + coupon_discount_ht (invariant) */
     $couponDiscountHt = (float)($facture->discount_ht ?? 0);
     $manualRemise     = max(0.0, round($totalRemise - $couponDiscountHt, 3));
     $couponCode       = $facture->coupon_code_snapshot ?? null;
@@ -55,7 +55,7 @@
             ? \Carbon\Carbon::parse($facture->date_facture)->format('d/m/Y')
             : ($facture->created_at?->format('d/m/Y') ?? ''));
 
-    /* ── Build rows (print route pre-builds them; fallback here) ─ */
+    /* ── Build rows ───────────────────────────────────────────── */
     $rows = $invoice_rows ?? [];
     if (empty($rows) && isset($details_facture)) {
         $defTva = $tvaRate;
@@ -85,13 +85,138 @@
     $printClient = $client ?? $facture->client ?? null;
 @endphp
 
-{{-- ═══════════════════════════════════════════════════════════════ --}}
-{{-- BASE STYLES + FACTURE TVA OVERRIDES                            --}}
-{{-- ═══════════════════════════════════════════════════════════════ --}}
 @include('print.partials.styles-a4-bl-aligned', ['forPdf' => $isPdf])
 
 <style>
-/* ── Facture TVA — 9-column table overrides ─────────────────────── */
+/* ═══════════════════════════════════════════════════════════════
+   FACTURE TVA — PREMIUM REDESIGN
+   2-column header | highlighted PU TTC | dominant Total TTC
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Document wrapper ───────────────────────────────────────── */
+.ftva-page {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 9pt;
+    color: #1e293b;
+    max-width: 210mm;
+    margin: 0 auto;
+    padding: 12mm 10mm;
+    background: #fff;
+}
+
+/* ── 2-column header ────────────────────────────────────────── */
+.ftva-doc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 24px;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #ff4000;
+}
+.ftva-header-company {
+    flex: 1;
+    min-width: 0;
+}
+.ftva-logo {
+    max-width: 160px;
+    height: auto;
+    display: block;
+    margin-bottom: 8px;
+}
+.ftva-co-name {
+    font-size: 13pt;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 5px;
+    letter-spacing: -0.01em;
+}
+.ftva-co-line {
+    font-size: 8.5pt;
+    color: #475569;
+    line-height: 1.6;
+}
+.ftva-co-line b {
+    color: #0f172a;
+    font-weight: 600;
+}
+
+.ftva-header-right {
+    flex: 0 0 48%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-end;
+}
+
+/* ── Document meta box (title + number + date) ──────────────── */
+.ftva-doc-meta {
+    width: 100%;
+    background: #fff7ed;
+    border: 1.5px solid #ff4000;
+    border-radius: 8px;
+    padding: 12px 16px;
+    text-align: center;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+}
+.ftva-doc-meta h1 {
+    font-size: 20pt;
+    font-weight: 900;
+    color: #ff4000;
+    margin: 0 0 6px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+}
+.ftva-doc-meta-line {
+    font-size: 9pt;
+    color: #334155;
+    line-height: 1.7;
+}
+.ftva-doc-meta-line b {
+    color: #0f172a;
+    font-weight: 700;
+}
+
+/* ── Client block (right side) ──────────────────────────────── */
+.ftva-client-box {
+    width: 100%;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px 16px;
+    background: #f8fafc;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+}
+.ftva-client-box__label {
+    font-size: 7pt;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #94a3b8;
+    margin-bottom: 6px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #e2e8f0;
+}
+.ftva-client-box__name {
+    font-size: 10.5pt;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 4px;
+}
+.ftva-client-box__line {
+    font-size: 8.5pt;
+    color: #475569;
+    line-height: 1.55;
+}
+.ftva-client-box__line b {
+    color: #0f172a;
+    font-weight: 600;
+}
+
+/* ── 9-column table ─────────────────────────────────────────── */
 table.ftva-lines {
     width: 100%;
     border-collapse: collapse;
@@ -101,18 +226,18 @@ table.ftva-lines {
     border: 1px solid #cbd5e1;
     margin-top: 0;
 }
-table.ftva-lines col.c-num  { width: 4%; }
-table.ftva-lines col.c-prod { width: 28%; }
-table.ftva-lines col.c-qty  { width: 5%; }
-table.ftva-lines col.c-puht { width: 10%; }
+table.ftva-lines col.c-num   { width: 4%; }
+table.ftva-lines col.c-prod  { width: 28%; }
+table.ftva-lines col.c-qty   { width: 5%; }
+table.ftva-lines col.c-puht  { width: 10%; }
 table.ftva-lines col.c-puttc { width: 10%; }
-table.ftva-lines col.c-tht  { width: 11%; }
-table.ftva-lines col.c-tva  { width: 7%; }
-table.ftva-lines col.c-mtva { width: 12%; }
-table.ftva-lines col.c-tttc { width: 13%; }
+table.ftva-lines col.c-tht   { width: 10%; }
+table.ftva-lines col.c-tva   { width: 6%; }
+table.ftva-lines col.c-mtva  { width: 11%; }
+table.ftva-lines col.c-tttc  { width: 16%; }
 
 table.ftva-lines thead {
-    display: table-header-group; /* repeats on page break in browser */
+    display: table-header-group;
 }
 table.ftva-lines thead th {
     background: #ff4000 !important;
@@ -122,29 +247,58 @@ table.ftva-lines thead th {
     font-size: 7.5pt;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    padding: 8px 6px;
+    padding: 9px 7px;
     vertical-align: middle;
-    border: 1px solid #cc3400;
+    border: none;
+    border-right: 1px solid rgba(255,255,255,0.2);
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
 }
-table.ftva-lines thead th.th-left  { text-align: left; }
-table.ftva-lines thead th.th-right { text-align: right; padding-right: 8px; }
+table.ftva-lines thead th:last-child {
+    border-right: none;
+}
+
+/* PU TTC header — slightly darker accent */
+table.ftva-lines thead th.th-puttc {
+    background: #c2410c !important;
+    background-color: #c2410c !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+}
+
+/* Total TTC header — darkest accent */
+table.ftva-lines thead th.th-tttc {
+    background: #9a3412 !important;
+    background-color: #9a3412 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+}
+
+table.ftva-lines thead th.th-left   { text-align: left; }
+table.ftva-lines thead th.th-right  { text-align: right; padding-right: 8px; }
 table.ftva-lines thead th.th-center { text-align: center; }
 
 table.ftva-lines tbody td {
-    padding: 6px 6px;
-    border: 1px solid #e2e8f0;
+    padding: 8px 7px;
+    border-bottom: 1px solid #f1f5f9;
+    border-right: 1px solid #f1f5f9;
     vertical-align: middle;
     font-size: 8.5pt;
     color: #334155;
     background: #fff;
+}
+table.ftva-lines tbody td:last-child {
+    border-right: none;
 }
 table.ftva-lines tbody tr:nth-child(even) td {
     background: #f8fafc !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
 }
+table.ftva-lines tbody tr:last-child td {
+    border-bottom: none;
+}
+
 table.ftva-lines td.td-num {
     text-align: center;
     color: #94a3b8;
@@ -168,29 +322,51 @@ table.ftva-lines td.td-tva-pct {
     color: #64748b;
     font-size: 8pt;
 }
-table.ftva-lines td.td-ttc {
+
+/* ── PU TTC highlighted column ──────────────────────────────── */
+table.ftva-lines td.td-puttc {
     text-align: right;
     padding-right: 8px;
     font-variant-numeric: tabular-nums;
     font-weight: 700;
-    color: #0f172a;
+    color: #c2410c;
+    background: #fff7ed !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+}
+table.ftva-lines tbody tr:nth-child(even) td.td-puttc {
+    background: #ffedd5 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
 }
 
-/* ── Totals (right-aligned summary block) ───────────────────────── */
+/* ── Total TTC — dominant ───────────────────────────────────── */
+table.ftva-lines td.td-ttc {
+    text-align: right;
+    padding-right: 8px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 800;
+    color: #9a3412;
+    font-size: 9pt;
+}
+
+/* ── Totals summary (right-aligned) ────────────────────────── */
 .ftva-totals-outer {
     display: flex;
     justify-content: flex-end;
-    margin-top: 18px;
+    margin-top: 16px;
     margin-bottom: 0;
 }
 table.ftva-totals {
-    width: 340px;
+    width: 320px;
     border-collapse: collapse;
     font-size: 9.5pt;
     border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    overflow: hidden;
 }
 table.ftva-totals td {
-    padding: 6px 12px;
+    padding: 7px 14px;
     border-bottom: 1px solid #f1f5f9;
     vertical-align: middle;
 }
@@ -210,12 +386,15 @@ table.ftva-totals td:last-child {
     color: #0f172a;
     min-width: 110px;
 }
+table.ftva-totals tr:last-child td {
+    border-bottom: none;
+}
 table.ftva-totals tr.row-grand td {
-    padding: 10px 12px;
+    padding: 11px 14px;
     border-top: 2px solid #ff4000;
     border-bottom: none;
-    font-size: 11pt;
-    font-weight: 800;
+    font-size: 11.5pt;
+    font-weight: 900;
 }
 table.ftva-totals tr.row-grand td:first-child {
     color: #c2410c;
@@ -225,22 +404,22 @@ table.ftva-totals tr.row-grand td:first-child {
 }
 table.ftva-totals tr.row-grand td:last-child {
     color: #c2410c;
-    font-size: 12pt;
+    font-size: 13pt;
     background: #fff7ed !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
 }
 
-/* ── Bottom section (Note + RIB + Signature) — keep together ────── */
+/* ── Bottom section ─────────────────────────────────────────── */
 .ftva-bottom {
-    margin-top: 22px;
+    margin-top: 20px;
     page-break-inside: avoid;
     break-inside: avoid;
 }
 .ftva-separator {
     border: none;
     border-top: 1px solid #e2e8f0;
-    margin: 0 0 16px;
+    margin: 0 0 14px;
 }
 .ftva-note {
     padding: 10px 14px;
@@ -250,7 +429,7 @@ table.ftva-totals tr.row-grand td:last-child {
     font-size: 9pt;
     color: #334155;
     line-height: 1.55;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
 }
@@ -295,30 +474,23 @@ table.ftva-totals tr.row-grand td:last-child {
     color: #0f172a;
 }
 
-/* ── Watermark for paid/draft (optional) ────────────────────────── */
-.ftva-status-badge {
-    display: inline-block;
-    font-size: 8pt;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    padding: 2px 8px;
-    border-radius: 4px;
-    margin-left: 8px;
-    vertical-align: middle;
-}
-
-/* ── Print overrides ────────────────────────────────────────────── */
+/* ── Print overrides ────────────────────────────────────────── */
 @media print {
-    @page { size: A4 portrait; margin: 12mm 10mm; }
-    body.doc-a4-print { background: #fff !important; }
-    .doc-a4-print .page-content { padding: 0 !important; }
-    .doc-a4-print #invoice { padding: 0 !important; max-width: none !important; box-shadow: none !important; border-radius: 0 !important; }
+    @page { size: A4 portrait; margin: 10mm 8mm; }
+    body { background: #fff !important; }
+    .ftva-page { padding: 0 !important; max-width: none !important; }
+    .doc-a4-toolbar { display: none !important; }
     table.ftva-lines thead,
     table.ftva-lines thead th,
+    table.ftva-lines thead th.th-puttc,
+    table.ftva-lines thead th.th-tttc,
     table.ftva-lines tbody tr:nth-child(even) td,
+    table.ftva-lines tbody td.td-puttc,
+    table.ftva-lines tbody tr:nth-child(even) td.td-puttc,
     table.ftva-totals td:first-child,
     table.ftva-totals tr.row-grand td,
+    .ftva-doc-meta,
+    .ftva-client-box,
     .ftva-note {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
@@ -331,74 +503,81 @@ table.ftva-totals tr.row-grand td:last-child {
 </style>
 
 {{-- ═══════════════════════════════════════════════════════════════ --}}
-{{-- DOCUMENT                                                        --}}
+{{-- DOCUMENT                                                         --}}
 {{-- ═══════════════════════════════════════════════════════════════ --}}
 <div class="page-content">
-<div id="invoice" class="doc-a4-shell">
+<div id="invoice">
+
 @if(!$isPdf)
-<div class="doc-a4-toolbar hide_print">
+<div class="doc-a4-toolbar hide_print" style="text-align:center;padding:10px 0 16px;display:flex;gap:8px;justify-content:center;">
     <button type="button" class="doc-a4-btn" onclick="window.print()">Imprimer</button>
     <a class="doc-a4-btn doc-a4-btn--muted" href="{{ $backUrl ?? url()->previous() }}">← Retour</a>
 </div>
 @endif
 
-<div class="invoice">
-<div class="doc-a4-main-wrap">
+<div class="ftva-page">
 
-{{-- ── HEADER ──────────────────────────────────────────────────── --}}
-<header class="doc-a4-header">
-    <div class="doc-a4-header__brand">
+{{-- ── 2-COLUMN HEADER ─────────────────────────────────────────── --}}
+<header class="ftva-doc-header">
+
+    {{-- LEFT: Company info --}}
+    <div class="ftva-header-company">
         @if($logoUrl)
-            <img src="{{ $logoUrl }}" alt="Logo" style="max-width:170px;height:auto;display:block;margin-bottom:6px;">
+            <img src="{{ $logoUrl }}" alt="Logo" class="ftva-logo">
         @endif
-        <div class="doc-a4-co-name">{{ $coordonnee->abbreviation ?? $coordonnee->designation_fr ?? '' }}</div>
+        <div class="ftva-co-name">{{ $coordonnee->abbreviation ?? $coordonnee->designation_fr ?? '' }}</div>
         @if(!empty($coordonnee->email))
-            <div class="doc-a4-co-line"><b>Email :</b> {{ $coordonnee->email }}</div>
+            <div class="ftva-co-line"><b>Email :</b> {{ $coordonnee->email }}</div>
         @endif
         @if(!empty($coordonnee->adresse_fr))
-            <div class="doc-a4-co-line"><b>Adresse :</b> {{ $coordonnee->adresse_fr }}</div>
+            <div class="ftva-co-line"><b>Adresse :</b> {{ $coordonnee->adresse_fr }}</div>
         @endif
         @if(!empty($coordonnee->phone_1))
-            <div class="doc-a4-co-line"><b>Tél :</b> {{ $coordonnee->phone_1 }}{{ !empty($coordonnee->phone_2) ? ' / '.$coordonnee->phone_2 : '' }}</div>
+            <div class="ftva-co-line"><b>Tél :</b> {{ $coordonnee->phone_1 }}{{ !empty($coordonnee->phone_2) ? ' / '.$coordonnee->phone_2 : '' }}</div>
         @endif
         @if(!empty($coordonnee->registre_commerce))
-            <div class="doc-a4-co-line"><b>RC :</b> {{ $coordonnee->registre_commerce }}</div>
+            <div class="ftva-co-line"><b>RC :</b> {{ $coordonnee->registre_commerce }}</div>
         @endif
         @if(!empty($coordonnee->matricule))
-            <div class="doc-a4-co-line"><b>MF :</b> {{ $coordonnee->matricule }}</div>
+            <div class="ftva-co-line"><b>MF :</b> {{ $coordonnee->matricule }}</div>
         @endif
     </div>
-    <div class="doc-a4-header__meta">
-        <h1>FACTURE</h1>
-        <div class="doc-a4-meta-line"><b>Date :</b> {{ $dateStr }}</div>
-        <div class="doc-a4-meta-line"><b>Numéro :</b> {{ $facture->numero ?? '' }}</div>
-        @if(isset($facture->facture_id) && $facture->facture_id)
-            <div class="doc-a4-meta-line"><b>Réf. BL :</b> {{ $facture->facture_id }}</div>
+
+    {{-- RIGHT: Doc meta + Client --}}
+    <div class="ftva-header-right">
+
+        {{-- Document meta box --}}
+        <div class="ftva-doc-meta">
+            <h1>FACTURE</h1>
+            <div class="ftva-doc-meta-line"><b>N° :</b> {{ $facture->numero ?? '' }}</div>
+            <div class="ftva-doc-meta-line"><b>Date :</b> {{ $dateStr }}</div>
+            @if(isset($facture->facture_id) && $facture->facture_id)
+                <div class="ftva-doc-meta-line"><b>Réf. BL :</b> {{ $facture->facture_id }}</div>
+            @endif
+        </div>
+
+        {{-- Client block --}}
+        @if($printClient)
+        <div class="ftva-client-box">
+            <div class="ftva-client-box__label">Destinataire</div>
+            <div class="ftva-client-box__name">{{ $printClient->name }}</div>
+            @if(!empty($printClient->adresse))
+                <div class="ftva-client-box__line"><b>Adresse :</b> {{ $printClient->adresse }}</div>
+            @endif
+            @if(!empty($printClient->matricule))
+                <div class="ftva-client-box__line"><b>Matricule :</b> {{ $printClient->matricule }}</div>
+            @endif
+            @if(!empty($printClient->phone_1))
+                <div class="ftva-client-box__line"><b>Tél :</b> {{ $printClient->phone_1 }}</div>
+            @endif
+        </div>
         @endif
+
     </div>
 </header>
 
-<main>
-
-{{-- ── CLIENT BLOCK ──────────────────────────────────────────────── --}}
-@if($printClient)
-<section class="doc-a4-client" style="margin-bottom:14px;">
-    <h2>Informations du client</h2>
-    <p><b>Nom :</b> {{ $printClient->name }}</p>
-    @if(!empty($printClient->adresse))
-        <p><b>Adresse :</b> {{ $printClient->adresse }}</p>
-    @endif
-    @if(!empty($printClient->matricule))
-        <p><b>Matricule :</b> {{ $printClient->matricule }}</p>
-    @endif
-    @if(!empty($printClient->phone_1))
-        <p><b>Tél :</b> {{ $printClient->phone_1 }}</p>
-    @endif
-</section>
-@endif
-
-{{-- ── PRODUCTS TABLE (9 columns, thead repeats on page-break) ───── --}}
-<div class="doc-a4-table-wrap">
+{{-- ── PRODUCTS TABLE (9 columns) ──────────────────────────────── --}}
+<div style="margin-top:4px;">
 <table class="ftva-lines">
     <colgroup>
         <col class="c-num">
@@ -417,11 +596,11 @@ table.ftva-totals tr.row-grand td:last-child {
             <th class="th-left">Désignation</th>
             <th class="th-center">Qté</th>
             <th class="th-right">PU HT</th>
-            <th class="th-right">PU TTC</th>
+            <th class="th-right th-puttc">PU TTC</th>
             <th class="th-right">Total HT</th>
             <th class="th-center">TVA</th>
             <th class="th-right">Mnt TVA</th>
-            <th class="th-right">Total TTC</th>
+            <th class="th-right th-tttc">Total TTC</th>
         </tr>
     </thead>
     <tbody>
@@ -431,16 +610,16 @@ table.ftva-totals tr.row-grand td:last-child {
             <td class="td-prod">{{ $row['produit'] }}</td>
             <td class="td-right" style="text-align:center;">{{ $row['qte'] }}</td>
             <td class="td-right">{{ $fmt($row['pu_ht']) }}</td>
-            <td class="td-right">{{ $fmt($row['pu_ttc']) }}</td>
+            <td class="td-puttc">{{ $fmt($row['pu_ttc']) }}</td>
             <td class="td-right">{{ $fmt($row['total_ht']) }}</td>
-            <td class="td-tva-pct">{{ $row['tva_pct'] }} %</td>
+            <td class="td-tva-pct">{{ $row['tva_pct'] }}&nbsp;%</td>
             <td class="td-right">{{ $fmt($row['montant_tva']) }}</td>
             <td class="td-ttc">{{ $fmt($row['total_ttc']) }}</td>
         </tr>
         @endforeach
         @if(empty($rows))
         <tr>
-            <td colspan="9" style="text-align:center;padding:14px;color:#94a3b8;font-style:italic;">
+            <td colspan="9" style="text-align:center;padding:16px;color:#94a3b8;font-style:italic;">
                 Aucune ligne de produit.
             </td>
         </tr>
@@ -454,48 +633,47 @@ table.ftva-totals tr.row-grand td:last-child {
     <table class="ftva-totals">
         <tr>
             <td>Total HT</td>
-            <td>{{ $fmt($totalHtBrut) }} DT</td>
+            <td>{{ $fmt($totalHtBrut) }}&nbsp;DT</td>
         </tr>
         @if($manualRemise > 0)
         <tr>
             <td>Remise</td>
-            <td>− {{ $fmt($manualRemise) }} DT</td>
+            <td>− {{ $fmt($manualRemise) }}&nbsp;DT</td>
         </tr>
         @endif
         @if($couponDiscountHt > 0)
         <tr>
             <td>Code promo{{ $couponCode ? ' (' . $couponCode . ')' : '' }}</td>
-            <td>− {{ $fmt($couponDiscountHt) }} DT</td>
+            <td>− {{ $fmt($couponDiscountHt) }}&nbsp;DT</td>
         </tr>
         @endif
         @if($totalRemise > 0)
         <tr>
             <td>Base imposable</td>
-            <td>{{ $fmt($baseImp) }} DT</td>
+            <td>{{ $fmt($baseImp) }}&nbsp;DT</td>
         </tr>
         @endif
         <tr>
-            <td>TVA ({{ $tvaDisplay }} %)</td>
-            <td>{{ $fmt($totalTva) }} DT</td>
+            <td>TVA ({{ $tvaDisplay }}&nbsp;%)</td>
+            <td>{{ $fmt($totalTva) }}&nbsp;DT</td>
         </tr>
         @if($totalTimbre > 0)
         <tr>
             <td>Timbre fiscal</td>
-            <td>{{ $fmt($totalTimbre) }} DT</td>
+            <td>{{ $fmt($totalTimbre) }}&nbsp;DT</td>
         </tr>
         @endif
         <tr class="row-grand">
             <td>TOTAL TTC (Net à payer)</td>
-            <td>{{ $fmt($netAPayer) }} DT</td>
+            <td>{{ $fmt($netAPayer) }}&nbsp;DT</td>
         </tr>
     </table>
 </div>
 
-{{-- ── BOTTOM SECTION (Note + RIB + Signature) — always last page ── --}}
+{{-- ── BOTTOM (Note + RIB + Signature) ─────────────────────────── --}}
 <div class="ftva-bottom">
     <hr class="ftva-separator">
 
-    {{-- Note en lettres --}}
     <div class="ftva-note">
         <strong>Note</strong>
         Arrêtée la présente facture à la somme de :
@@ -503,7 +681,6 @@ table.ftva-totals tr.row-grand td:last-child {
     </div>
     <input type="hidden" id="ftva-total-val" value="{{ $netAPayer }}">
 
-    {{-- RIB + Signature --}}
     <div class="ftva-sig-rib">
         <div class="ftva-rib">
             @if(!empty($coordonnee->rib))
@@ -516,13 +693,11 @@ table.ftva-totals tr.row-grand td:last-child {
     </div>
 </div>
 
-</main>
-</div>{{-- doc-a4-main-wrap --}}
+</div>{{-- ftva-page --}}
 </div>{{-- invoice --}}
-</div>{{-- doc-a4-shell --}}
 </div>{{-- page-content --}}
 
-{{-- ── Amount in words script ──────────────────────────────────────── --}}
+{{-- ── Amount in words ─────────────────────────────────────────────── --}}
 <script>
 (function () {
     var el    = document.getElementById('ftva-total-val');
@@ -551,7 +726,7 @@ table.ftva-totals tr.row-grand td:last-child {
     }
     function toFr(num) {
         num = Math.abs(num);
-        var dinars  = Math.floor(num);
+        var dinars   = Math.floor(num);
         var millimes = Math.round((num - dinars) * 1000);
         var parts = [];
         if (dinars === 0) { parts.push('zéro'); }
