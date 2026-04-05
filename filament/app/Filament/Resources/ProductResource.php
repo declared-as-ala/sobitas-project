@@ -204,30 +204,30 @@ class ProductResource extends Resource
                                 ]),
                         ]),
 
-                    Tab::make('3. Prix & Promotion')
+                    Tab::make("3. Prix & Promotion")
                         ->schema([
-                            Section::make(‘Prix’)
+                            Section::make("Prix")
                                 ->schema([
                                     Grid::make(4)->schema([
-                                        Forms\Components\TextInput::make(‘prix’)
-                                            ->label(‘Prix TTC’)
+                                        Forms\Components\TextInput::make("prix")
+                                            ->label("Prix TTC")
                                             ->numeric()
-                                            ->prefix(‘DT’),
-                                        Forms\Components\TextInput::make(‘prix_ht’)
-                                            ->label(‘Prix HT’)
+                                            ->prefix("DT"),
+                                        Forms\Components\TextInput::make("prix_ht")
+                                            ->label("Prix HT")
                                             ->numeric()
-                                            ->prefix(‘DT’),
-                                        Forms\Components\TextInput::make(‘promo’)
-                                            ->label(‘Promo TTC’)
+                                            ->prefix("DT"),
+                                        Forms\Components\TextInput::make("promo")
+                                            ->label("Promo TTC")
                                             ->numeric()
-                                            ->prefix(‘DT’),
-                                        Forms\Components\TextInput::make(‘promo_ht’)
-                                            ->label(‘Promo HT’)
+                                            ->prefix("DT"),
+                                        Forms\Components\TextInput::make("promo_ht")
+                                            ->label("Promo HT")
                                             ->numeric()
-                                            ->prefix(‘DT’),
+                                            ->prefix("DT"),
                                     ]),
-                                    Forms\Components\DateTimePicker::make(‘promo_expiration_date’)
-                                        ->label(‘Date d\’expiration promo (Ventes Flash)’)
+                                    Forms\Components\DateTimePicker::make("promo_expiration_date")
+                                        ->label("Date d’expiration promo (Ventes Flash)")
                                         ->columnSpanFull(),
                                 ]),
                         ]),
