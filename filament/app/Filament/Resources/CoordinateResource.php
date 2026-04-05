@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\CoordinateResource\Pages;
+use App\Filament\Support\ImagePath;
 use App\Models\Coordinate;
 use Filament\Actions;
 use Filament\Forms;
@@ -149,6 +150,7 @@ class CoordinateResource extends Resource
                                     ->imageEditor()
                                     ->maxSize(2048)
                                     ->columnSpanFull()
+                                    ->afterStateHydrated(fn ($component, $state) => $component->state(ImagePath::normalize($state)))
                                     ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
                                         $path = (string) $file->store('coordonnees', 'public');
                                         return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp($path) ?? $path;
@@ -184,6 +186,7 @@ class CoordinateResource extends Resource
                                     ->imageEditor()
                                     ->maxSize(2048)
                                     ->columnSpanFull()
+                                    ->afterStateHydrated(fn ($component, $state) => $component->state(ImagePath::normalize($state)))
                                     ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
                                         $path = (string) $file->store('coordonnees', 'public');
                                         return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp($path) ?? $path;
@@ -219,6 +222,7 @@ class CoordinateResource extends Resource
                                     ->imageEditor()
                                     ->maxSize(4096)
                                     ->columnSpanFull()
+                                    ->afterStateHydrated(fn ($component, $state) => $component->state(ImagePath::normalize($state)))
                                     ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
                                         $path = (string) $file->store('coordonnees', 'public');
                                         return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp($path) ?? $path;
@@ -254,6 +258,7 @@ class CoordinateResource extends Resource
                                     ->imageEditor()
                                     ->maxSize(2048)
                                     ->columnSpanFull()
+                                    ->afterStateHydrated(fn ($component, $state) => $component->state(ImagePath::normalize($state)))
                                     ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
                                         $path = (string) $file->store('coordonnees', 'public');
                                         return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp($path) ?? $path;
@@ -288,7 +293,8 @@ class CoordinateResource extends Resource
                                     ->image()
                                     ->maxSize(512)
                                     ->acceptedFileTypes(['image/png', 'image/x-icon', 'image/vnd.microsoft.icon', 'image/jpeg', 'image/webp'])
-                                    ->columnSpanFull(),
+                                    ->columnSpanFull()
+                                    ->afterStateHydrated(fn ($component, $state) => $component->state(ImagePath::normalize($state))),
 
                             ]),
                         ]),
@@ -424,6 +430,7 @@ class CoordinateResource extends Resource
     {
         return [
             'index' => Pages\ManageCoordinates::route('/'),
+            'edit'  => Pages\EditCoordinate::route('/{record}/edit'),
         ];
     }
 }

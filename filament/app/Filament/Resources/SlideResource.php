@@ -7,6 +7,8 @@ use App\Filament\Support\ImagePath;
 use App\Models\Slide;
 use Filament\Forms;
 use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
 use Filament\Resources\Resource;
 use Filament\Forms\Components\FileUpload;
 use Filament\Tables;
@@ -20,53 +22,67 @@ class SlideResource extends Resource
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-photo';
     protected static string | \UnitEnum | null $navigationGroup = 'Paramètres du site';
     protected static ?int $navigationSort = 2;
+    protected static ?string $modelLabel = 'Slide';
+    protected static ?string $pluralModelLabel = 'Slides';
 
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            FileUpload::make('image')
-                ->label('Couverture')
-                ->disk('public')
-                ->directory('slides')
-                ->image()
-                ->imageEditor()
-                ->imagePreviewHeight('250')
-                ->imageEditorAspectRatios([
-                    null,
-                    '16:9',
-                    '4:3',
-                    '1:1',
-                ])
-                ->visibility('public')
-                ->preserveFilenames(false)
-                ->maxSize(4096)
-                ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
-                ->helperText('Formats acceptés: JPEG, PNG, WebP, GIF. Taille max: 4MB')
-                ->deletable(true)
-                ->downloadable(true)
-                ->openable(true)
-                ->loadingIndicatorPosition('left')
-                ->removeUploadedFileButtonPosition('right')
-                ->uploadButtonPosition('left')
-                ->uploadProgressIndicatorPosition('left')
-                ->afterStateUpdated(function ($state, $record, $set) {
-                    // Delete old file when a new one is uploaded
-                    if ($record && $record->image && $state && $state !== $record->image) {
-                        $oldPath = $record->image;
-                        if (Storage::disk('public')->exists($oldPath)) {
-                            Storage::disk('public')->delete($oldPath);
-                        }
-                    }
-                })
-                ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
-                    $path = (string) $file->store('slides', 'public');
-                    return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp($path) ?? $path;
-                }),
-            Forms\Components\TextInput::make('titre')->label('Titre')->maxLength(255),
-            Forms\Components\TextInput::make('lien')->label('Lien')->maxLength(500),
-            Forms\Components\Select::make('type')
-                ->options(['web' => 'Web', 'mobile' => 'Mobile'])
-                ->default('web'),
+            Section::make('Image')
+                ->schema([
+                    FileUpload::make('image')
+                        ->label('Couverture')
+                        ->disk('public')
+                        ->directory('slides')
+                        ->image()
+                        ->imageEditor()
+                        ->imageEditorAspectRatios([null, '16:9', '21:9', '4:3', '1:1'])
+                        ->imagePreviewHeight('280')
+                        ->maxSize(4096)
+                        ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+                        ->helperText('Formats acceptés : JPEG, PNG, WebP, GIF — Max 4 Mo')
+                        ->deletable(true)
+                        ->downloadable(false)
+                        ->openable(false)
+                        ->visibility('public')
+                        ->preserveFilenames(false)
+                        ->columnSpanFull()
+                        ->afterStateHydrated(function ($component, $state): void {
+                            $component->state(ImagePath::normalize($state));
+                        })
+                        ->afterStateUpdated(function ($state, $record): void {
+                            if ($record && $record->image && $state && $state !== $record->image) {
+                                $old = ImagePath::normalize($record->image);
+                                if ($old && Storage::disk('public')->exists($old)) {
+                                    Storage::disk('public')->delete($old);
+                                }
+                            }
+                        })
+                        ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
+                            $path = (string) $file->store('slides', 'public');
+                            return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp($path) ?? $path;
+                        }),
+                ]),
+
+            Section::make('Informations')
+                ->schema([
+                    Grid::make(2)->schema([
+                        Forms\Components\TextInput::make('titre')
+                            ->label('Titre')
+                            ->maxLength(255)
+                            ->placeholder('Titre du slide (optionnel)'),
+                        Forms\Components\Select::make('type')
+                            ->label('Affichage')
+                            ->options(['web' => 'Web', 'mobile' => 'Mobile'])
+                            ->default('web')
+                            ->native(false),
+                        Forms\Components\TextInput::make('lien')
+                            ->label('Lien (URL)')
+                            ->maxLength(500)
+                            ->placeholder('https://...')
+                            ->columnSpan(2),
+                    ]),
+                ]),
         ]);
     }
 
@@ -78,50 +94,47 @@ class SlideResource extends Resource
                     ->label('Couverture')
                     ->getStateUsing(fn ($record) => ImagePath::normalize($record->image))
                     ->disk('public')
-                    ->size(80)
                     ->height(60)
-                    ->width(80)
-                    ->circular(false)
-                    ->square()
-                    ->extraAttributes([
-                        'class' => 'rounded-lg object-cover',
-                    ]),
+                    ->width(120)
+                    ->extraImgAttributes(['style' => 'object-fit:cover;border-radius:6px;']),
                 Tables\Columns\TextColumn::make('titre')
                     ->label('Titre')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->default('—'),
                 Tables\Columns\TextColumn::make('type')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
-                        'web' => 'success',
+                        'web'    => 'success',
                         'mobile' => 'info',
-                        default => 'gray',
+                        default  => 'gray',
                     })
                     ->sortable(),
                 Tables\Columns\TextColumn::make('lien')
                     ->label('Lien')
-                    ->limit(30)
+                    ->limit(40)
                     ->copyable()
-                    ->copyMessage('Lien copié!')
+                    ->copyMessage('Lien copié !')
                     ->toggleable(),
             ])
+            ->defaultSort('id', 'desc')
             ->actions([
-                Actions\EditAction::make(),
+                Actions\EditAction::make()->slideOver(),
                 Actions\DeleteAction::make()
-                    ->before(function (Slide $record) {
-                        // Delete image file when deleting the record
-                        if ($record->image && Storage::disk('public')->exists($record->image)) {
-                            Storage::disk('public')->delete($record->image);
+                    ->before(function (Slide $record): void {
+                        $path = ImagePath::normalize($record->image);
+                        if ($path && Storage::disk('public')->exists($path)) {
+                            Storage::disk('public')->delete($path);
                         }
                     }),
             ])
             ->bulkActions([
                 Actions\DeleteBulkAction::make()
-                    ->before(function ($records) {
-                        // Delete image files when bulk deleting
+                    ->before(function ($records): void {
                         foreach ($records as $record) {
-                            if ($record->image && Storage::disk('public')->exists($record->image)) {
-                                Storage::disk('public')->delete($record->image);
+                            $path = ImagePath::normalize($record->image);
+                            if ($path && Storage::disk('public')->exists($path)) {
+                                Storage::disk('public')->delete($path);
                             }
                         }
                     }),
@@ -135,4 +148,3 @@ class SlideResource extends Resource
         ];
     }
 }
-

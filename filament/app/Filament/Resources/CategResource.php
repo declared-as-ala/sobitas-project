@@ -68,12 +68,14 @@ class CategResource extends Resource
                 ->removeUploadedFileButtonPosition('right')
                 ->uploadButtonPosition('left')
                 ->uploadProgressIndicatorPosition('left')
-                ->afterStateUpdated(function ($state, $record, $set) {
-                    // Delete old file when a new one is uploaded
+                ->afterStateHydrated(function ($component, $state): void {
+                    $component->state(\App\Filament\Support\ImagePath::normalize($state));
+                })
+                ->afterStateUpdated(function ($state, $record): void {
                     if ($record && $record->cover && $state && $state !== $record->cover) {
-                        $oldPath = $record->cover;
-                        if (Storage::disk('public')->exists($oldPath)) {
-                            Storage::disk('public')->delete($oldPath);
+                        $old = \App\Filament\Support\ImagePath::normalize($record->cover);
+                        if ($old && Storage::disk('public')->exists($old)) {
+                            Storage::disk('public')->delete($old);
                         }
                     }
                 })
@@ -121,20 +123,20 @@ class CategResource extends Resource
             ->actions([
                 Actions\EditAction::make(),
                 Actions\DeleteAction::make()
-                    ->before(function (Categ $record) {
-                        // Delete image file when deleting the record
-                        if ($record->cover && Storage::disk('public')->exists($record->cover)) {
-                            Storage::disk('public')->delete($record->cover);
+                    ->before(function (Categ $record): void {
+                        $path = \App\Filament\Support\ImagePath::normalize($record->cover);
+                        if ($path && Storage::disk('public')->exists($path)) {
+                            Storage::disk('public')->delete($path);
                         }
                     }),
             ])
             ->bulkActions([
                 Actions\DeleteBulkAction::make()
-                    ->before(function ($records) {
-                        // Delete image files when bulk deleting
+                    ->before(function ($records): void {
                         foreach ($records as $record) {
-                            if ($record->cover && Storage::disk('public')->exists($record->cover)) {
-                                Storage::disk('public')->delete($record->cover);
+                            $path = \App\Filament\Support\ImagePath::normalize($record->cover);
+                            if ($path && Storage::disk('public')->exists($path)) {
+                                Storage::disk('public')->delete($path);
                             }
                         }
                     }),

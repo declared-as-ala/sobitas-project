@@ -137,10 +137,21 @@ class ProductResource extends Resource
                                 ]),
                             Section::make('Flags produit')
                                 ->schema([
-                                    Grid::make(3)->schema([
+                                    Grid::make(4)->schema([
                                         Forms\Components\Toggle::make('pack')->label('Pack'),
                                         Forms\Components\Toggle::make('new_product')->label('New Product'),
                                         Forms\Components\Toggle::make('best_seller')->label('Meilleures ventes'),
+                                        Forms\Components\Select::make('note')
+                                            ->label('Note (étoiles)')
+                                            ->options([
+                                                1 => '★ 1',
+                                                2 => '★★ 2',
+                                                3 => '★★★ 3',
+                                                4 => '★★★★ 4',
+                                                5 => '★★★★★ 5',
+                                            ])
+                                            ->native(false)
+                                            ->placeholder('—'),
                                     ]),
                                 ]),
                         ]),
@@ -149,7 +160,7 @@ class ProductResource extends Resource
                         ->schema([
                             Section::make('Stock')
                                 ->schema([
-                                    Grid::make(2)->schema([
+                                    Grid::make(3)->schema([
                                         Forms\Components\TextInput::make('qte')
                                             ->label('Qte (quantité)')
                                             ->numeric()
@@ -183,26 +194,41 @@ class ProductResource extends Resource
                                                     $set('qte', 1);
                                                 }
                                             }),
+                                        Forms\Components\TextInput::make('low_stock_threshold')
+                                            ->label('Seuil alerte stock')
+                                            ->numeric()
+                                            ->default(5)
+                                            ->minValue(0)
+                                            ->helperText('Alerte quand qté ≤ ce seuil.'),
                                     ]),
                                 ]),
                         ]),
 
                     Tab::make('3. Prix & Promotion')
                         ->schema([
-                            Section::make('Prix')
+                            Section::make(‘Prix’)
                                 ->schema([
-                                    Grid::make(3)->schema([
-                                        Forms\Components\TextInput::make('prix')
-                                            ->label('Prix')
+                                    Grid::make(4)->schema([
+                                        Forms\Components\TextInput::make(‘prix’)
+                                            ->label(‘Prix TTC’)
                                             ->numeric()
-                                            ->prefix('DT'),
-                                        Forms\Components\TextInput::make('promo')
-                                            ->label('Promo')
+                                            ->prefix(‘DT’),
+                                        Forms\Components\TextInput::make(‘prix_ht’)
+                                            ->label(‘Prix HT’)
                                             ->numeric()
-                                            ->prefix('DT'),
-                                        Forms\Components\DateTimePicker::make('promo_expiration_date')
-                                            ->label('Date d’expiration du promo (Ventes Flash)'),
+                                            ->prefix(‘DT’),
+                                        Forms\Components\TextInput::make(‘promo’)
+                                            ->label(‘Promo TTC’)
+                                            ->numeric()
+                                            ->prefix(‘DT’),
+                                        Forms\Components\TextInput::make(‘promo_ht’)
+                                            ->label(‘Promo HT’)
+                                            ->numeric()
+                                            ->prefix(‘DT’),
                                     ]),
+                                    Forms\Components\DateTimePicker::make(‘promo_expiration_date’)
+                                        ->label(‘Date d\’expiration promo (Ventes Flash)’)
+                                        ->columnSpanFull(),
                                 ]),
                         ]),
 

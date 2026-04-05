@@ -14,23 +14,43 @@ class Facture extends Model
     protected $fillable = [
         'numero', 'client_id', 'commande_id', 'status', 'prix_ht', 'prix_ttc', 'remise',
         'pourcentage_remise', 'prix_ht_apres_remise', 'tva', 'timbre', 'frais_livraison', 'net_a_payer',
+        // Coupon tracking: remise = manual_remise + discount_ht (invariant)
+        'discount_ht', 'coupon_code_snapshot', 'coupon_type_snapshot', 'coupon_value_snapshot',
         'nom', 'prenom', 'email', 'phone', 'adresse1', 'adresse2', 'ville', 'region', 'code_postale',
-        'livraison_nom', 'livraison_prenom', 'livraison_email', 'livraison_phone', 
-        'livraison_adresse1', 'livraison_adresse2', 'livraison_ville', 'livraison_region', 'livraison_code_postale'
+        'livraison_nom', 'livraison_prenom', 'livraison_email', 'livraison_phone',
+        'livraison_adresse1', 'livraison_adresse2', 'livraison_ville', 'livraison_region', 'livraison_code_postale',
     ];
 
     protected $casts = [
-        'prix_ht' => 'decimal:3',
-        'remise' => 'decimal:3',
-        'pourcentage_remise' => 'decimal:3',
+        'prix_ht'              => 'decimal:3',
+        'remise'               => 'decimal:3',
+        'pourcentage_remise'   => 'decimal:3',
         'prix_ht_apres_remise' => 'decimal:3',
-        'tva' => 'decimal:3',
-        'timbre' => 'decimal:3',
-        'frais_livraison' => 'decimal:3',
-        'prix_ttc' => 'decimal:3',
-        'net_a_payer' => 'decimal:3',
-        'status' => BlStatus::class,
+        'tva'                  => 'decimal:3',
+        'timbre'               => 'decimal:3',
+        'frais_livraison'      => 'decimal:3',
+        'prix_ttc'             => 'decimal:3',
+        'net_a_payer'          => 'decimal:3',
+        'discount_ht'          => 'decimal:3',
+        'coupon_value_snapshot' => 'decimal:3',
+        'status'               => BlStatus::class,
     ];
+
+    /**
+     * Coupon discount portion of remise (zero when no coupon was applied).
+     */
+    public function getCouponDiscountAttribute(): float
+    {
+        return (float) ($this->discount_ht ?? 0);
+    }
+
+    /**
+     * Manual (admin-set) portion of remise = total remise minus coupon portion.
+     */
+    public function getManualRemiseAttribute(): float
+    {
+        return max(0.0, (float) ($this->remise ?? 0) - (float) ($this->discount_ht ?? 0));
+    }
 
     /**
      * Computed, human-friendly single-line delivery address.

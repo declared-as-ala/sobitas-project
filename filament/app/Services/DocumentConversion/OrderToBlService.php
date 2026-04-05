@@ -87,8 +87,15 @@ class OrderToBlService
 
             $clientId = $this->resolveOrCreateClient($order);
 
-            $remise = (float) ($order->remise ?? 0);
-            $timbre = 0;
+            // ── Discount resolution ───────────────────────────────────────────
+            // INVARIANT: BL.remise = manual_remise + coupon_discount_ht
+            // Both sources MUST be combined so InvoiceCalculator receives the
+            // true total discount. The coupon portion is stored separately in
+            // discount_ht / coupon_*_snapshot for display and audit purposes.
+            $manualRemise   = (float) ($order->remise ?? 0);
+            $couponDiscount = (float) ($order->discount_ht ?? 0);
+            $remise         = $manualRemise + $couponDiscount; // combined for calculator
+            $timbre         = 0;
             $fraisLivraison = (float) ($order->frais_livraison ?? 0);
 
             $details = [];
@@ -110,15 +117,17 @@ class OrderToBlService
                 ];
             }
 
-            // Safer Fallback for legacy commandes: 
+            // Safer fallback for legacy commandes:
             // Derive delivery fee from Order TTC minus the actual sum of line items.
-            // This safely bypasses any corrupted or zero $order->prix_ht in the DB.
+            // Uses the COMBINED remise (manual + coupon) so the derivation is correct
+            // regardless of whether a coupon was applied.
             if ($fraisLivraison <= 0 && ($order->prix_ttc ?? 0) > 0) {
                 $sumLinesHt = 0;
                 foreach ($details as $d) {
                     $sumLinesHt += $d['qte'] * $d['prix_unitaire'];
                 }
-                $derivedFrais = (float) $order->prix_ttc - $sumLinesHt - $remise;
+                // prix_ttc = sumLinesHt - combinedRemise + frais  →  frais = prix_ttc - sumLinesHt + combinedRemise
+                $derivedFrais = (float) $order->prix_ttc - $sumLinesHt + $remise;
                 if ($derivedFrais > 0.001) {
                     $fraisLivraison = round($derivedFrais, 3);
                 }
@@ -202,6 +211,22 @@ class OrderToBlService
                 'bl_id' => $bl->id ?? 'pending', 
                 'livraison' => $bl->only(['livraison_nom', 'livraison_prenom', 'livraison_email', 'livraison_phone', 'livraison_adresse1', 'livraison_ville', 'livraison_region', 'livraison_code_postale'])
             ]);
+
+            // ── Coupon snapshot propagation ───────────────────────────────────
+            // Store the coupon portion and its metadata on the BL so print/display
+            // can show "Code promo (CODE): -XX DT" separately from the manual remise.
+            if (Schema::hasColumn('factures', 'discount_ht')) {
+                $bl->discount_ht = round($couponDiscount, 3);
+            }
+            if (Schema::hasColumn('factures', 'coupon_code_snapshot')) {
+                $bl->coupon_code_snapshot = $order->coupon_code_snapshot ?? null;
+            }
+            if (Schema::hasColumn('factures', 'coupon_type_snapshot')) {
+                $bl->coupon_type_snapshot = $order->coupon_type_snapshot ?? null;
+            }
+            if (Schema::hasColumn('factures', 'coupon_value_snapshot')) {
+                $bl->coupon_value_snapshot = $order->coupon_value_snapshot ?? null;
+            }
 
             $bl->save();
 

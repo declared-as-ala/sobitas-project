@@ -38,7 +38,7 @@ class QuickActionsWidget extends Widget
                 'color' => 'green',
             ],
             [
-                'label' => 'Ajouter Facture (TVA)',
+                'label' => 'Ajouter Facture',
                 'icon' => 'heroicon-o-banknotes',
                 'url' => FactureTvaResource::getUrl('create'),
                 'color' => 'emerald',

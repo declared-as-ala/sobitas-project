@@ -106,29 +106,47 @@
                         </table>
                     </div>
 
+                    @php
+                        $blTotalHt     = (float) ($calc_total_ht ?? $facture->prix_ht ?? 0);
+                        $blRemiseTotal = (float) ($calc_remise ?? $facture->remise ?? 0);
+                        $blCouponHt    = (float) ($facture->discount_ht ?? 0);
+                        $blManualRem   = max(0.0, round($blRemiseTotal - $blCouponHt, 3));
+                        $blPct         = (float) ($calc_pourcentage_remise ?? $facture->pourcentage_remise ?? 0);
+                        $blCouponCode  = $facture->coupon_code_snapshot ?? null;
+                    @endphp
                     <div class="doc-a4-totals-wrap">
                         <table class="doc-a4-totals">
                             <tr>
                                 <td>Montant total HT</td>
-                                <td>{{ number_format((float) ($calc_total_ht ?? $facture->prix_ht ?? 0), 3, '.', '') }}</td>
+                                <td>{{ number_format($blTotalHt, 3, '.', ' ') }} DT</td>
                             </tr>
-                            <tr>
-                                <td>Remise</td>
-                                <td>{{ number_format((float) ($calc_remise ?? $facture->remise ?? 0), 3, '.', '') }}</td>
-                            </tr>
-                            <tr>
-                                <td>Pourcentage remise %</td>
-                                <td>{{ number_format((float) ($calc_pourcentage_remise ?? $facture->pourcentage_remise ?? 0), 1, '.', '') }} %</td>
-                            </tr>
+                            @if ($blManualRem > 0)
+                                <tr>
+                                    <td>Remise</td>
+                                    <td>−{{ number_format($blManualRem, 3, '.', ' ') }} DT</td>
+                                </tr>
+                            @endif
+                            @if ($blCouponHt > 0)
+                                <tr>
+                                    <td>Code promo{{ $blCouponCode ? ' (' . $blCouponCode . ')' : '' }}</td>
+                                    <td>−{{ number_format($blCouponHt, 3, '.', ' ') }} DT</td>
+                                </tr>
+                            @endif
+                            @if ($blRemiseTotal <= 0 && $blPct > 0)
+                                <tr>
+                                    <td>Remise {{ number_format($blPct, 1, '.', ' ') }} %</td>
+                                    <td>—</td>
+                                </tr>
+                            @endif
                             @if ($frais > 0)
                                 <tr>
-                                    <td>Frais livraison</td>
-                                    <td>{{ number_format($frais, 3, '.', '') }}</td>
+                                    <td>Frais de livraison</td>
+                                    <td>{{ number_format($frais, 3, '.', ' ') }} DT</td>
                                 </tr>
                             @endif
                             <tr class="doc-a4-totals__grand">
                                 <td>Montant total à payer</td>
-                                <td>{{ number_format($netAPayer, 3, '.', '') }}</td>
+                                <td>{{ number_format($netAPayer, 3, '.', ' ') }} DT</td>
                             </tr>
                         </table>
                     </div>

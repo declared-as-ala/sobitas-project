@@ -55,14 +55,30 @@ class BlToInvoiceService
             // BL -> Facture TVA completely drops frais_livraison
             $totals = InvoiceCalculator::calculate($details, (float) ($bl->remise ?? 0), (float) ($bl->timbre ?? 0), $defaultTvaPct, 0);
 
-            $invoice->prix_ht = $totals['total_ht_brut'];
-            $invoice->remise = $totals['remise'];
-            $invoice->pourcentage_remise = $totals['pourcentage_remise'];
-            $invoice->timbre = $totals['timbre'];
-            $invoice->prix_ht_apres_remise = $totals['prix_ht_apres_remise'];
-            $invoice->tva = $totals['tva'];
-            $invoice->prix_ttc = $totals['prix_ttc'];
-            $invoice->net_a_payer = $totals['net_a_payer'];
+            $invoice->prix_ht               = $totals['total_ht_brut'];
+            $invoice->remise                 = $totals['remise'];
+            $invoice->pourcentage_remise     = $totals['pourcentage_remise'];
+            $invoice->timbre                 = $totals['timbre'];
+            $invoice->prix_ht_apres_remise   = $totals['prix_ht_apres_remise'];
+            $invoice->tva                    = $totals['tva'];
+            $invoice->prix_ttc               = $totals['prix_ttc'];
+            $invoice->net_a_payer            = $totals['net_a_payer'];
+
+            // ── Coupon propagation: BL → Invoice ─────────────────────────────
+            // INVARIANT preserved: invoice.remise = manual_remise + discount_ht
+            if (Schema::hasColumn('facture_tvas', 'discount_ht')) {
+                $invoice->discount_ht = (float) ($bl->discount_ht ?? 0);
+            }
+            if (Schema::hasColumn('facture_tvas', 'coupon_code_snapshot')) {
+                $invoice->coupon_code_snapshot = $bl->coupon_code_snapshot ?? null;
+            }
+            if (Schema::hasColumn('facture_tvas', 'coupon_type_snapshot')) {
+                $invoice->coupon_type_snapshot = $bl->coupon_type_snapshot ?? null;
+            }
+            if (Schema::hasColumn('facture_tvas', 'coupon_value_snapshot')) {
+                $invoice->coupon_value_snapshot = $bl->coupon_value_snapshot ?? null;
+            }
+
             $invoice->save();
 
             foreach ($bl->details as $line) {

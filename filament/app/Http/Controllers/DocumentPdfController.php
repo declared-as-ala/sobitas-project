@@ -112,21 +112,23 @@ class DocumentPdfController extends Controller
             );
 
             $invoice_rows = $details_facture->map(function ($d, $i) use ($defaultTva) {
-                $qte = (int) ($d->qte ?? $d->quantite ?? 0);
-                $pu_ht = (float) ($d->prix_unitaire ?? 0);
-                $tva_pct = (float) ($d->tva ?? $defaultTva);
-                $pu_ttc = round($pu_ht * (1 + $tva_pct / 100), 3);
-                $total_ht = round($pu_ht * $qte, 3);
-                $total_ttc = round($pu_ttc * $qte, 3);
+                $qte         = (int) ($d->qte ?? $d->quantite ?? 0);
+                $pu_ht       = (float) ($d->prix_unitaire ?? 0);
+                $tva_pct     = (float) ($d->tva ?? $defaultTva);
+                $pu_ttc      = round($pu_ht * (1 + $tva_pct / 100), 3);
+                $total_ht    = round($pu_ht * $qte, 3);
+                $montant_tva = round($total_ht * $tva_pct / 100, 3);
+                $total_ttc   = round($total_ht + $montant_tva, 3);
                 return [
-                    'index' => $i + 1,
-                    'produit' => $d->product->designation_fr ?? '—',
-                    'qte' => $qte,
-                    'pu_ht' => $pu_ht,
-                    'tva_pct' => $tva_pct,
-                    'pu_ttc' => $pu_ttc,
-                    'total_ht' => $total_ht,
-                    'total_ttc' => $total_ttc,
+                    'index'       => $i + 1,
+                    'produit'     => $d->product->designation_fr ?? '—',
+                    'qte'         => $qte,
+                    'pu_ht'       => $pu_ht,
+                    'pu_ttc'      => $pu_ttc,
+                    'total_ht'    => $total_ht,
+                    'tva_pct'     => $tva_pct,
+                    'montant_tva' => $montant_tva,
+                    'total_ttc'   => $total_ttc,
                 ];
             })->all();
 
@@ -165,8 +167,9 @@ class DocumentPdfController extends Controller
             if (! self::pdfFacadeExists()) {
                 return redirect()->back()->with('error', __('Le package PDF (barryvdh/laravel-dompdf) n’est pas installé. Exécutez : composer require barryvdh/laravel-dompdf'));
             }
-            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('print.facture-tva', $data);
-            return $pdf->download($filename, ['Attachment' => true]);
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('print.facture-tva', $data)
+                ->setPaper('a4', 'portrait');
+            return $pdf->download($filename);
         } catch (\Throwable $e) {
             Log::error('DocumentPdfController::downloadFactureTva', ['id' => $factureTva->id, 'error' => $e->getMessage()]);
             return redirect()->back()->with('error', __('Erreur lors de la génération du PDF.'));

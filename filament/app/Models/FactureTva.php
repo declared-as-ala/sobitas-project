@@ -14,17 +14,35 @@ class FactureTva extends Model
     protected $guarded = ['id'];
 
     protected $casts = [
-        'date_facture' => 'date',
-        'prix_ht' => 'decimal:3',
-        'remise' => 'decimal:3',
-        'pourcentage_remise' => 'decimal:3',
-        'prix_ht_apres_remise' => 'decimal:3',
-        'tva' => 'decimal:3',
-        'timbre' => 'decimal:3',
-        'prix_ttc' => 'decimal:3',
-        'net_a_payer' => 'decimal:3',
-        'status' => InvoiceStatus::class,
+        'date_facture'          => 'date',
+        'prix_ht'               => 'decimal:3',
+        'remise'                => 'decimal:3',
+        'pourcentage_remise'    => 'decimal:3',
+        'prix_ht_apres_remise'  => 'decimal:3',
+        'tva'                   => 'decimal:3',
+        'timbre'                => 'decimal:3',
+        'prix_ttc'              => 'decimal:3',
+        'net_a_payer'           => 'decimal:3',
+        'discount_ht'           => 'decimal:3',
+        'coupon_value_snapshot' => 'decimal:3',
+        'status'                => InvoiceStatus::class,
     ];
+
+    /**
+     * Coupon discount portion of remise (zero when no coupon was applied).
+     */
+    public function getCouponDiscountAttribute(): float
+    {
+        return (float) ($this->discount_ht ?? 0);
+    }
+
+    /**
+     * Manual (admin-set) portion of remise = total remise minus coupon portion.
+     */
+    public function getManualRemiseAttribute(): float
+    {
+        return max(0.0, (float) ($this->remise ?? 0) - (float) ($this->discount_ht ?? 0));
+    }
 
     protected static function booted()
     {
