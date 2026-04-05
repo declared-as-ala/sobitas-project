@@ -46,26 +46,45 @@ else
   echo "✓ Storage symlink already exists"
 fi
 
-# Wait for DB and run migrations
-echo "Running migrations..."
-migrate_attempt=1
-migrate_max=10
+# Wait for DB to accept connections BEFORE attempting migrations.
+# PDO with ATTR_TIMEOUT=2 prevents the migrate command from hanging indefinitely.
+echo "Waiting for database to be ready..."
+DB_HOST="${DB_HOST:-mysql}"
+DB_PORT="${DB_PORT:-3306}"
+DB_DATABASE="${DB_DATABASE:-sobitas}"
+DB_USERNAME="${DB_USERNAME:-root}"
+DB_PASSWORD="${DB_PASSWORD:-}"
 
-while [ "$migrate_attempt" -le "$migrate_max" ]; do
-  if php artisan migrate --force >/dev/null 2>&1; then
-    echo "✓ Migrations completed"
+db_ready=0
+for i in $(seq 1 30); do
+  if php -r "
+    try {
+      \$pdo = new PDO(
+        'mysql:host=${DB_HOST};port=${DB_PORT};dbname=${DB_DATABASE}',
+        '${DB_USERNAME}', '${DB_PASSWORD}',
+        [PDO::ATTR_TIMEOUT => 2, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+      );
+      echo 'ready';
+    } catch (Exception \$e) { exit(1); }
+  " 2>/dev/null | grep -q 'ready'; then
+    db_ready=1
+    echo "✓ Database is ready (attempt $i)"
     break
   fi
-
-  if [ "$migrate_attempt" -eq "$migrate_max" ]; then
-    echo "⚠ Migration skipped after ${migrate_max} attempts"
-    break
-  fi
-
-  echo "DB not ready yet (attempt $migrate_attempt/$migrate_max), retrying in 3s..."
+  echo "  DB not ready yet (attempt $i/30), waiting 3s..."
   sleep 3
-  migrate_attempt=$((migrate_attempt + 1))
 done
+
+if [ "$db_ready" -ne 1 ]; then
+  echo "⚠ Database did not become ready in 90s — skipping migrations"
+else
+  echo "Running migrations..."
+  if php artisan migrate --force 2>&1; then
+    echo "✓ Migrations completed"
+  else
+    echo "⚠ Migration failed — continuing startup anyway"
+  fi
+fi
 
 # Publish Filament assets
 echo "Publishing Filament assets..."
