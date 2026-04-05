@@ -8,6 +8,7 @@ export interface CategorySeoFaq {
   question: string;
   answer: string;
 }
+//kkkkk
 
 export interface CategorySeoContent {
   /** Unique H1 for the page (defaults to category name if omitted) */
