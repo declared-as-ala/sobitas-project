@@ -14,7 +14,9 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Tables;
 use Filament\Actions;
 use Filament\Tables\Table;
+use App\Services\Media\ConvertUploadedImageToWebp;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class SlideResource extends Resource
 {
@@ -47,20 +49,13 @@ class SlideResource extends Resource
                         ->visibility('public')
                         ->preserveFilenames(false)
                         ->columnSpanFull()
-                        ->afterStateHydrated(function ($component, $state): void {
-                            $component->state(ImagePath::normalize($state));
-                        })
-                        ->afterStateUpdated(function ($state, $record): void {
-                            if ($record && $record->image && $state && $state !== $record->image) {
-                                $old = ImagePath::normalize($record->image);
-                                if ($old && Storage::disk('public')->exists($old)) {
-                                    Storage::disk('public')->delete($old);
-                                }
-                            }
-                        })
                         ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
-                            $path = (string) $file->store('slides', 'public');
-                            return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp($path) ?? $path;
+                            $path = $file->store('slides', 'public');
+                            if (! $path) {
+                                $ext  = $file->getClientOriginalExtension() ?: 'jpg';
+                                $path = $file->storeAs('slides', \Illuminate\Support\Str::uuid() . '.' . $ext, 'public');
+                            }
+                            return (new ConvertUploadedImageToWebp())->convertStoredPathToWebp((string) $path) ?? (string) $path;
                         }),
                 ]),
 

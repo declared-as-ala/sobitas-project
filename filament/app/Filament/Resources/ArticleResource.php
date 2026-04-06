@@ -140,11 +140,13 @@ class ArticleResource extends Resource
                                             ->maxSize(5120)
                                             ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
                                             ->columnSpanFull()
-                                            ->afterStateHydrated(fn ($component, $state) =>
-                                                $component->state(ImagePath::normalize($state)))
                                             ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
-                                                $path = (string) $file->store('articles', 'public');
-                                                return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp($path) ?? $path;
+                                                $path = $file->store('articles', 'public');
+                                                if (! $path) {
+                                                    $ext  = $file->getClientOriginalExtension() ?: 'jpg';
+                                                    $path = $file->storeAs('articles', \Illuminate\Support\Str::uuid() . '.' . $ext, 'public');
+                                                }
+                                                return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp((string) $path) ?? (string) $path;
                                             }),
 
                                         Grid::make(2)
