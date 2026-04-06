@@ -2,39 +2,20 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, ArrowRight } from 'lucide-react';
 import { getCategories } from '@/services/api';
 import { Category } from '@/types';
-
-/** Header height approx for dropdown max-height (leave room below nav) */
-const HEADER_OFFSET_PX = 80;
 
 const menuCategories = [
   {
     title: 'COMPLÉMENTS ALIMENTAIRES',
     items: [
-      'Acides Aminés',
-      'Bcaa',
-      'Citrulline',
-      'Creatine',
-      'EAA',
-      'Glutamine',
-      'HMB',
-      'L-Arginine',
-      'Mineraux',
-      'Omega 3',
-      'Boosters Hormonaux',
-      'Vitamines',
-      'ZMA',
-      'Beta Alanine',
-      'Ashwagandha',
-      'Tribulus',
-      'Collagene',
-      'Zinc',
-      'Magnésium',
+      'Acides Aminés', 'Bcaa', 'Citrulline', 'Creatine', 'EAA', 'Glutamine',
+      'HMB', 'L-Arginine', 'Mineraux', 'Omega 3', 'Boosters Hormonaux',
+      'Vitamines', 'ZMA', 'Beta Alanine', 'Ashwagandha', 'Tribulus',
+      'Collagene', 'Zinc', 'Magnésium',
     ],
   },
   {
@@ -43,280 +24,215 @@ const menuCategories = [
   },
   {
     title: 'PRISE DE MASSE',
-    items: [
-      'Gainers Haute Énergie',
-      'Gainers Riches En Protéines',
-      'Protéines',
-      'Carbohydrates',
-    ],
+    items: ['Gainers Haute Énergie', 'Gainers Riches En Protéines', 'Protéines', 'Carbohydrates'],
   },
   {
     title: 'PROTÉINES',
     items: [
-      'Protéine Whey',
-      'Isolat De Whey',
-      'Protéine De Caséine',
-      'Protéines Complètes',
-      'Protéine De Bœuf',
-      'Protéines Pour Cheveux',
-      'Whey Hydrolysée',
+      'Protéine Whey', 'Isolat De Whey', 'Protéine De Caséine',
+      'Protéines Complètes', 'Protéine De Bœuf', 'Protéines Pour Cheveux', 'Whey Hydrolysée',
     ],
   },
   {
-    title: 'COMPLEMENTS D\'ENTRAINEMENT',
-    items: [
-      'Pré-Workout',
-      'Pendant L\'entraînement',
-      'Récupération Après Entraînement',
-    ],
+    title: "COMPLÉMENTS D'ENTRAÎNEMENT",
+    items: ["Pré-Workout", "Pendant L'entraînement", 'Récupération Après Entraînement'],
   },
   {
-    title: 'ÉQUIPEMENTS ET ACCESSOIRES SPORTIFS',
+    title: 'ÉQUIPEMENTS ET ACCESSOIRES',
     items: [
-      'Bandages De Soutien Musculaire',
-      'Ceinture De Musculation',
-      'Gants De Musculation Et Fitness',
-      'Shakers Et Bouteilles Sportives',
-      'T-Shirts De Sport',
-      'Matériel De Musculation',
-      'Équipement Cardio Fitness',
+      'Bandages De Soutien Musculaire', 'Ceinture De Musculation',
+      'Gants De Musculation Et Fitness', 'Shakers Et Bouteilles Sportives',
+      'T-Shirts De Sport', 'Matériel De Musculation', 'Équipement Cardio Fitness',
     ],
   },
 ];
 
-// Helper to normalize for comparison
-const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+const normalize = (s: string) =>
+  s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 
-// Helper to find category by name (use returned slug only – never slugify from title)
-const findCategoryByName = (name: string, categories: Category[]): Category | null => {
-  const normalizedName = normalize(name);
-  return categories.find(cat => normalize(cat.designation_fr) === normalizedName) || null;
-};
-
-/** Menu label (normalized) → API slug when UI text differs from API (e.g. Bandages vs Bandes). Never slugify from label. */
 const subCategoryLabelToSlug: Record<string, string> = {
   'bandages de soutien musculaire': 'bandes-de-soutien-musculaire',
 };
 
-// Helper to find subcategory: exact match on designation_fr, or alias map. Always returns API slug.
-const findSubCategoryByName = (name: string, categories: Category[]): { slug: string; name: string } | null => {
-  const normalizedName = normalize(name);
+function findCategoryByName(name: string, categories: Category[]): Category | null {
+  const n = normalize(name);
+  return categories.find(cat => normalize(cat.designation_fr) === n) ?? null;
+}
 
-  for (const category of categories) {
-    if (category.sous_categories) {
-      const found = category.sous_categories.find((sub: any) => normalize(sub.designation_fr) === normalizedName);
-      if (found) return { slug: found.slug, name: found.designation_fr };
+function findSubCategorySlug(name: string, categories: Category[]): string | null {
+  const n = normalize(name);
+  for (const cat of categories) {
+    if (cat.sous_categories) {
+      const found = (cat.sous_categories as any[]).find(s => normalize(s.designation_fr) === n);
+      if (found?.slug) return found.slug;
     }
   }
-  // Fallback: known menu label ↔ API slug alias (so links use correct slug)
-  const aliasSlug = subCategoryLabelToSlug[normalizedName];
-  if (aliasSlug) {
-    for (const category of categories) {
-      const sub = category.sous_categories?.find((s: any) => s.slug === aliasSlug);
-      if (sub) return { slug: sub.slug, name: sub.designation_fr };
+  const alias = subCategoryLabelToSlug[n];
+  if (alias) {
+    for (const cat of categories) {
+      const sub = (cat.sous_categories as any[])?.find(s => s.slug === alias);
+      if (sub) return sub.slug;
     }
   }
   return null;
-};
+}
+
+/** Fallback URL when no slug matched — search by name */
+function fallbackHref(name: string): string {
+  return `/shop?q=${encodeURIComponent(name)}`;
+}
 
 export function ProductsDropdown() {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
+  const [dropdownTop, setDropdownTop] = useState(0);
+  const [mounted, setMounted] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+
   const triggerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const [mounted, setMounted] = useState(false);
-  const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const rafScrollRef = useRef<number | null>(null);
-
-  const closeMenu = useCallback(() => {
-    if (closeTimeoutRef.current) {
-      clearTimeout(closeTimeoutRef.current);
-      closeTimeoutRef.current = null;
-    }
-    setIsOpen(false);
-  }, []);
+  const closeTimer = useRef<NodeJS.Timeout | null>(null);
+  const hoverTrigger = useRef(false);
+  const hoverDropdown = useRef(false);
 
   useEffect(() => {
     setMounted(true);
     getCategories().then(setCategories).catch(console.error);
   }, []);
 
-  useEffect(() => {
-    if (isOpen && triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      setDropdownPosition({
-        top: rect.bottom + 8,
-        left: 0,
-      });
+  const scheduleClose = useCallback(() => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    closeTimer.current = setTimeout(() => {
+      if (!hoverTrigger.current && !hoverDropdown.current) {
+        setIsOpen(false);
+      }
+    }, 200);
+  }, []);
+
+  const cancelClose = useCallback(() => {
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
     }
-  }, [isOpen]);
+  }, []);
 
-  // Close on scroll (wheel + scrollbar) so the menu never stays stuck over content. Throttled with rAF.
-  useEffect(() => {
-    if (!isOpen) return;
-    const onScrollOrWheel = () => {
-      if (rafScrollRef.current != null) return;
-      rafScrollRef.current = requestAnimationFrame(() => {
-        rafScrollRef.current = null;
-        closeMenu();
-      });
-    };
-    window.addEventListener('scroll', onScrollOrWheel, { capture: true, passive: true });
-    window.addEventListener('wheel', onScrollOrWheel, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', onScrollOrWheel, { capture: true });
-      window.removeEventListener('wheel', onScrollOrWheel);
-      if (rafScrollRef.current != null) cancelAnimationFrame(rafScrollRef.current);
-    };
-  }, [isOpen, closeMenu]);
+  const open = useCallback(() => {
+    cancelClose();
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setDropdownTop(rect.bottom);
+    }
+    setIsOpen(true);
+  }, [cancelClose]);
 
-  // Close on click outside (trigger + dropdown)
-  useEffect(() => {
-    if (!isOpen) return;
-    const onPointerDown = (e: PointerEvent) => {
-      const target = e.target as Node;
-      if (triggerRef.current?.contains(target) || dropdownRef.current?.contains(target)) return;
-      closeMenu();
-    };
-    document.addEventListener('pointerdown', onPointerDown);
-    return () => document.removeEventListener('pointerdown', onPointerDown);
-  }, [isOpen, closeMenu]);
+  const close = useCallback(() => {
+    hoverTrigger.current = false;
+    hoverDropdown.current = false;
+    cancelClose();
+    setIsOpen(false);
+  }, [cancelClose]);
 
   // Close on Escape
   useEffect(() => {
     if (!isOpen) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeMenu();
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [isOpen, close]);
+
+  // Close on outside click (pointer up, not down — avoids killing clicks inside)
+  useEffect(() => {
+    if (!isOpen) return;
+    const onPointerUp = (e: PointerEvent) => {
+      const t = e.target as Node;
+      if (triggerRef.current?.contains(t) || dropdownRef.current?.contains(t)) return;
+      close();
     };
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [isOpen, closeMenu]);
+    document.addEventListener('pointerup', onPointerUp, { capture: true });
+    return () => document.removeEventListener('pointerup', onPointerUp, { capture: true });
+  }, [isOpen, close]);
 
-  const handleMouseEnter = () => {
-    if (closeTimeoutRef.current) {
-      clearTimeout(closeTimeoutRef.current);
-      closeTimeoutRef.current = null;
-    }
-    setIsOpen(true);
-  };
-
-  const handleMouseLeave = (e: React.MouseEvent) => {
-    const relatedTarget = e.relatedTarget as Node | null;
-    const isNode = relatedTarget != null && relatedTarget instanceof Node;
-    const isMovingToDropdown = isNode && (dropdownRef.current?.contains(relatedTarget) ?? false);
-    const isMovingToTrigger = isNode && (triggerRef.current?.contains(relatedTarget) ?? false);
-
-    if (!isMovingToDropdown && !isMovingToTrigger) {
-      closeTimeoutRef.current = setTimeout(closeMenu, 150);
-    }
-  };
+  useEffect(() => () => { if (closeTimer.current) clearTimeout(closeTimer.current); }, []);
 
   const dropdownContent = isOpen && mounted ? (
     <div
       ref={dropdownRef}
-      className="fixed left-0 right-0 w-full bg-white dark:bg-gray-900 border-y border-gray-200 dark:border-gray-800 shadow-xl z-[100] overflow-visible"
-      style={{
-        top: `${dropdownPosition.top}px`,
-        maxHeight: `calc(100vh - ${HEADER_OFFSET_PX}px - 16px)`,
-      }}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
+      className="fixed left-0 right-0 w-full bg-white dark:bg-gray-900 shadow-2xl border-t-2 border-red-600 z-[200]"
+      style={{ top: `${dropdownTop}px`, maxHeight: 'calc(100vh - 80px)' }}
+      onMouseEnter={() => { hoverDropdown.current = true; cancelClose(); }}
+      onMouseLeave={() => { hoverDropdown.current = false; scheduleClose(); }}
     >
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-3 pb-4 max-h-[calc(100vh-96px)] overflow-y-auto overscroll-contain">
-      <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-3">
-        {menuCategories.map((category, index) => {
-          const categoryData = findCategoryByName(category.title, categories);
-          const categorySlug = categoryData?.slug ?? null;
-          const categoryHref = categorySlug ? `/category/${categorySlug}` : null;
+      <div className="max-w-7xl mx-auto px-4 lg:px-8 py-6 overflow-y-auto max-h-[calc(100vh-80px)] overscroll-contain">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-6 lg:gap-8">
+          {menuCategories.map((cat, ci) => {
+            const catData = findCategoryByName(cat.title, categories);
+            const catHref = catData?.slug ? `/category/${catData.slug}` : fallbackHref(cat.title);
 
-          return (
-            <div key={index} className="space-y-0.5 min-w-0">
-              {/* Category title – link only when we have API slug (never slugify from title) */}
-              {categoryHref ? (
+            return (
+              <div key={ci} className="min-w-0">
                 <LinkWithLoading
-                  href={categoryHref}
-                  className="font-semibold text-xs sm:text-sm text-red-600 dark:text-red-500 mb-1 leading-tight hover:underline block"
-                  loadingMessage={`Chargement de ${category.title}...`}
-                  onMouseEnter={() => router.prefetch(categoryHref)}
-                  onClick={closeMenu}
+                  href={catHref}
+                  className="group flex items-center gap-1 font-bold text-[11px] tracking-wider text-red-600 dark:text-red-500 uppercase mb-3 hover:text-red-700 transition-colors"
+                  loadingMessage={`Chargement...`}
+                  onMouseEnter={() => router.prefetch(catHref)}
+                  onClick={close}
                 >
-                  {category.title}
+                  {cat.title}
                 </LinkWithLoading>
-              ) : (
-                <span className="font-semibold text-xs sm:text-sm text-red-600 dark:text-red-500 mb-1 leading-tight block">
-                  {category.title}
-                </span>
-              )}
-              <ul className="space-y-0.5">
-                {category.items.map((item, itemIndex) => {
-                  const subCategory = findSubCategoryByName(item, categories);
-                  const itemSlug = subCategory?.slug ?? null;
-                  const itemHref = itemSlug ? `/category/${itemSlug}` : null;
 
-                  return (
-                    <li key={itemIndex}>
-                      {itemHref ? (
+                <div className="w-8 h-0.5 bg-red-200 dark:bg-red-900 mb-3 rounded-full" />
+
+                <ul className="space-y-1">
+                  {cat.items.map((item, ii) => {
+                    const slug = findSubCategorySlug(item, categories);
+                    const href = slug ? `/category/${slug}` : fallbackHref(item);
+
+                    return (
+                      <li key={ii}>
                         <LinkWithLoading
-                          href={itemHref}
-                          className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-500 transition-colors block py-0.5 break-words"
-                          loadingMessage={`Chargement de ${item}...`}
-                          onMouseEnter={() => router.prefetch(itemHref)}
-                          onClick={closeMenu}
+                          href={href}
+                          className="group flex items-center gap-1.5 text-[13px] text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors py-0.5 leading-snug"
+                          loadingMessage="Chargement..."
+                          onMouseEnter={() => router.prefetch(href)}
+                          onClick={close}
                         >
+                          <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600 group-hover:bg-red-500 transition-colors flex-shrink-0" />
                           {item}
                         </LinkWithLoading>
-                      ) : (
-                        <span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 block py-0.5 break-words">
-                          {item}
-                        </span>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          );
-        })}
-      </div>
-      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-800">
-        <LinkWithLoading
-          href="/shop"
-          className="text-sm font-semibold text-red-600 dark:text-red-500 hover:underline"
-          loadingMessage="Chargement de la boutique..."
-          onMouseEnter={() => router.prefetch('/shop')}
-          onClick={closeMenu}
-        >
-          Voir tous les produits →
-        </LinkWithLoading>
-      </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
+          <p className="text-xs text-gray-400 dark:text-gray-600">
+            Découvrez toute notre gamme de produits
+          </p>
+          <LinkWithLoading
+            href="/shop"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors px-4 py-2 rounded-lg"
+            loadingMessage="Chargement de la boutique..."
+            onMouseEnter={() => router.prefetch('/shop')}
+            onClick={close}
+          >
+            Voir tous les produits
+            <ArrowRight className="h-4 w-4" />
+          </LinkWithLoading>
+        </div>
       </div>
     </div>
   ) : null;
-
-  useEffect(() => {
-    return () => {
-      if (closeTimeoutRef.current) {
-        clearTimeout(closeTimeoutRef.current);
-      }
-    };
-  }, []);
 
   return (
     <div
       ref={triggerRef}
       className="relative"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      onFocus={() => setIsOpen(true)}
-      onBlur={(e) => {
-        const relatedTarget = e.relatedTarget as HTMLElement;
-        if (dropdownRef.current?.contains(relatedTarget)) return;
-        if (!e.currentTarget.contains(relatedTarget)) {
-          closeTimeoutRef.current = setTimeout(closeMenu, 200);
-        }
-      }}
+      onMouseEnter={() => { hoverTrigger.current = true; open(); }}
+      onMouseLeave={() => { hoverTrigger.current = false; scheduleClose(); }}
     >
       <LinkWithLoading
         href="/shop"
@@ -325,10 +241,11 @@ export function ProductsDropdown() {
         onMouseEnter={() => router.prefetch('/shop')}
       >
         NOS PRODUITS
-        <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
       </LinkWithLoading>
 
-      {mounted && typeof window !== 'undefined' && dropdownContent && createPortal(dropdownContent, document.body)}
+      {mounted && typeof window !== 'undefined' && dropdownContent &&
+        createPortal(dropdownContent, document.body)}
     </div>
   );
 }
