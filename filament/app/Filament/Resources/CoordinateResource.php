@@ -151,10 +151,13 @@ class CoordinateResource extends Resource
                                     ->imageEditor()
                                     ->maxSize(2048)
                                     ->columnSpanFull()
-                                    ->afterStateHydrated(fn ($component, $state) => $component->state(ImagePath::normalize($state)))
                                     ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
-                                        $path = (string) $file->store('coordonnees', 'public');
-                                        return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp($path) ?? $path;
+                                        $path = $file->store('coordonnees', 'public');
+                                        if (! $path) {
+                                            $ext  = $file->getClientOriginalExtension() ?: 'jpg';
+                                            $path = $file->storeAs('coordonnees', \Illuminate\Support\Str::uuid() . '.' . $ext, 'public');
+                                        }
+                                        return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp((string) $path) ?? (string) $path;
                                     }),
 
                                 // ── Logo Facture ─────────────────────────────
@@ -187,10 +190,13 @@ class CoordinateResource extends Resource
                                     ->imageEditor()
                                     ->maxSize(2048)
                                     ->columnSpanFull()
-                                    ->afterStateHydrated(fn ($component, $state) => $component->state(ImagePath::normalize($state)))
                                     ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
-                                        $path = (string) $file->store('coordonnees', 'public');
-                                        return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp($path) ?? $path;
+                                        $path = $file->store('coordonnees', 'public');
+                                        if (! $path) {
+                                            $ext  = $file->getClientOriginalExtension() ?: 'jpg';
+                                            $path = $file->storeAs('coordonnees', \Illuminate\Support\Str::uuid() . '.' . $ext, 'public');
+                                        }
+                                        return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp((string) $path) ?? (string) $path;
                                     }),
 
                                 // ── Photo / Cover ────────────────────────────
@@ -223,10 +229,13 @@ class CoordinateResource extends Resource
                                     ->imageEditor()
                                     ->maxSize(4096)
                                     ->columnSpanFull()
-                                    ->afterStateHydrated(fn ($component, $state) => $component->state(ImagePath::normalize($state)))
                                     ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
-                                        $path = (string) $file->store('coordonnees', 'public');
-                                        return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp($path) ?? $path;
+                                        $path = $file->store('coordonnees', 'public');
+                                        if (! $path) {
+                                            $ext  = $file->getClientOriginalExtension() ?: 'jpg';
+                                            $path = $file->storeAs('coordonnees', \Illuminate\Support\Str::uuid() . '.' . $ext, 'public');
+                                        }
+                                        return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp((string) $path) ?? (string) $path;
                                     }),
 
                                 // ── Logo Footer ──────────────────────────────
@@ -259,10 +268,13 @@ class CoordinateResource extends Resource
                                     ->imageEditor()
                                     ->maxSize(2048)
                                     ->columnSpanFull()
-                                    ->afterStateHydrated(fn ($component, $state) => $component->state(ImagePath::normalize($state)))
                                     ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
-                                        $path = (string) $file->store('coordonnees', 'public');
-                                        return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp($path) ?? $path;
+                                        $path = $file->store('coordonnees', 'public');
+                                        if (! $path) {
+                                            $ext  = $file->getClientOriginalExtension() ?: 'jpg';
+                                            $path = $file->storeAs('coordonnees', \Illuminate\Support\Str::uuid() . '.' . $ext, 'public');
+                                        }
+                                        return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp((string) $path) ?? (string) $path;
                                     }),
 
                                 // ── Favicon ──────────────────────────────────
@@ -294,8 +306,7 @@ class CoordinateResource extends Resource
                                     ->image()
                                     ->maxSize(512)
                                     ->acceptedFileTypes(['image/png', 'image/x-icon', 'image/vnd.microsoft.icon', 'image/jpeg', 'image/webp'])
-                                    ->columnSpanFull()
-                                    ->afterStateHydrated(fn ($component, $state) => $component->state(ImagePath::normalize($state))),
+                                    ->columnSpanFull(),
 
                             ]),
                         ]),

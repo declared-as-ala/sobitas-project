@@ -112,11 +112,13 @@ class ProductResource extends Resource
                                         ->image()
                                         ->imageEditor()
                                         ->maxSize(4096)
-                                        ->afterStateHydrated(fn ($component, $state) =>
-                                            $component->state(ImagePath::normalize($state)))
                                         ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
-                                            $path = (string) $file->store('products', 'public');
-                                            return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp($path) ?? $path;
+                                            $path = $file->store('products', 'public');
+                                            if (! $path) {
+                                                $ext  = $file->getClientOriginalExtension() ?: 'jpg';
+                                                $path = $file->storeAs('products', \Illuminate\Support\Str::uuid() . '.' . $ext, 'public');
+                                            }
+                                            return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp((string) $path) ?? (string) $path;
                                         }),
                                     FileUpload::make('images')
                                         ->label('Gallery (images secondaires)')
@@ -126,13 +128,13 @@ class ProductResource extends Resource
                                         ->multiple()
                                         ->reorderable()
                                         ->maxSize(4096)
-                                        ->afterStateHydrated(function ($component, $state) {
-                                            $arr = is_array($state) ? $state : (is_string($state) ? json_decode($state, true) : []);
-                                            $component->state(ImagePath::normalizeArray($arr ?: []));
-                                        })
                                         ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
-                                            $path = (string) $file->store('products', 'public');
-                                            return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp($path) ?? $path;
+                                            $path = $file->store('products', 'public');
+                                            if (! $path) {
+                                                $ext  = $file->getClientOriginalExtension() ?: 'jpg';
+                                                $path = $file->storeAs('products', \Illuminate\Support\Str::uuid() . '.' . $ext, 'public');
+                                            }
+                                            return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp((string) $path) ?? (string) $path;
                                         }),
                                 ]),
                             Section::make('Flags produit')

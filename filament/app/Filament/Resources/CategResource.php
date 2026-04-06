@@ -65,20 +65,13 @@ class CategResource extends Resource
                         ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
                         ->helperText('Formats acceptés : JPEG, PNG, WebP, GIF — Max 4 Mo')
                         ->columnSpanFull()
-                        ->afterStateHydrated(function ($component, $state): void {
-                            $component->state(\App\Filament\Support\ImagePath::normalize($state));
-                        })
-                        ->afterStateUpdated(function ($state, $record): void {
-                            if ($record && $record->cover && $state && $state !== $record->cover) {
-                                $old = \App\Filament\Support\ImagePath::normalize($record->cover);
-                                if ($old && Storage::disk('public')->exists($old)) {
-                                    Storage::disk('public')->delete($old);
-                                }
-                            }
-                        })
                         ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
-                            $path = (string) $file->store('categories', 'public');
-                            return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp($path) ?? $path;
+                            $path = $file->store('categories', 'public');
+                            if (! $path) {
+                                $ext  = $file->getClientOriginalExtension() ?: 'jpg';
+                                $path = $file->storeAs('categories', \Illuminate\Support\Str::uuid() . '.' . $ext, 'public');
+                            }
+                            return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp((string) $path) ?? (string) $path;
                         }),
                 ]),
 
