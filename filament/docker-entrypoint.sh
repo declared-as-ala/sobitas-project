@@ -103,11 +103,11 @@ fi
 
 # Rebuild caches BEFORE php-fpm starts
 echo "Rebuilding Laravel caches..."
-php artisan optimize:clear
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
-php artisan event:cache
+php artisan optimize:clear || true
+php artisan config:cache || true
+php artisan route:cache || true
+php artisan view:cache || true
+php artisan event:cache || true
 
 echo "✓ Laravel caches rebuilt"
 
