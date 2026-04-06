@@ -51,6 +51,7 @@ class ArticleResource extends Resource
             ->schema([
                 Tabs::make('article_tabs')
                     ->persistTabInQueryString()
+                    ->columnSpanFull()
                     ->tabs([
 
                         // ═══════════════════════════════════════════════════════
@@ -104,7 +105,7 @@ class ArticleResource extends Resource
                                     ->description('Rédigez le contenu complet de votre article.')
                                     ->schema([
                                         Forms\Components\RichEditor::make('description')
-                                            ->label(false)
+                                            ->hiddenLabel()
                                             ->columnSpanFull()
                                             ->toolbarButtons([
                                                 ['bold', 'italic', 'underline', 'strike'],
@@ -130,7 +131,7 @@ class ArticleResource extends Resource
                                     ->description('Format recommandé : 21:9  ·  JPEG, PNG ou WebP  ·  Max 5 Mo')
                                     ->schema([
                                         Forms\Components\FileUpload::make('cover')
-                                            ->label(false)
+                                            ->hiddenLabel()
                                             ->disk('public')
                                             ->directory('articles')
                                             ->image()
@@ -219,7 +220,7 @@ class ArticleResource extends Resource
                                             ->description('Prévisualisation dans les résultats de recherche.')
                                             ->schema([
                                                 Forms\Components\Placeholder::make('serp_preview')
-                                                    ->label(false)
+                                                    ->hiddenLabel()
                                                     ->content(function (Get $get): HtmlString {
                                                         $rawTitle = $get('meta_title') ?: ($get('designation_fr') ?: 'Titre de votre article');
                                                         $rawDesc  = $get('meta_description_fr') ?: 'Renseignez une meta description pour voir comment votre article apparaîtra dans les résultats de recherche Google.';

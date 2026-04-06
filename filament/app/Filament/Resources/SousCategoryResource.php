@@ -14,6 +14,8 @@ use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -58,6 +60,7 @@ class SousCategoryResource extends Resource
             ->schema([
                 Tabs::make('sous_categorie_tabs')
                     ->persistTabInQueryString()
+                    ->columnSpanFull()
                     ->tabs([
                         Tab::make('Contenu')
                             ->icon('heroicon-o-pencil-square')
@@ -84,7 +87,7 @@ class SousCategoryResource extends Resource
                                                 ->required()
                                                 ->maxLength(255)
                                                 ->live(debounce: 400)
-                                                ->afterStateUpdated(function ($state, callable $set, callable $get): void {
+                                                ->afterStateUpdated(function ($state, Set $set, Get $get): void {
                                                     $des = (string) ($state ?? '');
                                                     $newSlug = Str::slug($des);
                                                     $slug = (string) ($get('slug') ?? '');

@@ -35,8 +35,9 @@ class CoordinateResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema->schema([
+        return $schema->columns(1)->schema([
             Tabs::make('Coordonnées')
+                ->columnSpanFull()
                 ->tabs([
 
                     Tab::make('Informations générales')

@@ -27,7 +27,7 @@ class SlideResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema->schema([
+        return $schema->columns(1)->schema([
             Section::make('Image')
                 ->schema([
                     FileUpload::make('image')
