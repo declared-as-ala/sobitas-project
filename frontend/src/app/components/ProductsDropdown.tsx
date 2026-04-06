@@ -240,9 +240,6 @@ export function ProductsDropdown() {
                   className="font-semibold text-xs sm:text-sm text-red-600 dark:text-red-500 mb-1 leading-tight hover:underline block"
                   loadingMessage={`Chargement de ${category.title}...`}
                   onMouseEnter={() => router.prefetch(categoryHref)}
-                  onMouseDown={(e: React.MouseEvent<HTMLAnchorElement>) => {
-                    e.preventDefault();
-                  }}
                   onClick={closeMenu}
                 >
                   {category.title}
@@ -266,9 +263,6 @@ export function ProductsDropdown() {
                           className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-500 transition-colors block py-0.5 break-words"
                           loadingMessage={`Chargement de ${item}...`}
                           onMouseEnter={() => router.prefetch(itemHref)}
-                          onMouseDown={(e: React.MouseEvent<HTMLAnchorElement>) => {
-                            e.preventDefault();
-                          }}
                           onClick={closeMenu}
                         >
                           {item}
@@ -292,9 +286,6 @@ export function ProductsDropdown() {
           className="text-sm font-semibold text-red-600 dark:text-red-500 hover:underline"
           loadingMessage="Chargement de la boutique..."
           onMouseEnter={() => router.prefetch('/shop')}
-          onMouseDown={(e: React.MouseEvent<HTMLAnchorElement>) => {
-            e.preventDefault();
-          }}
           onClick={closeMenu}
         >
           Voir tous les produits →
