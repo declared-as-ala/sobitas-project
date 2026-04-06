@@ -27,14 +27,17 @@ export function isRupture(product: ProductLike): boolean {
 
 /**
  * Whether the product is in stock. Single source of truth: not rupture AND qte > 0.
+ * If qte is not provided by the API (undefined/null), rely only on the rupture flag.
  */
 export function isInStock(product: ProductLike): boolean {
   if (isRupture(product)) return false;
-  return Number(product.qte ?? 0) > 0;
+  if (product.qte == null) return true; // qte not provided (e.g. similar products endpoint), rely on rupture flag only
+  return Number(product.qte) > 0;
 }
 
 /**
  * Stock disponible pour un produit. Returns 0 when rupture is true.
+ * If no quantity info is available, returns 1 to allow adding to cart.
  */
 export function getStockDisponible(product: ProductLike): number {
   if (isRupture(product)) return 0;
@@ -45,7 +48,7 @@ export function getStockDisponible(product: ProductLike): number {
   if (raw != null && typeof raw === 'number' && !Number.isNaN(raw) && raw >= 0) {
     return Math.floor(raw);
   }
-  return 0;
+  return 1; // No quantity info available, assume in stock (rupture flag is authoritative)
 }
 
 export interface ProductStockStatus {
