@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
-import { getStorageUrl, isStorageImageUrl } from '@/services/api';
+import { getStorageUrl } from '@/services/api';
 import type { Slide } from '@/types';
 
 // Breakpoint: show mobile slides below this width, web slides at or above
@@ -52,11 +52,10 @@ const SlideImage = memo(({
         sizes="100vw"
         quality={75}
         loading="lazy"
-        unoptimized={isStorageImageUrl(src)}
       />
     );
   }
-  
+
   // First slide - critical for LCP; quality 75 saves ~9 KiB and improves LCP on mobile
   return (
     <Image
@@ -68,7 +67,6 @@ const SlideImage = memo(({
       className={className || imageClass}
       sizes="(max-width: 768px) 100vw, 100vw"
       quality={75}
-      unoptimized={isStorageImageUrl(src)}
     />
   );
 });

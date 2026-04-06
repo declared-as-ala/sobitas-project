@@ -1,4 +1,5 @@
 /** @type {import('next').NextConfig} */
+const path = require('path');
 // NEXT_PUBLIC_API_URL = what the client calls (e.g. https://protein.tn/api-proxy for production)
 // API_BACKEND_URL = where /api-proxy rewrites to (e.g. https://admin.protein.tn/api)
 // STORAGE_BACKEND_URL = where /storage-proxy rewrites to (e.g. https://admin.protein.tn/storage)
@@ -7,6 +8,8 @@ const STORAGE_BACKEND_URL = process.env.STORAGE_BACKEND_URL || 'https://admin.pr
 
 const nextConfig = {
   output: 'standalone',
+  // Tell Next.js the monorepo root to avoid the "multiple lockfiles" workspace warning.
+  outputFileTracingRoot: path.join(__dirname, '..'),
   reactStrictMode: true,
   eslint: { ignoreDuringBuilds: true },
   images: {
@@ -15,7 +18,6 @@ const nextConfig = {
     formats: ['image/avif', 'image/webp'],
     remotePatterns: [
       { protocol: 'https', hostname: 'admin.protein.tn' },
-      { protocol: 'https', hostname: 'admin.sobitas.tn' },
       { protocol: 'https', hostname: 'images.unsplash.com' },
       { protocol: 'https', hostname: 'protein.tn' },
       { protocol: 'https', hostname: 'sobitas.tn' },

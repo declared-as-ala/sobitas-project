@@ -110,7 +110,8 @@ export async function apiFetch<T = unknown>(
   // in cases where callers forget to await or attach their own .catch.
   const rawPromise = doFetch<T>(url, options, 0);
   const promise = rawPromise.catch((error) => {
-    if (error instanceof ApiError && typeof console !== 'undefined') {
+    // Log unexpected errors only — 404s are expected (e.g. subcategory probing).
+    if (error instanceof ApiError && error.status !== 404 && typeof console !== 'undefined') {
       console.error('[apiFetch] Unhandled ApiError', {
         url,
         status: error.status,
@@ -130,7 +131,7 @@ export async function apiFetch<T = unknown>(
         clearTimeout(entry.ttlId);
         inFlight.delete(url);
       }
-    });
+    }).catch(() => {}); // suppress unhandled rejection propagated through finally chain
   }
   return promise;
 }

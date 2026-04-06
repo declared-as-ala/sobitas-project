@@ -397,8 +397,9 @@ export function buildArticleSchema(article: {
 /**
  * FAQPage schema. Match visible questions/answers (e.g. from getFAQs() or product FAQs).
  */
-export function buildFAQPageSchema(faqs: FAQ[]): object | null {
-  const list = faqs.filter((f) => f.question && f.reponse);
+export function buildFAQPageSchema(faqs: FAQ[] | unknown): object | null {
+  const arr: FAQ[] = Array.isArray(faqs) ? faqs : ((faqs as any)?.data ?? []);
+  const list = arr.filter((f) => f.question && f.reponse);
   if (!list.length) return null;
   return {
     '@context': 'https://schema.org',

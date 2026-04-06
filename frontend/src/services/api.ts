@@ -140,7 +140,7 @@ export const getStorageUrl = (path?: string, cacheBust?: string | number): strin
 /** True if the URL is from our storage (storage-proxy or admin backend). Use to set unoptimized on next/image. */
 export const isStorageImageUrl = (url: string): boolean =>
   typeof url === 'string' &&
-  (url.includes('storage-proxy') || url.includes('admin.protein.tn') || url.includes('admin.sobitas.tn'));
+  (url.includes('storage-proxy') || url.includes('admin.protein.tn'));
 
 // ==================== PUBLIC API ENDPOINTS ====================
 
@@ -203,8 +203,10 @@ export const getHome = async (): Promise<HomeData> => {
 
 // Categories
 export const getCategories = async (signal?: AbortSignal): Promise<Category[]> => {
-  const response = await api.get<Category[]>('/categories', { signal });
-  return response.data;
+  const response = await api.get<any>('/categories', { signal });
+  const raw = response.data;
+  // Backend returns paginated response {data: [...], meta: {}, links: {}}
+  return Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
 };
 
 // Slides – use same API base as rest of app
@@ -602,7 +604,7 @@ export const getTags = async (): Promise<any[]> => {
 // ─────────────────────────────────────────────────────────
 
 export const getAllArticles = async (): Promise<Article[]> => {
-  const response = await fetch(`${API_URL}/all_articles`, {
+  const response = await fetch(`${API_URL}/all_articles?per_page=100`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -616,7 +618,8 @@ export const getAllArticles = async (): Promise<Article[]> => {
   }
 
   const data = await response.json();
-  return Array.isArray(data) ? data : (data.articles || []);
+  // Backend returns paginated {data:[...], meta, links} or plain array
+  return Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : (data.articles || []));
 };
 
 export const getArticleDetails = async (slug: string): Promise<Article> => {
@@ -665,7 +668,7 @@ export const getLatestArticles = async (): Promise<Article[]> => {
  * Data Cache involved).  No ?_t= needed.
  */
 export const getAllArticlesClient = async (): Promise<Article[]> => {
-  const response = await fetch(`${API_URL}/all_articles`, {
+  const response = await fetch(`${API_URL}/all_articles?per_page=100`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -681,7 +684,8 @@ export const getAllArticlesClient = async (): Promise<Article[]> => {
   }
 
   const data = await response.json();
-  return Array.isArray(data) ? data : (data.articles || []);
+  // Backend returns paginated {data:[...], meta, links} or plain array
+  return Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : (data.articles || []));
 };
 
 // Media
