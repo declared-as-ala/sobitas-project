@@ -227,11 +227,11 @@ table.ftva-lines {
     margin-top: 0;
 }
 table.ftva-lines col.c-num   { width: 4%; }
-table.ftva-lines col.c-prod  { width: 28%; }
+table.ftva-lines col.c-prod  { width: 22%; }
 table.ftva-lines col.c-qty   { width: 5%; }
-table.ftva-lines col.c-puht  { width: 10%; }
-table.ftva-lines col.c-puttc { width: 10%; }
-table.ftva-lines col.c-tht   { width: 10%; }
+table.ftva-lines col.c-puht  { width: 12%; }
+table.ftva-lines col.c-puttc { width: 12%; }
+table.ftva-lines col.c-tht   { width: 12%; }
 table.ftva-lines col.c-tva   { width: 6%; }
 table.ftva-lines col.c-mtva  { width: 11%; }
 table.ftva-lines col.c-tttc  { width: 16%; }
@@ -316,6 +316,7 @@ table.ftva-lines td.td-right {
     padding-right: 8px;
     font-variant-numeric: tabular-nums;
     color: #334155;
+    white-space: nowrap;
 }
 table.ftva-lines td.td-tva-pct {
     text-align: center;
@@ -330,6 +331,7 @@ table.ftva-lines td.td-puttc {
     font-variant-numeric: tabular-nums;
     font-weight: 700;
     color: #c2410c;
+    white-space: nowrap;
     background: #fff7ed !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
@@ -348,6 +350,7 @@ table.ftva-lines td.td-ttc {
     font-weight: 800;
     color: #9a3412;
     font-size: 9pt;
+    white-space: nowrap;
 }
 
 /* ── Totals summary (right-aligned) ────────────────────────── */
@@ -385,6 +388,7 @@ table.ftva-totals td:last-child {
     font-weight: 600;
     color: #0f172a;
     min-width: 110px;
+    white-space: nowrap;
 }
 table.ftva-totals tr:last-child td {
     border-bottom: none;

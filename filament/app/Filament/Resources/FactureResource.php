@@ -105,8 +105,7 @@ class FactureResource extends Resource
                     'factures.id',
                     'factures.numero',
                     'factures.client_id',
-                    'factures.prix_ttc',
-                    'factures.timbre',
+                    'factures.net_a_payer',
                     'factures.created_at',
                 ])
                 ->with('client:id,name')
@@ -126,15 +125,12 @@ class FactureResource extends Resource
                     ->label('Clients')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('montant_a_payer')
-                    ->label('Montant à payer')
-                    ->state(fn (Facture $record): float => max(
-                        (float) ($record->prix_ttc ?? 0) - (float) ($record->timbre ?? 0),
-                        0,
-                    ))
-                    ->money('TND', divideBy: 1)
+                Tables\Columns\TextColumn::make('net_a_payer')
+                    ->label('Net à payer')
+                    ->formatStateUsing(fn ($state): string => number_format((float) ($state ?? 0), 3, '.', ' ') . ' DT')
                     ->alignEnd()
-                    ->weight(\Filament\Support\Enums\FontWeight::Bold),
+                    ->weight(\Filament\Support\Enums\FontWeight::Bold)
+                    ->color('primary'),
             ])
             ->defaultSort('created_at', 'desc')
             ->defaultPaginationPageOption(25)

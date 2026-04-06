@@ -236,8 +236,8 @@
         print-color-adjust: exact !important;
     }
     table.doc-a4-lines thead th.doc-a4-col-num { width: 5%; text-align: center; }
-    table.doc-a4-lines thead th.doc-a4-col-prod { width: 34%; }
-    table.doc-a4-lines thead th.doc-a4-col-numcell { width: 11%; text-align: right; padding-right: 12px; }
+    table.doc-a4-lines thead th.doc-a4-col-prod { width: 28%; }
+    table.doc-a4-lines thead th.doc-a4-col-numcell { width: 16%; text-align: right; padding-right: 12px; }
     table.doc-a4-lines tbody td {
         padding: 7px 10px;
         border: 1px solid #e2e8f0;
@@ -268,6 +268,7 @@
         font-variant-numeric: tabular-nums;
         color: #334155;
         padding-right: 12px;
+        white-space: nowrap;
     }
 
     /* ── Totals block ── */
@@ -306,6 +307,7 @@
         font-variant-numeric: tabular-nums;
         font-weight: 600;
         color: #0f172a;
+        white-space: nowrap;
     }
     table.doc-a4-totals tr.doc-a4-totals__grand td {
         padding: 8px 12px;
