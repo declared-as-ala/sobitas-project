@@ -1,15 +1,21 @@
 /** @type {import('next').NextConfig} */
 const path = require('path');
+const fs = require('fs');
 // NEXT_PUBLIC_API_URL = what the client calls (e.g. https://protein.tn/api-proxy for production)
 // API_BACKEND_URL = where /api-proxy rewrites to (e.g. https://admin.protein.tn/api)
 // STORAGE_BACKEND_URL = where /storage-proxy rewrites to (e.g. https://admin.protein.tn/storage)
 const API_BACKEND_URL = process.env.API_BACKEND_URL || 'https://admin.protein.tn/api';
 const STORAGE_BACKEND_URL = process.env.STORAGE_BACKEND_URL || 'https://admin.protein.tn/storage';
 
+// Only set outputFileTracingRoot when running in the monorepo (parent package-lock.json exists).
+// In Docker the build context is only frontend/ so the parent dir has no package.json — setting
+// this in Docker breaks the standalone build and server.js is not produced.
+const parentLockfile = path.join(__dirname, '..', 'package-lock.json');
+const monoRepoRoot = fs.existsSync(parentLockfile) ? path.join(__dirname, '..') : undefined;
+
 const nextConfig = {
   output: 'standalone',
-  // Tell Next.js the monorepo root to avoid the "multiple lockfiles" workspace warning.
-  outputFileTracingRoot: path.join(__dirname, '..'),
+  ...(monoRepoRoot && { outputFileTracingRoot: monoRepoRoot }),
   reactStrictMode: true,
   eslint: { ignoreDuringBuilds: true },
   images: {
