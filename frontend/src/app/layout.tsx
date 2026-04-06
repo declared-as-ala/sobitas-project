@@ -8,6 +8,7 @@ import { Providers } from "@/app/providers";
 import { GlobalLoader } from "@/app/components/GlobalLoader";
 import { NavigationHandler } from "@/app/components/NavigationHandler";
 import { DeferredToaster } from "@/app/components/DeferredToaster";
+import { InstallAppBanner } from "@/app/components/InstallAppBanner";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -107,6 +108,11 @@ export default async function RootLayout({
   return (
     <html lang="fr" suppressHydrationWarning data-scroll-behavior="smooth">
       <head>
+        <meta name="theme-color" content="#dc2626" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Protein.tn" />
         {/* Favicons */}
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
@@ -126,6 +132,10 @@ export default async function RootLayout({
       </head>
       <body className={inter.className}>
         {/* Google tag (gtag.js) — deferred with afterInteractive to avoid blocking FCP */}
+        {/* Register service worker for PWA install support */}
+        <Script id="register-sw" strategy="afterInteractive">
+          {`if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').catch(() => {}); }`}
+        </Script>
         <Script src="https://www.googletagmanager.com/gtag/js?id=G-0J0J27JZ7D" strategy="afterInteractive" />
         <Script id="gtag-init" strategy="afterInteractive">
           {`window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'G-0J0J27JZ7D');`}
@@ -138,6 +148,7 @@ export default async function RootLayout({
             {children}
             <GlobalLoader />
             <DeferredToaster />
+            <InstallAppBanner />
           </Providers>
         </ThemeProvider>
       </body>
