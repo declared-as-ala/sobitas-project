@@ -34,18 +34,11 @@ class Coordinate extends Model
 
     /**
      * Public origin for building asset URLs (scheme + host [+ base path]).
-     * Uses the current HTTP request so logos work behind reverse proxies and
-     * in Docker environments where APP_URL may not match the real browser host.
+     * Uses APP_URL from config so URLs are always correct regardless of
+     * what Host header the reverse proxy forwards to PHP-FPM.
      */
     public static function originRootUrl(): string
     {
-        if (! app()->runningInConsole() && request()) {
-            $host = request()->getSchemeAndHttpHost();
-            $base = rtrim((string) request()->getBasePath(), '/');
-
-            return $base !== '' ? $host . $base : $host;
-        }
-
         return rtrim((string) config('app.url'), '/');
     }
 
