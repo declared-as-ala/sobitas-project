@@ -197,12 +197,6 @@ class ProductResource extends Resource
                                                     $set('qte', 1);
                                                 }
                                             }),
-                                        Forms\Components\TextInput::make('low_stock_threshold')
-                                            ->label('Seuil alerte stock')
-                                            ->numeric()
-                                            ->default(5)
-                                            ->minValue(0)
-                                            ->helperText('Alerte quand qté ≤ ce seuil.'),
                                     ]),
                                 ]),
                         ]),
