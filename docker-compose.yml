@@ -62,8 +62,8 @@ services:
 
       APP_ENV: production
       APP_DEBUG: "false"
-      APP_URL: https://admin.sobitas.tn
-      ASSET_URL: https://admin.sobitas.tn
+      APP_URL: https://admin.protein.tn
+      ASSET_URL: https://admin.protein.tn
       FILESYSTEM_DISK: public
       FILESYSTEM_DRIVER: public
 
@@ -115,7 +115,7 @@ services:
 
       APP_ENV: production
       APP_DEBUG: "false"
-      APP_URL: https://admin.sobitas.tn
+      APP_URL: https://admin.protein.tn
       FILESYSTEM_DISK: public
       FILESYSTEM_DRIVER: public
 
@@ -206,8 +206,8 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      NEXT_PUBLIC_API_URL: https://admin.sobitas.tn/api
-      NEXT_PUBLIC_STORAGE_URL: https://admin.sobitas.tn/storage
+      NEXT_PUBLIC_API_URL: https://admin.protein.tn/api
+      NEXT_PUBLIC_STORAGE_URL: https://admin.protein.tn/storage
     ports:
       - "3002:3000"
     networks:
