@@ -207,10 +207,10 @@ class ProductResource extends Resource
                         ]),
 
                     Tab::make("3. Prix & Promotion")
-                        ->icon(‘heroicon-o-currency-dollar’)
+                        ->icon('heroicon-o-currency-dollar')
                         ->schema([
                             Section::make("Prix de vente")
-                                ->icon(‘heroicon-o-tag’)
+                                ->icon('heroicon-o-tag')
                                 ->description('Définissez le prix de vente et le prix promotionnel du produit.')
                                 ->schema([
                                     Grid::make(2)->schema([
@@ -221,8 +221,8 @@ class ProductResource extends Resource
                                             ->placeholder("0.000")
                                             ->step(0.001)
                                             ->minValue(0)
-                                            ->extraInputAttributes([‘class’ => ‘text-lg font-semibold’])
-                                            ->helperText(‘Prix de vente affiché sur le site.’),
+                                            ->extraInputAttributes(['class' => 'text-lg font-semibold'])
+                                            ->helperText('Prix de vente affiché sur le site.'),
                                         Forms\Components\TextInput::make("promo")
                                             ->label("Prix Promo")
                                             ->numeric()
@@ -230,38 +230,38 @@ class ProductResource extends Resource
                                             ->placeholder("0.000")
                                             ->step(0.001)
                                             ->minValue(0)
-                                            ->extraInputAttributes([‘class’ => ‘text-lg font-semibold text-red-600’])
-                                            ->helperText(‘Laissez vide si aucune promotion.’),
+                                            ->extraInputAttributes(['class' => 'text-lg font-semibold text-red-600'])
+                                            ->helperText('Laissez vide si aucune promotion.'),
                                     ]),
                                     Forms\Components\DateTimePicker::make("promo_expiration_date")
-                                        ->label("Date d’expiration de la promotion")
-                                        ->prefixIcon(‘heroicon-o-clock’)
-                                        ->helperText("Après cette date, le produit n’apparaît plus dans les Ventes Flash.")
+                                        ->label("Date d'expiration de la promotion")
+                                        ->prefixIcon('heroicon-o-clock')
+                                        ->helperText("Après cette date, le produit n'apparaît plus dans les Ventes Flash.")
                                         ->columnSpanFull(),
                                 ]),
                         ]),
 
-                    Tab::make(‘4. Contenu produit’)
-                        ->icon(‘heroicon-o-chat-bubble-left-right’)
+                    Tab::make('4. Contenu produit')
+                        ->icon('heroicon-o-chat-bubble-left-right')
                         ->schema([
-                            Section::make(‘Questions fréquentes (FAQ)’)
-                                ->icon(‘heroicon-o-question-mark-circle’)
-                                ->description(‘Ajoutez les questions/réponses qui apparaîtront sur la page produit.’)
+                            Section::make('Questions fréquentes (FAQ)')
+                                ->icon('heroicon-o-question-mark-circle')
+                                ->description('Ajoutez les questions/réponses qui apparaîtront sur la page produit.')
                                 ->schema([
-                                    Forms\Components\Repeater::make(‘faq’)
-                                        ->label(‘’)
-                                        ->visible(fn (): bool => self::hasProductColumn(‘faq’))
-                                        ->dehydrated(fn (): bool => self::hasProductColumn(‘faq’))
+                                    Forms\Components\Repeater::make('faq')
+                                        ->label('')
+                                        ->visible(fn (): bool => self::hasProductColumn('faq'))
+                                        ->dehydrated(fn (): bool => self::hasProductColumn('faq'))
                                         ->schema([
-                                            Forms\Components\TextInput::make(‘q’)
-                                                ->label(‘Question’)
-                                                ->placeholder(‘Ex : Quelle est la dose recommandée ?’)
-                                                ->prefixIcon(‘heroicon-o-question-mark-circle’)
+                                            Forms\Components\TextInput::make('q')
+                                                ->label('Question')
+                                                ->placeholder('Ex : Quelle est la dose recommandée ?')
+                                                ->prefixIcon('heroicon-o-question-mark-circle')
                                                 ->required()
                                                 ->columnSpanFull(),
-                                            Forms\Components\Textarea::make(‘a’)
-                                                ->label(‘Réponse’)
-                                                ->placeholder(‘Rédigez une réponse claire et concise…’)
+                                            Forms\Components\Textarea::make('a')
+                                                ->label('Réponse')
+                                                ->placeholder('Rédigez une réponse claire et concise…')
                                                 ->rows(3)
                                                 ->required()
                                                 ->columnSpanFull(),
@@ -270,8 +270,8 @@ class ProductResource extends Resource
                                         ->default([])
                                         ->collapsible()
                                         ->collapsed()
-                                        ->itemLabel(fn (array $state): ?string => $state[‘q’] ? ‘❓ ‘ . Str::limit($state[‘q’], 60) : ‘Nouvelle question’)
-                                        ->addActionLabel(‘Ajouter une question’)
+                                        ->itemLabel(fn (array $state): ?string => $state['q'] ? '❓ ' . Str::limit($state['q'], 60) : 'Nouvelle question')
+                                        ->addActionLabel('Ajouter une question')
                                         ->reorderable()
                                         ->cloneable()
                                         ->columnSpanFull(),
