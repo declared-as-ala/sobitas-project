@@ -561,30 +561,35 @@ export const getBestSellers = async (): Promise<Product[]> => {
 };
 
 export const getFlashSales = async (): Promise<Product[]> => {
-  const response = await api.get('/ventes_flash');
-  return response.data;
+  const response = await api.get('/ventes_flash?per_page=100');
+  const raw = response.data;
+  return Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
 };
 
 export const getPacks = async (): Promise<Product[]> => {
-  const response = await api.get('/packs');
-  return response.data;
+  const response = await api.get('/packs?per_page=100');
+  const raw = response.data;
+  return Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
 };
 
 // Brands
 export const getAllBrands = async (): Promise<Brand[]> => {
-  const response = await api.get('/all_brands');
-  return response.data;
+  const response = await api.get('/all_brands?per_page=100');
+  const raw = response.data;
+  return Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
 };
 
 // Aromas & Tags
 export const getAromas = async (): Promise<any[]> => {
-  const response = await api.get('/aromes');
-  return response.data;
+  const response = await api.get('/aromes?per_page=100');
+  const raw = response.data;
+  return Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
 };
 
 export const getTags = async (): Promise<any[]> => {
-  const response = await api.get('/tags');
-  return response.data;
+  const response = await api.get('/tags?per_page=100');
+  const raw = response.data;
+  return Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
 };
 
 // ==================== ARTICLES / BLOG ====================
@@ -696,14 +701,16 @@ export const getMedia = async (): Promise<any> => {
 
 // Services
 export const getServices = async (): Promise<Service[]> => {
-  const response = await api.get<Service[]>('/services');
-  return response.data;
+  const response = await api.get('/services?per_page=100');
+  const raw = response.data;
+  return Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
 };
 
 // Pages (main API – for /page/[slug] etc.)
 export const getAppPages = async (): Promise<Page[]> => {
-  const response = await api.get<Page[]>('/pages');
-  return response.data;
+  const response = await api.get('/pages?per_page=100');
+  const raw = response.data;
+  return Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
 };
 
 export const getPageBySlug = async (slug: string): Promise<Page> => {
@@ -720,8 +727,9 @@ export const getPageBySlug = async (slug: string): Promise<Page> => {
 
 // FAQs
 export const getFAQs = async (): Promise<FAQ[]> => {
-  const response = await api.get<FAQ[]>('/faqs');
-  return response.data;
+  const response = await api.get('/faqs?per_page=100');
+  const raw = response.data;
+  return Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
 };
 
 // SEO
