@@ -211,7 +211,7 @@ class ProductResource extends Resource
                         ->schema([
                             Section::make("Prix de vente")
                                 ->icon(‘heroicon-o-tag’)
-                                ->description(‘Définissez le prix de vente et le prix promotionnel du produit.’)
+                                ->description('Définissez le prix de vente et le prix promotionnel du produit.')
                                 ->schema([
                                     Grid::make(2)->schema([
                                         Forms\Components\TextInput::make("prix")
