@@ -107,14 +107,13 @@ class AdminPanelProvider extends PanelProvider
             ->renderHook(
                 PanelsRenderHook::HEAD_END,
                 function (): string {
-                    $origin = rtrim(Coordinate::originRootUrl(), '/');
-
-                    // Login background: must use full URL (not /images/...) so it works behind subpaths & Docker.
+                    // Login background — asset() uses APP_URL (forced in AppServiceProvider)
+                    // so it always resolves to the correct public domain.
                     $bgUrl = Coordinate::publicLoginBackgroundUrl();
                     if ($bgUrl === '') {
                         foreach (['images/auth/gym-bg.jpg', 'images/auth/image.png', 'images/auth/image.jpg'] as $rel) {
                             if (is_file(public_path($rel))) {
-                                $bgUrl = $origin . '/' . str_replace('\\', '/', $rel);
+                                $bgUrl = asset($rel);
                                 break;
                             }
                         }
@@ -129,9 +128,9 @@ class AdminPanelProvider extends PanelProvider
                     return implode("\n", [
                         '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.min.css" />',
                         view('filament.components.custom-admin-styles')->render(),
-                        '<link rel="stylesheet" href="' . $origin . '/css/filament/topbar.css" />',
-                        '<link rel="stylesheet" href="' . $origin . '/css/filament/doc-edit.css" />',
-                        '<link rel="stylesheet" href="' . $origin . '/css/filament/auth.css" />',
+                        '<link rel="stylesheet" href="' . asset('css/filament/topbar.css') . '" />',
+                        '<link rel="stylesheet" href="' . asset('css/filament/doc-edit.css') . '" />',
+                        '<link rel="stylesheet" href="' . asset('css/filament/auth.css') . '" />',
                         '<style id="filament-login-background">' . $loginBgStyle . '</style>',
                     ]);
                 }
