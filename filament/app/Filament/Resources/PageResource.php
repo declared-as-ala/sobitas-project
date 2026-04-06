@@ -63,8 +63,12 @@ class PageResource extends Resource
                 ->imageEditor()
                 ->maxSize(4096)
                 ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
-                    $path = (string) $file->store('pages', 'public');
-                    return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp($path) ?? $path;
+                    $path = $file->store('pages', 'public');
+                    if (! $path) {
+                        $ext  = $file->getClientOriginalExtension() ?: 'jpg';
+                        $path = $file->storeAs('pages', \Illuminate\Support\Str::uuid() . '.' . $ext, 'public');
+                    }
+                    return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp((string) $path) ?? (string) $path;
                 }),
             Forms\Components\Select::make('status')
                 ->label('Statut')

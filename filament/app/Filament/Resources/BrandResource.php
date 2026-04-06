@@ -69,8 +69,12 @@ class BrandResource extends Resource
                 ->imageEditor()
                 ->maxSize(2048)
                 ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
-                    $path = (string) $file->store('brands', 'public');
-                    return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp($path) ?? $path;
+                    $path = $file->store('brands', 'public');
+                    if (! $path) {
+                        $ext  = $file->getClientOriginalExtension() ?: 'jpg';
+                        $path = $file->storeAs('brands', \Illuminate\Support\Str::uuid() . '.' . $ext, 'public');
+                    }
+                    return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp((string) $path) ?? (string) $path;
                 }),
 
             Forms\Components\TextInput::make('alt_cover')
