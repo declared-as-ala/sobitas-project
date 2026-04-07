@@ -307,9 +307,12 @@ class ApisController extends Controller
         $query = Product::where('publier', 1)->select(self::PRODUCT_LISTING);
 
         if ($search = trim((string) $request->get('search', ''))) {
-            $query->where(function ($q) use ($search) {
+            $matchingBrandIds = Brand::where('designation_fr', 'like', '%' . $search . '%')->pluck('id');
+            $query->where(function ($q) use ($search, $matchingBrandIds) {
                 $q->where('designation_fr', 'like', '%' . $search . '%')
-                    ->orWhere('slug', 'like', '%' . $search . '%');
+                    ->orWhere('designation_ar', 'like', '%' . $search . '%')
+                    ->orWhere('slug', 'like', '%' . $search . '%')
+                    ->orWhereIn('brand_id', $matchingBrandIds);
             });
         }
         if ($request->filled('brand_id')) {
@@ -482,8 +485,14 @@ class ApisController extends Controller
             return ['products' => [], 'brands' => []];
         }
 
-        $products = Product::where('designation_fr', 'LIKE', "%{$text}%")
-            ->where('publier', 1)
+        $matchingBrandIds = Brand::where('designation_fr', 'like', "%{$text}%")->pluck('id');
+        $products = Product::where('publier', 1)
+            ->where(function ($q) use ($text, $matchingBrandIds) {
+                $q->where('designation_fr', 'like', "%{$text}%")
+                  ->orWhere('designation_ar', 'like', "%{$text}%")
+                  ->orWhere('slug', 'like', "%{$text}%")
+                  ->orWhereIn('brand_id', $matchingBrandIds);
+            })
             ->select(self::PRODUCT_FULL_LIST_COLUMNS)
             ->with('aromes:id,designation_fr', 'tags:id,designation_fr')
             ->limit(50)

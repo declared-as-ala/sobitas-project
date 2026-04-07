@@ -182,8 +182,9 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
     setIsLoading(true);
     try {
       const { products: results } = await searchProducts(trimmed);
-      setProducts(results || []);
-    } catch {
+      setProducts(Array.isArray(results) ? results : []);
+    } catch (err) {
+      console.error('[SearchBar] search failed:', err);
       setProducts([]);
     } finally {
       setIsLoading(false);
