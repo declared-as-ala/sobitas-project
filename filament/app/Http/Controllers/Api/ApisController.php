@@ -439,6 +439,7 @@ class ApisController extends Controller
 
         $sous_category = SousCategory::where('slug', $slug)
             ->select('id', 'slug', 'designation_fr', 'categorie_id')
+            ->with('categorie:id,slug,designation_fr')
             ->first();
 
         if (! $sous_category) {

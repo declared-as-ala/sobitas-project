@@ -57,7 +57,13 @@ export function SubCategoryPageClient({ categorySlug, subcategorySlug }: SubCate
             setData(null);
             return;
           }
-          if (subcategoryData.categorie?.slug !== categorySlug) {
+          
+          // Only validate category match if subcategory has categorie data with slug
+          // Don't fail if categorie data is missing - trust the API response
+          if (subcategoryData.categorie?.slug && subcategoryData.categorie.slug !== categorySlug) {
+            console.warn(
+              `[SubCategoryPageClient] Category mismatch: expected "${categorySlug}", got "${subcategoryData.categorie.slug}"`
+            );
             setStatus('not_found');
             setData(null);
             return;
