@@ -40,7 +40,7 @@ const SlideImage = memo(({
   isFirst: boolean;
   className?: string;
 }) => {
-  const imageClass = 'object-contain object-center';
+  const imageClass = 'object-cover object-center';
   if (!isFirst) {
     // Lazy load non-first slides for faster initial load (quality 75 for mobile PageSpeed)
     return (
@@ -195,7 +195,7 @@ export const HeroSlider = memo(function HeroSlider({ slides }: HeroSliderProps) 
 
   return (
     <section 
-      className="relative w-full overflow-hidden bg-gray-900 min-h-[100dvh] h-[100dvh] sm:h-[70vh] sm:min-h-0 md:h-[80vh] md:min-h-[420px] lg:h-[65vh] xl:h-[70vh]"
+      className="relative w-full overflow-hidden bg-gray-900 min-h-[100dvh] h-[100dvh] sm:h-[70vh] sm:min-h-0 md:h-[80vh] md:min-h-[420px] lg:h-[520px] xl:h-[600px] 2xl:h-[680px]"
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
@@ -210,7 +210,7 @@ export const HeroSlider = memo(function HeroSlider({ slides }: HeroSliderProps) 
           src={currentSlideData.image}
           alt={currentSlideData.titre}
           isFirst={isFirstSlide}
-          className="object-contain object-center"
+          className="object-cover object-center"
         />
         
         {/* Gradient Overlay for better text readability */}
