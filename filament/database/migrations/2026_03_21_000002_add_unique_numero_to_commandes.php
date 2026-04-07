@@ -39,8 +39,8 @@ return new class extends Migration
             $rows = DB::table('commandes')
                 ->where('numero', $dup->numero)
                 ->orderBy('id')
-                ->skip(1)
-                ->pluck('id');
+                ->pluck('id')
+                ->slice(1);
 
             foreach ($rows as $i => $id) {
                 $suffix = 'DUP' . ($i + 1);
