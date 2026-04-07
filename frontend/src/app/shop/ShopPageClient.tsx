@@ -43,9 +43,15 @@ interface ShopPageClientProps {
   categorySeoLanding?: React.ReactNode;
   /** Optional SEO block for bottom of page (Catégories associées + Produits phares). Rendered after product grid. */
   categorySeoLandingBottom?: React.ReactNode;
+  /** Server-side pagination data (for subcategory pages) */
+  serverPagination?: { total: number; current_page: number; per_page: number; last_page: number };
+  /** Current page from URL (for server pagination) */
+  currentPage?: number;
+  /** Page change handler (for server pagination) */
+  onPageChange?: (page: number) => void;
 }
 
-function ShopContent({ productsData, categories, brands, initialCategory, isSubcategory, parentCategory, initialBrand, categorySeoLanding, categorySeoLandingBottom }: ShopPageClientProps) {
+function ShopContent({ productsData, categories, brands, initialCategory, isSubcategory, parentCategory, initialBrand, categorySeoLanding, categorySeoLandingBottom, serverPagination, currentPage: serverCurrentPage, onPageChange }: ShopPageClientProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
@@ -77,11 +83,13 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
   const [filterError, setFilterError] = useState<Error | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [inStockOnly, setInStockOnly] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
+  // Use server page number if serverPagination is provided, otherwise use local state
+  const [localPage, setLocalPage] = useState(1);
+  const currentPage = serverPagination ? (serverCurrentPage ?? 1) : localPage;
   const [currentBrand, setCurrentBrand] = useState<Brand | null>(null);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
-  const PRODUCTS_PER_PAGE = 12;
+  const PRODUCTS_PER_PAGE = serverPagination ? serverPagination.per_page : 12;
 
   // Keep skeleton visible at least SKELETON_MIN_MS to avoid flicker on fast loads
   useEffect(() => {
@@ -554,17 +562,27 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
   }, [products, priceRange, selectedBrands, searchQuery, selectedCategories, inStockOnly]);
 
   // Calculate pagination
-  const totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
+  // Use server pagination if available, otherwise calculate locally
+  const totalPages = serverPagination ? serverPagination.last_page : Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
+  const totalProducts = serverPagination ? serverPagination.total : filteredProducts.length;
+  
   const paginatedProducts = useMemo(() => {
+    // For server pagination, all products for current page are already in the products array
+    // For local pagination, slice the filtered products
+    if (serverPagination) {
+      return filteredProducts;
+    }
     const startIndex = (currentPage - 1) * PRODUCTS_PER_PAGE;
     const endIndex = startIndex + PRODUCTS_PER_PAGE;
     return filteredProducts.slice(startIndex, endIndex);
-  }, [filteredProducts, currentPage]);
+  }, [filteredProducts, currentPage, serverPagination]);
 
-    // Reset to page 1 when filters change
+    // Reset to page 1 when filters change (only for local pagination)
   useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, selectedCategories, selectedBrands, debouncedPriceRange, inStockOnly]);
+    if (!serverPagination) {
+      setLocalPage(1);
+    }
+  }, [searchQuery, selectedCategories, selectedBrands, debouncedPriceRange, inStockOnly, serverPagination]);
 
   const toggleCategory = (categorySlug: string) => {
     setSelectedCategories(prev =>
@@ -588,13 +606,19 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
     setSelectedBrands([]);
     setPriceRange([priceBounds.min, priceBounds.max]);
     setInStockOnly(false);
-    setCurrentPage(1);
+    setLocalPage(1);
     setProducts(safeProductsData.products || []);
     router.push('/shop');
   };
 
   const handlePageChange = (page: number) => {
-    setCurrentPage(page);
+    // Use server pagination handler if provided
+    if (onPageChange) {
+      onPageChange(page);
+      return;
+    }
+    // Otherwise use local pagination
+    setLocalPage(page);
     // Scroll to top of products section
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -716,7 +740,11 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
           )}
           <p className="text-sm sm:text-lg text-gray-600 dark:text-gray-400">
             {!showSkeleton && (totalPages > 1 ? (
-              `Affichage ${(currentPage - 1) * PRODUCTS_PER_PAGE + 1}-${Math.min(currentPage * PRODUCTS_PER_PAGE, filteredProducts.length)} sur ${filteredProducts.length} produit${filteredProducts.length > 1 ? 's' : ''}`
+              serverPagination ? (
+                `Affichage ${(currentPage - 1) * PRODUCTS_PER_PAGE + 1}-${Math.min(currentPage * PRODUCTS_PER_PAGE, totalProducts)} sur ${totalProducts} produit${totalProducts > 1 ? 's' : ''}`
+              ) : (
+                `Affichage ${(currentPage - 1) * PRODUCTS_PER_PAGE + 1}-${Math.min(currentPage * PRODUCTS_PER_PAGE, filteredProducts.length)} sur ${filteredProducts.length} produit${filteredProducts.length > 1 ? 's' : ''}`
+              )
             ) : (
               `${filteredProducts.length} produit${filteredProducts.length > 1 ? 's' : ''} trouvé${filteredProducts.length > 1 ? 's' : ''}`
             ))}
