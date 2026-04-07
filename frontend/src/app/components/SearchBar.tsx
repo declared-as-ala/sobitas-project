@@ -28,6 +28,7 @@ interface SearchBarProps {
 
 function SearchResults({
   query,
+  debouncedQuery,
   products,
   isLoading,
   onProductClick,
@@ -36,17 +37,20 @@ function SearchResults({
   showAllScrollable = false,
 }: {
   query: string;
+  debouncedQuery: string;
   products: Product[];
   isLoading: boolean;
   onProductClick?: () => void;
   onViewAll?: () => void;
   showAllScrollable?: boolean;
 }) {
-  if (isLoading) {
+  const isPending = query.trim() !== debouncedQuery.trim();
+
+  if (isLoading || isPending) {
     return (
-      <div className="flex items-center justify-center py-8 text-muted-foreground">
-        <Loader2 className="h-6 w-6 animate-spin" aria-hidden />
-        <span className="sr-only">Recherche en cours</span>
+      <div className="flex flex-col items-center justify-center py-8 gap-2 text-muted-foreground">
+        <Loader2 className="h-6 w-6 animate-spin text-red-500" aria-hidden />
+        <span className="text-sm">Recherche en cours...</span>
       </div>
     );
   }
@@ -63,7 +67,7 @@ function SearchResults({
     return (
       <div className="py-6 text-center text-sm text-muted-foreground">
         <p>Aucun produit trouvé pour &quot;{query}&quot;</p>
-        <p className="mt-1">Essayez d&apos;autres termes</p>
+        <p className="mt-1 text-xs">Essayez d&apos;autres termes</p>
       </div>
     );
   }
@@ -343,7 +347,8 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
               style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
             >
               <SearchResults
-                query={debouncedQuery}
+                query={query}
+                debouncedQuery={debouncedQuery}
                 products={products}
                 isLoading={isLoading}
                 onProductClick={handleProductClick}
@@ -421,7 +426,8 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
           onMouseDown={(e) => e.preventDefault()}
         >
           <SearchResults
-            query={debouncedQuery}
+            query={query}
+            debouncedQuery={debouncedQuery}
             products={products}
             isLoading={isLoading}
             onProductClick={handleProductClick}

@@ -330,11 +330,7 @@ export function HeaderClient() {
                       setSearchQuery(e.target.value);
                       setShowSearchResults(true);
                     }}
-                    onFocus={() => {
-                      if (searchResults.length > 0 || isSearching) {
-                        setShowSearchResults(true);
-                      }
-                    }}
+                    onFocus={() => setShowSearchResults(true)}
                     placeholder="Rechercher tous les produits..."
                     className="w-full h-11 pl-4 pr-12 rounded-lg border-0 bg-white text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-red-300 text-sm"
                   />
@@ -358,14 +354,19 @@ export function HeaderClient() {
                     ref={searchResultsRef}
                     className="absolute left-0 right-0 top-full mt-2 z-50 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl max-h-[500px] overflow-y-auto"
                   >
-                    {isSearching ? (
+                    {(isSearching || (searchQuery.trim() && debouncedSearchQuery.trim() !== searchQuery.trim())) ? (
                       <div className="flex items-center justify-center py-8 text-gray-500">
                         <Loader2 className="h-6 w-6 animate-spin mr-2" />
                         <span>Recherche en cours...</span>
                       </div>
-                    ) : searchQuery.trim() && searchResults.length === 0 ? (
+                    ) : !searchQuery.trim() ? (
+                      <div className="py-6 text-center text-sm text-gray-400">
+                        Tapez pour rechercher des protéines, gainers, compléments...
+                      </div>
+                    ) : searchResults.length === 0 ? (
                       <div className="py-6 text-center text-sm text-gray-500">
                         <p>Aucun produit trouvé pour &quot;{searchQuery}&quot;</p>
+                        <p className="mt-1 text-xs text-gray-400">Essayez d&apos;autres termes</p>
                       </div>
                     ) : searchResults.length > 0 ? (
                       <>
