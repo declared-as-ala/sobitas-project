@@ -38,10 +38,7 @@ class Product extends Model
     ];
 
     /**
-     * qte = source of truth; rupture = derived out-of-stock flag (1 = out of stock, 0 = in stock).
-     * On save: clamp qte to 0 if negative; set rupture from qte only:
-     * - qte > 0 => rupture = false (in stock)
-     * - qte <= 0 or null => rupture = true (out of stock)
+     * Boot method for model events.
      */
     protected static function booted(): void
     {
@@ -64,9 +61,22 @@ class Product extends Model
 
     // ── Relationships ──────────────────────────────────
 
+    /**
+     * Legacy single subcategory relationship (kept for backward compatibility).
+     */
     public function sousCategorie(): BelongsTo
     {
         return $this->belongsTo(SousCategory::class, 'sous_categorie_id');
+    }
+
+    /**
+     * Multiple subcategories relationship (new many-to-many).
+     */
+    public function sousCategories(): BelongsToMany
+    {
+        return $this->belongsToMany(SousCategory::class, 'product_sous_category')
+            ->withTimestamps()
+            ->orderBy('designation_fr');
     }
 
     public function brand(): BelongsTo

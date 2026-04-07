@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SousCategory extends Model
@@ -21,8 +22,20 @@ class SousCategory extends Model
         return $this->belongsTo(Categ::class, 'categorie_id');
     }
 
+    /**
+     * Legacy single products relationship.
+     */
     public function products(): HasMany
     {
         return $this->hasMany(Product::class, 'sous_categorie_id');
+    }
+
+    /**
+     * Many-to-many relationship with products (new).
+     */
+    public function manyProducts(): BelongsToMany
+    {
+        return $this->belongsToMany(Product::class, 'product_sous_category')
+            ->withTimestamps();
     }
 }

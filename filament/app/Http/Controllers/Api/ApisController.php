@@ -431,7 +431,7 @@ class ApisController extends Controller
     }
 
     /**
-     * Products by subcategory — returns ALL products (client-side pagination).
+     * Products by subcategory — returns ALL products (supports many-to-many).
      */
     public function productsBySubCategoryId(Request $request, string $slug): JsonResponse
     {
@@ -444,11 +444,19 @@ class ApisController extends Controller
             return response()->json(['error' => 'Sous-catégorie introuvable'], 404);
         }
 
-        // Get ALL products for this subcategory (no pagination)
-        $products = Product::where('sous_categorie_id', $sous_category->id)
-            ->where('publier', 1)
+        // Get ALL products for this subcategory using many-to-many relationship
+        // Checks both legacy sous_categorie_id AND new pivot table
+        $products = Product::where('publier', 1)
+            ->where(function ($query) use ($sous_category) {
+                // Legacy single subcategory
+                $query->where('sous_categorie_id', $sous_category->id)
+                    // New many-to-many relationship
+                    ->orWhereHas('sousCategories', function ($q) use ($sous_category) {
+                        $q->where('sous_categories.id', $sous_category->id);
+                    });
+            })
             ->select(self::PRODUCT_FULL_LIST_COLUMNS)
-            ->with('aromes:id,designation_fr', 'tags:id,designation_fr')
+            ->with(['aromes:id,designation_fr', 'tags:id,designation_fr', 'sousCategories:id,slug,designation_fr,categorie_id'])
             ->latest('created_at')
             ->get();
 

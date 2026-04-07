@@ -31,7 +31,10 @@ export interface Product {
   sous_categorie_id?: number;
   aromes?: Aroma[];
   tags?: Tag[];
+  /** Legacy single subcategory (backward compatibility) */
   sous_categorie?: SubCategory;
+  /** Multiple subcategories (new many-to-many relationship) */
+  sous_categories?: SubCategory[];
   brand?: Brand;
   reviews?: Review[];
   qte?: number;

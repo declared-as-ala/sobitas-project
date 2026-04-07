@@ -95,10 +95,26 @@ class ProductResource extends Resource
                                             ->searchable()
                                             ->preload(),
                                         Forms\Components\Select::make('sous_categorie_id')
-                                            ->label('Sous-catégories')
+                                            ->label('Sous-catégorie (principale)')
                                             ->relationship('sousCategorie', 'designation_fr')
                                             ->searchable()
-                                            ->preload(),
+                                            ->preload()
+                                            ->helperText('Sous-catégorie principale (pour compatibilité legacy)'),
+                                        Forms\Components\Select::make('sous_categories')
+                                            ->label('Sous-catégories (multiples)')
+                                            ->relationship('sousCategories', 'designation_fr')
+                                            ->multiple()
+                                            ->searchable()
+                                            ->preload()
+                                            ->helperText('Sélectionnez une ou plusieurs sous-catégories pour ce produit')
+                                            ->afterStateUpdated(function ($state, callable $set): void {
+                                                // Sync legacy sous_categorie_id with first selected subcategory
+                                                if (is_array($state) && count($state) > 0) {
+                                                    $set('sous_categorie_id', $state[0]);
+                                                } else {
+                                                    $set('sous_categorie_id', null);
+                                                }
+                                            }),
                                     ]),
                                     Forms\Components\RichEditor::make('description_fr')
                                         ->label('Description')
@@ -357,7 +373,7 @@ class ProductResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $query) => $query->with(['sousCategorie:id,designation_fr', 'brand:id,designation_fr']))
+            ->modifyQueryUsing(fn (Builder $query) => $query->with(['sousCategorie:id,designation_fr', 'sousCategories:id,designation_fr', 'brand:id,designation_fr']))
             ->columns([
                 Tables\Columns\ImageColumn::make('cover')
                     ->label('Image')
@@ -370,9 +386,24 @@ class ProductResource extends Resource
                     ->searchable()
                     ->sortable()
                     ->limit(40),
-                Tables\Columns\TextColumn::make('sousCategorie.designation_fr')
-                    ->label('Sous-catégorie')
-                    ->sortable()
+                Tables\Columns\TextColumn::make('subCategoriesList')
+                    ->label('Sous-catégories')
+                    ->getStateUsing(function ($record): string {
+                        // Try new many-to-many relationship first
+                        $subCategories = $record->sousCategories;
+                        if ($subCategories && $subCategories->count() > 0) {
+                            return $subCategories->pluck('designation_fr')->join(', ');
+                        }
+                        // Fallback to legacy single subcategory
+                        return $record->sousCategorie?->designation_fr ?? '—';
+                    })
+                    ->sortable(query: function (Builder $query, string $direction): Builder {
+                        return $query
+                            ->leftJoin('product_sous_category', 'products.id', '=', 'product_sous_category.product_id')
+                            ->leftJoin('sous_categories', 'product_sous_category.sous_category_id', '=', 'sous_categories.id')
+                            ->orderBy('sous_categories.designation_fr', $direction)
+                            ->groupBy('products.id');
+                    })
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('brand.designation_fr')
                     ->label('Marque')
