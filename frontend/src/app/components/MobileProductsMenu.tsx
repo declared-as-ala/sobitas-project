@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
-import { ChevronRight, ChevronLeft, X, ArrowRight } from 'lucide-react';
+import { ChevronRight, ChevronLeft, X, ArrowRight, Loader2 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/app/components/ui/sheet';
 import { Button } from '@/app/components/ui/button';
 import { getCategories } from '@/services/api';
@@ -56,9 +56,9 @@ const subCategoryLabelToSlug: Record<string, string> = {
   'bandages de soutien musculaire': 'bandes-de-soutien-musculaire',
 };
 
-function findCategoryByName(name: string, cats: Category[]): Category | null {
+function findCategorySlug(name: string, cats: Category[]): string | null {
   const n = normalize(name);
-  return cats.find(c => normalize(c.designation_fr) === n) ?? null;
+  return cats.find(c => normalize(c.designation_fr) === n)?.slug ?? null;
 }
 
 function findSubCategorySlug(name: string, cats: Category[]): string | null {
@@ -77,10 +77,6 @@ function findSubCategorySlug(name: string, cats: Category[]): string | null {
   return null;
 }
 
-function fallbackHref(name: string) {
-  return `/shop?q=${encodeURIComponent(name)}`;
-}
-
 interface MobileProductsMenuProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -91,9 +87,13 @@ export function MobileProductsMenu({ open, onOpenChange }: MobileProductsMenuPro
   const prevPathnameRef = useRef(pathname);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
 
   useEffect(() => {
-    getCategories().then(setCategories).catch(console.error);
+    getCategories()
+      .then(setCategories)
+      .catch(console.error)
+      .finally(() => setCategoriesLoading(false));
   }, []);
 
   const handleClose = () => {
@@ -101,6 +101,7 @@ export function MobileProductsMenu({ open, onOpenChange }: MobileProductsMenuPro
     onOpenChange(false);
   };
 
+  // Close on route change (navigation completed)
   useEffect(() => {
     if (prevPathnameRef.current !== pathname) {
       prevPathnameRef.current = pathname;
@@ -166,9 +167,7 @@ export function MobileProductsMenu({ open, onOpenChange }: MobileProductsMenuPro
 
               <SheetTitle className="flex-1 text-center text-base font-bold text-gray-900 dark:text-white line-clamp-1 px-1">
                 {selectedCategory ? (
-                  <span className="text-red-600 dark:text-red-400">
-                    {selectedCategory}
-                  </span>
+                  <span className="text-red-600 dark:text-red-400 text-sm">{selectedCategory}</span>
                 ) : (
                   'Nos Produits'
                 )}
@@ -209,7 +208,7 @@ export function MobileProductsMenu({ open, onOpenChange }: MobileProductsMenuPro
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-0.5">
                             <div className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
-                            <span className="font-bold text-[12px] tracking-wide text-red-600 dark:text-red-400 uppercase leading-tight">
+                            <span className="font-bold text-[11px] tracking-wide text-red-600 dark:text-red-400 uppercase leading-tight">
                               {cat.title}
                             </span>
                           </div>
@@ -242,47 +241,70 @@ export function MobileProductsMenu({ open, onOpenChange }: MobileProductsMenuPro
                   exit={{ opacity: 0, x: 16 }}
                   transition={{ duration: 0.18 }}
                 >
-                  {/* Category-level link */}
-                  {(() => {
-                    const catData = findCategoryByName(selectedCategoryData?.title ?? '', categories);
-                    const href = catData?.slug
-                      ? `/category/${catData.slug}`
-                      : fallbackHref(selectedCategoryData?.title ?? '');
-                    return (
-                      <div className="px-3 pt-3 pb-2">
-                        <LinkWithLoading
-                          href={href}
-                          className="flex items-center justify-between py-3 px-4 bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/40 rounded-2xl text-red-600 dark:text-red-400 font-semibold text-sm"
-                          loadingMessage="Chargement..."
-                        >
-                          <span>Tout voir — {selectedCategoryData?.title}</span>
-                          <ArrowRight className="h-4 w-4 shrink-0" />
-                        </LinkWithLoading>
+                  {/* Loading skeleton while API resolves slugs */}
+                  {categoriesLoading ? (
+                    <div className="px-3 pt-4 space-y-2">
+                      <div className="flex items-center justify-center gap-2 py-6 text-gray-400">
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        <span className="text-sm">Chargement des catégories…</span>
                       </div>
-                    );
-                  })()}
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <div
+                          key={i}
+                          className="h-12 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse"
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <>
+                      {/* "Tout voir" for the parent category */}
+                      {(() => {
+                        const slug = findCategorySlug(selectedCategoryData?.title ?? '', categories);
+                        const href = slug ? `/category/${slug}` : '/shop';
+                        return (
+                          <div className="px-3 pt-3 pb-2">
+                            <LinkWithLoading
+                              href={href}
+                              className="flex items-center justify-between py-3 px-4 bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/40 rounded-2xl text-red-600 dark:text-red-400 font-semibold text-sm"
+                              loadingMessage="Chargement..."
+                            >
+                              <span>Tout voir — {selectedCategoryData?.title}</span>
+                              <ArrowRight className="h-4 w-4 shrink-0" />
+                            </LinkWithLoading>
+                          </div>
+                        );
+                      })()}
 
-                  <div className="px-3 pb-6 space-y-1.5">
-                    {selectedCategoryData?.items.map((item, ii) => {
-                      const slug = findSubCategorySlug(item, categories);
-                      const href = slug ? `/category/${slug}` : fallbackHref(item);
+                      {/* Subcategory items — always a real link now */}
+                      <div className="px-3 pb-6 space-y-1.5">
+                        {selectedCategoryData?.items.map((item, ii) => {
+                          const slug = findSubCategorySlug(item, categories);
+                          // Use the matched slug; fall back to the parent category or /shop — never a dead search
+                          const parentSlug = findCategorySlug(selectedCategoryData.title, categories);
+                          const href = slug
+                            ? `/category/${slug}`
+                            : parentSlug
+                              ? `/category/${parentSlug}`
+                              : '/shop';
 
-                      return (
-                        <LinkWithLoading
-                          key={ii}
-                          href={href}
-                          className="flex items-center gap-3 py-3.5 px-4 bg-white dark:bg-gray-900 active:bg-gray-50 dark:active:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm group"
-                          loadingMessage="Chargement..."
-                        >
-                          <span className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600 group-active:bg-red-500 flex-shrink-0" />
-                          <span className="flex-1 text-sm font-medium text-gray-800 dark:text-gray-200 leading-snug">
-                            {item}
-                          </span>
-                          <ChevronRight className="h-4 w-4 text-gray-300 dark:text-gray-600 shrink-0" />
-                        </LinkWithLoading>
-                      );
-                    })}
-                  </div>
+                          return (
+                            <LinkWithLoading
+                              key={ii}
+                              href={href}
+                              className="flex items-center gap-3 py-3.5 px-4 bg-white dark:bg-gray-900 active:bg-gray-50 dark:active:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm group"
+                              loadingMessage="Chargement..."
+                            >
+                              <span className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" />
+                              <span className="flex-1 text-sm font-medium text-gray-800 dark:text-gray-200 leading-snug">
+                                {item}
+                              </span>
+                              <ChevronRight className="h-4 w-4 text-gray-300 dark:text-gray-600 shrink-0" />
+                            </LinkWithLoading>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
