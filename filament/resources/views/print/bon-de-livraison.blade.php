@@ -273,9 +273,10 @@ table.ftva-lines td.td-num {
 }
 table.ftva-lines td.td-prod {
     text-align: left;
-    font-weight: 600;
+    font-weight: 400;
     color: #0f172a;
     word-break: break-word;
+    line-height: 1.4;
 }
 table.ftva-lines td.td-right {
     text-align: right;

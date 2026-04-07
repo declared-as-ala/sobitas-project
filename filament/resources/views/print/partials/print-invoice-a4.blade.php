@@ -75,7 +75,7 @@
     .invoice-table tbody td { padding: 3px 6px; border-bottom: 1px solid var(--invoice-gray-100); vertical-align: top; }
     .invoice-table tbody tr:nth-child(even) { background: #fafbfc; }
     .invoice-table tbody td.num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 500; }
-    .invoice-table tbody td.designation { font-weight: 500; color: var(--invoice-gray-900); word-break: break-word; max-width: 0; line-height: 1.2; }
+    .invoice-table tbody td.designation { font-weight: 400; color: var(--invoice-gray-900); word-break: break-word; max-width: 0; line-height: 1.35; }
 
     /* Totals box (right, soft orange tint) */
     .invoice-totals-wrap { display: flex; justify-content: flex-end; margin: 10px 0 12px; }
