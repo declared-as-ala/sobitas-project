@@ -508,8 +508,14 @@ export const searchProducts = async (text: string): Promise<{
   products: Product[];
   brands: Brand[];
 }> => {
-  const response = await api.get(`/searchProduct/${text}`);
-  return response.data;
+  const response = await api.get('/all_products', {
+    params: { search: text.trim(), per_page: 10, page: 1 },
+  });
+  const raw = response.data;
+  const products = Array.isArray(raw.products)
+    ? raw.products
+    : (raw.products?.data ?? []);
+  return { products, brands: raw.brands ?? [] };
 };
 
 export const searchProductsBySubCategory = async (slug: string, text: string): Promise<{
