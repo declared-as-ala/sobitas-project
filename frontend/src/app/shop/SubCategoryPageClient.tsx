@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
 import { Header } from '@/app/components/Header';
 import { Footer } from '@/app/components/Footer';
 import { CategorySkeleton } from '@/app/components/ProductsSkeleton';
@@ -23,24 +22,18 @@ interface SubCategoryPageClientProps {
 }
 
 export function SubCategoryPageClient({ categorySlug, subcategorySlug }: SubCategoryPageClientProps) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
   const [status, setStatus] = useState<Status>('loading');
   const [data, setData] = useState<{
     productsData: { products: any[]; brands: any[]; categories: any[] };
     categories: any[];
     brands: any[];
-    pagination?: { total: number; current_page: number; per_page: number; last_page: number };
   } | null>(null);
   const [showErrorUi, setShowErrorUi] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const previousDataRef = useRef<typeof data>(null);
 
-  // Get current page from URL or default to 1
-  const currentPage = parseInt(searchParams.get('page') || '1', 10);
-
   const load = useCallback(
-    async (signal?: AbortSignal, page: number = 1) => {
+    async (signal?: AbortSignal) => {
       if (!subcategorySlug?.trim()) {
         setStatus('empty');
         setData(null);
@@ -55,7 +48,8 @@ export function SubCategoryPageClient({ categorySlug, subcategorySlug }: SubCate
       let lastError: any;
       for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         try {
-          const result = await getProductsBySubCategory(subcategorySlug.trim(), { signal, page, perPage: 24 });
+          // Fetch ALL products (no pagination params)
+          const result = await getProductsBySubCategory(subcategorySlug.trim(), { signal });
           if (signal?.aborted) return;
 
           const subcategoryData = result?.sous_category;
@@ -81,13 +75,10 @@ export function SubCategoryPageClient({ categorySlug, subcategorySlug }: SubCate
 
           const products = result?.products ?? [];
           const brands = result?.brands ?? [];
-          const pagination = result?.pagination;
-          
           setData({
             productsData: { products, brands, categories: [] },
             categories,
             brands,
-            pagination,
           });
           setStatus(products.length > 0 ? 'success' : 'empty');
           previousDataRef.current = null;
@@ -122,32 +113,17 @@ export function SubCategoryPageClient({ categorySlug, subcategorySlug }: SubCate
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
-    load(controller.signal, currentPage);
+    load(controller.signal);
 
     return () => {
       controller.abort();
       abortControllerRef.current = null;
     };
-  }, [subcategorySlug, categorySlug, currentPage, load]);
+  }, [subcategorySlug, categorySlug, load]);
 
   const handleRetry = useCallback(() => {
-    load(undefined, currentPage);
-  }, [load, currentPage]);
-
-  const handlePageChange = useCallback((page: number) => {
-    // Update URL with new page number
-    const params = new URLSearchParams(searchParams.toString());
-    if (page === 1) {
-      params.delete('page');
-    } else {
-      params.set('page', page.toString());
-    }
-    const queryString = params.toString();
-    const newUrl = queryString ? `/shop/${categorySlug}/${subcategorySlug}?${queryString}` : `/shop/${categorySlug}/${subcategorySlug}`;
-    router.push(newUrl);
-    // Scroll to top when page changes
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [categorySlug, subcategorySlug, searchParams, router]);
+    load();
+  }, [load]);
 
   const displayData = data ?? previousDataRef.current;
   const isLoading = status === 'loading';
@@ -162,9 +138,6 @@ export function SubCategoryPageClient({ categorySlug, subcategorySlug }: SubCate
         initialCategory={subcategorySlug}
         isSubcategory={true}
         parentCategory={categorySlug}
-        serverPagination={data.pagination}
-        currentPage={currentPage}
-        onPageChange={handlePageChange}
       />
     );
   }

@@ -431,12 +431,10 @@ class ApisController extends Controller
     }
 
     /**
-     * Products by subcategory — FIXED: added column selection + limit.
+     * Products by subcategory — returns ALL products (client-side pagination).
      */
     public function productsBySubCategoryId(Request $request, string $slug): JsonResponse
     {
-        $perPage = $this->resolvePerPage($request);
-
         $sous_category = SousCategory::where('slug', $slug)
             ->select('id', 'slug', 'designation_fr', 'categorie_id')
             ->with('categorie:id,slug,designation_fr')
@@ -446,35 +444,30 @@ class ApisController extends Controller
             return response()->json(['error' => 'Sous-catégorie introuvable'], 404);
         }
 
-        $productsPaginator = Product::where('sous_categorie_id', $sous_category->id)
+        // Get ALL products for this subcategory (no pagination)
+        $products = Product::where('sous_categorie_id', $sous_category->id)
             ->where('publier', 1)
             ->select(self::PRODUCT_FULL_LIST_COLUMNS)
             ->with('aromes:id,designation_fr', 'tags:id,designation_fr')
             ->latest('created_at')
-            ->paginate($perPage);
-
-        $products = $productsPaginator->getCollection();
+            ->get();
 
         $brands = Brand::whereIn('id', $products->pluck('brand_id')->unique()->filter())
             ->select('id', 'designation_fr', 'logo')
             ->orderBy('designation_fr')
             ->get();
 
-        $sousCategoriesPaginator = SousCategory::where('categorie_id', $sous_category->categorie_id)
+        $sousCategories = SousCategory::where('categorie_id', $sous_category->categorie_id)
             ->select('id', 'slug', 'designation_fr', 'categorie_id')
             ->orderBy('designation_fr')
-            ->paginate($perPage);
+            ->get();
 
-        return response()->json(array_merge(
-            [
-                'sous_category'   => $sous_category,
-                'products'        => $productsPaginator->items(),
-                'brands'          => $brands,
-                'sous_categories' => $sousCategoriesPaginator->items(),
-            ],
-            $this->paginatedKeyedResponse($productsPaginator, 'products'),
-            $this->paginatedKeyedResponse($sousCategoriesPaginator, 'sous_categories')
-        ));
+        return response()->json([
+            'sous_category'   => $sous_category,
+            'products'        => $products,
+            'brands'          => $brands,
+            'sous_categories' => $sousCategories,
+        ]);
     }
 
     public function searchProduct(string $text): array
