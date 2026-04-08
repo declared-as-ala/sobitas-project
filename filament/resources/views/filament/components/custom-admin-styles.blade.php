@@ -399,4 +399,103 @@
         .cw-arrow svg { transform: rotate(90deg); }
         .cw-target { min-width: auto; width: 100%; }
     }
+
+    /* ── Products table: compact, responsive, no horizontal scroll ────────────── */
+    .fi-resource-table-container {
+        width: 100%;
+        overflow-x: hidden !important;
+    }
+    
+    .fi-ta-table.fi-resource-table {
+        table-layout: fixed !important;
+        width: 100% !important;
+    }
+
+    /* Compact table rows */
+    .fi-ta-table.fi-resource-table thead th {
+        padding: 0.625rem 0.75rem !important;
+        font-size: 0.6875rem !important;
+    }
+
+    .fi-ta-table.fi-resource-table tbody td {
+        padding: 0.75rem 0.75rem !important;
+        font-size: 0.8125rem !important;
+        vertical-align: middle !important;
+    }
+
+    /* Text columns: truncate with ellipsis */
+    .fi-ta-table.fi-resource-table tbody td .fi-ta-text-item,
+    .fi-ta-table.fi-resource-table tbody td .fi-ta-text-item-label {
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+        display: block !important;
+    }
+
+    /* Badge styling: smaller and more compact */
+    .fi-ta-table.fi-resource-table tbody td .fi-badge {
+        font-size: 0.6875rem !important;
+        padding: 0.125rem 0.5rem !important;
+    }
+
+    /* Premium hover effect */
+    .fi-ta-table.fi-resource-table tbody tr {
+        transition: all 0.15s ease;
+    }
+
+    .fi-ta-table.fi-resource-table tbody tr:hover {
+        background-color: rgba(59, 130, 246, 0.04) !important;
+        transform: translateX(2px);
+    }
+
+    /* Icon columns: smaller */
+    .fi-ta-table.fi-resource-table tbody td .fi-ta-icon-item {
+        width: 1.125rem !important;
+        height: 1.125rem !important;
+    }
+
+    /* Money columns: right-aligned with tabular nums */
+    .fi-ta-table.fi-resource-table tbody td .fi-ta-money-item {
+        text-align: right !important;
+        font-variant-numeric: tabular-nums !important;
+        font-weight: 500 !important;
+    }
+
+    /* ── Products list page specific styles ──────────────────────────────────── */
+    .products-list-page .fi-resource-table-container {
+        width: 100% !important;
+        max-width: 100vw !important;
+        overflow-x: hidden !important;
+    }
+    
+    /* Compact and premium table design */
+    .products-list-page .fi-ta-table {
+        font-size: 0.8125rem !important;
+    }
+    
+    .products-list-page .fi-ta-table thead th {
+        background: linear-gradient(to bottom, #f8fafc, #f1f5f9) !important;
+        border-bottom: 2px solid #e2e8f0 !important;
+        font-weight: 600 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.05em !important;
+        font-size: 0.6875rem !important;
+        color: #475569 !important;
+        padding: 0.75rem 0.5rem !important;
+    }
+    
+    .products-list-page .fi-ta-table tbody td {
+        padding: 0.625rem 0.5rem !important;
+        border-bottom: 1px solid #f1f5f9 !important;
+    }
+    
+    /* Premium row hover */
+    .products-list-page .fi-ta-table tbody tr {
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+    
+    .products-list-page .fi-ta-table tbody tr:hover {
+        background: linear-gradient(to right, rgba(59, 130, 246, 0.03), rgba(59, 130, 246, 0.06)) !important;
+        box-shadow: inset 3px 0 0 0 #3b82f6 !important;
+    }
 </style>

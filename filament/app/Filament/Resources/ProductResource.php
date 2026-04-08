@@ -380,12 +380,16 @@ class ProductResource extends Resource
                     ->getStateUsing(fn ($record) => ImagePath::normalize($record->cover))
                     ->disk('public')
                     ->circular()
-                    ->size(72),
+                    ->size(48)
+                    ->width(48)
+                    ->height(48),
                 Tables\Columns\TextColumn::make('designation_fr')
                     ->label('Désignation')
                     ->searchable()
                     ->sortable()
-                    ->limit(40),
+                    ->limit(35)
+                    ->wrap(false)
+                    ->width('20%'),
                 Tables\Columns\TextColumn::make('subCategoriesList')
                     ->label('Sous-catégories')
                     ->getStateUsing(function ($record): string {
@@ -404,30 +408,42 @@ class ProductResource extends Resource
                             ->orderBy('sous_categories.designation_fr', $direction)
                             ->groupBy('products.id');
                     })
-                    ->toggleable(),
+                    ->limit(25)
+                    ->wrap(false)
+                    ->toggleable(isToggledHiddenByDefault: false)
+                    ->width('15%'),
                 Tables\Columns\TextColumn::make('brand.designation_fr')
                     ->label('Marque')
                     ->sortable()
-                    ->toggleable(),
+                    ->limit(20)
+                    ->wrap(false)
+                    ->toggleable(isToggledHiddenByDefault: false)
+                    ->width('12%'),
                 Tables\Columns\TextColumn::make('prix')
                     ->label('Prix')
-                    ->money('TND')
-                    ->sortable(),
+                    ->money('TND', 0)
+                    ->sortable()
+                    ->numeric()
+                    ->width('10%'),
                 Tables\Columns\TextColumn::make('promo')
                     ->label('Promo')
-                    ->money('TND')
+                    ->money('TND', 0)
                     ->sortable()
-                    ->toggleable()
-                    ->placeholder('—'),
+                    ->toggleable(isToggledHiddenByDefault: false)
+                    ->placeholder('—')
+                    ->numeric()
+                    ->width('10%'),
                 Tables\Columns\TextColumn::make('qte')
                     ->label('Stock')
                     ->sortable()
                     ->badge()
-                    ->color(fn (int $state): string => $state > 10 ? 'success' : ($state > 0 ? 'warning' : 'danger')),
+                    ->color(fn (int $state): string => $state > 10 ? 'success' : ($state > 0 ? 'warning' : 'danger'))
+                    ->width('8%'),
                 Tables\Columns\IconColumn::make('publier')
                     ->label('Publié')
                     ->boolean()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\IconColumn::make('best_seller')
                     ->label('Best')
                     ->boolean()
@@ -440,6 +456,11 @@ class ProductResource extends Resource
             ])
             ->defaultSort('created_at', 'desc')
             ->defaultPaginationPageOption(25)
+            ->contentGrid([
+                'md' => 1,
+                'xl' => 1,
+            ])
+            ->paginated([25, 50, 100])
             ->filters([
                 Tables\Filters\TernaryFilter::make('publier')
                     ->label('Publié'),
@@ -460,6 +481,7 @@ class ProductResource extends Resource
                     ->searchable()
                     ->preload(),
             ])
+            ->filtersFormColumns(3)
             ->actions([
                 Actions\EditAction::make(),
                 Actions\DeleteAction::make(),
@@ -467,6 +489,10 @@ class ProductResource extends Resource
             ->bulkActions([
                 Actions\DeleteBulkAction::make()
                     ->label('Supprimer sélection'),
+            ])
+            ->extraAttributes([
+                'class' => 'w-full overflow-x-hidden',
+                'style' => 'table-layout: fixed;',
             ]);
     }
 

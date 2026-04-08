@@ -16,4 +16,11 @@ class ListProducts extends ListRecords
             Actions\CreateAction::make(),
         ];
     }
+
+    protected function getHeaderAttributes(): array
+    {
+        return [
+            'class' => 'products-list-page',
+        ];
+    }
 }
