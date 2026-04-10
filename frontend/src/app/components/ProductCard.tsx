@@ -138,9 +138,9 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
         '[@media(hover:hover)]:hover:shadow-[0_8px_30px_rgba(0,0,0,0.16)] [@media(hover:hover)]:dark:hover:shadow-[0_12px_40px_rgba(0,0,0,0.5)] [@media(hover:hover)]:hover:-translate-y-1',
       ].join(' ')}
     >
-      {/* Image area: full-width, fixed height, object-fit: cover, flush with top */}
+      {/* Image area: full-width, generous height, object-fit: cover, flush with top */}
       <div className="relative w-full flex-shrink-0 overflow-hidden rounded-t-xl lg:rounded-t-2xl bg-gray-100 dark:bg-gray-700/50"
-        style={{ height: '240px' }}
+        style={{ height: '320px' }}
       >
         <LinkWithLoading
           href={`/shop/${encodeURIComponent(productData.slug || String(product.id))}`}
