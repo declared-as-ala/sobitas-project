@@ -37,7 +37,7 @@ export function PacksPageClient({ packs }: PacksPageClientProps) {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 max-[360px]:gap-1.5 sm:gap-4 lg:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
             {packs.map((pack, index) => (
               <motion.div
                 key={pack.id}

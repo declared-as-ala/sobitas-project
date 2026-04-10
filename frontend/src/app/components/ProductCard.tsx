@@ -6,7 +6,6 @@ import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { motion } from 'motion/react';
 import { ShoppingCart, Heart } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
-import { Badge } from '@/app/components/ui/badge';
 import type { Product as ApiProduct } from '@/types';
 import { useCart } from '@/app/contexts/CartContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
@@ -131,21 +130,21 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
       transition={{ duration: 0.2 }}
       className={[
         'group flex flex-col h-full w-full min-w-0 overflow-hidden',
-        'rounded-[14px] sm:rounded-xl lg:rounded-2xl',
+        'rounded-xl lg:rounded-2xl',
         'bg-white dark:bg-gray-800',
-        'border border-white dark:border-white/20',
-        'shadow-[0_2px_16px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.35)]',
-        'sm:shadow-md lg:shadow-lg',
-        'transition-[box-shadow,border-color,transform] duration-300',
-        '[@media(hover:hover)]:lg:hover:shadow-2xl [@media(hover:hover)]:lg:hover:border-red-500/40 [@media(hover:hover)]:lg:dark:hover:border-red-500/40 [@media(hover:hover)]:lg:hover:-translate-y-1',
+        'border-0',
+        'shadow-[0_2px_12px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.35)]',
+        'transition-all duration-300 ease-out',
+        '[@media(hover:hover)]:hover:shadow-[0_8px_30px_rgba(0,0,0,0.16)] [@media(hover:hover)]:dark:hover:shadow-[0_12px_40px_rgba(0,0,0,0.5)] [@media(hover:hover)]:hover:-translate-y-1',
       ].join(' ')}
     >
-      {/* Image area: square aspect, subtle bg, contained centered image */}
-      <div className="relative aspect-square w-full flex-shrink-0 overflow-hidden rounded-t-[14px] sm:rounded-t-xl lg:rounded-t-2xl bg-gray-50 dark:bg-gray-700/50 flex items-center justify-center">
-
-        <LinkWithLoading 
-          href={`/shop/${encodeURIComponent(productData.slug || String(product.id))}`} 
-          className={`block size-full flex items-center justify-center ${isCompact ? 'p-2 md:p-3' : 'p-3 md:p-4 lg:p-5'}`}
+      {/* Image area: full-width, fixed height, object-fit: cover, flush with top */}
+      <div className="relative w-full flex-shrink-0 overflow-hidden rounded-t-xl lg:rounded-t-2xl bg-gray-100 dark:bg-gray-700/50"
+        style={{ height: '240px' }}
+      >
+        <LinkWithLoading
+          href={`/shop/${encodeURIComponent(productData.slug || String(product.id))}`}
+          className="block w-full h-full"
           aria-label={`Voir ${productData.name}`}
           loadingMessage="Chargement"
         >
@@ -153,12 +152,11 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
             <Image
               src={productData.image}
               alt={productData.name}
-              width={400}
-              height={400}
-              className="size-full object-contain transition-transform duration-300 [@media(hover:hover)]:lg:group-hover:scale-105 [@media(hover:hover)]:lg:transition-transform [@media(hover:hover)]:lg:duration-500"
+              fill
+              className="object-cover transition-transform duration-500 [@media(hover:hover)]:group-hover:scale-105"
               loading="lazy"
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
-              quality={75}
+              quality={85}
               unoptimized={isStorageImageUrl(productData.image)}
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
@@ -174,48 +172,52 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
             />
           ) : (
             <div className="size-full flex items-center justify-center bg-gray-200/50 dark:bg-gray-700/50" aria-hidden="true">
-              <ShoppingCart className="h-10 w-10 md:h-12 md:w-12 text-gray-400" />
+              <ShoppingCart className="h-12 w-12 text-gray-400" />
             </div>
           )}
         </LinkWithLoading>
+
+        {/* Gradient overlay at bottom of image for smooth transition */}
+        <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white/60 dark:from-gray-800/60 to-transparent pointer-events-none" />
 
         {/* Favoris – top-right */}
         <button
           type="button"
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(toFavoriteProduct(product)); }}
-          className="absolute top-2.5 right-2.5 z-10 p-1.5 rounded-full bg-white/90 dark:bg-gray-700/95 shadow-sm border border-gray-200/80 dark:border-gray-600/80 hover:bg-white dark:hover:bg-gray-700 transition-colors pointer-events-auto"
+          className="absolute top-3 right-3 z-10 p-2 rounded-full bg-white/90 dark:bg-gray-700/95 shadow-sm backdrop-blur-sm hover:bg-white dark:hover:bg-gray-700 transition-all hover:scale-110 pointer-events-auto"
           aria-label={favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
         >
-          <Heart className={`h-4 w-4 sm:h-5 sm:w-5 ${favorite ? 'fill-red-600 text-red-600' : 'text-gray-500 dark:text-gray-400'}`} />
+          <Heart className={`h-4 w-4 sm:h-5 sm:w-5 ${favorite ? 'fill-red-500 text-red-500' : 'text-gray-600 dark:text-gray-300'}`} />
         </button>
-        {/* Badges – top-left, fixed position, no layout shift */}
-        <div className="absolute top-2.5 left-2.5 z-10 flex flex-col gap-1 pointer-events-none">
+
+        {/* Badges – top-left */}
+        <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5 pointer-events-none">
           {!productData.isInStock && (
-            <Badge className="w-fit bg-gray-800 text-white border-0 font-semibold text-[10px] px-2 py-0.5 sm:text-xs shadow-sm">
+            <span className="inline-flex items-center rounded-md bg-gray-900/90 dark:bg-gray-900 text-white font-bold text-[10px] sm:text-xs px-2.5 py-1 shadow-md backdrop-blur-sm">
               Rupture
-            </Badge>
+            </span>
           )}
           {productData.isInStock && productData.priceDisplay.hasPromo && productData.discount > 0 && (
-            <Badge className="w-fit bg-red-600 text-white border-0 font-semibold text-[10px] px-2 py-0.5 sm:text-xs shadow-sm">
+            <span className="inline-flex items-center rounded-md bg-red-600 text-white font-bold text-[10px] sm:text-xs px-2.5 py-1 shadow-md">
               -{productData.discount}%
-            </Badge>
+            </span>
           )}
           {!isCompact && (
             <>
               {productData.isInStock && showBadge && badgeText && (
-                <Badge className="bg-green-600 text-white border-0 font-semibold text-[10px] px-1.5 py-0.5">
+                <span className="inline-flex items-center rounded-md bg-green-600 text-white font-bold text-[10px] sm:text-xs px-2.5 py-1 shadow-md">
                   {badgeText}
-                </Badge>
+                </span>
               )}
               {productData.isInStock && !productData.priceDisplay.hasPromo && !showBadge && productData.isNew && (
-                <Badge className="bg-blue-600 text-white border-0 font-semibold text-[10px] px-1.5 py-0.5">
+                <span className="inline-flex items-center rounded-md bg-blue-600 text-white font-bold text-[10px] sm:text-xs px-2.5 py-1 shadow-md">
                   New
-                </Badge>
+                </span>
               )}
               {productData.isInStock && !productData.priceDisplay.hasPromo && !showBadge && productData.isBestSeller && (
-                <Badge className="bg-amber-600 text-white border-0 font-semibold text-[10px] px-1.5 py-0.5">
+                <span className="inline-flex items-center rounded-md bg-amber-500 text-white font-bold text-[10px] sm:text-xs px-2.5 py-1 shadow-md">
                   Top Vendu
-                </Badge>
+                </span>
               )}
             </>
           )}
@@ -223,12 +225,12 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
 
         {/* Desktop only: hover overlay CTA (Ajouter au panier) */}
         <div
-          className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/70 to-transparent hidden opacity-0 transition-opacity duration-200 [@media(hover:hover)]:lg:block [@media(hover:hover)]:lg:group-hover:opacity-100 pointer-events-none [@media(hover:hover)]:lg:group-hover:pointer-events-auto"
+          className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/60 to-transparent hidden opacity-0 transition-opacity duration-300 [@media(hover:hover)]:block [@media(hover:hover)]:group-hover:opacity-100 pointer-events-none [@media(hover:hover)]:group-hover:pointer-events-auto"
           aria-hidden="true"
         >
           <Button
             size="sm"
-            className="w-full min-h-[44px] bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-xl"
+            className="w-full min-h-[44px] bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
             onClick={handleAddToCart}
             disabled={isAdding || !productData.isInStock || !canAddMore}
             aria-label={!canAddMore && productData.isInStock ? 'Stock maximum atteint' : `Ajouter ${productData.name} au panier`}
@@ -239,74 +241,62 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
         </div>
       </div>
 
-      {/* Content – flexible layout; responsive padding for very small screens */}
-      <div className="flex flex-col flex-1 min-h-0 min-w-0 p-2 max-[320px]:p-1.5 max-[360px]:p-2 sm:p-3 md:p-3 lg:p-4 gap-0.5 sm:gap-1">
-        <LinkWithLoading 
-          href={`/shop/${encodeURIComponent(productData.slug || String(product.id))}`} 
-          className="block mb-0 min-w-0 flex-shrink-0"
+      {/* Content – clean padding, no top gap since image is flush */}
+      <div className="flex flex-col flex-1 min-h-0 min-w-0 px-4 py-4 gap-2">
+        <LinkWithLoading
+          href={`/shop/${encodeURIComponent(productData.slug || String(product.id))}`}
+          className="block min-w-0"
           loadingMessage="Chargement"
         >
           <h3
             title={productData.name}
-            className={`font-semibold text-gray-900 dark:text-white leading-tight overflow-hidden transition-colors group-hover:text-red-600 dark:group-hover:text-red-400
-              line-clamp-4 min-[361px]:line-clamp-3
-              ${isCompact ? 'text-[13px] max-[360px]:text-[11px] sm:text-sm md:text-[15px] lg:text-base' : 'text-sm max-[360px]:text-xs sm:text-base md:text-[15px] lg:text-base'}`}
+            className={`font-bold text-gray-900 dark:text-white leading-snug overflow-hidden transition-colors [@media(hover:hover)]:hover:text-red-600 dark:[@media(hover:hover)]:hover:text-red-400 line-clamp-2
+              ${isCompact ? 'text-sm sm:text-base' : 'text-sm sm:text-base lg:text-[15px]'}`}
           >
             {productData.name}
           </h3>
         </LinkWithLoading>
 
         {showDescription && productData.description && (
-          <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mt-1 mb-2">
+          <p className="text-xs sm:text-[13px] text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed">
             {productData.description}
           </p>
         )}
 
-        {/* No rating/avis on listing cards – only on product detail page */}
-        {/* Price – promo + old price only when hasPromo (active promo, not expired) */}
-        <div className={`flex flex-wrap items-baseline gap-1 sm:gap-1.5 md:gap-2 mt-auto min-w-0 ${isCompact ? 'mb-0' : 'mb-0'}`}>
+        {/* Price – clean layout with prominent current price and subtle old price */}
+        <div className="flex flex-wrap items-center gap-2 mt-auto">
           {productData.priceDisplay.hasPromo && productData.priceDisplay.oldPrice != null ? (
             <>
-              <span className={`font-bold text-red-600 dark:text-red-400 tabular-nums ${isCompact ? 'text-sm' : 'text-sm max-[360px]:text-xs sm:text-base md:text-lg lg:text-xl'}`}>
+              <span className={`font-extrabold text-red-600 dark:text-red-400 tabular-nums ${isCompact ? 'text-lg sm:text-xl' : 'text-lg sm:text-xl'}`}>
                 {productData.priceDisplay.finalPrice} DT
               </span>
               <span
-                className="text-gray-500 dark:text-gray-400 line-through tabular-nums text-[10px] sm:text-[11px] md:text-xs"
+                className="text-gray-400 dark:text-gray-500 line-through tabular-nums text-xs sm:text-sm"
                 style={{ textDecorationThickness: '1.5px' }}
                 aria-label={`Prix barré: ${productData.priceDisplay.oldPrice} DT`}
               >
                 {productData.priceDisplay.oldPrice} DT
               </span>
-              {!isCompact && productData.discount > 0 && (
-                <span className="rounded bg-red-100 dark:bg-red-950/50 px-1 sm:px-1.5 py-0.5 text-[9px] sm:text-[10px] md:text-xs font-semibold text-red-700 dark:text-red-400 ml-0.5 sm:ml-0">
-                  -{productData.discount}%
-                </span>
-              )}
             </>
           ) : (
-            <span className={`font-bold text-gray-900 dark:text-white tabular-nums ${isCompact ? 'text-sm' : 'text-sm max-[360px]:text-xs sm:text-base md:text-lg lg:text-xl'}`}>
+            <span className={`font-extrabold text-gray-900 dark:text-white tabular-nums ${isCompact ? 'text-lg sm:text-xl' : 'text-lg sm:text-xl'}`}>
               {productData.priceDisplay.finalPrice} DT
             </span>
           )}
         </div>
 
-        {/* CTA – "Ajouter" on mobile (one line), "Ajouter au panier" on desktop; visible on mobile/tablet (desktop has overlay) */}
-        <div className="flex-shrink-0 pt-1.5 max-[360px]:pt-1 md:pt-3 mt-1 md:mt-2 border-t border-gray-100 dark:border-gray-600/80 lg:hidden block">
+        {/* CTA – mobile/tablet visible, desktop hidden (overlay is used) */}
+        <div className="flex-shrink-0 pt-3 mt-1 border-t border-gray-100 dark:border-gray-700 lg:hidden block">
           <Button
             size="sm"
-            className={`w-full min-h-[40px] max-[360px]:min-h-[38px] rounded-xl font-semibold text-[11px] max-[360px]:text-[10px] sm:text-sm active:scale-[0.98] transition-transform duration-150 select-none px-2 whitespace-nowrap ${productData.isInStock && canAddMore ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed text-white'}`}
+            className={`w-full min-h-[44px] rounded-xl font-semibold text-sm active:scale-[0.98] transition-all duration-150 select-none ${productData.isInStock && canAddMore ? 'bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg' : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed text-white'}`}
             onClick={handleAddToCart}
             disabled={isAdding || !productData.isInStock || !canAddMore}
             aria-label={`Ajouter ${productData.name} au panier`}
           >
-            <ShoppingCart className={`size-3.5 sm:size-4 shrink-0 mr-1 sm:mr-1.5 ${isCompact ? 'sm:mr-1.5' : ''}`} aria-hidden="true" />
+            <ShoppingCart className="size-4 shrink-0 mr-2" aria-hidden="true" />
             <span className="truncate">
-              {!productData.isInStock || stockDisponible <= 0 ? 'Rupture' : !canAddMore ? 'Stock max' : isAdding ? 'Ajouté !' : (
-                <>
-                  <span className="sm:hidden">Ajouter</span>
-                  <span className="hidden sm:inline">Ajouter au panier</span>
-                </>
-              )}
+              {!productData.isInStock || stockDisponible <= 0 ? 'Rupture de stock' : !canAddMore ? 'Stock max' : isAdding ? 'Ajouté !' : 'Ajouter au panier'}
             </span>
           </Button>
         </div>
