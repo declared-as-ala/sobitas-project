@@ -138,13 +138,13 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
         '[@media(hover:hover)]:hover:shadow-[0_8px_30px_rgba(0,0,0,0.16)] [@media(hover:hover)]:dark:hover:shadow-[0_12px_40px_rgba(0,0,0,0.5)] [@media(hover:hover)]:hover:-translate-y-1',
       ].join(' ')}
     >
-      {/* Image area: full-width, generous height, object-fit: cover, flush with top */}
-      <div className="relative w-full flex-shrink-0 overflow-hidden rounded-t-xl lg:rounded-t-2xl bg-gray-100 dark:bg-gray-700/50"
+      {/* Image area: full-width, generous height, object-fit: contain to show full image, flush with top */}
+      <div className="relative w-full flex-shrink-0 overflow-hidden rounded-t-xl lg:rounded-t-2xl bg-white dark:bg-gray-700/50"
         style={{ height: '320px' }}
       >
         <LinkWithLoading
           href={`/shop/${encodeURIComponent(productData.slug || String(product.id))}`}
-          className="block w-full h-full"
+          className="block w-full h-full flex items-center justify-center p-3 lg:p-5"
           aria-label={`Voir ${productData.name}`}
           loadingMessage="Chargement"
         >
@@ -152,8 +152,9 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
             <Image
               src={productData.image}
               alt={productData.name}
-              fill
-              className="object-cover transition-transform duration-500 [@media(hover:hover)]:group-hover:scale-105"
+              width={600}
+              height={480}
+              className="w-full h-full object-contain transition-transform duration-500 [@media(hover:hover)]:group-hover:scale-105"
               loading="lazy"
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
               quality={85}
