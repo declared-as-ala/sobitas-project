@@ -38,6 +38,7 @@ interface ProductCardProps {
   variant?: 'default' | 'compact';
   showDescription?: boolean;
   hideCountdown?: boolean;
+  imageContext?: 'default' | 'packs';
 }
 
 function toFavoriteProduct(product: Product): { id: number; designation_fr: string; slug?: string; cover?: string; prix?: number; promo?: number | null; rupture?: number } {
@@ -53,7 +54,15 @@ function toFavoriteProduct(product: Product): { id: number; designation_fr: stri
   };
 }
 
-export const ProductCard = memo(function ProductCard({ product, showBadge, badgeText, variant = 'default', showDescription = false, hideCountdown = false }: ProductCardProps) {
+export const ProductCard = memo(function ProductCard({
+  product,
+  showBadge,
+  badgeText,
+  variant = 'default',
+  showDescription = false,
+  hideCountdown = false,
+  imageContext = 'default',
+}: ProductCardProps) {
   const { addToCart, getCartQty } = useCart();
   const { isFavorite, toggleFavorite } = useFavorites();
   const [isAdding, setIsAdding] = useState(false);
@@ -80,7 +89,7 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
       slug,
       name,
       designation_fr: product.designation_fr,
-    });
+    }, { visualContext: imageContext });
     return {
       name,
       slug,
@@ -93,7 +102,7 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
       isInStock: isInStock(product as any),
       imagePresentation,
     };
-  }, [product]);
+  }, [product, imageContext]);
 
   const doAddToCart = useCallback((prod: any, selectedAroma: { id: number; designation_fr: string } | null) => {
     const price = prod.prix != null ? getPriceDisplay(prod).finalPrice : productData.priceDisplay.finalPrice;

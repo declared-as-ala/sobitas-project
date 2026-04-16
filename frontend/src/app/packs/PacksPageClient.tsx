@@ -45,7 +45,7 @@ export function PacksPageClient({ packs }: PacksPageClientProps) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: Math.min(index * 0.05, 0.3) }}
               >
-                <ProductCard product={pack} showDescription={true} />
+                <ProductCard product={pack} showDescription={true} imageContext="packs" />
               </motion.div>
             ))}
           </div>

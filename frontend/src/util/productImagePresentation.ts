@@ -8,6 +8,10 @@ export interface ProductImagePresentation {
   scale: number;
 }
 
+export interface ProductImagePresentationOptions {
+  visualContext?: 'default' | 'packs';
+}
+
 type ProductImageMeta = Partial<{
   image_mode: ProductImageMode;
   imageMode: ProductImageMode;
@@ -68,7 +72,10 @@ function resolveMode(product: ProductImageMeta, imageLower: string, nameLower: s
   return hasLikelyBakedPadding ? 'cover-zoom' : 'cover';
 }
 
-export function getProductImagePresentation(product: ProductImageMeta): ProductImagePresentation {
+export function getProductImagePresentation(
+  product: ProductImageMeta,
+  options: ProductImagePresentationOptions = {}
+): ProductImagePresentation {
   const imageRaw = product.image || product.cover || '';
   const imageLower = imageRaw.toLowerCase();
   const nameLower = (product.name || product.designation_fr || '').toLowerCase();
@@ -87,10 +94,18 @@ export function getProductImagePresentation(product: ProductImageMeta): ProductI
     (fallback.mode === 'contain' ? 1 : fallback.mode === 'cover-zoom' ? 1.12 : fallback.scale);
 
   const mode = product.image_mode || product.imageMode || override?.mode || fallback.mode;
+  const visualContext = options.visualContext || 'default';
+  const contextScaleBoost =
+    visualContext === 'packs' && mode !== 'contain'
+      ? mode === 'cover-zoom'
+        ? 1.03
+        : 1.05
+      : 1;
 
   return {
     mode,
-    objectPosition: objectPosition || 'center center',
-    scale,
+    objectPosition:
+      objectPosition || (visualContext === 'packs' && mode !== 'contain' ? 'center 47%' : 'center center'),
+    scale: Math.min(1.3, Math.max(1, scale * contextScaleBoost)),
   };
 }
