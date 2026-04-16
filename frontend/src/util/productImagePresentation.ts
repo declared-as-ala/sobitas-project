@@ -45,22 +45,10 @@ function clampScale(value?: number): number | null {
   return Math.min(1.3, Math.max(1, value));
 }
 
-function resolveMode(product: ProductImageMeta, imageLower: string, nameLower: string): ProductImageMode {
+function resolveMode(product: ProductImageMeta, imageLower: string): ProductImageMode {
   const modeFromProduct = product.image_mode || product.imageMode;
   if (modeFromProduct === 'cover' || modeFromProduct === 'contain' || modeFromProduct === 'cover-zoom') {
     return modeFromProduct;
-  }
-
-  const category = (product.category || '').toLowerCase();
-  const isPackLike = category.includes('pack') || nameLower.includes('pack') || imageLower.includes('pack') || product.pack === 1;
-  const hasTransparentVisualHint =
-    imageLower.endsWith('.png') ||
-    imageLower.includes('transparent') ||
-    imageLower.includes('logo') ||
-    imageLower.includes('white-bg');
-
-  if (!isPackLike || hasTransparentVisualHint) {
-    return 'contain';
   }
 
   const hasLikelyBakedPadding =
@@ -69,6 +57,7 @@ function resolveMode(product: ProductImageMeta, imageLower: string, nameLower: s
     imageLower.includes('gainer') ||
     imageLower.includes('creatine');
 
+  // Default to full-bleed behavior; use "contain" only as an explicit per-product override.
   return hasLikelyBakedPadding ? 'cover-zoom' : 'cover';
 }
 
@@ -78,9 +67,8 @@ export function getProductImagePresentation(
 ): ProductImagePresentation {
   const imageRaw = product.image || product.cover || '';
   const imageLower = imageRaw.toLowerCase();
-  const nameLower = (product.name || product.designation_fr || '').toLowerCase();
 
-  const fallback = { ...DEFAULT_PRESENTATION, mode: resolveMode(product, imageLower, nameLower) };
+  const fallback = { ...DEFAULT_PRESENTATION, mode: resolveMode(product, imageLower) };
   const identifier = (product.slug || '').toLowerCase();
   const fileName = imageLower.split('/').pop() || '';
   const override = IMAGE_PRESENTATION_OVERRIDES[identifier] || IMAGE_PRESENTATION_OVERRIDES[fileName];
