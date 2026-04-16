@@ -12,6 +12,7 @@ import { getStorageUrl } from '@/services/api';
 import { toast } from 'sonner';
 import { getPriceDisplay } from '@/util/productPrice';
 import { getStockDisponible, isInStock } from '@/util/cartStock';
+import { getProductImagePresentation } from '@/util/productImagePresentation';
 import { useState, useMemo, memo, useCallback } from 'react';
 type Product = ApiProduct | {
   id: number;
@@ -73,18 +74,13 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
         : 0;
     const isNew = product.new_product === 1;
     const isBestSeller = product.best_seller === 1;
-    const category = ((product as any).category || '').toLowerCase();
-    const imageLower = image.toLowerCase();
-    const hasTransparentVisualHint =
-      imageLower.endsWith('.png') ||
-      imageLower.includes('transparent') ||
-      imageLower.includes('logo') ||
-      imageLower.includes('white-bg');
-    const isPackLike =
-      category.includes('pack') ||
-      name.toLowerCase().includes('pack') ||
-      imageLower.includes('pack');
-    const imageFitMode: 'cover' | 'contain' = isPackLike && !hasTransparentVisualHint ? 'cover' : 'contain';
+    const imagePresentation = getProductImagePresentation({
+      ...(product as any),
+      image,
+      slug,
+      name,
+      designation_fr: product.designation_fr,
+    });
     return {
       name,
       slug,
@@ -95,7 +91,7 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
       isNew,
       isBestSeller,
       isInStock: isInStock(product as any),
-      imageFitMode,
+      imagePresentation,
     };
   }, [product]);
 
@@ -156,7 +152,9 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
           productName={productData.name}
           productId={product.id}
           slug={productData.slug}
-          fitMode={productData.imageFitMode}
+          mode={productData.imagePresentation.mode}
+          objectPosition={productData.imagePresentation.objectPosition}
+          scale={productData.imagePresentation.scale}
         />
 
         {/* Favoris – top-right */}

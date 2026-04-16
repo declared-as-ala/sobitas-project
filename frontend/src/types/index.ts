@@ -48,6 +48,9 @@ export interface Product {
   zone4?: string;
   review?: string | null;
   aggregateRating?: string | null;
+  image_mode?: 'cover' | 'contain' | 'cover-zoom';
+  image_position?: string;
+  image_zoom?: number;
 }
 
 export interface Category {

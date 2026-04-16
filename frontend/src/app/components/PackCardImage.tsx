@@ -5,13 +5,17 @@ import Image from 'next/image';
 import { ShoppingCart } from 'lucide-react';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { isStorageImageUrl } from '@/services/api';
+import { cn } from '@/app/components/ui/utils';
+import type { ProductImageMode } from '@/util/productImagePresentation';
 
 interface PackCardImageProps {
   imageSrc: string;
   productName: string;
   productId: number;
   slug?: string;
-  fitMode: 'cover' | 'contain';
+  mode: ProductImageMode;
+  objectPosition?: string;
+  scale?: number;
 }
 
 export function PackCardImage({
@@ -19,7 +23,9 @@ export function PackCardImage({
   productName,
   productId,
   slug,
-  fitMode,
+  mode,
+  objectPosition = 'center center',
+  scale = 1,
 }: PackCardImageProps) {
   const [hasError, setHasError] = useState(false);
   const productHref = `/shop/${encodeURIComponent(slug || String(productId))}`;
@@ -34,10 +40,12 @@ export function PackCardImage({
     []
   );
 
-  const imageClasses =
-    fitMode === 'cover'
-      ? 'object-cover object-center [@media(hover:hover)]:group-hover:scale-[1.06]'
-      : 'object-contain object-center p-2 sm:p-3 lg:p-4 [@media(hover:hover)]:group-hover:scale-[1.03]';
+  const imageClasses = cn(
+    'transition-transform duration-500 ease-out will-change-transform',
+    mode === 'contain'
+      ? 'object-contain p-1.5 sm:p-2.5 lg:p-3.5 [@media(hover:hover)]:group-hover:scale-[1.03]'
+      : 'object-cover [@media(hover:hover)]:group-hover:scale-[1.06]'
+  );
 
   return (
     <div className={wrapperClasses}>
@@ -52,7 +60,11 @@ export function PackCardImage({
             src={imageSrc}
             alt={productName}
             fill
-            className={`transition-transform duration-500 ease-out ${imageClasses}`}
+            className={imageClasses}
+            style={{
+              objectPosition,
+              transform: scale > 1 ? `scale(${scale})` : undefined,
+            }}
             loading="lazy"
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
             quality={85}
@@ -69,7 +81,7 @@ export function PackCardImage({
         )}
       </LinkWithLoading>
 
-      {fitMode === 'contain' && imageSrc && !hasError && (
+      {mode === 'contain' && imageSrc && !hasError && (
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0)_20%,rgba(255,255,255,0.45)_100%)] dark:bg-[radial-gradient(ellipse_at_center,rgba(17,24,39,0)_20%,rgba(17,24,39,0.35)_100%)]" />
       )}
 
