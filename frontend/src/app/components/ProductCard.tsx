@@ -73,7 +73,7 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
         : 0;
     const isNew = product.new_product === 1;
     const isBestSeller = product.best_seller === 1;
-    const category = (product.category || '').toLowerCase();
+    const category = ((product as any).category || '').toLowerCase();
     const imageLower = image.toLowerCase();
     const hasTransparentVisualHint =
       imageLower.endsWith('.png') ||
