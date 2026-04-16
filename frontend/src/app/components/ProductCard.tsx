@@ -1,15 +1,14 @@
 'use client';
 
-import Image from 'next/image';
-import Link from 'next/link';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { motion } from 'motion/react';
 import { ShoppingCart, Heart } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
+import { PackCardImage } from '@/app/components/PackCardImage';
 import type { Product as ApiProduct } from '@/types';
 import { useCart } from '@/app/contexts/CartContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
-import { getStorageUrl, isStorageImageUrl } from '@/services/api';
+import { getStorageUrl } from '@/services/api';
 import { toast } from 'sonner';
 import { getPriceDisplay } from '@/util/productPrice';
 import { getStockDisponible, isInStock } from '@/util/cartStock';
@@ -74,6 +73,18 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
         : 0;
     const isNew = product.new_product === 1;
     const isBestSeller = product.best_seller === 1;
+    const category = (product.category || '').toLowerCase();
+    const imageLower = image.toLowerCase();
+    const hasTransparentVisualHint =
+      imageLower.endsWith('.png') ||
+      imageLower.includes('transparent') ||
+      imageLower.includes('logo') ||
+      imageLower.includes('white-bg');
+    const isPackLike =
+      category.includes('pack') ||
+      name.toLowerCase().includes('pack') ||
+      imageLower.includes('pack');
+    const imageFitMode: 'cover' | 'contain' = isPackLike && !hasTransparentVisualHint ? 'cover' : 'contain';
     return {
       name,
       slug,
@@ -84,6 +95,7 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
       isNew,
       isBestSeller,
       isInStock: isInStock(product as any),
+      imageFitMode,
     };
   }, [product]);
 
@@ -138,48 +150,14 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
         '[@media(hover:hover)]:hover:shadow-[0_8px_30px_rgba(0,0,0,0.16)] [@media(hover:hover)]:dark:hover:shadow-[0_12px_40px_rgba(0,0,0,0.5)] [@media(hover:hover)]:hover:-translate-y-1',
       ].join(' ')}
     >
-      {/* Image area: full-width, generous height, object-fit: contain to show full image, flush with top */}
-      <div className="relative w-full flex-shrink-0 overflow-hidden rounded-t-xl lg:rounded-t-2xl bg-white dark:bg-gray-700/50"
-        style={{ height: '320px' }}
-      >
-        <LinkWithLoading
-          href={`/shop/${encodeURIComponent(productData.slug || String(product.id))}`}
-          className="block w-full h-full flex items-center justify-center p-3 lg:p-5"
-          aria-label={`Voir ${productData.name}`}
-          loadingMessage="Chargement"
-        >
-          {productData.image ? (
-            <Image
-              src={productData.image}
-              alt={productData.name}
-              width={600}
-              height={480}
-              className="w-full h-full object-contain transition-transform duration-500 [@media(hover:hover)]:group-hover:scale-105"
-              loading="lazy"
-              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
-              quality={85}
-              unoptimized={isStorageImageUrl(productData.image)}
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-                const parent = target.parentElement;
-                if (parent && !parent.querySelector('.error-placeholder')) {
-                  const ph = document.createElement('div');
-                  ph.className = 'error-placeholder size-full flex items-center justify-center bg-gray-200 dark:bg-gray-700';
-                  ph.innerHTML = '<svg class="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>';
-                  parent.appendChild(ph);
-                }
-              }}
-            />
-          ) : (
-            <div className="size-full flex items-center justify-center bg-gray-200/50 dark:bg-gray-700/50" aria-hidden="true">
-              <ShoppingCart className="h-12 w-12 text-gray-400" />
-            </div>
-          )}
-        </LinkWithLoading>
-
-        {/* Gradient overlay at bottom of image for smooth transition */}
-        <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white/60 dark:from-gray-800/60 to-transparent pointer-events-none" />
+      <div className="relative">
+        <PackCardImage
+          imageSrc={productData.image}
+          productName={productData.name}
+          productId={product.id}
+          slug={productData.slug}
+          fitMode={productData.imageFitMode}
+        />
 
         {/* Favoris – top-right */}
         <button
@@ -243,7 +221,7 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
       </div>
 
       {/* Content – clean padding, no top gap since image is flush */}
-      <div className="flex flex-col flex-1 min-h-0 min-w-0 px-4 py-4 gap-2">
+      <div className="flex flex-col flex-1 min-h-0 min-w-0 px-4 py-4 gap-2.5">
         <LinkWithLoading
           href={`/shop/${encodeURIComponent(productData.slug || String(product.id))}`}
           className="block min-w-0"
@@ -259,7 +237,7 @@ export const ProductCard = memo(function ProductCard({ product, showBadge, badge
         </LinkWithLoading>
 
         {showDescription && productData.description && (
-          <p className="text-xs sm:text-[13px] text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed">
+          <p className="text-xs sm:text-[13px] text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed min-h-[2.5rem]">
             {productData.description}
           </p>
         )}

@@ -1,0 +1,79 @@
+'use client';
+
+import { useMemo, useState } from 'react';
+import Image from 'next/image';
+import { ShoppingCart } from 'lucide-react';
+import { LinkWithLoading } from '@/app/components/LinkWithLoading';
+import { isStorageImageUrl } from '@/services/api';
+
+interface PackCardImageProps {
+  imageSrc: string;
+  productName: string;
+  productId: number;
+  slug?: string;
+  fitMode: 'cover' | 'contain';
+}
+
+export function PackCardImage({
+  imageSrc,
+  productName,
+  productId,
+  slug,
+  fitMode,
+}: PackCardImageProps) {
+  const [hasError, setHasError] = useState(false);
+  const productHref = `/shop/${encodeURIComponent(slug || String(productId))}`;
+
+  const wrapperClasses = useMemo(
+    () =>
+      [
+        'relative w-full flex-shrink-0 overflow-hidden rounded-t-xl lg:rounded-t-2xl',
+        'h-[220px] sm:h-[240px] lg:h-[260px] xl:h-[280px]',
+        'bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-800 dark:via-gray-800 dark:to-gray-700/90',
+      ].join(' '),
+    []
+  );
+
+  const imageClasses =
+    fitMode === 'cover'
+      ? 'object-cover object-center [@media(hover:hover)]:group-hover:scale-[1.06]'
+      : 'object-contain object-center p-2 sm:p-3 lg:p-4 [@media(hover:hover)]:group-hover:scale-[1.03]';
+
+  return (
+    <div className={wrapperClasses}>
+      <LinkWithLoading
+        href={productHref}
+        className="block size-full"
+        aria-label={`Voir ${productName}`}
+        loadingMessage="Chargement"
+      >
+        {imageSrc && !hasError ? (
+          <Image
+            src={imageSrc}
+            alt={productName}
+            fill
+            className={`transition-transform duration-500 ease-out ${imageClasses}`}
+            loading="lazy"
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
+            quality={85}
+            unoptimized={isStorageImageUrl(imageSrc)}
+            onError={() => setHasError(true)}
+          />
+        ) : (
+          <div
+            className="size-full flex items-center justify-center bg-gray-200/60 dark:bg-gray-700/60"
+            aria-hidden="true"
+          >
+            <ShoppingCart className="h-12 w-12 text-gray-400" />
+          </div>
+        )}
+      </LinkWithLoading>
+
+      {fitMode === 'contain' && imageSrc && !hasError && (
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0)_20%,rgba(255,255,255,0.45)_100%)] dark:bg-[radial-gradient(ellipse_at_center,rgba(17,24,39,0)_20%,rgba(17,24,39,0.35)_100%)]" />
+      )}
+
+      <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white/70 dark:from-gray-800/65 to-transparent pointer-events-none" />
+    </div>
+  );
+}
