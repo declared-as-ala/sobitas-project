@@ -434,7 +434,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
     <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
       <Header />
 
-      <main className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-3 sm:py-6 lg:py-12 pb-32 sm:pb-40 lg:pb-12">
+      <main className="w-full mx-auto px-4 sm:px-6 max-w-[1024px] md:max-w-[1280px] lg:max-w-[1400px] xl:max-w-[1600px] py-3 sm:py-6 lg:py-12 pb-32 sm:pb-40 lg:pb-12">
         {/* Breadcrumb: Accueil > Boutique > Category > Subcategory (ends at category, no product name) */}
         {breadcrumbItems.length > 0 && (
           <nav aria-label="Fil d'Ariane" className="mb-3 sm:mb-4 text-sm text-gray-500 dark:text-gray-400">
@@ -978,7 +978,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
         </div>
 
         {/* Description / Nutrition / Questions — full width; spacing so sections never overlap */}
-        <section className="mx-auto w-full max-w-7xl px-4 md:px-6 pt-8 sm:pt-10 lg:pt-12 pb-6 sm:pb-8 border-t border-gray-100 dark:border-gray-800 mt-8 sm:mt-10" aria-label="Description et informations produit">
+        <section className="mx-auto w-full px-4 md:px-6 pt-8 sm:pt-10 lg:pt-12 pb-6 sm:pb-8 border-t border-gray-100 dark:border-gray-800 mt-8 sm:mt-10" aria-label="Description et informations produit">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="w-full mb-0">
             {(() => {
               const hasNutritionContent = product.nutrition_values != null &&
@@ -1306,7 +1306,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
         className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 p-2.5 sm:p-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] z-50"
         style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}
       >
-        <div className="max-w-7xl mx-auto flex flex-col gap-2 sm:gap-3">
+        <div className="w-full mx-auto px-1 sm:px-2 max-w-[1024px] md:max-w-[1280px] lg:max-w-[1400px] xl:max-w-[1600px] flex flex-col gap-2 sm:gap-3">
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total</p>
             <p className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400 truncate">

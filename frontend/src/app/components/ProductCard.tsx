@@ -209,22 +209,6 @@ export const ProductCard = memo(function ProductCard({
           )}
         </div>
 
-        {/* Desktop only: hover overlay CTA (Ajouter au panier) */}
-        <div
-          className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/60 to-transparent hidden opacity-0 transition-opacity duration-300 [@media(hover:hover)]:block [@media(hover:hover)]:group-hover:opacity-100 pointer-events-none [@media(hover:hover)]:group-hover:pointer-events-auto"
-          aria-hidden="true"
-        >
-          <Button
-            size="sm"
-            className="w-full min-h-[44px] bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
-            onClick={handleAddToCart}
-            disabled={isAdding || !productData.isInStock || !canAddMore}
-            aria-label={!canAddMore && productData.isInStock ? 'Stock maximum atteint' : `Ajouter ${productData.name} au panier`}
-          >
-            <ShoppingCart className="h-4 w-4 mr-2" aria-hidden="true" />
-            {!productData.isInStock || stockDisponible <= 0 ? 'Rupture' : !canAddMore ? 'Stock max' : isAdding ? 'Ajouté !' : 'Ajouter au panier'}
-          </Button>
-        </div>
       </div>
 
       {/* Content – clean padding, no top gap since image is flush */}
