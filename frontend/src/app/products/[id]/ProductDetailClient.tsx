@@ -473,20 +473,20 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
         {/* Layout: 2 cols desktop (Image left, larger | Info + buy right), mobile single col. */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8 xl:gap-10 mb-6 sm:mb-8 lg:mb-10">
           {/* A) COLONNE GAUCHE — Gallery (desktop): image slightly smaller */}
-          <div className="hidden lg:block lg:col-span-6 min-w-0 lg:pr-2">
+          <div className="hidden lg:block lg:col-span-7 min-w-0">
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               className="sticky top-24"
             >
-              <div className="relative w-full max-w-[480px] rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg group aspect-square min-h-[360px] xl:min-h-[440px]">
+              <div className="relative w-full rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg group aspect-square min-h-[420px] xl:min-h-[520px]">
                 {productImage ? (
                   <Image
                     src={productImage}
                     alt={product.designation_fr ?? product.slug ?? 'Produit'}
                     fill
-                    className="object-contain p-2 group-hover:scale-[1.03] transition-transform duration-300"
-                    sizes="(max-width: 1024px) 100vw, 58vw"
+                    className="object-cover object-center group-hover:scale-[1.03] transition-transform duration-300"
+                    sizes="(max-width: 1024px) 100vw, 62vw"
                     priority
                     fetchPriority="high"
                     unoptimized
@@ -514,7 +514,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
           </div>
 
           {/* B) COLONNE DROITE — Infos + prix + quantité + CTAs + garanties (desktop) / mobile first block */}
-          <div className="lg:col-span-6 min-w-0 space-y-3 sm:space-y-4">
+          <div className="lg:col-span-5 min-w-0 space-y-3 sm:space-y-4">
             {/* Mobile Layout: Image First then badges, title, etc. */}
             <div className="lg:hidden space-y-4 sm:space-y-5">
               {/* Badges at top (stock from API: rupture + qte + low_stock_threshold) */}
