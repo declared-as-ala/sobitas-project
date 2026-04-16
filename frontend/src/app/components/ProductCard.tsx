@@ -255,6 +255,22 @@ export const ProductCard = memo(function ProductCard({
           )}
         </div>
 
+        {/* CTA – desktop */}
+        <div className="hidden lg:block flex-shrink-0 pt-3 mt-1 border-t border-gray-100 dark:border-gray-700">
+          <Button
+            size="sm"
+            className={`w-full min-h-[44px] rounded-xl font-semibold text-sm transition-all duration-150 select-none ${productData.isInStock && canAddMore ? 'bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg' : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed text-white'}`}
+            onClick={handleAddToCart}
+            disabled={isAdding || !productData.isInStock || !canAddMore}
+            aria-label={!canAddMore && productData.isInStock ? 'Stock maximum atteint' : `Ajouter ${productData.name} au panier`}
+          >
+            <ShoppingCart className="size-4 shrink-0 mr-2" aria-hidden="true" />
+            <span className="truncate">
+              {!productData.isInStock || stockDisponible <= 0 ? 'Rupture de stock' : !canAddMore ? 'Stock max' : isAdding ? 'Ajouté !' : 'Ajouter au panier'}
+            </span>
+          </Button>
+        </div>
+
         {/* CTA – mobile/tablet visible, desktop hidden (overlay is used) */}
         <div className="flex-shrink-0 pt-3 mt-1 border-t border-gray-100 dark:border-gray-700 lg:hidden block">
           <Button
