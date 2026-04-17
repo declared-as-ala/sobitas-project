@@ -153,7 +153,7 @@ class ArticleResource extends Resource
                                             ->default(ArticleDescriptionHtml::MODE_VISUAL)
                                             ->live()
                                             ->columnSpanFull()
-                                            ->afterStateUpdated(function (mixed $state, Set $set, Get $get): void {
+                                            ->afterStateUpdated(function (mixed $state, Set $set, Get $get, mixed $old = null): void {
                                                 if ($state === ArticleDescriptionHtml::MODE_HTML) {
                                                     $set(
                                                         ArticleDescriptionHtml::FIELD_HTML_STAGING,
@@ -163,7 +163,10 @@ class ArticleResource extends Resource
                                                     return;
                                                 }
 
-                                                if ($state === ArticleDescriptionHtml::MODE_VISUAL) {
+                                                // Only merge staging → RichEditor when leaving HTML mode.
+                                                // On first load, $old is null and staging may not be hydrated yet;
+                                                // running this would wipe `description` with an empty doc.
+                                                if ($state === ArticleDescriptionHtml::MODE_VISUAL && $old === ArticleDescriptionHtml::MODE_HTML) {
                                                     $html = (string) ($get(ArticleDescriptionHtml::FIELD_HTML_STAGING) ?? '');
 
                                                     try {

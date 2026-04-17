@@ -4,6 +4,7 @@ namespace App\Filament\Resources\ArticleResource\Pages;
 
 use App\Filament\Resources\ArticleResource;
 use App\Filament\Support\ArticleDescriptionHtml;
+use App\Models\Article;
 use Filament\Actions;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
@@ -20,8 +21,15 @@ class EditArticle extends EditRecord
     protected function mutateFormDataBeforeFill(array $data): array
     {
         $data['_slug_auto_source'] = $data['designation_fr'] ?? '';
-        $data[ArticleDescriptionHtml::FIELD_HTML_STAGING] = (string) ($data['description'] ?? '');
+        $rawDescription = $data['description'] ?? null;
+        $data[ArticleDescriptionHtml::FIELD_HTML_STAGING] = is_string($rawDescription)
+            ? $rawDescription
+            : (is_array($rawDescription) ? ArticleDescriptionHtml::toStoredHtml($rawDescription) : '');
         $data[ArticleDescriptionHtml::FIELD_EDITOR_MODE] = ArticleDescriptionHtml::MODE_VISUAL;
+
+        if (array_key_exists('description', $data)) {
+            $data['description'] = Article::prepareDescriptionForRichEditorForm($data['description']);
+        }
 
         return $data;
     }
