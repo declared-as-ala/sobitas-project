@@ -110,6 +110,39 @@ const CHATGPT_BASE = 'https://chat.openai.com/';
 /** Max length for ChatGPT ?q= param (browser URL limits); longer prompts go to clipboard only */
 const CHATGPT_QUERY_MAX_LEN = 2000;
 
+const articleBodyProseClass =
+  'article-content prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none ' +
+  'prose-headings:text-gray-900 dark:prose-headings:text-white ' +
+  'prose-p:text-gray-700 dark:prose-p:text-gray-300 ' +
+  'prose-strong:text-gray-900 dark:prose-strong:text-white ' +
+  'prose-ul:text-gray-700 dark:prose-ul:text-gray-300 ' +
+  'prose-ol:text-gray-700 dark:prose-ol:text-gray-300 ' +
+  'prose-li:text-gray-700 dark:prose-li:text-gray-300 ' +
+  'prose-img:rounded-lg prose-img:shadow-md ' +
+  'prose-blockquote:border-l-red-600 dark:prose-blockquote:border-l-red-400 ' +
+  'prose-blockquote:text-gray-600 dark:prose-blockquote:text-gray-400 ' +
+  'prose-code:text-red-600 dark:prose-code:text-red-400 ' +
+  'prose-pre:bg-gray-100 dark:prose-pre:bg-gray-800';
+
+/** Resolved `dir` for the article body (explicit CMS value, or auto from `content_lang`). */
+function resolveArticleBodyDir(article: Article): 'ltr' | 'rtl' | undefined {
+  const raw = (article.content_text_direction ?? 'auto').toString().toLowerCase();
+  if (raw === 'rtl' || raw === 'ltr') {
+    return raw;
+  }
+  const lang = (article.content_lang ?? '').toString().toLowerCase();
+  if (
+    lang.startsWith('ar') ||
+    lang.startsWith('he') ||
+    lang.startsWith('fa') ||
+    lang.startsWith('ur') ||
+    lang.startsWith('yi')
+  ) {
+    return 'rtl';
+  }
+  return undefined;
+}
+
 export function ArticleDetailClient({ article, relatedArticles, children }: ArticleDetailClientProps) {
   const router = useRouter();
   const contentRef = useRef<HTMLDivElement>(null);
@@ -253,21 +286,15 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
 
             {/* Article Content – first part, then "Achetez les produits de cet article" in the middle, then rest of content */}
             <div className="px-4 sm:px-6 lg:px-8 pb-6 sm:pb-8 lg:pb-12">
-              <div ref={contentRef}>
+              <div
+                ref={contentRef}
+                dir={resolveArticleBodyDir(article)}
+                lang={article.content_lang?.trim() ? article.content_lang.trim() : undefined}
+                className="article-body-root min-w-0 [dir=rtl]:text-right"
+              >
                 {contentBefore && (
                   <div
-                    className="article-content prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none
-                      prose-headings:text-gray-900 dark:prose-headings:text-white
-                      prose-p:text-gray-700 dark:prose-p:text-gray-300
-                      prose-strong:text-gray-900 dark:prose-strong:text-white
-                      prose-ul:text-gray-700 dark:prose-ul:text-gray-300
-                      prose-ol:text-gray-700 dark:prose-ol:text-gray-300
-                      prose-li:text-gray-700 dark:prose-li:text-gray-300
-                      prose-img:rounded-lg prose-img:shadow-md
-                      prose-blockquote:border-l-red-600 dark:prose-blockquote:border-l-red-400
-                      prose-blockquote:text-gray-600 dark:prose-blockquote:text-gray-400
-                      prose-code:text-red-600 dark:prose-code:text-red-400
-                      prose-pre:bg-gray-100 dark:prose-pre:bg-gray-800"
+                    className={articleBodyProseClass}
                     dangerouslySetInnerHTML={{ __html: decodeHtmlEntities(contentBefore) }}
                   />
                 )}
@@ -280,18 +307,7 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
                 />
                 {contentAfter && (
                   <div
-                    className="article-content prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none
-                      prose-headings:text-gray-900 dark:prose-headings:text-white
-                      prose-p:text-gray-700 dark:prose-p:text-gray-300
-                      prose-strong:text-gray-900 dark:prose-strong:text-white
-                      prose-ul:text-gray-700 dark:prose-ul:text-gray-300
-                      prose-ol:text-gray-700 dark:prose-ol:text-gray-300
-                      prose-li:text-gray-700 dark:prose-li:text-gray-300
-                      prose-img:rounded-lg prose-img:shadow-md
-                      prose-blockquote:border-l-red-600 dark:prose-blockquote:border-l-red-400
-                      prose-blockquote:text-gray-600 dark:prose-blockquote:text-gray-400
-                      prose-code:text-red-600 dark:prose-code:text-red-400
-                      prose-pre:bg-gray-100 dark:prose-pre:bg-gray-800"
+                    className={articleBodyProseClass}
                     dangerouslySetInnerHTML={{ __html: decodeHtmlEntities(contentAfter) }}
                   />
                 )}

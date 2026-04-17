@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Enums\BlogArticleType;
 use App\Filament\Resources\ArticleResource\Pages;
+use App\Filament\Support\ArticleBodyDocumentNormalizer;
 use App\Filament\Support\ArticleDescriptionHtml;
 use App\Filament\Support\ImagePath;
 use App\Models\Article;
@@ -57,9 +58,7 @@ class ArticleResource extends Resource
     public static function mergeDescriptionEditorFormData(array $data): array
     {
         if (($data[ArticleDescriptionHtml::FIELD_EDITOR_MODE] ?? ArticleDescriptionHtml::MODE_VISUAL) === ArticleDescriptionHtml::MODE_HTML) {
-            $data['description'] = ArticleDescriptionHtml::sanitizeStoredHtml(
-                (string) ($data[ArticleDescriptionHtml::FIELD_HTML_STAGING] ?? '')
-            );
+            $data['description'] = (string) ($data[ArticleDescriptionHtml::FIELD_HTML_STAGING] ?? '');
         }
 
         unset(
@@ -68,7 +67,36 @@ class ArticleResource extends Resource
             $data['_description_seo_metrics'],
         );
 
+        if (isset($data['description']) && is_array($data['description'])) {
+            $data['description'] = ArticleDescriptionHtml::toStoredHtml($data['description']);
+        }
+
+        if (isset($data['description']) && is_string($data['description']) && $data['description'] !== '') {
+            $normalized = ArticleBodyDocumentNormalizer::normalize($data['description']);
+            $data['description'] = ArticleDescriptionHtml::sanitizeStoredHtml($normalized['html']);
+            self::mergeInferredDocumentLocale($data, $normalized);
+        }
+
         return $data;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @param  array{html: string, lang: ?string, dir: ?string}  $normalized
+     */
+    private static function mergeInferredDocumentLocale(array &$data, array $normalized): void
+    {
+        if (blank($data['content_lang'] ?? null) && filled($normalized['lang'])) {
+            $data['content_lang'] = Str::limit((string) $normalized['lang'], 16, '');
+        }
+
+        $direction = $data['content_text_direction'] ?? 'auto';
+        if (($direction === 'auto' || blank($direction)) && filled($normalized['dir'])) {
+            $d = strtolower((string) $normalized['dir']);
+            if ($d === 'rtl' || $d === 'ltr') {
+                $data['content_text_direction'] = $d;
+            }
+        }
     }
 
     public static function form(Schema $schema): Schema
@@ -130,7 +158,7 @@ class ArticleResource extends Resource
                                 Section::make('Rédaction')
                                     ->icon('heroicon-o-document-text')
                                     ->iconColor('primary')
-                                    ->description('Rédigez le contenu complet de votre article. Passez en mode HTML pour coller du balisage ou ajuster la structure sémantique (titres, liens, tableaux).')
+                                    ->description('Rédigez le contenu complet de votre article. Passez en mode HTML pour coller du balisage ou ajuster la structure sémantique (titres, liens, tableaux). Si vous collez une page HTML complète (<!DOCTYPE>, <html>…), seul le contenu du <body> est conservé ; les balises <head> (meta, styles globaux) ne sont pas enregistrées — utilisez la section Affichage pour la langue / le sens du texte, et l’onglet SEO pour les meta.')
                                     ->extraAttributes(['class' => 'article-redaction-section'])
                                     ->schema([
                                         Forms\Components\ToggleButtons::make(ArticleDescriptionHtml::FIELD_EDITOR_MODE)
@@ -226,6 +254,32 @@ class ArticleResource extends Resource
                                             ->extraFieldWrapperAttributes(['class' => 'article-redaction-seo-wrap'])
                                             ->columnSpanFull()
                                             ->dehydrated(false),
+                                    ]),
+
+                                Section::make('Affichage du texte (blog)')
+                                    ->icon('heroicon-o-language')
+                                    ->iconColor('gray')
+                                    ->description('Contrôle la direction et la langue du corps de l’article sur le site public. « Automatique » : pour l’affichage, le sens peut être déduit de la langue (ex. ar → RTL) côté site.')
+                                    ->schema([
+                                        Grid::make(2)
+                                            ->schema([
+                                                Forms\Components\Select::make('content_text_direction')
+                                                    ->label('Sens du texte')
+                                                    ->options([
+                                                        'auto' => 'Automatique',
+                                                        'ltr' => 'Gauche à droite (LTR)',
+                                                        'rtl' => 'Droite à gauche (RTL)',
+                                                    ])
+                                                    ->default('auto')
+                                                    ->required()
+                                                    ->native(false),
+
+                                                Forms\Components\TextInput::make('content_lang')
+                                                    ->label('Langue du contenu (ISO)')
+                                                    ->placeholder('fr, ar, …')
+                                                    ->maxLength(16)
+                                                    ->helperText('Optionnel. Ex. fr, ar. Améliore l’accessibilité (attribut lang) et peut guider le sens en mode Automatique.'),
+                                            ]),
                                     ]),
                             ]),
 

@@ -121,6 +121,10 @@ export interface Article {
   designation_fr: string;
   description?: string;
   description_fr?: string;
+  /** Blog body text direction: auto | ltr | rtl (from CMS). */
+  content_text_direction?: 'auto' | 'ltr' | 'rtl' | string | null;
+  /** ISO language code for article body (e.g. fr, ar). */
+  content_lang?: string | null;
   cover?: string;
   created_at?: string;
   updated_at?: string; // Added for cache busting
