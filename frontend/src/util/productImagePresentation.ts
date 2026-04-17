@@ -91,18 +91,10 @@ export function getProductImagePresentation(
     (fallback.mode === 'contain' ? 1 : fallback.mode === 'cover-zoom' ? 1.12 : fallback.scale);
 
   const mode = product.image_mode || product.imageMode || override?.mode || fallback.mode;
-  const visualContext = options.visualContext || 'default';
-  const contextScaleBoost =
-    visualContext === 'packs' && mode !== 'contain'
-      ? mode === 'cover-zoom'
-        ? 1.03
-        : 1.05
-      : 1;
 
   return {
     mode,
-    objectPosition:
-      objectPosition || (visualContext === 'packs' && mode !== 'contain' ? 'center 47%' : 'center center'),
-    scale: Math.min(1.3, Math.max(1, scale * contextScaleBoost)),
+    objectPosition: objectPosition || 'center center',
+    scale: Math.min(1.3, Math.max(1, scale)),
   };
 }
