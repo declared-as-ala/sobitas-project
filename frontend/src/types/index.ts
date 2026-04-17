@@ -40,6 +40,9 @@ export interface Product {
   qte?: number;
   low_stock_threshold?: number;
   nutrition_values?: string | null;
+  /** Filament repeater: [{ q, a }, …] — product-specific FAQ shown on detail page */
+  faq?: Array<{ q?: string; a?: string; question?: string; answer?: string }> | null;
+  /** Legacy HTML block (older backends); optional fallback if `faq` is empty */
   questions?: string | null;
   code_product?: string | null;
   zone1?: string;
@@ -312,6 +315,8 @@ export interface Service {
 export interface FAQ {
   id: number;
   question?: string;
+  /** API (Filament) returns `answer`; legacy may use `reponse` */
+  answer?: string;
   reponse?: string;
 }
 

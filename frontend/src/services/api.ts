@@ -731,11 +731,17 @@ export const getPageBySlug = async (slug: string): Promise<Page> => {
   }
 };
 
-// FAQs
+// FAQs — Filament `ApisController::faqs` returns paginated `{ data, meta, links }` with `question` + `answer`
 export const getFAQs = async (): Promise<FAQ[]> => {
   const response = await api.get('/faqs?per_page=100');
   const raw = response.data;
-  return Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
+  const rows: any[] = Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
+  return rows.map((row) => ({
+    id: row.id,
+    question: row.question,
+    answer: row.answer,
+    reponse: row.reponse ?? row.answer ?? '',
+  })) as FAQ[];
 };
 
 // SEO

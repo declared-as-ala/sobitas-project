@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -164,8 +164,27 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
     });
   const reviewsToShowOnPage = filteredReviews.slice(0, REVIEWS_ON_PRODUCT_PAGE);
 
+  /** Filament stores product FAQ as JSON array `{ q, a }[]` on `faq`; exposed as-is from `GET /product_details/{slug}`. */
+  const productFaqItems = useMemo(() => {
+    const raw = (product as Product & { faq?: unknown }).faq;
+    if (!raw) return [] as Array<{ id: number; q: string; a: string }>;
+    const arr = Array.isArray(raw) ? raw : [];
+    return arr
+      .map((item: Record<string, unknown>, idx: number) => ({
+        id: idx,
+        q: String(item?.q ?? item?.question ?? '').trim(),
+        a: String(item?.a ?? item?.answer ?? '').trim(),
+      }))
+      .filter((item) => item.q.length > 0 || item.a.length > 0);
+  }, [product]);
+
   const images = product.cover ? [product.cover] : [];
   const productImage = images[0] ? getStorageUrl(images[0]) : '';
+
+  const slugLower = (product.slug || '').toLowerCase();
+  const nameLower = (product.designation_fr || '').toLowerCase();
+  const isPackProduct =
+    product.pack === 1 || slugLower.includes('pack') || nameLower.includes('pack');
 
   // Helper function to strip HTML tags and decode HTML entities for meta description
   const stripHtml = (html: string | null | undefined): string => {
@@ -479,13 +498,25 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
               animate={{ opacity: 1, y: 0 }}
               className="sticky top-24"
             >
-              <div className="relative w-full rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg group aspect-square min-h-[420px] xl:min-h-[520px]">
+              <div
+                className={cn(
+                  'relative w-full rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-lg group',
+                  isPackProduct
+                    ? 'aspect-[3/2] bg-gradient-to-b from-gray-50 to-white dark:from-gray-800 dark:to-gray-900/90'
+                    : 'aspect-square min-h-[420px] xl:min-h-[520px] bg-gray-100 dark:bg-gray-800'
+                )}
+              >
                 {productImage ? (
                   <Image
                     src={productImage}
                     alt={product.designation_fr ?? product.slug ?? 'Produit'}
                     fill
-                    className="object-cover object-center group-hover:scale-[1.03] transition-transform duration-300"
+                    className={cn(
+                      'transition-transform duration-300',
+                      isPackProduct
+                        ? 'object-contain object-center p-3 sm:p-4 xl:p-5 [@media(hover:hover)]:group-hover:scale-[1.02]'
+                        : 'object-cover object-center [@media(hover:hover)]:group-hover:scale-[1.03]'
+                    )}
                     sizes="(max-width: 1024px) 100vw, 62vw"
                     priority
                     fetchPriority="high"
@@ -552,13 +583,26 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 animate={{ opacity: 1, y: 0 }}
                 className="w-full max-w-[320px] sm:max-w-[380px] mx-auto"
               >
-                <div className="relative bg-gray-100 dark:bg-gray-800 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-700 group w-full" style={{ aspectRatio: '1 / 1' }}>
+                <div
+                  className={cn(
+                    'relative bg-gray-100 dark:bg-gray-800 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-700 group w-full',
+                    isPackProduct
+                      ? 'aspect-[3/2] bg-gradient-to-b from-gray-50 to-white dark:from-gray-800 dark:to-gray-900/90'
+                      : ''
+                  )}
+                  style={isPackProduct ? undefined : { aspectRatio: '1 / 1' }}
+                >
                   {productImage ? (
                     <Image
                       src={productImage}
                       alt={product.designation_fr ?? product.slug ?? 'Produit'}
                       fill
-                      className="object-contain p-3 sm:p-4 group-hover:scale-105 transition-transform duration-500"
+                      className={cn(
+                        'transition-transform duration-500',
+                        isPackProduct
+                          ? 'object-contain object-center p-2 sm:p-3 group-hover:scale-[1.02]'
+                          : 'object-contain p-3 sm:p-4 group-hover:scale-105'
+                      )}
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 50vw"
                       priority
                       fetchPriority="high"
@@ -985,11 +1029,13 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 String(product.nutrition_values).trim() !== '' &&
                 String(product.nutrition_values).trim() !== '<p></p>' &&
                 String(product.nutrition_values).trim() !== '<p><br></p>';
-              const hasQuestions = product.questions != null &&
+              const hasLegacyQuestionsHtml =
+                product.questions != null &&
                 String(product.questions).trim() !== '' &&
                 String(product.questions).trim() !== '<p></p>' &&
                 String(product.questions).trim() !== '<p><br></p>';
-              const tabCount = hasQuestions ? 3 : 2;
+              const hasProductFaq = productFaqItems.length > 0;
+              const hasQuestionsTab = hasLegacyQuestionsHtml || hasProductFaq || faqs.length > 0;
 
               return (
                 <Tabs defaultValue="description" className="w-full flex flex-col gap-4 sm:gap-5">
@@ -1001,7 +1047,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     <TabsTrigger value="nutrition" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2.5 sm:py-2 min-h-[40px] sm:min-h-0 flex-shrink-0 sm:flex-1 min-w-0 px-4 min-[400px]:px-3 sm:px-2 whitespace-nowrap sm:truncate mr-0" title={product.zone3 || 'Valeurs nutritionnelles'}>
                       {product.zone3 || 'Valeurs nutritionnelles'}
                     </TabsTrigger>
-                    {hasQuestions && (
+                    {hasQuestionsTab && (
                       <TabsTrigger value="questions" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2.5 sm:py-2 min-h-[40px] sm:min-h-0 flex-shrink-0 sm:flex-1 min-w-0 px-4 min-[400px]:px-3 sm:px-2 whitespace-nowrap sm:truncate mr-0" title={product.zone4 || 'Questions'}>
                         {product.zone4 || 'Questions'}
                       </TabsTrigger>
@@ -1054,10 +1100,27 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     <h3 className="text-lg sm:text-xl font-bold mb-3 text-gray-900 dark:text-white">
                       {product.zone4 || 'Questions Fréquentes'}
                     </h3>
-                    {product.questions && product.questions.trim() !== '' ? (
+                    {hasProductFaq ? (
+                      <div className="space-y-5">
+                        {productFaqItems.map((item) => (
+                          <div
+                            key={item.id}
+                            className="border-b border-gray-100 dark:border-gray-800 pb-5 last:border-0 last:pb-0"
+                          >
+                            <h4 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-start gap-2">
+                              <span className="text-red-600 dark:text-red-400 shrink-0">Q.</span>
+                              <span>{item.q || '—'}</span>
+                            </h4>
+                            <div className="pl-6 text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap">
+                              {item.a}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : hasLegacyQuestionsHtml ? (
                       <div
                         className="text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-base max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-headings:mb-2 prose-headings:mt-4 prose-p:text-gray-600 prose-p:dark:text-gray-400 prose-p:leading-relaxed prose-p:my-2 prose-strong:text-gray-900 prose-strong:dark:text-white"
-                        dangerouslySetInnerHTML={{ __html: product.questions }}
+                        dangerouslySetInnerHTML={{ __html: product.questions || '' }}
                       />
                     ) : faqs.length > 0 ? (
                     <div className="space-y-4">
@@ -1067,8 +1130,8 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                             <span className="text-red-600 dark:text-red-400 shrink-0">Q.</span>
                             {faq.question}
                           </h4>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 pl-6">
-                            {faq.reponse}
+                          <p className="text-sm text-gray-600 dark:text-gray-400 pl-6 whitespace-pre-wrap">
+                            {faq.reponse ?? faq.answer ?? ''}
                           </p>
                         </div>
                       ))}

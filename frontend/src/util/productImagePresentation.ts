@@ -65,6 +65,15 @@ export function getProductImagePresentation(
   product: ProductImageMeta,
   options: ProductImagePresentationOptions = {}
 ): ProductImagePresentation {
+  // Packs listing page: always show the full product (Shopify-style cards, no cropping).
+  if (options.visualContext === 'packs') {
+    return {
+      mode: 'contain',
+      objectPosition: 'center center',
+      scale: 1,
+    };
+  }
+
   const imageRaw = product.image || product.cover || '';
   const imageLower = imageRaw.toLowerCase();
 
