@@ -7,6 +7,7 @@ use App\Filament\Resources\ArticleResource\Pages;
 use App\Filament\Support\ArticleBodyDocumentNormalizer;
 use App\Filament\Support\ArticleDescriptionHtml;
 use App\Filament\Support\ImagePath;
+use App\Filament\Support\RichEditor\TextDirectionToolPlugin;
 use App\Models\Article;
 use Filament\Forms;
 use Filament\Schemas\Schema;
@@ -219,6 +220,7 @@ class ArticleResource extends Resource
                                             ->extraFieldWrapperAttributes(['class' => 'article-redaction-rich-editor'])
                                             ->visible(fn (Get $get): bool => ($get(ArticleDescriptionHtml::FIELD_EDITOR_MODE) ?? ArticleDescriptionHtml::MODE_VISUAL) === ArticleDescriptionHtml::MODE_VISUAL)
                                             ->dehydrated(fn (Get $get): bool => ($get(ArticleDescriptionHtml::FIELD_EDITOR_MODE) ?? ArticleDescriptionHtml::MODE_VISUAL) === ArticleDescriptionHtml::MODE_VISUAL)
+                                            ->plugins([TextDirectionToolPlugin::make()])
                                             ->toolbarButtons([
                                                 ['bold', 'italic', 'underline', 'strike'],
                                                 ['h2', 'h3'],
@@ -226,6 +228,7 @@ class ArticleResource extends Resource
                                                 ['bulletList', 'orderedList'],
                                                 ['blockquote', 'codeBlock'],
                                                 ['table', 'attachFiles'],
+                                                [TextDirectionToolPlugin::TOOL_AUTO, TextDirectionToolPlugin::TOOL_LTR, TextDirectionToolPlugin::TOOL_RTL],
                                                 ['horizontalRule', 'clearFormatting'],
                                                 ['undo', 'redo'],
                                             ]),

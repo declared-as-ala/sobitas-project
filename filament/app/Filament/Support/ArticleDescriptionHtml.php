@@ -64,7 +64,7 @@ final class ArticleDescriptionHtml
 
     public static function sanitizeStoredHtml(string $html): string
     {
-        return Str::sanitizeHtml($html);
+        return StyleAwareHtmlSanitizer::sanitize($html);
     }
 
     /**

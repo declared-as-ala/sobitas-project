@@ -40,6 +40,15 @@ class EditArticle extends EditRecord
      */
     protected function mutateFormDataBeforeSave(array $data): array
     {
+        // FIELD_HTML_STAGING is dehydrated(false), so read it from raw state — otherwise HTML-mode saves wipe `description`.
+        $raw = $this->form->getRawState();
+        $data[ArticleDescriptionHtml::FIELD_HTML_STAGING] = (string) ($raw[ArticleDescriptionHtml::FIELD_HTML_STAGING] ?? '');
+
+        if (! array_key_exists(ArticleDescriptionHtml::FIELD_EDITOR_MODE, $data)
+            && array_key_exists(ArticleDescriptionHtml::FIELD_EDITOR_MODE, $raw)) {
+            $data[ArticleDescriptionHtml::FIELD_EDITOR_MODE] = $raw[ArticleDescriptionHtml::FIELD_EDITOR_MODE];
+        }
+
         return ArticleResource::mergeDescriptionEditorFormData($data);
     }
 
