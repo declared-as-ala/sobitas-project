@@ -603,7 +603,7 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
     <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
       <Header />
 
-      <main className="w-full mx-auto px-4 sm:px-6 max-w-[1024px] md:max-w-[1280px] lg:max-w-[1400px] xl:max-w-[1600px] py-4 sm:py-8 lg:py-12">
+      <main className="w-full mx-auto px-2.5 sm:px-4 md:px-5 lg:px-6 max-w-[1024px] md:max-w-[1280px] lg:max-w-[1400px] xl:max-w-[1600px] py-4 sm:py-8 lg:py-12">
         {/* Breadcrumbs */}
         {(() => {
           const breadcrumbItems = [];
@@ -741,7 +741,7 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
             <Button
               variant="outline"
               onClick={() => setShowFiltersDesktop(!showFiltersDesktop)}
-              className="hidden md:flex items-center gap-2 min-h-[44px] border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+              className="hidden lg:flex items-center gap-2 min-h-[44px] border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
             >
               <Filter className="h-4 w-4" />
               <span>Filtres</span>
@@ -756,7 +756,7 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
               <SheetTrigger asChild>
                 <Button
                   variant="outline"
-                  className="md:hidden min-h-[44px] min-w-[44px] flex-shrink-0 border-gray-200 dark:border-gray-700"
+                  className="lg:hidden min-h-[44px] min-w-[44px] flex-shrink-0 border-gray-200 dark:border-gray-700"
                   aria-label="Ouvrir les filtres"
                 >
                   <Filter className="h-4 w-4 sm:mr-2" />
@@ -962,7 +962,7 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
         )}
 
         {/* Main Content Area - Filters + Products */}
-        <div className="flex flex-col md:flex-row gap-6">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
           {/* Desktop Filter Panel - Collapsible */}
           <AnimatePresence>
             {showFiltersDesktop && (
@@ -971,7 +971,7 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
                 animate={{ opacity: 1, x: 0, width: 'auto' }}
                 exit={{ opacity: 0, x: -20, width: 0 }}
                 transition={{ duration: 0.2 }}
-                className="hidden md:block w-72 flex-shrink-0"
+                className="hidden lg:block w-72 flex-shrink-0"
               >
                 <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 px-6 pt-6 pb-8 space-y-1 sticky top-4 shadow-sm overflow-visible">
                   <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200 dark:border-gray-800">
@@ -1170,7 +1170,7 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
             ) : (
               <>
                 {/* Grid: 2 cols mobile; smaller gap on very small screens so cards stay readable. */}
-                <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 max-[360px]:gap-1.5 sm:gap-4 md:gap-5 lg:gap-6 min-w-0">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-2 max-[360px]:gap-1.5 sm:gap-3 md:gap-4 lg:gap-6 min-w-0 w-full">
                   {paginatedProducts.map(product => (
                     <ProductCard
                       key={product.id}
@@ -1210,7 +1210,7 @@ export function ShopPageClient(props: ShopPageClientProps) {
     <Suspense fallback={
       <>
         <Header />
-        <main className="w-full mx-auto px-4 sm:px-6 max-w-[1024px] md:max-w-[1280px] lg:max-w-[1400px] xl:max-w-[1600px] py-4 sm:py-8 lg:py-12">
+        <main className="w-full mx-auto px-2.5 sm:px-4 md:px-5 lg:px-6 max-w-[1024px] md:max-w-[1280px] lg:max-w-[1400px] xl:max-w-[1600px] py-4 sm:py-8 lg:py-12">
           <ProductsSkeleton />
         </main>
         <Footer />

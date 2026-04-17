@@ -85,8 +85,8 @@ export function ProductsSkeleton({
         </div>
       )}
 
-      {/* Product grid — same as ShopPageClient */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-5 lg:gap-6 xl:gap-7">
+      {/* Product grid — aligned with ShopPageClient */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-2 max-[360px]:gap-1.5 sm:gap-3 md:gap-4 lg:gap-6">
         {Array.from({ length: cardCount }).map((_, i) => (
           <ProductCardSkeleton key={i} />
         ))}
