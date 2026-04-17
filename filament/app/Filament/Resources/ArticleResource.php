@@ -19,6 +19,7 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Actions;
 use Filament\Notifications\Notification;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
@@ -128,14 +129,26 @@ class ArticleResource extends Resource
 
                                 Section::make('Rédaction')
                                     ->icon('heroicon-o-document-text')
+                                    ->iconColor('primary')
                                     ->description('Rédigez le contenu complet de votre article. Passez en mode HTML pour coller du balisage ou ajuster la structure sémantique (titres, liens, tableaux).')
+                                    ->extraAttributes(['class' => 'article-redaction-section'])
                                     ->schema([
                                         Forms\Components\ToggleButtons::make(ArticleDescriptionHtml::FIELD_EDITOR_MODE)
                                             ->label('Mode d\'édition')
+                                            ->helperText('Visuel : éditeur riche · HTML : source complète (collage, balises avancées)')
                                             ->options([
                                                 ArticleDescriptionHtml::MODE_VISUAL => 'Visuel',
                                                 ArticleDescriptionHtml::MODE_HTML => 'HTML',
                                             ])
+                                            ->icons([
+                                                ArticleDescriptionHtml::MODE_VISUAL => Heroicon::OutlinedEye,
+                                                ArticleDescriptionHtml::MODE_HTML => Heroicon::OutlinedCodeBracket,
+                                            ])
+                                            ->colors([
+                                                ArticleDescriptionHtml::MODE_VISUAL => 'primary',
+                                                ArticleDescriptionHtml::MODE_HTML => 'gray',
+                                            ])
+                                            ->grouped()
                                             ->inline()
                                             ->default(ArticleDescriptionHtml::MODE_VISUAL)
                                             ->live()
@@ -172,6 +185,7 @@ class ArticleResource extends Resource
                                         Forms\Components\RichEditor::make('description')
                                             ->hiddenLabel()
                                             ->columnSpanFull()
+                                            ->extraFieldWrapperAttributes(['class' => 'article-redaction-rich-editor'])
                                             ->visible(fn (Get $get): bool => ($get(ArticleDescriptionHtml::FIELD_EDITOR_MODE) ?? ArticleDescriptionHtml::MODE_VISUAL) === ArticleDescriptionHtml::MODE_VISUAL)
                                             ->dehydrated(fn (Get $get): bool => ($get(ArticleDescriptionHtml::FIELD_EDITOR_MODE) ?? ArticleDescriptionHtml::MODE_VISUAL) === ArticleDescriptionHtml::MODE_VISUAL)
                                             ->toolbarButtons([
@@ -192,8 +206,9 @@ class ArticleResource extends Resource
                                             ->dehydrated(false)
                                             ->visible(fn (Get $get): bool => ($get(ArticleDescriptionHtml::FIELD_EDITOR_MODE) ?? ArticleDescriptionHtml::MODE_VISUAL) === ArticleDescriptionHtml::MODE_HTML)
                                             ->live(debounce: 400)
+                                            ->extraFieldWrapperAttributes(['class' => 'article-redaction-html-field'])
                                             ->extraInputAttributes([
-                                                'class' => 'font-mono text-sm',
+                                                'class' => 'article-html-source-input font-mono text-sm',
                                                 'spellcheck' => 'false',
                                             ])
                                             ->helperText(new HtmlString(
@@ -205,6 +220,7 @@ class ArticleResource extends Resource
                                         Forms\Components\ViewField::make('_description_seo_metrics')
                                             ->hiddenLabel()
                                             ->view('filament.forms.components.article-description-seo-metrics')
+                                            ->extraFieldWrapperAttributes(['class' => 'article-redaction-seo-wrap'])
                                             ->columnSpanFull()
                                             ->dehydrated(false),
                                     ]),
