@@ -53,7 +53,7 @@ export function PackCardImage({
         href={productHref}
         className={cn(
           'relative size-full',
-          isContain && 'flex items-center justify-center p-2 sm:p-3'
+          isContain ? 'flex items-center justify-center p-2 sm:p-3' : 'block'
         )}
         aria-label={`Voir ${productName}`}
         loadingMessage="Chargement"

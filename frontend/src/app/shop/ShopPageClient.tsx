@@ -1176,6 +1176,7 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
                       key={product.id}
                       product={product}
                       variant="compact"
+                      imageContext="packs"
                     />
                   ))}
                 </div>

@@ -499,24 +499,14 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
               className="sticky top-24"
             >
               <div
-                className={cn(
-                  'relative w-full rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-lg group',
-                  isPackProduct
-                    ? 'aspect-[3/2] bg-gradient-to-b from-gray-50 to-white dark:from-gray-800 dark:to-gray-900/90'
-                    : 'aspect-square min-h-[420px] xl:min-h-[520px] bg-gray-100 dark:bg-gray-800'
-                )}
+                className="relative w-full rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-lg group aspect-square min-h-[420px] xl:min-h-[520px] bg-gradient-to-b from-gray-50 to-white dark:from-gray-800 dark:to-gray-900/90"
               >
                 {productImage ? (
                   <Image
                     src={productImage}
                     alt={product.designation_fr ?? product.slug ?? 'Produit'}
                     fill
-                    className={cn(
-                      'transition-transform duration-300',
-                      isPackProduct
-                        ? 'object-contain object-center p-3 sm:p-4 xl:p-5 [@media(hover:hover)]:group-hover:scale-[1.02]'
-                        : 'object-cover object-center [@media(hover:hover)]:group-hover:scale-[1.03]'
-                    )}
+                    className="object-contain object-center p-4 sm:p-6 xl:p-8 transition-transform duration-300 [@media(hover:hover)]:group-hover:scale-[1.03]"
                     sizes="(max-width: 1024px) 100vw, 62vw"
                     priority
                     fetchPriority="high"
@@ -584,25 +574,14 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 className="w-full max-w-[320px] sm:max-w-[380px] mx-auto"
               >
                 <div
-                  className={cn(
-                    'relative bg-gray-100 dark:bg-gray-800 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-700 group w-full',
-                    isPackProduct
-                      ? 'aspect-[3/2] bg-gradient-to-b from-gray-50 to-white dark:from-gray-800 dark:to-gray-900/90'
-                      : ''
-                  )}
-                  style={isPackProduct ? undefined : { aspectRatio: '1 / 1' }}
+                  className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-700 group w-full aspect-square bg-gradient-to-b from-gray-50 to-white dark:from-gray-800 dark:to-gray-900/90"
                 >
                   {productImage ? (
                     <Image
                       src={productImage}
                       alt={product.designation_fr ?? product.slug ?? 'Produit'}
                       fill
-                      className={cn(
-                        'transition-transform duration-500',
-                        isPackProduct
-                          ? 'object-contain object-center p-2 sm:p-3 group-hover:scale-[1.02]'
-                          : 'object-contain p-3 sm:p-4 group-hover:scale-105'
-                      )}
+                      className="object-contain object-center p-3 sm:p-4 transition-transform duration-500 group-hover:scale-[1.03]"
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 50vw"
                       priority
                       fetchPriority="high"
