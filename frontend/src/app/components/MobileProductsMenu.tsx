@@ -10,73 +10,6 @@ import { getCategories } from '@/services/api';
 import { Category } from '@/types';
 import { motion, AnimatePresence } from 'motion/react';
 
-const menuCategories = [
-  {
-    title: 'COMPLÉMENTS ALIMENTAIRES',
-    items: [
-      'Acides Aminés', 'Bcaa', 'Citrulline', 'Creatine', 'EAA', 'Glutamine',
-      'HMB', 'L-Arginine', 'Mineraux', 'Omega 3', 'Boosters Hormonaux',
-      'Vitamines', 'ZMA', 'Beta Alanine', 'Ashwagandha', 'Tribulus',
-      'Collagene', 'Zinc', 'Magnésium',
-    ],
-  },
-  {
-    title: 'PERTE DE POIDS',
-    items: ['CLA', 'Fat Burner', 'L-Carnitine', 'Brûleurs De Graisse'],
-  },
-  {
-    title: 'PRISE DE MASSE',
-    items: ['Gainers Haute Énergie', 'Gainers Riches En Protéines', 'Protéines', 'Carbohydrates'],
-  },
-  {
-    title: 'PROTÉINES',
-    items: [
-      'Protéine Whey', 'Isolat De Whey', 'Protéine De Caséine',
-      'Protéines Complètes', 'Protéine De Bœuf', 'Protéines Pour Cheveux', 'Whey Hydrolysée',
-    ],
-  },
-  {
-    title: "COMPLÉMENTS D'ENTRAÎNEMENT",
-    items: ["Pré-Workout", "Pendant L'entraînement", 'Récupération Après Entraînement'],
-  },
-  {
-    title: 'ÉQUIPEMENTS ET ACCESSOIRES',
-    items: [
-      'Bandages De Soutien Musculaire', 'Ceinture De Musculation',
-      'Gants De Musculation Et Fitness', 'Shakers Et Bouteilles Sportives',
-      'T-Shirts De Sport', 'Matériel De Musculation', 'Équipement Cardio Fitness',
-    ],
-  },
-];
-
-const normalize = (s: string) =>
-  s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-
-const subCategoryLabelToSlug: Record<string, string> = {
-  'bandages de soutien musculaire': 'bandes-de-soutien-musculaire',
-};
-
-function findCategorySlug(name: string, cats: Category[]): string | null {
-  const n = normalize(name);
-  return cats.find(c => normalize(c.designation_fr) === n)?.slug ?? null;
-}
-
-function findSubCategorySlug(name: string, cats: Category[]): string | null {
-  const n = normalize(name);
-  for (const cat of cats) {
-    const found = (cat.sous_categories as any[])?.find(s => normalize(s.designation_fr) === n);
-    if (found?.slug) return found.slug;
-  }
-  const alias = subCategoryLabelToSlug[n];
-  if (alias) {
-    for (const cat of cats) {
-      const sub = (cat.sous_categories as any[])?.find(s => s.slug === alias);
-      if (sub) return sub.slug;
-    }
-  }
-  return null;
-}
-
 interface MobileProductsMenuProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -85,15 +18,15 @@ interface MobileProductsMenuProps {
 export function MobileProductsMenu({ open, onOpenChange }: MobileProductsMenuProps) {
   const pathname = usePathname();
   const prevPathnameRef = useRef(pathname);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     getCategories()
       .then(setCategories)
       .catch(console.error)
-      .finally(() => setCategoriesLoading(false));
+      .finally(() => setLoading(false));
   }, []);
 
   const handleClose = () => {
@@ -131,9 +64,7 @@ export function MobileProductsMenu({ open, onOpenChange }: MobileProductsMenuPro
     };
   }, [open, onOpenChange]);
 
-  const selectedCategoryData = selectedCategory
-    ? menuCategories.find(c => c.title === selectedCategory) ?? null
-    : null;
+  const subCategories = (selectedCategory?.sous_categories ?? []) as Array<{ id: number; slug: string; designation_fr: string }>;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -165,9 +96,9 @@ export function MobileProductsMenu({ open, onOpenChange }: MobileProductsMenuPro
                 <span className="w-10 shrink-0" aria-hidden />
               )}
 
-              <SheetTitle className="flex-1 text-center text-base font-bold text-gray-900 dark:text-white line-clamp-1 px-1">
+              <SheetTitle className="flex-1 text-center font-bold text-gray-900 dark:text-white line-clamp-1 px-1">
                 {selectedCategory ? (
-                  <span className="text-red-600 dark:text-red-400 text-sm">{selectedCategory}</span>
+                  <span className="text-red-600 dark:text-red-400 text-sm">{selectedCategory.designation_fr}</span>
                 ) : (
                   'Nos Produits'
                 )}
@@ -187,127 +118,108 @@ export function MobileProductsMenu({ open, onOpenChange }: MobileProductsMenuPro
 
           {/* Scrollable content */}
           <div className="flex-1 overflow-y-auto overscroll-contain min-h-0">
-            <AnimatePresence mode="wait">
-              {!selectedCategory ? (
-                /* ── Category list ── */
-                <motion.div
-                  key="categories"
-                  initial={{ opacity: 0, x: -16 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -16 }}
-                  transition={{ duration: 0.18 }}
-                >
-                  <div className="px-3 pt-3 pb-1 space-y-2">
-                    {menuCategories.map((cat, i) => (
-                      <motion.button
-                        key={i}
-                        onClick={() => setSelectedCategory(cat.title)}
-                        className="w-full flex items-center justify-between py-3.5 px-4 text-left bg-white dark:bg-gray-900 active:bg-gray-50 dark:active:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm"
-                        whileTap={{ scale: 0.985 }}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-0.5">
-                            <div className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
-                            <span className="font-bold text-[11px] tracking-wide text-red-600 dark:text-red-400 uppercase leading-tight">
-                              {cat.title}
-                            </span>
-                          </div>
-                          <p className="text-xs text-gray-400 dark:text-gray-500 pl-4">
-                            {cat.items.length} sous-catégorie{cat.items.length > 1 ? 's' : ''}
-                          </p>
-                        </div>
-                        <ChevronRight className="h-4 w-4 text-gray-400 shrink-0 ml-3" />
-                      </motion.button>
-                    ))}
-                  </div>
 
-                  <div className="px-3 pt-3 pb-6">
-                    <LinkWithLoading
-                      href="/shop"
-                      className="flex items-center justify-center gap-2 py-3.5 px-4 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded-2xl font-semibold text-sm transition-colors shadow-md shadow-red-200 dark:shadow-red-950/40"
-                      loadingMessage="Chargement..."
-                    >
-                      Voir tous les produits
-                      <ArrowRight className="h-4 w-4" />
-                    </LinkWithLoading>
-                  </div>
-                </motion.div>
-              ) : (
-                /* ── Subcategory list ── */
-                <motion.div
-                  key={`sub-${selectedCategory}`}
-                  initial={{ opacity: 0, x: 16 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 16 }}
-                  transition={{ duration: 0.18 }}
-                >
-                  {/* Loading skeleton while API resolves slugs */}
-                  {categoriesLoading ? (
-                    <div className="px-3 pt-4 space-y-2">
-                      <div className="flex items-center justify-center gap-2 py-6 text-gray-400">
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                        <span className="text-sm">Chargement des catégories…</span>
-                      </div>
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <div
-                          key={i}
-                          className="h-12 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse"
-                        />
+            {/* Loading state */}
+            {loading ? (
+              <div className="flex flex-col items-center justify-center gap-3 py-16 text-gray-400">
+                <Loader2 className="h-6 w-6 animate-spin text-red-500" />
+                <span className="text-sm">Chargement des catégories…</span>
+                <div className="w-full px-3 space-y-2 mt-2">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="h-14 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <AnimatePresence mode="wait">
+                {!selectedCategory ? (
+                  /* ── Category list ── */
+                  <motion.div
+                    key="categories"
+                    initial={{ opacity: 0, x: -16 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -16 }}
+                    transition={{ duration: 0.18 }}
+                  >
+                    <div className="px-3 pt-3 pb-1 space-y-2">
+                      {categories.map((cat) => (
+                        <motion.button
+                          key={cat.id}
+                          onClick={() => setSelectedCategory(cat)}
+                          className="w-full flex items-center justify-between py-3.5 px-4 text-left bg-white dark:bg-gray-900 active:bg-gray-50 dark:active:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm"
+                          whileTap={{ scale: 0.985 }}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <div className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
+                              <span className="font-bold text-[11px] tracking-wide text-red-600 dark:text-red-400 uppercase leading-tight">
+                                {cat.designation_fr}
+                              </span>
+                            </div>
+                            {cat.sous_categories && (
+                              <p className="text-xs text-gray-400 dark:text-gray-500 pl-4">
+                                {cat.sous_categories.length} sous-catégorie{cat.sous_categories.length > 1 ? 's' : ''}
+                              </p>
+                            )}
+                          </div>
+                          <ChevronRight className="h-4 w-4 text-gray-400 shrink-0 ml-3" />
+                        </motion.button>
                       ))}
                     </div>
-                  ) : (
-                    <>
-                      {/* "Tout voir" for the parent category */}
-                      {(() => {
-                        const slug = findCategorySlug(selectedCategoryData?.title ?? '', categories);
-                        const href = slug ? `/category/${slug}` : '/shop';
-                        return (
-                          <div className="px-3 pt-3 pb-2">
-                            <LinkWithLoading
-                              href={href}
-                              className="flex items-center justify-between py-3 px-4 bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/40 rounded-2xl text-red-600 dark:text-red-400 font-semibold text-sm"
-                              loadingMessage="Chargement..."
-                            >
-                              <span>Tout voir — {selectedCategoryData?.title}</span>
-                              <ArrowRight className="h-4 w-4 shrink-0" />
-                            </LinkWithLoading>
-                          </div>
-                        );
-                      })()}
 
-                      {/* Subcategory items — always a real link now */}
-                      <div className="px-3 pb-6 space-y-1.5">
-                        {selectedCategoryData?.items.map((item, ii) => {
-                          const slug = findSubCategorySlug(item, categories);
-                          // Use the matched slug; fall back to the parent category or /shop — never a dead search
-                          const parentSlug = findCategorySlug(selectedCategoryData.title, categories);
-                          const href = slug
-                            ? `/category/${slug}`
-                            : parentSlug
-                              ? `/category/${parentSlug}`
-                              : '/shop';
+                    <div className="px-3 pt-3 pb-6">
+                      <LinkWithLoading
+                        href="/shop"
+                        className="flex items-center justify-center gap-2 py-3.5 px-4 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded-2xl font-semibold text-sm transition-colors shadow-md shadow-red-200 dark:shadow-red-950/40"
+                        loadingMessage="Chargement..."
+                      >
+                        Voir tous les produits
+                        <ArrowRight className="h-4 w-4" />
+                      </LinkWithLoading>
+                    </div>
+                  </motion.div>
+                ) : (
+                  /* ── Subcategory list ── */
+                  <motion.div
+                    key={`sub-${selectedCategory.id}`}
+                    initial={{ opacity: 0, x: 16 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 16 }}
+                    transition={{ duration: 0.18 }}
+                  >
+                    {/* "Tout voir" for the parent category */}
+                    <div className="px-3 pt-3 pb-2">
+                      <LinkWithLoading
+                        href={`/category/${selectedCategory.slug}`}
+                        className="flex items-center justify-between py-3 px-4 bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/40 rounded-2xl text-red-600 dark:text-red-400 font-semibold text-sm"
+                        loadingMessage="Chargement..."
+                      >
+                        <span>Tout voir — {selectedCategory.designation_fr}</span>
+                        <ArrowRight className="h-4 w-4 shrink-0" />
+                      </LinkWithLoading>
+                    </div>
 
-                          return (
-                            <LinkWithLoading
-                              key={ii}
-                              href={href}
-                              className="flex items-center gap-3 py-3.5 px-4 bg-white dark:bg-gray-900 active:bg-gray-50 dark:active:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm group"
-                              loadingMessage="Chargement..."
-                            >
-                              <span className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" />
-                              <span className="flex-1 text-sm font-medium text-gray-800 dark:text-gray-200 leading-snug">
-                                {item}
-                              </span>
-                              <ChevronRight className="h-4 w-4 text-gray-300 dark:text-gray-600 shrink-0" />
-                            </LinkWithLoading>
-                          );
-                        })}
-                      </div>
-                    </>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
+                    {/* Subcategory items — slug comes directly from API */}
+                    <div className="px-3 pb-6 space-y-1.5">
+                      {subCategories.map((sub) => (
+                        <LinkWithLoading
+                          key={sub.id}
+                          href={`/category/${sub.slug}`}
+                          className="flex items-center gap-3 py-3.5 px-4 bg-white dark:bg-gray-900 active:bg-gray-50 dark:active:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm"
+                          loadingMessage="Chargement..."
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" />
+                          <span className="flex-1 text-sm font-medium text-gray-800 dark:text-gray-200 leading-snug">
+                            {sub.designation_fr}
+                          </span>
+                          <ChevronRight className="h-4 w-4 text-gray-300 dark:text-gray-600 shrink-0" />
+                        </LinkWithLoading>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            )}
           </div>
         </div>
       </SheetContent>

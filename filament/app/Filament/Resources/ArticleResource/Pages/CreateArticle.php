@@ -11,6 +11,15 @@ class CreateArticle extends CreateRecord
 {
     protected static string $resource = ArticleResource::class;
 
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function mutateFormDataBeforeCreate(array $data): array
+    {
+        return ArticleResource::mergeDescriptionEditorFormData($data);
+    }
+
     public function getMaxContentWidth(): Width | string | null
     {
         return Width::Full;

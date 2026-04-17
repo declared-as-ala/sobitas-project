@@ -28,16 +28,17 @@ type ProductImageMeta = Partial<{
   designation_fr: string;
 }>;
 
+/** Listing cards: packshots stay fully visible (no cover crop). Per-product API fields can still override. */
 const DEFAULT_PRESENTATION: ProductImagePresentation = {
-  mode: 'cover',
+  mode: 'contain',
   objectPosition: 'center center',
-  scale: 1.04,
+  scale: 1,
 };
 
 const IMAGE_PRESENTATION_OVERRIDES: Record<string, Partial<ProductImagePresentation>> = {
-  // Use slug (preferred) or image filename keys for difficult assets.
-  'pack-seche-extreme': { mode: 'cover-zoom', objectPosition: 'center 46%', scale: 1.14 },
-  'pack-muscle-sec': { mode: 'cover-zoom', objectPosition: 'center 48%', scale: 1.12 },
+  // Prefer full-frame packshots; fine-tune framing only via position if ever needed.
+  'pack-seche-extreme': { mode: 'contain', objectPosition: 'center center', scale: 1 },
+  'pack-muscle-sec': { mode: 'contain', objectPosition: 'center center', scale: 1 },
 };
 
 function clampScale(value?: number): number | null {
@@ -45,20 +46,13 @@ function clampScale(value?: number): number | null {
   return Math.min(1.3, Math.max(1, value));
 }
 
-function resolveMode(product: ProductImageMeta, imageLower: string): ProductImageMode {
+function resolveMode(product: ProductImageMeta, _imageLower: string): ProductImageMode {
   const modeFromProduct = product.image_mode || product.imageMode;
   if (modeFromProduct === 'cover' || modeFromProduct === 'contain' || modeFromProduct === 'cover-zoom') {
     return modeFromProduct;
   }
 
-  const hasLikelyBakedPadding =
-    imageLower.includes('isolate') ||
-    imageLower.includes('whey') ||
-    imageLower.includes('gainer') ||
-    imageLower.includes('creatine');
-
-  // Default to full-bleed behavior; use "contain" only as an explicit per-product override.
-  return hasLikelyBakedPadding ? 'cover-zoom' : 'cover';
+  return 'contain';
 }
 
 export function getProductImagePresentation(

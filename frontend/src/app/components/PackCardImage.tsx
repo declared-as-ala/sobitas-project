@@ -35,15 +35,15 @@ export function PackCardImage({
   const wrapperClasses = cn(
     'relative w-full flex-shrink-0 overflow-hidden rounded-t-xl lg:rounded-t-2xl',
     isContain
-      ? // Wider/shorter frame than a tall fixed box → much less top/bottom letterboxing for landscape pack shots while keeping object-contain.
-        'aspect-[3/2] w-full bg-gradient-to-b from-gray-50 to-white dark:from-gray-800 dark:to-gray-900/90'
-      : 'h-[220px] sm:h-[240px] lg:h-[260px] xl:h-[280px] bg-gray-100 dark:bg-gray-800'
+      ? // Fixed frame + object-contain: full packshot visible; taller on narrow 2-col grids, wider on sm+.
+        'aspect-[4/5] sm:aspect-[3/2] w-full bg-gradient-to-b from-gray-50 via-gray-50/95 to-white dark:from-gray-800 dark:via-gray-800/95 dark:to-gray-900/90'
+      : 'h-[220px] sm:h-[240px] lg:h-[260px] xl:h-[280px] bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900/80'
   );
 
   const imageClasses = cn(
     'transition-transform duration-300 ease-out will-change-transform',
     isContain
-      ? 'object-contain object-center [@media(hover:hover)]:group-hover:scale-[1.04]'
+      ? 'object-contain object-center [@media(hover:hover)]:group-hover:scale-[1.02]'
       : 'object-cover [@media(hover:hover)]:group-hover:scale-[1.06]'
   );
 
@@ -53,7 +53,7 @@ export function PackCardImage({
         href={productHref}
         className={cn(
           'relative size-full',
-          isContain ? 'flex items-center justify-center p-2 sm:p-3' : 'block'
+          isContain ? 'flex items-center justify-center p-2.5 sm:p-3 md:p-3.5' : 'block'
         )}
         aria-label={`Voir ${productName}`}
         loadingMessage="Chargement"
@@ -84,8 +84,15 @@ export function PackCardImage({
         )}
       </LinkWithLoading>
 
-      {isContain && imageSrc && !hasError && (
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0)_55%,rgba(0,0,0,0.04)_100%)] dark:bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0)_55%,rgba(0,0,0,0.12)_100%)]" />
+      {imageSrc && !hasError && (
+        <div
+          className={cn(
+            'pointer-events-none absolute inset-0',
+            isContain
+              ? 'bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0)_55%,rgba(0,0,0,0.04)_100%)] dark:bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0)_55%,rgba(0,0,0,0.12)_100%)]'
+              : 'bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0)_60%,rgba(0,0,0,0.03)_100%)] dark:bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0)_60%,rgba(0,0,0,0.1)_100%)]'
+          )}
+        />
       )}
     </div>
   );

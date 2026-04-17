@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\ArticleResource\Pages;
 
 use App\Filament\Resources\ArticleResource;
+use App\Filament\Support\ArticleDescriptionHtml;
 use Filament\Actions;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
@@ -19,8 +20,19 @@ class EditArticle extends EditRecord
     protected function mutateFormDataBeforeFill(array $data): array
     {
         $data['_slug_auto_source'] = $data['designation_fr'] ?? '';
+        $data[ArticleDescriptionHtml::FIELD_HTML_STAGING] = (string) ($data['description'] ?? '');
+        $data[ArticleDescriptionHtml::FIELD_EDITOR_MODE] = ArticleDescriptionHtml::MODE_VISUAL;
 
         return $data;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        return ArticleResource::mergeDescriptionEditorFormData($data);
     }
 
     public function getMaxContentWidth(): Width | string | null

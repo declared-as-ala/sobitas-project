@@ -8,80 +8,6 @@ import { ChevronDown, ArrowRight } from 'lucide-react';
 import { getCategories } from '@/services/api';
 import { Category } from '@/types';
 
-const menuCategories = [
-  {
-    title: 'COMPLÉMENTS ALIMENTAIRES',
-    items: [
-      'Acides Aminés', 'Bcaa', 'Citrulline', 'Creatine', 'EAA', 'Glutamine',
-      'HMB', 'L-Arginine', 'Mineraux', 'Omega 3', 'Boosters Hormonaux',
-      'Vitamines', 'ZMA', 'Beta Alanine', 'Ashwagandha', 'Tribulus',
-      'Collagene', 'Zinc', 'Magnésium',
-    ],
-  },
-  {
-    title: 'PERTE DE POIDS',
-    items: ['CLA', 'Fat Burner', 'L-Carnitine', 'Brûleurs De Graisse'],
-  },
-  {
-    title: 'PRISE DE MASSE',
-    items: ['Gainers Haute Énergie', 'Gainers Riches En Protéines', 'Protéines', 'Carbohydrates'],
-  },
-  {
-    title: 'PROTÉINES',
-    items: [
-      'Protéine Whey', 'Isolat De Whey', 'Protéine De Caséine',
-      'Protéines Complètes', 'Protéine De Bœuf', 'Protéines Pour Cheveux', 'Whey Hydrolysée',
-    ],
-  },
-  {
-    title: "COMPLÉMENTS D'ENTRAÎNEMENT",
-    items: ["Pré-Workout", "Pendant L'entraînement", 'Récupération Après Entraînement'],
-  },
-  {
-    title: 'ÉQUIPEMENTS ET ACCESSOIRES',
-    items: [
-      'Bandages De Soutien Musculaire', 'Ceinture De Musculation',
-      'Gants De Musculation Et Fitness', 'Shakers Et Bouteilles Sportives',
-      'T-Shirts De Sport', 'Matériel De Musculation', 'Équipement Cardio Fitness',
-    ],
-  },
-];
-
-const normalize = (s: string) =>
-  s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-
-const subCategoryLabelToSlug: Record<string, string> = {
-  'bandages de soutien musculaire': 'bandes-de-soutien-musculaire',
-};
-
-function findCategoryByName(name: string, categories: Category[]): Category | null {
-  const n = normalize(name);
-  return categories.find(cat => normalize(cat.designation_fr) === n) ?? null;
-}
-
-function findSubCategorySlug(name: string, categories: Category[]): string | null {
-  const n = normalize(name);
-  for (const cat of categories) {
-    if (cat.sous_categories) {
-      const found = (cat.sous_categories as any[]).find(s => normalize(s.designation_fr) === n);
-      if (found?.slug) return found.slug;
-    }
-  }
-  const alias = subCategoryLabelToSlug[n];
-  if (alias) {
-    for (const cat of categories) {
-      const sub = (cat.sous_categories as any[])?.find(s => s.slug === alias);
-      if (sub) return sub.slug;
-    }
-  }
-  return null;
-}
-
-/** Fallback URL when no slug matched — search by name */
-function fallbackHref(name: string): string {
-  return `/shop?q=${encodeURIComponent(name)}`;
-}
-
 export function ProductsDropdown() {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
@@ -103,24 +29,18 @@ export function ProductsDropdown() {
   const scheduleClose = useCallback(() => {
     if (closeTimer.current) clearTimeout(closeTimer.current);
     closeTimer.current = setTimeout(() => {
-      if (!hoverTrigger.current && !hoverDropdown.current) {
-        setIsOpen(false);
-      }
+      if (!hoverTrigger.current && !hoverDropdown.current) setIsOpen(false);
     }, 200);
   }, []);
 
   const cancelClose = useCallback(() => {
-    if (closeTimer.current) {
-      clearTimeout(closeTimer.current);
-      closeTimer.current = null;
-    }
+    if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null; }
   }, []);
 
   const open = useCallback(() => {
     cancelClose();
     if (triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      setDropdownTop(rect.bottom);
+      setDropdownTop(triggerRef.current.getBoundingClientRect().bottom);
     }
     setIsOpen(true);
   }, [cancelClose]);
@@ -132,7 +52,6 @@ export function ProductsDropdown() {
     setIsOpen(false);
   }, [cancelClose]);
 
-  // Close on Escape
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
@@ -140,7 +59,6 @@ export function ProductsDropdown() {
     return () => document.removeEventListener('keydown', onKey);
   }, [isOpen, close]);
 
-  // Close on outside click (pointer up, not down — avoids killing clicks inside)
   useEffect(() => {
     if (!isOpen) return;
     const onPointerUp = (e: PointerEvent) => {
@@ -164,44 +82,37 @@ export function ProductsDropdown() {
     >
       <div className="max-w-7xl mx-auto px-4 lg:px-8 py-6 overflow-y-auto max-h-[calc(100vh-80px)] overscroll-contain">
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-6 lg:gap-8">
-          {menuCategories.map((cat, ci) => {
-            const catData = findCategoryByName(cat.title, categories);
-            const catHref = catData?.slug ? `/category/${catData.slug}` : fallbackHref(cat.title);
-
+          {categories.map((cat) => {
+            const subs = (cat.sous_categories ?? []) as Array<{ id: number; slug: string; designation_fr: string }>;
             return (
-              <div key={ci} className="min-w-0">
+              <div key={cat.id} className="min-w-0">
                 <LinkWithLoading
-                  href={catHref}
-                  className="group flex items-center gap-1 font-bold text-[11px] tracking-wider text-red-600 dark:text-red-500 uppercase mb-3 hover:text-red-700 transition-colors"
-                  loadingMessage={`Chargement...`}
-                  onMouseEnter={() => router.prefetch(catHref)}
+                  href={`/category/${cat.slug}`}
+                  className="font-bold text-[11px] tracking-wider text-red-600 dark:text-red-500 uppercase mb-3 hover:text-red-700 transition-colors block leading-tight"
+                  loadingMessage="Chargement..."
+                  onMouseEnter={() => router.prefetch(`/category/${cat.slug}`)}
                   onClick={close}
                 >
-                  {cat.title}
+                  {cat.designation_fr}
                 </LinkWithLoading>
 
                 <div className="w-8 h-0.5 bg-red-200 dark:bg-red-900 mb-3 rounded-full" />
 
                 <ul className="space-y-1">
-                  {cat.items.map((item, ii) => {
-                    const slug = findSubCategorySlug(item, categories);
-                    const href = slug ? `/category/${slug}` : fallbackHref(item);
-
-                    return (
-                      <li key={ii}>
-                        <LinkWithLoading
-                          href={href}
-                          className="group flex items-center gap-1.5 text-[13px] text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors py-0.5 leading-snug"
-                          loadingMessage="Chargement..."
-                          onMouseEnter={() => router.prefetch(href)}
-                          onClick={close}
-                        >
-                          <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600 group-hover:bg-red-500 transition-colors flex-shrink-0" />
-                          {item}
-                        </LinkWithLoading>
-                      </li>
-                    );
-                  })}
+                  {subs.map((sub) => (
+                    <li key={sub.id}>
+                      <LinkWithLoading
+                        href={`/category/${sub.slug}`}
+                        className="group flex items-center gap-1.5 text-[13px] text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors py-0.5 leading-snug"
+                        loadingMessage="Chargement..."
+                        onMouseEnter={() => router.prefetch(`/category/${sub.slug}`)}
+                        onClick={close}
+                      >
+                        <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600 group-hover:bg-red-500 transition-colors flex-shrink-0" />
+                        {sub.designation_fr}
+                      </LinkWithLoading>
+                    </li>
+                  ))}
                 </ul>
               </div>
             );

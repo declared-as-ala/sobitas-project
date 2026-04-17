@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Enums\BlogArticleType;
 use App\Filament\Resources\ArticleResource\Pages;
+use App\Filament\Support\ArticleDescriptionHtml;
 use App\Filament\Support\ImagePath;
 use App\Models\Article;
 use Filament\Forms;
@@ -17,9 +18,11 @@ use Filament\Schemas\Components\Utilities\Get;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Actions;
+use Filament\Notifications\Notification;
 use Filament\Tables\Table;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
+use Throwable;
 
 class ArticleResource extends Resource
 {
@@ -43,6 +46,29 @@ class ArticleResource extends Resource
     protected static ?string $recordTitleAttribute = 'designation_fr';
 
     protected static bool $isGloballySearchable = false;
+
+    /**
+     * Merge HTML staging into `description` when the editor is in HTML mode, then drop auxiliary keys.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public static function mergeDescriptionEditorFormData(array $data): array
+    {
+        if (($data[ArticleDescriptionHtml::FIELD_EDITOR_MODE] ?? ArticleDescriptionHtml::MODE_VISUAL) === ArticleDescriptionHtml::MODE_HTML) {
+            $data['description'] = ArticleDescriptionHtml::sanitizeStoredHtml(
+                (string) ($data[ArticleDescriptionHtml::FIELD_HTML_STAGING] ?? '')
+            );
+        }
+
+        unset(
+            $data[ArticleDescriptionHtml::FIELD_EDITOR_MODE],
+            $data[ArticleDescriptionHtml::FIELD_HTML_STAGING],
+            $data['_description_seo_metrics'],
+        );
+
+        return $data;
+    }
 
     public static function form(Schema $schema): Schema
     {
@@ -102,11 +128,52 @@ class ArticleResource extends Resource
 
                                 Section::make('Rédaction')
                                     ->icon('heroicon-o-document-text')
-                                    ->description('Rédigez le contenu complet de votre article.')
+                                    ->description('Rédigez le contenu complet de votre article. Passez en mode HTML pour coller du balisage ou ajuster la structure sémantique (titres, liens, tableaux).')
                                     ->schema([
+                                        Forms\Components\ToggleButtons::make(ArticleDescriptionHtml::FIELD_EDITOR_MODE)
+                                            ->label('Mode d\'édition')
+                                            ->options([
+                                                ArticleDescriptionHtml::MODE_VISUAL => 'Visuel',
+                                                ArticleDescriptionHtml::MODE_HTML => 'HTML',
+                                            ])
+                                            ->inline()
+                                            ->default(ArticleDescriptionHtml::MODE_VISUAL)
+                                            ->live()
+                                            ->columnSpanFull()
+                                            ->afterStateUpdated(function (mixed $state, Set $set, Get $get): void {
+                                                if ($state === ArticleDescriptionHtml::MODE_HTML) {
+                                                    $set(
+                                                        ArticleDescriptionHtml::FIELD_HTML_STAGING,
+                                                        ArticleDescriptionHtml::toStoredHtml($get('description')),
+                                                    );
+
+                                                    return;
+                                                }
+
+                                                if ($state === ArticleDescriptionHtml::MODE_VISUAL) {
+                                                    $html = (string) ($get(ArticleDescriptionHtml::FIELD_HTML_STAGING) ?? '');
+
+                                                    try {
+                                                        $set(
+                                                            'description',
+                                                            ArticleDescriptionHtml::tipTapDocumentFromHtml($html),
+                                                        );
+                                                    } catch (Throwable $e) {
+                                                        $set(ArticleDescriptionHtml::FIELD_EDITOR_MODE, ArticleDescriptionHtml::MODE_HTML);
+                                                        Notification::make()
+                                                            ->title('HTML invalide')
+                                                            ->body('Impossible de repasser en mode Visuel : corrigez le HTML ou annulez avec Annuler / recharger la page.')
+                                                            ->danger()
+                                                            ->send();
+                                                    }
+                                                }
+                                            }),
+
                                         Forms\Components\RichEditor::make('description')
                                             ->hiddenLabel()
                                             ->columnSpanFull()
+                                            ->visible(fn (Get $get): bool => ($get(ArticleDescriptionHtml::FIELD_EDITOR_MODE) ?? ArticleDescriptionHtml::MODE_VISUAL) === ArticleDescriptionHtml::MODE_VISUAL)
+                                            ->dehydrated(fn (Get $get): bool => ($get(ArticleDescriptionHtml::FIELD_EDITOR_MODE) ?? ArticleDescriptionHtml::MODE_VISUAL) === ArticleDescriptionHtml::MODE_VISUAL)
                                             ->toolbarButtons([
                                                 ['bold', 'italic', 'underline', 'strike'],
                                                 ['h2', 'h3'],
@@ -114,8 +181,32 @@ class ArticleResource extends Resource
                                                 ['bulletList', 'orderedList'],
                                                 ['blockquote', 'codeBlock'],
                                                 ['table', 'attachFiles'],
+                                                ['horizontalRule', 'clearFormatting'],
                                                 ['undo', 'redo'],
                                             ]),
+
+                                        Forms\Components\Textarea::make(ArticleDescriptionHtml::FIELD_HTML_STAGING)
+                                            ->label('Source HTML')
+                                            ->rows(22)
+                                            ->columnSpanFull()
+                                            ->dehydrated(false)
+                                            ->visible(fn (Get $get): bool => ($get(ArticleDescriptionHtml::FIELD_EDITOR_MODE) ?? ArticleDescriptionHtml::MODE_VISUAL) === ArticleDescriptionHtml::MODE_HTML)
+                                            ->live(debounce: 400)
+                                            ->extraInputAttributes([
+                                                'class' => 'font-mono text-sm',
+                                                'spellcheck' => 'false',
+                                            ])
+                                            ->helperText(new HtmlString(
+                                                '<strong>SEO</strong> : utilisez H2/H3 pour structurer (le titre de l’article sert de H1 sur le site). '
+                                                . 'Rédigez des ancres de liens explicites, ajoutez <code>alt</code> sur les images inline. '
+                                                . 'À l’enregistrement, le HTML est assaini (scripts / balises dangereuses retirés).'
+                                            )),
+
+                                        Forms\Components\ViewField::make('_description_seo_metrics')
+                                            ->hiddenLabel()
+                                            ->view('filament.forms.components.article-description-seo-metrics')
+                                            ->columnSpanFull()
+                                            ->dehydrated(false),
                                     ]),
                             ]),
 
