@@ -241,6 +241,7 @@ export function HomePageClient({ accueil, slides }: HomePageClientProps) {
             products={packs as any}
             viewAllHref="/packs"
             viewAllLabel="Voir tous les packs"
+            imageContext="packs"
           />
         )}
 

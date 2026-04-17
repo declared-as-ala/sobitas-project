@@ -21,6 +21,8 @@ interface ProductSectionProps {
   viewAllHref?: string;
   /** Label for "Voir tout" button (default "Voir tout"). */
   viewAllLabel?: string;
+  /** Image presentation context for product cards. */
+  imageContext?: 'default' | 'packs';
 }
 
 export const ProductSection = memo(function ProductSection({
@@ -32,6 +34,7 @@ export const ProductSection = memo(function ProductSection({
   id,
   viewAllHref = '/shop',
   viewAllLabel = 'Voir tout',
+  imageContext = 'default',
 }: ProductSectionProps) {
   return (
     <section id={id} className="py-8 sm:py-12 md:py-20 bg-white dark:bg-gray-950">
@@ -60,13 +63,14 @@ export const ProductSection = memo(function ProductSection({
         </div>
 
         {/* Products Grid - Optimized responsive layout */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
           {products.map((product) => (
             <ProductCard
               key={product.id}
               product={product}
               showBadge={showBadge}
               badgeText={badgeText}
+              imageContext={imageContext}
             />
           ))}
         </div>

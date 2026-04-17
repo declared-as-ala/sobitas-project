@@ -170,14 +170,14 @@ export const ProductCard = memo(function ProductCard({
         <button
           type="button"
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(toFavoriteProduct(product)); }}
-          className="absolute top-3 right-3 z-10 p-2 rounded-full bg-white/90 dark:bg-gray-700/95 shadow-sm backdrop-blur-sm hover:bg-white dark:hover:bg-gray-700 transition-all hover:scale-110 pointer-events-auto"
+          className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 z-10 p-1.5 sm:p-2 rounded-full bg-white/90 dark:bg-gray-700/95 shadow-sm backdrop-blur-sm hover:bg-white dark:hover:bg-gray-700 transition-all hover:scale-110 pointer-events-auto"
           aria-label={favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
         >
-          <Heart className={`h-4 w-4 sm:h-5 sm:w-5 ${favorite ? 'fill-red-500 text-red-500' : 'text-gray-600 dark:text-gray-300'}`} />
+          <Heart className={`h-4 w-4 ${favorite ? 'fill-red-500 text-red-500' : 'text-gray-600 dark:text-gray-300'}`} />
         </button>
 
         {/* Badges – top-left */}
-        <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5 pointer-events-none">
+        <div className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 z-10 flex flex-col gap-1 sm:gap-1.5 pointer-events-none">
           {!productData.isInStock && (
             <span className="inline-flex items-center rounded-md bg-gray-900/90 dark:bg-gray-900 text-white font-bold text-[10px] sm:text-xs px-2.5 py-1 shadow-md backdrop-blur-sm">
               Rupture
@@ -212,7 +212,7 @@ export const ProductCard = memo(function ProductCard({
       </div>
 
       {/* Content – clean padding, no top gap since image is flush */}
-      <div className="flex flex-col flex-1 min-h-0 min-w-0 px-4 py-4 gap-2.5">
+      <div className="flex flex-col flex-1 min-h-0 min-w-0 px-3 py-3 sm:px-4 sm:py-4 gap-2 sm:gap-2.5">
         <LinkWithLoading
           href={`/shop/${encodeURIComponent(productData.slug || String(product.id))}`}
           className="block min-w-0"
@@ -221,7 +221,7 @@ export const ProductCard = memo(function ProductCard({
           <h3
             title={productData.name}
             className={`font-bold text-gray-900 dark:text-white leading-snug overflow-hidden transition-colors [@media(hover:hover)]:hover:text-red-600 dark:[@media(hover:hover)]:hover:text-red-400 line-clamp-2
-              ${isCompact ? 'text-sm sm:text-base' : 'text-sm sm:text-base lg:text-[15px]'}`}
+              ${isCompact ? 'text-xs sm:text-base' : 'text-xs sm:text-sm lg:text-[15px]'}`}
           >
             {productData.name}
           </h3>
@@ -237,11 +237,11 @@ export const ProductCard = memo(function ProductCard({
         <div className="flex flex-wrap items-center gap-2 mt-auto">
           {productData.priceDisplay.hasPromo && productData.priceDisplay.oldPrice != null ? (
             <>
-              <span className={`font-extrabold text-red-600 dark:text-red-400 tabular-nums ${isCompact ? 'text-lg sm:text-xl' : 'text-lg sm:text-xl'}`}>
+              <span className={`font-extrabold text-red-600 dark:text-red-400 tabular-nums ${isCompact ? 'text-base sm:text-xl' : 'text-base sm:text-lg lg:text-xl'}`}>
                 {productData.priceDisplay.finalPrice} DT
               </span>
               <span
-                className="text-gray-400 dark:text-gray-500 line-through tabular-nums text-xs sm:text-sm"
+                className="text-gray-400 dark:text-gray-500 line-through tabular-nums text-[11px] sm:text-sm"
                 style={{ textDecorationThickness: '1.5px' }}
                 aria-label={`Prix barré: ${productData.priceDisplay.oldPrice} DT`}
               >
@@ -249,7 +249,7 @@ export const ProductCard = memo(function ProductCard({
               </span>
             </>
           ) : (
-            <span className={`font-extrabold text-gray-900 dark:text-white tabular-nums ${isCompact ? 'text-lg sm:text-xl' : 'text-lg sm:text-xl'}`}>
+            <span className={`font-extrabold text-gray-900 dark:text-white tabular-nums ${isCompact ? 'text-base sm:text-xl' : 'text-base sm:text-lg lg:text-xl'}`}>
               {productData.priceDisplay.finalPrice} DT
             </span>
           )}
@@ -272,15 +272,15 @@ export const ProductCard = memo(function ProductCard({
         </div>
 
         {/* CTA – mobile/tablet visible, desktop hidden (overlay is used) */}
-        <div className="flex-shrink-0 pt-3 mt-1 border-t border-gray-100 dark:border-gray-700 lg:hidden block">
+        <div className="flex-shrink-0 pt-2.5 sm:pt-3 mt-1 border-t border-gray-100 dark:border-gray-700 lg:hidden block">
           <Button
             size="sm"
-            className={`w-full min-h-[44px] rounded-xl font-semibold text-sm active:scale-[0.98] transition-all duration-150 select-none ${productData.isInStock && canAddMore ? 'bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg' : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed text-white'}`}
+            className={`w-full min-h-[42px] sm:min-h-[44px] rounded-lg sm:rounded-xl px-2.5 sm:px-3 font-semibold text-xs sm:text-sm active:scale-[0.98] transition-all duration-150 select-none ${productData.isInStock && canAddMore ? 'bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg' : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed text-white'}`}
             onClick={handleAddToCart}
             disabled={isAdding || !productData.isInStock || !canAddMore}
             aria-label={`Ajouter ${productData.name} au panier`}
           >
-            <ShoppingCart className="size-4 shrink-0 mr-2" aria-hidden="true" />
+            <ShoppingCart className="size-3.5 sm:size-4 shrink-0 mr-1.5 sm:mr-2" aria-hidden="true" />
             <span className="truncate">
               {!productData.isInStock || stockDisponible <= 0 ? 'Rupture de stock' : !canAddMore ? 'Stock max' : isAdding ? 'Ajouté !' : 'Ajouter au panier'}
             </span>
