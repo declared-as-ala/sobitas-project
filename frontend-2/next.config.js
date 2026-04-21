@@ -15,7 +15,6 @@ const nextConfig = {
     formats: ['image/avif', 'image/webp'],
     remotePatterns: [
       { protocol: 'https', hostname: 'admin.protein.tn' },
-      { protocol: 'https', hostname: 'admin.sobitas.tn' },
       { protocol: 'https', hostname: 'images.unsplash.com' },
       { protocol: 'https', hostname: 'protein.tn' },
       { protocol: 'https', hostname: 'sobitas.tn' },

@@ -14,8 +14,7 @@ class MarketingService
 
     public static function logoUrl(): string
     {
-        $default = config('marketing.logo_url', rtrim(config('app.url'), '/') . '/logo.png');
-        return MarketingSetting::get('logo_url', $default);
+        return url('/logo.png');
     }
 
     public static function unsubscribeUrl(string $channel, string $recipient, ?int $clientId = null): string

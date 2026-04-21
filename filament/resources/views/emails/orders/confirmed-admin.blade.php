@@ -1,6 +1,6 @@
 @php
     $details       = $commande->details->isNotEmpty() ? $commande->details : $commande->details()->with('product:id,designation_fr')->get();
-    $logoUrl       = config('marketing.logo_url', rtrim(config('app.url'), '/') . '/logo.png');
+    $logoUrl       = url('/logo.png');
     $adminUrl      = url(\App\Filament\Resources\CommandeResource::getUrl('edit', ['record' => $commande]));
     $dateFormatted = $commande->created_at ? $commande->created_at->locale('fr_FR')->isoFormat('D MMMM YYYY [à] HH:mm') : now()->locale('fr_FR')->isoFormat('D MMMM YYYY [à] HH:mm');
     $nom           = trim(($commande->livraison_nom ?? $commande->nom ?? '') . ' ' . ($commande->livraison_prenom ?? $commande->prenom ?? ''));

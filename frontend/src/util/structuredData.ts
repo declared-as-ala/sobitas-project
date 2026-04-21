@@ -93,21 +93,29 @@ export function buildProductSchema(product: Product, baseUrl: string): object | 
  */
 export function buildProductJsonLd(product: Product, canonicalUrl: string): object | null {
   // Main product cover first so Google uses it as primary image (matches og:image and avoids wrong product image in search).
-  const rawImages = [product.cover, (product as { alt_cover?: string }).alt_cover].filter(Boolean) as string[];
+  const rawImages = [product.schema?.image, product.seo?.image, product.cover, (product as { alt_cover?: string }).alt_cover].filter(Boolean) as string[];
   const imagePaths = rawImages.filter((path) => looksLikeImagePath(path));
   if (imagePaths.length === 0 && product.cover) imagePaths.push(product.cover);
   const imageArray = imagePaths
     .map((path) => getStorageUrl(path))
     .filter((url) => isValidImageUrl(url));
   const dedupedImages = [...new Set(imageArray)];
-  const price = getSchemaPrice(product);
-  const inStock = (product as { rupture?: number }).rupture !== 1;
+  const schemaPrice = parsePriceForSchema(product.schema?.price);
+  const price = schemaPrice ?? getSchemaPrice(product);
+  const availability = product.schema?.availability
+    || (((product as { rupture?: number }).rupture !== 1)
+      ? 'https://schema.org/InStock'
+      : 'https://schema.org/OutOfStock');
   const description = stripHtml(
-    product.description_cover || product.description_fr || '',
+    product.seo?.description || product.seo_description || product.meta_description || product.description_cover || product.description_fr || '',
     500
   );
-  const sku = (product.code_product != null && String(product.code_product).trim() !== '')
-    ? String(product.code_product).trim()
+  const sku = (product.schema?.sku != null && String(product.schema.sku).trim() !== '')
+    ? String(product.schema.sku).trim()
+    : (product.sku != null && String(product.sku).trim() !== '')
+      ? String(product.sku).trim()
+      : (product.code_product != null && String(product.code_product).trim() !== '')
+        ? String(product.code_product).trim()
     : String(product.id);
 
   if (!Number.isFinite(price) || price < 0) {
@@ -122,11 +130,9 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
     url: canonicalUrl,
     priceCurrency: 'TND',
     price: formatSchemaPrice(price),
-    availability: inStock
-      ? 'https://schema.org/InStock'
-      : 'https://schema.org/OutOfStock',
-    itemCondition: 'https://schema.org/NewCondition',
-    priceValidUntil: getPriceValidUntil(),
+    availability,
+    itemCondition: product.schema?.item_condition || 'https://schema.org/NewCondition',
+    priceValidUntil: product.schema?.price_valid_until || product.price_valid_until || getPriceValidUntil(),
     seller: { '@type': 'Organization', name: 'SOBITAS' },
     shippingDetails: {
       '@type': 'OfferShippingDetails',
@@ -147,11 +153,18 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
     image: dedupedImages.length > 0 ? dedupedImages : undefined,
     sku,
     productID: sku,
-    brand: product.brand?.designation_fr
-      ? { '@type': 'Brand', name: product.brand.designation_fr }
+    brand: (product.schema?.brand || product.brand?.designation_fr)
+      ? { '@type': 'Brand', name: product.schema?.brand || product.brand?.designation_fr }
       : undefined,
     offers: offersPayload,
   };
+
+  if (product.gtin?.trim()) {
+    schema.gtin = product.gtin.trim();
+  }
+  if (product.mpn?.trim()) {
+    schema.mpn = product.mpn.trim();
+  }
 
   const reviewsRaw = product.reviews ?? (product as { avis?: Review[] }).avis ?? [];
   const reviews = (reviewsRaw as Review[]).filter(

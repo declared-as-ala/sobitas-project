@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -16,6 +17,9 @@ class Product extends Model
         'images', 'prix', 'prix_ht', 'promo', 'promo_ht', 'promo_expiration_date',
         'qte', 'low_stock_threshold', 'publier', 'rupture', 'new_product', 'best_seller', 'pack', 'note',
         'meta_title', 'meta_description', 'seo_schema_description', 'seo_review', 'seo_aggregate_rating',
+        'seo_title', 'seo_description', 'seo_excerpt', 'seo_canonical_url', 'seo_robots_index', 'seo_robots_follow',
+        'og_title', 'og_description', 'og_image', 'twitter_title', 'twitter_description', 'twitter_image', 'twitter_card',
+        'sku', 'gtin', 'mpn', 'item_condition', 'availability_override', 'price_valid_until', 'seo_image_alt',
         'sous_categorie_id', 'brand_id', 'code_product',
     ];
 
@@ -35,6 +39,9 @@ class Product extends Model
         'note' => 'integer',
         'images' => 'array',
         'faq' => 'array',
+        'seo_robots_index' => 'boolean',
+        'seo_robots_follow' => 'boolean',
+        'price_valid_until' => 'date',
     ];
 
     /**
@@ -230,6 +237,136 @@ class Product extends Model
         return $name . ' — ' . number_format($price, 3, ',', ' ') . ' DT' . $suffix . ' — ' . $stock . ' en stock';
     }
 
+    public function effectiveSeoTitle(): ?string
+    {
+        $seoTitle = trim((string) ($this->attributes['seo_title'] ?? ''));
+        if ($seoTitle !== '') {
+            return $seoTitle;
+        }
+
+        $metaTitle = trim((string) ($this->attributes['meta_title'] ?? ''));
+        if ($metaTitle !== '') {
+            return $metaTitle;
+        }
+
+        return $this->designation_fr ?: null;
+    }
+
+    public function effectiveSeoDescription(): ?string
+    {
+        $seoDescription = trim((string) ($this->attributes['seo_description'] ?? ''));
+        if ($seoDescription !== '') {
+            return $seoDescription;
+        }
+
+        $metaDescription = trim((string) ($this->attributes['meta_description'] ?? ''));
+        if ($metaDescription !== '') {
+            return $metaDescription;
+        }
+
+        $legacy = trim((string) ($this->attributes['description_cover'] ?? ''));
+        if ($legacy !== '') {
+            return $legacy;
+        }
+
+        if (filled($this->description_fr)) {
+            return str((string) $this->description_fr)
+                ->replaceMatches('/<[^>]*>/', ' ')
+                ->squish()
+                ->limit(500, '')
+                ->toString();
+        }
+
+        return null;
+    }
+
+    public function getEffectiveSkuAttribute(): ?string
+    {
+        foreach (['sku', 'code_product'] as $field) {
+            $value = trim((string) ($this->attributes[$field] ?? ''));
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        return $this->id ? (string) $this->id : null;
+    }
+
+    public function getEffectiveSeoImagePathAttribute(): ?string
+    {
+        foreach (['og_image', 'twitter_image', 'cover'] as $field) {
+            $value = trim((string) ($this->attributes[$field] ?? ''));
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        return null;
+    }
+
+    public function getEffectiveSeoImageAltAttribute(): ?string
+    {
+        foreach (['seo_image_alt', 'alt_cover', 'designation_fr'] as $field) {
+            $value = trim((string) ($this->attributes[$field] ?? ''));
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        return null;
+    }
+
+    public function getEffectiveAvailabilitySchemaAttribute(): string
+    {
+        $override = strtolower(trim((string) ($this->attributes['availability_override'] ?? '')));
+
+        if ($override !== '') {
+            return $this->normalizeAvailabilitySchema($override);
+        }
+
+        return $this->is_available
+            ? 'https://schema.org/InStock'
+            : 'https://schema.org/OutOfStock';
+    }
+
+    public function getEffectiveItemConditionSchemaAttribute(): string
+    {
+        $condition = strtolower(trim((string) ($this->attributes['item_condition'] ?? '')));
+
+        return match ($condition) {
+            'new', 'newcondition' => 'https://schema.org/NewCondition',
+            'used', 'usedcondition' => 'https://schema.org/UsedCondition',
+            'refurbished', 'refurbishedcondition' => 'https://schema.org/RefurbishedCondition',
+            default => 'https://schema.org/NewCondition',
+        };
+    }
+
+    public function getEffectivePriceValidUntilAttribute(): ?string
+    {
+        $date = $this->price_valid_until;
+        if ($date instanceof CarbonInterface) {
+            return $date->format('Y-m-d');
+        }
+
+        if ($this->promo_expiration_date instanceof CarbonInterface) {
+            return $this->promo_expiration_date->format('Y-m-d');
+        }
+
+        return null;
+    }
+
+    public function getEffectiveSeoRobotsIndexAttribute(): bool
+    {
+        $value = $this->attributes['seo_robots_index'] ?? null;
+        return $value === null ? true : (bool) $value;
+    }
+
+    public function getEffectiveSeoRobotsFollowAttribute(): bool
+    {
+        $value = $this->attributes['seo_robots_follow'] ?? null;
+        return $value === null ? true : (bool) $value;
+    }
+
     // ── Filament select search (performance: minimal columns, no N+1) ─────
 
     /** Columns needed for search results and option label (no images, no description). */
@@ -332,5 +469,18 @@ class Product extends Model
             $q->where('qte', '<=', 0)
               ->orWhere('rupture', 1);
         });
+    }
+
+    private function normalizeAvailabilitySchema(string $value): string
+    {
+        return match ($value) {
+            'instock', 'in_stock' => 'https://schema.org/InStock',
+            'outofstock', 'out_of_stock' => 'https://schema.org/OutOfStock',
+            'preorder', 'pre_order' => 'https://schema.org/PreOrder',
+            'backorder', 'back_order' => 'https://schema.org/BackOrder',
+            'limitedavailability', 'limited_availability' => 'https://schema.org/LimitedAvailability',
+            'discontinued' => 'https://schema.org/Discontinued',
+            default => str_starts_with($value, 'http') ? $value : 'https://schema.org/InStock',
+        };
     }
 }

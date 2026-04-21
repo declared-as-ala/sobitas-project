@@ -1,6 +1,6 @@
 @php
     $details       = $commande->details->isNotEmpty() ? $commande->details : $commande->details()->with('product:id,designation_fr')->get();
-    $logoUrl       = config('marketing.logo_url', rtrim(config('app.url'), '/') . '/logo.png');
+    $logoUrl       = url('/logo.png');
     $orderUrl      = $commande->order_token
         ? config('app.frontend_url', config('app.url')) . '/order-confirmation/' . $commande->id . '?token=' . urlencode($commande->order_token)
         : config('app.frontend_url', config('app.url')) . '/order-confirmation/' . $commande->id;

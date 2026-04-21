@@ -25,6 +25,8 @@ export interface Product {
   publier?: number;
   rupture?: number | boolean;
   meta?: string;
+  meta_title?: string;
+  meta_description?: string;
   meta_description_fr?: string;
   content_seo?: string;
   brand_id?: number;
@@ -45,6 +47,64 @@ export interface Product {
   /** Legacy HTML block (older backends); optional fallback if `faq` is empty */
   questions?: string | null;
   code_product?: string | null;
+  sku?: string | null;
+  gtin?: string | null;
+  mpn?: string | null;
+  item_condition?: string | null;
+  availability_override?: string | null;
+  price_valid_until?: string | null;
+  seo_image_alt?: string | null;
+  seo_title?: string | null;
+  seo_description?: string | null;
+  seo_excerpt?: string | null;
+  seo_canonical_url?: string | null;
+  seo_robots_index?: boolean | null;
+  seo_robots_follow?: boolean | null;
+  og_title?: string | null;
+  og_description?: string | null;
+  og_image?: string | null;
+  twitter_title?: string | null;
+  twitter_description?: string | null;
+  twitter_image?: string | null;
+  twitter_card?: string | null;
+  seo?: {
+    title?: string | null;
+    description?: string | null;
+    excerpt?: string | null;
+    canonical_url?: string | null;
+    image?: string | null;
+    image_alt?: string | null;
+    robots?: {
+      index?: boolean;
+      follow?: boolean;
+    };
+    open_graph?: {
+      title?: string | null;
+      description?: string | null;
+      image?: string | null;
+    };
+    twitter?: {
+      card?: string | null;
+      title?: string | null;
+      description?: string | null;
+      image?: string | null;
+    };
+  };
+  schema?: {
+    sku?: string | null;
+    gtin?: string | null;
+    mpn?: string | null;
+    brand?: string | null;
+    price?: number | null;
+    price_currency?: string | null;
+    availability?: string | null;
+    item_condition?: string | null;
+    price_valid_until?: string | null;
+    image?: string | null;
+    image_alt?: string | null;
+    aggregate_rating?: string | null;
+    review?: string | null;
+  };
   zone1?: string;
   zone2?: string;
   zone3?: string;

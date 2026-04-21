@@ -56,7 +56,7 @@ function CategoryCard({ category }: { category: Category }) {
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 33vw"
               loading="lazy"
               quality={70}
-              unoptimized={imageUrl.includes('admin.protein.tn') || imageUrl.includes('admin.sobitas.tn')}
+              unoptimized={imageUrl.includes('admin.protein.tn')}
               onError={() => setImageError(true)}
             />
           ) : (

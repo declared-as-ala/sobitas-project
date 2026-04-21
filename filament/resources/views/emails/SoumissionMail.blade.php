@@ -4,7 +4,7 @@
 @php
     $facture = $data['commande'];
     $details_facture = $data['details'];
-    $logoUrl = config('marketing.logo_url', rtrim(config('app.url'), '/') . '/logo.png');
+    $logoUrl = url('/logo.png');
 @endphp
 
 <head>

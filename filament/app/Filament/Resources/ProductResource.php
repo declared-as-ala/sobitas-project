@@ -297,14 +297,155 @@ class ProductResource extends Resource
 
                     Tab::make('5. SEO')
                         ->schema([
-                            Section::make('SEO')
+                            Section::make('SEO de base')
                                 ->schema([
                                     Grid::make(2)->schema([
+                                        Forms\Components\TextInput::make('seo_title')
+                                            ->label('SEO title')
+                                            ->visible(fn (): bool => self::hasProductColumn('seo_title'))
+                                            ->dehydrated(fn (): bool => self::hasProductColumn('seo_title'))
+                                            ->maxLength(255)
+                                            ->helperText('Titre prioritaire pour la balise <title>. Fallback: Meta title puis designation.'),
+                                        Forms\Components\Textarea::make('seo_description')
+                                            ->label('SEO description')
+                                            ->visible(fn (): bool => self::hasProductColumn('seo_description'))
+                                            ->dehydrated(fn (): bool => self::hasProductColumn('seo_description'))
+                                            ->rows(3)
+                                            ->maxLength(500)
+                                            ->columnSpanFull(),
                                         Forms\Components\TextInput::make('meta_description')
                                             ->label('Meta Description')
                                             ->maxLength(255),
                                         Forms\Components\TextInput::make('meta_title')
                                             ->label('Meta (name;content)')
+                                            ->maxLength(255),
+                                        Forms\Components\Textarea::make('seo_excerpt')
+                                            ->label('Extrait SEO court')
+                                            ->visible(fn (): bool => self::hasProductColumn('seo_excerpt'))
+                                            ->dehydrated(fn (): bool => self::hasProductColumn('seo_excerpt'))
+                                            ->rows(3)
+                                            ->maxLength(1000)
+                                            ->columnSpanFull(),
+                                        Forms\Components\TextInput::make('seo_canonical_url')
+                                            ->label('Canonical URL')
+                                            ->visible(fn (): bool => self::hasProductColumn('seo_canonical_url'))
+                                            ->dehydrated(fn (): bool => self::hasProductColumn('seo_canonical_url'))
+                                            ->url()
+                                            ->maxLength(1024)
+                                            ->columnSpanFull(),
+                                        Forms\Components\Toggle::make('seo_robots_index')
+                                            ->label('Indexable')
+                                            ->visible(fn (): bool => self::hasProductColumn('seo_robots_index'))
+                                            ->dehydrated(fn (): bool => self::hasProductColumn('seo_robots_index'))
+                                            ->default(true),
+                                        Forms\Components\Toggle::make('seo_robots_follow')
+                                            ->label('Liens suivis (follow)')
+                                            ->visible(fn (): bool => self::hasProductColumn('seo_robots_follow'))
+                                            ->dehydrated(fn (): bool => self::hasProductColumn('seo_robots_follow'))
+                                            ->default(true),
+                                    ]),
+                                ]),
+                            Section::make('Open Graph et Twitter')
+                                ->schema([
+                                    Grid::make(2)->schema([
+                                        Forms\Components\TextInput::make('og_title')
+                                            ->label('OG title')
+                                            ->visible(fn (): bool => self::hasProductColumn('og_title'))
+                                            ->dehydrated(fn (): bool => self::hasProductColumn('og_title'))
+                                            ->maxLength(255),
+                                        Forms\Components\Textarea::make('og_description')
+                                            ->label('OG description')
+                                            ->visible(fn (): bool => self::hasProductColumn('og_description'))
+                                            ->dehydrated(fn (): bool => self::hasProductColumn('og_description'))
+                                            ->rows(3)
+                                            ->maxLength(500),
+                                        Forms\Components\FileUpload::make('og_image')
+                                            ->label('OG image')
+                                            ->visible(fn (): bool => self::hasProductColumn('og_image'))
+                                            ->dehydrated(fn (): bool => self::hasProductColumn('og_image'))
+                                            ->disk('public')
+                                            ->directory('products/seo')
+                                            ->image()
+                                            ->maxSize(4096),
+                                        Forms\Components\TextInput::make('twitter_card')
+                                            ->label('Twitter card')
+                                            ->visible(fn (): bool => self::hasProductColumn('twitter_card'))
+                                            ->dehydrated(fn (): bool => self::hasProductColumn('twitter_card'))
+                                            ->default('summary_large_image')
+                                            ->datalist(['summary', 'summary_large_image'])
+                                            ->maxLength(32),
+                                        Forms\Components\TextInput::make('twitter_title')
+                                            ->label('Twitter title')
+                                            ->visible(fn (): bool => self::hasProductColumn('twitter_title'))
+                                            ->dehydrated(fn (): bool => self::hasProductColumn('twitter_title'))
+                                            ->maxLength(255),
+                                        Forms\Components\Textarea::make('twitter_description')
+                                            ->label('Twitter description')
+                                            ->visible(fn (): bool => self::hasProductColumn('twitter_description'))
+                                            ->dehydrated(fn (): bool => self::hasProductColumn('twitter_description'))
+                                            ->rows(3)
+                                            ->maxLength(500),
+                                        Forms\Components\FileUpload::make('twitter_image')
+                                            ->label('Twitter image')
+                                            ->visible(fn (): bool => self::hasProductColumn('twitter_image'))
+                                            ->dehydrated(fn (): bool => self::hasProductColumn('twitter_image'))
+                                            ->disk('public')
+                                            ->directory('products/seo')
+                                            ->image()
+                                            ->maxSize(4096),
+                                    ]),
+                                ]),
+                            Section::make('Donnees schema Product')
+                                ->schema([
+                                    Grid::make(2)->schema([
+                                        Forms\Components\TextInput::make('sku')
+                                            ->label('SKU')
+                                            ->visible(fn (): bool => self::hasProductColumn('sku'))
+                                            ->dehydrated(fn (): bool => self::hasProductColumn('sku'))
+                                            ->maxLength(120),
+                                        Forms\Components\TextInput::make('gtin')
+                                            ->label('GTIN / Barcode')
+                                            ->visible(fn (): bool => self::hasProductColumn('gtin'))
+                                            ->dehydrated(fn (): bool => self::hasProductColumn('gtin'))
+                                            ->maxLength(64),
+                                        Forms\Components\TextInput::make('mpn')
+                                            ->label('MPN')
+                                            ->visible(fn (): bool => self::hasProductColumn('mpn'))
+                                            ->dehydrated(fn (): bool => self::hasProductColumn('mpn'))
+                                            ->maxLength(120),
+                                        Forms\Components\Select::make('item_condition')
+                                            ->label('Condition')
+                                            ->visible(fn (): bool => self::hasProductColumn('item_condition'))
+                                            ->dehydrated(fn (): bool => self::hasProductColumn('item_condition'))
+                                            ->options([
+                                                'new' => 'NewCondition',
+                                                'used' => 'UsedCondition',
+                                                'refurbished' => 'RefurbishedCondition',
+                                            ])
+                                            ->native(false)
+                                            ->placeholder('NewCondition'),
+                                        Forms\Components\Select::make('availability_override')
+                                            ->label('Availability override')
+                                            ->visible(fn (): bool => self::hasProductColumn('availability_override'))
+                                            ->dehydrated(fn (): bool => self::hasProductColumn('availability_override'))
+                                            ->options([
+                                                'in_stock' => 'InStock',
+                                                'out_of_stock' => 'OutOfStock',
+                                                'preorder' => 'PreOrder',
+                                                'backorder' => 'BackOrder',
+                                                'limited_availability' => 'LimitedAvailability',
+                                                'discontinued' => 'Discontinued',
+                                            ])
+                                            ->native(false)
+                                            ->placeholder('Auto selon le stock'),
+                                        Forms\Components\DatePicker::make('price_valid_until')
+                                            ->label('Prix valide jusqu\'au')
+                                            ->visible(fn (): bool => self::hasProductColumn('price_valid_until'))
+                                            ->dehydrated(fn (): bool => self::hasProductColumn('price_valid_until')),
+                                        Forms\Components\TextInput::make('seo_image_alt')
+                                            ->label('Texte alternatif image SEO')
+                                            ->visible(fn (): bool => self::hasProductColumn('seo_image_alt'))
+                                            ->dehydrated(fn (): bool => self::hasProductColumn('seo_image_alt'))
                                             ->maxLength(255),
                                         Forms\Components\TextInput::make('alt_cover')
                                             ->label('Alt Cover (SEO)')

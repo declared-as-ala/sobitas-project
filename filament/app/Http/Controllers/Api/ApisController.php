@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\ProductDetailResource;
 use App\Jobs\SendOrderEmailJob;
 use App\Models\Annonce;
 use App\Models\Aroma;
@@ -48,13 +49,14 @@ class ApisController extends Controller
         'id', 'slug', 'designation_fr', 'cover', 'new_product', 'best_seller',
         'note', 'alt_cover', 'description_cover', 'prix', 'prix_ht', 'pack', 'promo',
         'promo_expiration_date', 'sous_categorie_id', 'brand_id', 'qte', 'rupture',
+        'meta_title', 'meta_description', 'seo_title', 'seo_description',
     ];
 
     /** Same as backend ApisController::PRODUCT_LISTING — used for /api/all_products (no pagination). */
     private const PRODUCT_LISTING = [
         'id', 'slug', 'designation_fr', 'cover', 'new_product', 'best_seller', 'note',
         'alt_cover', 'description_cover', 'prix', 'pack', 'promo', 'promo_expiration_date',
-        'qte', 'rupture', 'brand_id', 'sous_categorie_id',
+        'qte', 'rupture', 'brand_id', 'sous_categorie_id', 'meta_title', 'meta_description', 'seo_title', 'seo_description',
     ];
 
     // Article list columns — exclude description_fr (can be huge HTML); blog_type only if migrated
@@ -283,6 +285,7 @@ class ApisController extends Controller
         $product = Product::where('slug', $slug)
             ->where('publier', 1)
             ->with([
+                'brand:id,designation_fr,logo',
                 'sousCategorie:id,designation_fr,slug,categorie_id',
                 'sousCategorie.categorie:id,designation_fr,slug',
                 'tags:id,designation_fr',
@@ -295,7 +298,7 @@ class ApisController extends Controller
             return response()->json(['error' => 'Produit introuvable'], 404);
         }
 
-        return response()->json($product);
+        return response()->json((new ProductDetailResource($product))->resolve());
     }
 
     /**

@@ -1,0 +1,350 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fontawesome5}
+\usepackage{hyperref}
+\usepackage{needspace}
+
+\geometry{margin=2.5cm}
+
+% Colors
+\definecolor{primaryblue}{RGB}{0,102,204}
+\definecolor{accentgreen}{RGB}{0,153,0}
+\definecolor{accentorange}{RGB}{255,140,0}
+
+% Title formatting
+\titleformat{\section}
+{\Large\bfseries\color{primaryblue}}
+{}
+{0em}
+{}[\titlerule]
+
+\titleformat{\subsection}
+{\large\bfseries\color{accentgreen}}
+{}
+{0em}
+{}
+
+% Custom commands for phases
+\newcommand{\phase}[2]{%
+    \needspace{8\baselineskip}%
+    \nopagebreak[4]%
+    \section*{PHASE #1 -- #2}%
+    \nopagebreak[4]%
+}
+\newcommand{\objective}[1]{\textbf{Objectifs}\\[0.3em]#1}
+\newcommand{\content}[1]{\textbf{Contenu}\\[0.3em]#1}
+\newcommand{\project}[1]{\textbf{✅ Projet :}\\[0.3em]#1}
+\newcommand{\exercise}[1]{\textbf{✅ Mini-exercice :}\\[0.3em]#1}
+
+\begin{document}
+
+\begin{center}
+\vspace*{0.5cm}
+{\Huge\bfseries Plan de Formation}\\[0.4cm]
+{\Large Full-Stack JavaScript + Mobile + AI (LLM \& RAG)}\\[0.6cm]
+{\large\bfseries Société Trinovatech}
+\end{center}
+
+\vspace{0.8cm}
+
+\phase{0}{Foundations (Mais critique)}
+
+\objective{Mettre tout le monde au même niveau\\
+Comprendre comment travaillent les développeurs pros}
+
+\content{
+\begin{itemize}[leftmargin=*]
+    \item Comment fonctionne le Web
+    \item Frontend vs Backend
+    \item Client / Server
+    \item HTTP, API, JSON
+    \item Outils indispensables
+    \begin{itemize}
+        \item VS Code (extensions)
+        \item Terminal (bases)
+        \item npm / npx
+    \end{itemize}
+    \item Structure d'un projet moderne
+\end{itemize}
+}
+
+\exercise{Lancer un projet simple + comprendre l'arborescence}
+
+\vspace{0.3cm}
+
+\phase{1}{Git \& GitHub (OBLIGATOIRE en premier)}
+
+\textbf{👉 Toujours commencer par Git}
+
+\content{
+\begin{itemize}[leftmargin=*]
+    \item Git basics
+    \begin{itemize}
+        \item init, clone, status, add, commit
+        \item branches, merge
+    \end{itemize}
+    \item GitHub
+    \begin{itemize}
+        \item repo, README
+        \item pull request
+    \end{itemize}
+    \item Workflow professionnel
+    \begin{itemize}
+        \item feature branches
+        \item commit messages propres
+        \item Résolution de conflits
+    \end{itemize}
+\end{itemize}
+}
+
+\project{Repo GitHub propre\\
+Travail en branches\\
+PR + review}
+
+\vspace{0.3cm}
+
+\phase{2}{React.js (Frontend Web)}
+
+\objective{Créer des interfaces modernes\\
+Comprendre l'état, la logique, les composants}
+
+\content{
+\textbf{React Fundamentals}
+\begin{itemize}[leftmargin=*]
+    \item JSX
+    \item Components
+    \item Props
+    \item State
+    \item Events
+\end{itemize}
+
+\textbf{Hooks (essentiel)}
+\begin{itemize}[leftmargin=*]
+    \item useState
+    \item useEffect
+    \item useContext
+    \item custom hooks
+\end{itemize}
+
+\textbf{Routing \& UI}
+\begin{itemize}[leftmargin=*]
+    \item React Router
+    \item Layouts
+    \item Responsive design
+    \item Tailwind CSS / MUI / Ant Design
+\end{itemize}
+
+\textbf{Data \& APIs}
+\begin{itemize}[leftmargin=*]
+    \item Fetch / Axios
+    \item Gestion loading / error
+    \item Env variables
+\end{itemize}
+
+\textbf{Bonnes pratiques}
+\begin{itemize}[leftmargin=*]
+    \item Folder structure
+    \item Reusable components
+    \item Clean code
+\end{itemize}
+}
+
+\project{Dashboard / E-commerce / Admin panel\\
+API fake au début → vraie API plus tard}
+
+\vspace{0.3cm}
+
+\phase{3}{Node.js \& Backend (API)}
+
+\objective{Créer des APIs robustes\\
+Gérer auth, DB, sécurité}
+
+\content{
+\textbf{Node \& Express}
+\begin{itemize}[leftmargin=*]
+    \item Express basics
+    \item Middleware
+    \item MVC architecture
+\end{itemize}
+
+\textbf{Database}
+\begin{itemize}[leftmargin=*]
+    \item MongoDB ou PostgreSQL
+    \item Models \& relations
+    \item CRUD complet
+\end{itemize}
+
+\textbf{Auth \& Security}
+\begin{itemize}[leftmargin=*]
+    \item JWT
+    \item Login / Register
+    \item Roles \& permissions
+    \item Hash passwords
+\end{itemize}
+
+\textbf{Advanced Backend}
+\begin{itemize}[leftmargin=*]
+    \item Pagination
+    \item Filters
+    \item File upload
+    \item Environment config
+\end{itemize}
+}
+
+\project{API complète consommée par le frontend React}
+
+\vspace{0.3cm}
+
+\phase{4}{Full-Stack Integration}
+
+\content{
+\begin{itemize}[leftmargin=*]
+    \item Connect React ↔ Node
+    \item Auth end-to-end
+    \item Protected routes
+    \item State global (Redux / Context)
+    \item Error handling global
+\end{itemize}
+}
+
+\project{Application full-stack complète}
+
+\vspace{0.3cm}
+
+\phase{5}{React Native (Mobile)}
+
+\objective{Passer du Web au Mobile rapidement}
+
+\content{
+\begin{itemize}[leftmargin=*]
+    \item Expo
+    \item Components React Native
+    \item Navigation
+    \item Styles (Flexbox)
+    \item API calls
+    \item Auth mobile
+    \item Build Android / iOS
+\end{itemize}
+}
+
+\project{Version mobile de l'app web}
+
+\vspace{0.3cm}
+
+\phase{6}{AI \& LLM Fundamentals}
+
+\objective{Comprendre l'IA moderne\\
+Ne pas être juste ``user de l'API''}
+
+\content{
+\begin{itemize}[leftmargin=*]
+    \item C'est quoi un modèle IA
+    \item ML vs DL vs LLM
+    \item Prompt engineering
+    \item Tokens, embeddings
+    \item OpenAI / open-source models
+\end{itemize}
+}
+
+\textbf{✅ Exercice :} Chatbot simple avec API LLM
+
+\vspace{0.3cm}
+
+\phase{7}{RAG (Retrieval Augmented Generation)}
+
+\textbf{🔥 Partie très demandée sur le marché}
+
+\content{
+\begin{itemize}[leftmargin=*]
+    \item Pourquoi RAG
+    \item Vector databases
+    \begin{itemize}
+        \item Pinecone / Chroma / FAISS
+    \end{itemize}
+    \item Embeddings
+    \item Indexation de documents
+    \item Recherche sémantique
+    \item RAG pipeline complet
+\end{itemize}
+}
+
+\project{Chatbot basé sur documents (PDF, DB, site web)}
+
+\vspace{0.3cm}
+
+\phase{8}{Build \& Integrate AI into Apps}
+
+\content{
+\textbf{Intégrer LLM dans:}
+\begin{itemize}[leftmargin=*]
+    \item React
+    \item React Native
+    \item Node API
+    \item Streaming responses
+\end{itemize}
+
+\textbf{AI features:}
+\begin{itemize}[leftmargin=*]
+    \item résumé
+    \item recherche intelligente
+    \item assistant métier
+\end{itemize}
+}
+
+\project{Application Full-Stack + Mobile + AI}
+
+\vspace{0.3cm}
+
+\phase{9}{Production \& Career Ready}
+
+\content{
+\begin{itemize}[leftmargin=*]
+    \item Docker basics
+    \item Deployment
+    \item Env prod
+    \item Performance
+    \item Portfolio GitHub
+    \item Comment présenter le projet
+    \item Préparer entretien technique
+\end{itemize}
+}
+
+\vspace{1cm}
+
+\section*{🏁 PROJET FINAL (Capstone)}
+
+\textbf{Obligatoire}
+
+\textbf{👉 Exemple :}
+
+Plateforme SaaS avec
+\begin{itemize}[leftmargin=*]
+    \item Web + Mobile
+    \item Auth
+    \item AI assistant (RAG)
+    \item Dashboard
+    \item Déploiement
+\end{itemize}
+
+\vspace{1cm}
+
+\section*{🎯 ORDRE RÉSUMÉ (TRÈS IMPORTANT)}
+
+\begin{enumerate}[leftmargin=*]
+    \item Git \& GitHub
+    \item React
+    \item Node.js
+    \item Full-Stack Integration
+    \item React Native
+    \item AI fundamentals
+    \item RAG
+    \item AI Integration
+    \item Production \& Career
+\end{enumerate}
+
+\end{document}

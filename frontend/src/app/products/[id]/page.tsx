@@ -1,11 +1,8 @@
 import { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { getProductDetails, getSimilarProducts } from '@/services/api';
-import { getStorageUrl } from '@/services/api';
-import { isInStock } from '@/util/cartStock';
 import { ProductDetailClient } from './ProductDetailClient';
 import { ProductDetailFallbackClient } from '@/app/shop/ProductDetailFallbackClient';
-import type { Product } from '@/types';
 
 interface ProductPageProps {
   params: Promise<{ id: string }>;
@@ -45,32 +42,8 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
   }
 }
 
-function buildProductJsonLd(product: Product, baseUrl: string) {
-  const imageUrl = product.cover ? getStorageUrl(product.cover) : '';
-  const price = product.promo ?? product.prix;
-  const inStock = isInStock(product);
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'Product',
-    name: product.designation_fr,
-    description: (product.description_cover || product.description_fr || '').slice(0, 500),
-    image: imageUrl || undefined,
-    sku: String(product.id),
-    brand: product.brand ? { '@type': 'Brand', name: product.brand.designation_fr } : undefined,
-    offers: {
-      '@type': 'Offer',
-      url: `${baseUrl}/shop/${product.slug}`,
-      priceCurrency: 'TND',
-      price: price ?? 0,
-      availability: inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
-      seller: { '@type': 'Organization', name: 'SOBITAS' },
-    },
-  };
-}
-
 export default async function ProductDetailPage({ params }: ProductPageProps) {
   const { id } = await params;
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
 
   if (!id?.trim()) {
     notFound();
@@ -89,11 +62,8 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
       ? await getSimilarProducts(product.sous_categorie_id).catch(() => ({ products: [] }))
       : { products: [] };
 
-    const productSchema = buildProductJsonLd(product, baseUrl);
-
     return (
       <>
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }} />
         <ProductDetailClient product={product} similarProducts={similarData.products || []} />
       </>
     );

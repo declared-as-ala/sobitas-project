@@ -1,0 +1,94 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom modern admin styles */
+@layer components {
+    /* Modern Card Styles */
+    .modern-card {
+        @apply bg-white rounded-xl shadow-sm border border-gray-100 p-6 transition-all duration-200 ease-in-out;
+    }
+    
+    .modern-card:hover {
+        @apply shadow-md border-gray-200;
+    }
+    
+    /* Stat Card Styles */
+    .stat-card {
+        @apply modern-card cursor-pointer;
+    }
+    
+    .stat-card-primary {
+        @apply border-l-4 border-l-primary-500;
+    }
+    
+    .stat-card-success {
+        @apply border-l-4 border-l-green-500;
+    }
+    
+    .stat-card-warning {
+        @apply border-l-4 border-l-yellow-500;
+    }
+    
+    .stat-card-danger {
+        @apply border-l-4 border-l-red-500;
+    }
+    
+    .stat-card-info {
+        @apply border-l-4 border-l-blue-500;
+    }
+    
+    /* Modern Button Styles */
+    .btn-modern {
+        @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 ease-in-out;
+    }
+    
+    .btn-modern-primary {
+        @apply btn-modern bg-primary-600 text-white hover:bg-primary-700 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+    }
+    
+    .btn-modern-success {
+        @apply btn-modern bg-green-600 text-white hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2;
+    }
+    
+    .btn-modern-warning {
+        @apply btn-modern bg-yellow-600 text-white hover:bg-yellow-700 focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2;
+    }
+    
+    .btn-modern-danger {
+        @apply btn-modern bg-red-600 text-white hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2;
+    }
+    
+    .btn-modern-secondary {
+        @apply btn-modern bg-gray-100 text-gray-700 hover:bg-gray-200 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2;
+    }
+    
+    /* Modern Input Styles */
+    .input-modern {
+        @apply w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200;
+    }
+    
+    /* Chart Container */
+    .chart-container {
+        @apply modern-card p-6;
+    }
+    
+    /* Skeleton Loader */
+    .skeleton {
+        @apply animate-pulse bg-gray-200 rounded;
+    }
+}
+
+/* Override Voyager styles within modern wrapper */
+.voyager-modern {
+    @apply bg-gray-50;
+}
+
+.voyager-modern .page-content {
+    @apply p-6;
+}
+
+/* Smooth transitions */
+* {
+    @apply transition-colors duration-200;
+}

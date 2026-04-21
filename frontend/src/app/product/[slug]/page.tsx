@@ -1,4 +1,4 @@
-import { redirect, RedirectType } from 'next/navigation';
+import { permanentRedirect } from 'next/navigation';
 
 export type PageProps = {
   params: Promise<{ slug: string }>;
@@ -15,7 +15,7 @@ export const revalidate = 0;
 export default async function ProductRedirectPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
   const cleanSlug = slug?.trim();
-  if (!cleanSlug) redirect('/shop');
+  if (!cleanSlug) permanentRedirect('/shop');
 
   const sp = searchParams ? await searchParams : {};
   const query = new URLSearchParams();
@@ -28,5 +28,5 @@ export default async function ProductRedirectPage({ params, searchParams }: Page
   });
   const queryString = query.toString();
   const dest = `/shop/${encodeURIComponent(cleanSlug)}${queryString ? `?${queryString}` : ''}`;
-  redirect(dest, RedirectType.replace);
+  permanentRedirect(dest);
 }

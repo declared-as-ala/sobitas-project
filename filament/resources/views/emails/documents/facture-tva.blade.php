@@ -1,5 +1,5 @@
 @php
-    $logoUrl  = config('marketing.logo_url', rtrim(config('app.url'), '/') . '/logo.png');
+    $logoUrl  = url('/logo.png');
     $co       = $coordonnee ?? null;
     $cl       = $client ?? $facture->client ?? null;
     $companyName = $co ? ($co->name ?? $co->nom ?? null) : null;

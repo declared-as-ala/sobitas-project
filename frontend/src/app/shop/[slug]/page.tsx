@@ -46,15 +46,18 @@ function buildCategoryRedirectUrl(
 }
 
 /** CTR-optimized product title for Tunisia SERP (aim: position #1). Format: Product Name – Prix Tunisie & Livraison Rapide | Protein.tn */
-function productTitle(product: { designation_fr?: string; slug?: string }): string {
+function productTitle(product: Product): string {
+  const explicit = product.seo?.title || product.seo_title || product.meta_title;
+  if (explicit?.trim()) return explicit.trim();
   const name = product.designation_fr ?? product.slug ?? 'Produit';
   return `${name} – Prix Tunisie & Livraison Rapide | Protein.tn`;
 }
 
 /** Meta description: benefit + authenticity + delivery + location (Tunisie). Max 160 chars. */
-function productDescription(product: { meta_description_fr?: string; description_fr?: string; designation_fr?: string }, productName: string): string {
-  if (product.meta_description_fr?.trim()) {
-    const plain = product.meta_description_fr.replace(/<[^>]*>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim();
+function productDescription(product: Product, productName: string): string {
+  const explicit = product.seo?.description || product.seo_description || product.meta_description || product.meta_description_fr;
+  if (explicit?.trim()) {
+    const plain = explicit.replace(/<[^>]*>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim();
     if (plain) return plain.slice(0, 160);
   }
   const plain = (product.description_fr || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
@@ -72,10 +75,12 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     if (product?.id) {
       const title = productTitle(product);
       const description = productDescription(product, product.designation_fr ?? product.slug ?? 'Produit');
-      const canonicalUrl = buildCanonicalUrl(`/shop/${cleanSlug}`);
+      const canonicalUrl = product.seo?.canonical_url?.trim()
+        ? product.seo.canonical_url.trim()
+        : buildCanonicalUrl(`/shop/${product.slug || cleanSlug}`);
       // Use only this product's cover so Google shows the correct image (never another product's).
       // Add ?for=<slug> so the image URL is unique per product and caches don't mix results.
-      const baseImageUrl = product.cover ? getStorageUrl(product.cover) : null;
+      const baseImageUrl = product.seo?.image || (product.cover ? getStorageUrl(product.cover) : null);
       const imageUrl =
         baseImageUrl && (baseImageUrl.startsWith('http://') || baseImageUrl.startsWith('https://'))
           ? `${baseImageUrl}${baseImageUrl.includes('?') ? '&' : '?'}for=${encodeURIComponent(cleanSlug)}`
@@ -87,22 +92,25 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
       return {
         title: { absolute: title },
         description,
-        robots: { index: true, follow: true },
+        robots: {
+          index: product.seo?.robots?.index ?? true,
+          follow: product.seo?.robots?.follow ?? true,
+        },
         alternates: { canonical: canonicalUrl },
         openGraph: {
-          type: 'website',
+          type: 'product',
           url: canonicalUrl,
-          title,
-          description,
+          title: product.seo?.open_graph?.title || title,
+          description: product.seo?.open_graph?.description || description,
           siteName: 'Protein.tn',
           images: ogImage ? [ogImage] : undefined,
           locale: 'fr_TN',
         },
         twitter: {
-          card: 'summary_large_image',
-          title,
-          description,
-          images: imageUrl ? [imageUrl] : undefined,
+          card: (product.seo?.twitter?.card as 'summary' | 'summary_large_image') || 'summary_large_image',
+          title: product.seo?.twitter?.title || product.seo?.open_graph?.title || title,
+          description: product.seo?.twitter?.description || product.seo?.open_graph?.description || description,
+          images: (product.seo?.twitter?.image ? [product.seo.twitter.image] : undefined) || (imageUrl ? [imageUrl] : undefined),
         },
       };
     }
@@ -152,7 +160,9 @@ export default async function ShopProductPage({ params, searchParams }: PageProp
   const [similarProducts, faqs] = await Promise.all([similarPromise, faqsPromise]);
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
-  const canonicalUrl = buildCanonicalUrl(`/shop/${cleanSlug}`);
+  const canonicalUrl = safeProduct.seo?.canonical_url?.trim()
+    ? safeProduct.seo.canonical_url.trim()
+    : buildCanonicalUrl(`/shop/${safeProduct.slug || cleanSlug}`);
   const productSchema = buildProductJsonLd(safeProduct, canonicalUrl);
   if (productSchema) {
     validateStructuredData(productSchema, 'Product');

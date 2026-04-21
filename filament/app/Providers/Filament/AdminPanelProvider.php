@@ -177,6 +177,7 @@ class AdminPanelProvider extends PanelProvider
             ->pages([
                 Dashboard::class,
                 HistoriqueClient::class,
+                MediaPage::class,
                 SendSms::class,
                 SendEmail::class,
                 StockDashboard::class,
