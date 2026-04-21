@@ -26,9 +26,10 @@ return new class extends Migration
         // Migrate existing single sous_categorie_id to the pivot table
         if (Schema::hasColumn('products', 'sous_categorie_id')) {
             DB::table('products')
+                ->select('id', 'sous_categorie_id')
                 ->whereNotNull('sous_categorie_id')
                 ->where('sous_categorie_id', '>', 0)
-                ->chunk(100, function ($products) {
+                ->chunkById(100, function ($products) {
                     $inserts = [];
                     foreach ($products as $product) {
                         $inserts[] = [
@@ -41,7 +42,7 @@ return new class extends Migration
                     if (! empty($inserts)) {
                         DB::table('product_sous_category')->insertOrIgnore($inserts);
                     }
-                });
+                }, 'id');
         }
     }
 
