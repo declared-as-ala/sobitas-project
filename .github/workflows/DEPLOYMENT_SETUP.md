@@ -123,12 +123,12 @@ Ajoutez ces secrets dans **Settings → Secrets and variables → Actions** de v
 
 ## Workflow Frontend
 
-Le workflow `frontend-deploy.yml` a été modifié pour **ne plus se déclencher automatiquement** sur les push dans `frontend/`. Il est maintenant disponible uniquement via **workflow_dispatch** (déclenchement manuel).
+Un seul workflow gère le frontend : **`deploy-frontend.yml`** (lint, `next build`, image Docker, déploiement VPS). Il se déclenche sur push lorsque `frontend/**` ou `docker-compose.yml` change (voir le fichier YAML pour la liste exacte).
 
-Pour déployer le frontend manuellement :
-1. Allez dans **Actions** → **Frontend Build & Deploy**
+Pour relancer un déploiement sans nouveau commit :
+1. Allez dans **Actions** → **Deploy Frontend (Docker Image)**
 2. Cliquez sur **Run workflow**
-3. Sélectionnez la branche et cliquez sur **Run workflow**
+3. Choisissez la branche puis **Run workflow**
 
 ## Test du déploiement
 
