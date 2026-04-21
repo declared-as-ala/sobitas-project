@@ -10,7 +10,10 @@
 
 <body>
 
-    @include('print._logo')
+    @php
+        // Must resolve here: assignments inside @include('print._logo') do not leak to this view.
+        $logoUrl = \App\Support\PrintLogo::resolve($coordonnee ?? null);
+    @endphp
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro&display=swap');
@@ -175,8 +178,6 @@
             opacity: .9;
         }
     </style>
-
-    <body>
 
         <div class="toolbar hidden-print hide_print ">
             <div class="text-right">
