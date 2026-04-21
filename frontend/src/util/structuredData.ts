@@ -402,7 +402,7 @@ export function buildArticleSchema(article: {
     date_modified?: string | null;
   };
   categories?: Array<{ name?: string }>;
-  tags?: Array<{ name?: string }>;
+  tags?: Array<{ name?: string } | string>;
 }, baseUrl: string, imageUrl?: string): object {
   const base = baseUrl.replace(/\/$/, '');
   const url = article.slug ? `${base}/blog/${article.slug}` : `${base}/blog`;
@@ -414,7 +414,10 @@ export function buildArticleSchema(article: {
   const headline = article.seo?.title || article.schema?.headline || article.designation_fr || 'Article';
   const description = article.seo?.description || article.schema?.description || plainDesc || undefined;
   const section = article.schema?.section || article.categories?.[0]?.name || undefined;
-  const keywords = article.tags?.map((t) => t.name).filter(Boolean).join(', ') || undefined;
+  const keywords = article.tags
+    ?.map((t) => (typeof t === 'string' ? t : t?.name))
+    .filter(Boolean)
+    .join(', ') || undefined;
   const schemaImage = article.seo?.image || article.schema?.image || imageUrl || undefined;
   const published = article.schema?.date_published || article.created_at || undefined;
   const modified = article.schema?.date_modified || article.updated_at || article.created_at || undefined;
