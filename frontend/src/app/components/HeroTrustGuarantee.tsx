@@ -1,43 +1,81 @@
 'use client';
 
 import { memo } from 'react';
-import { ShieldCheck } from 'lucide-react';
+import { BadgeCheck, Shield } from 'lucide-react';
 
 /**
- * Tunisian Derja trust / money-back message for the homepage hero.
- * RTL block; visually matches the hero glass + red accent system.
+ * Premium hero trust / money-back strip (Tunisian Derja).
+ * Strong hierarchy: headline → guarantee line with emphasized refund + 7 days.
  */
 export const HeroTrustGuarantee = memo(function HeroTrustGuarantee() {
   return (
     <aside
-      className="mt-5 sm:mt-6 md:mt-8 w-full max-w-lg"
+      className="relative z-[1] mt-6 w-full max-w-[22rem] sm:mt-7 sm:max-w-md md:mt-8 md:max-w-lg"
       dir="rtl"
       lang="ar"
-      aria-label="Garantie satisfait ou remboursé : achat en toute confiance, remboursement sous 7 jours"
+      aria-label="Garantie : achetez en toute tranquillité, remboursement sous 7 jours si le produit ne vous convient pas"
     >
-      <div className="group relative overflow-hidden rounded-2xl border border-white/20 bg-white/[0.08] px-3.5 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.25)] backdrop-blur-md transition-[border-color,box-shadow] duration-300 sm:px-4 sm:py-3.5 md:px-5 md:py-4 hover:border-white/30 hover:shadow-[0_12px_40px_rgba(0,0,0,0.35)]">
+      <div className="relative overflow-hidden rounded-2xl border border-white/25 bg-gradient-to-br from-white/[0.14] via-white/[0.06] to-black/20 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.15),0_20px_50px_-12px_rgba(0,0,0,0.45)] ring-1 ring-inset ring-white/10 backdrop-blur-xl sm:rounded-3xl">
+        {/* Top accent — premium “seal” strip */}
         <div
-          className="pointer-events-none absolute -left-8 -top-12 h-28 w-28 rounded-full bg-red-500/20 blur-2xl transition-opacity duration-300 group-hover:opacity-90"
+          className="h-1 w-full bg-gradient-to-l from-emerald-400/90 via-amber-300/95 to-red-500"
           aria-hidden
         />
-        <div className="relative flex items-start gap-2.5 sm:gap-3 md:gap-3.5">
-          <div
-            className="flex shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-white/20 to-white/5 p-2 ring-1 ring-white/25 shadow-inner sm:p-2.5"
-            aria-hidden
-          >
-            <ShieldCheck className="h-5 w-5 text-emerald-300 drop-shadow sm:h-6 sm:w-6" strokeWidth={2} />
+
+        {/* Soft light leak */}
+        <div
+          className="pointer-events-none absolute -right-10 -top-16 h-40 w-40 rounded-full bg-amber-200/15 blur-3xl"
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute -bottom-8 -left-6 h-32 w-32 rounded-full bg-red-500/20 blur-2xl"
+          aria-hidden
+        />
+
+        <div className="relative flex items-stretch gap-3 px-3.5 py-3.5 sm:gap-4 sm:px-5 sm:py-4 md:px-6 md:py-5">
+          {/* Icon column (first in RTL = visual right) */}
+          <div className="flex shrink-0 flex-col items-center justify-center gap-1" aria-hidden>
+            <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-white/25 to-white/[0.06] shadow-inner ring-1 ring-white/30 sm:h-16 sm:w-16 md:h-[4.25rem] md:w-[4.25rem]">
+              <Shield
+                className="h-7 w-7 text-emerald-100/95 drop-shadow-md sm:h-8 sm:w-8"
+                strokeWidth={2}
+              />
+              <div className="absolute -bottom-0.5 -left-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 shadow-md ring-2 ring-white/90 sm:h-7 sm:w-7">
+                <BadgeCheck className="h-3.5 w-3.5 text-white sm:h-4 sm:w-4" strokeWidth={2.5} aria-hidden />
+              </div>
+            </div>
           </div>
-          <div className="min-w-0 flex-1 space-y-1 text-right leading-snug sm:space-y-1.5">
-            <p className="text-[0.8125rem] font-semibold tracking-wide text-white drop-shadow-md sm:text-sm md:text-base">
-              جرّب بكل ثقة <span className="inline-block translate-y-px">💯</span>
+
+          {/* Copy */}
+          <div className="min-w-0 flex-1 text-right leading-relaxed">
+            <p className="text-[0.9375rem] font-bold tracking-tight text-white drop-shadow-md sm:text-lg md:text-xl">
+              جرّب بكل راحة{' '}
+              <span className="inline-block align-middle text-[1.05em] leading-none" aria-hidden>
+                💪
+              </span>
             </p>
-            <p className="text-[0.8125rem] text-white/90 drop-shadow sm:text-sm md:text-[0.9375rem]">
-              ما عجبكش؟ ترجّع فلوسك في{' '}
-              <span className="inline-block rounded-md bg-red-600 px-1.5 py-0.5 font-bold text-white shadow-sm ring-1 ring-red-400/40 sm:px-2 sm:py-0.5">
-                7 أيّام
+
+            <p className="mt-2 text-[0.8125rem] leading-[1.65] text-white/88 sm:mt-2.5 sm:text-[0.9375rem] md:text-base md:leading-[1.7]">
+              <span className="font-medium text-white/80">وإذا ما عجبكش،</span>
+              <br className="sm:hidden" aria-hidden />
+              <span className="inline-block rounded-md bg-gradient-to-b from-amber-200/25 to-amber-600/10 px-1.5 py-0.5 font-extrabold text-amber-50 shadow-sm ring-1 ring-amber-300/40 sm:rounded-lg sm:px-2 sm:py-0.5">
+                فلوسك ترجعلِك
+              </span>
+              <span className="font-semibold text-white/80"> في </span>
+              <span className="relative inline-block align-baseline">
+                <span className="relative z-[1] inline-block rounded-lg bg-gradient-to-b from-red-500 to-red-800 px-2 py-0.5 text-sm font-black tracking-wide text-white shadow-[0_2px_10px_rgba(220,38,38,0.55)] ring-1 ring-red-300/70 sm:px-2.5 sm:py-1 sm:text-base md:text-lg">
+                  7 أيّام
+                </span>
               </span>
             </p>
           </div>
+        </div>
+
+        {/* Bottom micro-trust row */}
+        <div className="flex items-center justify-end gap-x-3 border-t border-white/10 px-3 py-2 sm:px-5 sm:py-2.5 md:px-6">
+          <span className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-white/45 sm:text-[0.7rem]">
+            ضمان استرجاع
+          </span>
         </div>
       </div>
     </aside>
