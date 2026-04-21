@@ -12,13 +12,20 @@
   3. Déploiement sur le VPS via SSH
   4. Redémarrage du container `sobitas-backend-v2`
 
-### 2. `frontend-deploy.yml` ⚠️ DÉSACTIVÉ (manuel uniquement)
-**Déploiement du frontend Next.js**
+### 2. `deploy-frontend.yml` ✅ ACTIF (déploiement auto)
+**Image Docker frontend + déploiement VPS**
 
-- **Déclenchement** : **UNIQUEMENT manuel** via `workflow_dispatch`
-- **Actions** : Build et déploiement du frontend (désactivé automatiquement)
+- **Déclenchement** : push sur `main`, `master` ou `develop` lorsqu’au moins un fichier change sous `frontend/**`, ou `docker-compose.yml`, ou ce workflow.
+- **Manuel** : `workflow_dispatch` dans l’onglet Actions.
+- **Si le workflow ne part pas** : vous poussez peut‑être sur une autre branche, ou aucun fichier du commit ne correspond aux chemins ci‑dessus (ex. changements uniquement dans `filament/`).
 
-### 3. `backend-assets-deploy.yml` ✅ ACTIF
+### 3. `frontend-deploy.yml` — manuel uniquement
+**Lint npm + build + Docker + VPS (pipeline plus long)**
+
+- **Déclenchement** : **uniquement** `workflow_dispatch` (Actions → choisir le workflow → Run workflow).
+- Utile pour un déploiement ponctuel ou un run complet avec `npm run lint` avant le build Docker.
+
+### 4. `backend-assets-deploy.yml` ✅ ACTIF
 **Compilation des assets du backend legacy**
 
 - **Déclenchement** : Push sur `main` avec changements dans `backend/resources/**`
@@ -46,8 +53,9 @@ Voir [DEPLOYMENT_SETUP.md](./DEPLOYMENT_SETUP.md) pour les instructions complèt
 
 ## Fichiers modifiés/créés
 
-- ✅ `.github/workflows/deploy-filament.yml` (nouveau)
-- ✅ `.github/workflows/frontend-deploy.yml` (modifié - trigger désactivé)
+- ✅ `.github/workflows/deploy-filament.yml`
+- ✅ `.github/workflows/deploy-frontend.yml` (déploiement auto frontend)
+- ✅ `.github/workflows/frontend-deploy.yml` (déploiement manuel / pipeline complet)
 - ✅ `.github/workflows/DEPLOYMENT_SETUP.md` (documentation)
 - ✅ `.github/workflows/docker-compose.vps.example.yml` (exemple de config)
 

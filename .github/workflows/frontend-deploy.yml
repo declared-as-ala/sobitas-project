@@ -1,12 +1,8 @@
 name: Frontend Build & Deploy
 
+# Manual / optional pipeline (lint + npm build + Docker + VPS). Automatic Docker deploy uses `deploy-frontend.yml`.
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'frontend/**'
-      - '.github/workflows/frontend-deploy.yml'
-  workflow_dispatch: # Manual trigger also available
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io

@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss"
+import type { PluginUtils } from "tailwindcss/types/config"
 import typography from "@tailwindcss/typography"
 
 const config: Config = {
@@ -79,7 +80,7 @@ const config: Config = {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
-      typography: ({ theme }) => ({
+      typography: ({ theme }: PluginUtils) => ({
         DEFAULT: {
           css: {
             maxWidth: "70ch",

@@ -1,8 +1,13 @@
 name: Deploy Frontend (Docker Image)
 
+# Runs when frontend-related files change on the default integration branches.
+# If this never appears in Actions: check your default branch name and that commits touch `frontend/**`.
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - master
+      - develop
     paths:
       - "frontend/**"
       - "docker-compose.yml"
