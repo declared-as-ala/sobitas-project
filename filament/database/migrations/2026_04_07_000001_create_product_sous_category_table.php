@@ -12,14 +12,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Create pivot table for many-to-many relationship
-        Schema::create('product_sous_category', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('product_id')->constrained('products')->onDelete('cascade');
-            $table->foreignId('sous_category_id')->constrained('sous_categories')->onDelete('cascade');
-            $table->unique(['product_id', 'sous_category_id']);
-            $table->timestamps();
-        });
+        // Make migration idempotent for environments where the table already exists.
+        if (! Schema::hasTable('product_sous_category')) {
+            Schema::create('product_sous_category', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('product_id')->constrained('products')->onDelete('cascade');
+                $table->foreignId('sous_category_id')->constrained('sous_categories')->onDelete('cascade');
+                $table->unique(['product_id', 'sous_category_id']);
+                $table->timestamps();
+            });
+        }
 
         // Migrate existing single sous_categorie_id to the pivot table
         if (Schema::hasColumn('products', 'sous_categorie_id')) {
@@ -36,8 +38,8 @@ return new class extends Migration
                             'updated_at' => now(),
                         ];
                     }
-                    if (!empty($inserts)) {
-                        DB::table('product_sous_category')->insert($inserts);
+                    if (! empty($inserts)) {
+                        DB::table('product_sous_category')->insertOrIgnore($inserts);
                     }
                 });
         }
