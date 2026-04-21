@@ -5,7 +5,7 @@
 ### 1. `deploy-filament.yml` ✅ ACTIF
 **Déploiement automatique du backend Filament**
 
-- **Déclenchement** : Push sur `main` avec changements dans `filament/**`
+- **Déclenchement** : push sur `main`, `master` ou `develop` lorsqu’au moins un fichier change sous `filament/**`, ou `docker-compose.yml`, ou ce workflow (les pushes **frontend-only** ne lancent plus le backend).
 - **Actions** :
   1. Build de l'image Docker depuis `filament/Dockerfile`
   2. Push vers GHCR : `ghcr.io/declared-as-ala/sobitas-backend-v2:latest`

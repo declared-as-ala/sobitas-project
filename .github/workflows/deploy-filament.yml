@@ -2,7 +2,14 @@ name: Deploy Filament Backend (Docker Image) - V2
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - master
+      - develop
+    paths:
+      - "filament/**"
+      - "docker-compose.yml"
+      - ".github/workflows/deploy-filament.yml"
   workflow_dispatch:
     inputs:
       enabled:
