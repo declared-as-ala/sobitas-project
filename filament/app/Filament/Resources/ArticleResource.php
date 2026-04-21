@@ -25,6 +25,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Schema as DbSchema;
 use Throwable;
 
 class ArticleResource extends Resource
@@ -49,6 +50,22 @@ class ArticleResource extends Resource
     protected static ?string $recordTitleAttribute = 'designation_fr';
 
     protected static bool $isGloballySearchable = false;
+
+    /** @var array<string, bool> */
+    private static array $articleColumnsCache = [];
+
+    private static function hasArticleColumn(string $column): bool
+    {
+        if (array_key_exists($column, self::$articleColumnsCache)) {
+            return self::$articleColumnsCache[$column];
+        }
+
+        try {
+            return self::$articleColumnsCache[$column] = DbSchema::hasColumn('articles', $column);
+        } catch (\Throwable) {
+            return self::$articleColumnsCache[$column] = false;
+        }
+    }
 
     /**
      * Merge HTML staging into `description` when the editor is in HTML mode, then drop auxiliary keys.
@@ -347,6 +364,26 @@ class ArticleResource extends Resource
                                         Section::make('Titre & Description')
                                             ->icon('heroicon-o-tag')
                                             ->schema([
+                                                Forms\Components\TextInput::make('seo_title')
+                                                    ->label('SEO title (prioritaire)')
+                                                    ->visible(fn (): bool => self::hasArticleColumn('seo_title'))
+                                                    ->dehydrated(fn (): bool => self::hasArticleColumn('seo_title'))
+                                                    ->maxLength(255)
+                                                    ->columnSpanFull(),
+                                                Forms\Components\Textarea::make('seo_description')
+                                                    ->label('SEO description (prioritaire)')
+                                                    ->visible(fn (): bool => self::hasArticleColumn('seo_description'))
+                                                    ->dehydrated(fn (): bool => self::hasArticleColumn('seo_description'))
+                                                    ->maxLength(500)
+                                                    ->rows(4)
+                                                    ->columnSpanFull(),
+                                                Forms\Components\Textarea::make('seo_excerpt')
+                                                    ->label('Extrait SEO')
+                                                    ->visible(fn (): bool => self::hasArticleColumn('seo_excerpt'))
+                                                    ->dehydrated(fn (): bool => self::hasArticleColumn('seo_excerpt'))
+                                                    ->maxLength(1000)
+                                                    ->rows(3)
+                                                    ->columnSpanFull(),
                                                 Forms\Components\TextInput::make('meta_title')
                                                     ->label('Titre SEO (meta title)')
                                                     ->maxLength(255)
@@ -381,6 +418,23 @@ class ArticleResource extends Resource
                                                     })
                                                     ->helperText('Entre 120 et 160 caractères recommandés.')
                                                     ->columnSpanFull(),
+                                                Forms\Components\TextInput::make('seo_canonical_url')
+                                                    ->label('Canonical URL')
+                                                    ->visible(fn (): bool => self::hasArticleColumn('seo_canonical_url'))
+                                                    ->dehydrated(fn (): bool => self::hasArticleColumn('seo_canonical_url'))
+                                                    ->url()
+                                                    ->maxLength(1024)
+                                                    ->columnSpanFull(),
+                                                Forms\Components\Toggle::make('seo_robots_index')
+                                                    ->label('Indexable')
+                                                    ->visible(fn (): bool => self::hasArticleColumn('seo_robots_index'))
+                                                    ->dehydrated(fn (): bool => self::hasArticleColumn('seo_robots_index'))
+                                                    ->default(true),
+                                                Forms\Components\Toggle::make('seo_robots_follow')
+                                                    ->label('Follow')
+                                                    ->visible(fn (): bool => self::hasArticleColumn('seo_robots_follow'))
+                                                    ->dehydrated(fn (): bool => self::hasArticleColumn('seo_robots_follow'))
+                                                    ->default(true),
                                             ]),
 
                                         // Right: Live SERP Preview
@@ -413,6 +467,64 @@ class ArticleResource extends Resource
                                                             . '</div>'
                                                         );
                                                     }),
+                                            ]),
+                                    ]),
+
+                                Section::make('Open Graph & Twitter')
+                                    ->icon('heroicon-o-share')
+                                    ->schema([
+                                        Grid::make(2)
+                                            ->schema([
+                                                Forms\Components\TextInput::make('og_title')
+                                                    ->label('OG title')
+                                                    ->visible(fn (): bool => self::hasArticleColumn('og_title'))
+                                                    ->dehydrated(fn (): bool => self::hasArticleColumn('og_title'))
+                                                    ->maxLength(255),
+                                                Forms\Components\Textarea::make('og_description')
+                                                    ->label('OG description')
+                                                    ->visible(fn (): bool => self::hasArticleColumn('og_description'))
+                                                    ->dehydrated(fn (): bool => self::hasArticleColumn('og_description'))
+                                                    ->maxLength(500)
+                                                    ->rows(3),
+                                                Forms\Components\FileUpload::make('og_image')
+                                                    ->label('OG image')
+                                                    ->visible(fn (): bool => self::hasArticleColumn('og_image'))
+                                                    ->dehydrated(fn (): bool => self::hasArticleColumn('og_image'))
+                                                    ->disk('public')
+                                                    ->directory('articles/seo')
+                                                    ->image()
+                                                    ->maxSize(5120),
+                                                Forms\Components\TextInput::make('twitter_card')
+                                                    ->label('Twitter card')
+                                                    ->visible(fn (): bool => self::hasArticleColumn('twitter_card'))
+                                                    ->dehydrated(fn (): bool => self::hasArticleColumn('twitter_card'))
+                                                    ->default('summary_large_image')
+                                                    ->datalist(['summary', 'summary_large_image'])
+                                                    ->maxLength(32),
+                                                Forms\Components\TextInput::make('twitter_title')
+                                                    ->label('Twitter title')
+                                                    ->visible(fn (): bool => self::hasArticleColumn('twitter_title'))
+                                                    ->dehydrated(fn (): bool => self::hasArticleColumn('twitter_title'))
+                                                    ->maxLength(255),
+                                                Forms\Components\Textarea::make('twitter_description')
+                                                    ->label('Twitter description')
+                                                    ->visible(fn (): bool => self::hasArticleColumn('twitter_description'))
+                                                    ->dehydrated(fn (): bool => self::hasArticleColumn('twitter_description'))
+                                                    ->maxLength(500)
+                                                    ->rows(3),
+                                                Forms\Components\FileUpload::make('twitter_image')
+                                                    ->label('Twitter image')
+                                                    ->visible(fn (): bool => self::hasArticleColumn('twitter_image'))
+                                                    ->dehydrated(fn (): bool => self::hasArticleColumn('twitter_image'))
+                                                    ->disk('public')
+                                                    ->directory('articles/seo')
+                                                    ->image()
+                                                    ->maxSize(5120),
+                                                Forms\Components\TextInput::make('seo_author_name')
+                                                    ->label('Auteur SEO')
+                                                    ->visible(fn (): bool => self::hasArticleColumn('seo_author_name'))
+                                                    ->dehydrated(fn (): bool => self::hasArticleColumn('seo_author_name'))
+                                                    ->maxLength(255),
                                             ]),
                                     ]),
 
@@ -468,6 +580,20 @@ class ArticleResource extends Resource
                                             ->nullable()
                                             ->native(false)
                                             ->helperText('Optionnel. Les articles sans type restent classés par mots-clés comme avant.')
+                                            ->columnSpanFull(),
+                                        Forms\Components\Select::make('categories')
+                                            ->label('Catégories blog')
+                                            ->relationship('categories', 'name')
+                                            ->multiple()
+                                            ->searchable()
+                                            ->preload()
+                                            ->columnSpanFull(),
+                                        Forms\Components\Select::make('tags')
+                                            ->label('Tags blog')
+                                            ->relationship('tags', 'name')
+                                            ->multiple()
+                                            ->searchable()
+                                            ->preload()
                                             ->columnSpanFull(),
 
                                         Forms\Components\Toggle::make('publier')

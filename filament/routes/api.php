@@ -34,6 +34,8 @@ Route::middleware(['cache.api:300', 'cache.headers.api:300'])->group(function ()
     Route::get('/pages', [ApisController::class, 'pages']);
     Route::get('/redirections', [ApisController::class, 'redirections']);
     Route::get('/latest_articles', [ApisController::class, 'latestArticles']);
+    Route::get('/blog_categories', [ApisController::class, 'blogCategories']);
+    Route::get('/blog_tags', [ApisController::class, 'blogTags']);
     Route::get('/latest_products', [ApisController::class, 'latestProducts']);
     Route::get('/latest_packs', [ApisController::class, 'latestPacks']);
     Route::get('/new_product', [ApisController::class, 'newProduct']);
@@ -56,6 +58,8 @@ Route::middleware(['cache.api:60', 'cache.headers.api:60'])->group(function () {
     Route::get('/page/{slug}', [ApisController::class, 'getPageBySlug']);
     Route::get('/all_products', [ApisController::class, 'allProducts']);
     Route::get('/all_articles', [ApisController::class, 'allArticles']);
+    Route::get('/blog/category/{slug}', [ApisController::class, 'articlesByBlogCategorySlug']);
+    Route::get('/blog/tag/{slug}', [ApisController::class, 'articlesByBlogTagSlug']);
 });
 
 // ── FAST ROUTE (Minimal middleware) ─────────────────────────────

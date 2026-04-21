@@ -385,6 +385,24 @@ export function buildArticleSchema(article: {
   created_at?: string;
   updated_at?: string;
   slug?: string;
+  seo?: {
+    title?: string | null;
+    description?: string | null;
+    author?: string | null;
+    image?: string | null;
+  };
+  schema?: {
+    type?: string;
+    section?: string | null;
+    headline?: string | null;
+    description?: string | null;
+    image?: string | null;
+    author?: string | null;
+    date_published?: string | null;
+    date_modified?: string | null;
+  };
+  categories?: Array<{ name?: string }>;
+  tags?: Array<{ name?: string }>;
 }, baseUrl: string, imageUrl?: string): object {
   const base = baseUrl.replace(/\/$/, '');
   const url = article.slug ? `${base}/blog/${article.slug}` : `${base}/blog`;
@@ -393,15 +411,33 @@ export function buildArticleSchema(article: {
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 200);
+  const headline = article.seo?.title || article.schema?.headline || article.designation_fr || 'Article';
+  const description = article.seo?.description || article.schema?.description || plainDesc || undefined;
+  const section = article.schema?.section || article.categories?.[0]?.name || undefined;
+  const keywords = article.tags?.map((t) => t.name).filter(Boolean).join(', ') || undefined;
+  const schemaImage = article.seo?.image || article.schema?.image || imageUrl || undefined;
+  const published = article.schema?.date_published || article.created_at || undefined;
+  const modified = article.schema?.date_modified || article.updated_at || article.created_at || undefined;
+  const authorName = article.seo?.author || article.schema?.author || 'Sobitas';
   return {
     '@context': 'https://schema.org',
-    '@type': 'Article',
-    headline: article.designation_fr || 'Article',
-    description: plainDesc || undefined,
-    image: imageUrl || undefined,
+    '@type': article.schema?.type || 'BlogPosting',
+    headline,
+    description,
+    image: schemaImage,
     url,
-    datePublished: article.created_at || undefined,
-    dateModified: article.updated_at || article.created_at || undefined,
+    datePublished: published,
+    dateModified: modified,
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': url,
+    },
+    author: {
+      '@type': 'Person',
+      name: authorName,
+    },
+    articleSection: section,
+    keywords,
     publisher: { '@type': 'Organization', name: 'SOBITAS', logo: { '@type': 'ImageObject', url: `${base}/icon.png` } },
     inLanguage: 'fr-TN',
   };
@@ -423,6 +459,34 @@ export function buildFAQPageSchema(faqs: FAQ[] | unknown): object | null {
       acceptedAnswer: {
         '@type': 'Answer',
         text: (f.reponse || '').trim(),
+      },
+    })),
+  };
+}
+
+/** FAQPage schema from product repeater format [{ q, a }] */
+export function buildFAQPageSchemaFromProductFaq(
+  faqs: Array<{ q?: string; a?: string; question?: string; answer?: string }> | null | undefined
+): object | null {
+  const list = Array.isArray(faqs) ? faqs : [];
+  const normalized = list
+    .map((item) => ({
+      question: (item.q || item.question || '').trim(),
+      answer: (item.a || item.answer || '').trim(),
+    }))
+    .filter((item) => item.question && item.answer);
+
+  if (!normalized.length) return null;
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: normalized.map((f) => ({
+      '@type': 'Question',
+      name: f.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: f.answer,
       },
     })),
   };

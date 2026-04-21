@@ -181,6 +181,22 @@ export interface Article {
   designation_fr: string;
   description?: string;
   description_fr?: string;
+  meta_title?: string | null;
+  meta_description_fr?: string | null;
+  seo_title?: string | null;
+  seo_description?: string | null;
+  seo_excerpt?: string | null;
+  seo_canonical_url?: string | null;
+  seo_robots_index?: boolean | null;
+  seo_robots_follow?: boolean | null;
+  og_title?: string | null;
+  og_description?: string | null;
+  og_image?: string | null;
+  twitter_title?: string | null;
+  twitter_description?: string | null;
+  twitter_image?: string | null;
+  twitter_card?: string | null;
+  seo_author_name?: string | null;
   /** Blog body text direction: auto | ltr | rtl (from CMS). */
   content_text_direction?: 'auto' | 'ltr' | 'rtl' | string | null;
   /** ISO language code for article body (e.g. fr, ar). */
@@ -197,6 +213,53 @@ export interface Article {
   tags?: string[];
   /** Optional: admin-set product slugs for "Produits recommandés" (manual override) */
   recommended_product_slugs?: string[];
+  categories?: BlogCategorySummary[];
+  tags?: BlogTagSummary[];
+  seo?: {
+    title?: string | null;
+    description?: string | null;
+    excerpt?: string | null;
+    canonical_url?: string | null;
+    author?: string | null;
+    image?: string | null;
+    robots?: {
+      index?: boolean;
+      follow?: boolean;
+    };
+    open_graph?: {
+      title?: string | null;
+      description?: string | null;
+      image?: string | null;
+    };
+    twitter?: {
+      card?: string | null;
+      title?: string | null;
+      description?: string | null;
+      image?: string | null;
+    };
+  };
+  schema?: {
+    type?: string;
+    headline?: string | null;
+    description?: string | null;
+    image?: string | null;
+    author?: string | null;
+    date_published?: string | null;
+    date_modified?: string | null;
+    section?: string | null;
+  };
+}
+
+export interface BlogCategorySummary {
+  id: number;
+  name: string;
+  slug: string;
+}
+
+export interface BlogTagSummary {
+  id: number;
+  name: string;
+  slug: string;
 }
 
 // Order Types

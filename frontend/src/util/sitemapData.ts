@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { getAllProducts, getAllArticles, getCategories, getAllBrands } from '@/services/api';
+import { getAllProducts, getAllArticles, getCategories, getAllBrands, getBlogCategories, getBlogTags } from '@/services/api';
 import type { Product, Article, Category, Brand, SubCategory } from '@/types';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
@@ -42,11 +42,13 @@ export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
   const sitemapEntries: MetadataRoute.Sitemap = [...staticPages];
 
   // Fetch all data in parallel so the sitemap responds quickly when requested (e.g. by Google).
-  const [productsRes, categories, brands, articles] = await Promise.allSettled([
+  const [productsRes, categories, brands, articles, blogCategories, blogTags] = await Promise.allSettled([
     getAllProducts({ perPage: 5000, page: 1 }),
     getCategories(),
     getAllBrands(),
     getAllArticles(),
+    getBlogCategories(),
+    getBlogTags(),
   ]);
 
   try {
@@ -128,6 +130,40 @@ export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
     }
   } catch (error) {
     console.error('Error processing articles for sitemap:', error);
+  }
+
+  try {
+    if (blogCategories.status === 'fulfilled' && Array.isArray(blogCategories.value)) {
+      blogCategories.value.forEach((cat) => {
+        if (cat.slug) {
+          sitemapEntries.push({
+            url: `${BASE_URL}/blog/category/${cat.slug}`,
+            lastModified: new Date(),
+            changeFrequency: 'weekly' as const,
+            priority: 0.55,
+          });
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error processing blog categories for sitemap:', error);
+  }
+
+  try {
+    if (blogTags.status === 'fulfilled' && Array.isArray(blogTags.value)) {
+      blogTags.value.forEach((tag) => {
+        if (tag.slug) {
+          sitemapEntries.push({
+            url: `${BASE_URL}/blog/tag/${tag.slug}`,
+            lastModified: new Date(),
+            changeFrequency: 'weekly' as const,
+            priority: 0.5,
+          });
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error processing blog tags for sitemap:', error);
   }
 
   return sitemapEntries;

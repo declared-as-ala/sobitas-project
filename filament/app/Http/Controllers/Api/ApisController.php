@@ -4,10 +4,15 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ProductDetailResource;
+use App\Http\Resources\ArticleDetailResource;
+use App\Http\Resources\BlogCategoryResource as BlogCategoryApiResource;
+use App\Http\Resources\BlogTagResource as BlogTagApiResource;
 use App\Jobs\SendOrderEmailJob;
 use App\Models\Annonce;
 use App\Models\Aroma;
 use App\Models\Article;
+use App\Models\BlogCategory;
+use App\Models\BlogTag;
 use App\Models\Brand;
 use App\Models\Categ;
 use App\Models\Commande;
@@ -63,8 +68,9 @@ class ApisController extends Controller
     private function articleListSelectColumns(): array
     {
         $base = ['id', 'slug', 'designation_fr', 'cover', 'publier', 'created_at'];
+        $base = ['id', 'slug', 'designation_fr', 'cover', 'publier', 'meta_title', 'meta_description_fr', 'seo_title', 'seo_description', 'created_at'];
         if (Article::hasBlogTypeColumn()) {
-            array_splice($base, 5, 0, ['blog_type']);
+            array_splice($base, 9, 0, ['blog_type']);
         }
 
         return $base;
@@ -553,13 +559,16 @@ class ApisController extends Controller
 
     public function articleDetails(string $slug): JsonResponse
     {
-        $article = Article::where('slug', $slug)->where('publier', 1)->first();
+        $article = Article::where('slug', $slug)
+            ->where('publier', 1)
+            ->with(['categories:id,name,slug', 'tags:id,name,slug'])
+            ->first();
 
         if (! $article) {
             return response()->json(['error' => 'Article introuvable'], 404);
         }
 
-        return response()->json($article);
+        return response()->json((new ArticleDetailResource($article))->resolve());
     }
 
     public function latestArticles()
@@ -574,6 +583,70 @@ class ApisController extends Controller
             ->select($cols)
             ->limit(4)
             ->get();
+    }
+
+    public function blogCategories(): JsonResponse
+    {
+        $categories = BlogCategory::query()
+            ->withCount(['articles' => fn ($q) => $q->where('publier', 1)])
+            ->orderBy('name')
+            ->get();
+
+        return response()->json(BlogCategoryApiResource::collection($categories));
+    }
+
+    public function blogTags(): JsonResponse
+    {
+        $tags = BlogTag::query()
+            ->withCount(['articles' => fn ($q) => $q->where('publier', 1)])
+            ->orderBy('name')
+            ->get();
+
+        return response()->json(BlogTagApiResource::collection($tags));
+    }
+
+    public function articlesByBlogCategorySlug(Request $request, string $slug): JsonResponse
+    {
+        $perPage = $this->resolvePerPage($request);
+        $category = BlogCategory::where('slug', $slug)->first();
+        if (! $category) {
+            return response()->json(['error' => 'Categorie blog introuvable'], 404);
+        }
+
+        $articles = $category->articles()
+            ->where('publier', 1)
+            ->select($this->articleListSelectColumns())
+            ->latest('created_at')
+            ->paginate($perPage);
+
+        return response()->json([
+            'category' => (new BlogCategoryApiResource($category))->resolve(),
+            'articles' => $articles->items(),
+            'meta' => $this->paginationMeta($articles),
+            'links' => $this->paginationLinks($articles),
+        ]);
+    }
+
+    public function articlesByBlogTagSlug(Request $request, string $slug): JsonResponse
+    {
+        $perPage = $this->resolvePerPage($request);
+        $tag = BlogTag::where('slug', $slug)->first();
+        if (! $tag) {
+            return response()->json(['error' => 'Tag blog introuvable'], 404);
+        }
+
+        $articles = $tag->articles()
+            ->where('publier', 1)
+            ->select($this->articleListSelectColumns())
+            ->latest('created_at')
+            ->paginate($perPage);
+
+        return response()->json([
+            'tag' => (new BlogTagApiResource($tag))->resolve(),
+            'articles' => $articles->items(),
+            'meta' => $this->paginationMeta($articles),
+            'links' => $this->paginationLinks($articles),
+        ]);
     }
 
     public function allBrands(Request $request)

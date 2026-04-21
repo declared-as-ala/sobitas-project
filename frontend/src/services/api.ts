@@ -672,6 +672,52 @@ export const getLatestArticles = async (): Promise<Article[]> => {
   return Array.isArray(data) ? data : (data.articles || []);
 };
 
+export interface BlogTaxonomyItem {
+  id: number;
+  name: string;
+  slug: string;
+  seo?: {
+    title?: string;
+    description?: string;
+    canonical_url?: string;
+    robots?: { index?: boolean; follow?: boolean };
+  };
+}
+
+export const getBlogCategories = async (): Promise<BlogTaxonomyItem[]> => {
+  const response = await api.get('/blog_categories');
+  const rows = response.data?.data ?? response.data;
+  return Array.isArray(rows) ? rows : [];
+};
+
+export const getBlogTags = async (): Promise<BlogTaxonomyItem[]> => {
+  const response = await api.get('/blog_tags');
+  const rows = response.data?.data ?? response.data;
+  return Array.isArray(rows) ? rows : [];
+};
+
+export const getArticlesByBlogCategory = async (
+  slug: string,
+  page: number = 1,
+  perPage: number = 9
+): Promise<{ category: BlogTaxonomyItem; articles: Article[]; meta?: any; links?: any }> => {
+  const response = await api.get(`/blog/category/${encodeURIComponent(slug)}`, {
+    params: { page, per_page: perPage },
+  });
+  return response.data;
+};
+
+export const getArticlesByBlogTag = async (
+  slug: string,
+  page: number = 1,
+  perPage: number = 9
+): Promise<{ tag: BlogTaxonomyItem; articles: Article[]; meta?: any; links?: any }> => {
+  const response = await api.get(`/blog/tag/${encodeURIComponent(slug)}`, {
+    params: { page, per_page: perPage },
+  });
+  return response.data;
+};
+
 /**
  * Client-side fetch for articles — called by BlogPageClient on mount
  * and on visibilitychange to guarantee fresh data in the browser.

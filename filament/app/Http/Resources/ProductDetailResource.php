@@ -73,7 +73,7 @@ class ProductDetailResource extends JsonResource
             return $path;
         }
 
-        return Storage::disk('public')->url((string) $path);
+        return url(Storage::disk('public')->url((string) $path));
     }
 }
 

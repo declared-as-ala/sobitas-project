@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\BlogArticleType;
 use App\Filament\Support\ArticleDescriptionHtml;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Support\Facades\Schema;
@@ -83,6 +84,49 @@ class Article extends Model
     public function scopePublished($query)
     {
         return $query->where('publier', 1);
+    }
+
+    public function categories(): BelongsToMany
+    {
+        return $this->belongsToMany(BlogCategory::class, 'article_blog_category')
+            ->withTimestamps();
+    }
+
+    public function tags(): BelongsToMany
+    {
+        return $this->belongsToMany(BlogTag::class, 'article_blog_tag')
+            ->withTimestamps();
+    }
+
+    public function effectiveSeoTitle(): ?string
+    {
+        return $this->seo_title
+            ?: $this->meta_title
+            ?: $this->designation_fr;
+    }
+
+    public function effectiveSeoDescription(): ?string
+    {
+        if (filled($this->seo_description)) {
+            return (string) $this->seo_description;
+        }
+
+        if (filled($this->meta_description_fr)) {
+            return (string) $this->meta_description_fr;
+        }
+
+        $plain = trim((string) preg_replace('/\s+/u', ' ', strip_tags((string) ($this->description ?? $this->description_fr ?? ''))));
+        return $plain !== '' ? mb_substr($plain, 0, 500) : null;
+    }
+
+    public function effectiveSeoRobotsIndex(): bool
+    {
+        return $this->seo_robots_index ?? true;
+    }
+
+    public function effectiveSeoRobotsFollow(): bool
+    {
+        return $this->seo_robots_follow ?? true;
     }
 
     /**

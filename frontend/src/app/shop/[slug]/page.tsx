@@ -16,6 +16,7 @@ import {
   buildBreadcrumbListSchema,
   buildWebPageSchema,
   buildFAQPageSchema,
+  buildFAQPageSchemaFromProductFaq,
   validateStructuredData,
 } from '@/util/structuredData';
 import { ProductDetailClient } from '@/app/products/[id]/ProductDetailClient';
@@ -179,14 +180,14 @@ export default async function ShopProductPage({ params, searchParams }: PageProp
   const sub = safeProduct.sous_categorie;
   if (cat?.slug) breadcrumbItems.push({ name: cat.designation_fr || cat.slug, url: `/category/${cat.slug}` });
   if (sub?.slug && sub.slug !== cat?.slug) breadcrumbItems.push({ name: sub.designation_fr || sub.slug, url: `/category/${sub.slug}` });
-  /* Breadcrumb ends at category/subcategory; product name is not shown in the trail */
+  breadcrumbItems.push({ name: safeProduct.designation_fr || safeProduct.slug || 'Produit', url: `/shop/${safeProduct.slug || cleanSlug}` });
   const breadcrumbSchema = buildBreadcrumbListSchema(breadcrumbItems, baseUrl);
   validateStructuredData(breadcrumbSchema, 'BreadcrumbList');
   const webPageSchema = buildWebPageSchema(safeProduct.designation_fr, `/shop/${cleanSlug}`, baseUrl, {
     description: (safeProduct.description_fr || '').replace(/<[^>]*>/g, ' ').trim().slice(0, 200),
   });
 
-  const faqSchema = buildFAQPageSchema(faqs);
+  const faqSchema = buildFAQPageSchemaFromProductFaq(safeProduct.faq) || buildFAQPageSchema(faqs);
   if (faqSchema) validateStructuredData(faqSchema, 'FAQPage');
 
   return (

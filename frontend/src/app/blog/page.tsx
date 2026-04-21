@@ -27,6 +27,10 @@ export async function generateMetadata(props: { searchParams?: BlogSearchParams 
       ...(prev && { prev }),
       ...(next && { next }),
     },
+    robots: {
+      index: pageNum === 1,
+      follow: true,
+    },
   };
 }
 
