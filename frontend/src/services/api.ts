@@ -209,32 +209,21 @@ export const getCategories = async (signal?: AbortSignal): Promise<Category[]> =
   return Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
 };
 
-// Slides – use same API base as rest of app
-const SLIDES_API_BASE = API_URL.replace(/\/api\/?$/, '') || 'https://admin.protein.tn';
-const SLIDES_STORAGE_PATH = `${SLIDES_API_BASE}/storage`;
-
-function toSlideImageUrl(path: string | null | undefined): string {
-  if (!path || path.startsWith('http://') || path.startsWith('https://')) return path || '';
-  const clean = path.replace(/^\//, '');
-  return clean ? `${SLIDES_STORAGE_PATH}/${clean}` : '';
-}
-
+/** Slides — same `api` instance as `/accueil` so nginx `/api-proxy` and auth headers stay consistent. */
 export const getSlides = async (): Promise<any[]> => {
-  const response = await axios.get(`${SLIDES_API_BASE}/api/slides`, {
-    timeout: 10000,
-    headers: { 'Content-Type': 'application/json' },
-  });
-  const raw = response.data?.data ?? response.data;
-  const list = Array.isArray(raw) ? raw : [];
-  return list.map((slide: any) => {
-    const imagePath = slide?.image || slide?.cover || '';
-    const coverPath = slide?.cover || slide?.image || '';
-    return {
+  try {
+    const response = await api.get('/slides', { timeout: 15000 });
+    const raw = response.data?.data ?? response.data;
+    const list = Array.isArray(raw) ? raw : [];
+    return list.map((slide: any) => ({
       ...slide,
-      image: toSlideImageUrl(imagePath) || slide?.image,
-      cover: toSlideImageUrl(coverPath) || slide?.cover,
-    };
-  });
+      image: slide?.image || slide?.cover,
+      cover: slide?.cover || slide?.image,
+    }));
+  } catch (error) {
+    console.error('[getSlides] API error:', error);
+    return [];
+  }
 };
 
 // CMS pages for footer (Services & Ventes) from admin.protein.tn

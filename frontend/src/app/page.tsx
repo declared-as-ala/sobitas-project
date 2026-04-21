@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { unstable_noStore as noStore } from 'next/cache';
 import { getAccueil, getSlides } from '@/services/api';
 import { getStorageUrl } from '@/services/api';
 import { buildCanonicalUrl } from '@/util/canonical';
@@ -30,8 +31,7 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-// ISR: revalidate every 60s to reduce server load and TTFB
-export const revalidate = 60;
+// Home is loaded fresh each request (see getHomeData + noStore) so backend deploys don’t cache empty hero/products.
 
 // Preload critical hero image for LCP optimization
 export function generateViewport() {
@@ -42,28 +42,36 @@ export function generateViewport() {
   };
 }
 
+const emptyAccueil: AccueilData = {
+  categories: [],
+  last_articles: [],
+  ventes_flash: [],
+  new_product: [],
+  packs: [],
+  best_sellers: [],
+};
+
+/** Load home payload: no static cache + short retries when API is warming after a deploy. */
 async function getHomeData(): Promise<{ accueil: AccueilData; slides: any[] }> {
-  try {
-    const [accueil, slides] = await Promise.all([
-      getAccueil(),
-      getSlides(),
-    ]);
-    return { accueil, slides };
-  } catch (error) {
-    console.error('Error fetching home data:', error);
-    // Return empty data structure on error
-    return {
-      accueil: {
-        categories: [],
-        last_articles: [],
-        ventes_flash: [],
-        new_product: [],
-        packs: [],
-        best_sellers: [],
-      },
-      slides: [],
-    };
+  noStore();
+  const delays = [0, 600, 1600];
+  for (let i = 0; i < delays.length; i++) {
+    if (delays[i]! > 0) {
+      await new Promise((r) => setTimeout(r, delays[i]!));
+    }
+    const [accueil, slides] = await Promise.all([getAccueil(), getSlides()]);
+    const hasProducts =
+      (accueil.new_product?.length ?? 0) > 0 ||
+      (accueil.best_sellers?.length ?? 0) > 0 ||
+      (accueil.ventes_flash?.length ?? 0) > 0 ||
+      (accueil.categories?.length ?? 0) > 0 ||
+      (accueil.packs?.length ?? 0) > 0;
+    const hasSlides = (slides?.length ?? 0) > 0;
+    if (hasProducts || hasSlides || i === delays.length - 1) {
+      return { accueil, slides };
+    }
   }
+  return { accueil: emptyAccueil, slides: [] };
 }
 
 /** First LCP candidate: hero image. Preload so the browser discovers it earlier. */
