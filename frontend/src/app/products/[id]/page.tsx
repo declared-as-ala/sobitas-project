@@ -1,8 +1,10 @@
 import { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
-import { getProductDetails, getSimilarProducts, getStorageUrl } from '@/services/api';
+import { getSimilarProducts } from '@/services/api';
+import { getCachedProductDetails } from '@/services/getCachedProductDetails';
 import { ProductDetailClient } from './ProductDetailClient';
 import { ProductDetailFallbackClient } from '@/app/shop/ProductDetailFallbackClient';
+import { buildCanonicalUrl } from '@/util/canonical';
 
 interface ProductPageProps {
   params: Promise<{ id: string }>;
@@ -15,29 +17,27 @@ export const revalidate = 0;
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const { id } = await params;
   try {
-    const product = await getProductDetails(id);
-    const imageUrl = product.cover ? getStorageUrl(product.cover) : '';
-    
+    const product = await getCachedProductDetails(id);
+    const description =
+      (product.description_cover || product.description_fr || '')
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 160)
+      || `Achetez ${product.designation_fr} en Tunisie – SOBITAS, protéines et compléments.`;
+    const canonical = product.slug?.trim() ? buildCanonicalUrl(`/shop/${product.slug.trim()}`) : undefined;
+
     return {
       title: product.designation_fr,
-      description: product.description_cover || product.description_fr || `Achetez ${product.designation_fr} en Tunisie – SOBITAS, protéines et compléments à Sousse.`,
-      openGraph: {
-        title: product.designation_fr,
-        description: product.description_cover || product.description_fr || '',
-        images: imageUrl ? [imageUrl] : [],
-        type: 'website',
-      },
-      twitter: {
-        card: 'summary_large_image',
-        title: product.designation_fr,
-        description: product.description_cover || product.description_fr || '',
-        images: imageUrl ? [imageUrl] : [],
-      },
+      description,
+      robots: { index: false, follow: true },
+      ...(canonical ? { alternates: { canonical } } : {}),
     };
   } catch (error) {
     return {
       title: 'Produit | SOBITAS Tunisie',
       description: 'Protéines, whey, créatine et compléments alimentaires en Tunisie.',
+      robots: { index: false, follow: true },
     };
   }
 }
@@ -50,7 +50,7 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
   }
 
   try {
-    const product = await getProductDetails(id);
+    const product = await getCachedProductDetails(id);
     if (!product?.id) {
       notFound();
     }

@@ -15,6 +15,85 @@
     .print-btn-ghost:hover { background: #f8fafc; }
 
     .print-sheet { width: 210mm; min-height: 297mm; margin: 16px auto; padding: 20px 24px; background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.06); }
+    /* Bottom-anchored footer: main stays natural height; footer grows; spacer pushes RIB/signature down */
+    .print-sheet.print-sheet--footer-anchor {
+        display: flex;
+        flex-direction: column;
+    }
+    .print-sheet--footer-anchor .print-sheet-main {
+        flex: 0 1 auto;
+    }
+    .print-sheet--footer-anchor .print-footer.print-footer--anchored {
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        margin-top: 0;
+        border-top: none;
+        padding-top: 12px;
+    }
+    .print-sheet--footer-anchor .print-footer--anchored .print-payment-terms,
+    .print-sheet--footer-anchor .print-footer--anchored .print-note {
+        flex-shrink: 0;
+    }
+    .print-sheet--footer-anchor .print-footer-spacer {
+        flex: 1 1 auto;
+        min-height: 20mm;
+    }
+    .print-footer-rib-sig {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 20px;
+        flex-shrink: 0;
+        padding-top: 4px;
+        border-top: 1px solid #e2e8f0;
+    }
+    .print-rib.print-rib--left {
+        text-align: left;
+        font-size: 11px;
+        font-weight: 500;
+        color: #334155;
+        letter-spacing: 0.04em;
+    }
+    .print-rib-label {
+        color: #f97316;
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 10px;
+        margin-right: 4px;
+    }
+    .print-signature-wrap {
+        flex: 0 0 auto;
+        min-width: 180px;
+        max-width: 45%;
+        text-align: center;
+    }
+    .print-signature-line {
+        border-top: 1px solid #94a3b8;
+        margin-bottom: 6px;
+    }
+    .print-signature-wrap .print-signature {
+        margin-top: 0;
+        text-align: center;
+    }
+    .print-footer-dual-sig {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 24px;
+        flex-shrink: 0;
+        padding-top: 4px;
+        border-top: 1px solid #e2e8f0;
+    }
+    .print-footer-dual-sig .print-signature-wrap {
+        flex: 1 1 0;
+        max-width: none;
+    }
+    .print-rib.print-rib--below-sig {
+        margin-top: 14px;
+        flex-shrink: 0;
+    }
     .print-header { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 2px solid #e2e8f0; }
     .print-logo { max-width: 340px; height: 140px; max-height: 140px; object-fit: contain; display: block; }
 .print-company-name { font-size: 18px; font-weight: 700; color: #0f172a; }
@@ -53,6 +132,9 @@
     .print-note { margin-bottom: 12px; padding: 12px 16px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #f97316; font-size: 12px; }
     .print-signature { margin-top: 16px; text-align: center; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; }
     .print-rib { margin-top: 12px; font-size: 11px; color: #94a3b8; text-align: center; }
+    .print-footer--anchored .print-signature {
+        margin-top: 0;
+    }
 
     @media print {
         .no-print, .print-toolbar { display: none !important; }
@@ -65,5 +147,14 @@
         .print-client { break-after: avoid; }
         .print-totals-card { break-inside: avoid; }
         .print-footer { break-inside: avoid; }
+        .print-sheet--footer-anchor {
+            min-height: 280mm;
+        }
+        .print-footer--anchored,
+        .print-footer-rib-sig,
+        .print-footer-dual-sig {
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
     }
 </style>

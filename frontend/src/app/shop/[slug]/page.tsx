@@ -1,8 +1,10 @@
 import { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
-import { getProductDetails, getSimilarProducts, getFAQs, getStorageUrl } from '@/services/api';
+import { getSimilarProducts, getFAQs } from '@/services/api';
+import { getCachedProductDetails } from '@/services/getCachedProductDetails';
 import { ApiError } from '@/services/http';
 import { buildCanonicalUrl } from '@/util/canonical';
+import { buildShopProductSocialMetadata } from '@/util/productSeo';
 
 /** Extract HTTP status from error. Only use for deciding redirect: redirect only when status === 404 (never on 5xx/timeout/network). */
 function getErrorStatus(e: unknown): number | null {
@@ -72,24 +74,13 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   if (!cleanSlug) return { title: 'Produit | SOBITAS Tunisie' };
   const search = searchParams ? await searchParams : undefined;
   try {
-    const product = await getProductDetails(cleanSlug);
+    const product = await getCachedProductDetails(cleanSlug);
     if (product?.id) {
       const title = productTitle(product);
       const description = productDescription(product, product.designation_fr ?? product.slug ?? 'Produit');
       const canonicalUrl = product.seo?.canonical_url?.trim()
         ? product.seo.canonical_url.trim()
         : buildCanonicalUrl(`/shop/${product.slug || cleanSlug}`);
-      // Use only this product's cover so Google shows the correct image (never another product's).
-      // Add ?for=<slug> so the image URL is unique per product and caches don't mix results.
-      const baseImageUrl = product.seo?.image || (product.cover ? getStorageUrl(product.cover) : null);
-      const imageUrl =
-        baseImageUrl && (baseImageUrl.startsWith('http://') || baseImageUrl.startsWith('https://'))
-          ? `${baseImageUrl}${baseImageUrl.includes('?') ? '&' : '?'}for=${encodeURIComponent(cleanSlug)}`
-          : null;
-      const productName = product.designation_fr ?? product.slug ?? 'Produit';
-      const ogImage = imageUrl
-        ? { url: imageUrl, width: 1200, height: 1200, alt: productName }
-        : undefined;
       return {
         title: { absolute: title },
         description,
@@ -98,22 +89,7 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
           follow: product.seo?.robots?.follow ?? true,
         },
         alternates: { canonical: canonicalUrl },
-        openGraph: {
-          // Next Metadata OpenGraph type union does not include "product".
-          type: 'website',
-          url: canonicalUrl,
-          title: product.seo?.open_graph?.title || title,
-          description: product.seo?.open_graph?.description || description,
-          siteName: 'Protein.tn',
-          images: ogImage ? [ogImage] : undefined,
-          locale: 'fr_TN',
-        },
-        twitter: {
-          card: (product.seo?.twitter?.card as 'summary' | 'summary_large_image') || 'summary_large_image',
-          title: product.seo?.twitter?.title || product.seo?.open_graph?.title || title,
-          description: product.seo?.twitter?.description || product.seo?.open_graph?.description || description,
-          images: (product.seo?.twitter?.image ? [product.seo.twitter.image] : undefined) || (imageUrl ? [imageUrl] : undefined),
-        },
+        ...buildShopProductSocialMetadata({ product, title, description, canonicalUrl }),
       };
     }
   } catch (e) {
@@ -136,7 +112,7 @@ export default async function ShopProductPage({ params, searchParams }: PageProp
   // 1) Try product first – if found, always 200 (never redirect a valid product)
   let product: Product | null = null;
   try {
-    product = await getProductDetails(cleanSlug);
+    product = await getCachedProductDetails(cleanSlug);
   } catch (e) {
     if (getErrorStatus(e) === 404) {
       permanentRedirect(buildCategoryRedirectUrl(cleanSlug, search));
@@ -165,9 +141,13 @@ export default async function ShopProductPage({ params, searchParams }: PageProp
   const canonicalUrl = safeProduct.seo?.canonical_url?.trim()
     ? safeProduct.seo.canonical_url.trim()
     : buildCanonicalUrl(`/shop/${safeProduct.slug || cleanSlug}`);
-  const productSchema = buildProductJsonLd(safeProduct, canonicalUrl);
+  const apiLd = safeProduct.json_ld_product;
+  const productSchema =
+    apiLd != null && typeof apiLd === 'object' && Object.keys(apiLd).length > 0
+      ? apiLd
+      : buildProductJsonLd(safeProduct, canonicalUrl);
   if (productSchema) {
-    validateStructuredData(productSchema, 'Product');
+    validateStructuredData(productSchema as object, 'Product');
     if (process.env.NODE_ENV === 'development') {
       console.log('[Product JSON-LD]', JSON.stringify(productSchema, null, 2));
     }

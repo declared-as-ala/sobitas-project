@@ -137,7 +137,7 @@ class DefaultEmailTemplates
     /** Default logo URL (absolute) for emails and iframe preview */
     public static function defaultLogoUrl(): string
     {
-        return url('/logo.png');
+        return MarketingService::logoUrl();
     }
 
     private static function emailResponsiveStyles(): string
@@ -204,7 +204,7 @@ class DefaultEmailTemplates
         <tr>
           <td class="email-header" align="center" style="padding:32px 40px 24px;border-bottom:1px solid #f3f4f6;">
             <a href="https://protein.tn" style="text-decoration:none;display:inline-block;">
-              <img src="{{logo_url}}" alt="Protein.tn by SOBITAS" width="160" style="max-width:160px;height:auto;display:inline-block;border:0;" />
+              <img src="{{logo_url}}" alt="SOBITAS – Protein.tn" width="240" style="max-width:240px;width:100%;height:auto;display:inline-block;border:0;" />
             </a>
             <p style="margin:10px 0 0;font-size:13px;color:#9ca3af;letter-spacing:0.5px;text-transform:uppercase;font-weight:500;">Votre partenaire nutrition &amp; bien-être</p>
           </td>
@@ -393,7 +393,7 @@ HTML;
         <tr>
           <td class="email-header" align="center" style="padding:32px 40px 24px;border-bottom:1px solid #f3f4f6;">
             <a href="https://protein.tn" style="text-decoration:none;display:inline-block;">
-              <img src="{{logo_url}}" alt="Protein.tn by SOBITAS" width="160" style="max-width:160px;height:auto;display:inline-block;border:0;" />
+              <img src="{{logo_url}}" alt="SOBITAS – Protein.tn" width="240" style="max-width:240px;width:100%;height:auto;display:inline-block;border:0;" />
             </a>
             <p style="margin:10px 0 0;font-size:13px;color:#9ca3af;letter-spacing:0.5px;text-transform:uppercase;font-weight:500;">Votre partenaire nutrition &amp; bien-être</p>
           </td>
@@ -594,7 +594,7 @@ HTML;
         <tr>
           <td class="email-header" align="center" style="padding:32px 40px 24px;border-bottom:1px solid #f3f4f6;">
             <a href="https://protein.tn" style="text-decoration:none;display:inline-block;">
-              <img src="{{logo_url}}" alt="Protein.tn by SOBITAS" width="160" style="max-width:160px;height:auto;display:inline-block;border:0;" />
+              <img src="{{logo_url}}" alt="SOBITAS – Protein.tn" width="240" style="max-width:240px;width:100%;height:auto;display:inline-block;border:0;" />
             </a>
             <p style="margin:10px 0 0;font-size:13px;color:#9ca3af;letter-spacing:0.5px;text-transform:uppercase;font-weight:500;">Votre partenaire nutrition &amp; bien-être</p>
           </td>

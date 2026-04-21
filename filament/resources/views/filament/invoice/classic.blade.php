@@ -102,7 +102,7 @@
             <div class="inv-client-details">
                 @if ($facture->client->adresse ?? null) {{ $facture->client->adresse }}<br> @endif
                 @if ($facture->client->phone_1 ?? null) Tél. {{ $facture->client->phone_1 }}<br> @endif
-                @if ($facture->client->matricule ?? null) Matricule : {{ $facture->client->matricule }} @endif
+                @if ($facture->client->matricule ?? null) MF : {{ $facture->client->matricule }} @endif
             </div>
         </section>
         @endif

@@ -18,9 +18,21 @@ class Product extends Model
         'qte', 'low_stock_threshold', 'publier', 'rupture', 'new_product', 'best_seller', 'pack', 'note',
         'meta_title', 'meta_description', 'seo_schema_description', 'seo_review', 'seo_aggregate_rating',
         'seo_title', 'seo_description', 'seo_excerpt', 'seo_canonical_url', 'seo_robots_index', 'seo_robots_follow',
-        'og_title', 'og_description', 'og_image', 'twitter_title', 'twitter_description', 'twitter_image', 'twitter_card',
         'sku', 'gtin', 'mpn', 'item_condition', 'availability_override', 'price_valid_until', 'seo_image_alt',
         'sous_categorie_id', 'brand_id', 'code_product',
+    ];
+
+    /**
+     * @var list<string>
+     */
+    protected $hidden = [
+        'og_title',
+        'og_description',
+        'og_image',
+        'twitter_title',
+        'twitter_description',
+        'twitter_image',
+        'twitter_card',
     ];
 
     protected $casts = [
@@ -294,7 +306,7 @@ class Product extends Model
 
     public function getEffectiveSeoImagePathAttribute(): ?string
     {
-        foreach (['og_image', 'twitter_image', 'cover'] as $field) {
+        foreach (['cover'] as $field) {
             $value = trim((string) ($this->attributes[$field] ?? ''));
             if ($value !== '') {
                 return $value;

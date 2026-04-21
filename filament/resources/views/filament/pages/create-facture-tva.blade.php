@@ -651,7 +651,7 @@ function ftvaCreateClient() {
             '<input id="ftva_sw_adresse" class="swal2-input" placeholder="Adresse">' +
             '<input id="ftva_sw_phone" class="swal2-input" placeholder="Téléphone">' +
             '<input id="ftva_sw_email" class="swal2-input" placeholder="Email (optionnel)">' +
-            '<input id="ftva_sw_mf" class="swal2-input" placeholder="Matricule Fiscal">',
+            '<input id="ftva_sw_mf" class="swal2-input" placeholder="MF">',
         focusConfirm: false,
         showCancelButton: true,
         confirmButtonText: 'Créer le client',

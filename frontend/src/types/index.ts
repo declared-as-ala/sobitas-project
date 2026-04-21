@@ -60,13 +60,6 @@ export interface Product {
   seo_canonical_url?: string | null;
   seo_robots_index?: boolean | null;
   seo_robots_follow?: boolean | null;
-  og_title?: string | null;
-  og_description?: string | null;
-  og_image?: string | null;
-  twitter_title?: string | null;
-  twitter_description?: string | null;
-  twitter_image?: string | null;
-  twitter_card?: string | null;
   seo?: {
     title?: string | null;
     description?: string | null;
@@ -77,17 +70,6 @@ export interface Product {
     robots?: {
       index?: boolean;
       follow?: boolean;
-    };
-    open_graph?: {
-      title?: string | null;
-      description?: string | null;
-      image?: string | null;
-    };
-    twitter?: {
-      card?: string | null;
-      title?: string | null;
-      description?: string | null;
-      image?: string | null;
     };
   };
   schema?: {
@@ -102,15 +84,16 @@ export interface Product {
     price_valid_until?: string | null;
     image?: string | null;
     image_alt?: string | null;
-    aggregate_rating?: string | null;
-    review?: string | null;
+    /** Average rating from published reviews (API-computed). */
+    rating_value?: number | null;
+    review_count?: number | null;
   };
+  /** Server-built schema.org Product graph (preferred over client-side `buildProductJsonLd`). */
+  json_ld_product?: Record<string, unknown> | null;
   zone1?: string;
   zone2?: string;
   zone3?: string;
   zone4?: string;
-  review?: string | null;
-  aggregateRating?: string | null;
   image_mode?: 'cover' | 'contain' | 'cover-zoom';
   image_position?: string;
   image_zoom?: number;
@@ -152,7 +135,10 @@ export interface Tag {
 
 export interface Review {
   id: number;
+  /** Primary rating (1–5); API usually sends this. */
   stars: number;
+  /** Legacy/alternate rating field from some payloads. */
+  note?: number;
   comment?: string;
   publier?: number;
   user?: {

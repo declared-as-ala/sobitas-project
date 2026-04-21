@@ -164,10 +164,10 @@ export function HeaderClient() {
   const navLinks = [
     { href: '/', label: 'ACCUEIL' },
     { href: '/packs', label: 'PACKS' },
-    { href: '/brands', label: 'BRANDS' },
+    { href: '/brands', label: 'MARQUES' },
     { href: '/blog', label: 'BLOG' },
     { href: '/contact', label: 'CONTACT' },
-    { href: '/about', label: 'QUI SOMMES NOUS' },
+    { href: '/qui-sommes-nous', label: 'QUI SOMMES NOUS' },
   ];
 
   const mobileNavHidden = isMobileViewport && !mobileNavVisible;
@@ -210,7 +210,7 @@ export function HeaderClient() {
             {DELIVERY_MSG}
           </span>
         </div>
-        <div className="md:hidden flex h-8 px-4 items-center justify-center text-[11px] font-medium text-gray-200">
+        <div className="md:hidden flex h-8 px-4 items-center justify-center text-xs font-medium leading-snug text-gray-200">
           <Truck className="h-3.5 w-3.5 mr-1.5 shrink-0" aria-hidden />
           Livraison gratuite dès 300 DT
         </div>
@@ -253,7 +253,7 @@ export function HeaderClient() {
               >
                 <ShoppingCart className="h-6 w-6" aria-hidden />
                 {cartItemsCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center bg-red-600 text-white text-[10px] font-bold rounded-full">
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center bg-red-600 text-white text-caption font-bold leading-none rounded-full">
                     {cartItemsCount > 99 ? '99+' : cartItemsCount}
                   </span>
                 )}
@@ -549,7 +549,7 @@ export function HeaderClient() {
             PACKS
           </Link>
           <Link href="/brands" className="text-sm font-semibold text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-400 transition-colors whitespace-nowrap py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
-            BRANDS
+            MARQUES
           </Link>
           <Link href="/blog" className="text-sm font-semibold text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-400 transition-colors whitespace-nowrap py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
             BLOG
@@ -557,7 +557,7 @@ export function HeaderClient() {
           <Link href="/contact" className="text-sm font-semibold text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-400 transition-colors whitespace-nowrap py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
             CONTACT
           </Link>
-          <Link href="/about" className="text-sm font-semibold text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-400 transition-colors whitespace-nowrap py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
+          <Link href="/qui-sommes-nous" className="text-sm font-semibold text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-400 transition-colors whitespace-nowrap py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
             QUI SOMMES NOUS
           </Link>
         </nav>
@@ -588,7 +588,7 @@ export function HeaderClient() {
                 <Link
                   href="/"
                   onClick={closeMobileMenu}
-                  className="block py-3 px-3 text-[15px] font-medium text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-red-600 dark:hover:text-red-500 rounded-xl transition-colors -mx-1"
+                  className="block py-3 px-3 text-base font-medium leading-snug text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-red-600 dark:hover:text-red-500 rounded-xl transition-colors -mx-1"
                 >
                   ACCUEIL
                 </Link>
@@ -597,7 +597,7 @@ export function HeaderClient() {
                     closeMobileMenu();
                     setTimeout(() => setMobileProductsMenuOpen(true), 150);
                   }}
-                  className="w-full text-left py-3 px-3 text-[15px] font-medium text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-red-600 dark:hover:text-red-500 rounded-xl transition-colors -mx-1 flex items-center justify-between"
+                  className="w-full text-left py-3 px-3 text-base font-medium leading-snug text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-red-600 dark:hover:text-red-500 rounded-xl transition-colors -mx-1 flex items-center justify-between"
                 >
                   <span>NOS PRODUITS</span>
                   <ChevronRight className="h-4 w-4 text-gray-400" />
@@ -607,7 +607,7 @@ export function HeaderClient() {
                     key={link.href}
                     href={link.href}
                     onClick={closeMobileMenu}
-                    className="block py-3 px-3 text-[15px] font-medium text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-red-600 dark:hover:text-red-500 rounded-xl transition-colors -mx-1"
+                    className="block py-3 px-3 text-base font-medium leading-snug text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-red-600 dark:hover:text-red-500 rounded-xl transition-colors -mx-1"
                   >
                     {link.label}
                   </Link>
@@ -618,14 +618,14 @@ export function HeaderClient() {
             <div className="mt-auto pt-4 px-4 border-t border-gray-200 dark:border-gray-800 space-y-0.5">
               <Button
                 variant="ghost"
-                className="w-full justify-start h-12 rounded-xl text-[15px] font-medium -mx-1"
+                className="w-full justify-start h-12 rounded-xl text-base font-medium leading-snug -mx-1"
                 onClick={() => { setCartDrawerOpen(true); closeMobileMenu(); }}
               >
                 <ShoppingCart className="h-5 w-5 mr-3 shrink-0" />
                 Panier{cartItemsCount > 0 ? ` (${cartItemsCount})` : ''}
               </Button>
               <Link href="/favoris" onClick={closeMobileMenu}>
-                <Button variant="ghost" className="w-full justify-start h-12 rounded-xl text-[15px] font-medium -mx-1">
+                <Button variant="ghost" className="w-full justify-start h-12 rounded-xl text-base font-medium leading-snug -mx-1">
                   <Heart className={`h-5 w-5 mr-3 shrink-0 ${favoritesCount > 0 ? 'fill-red-600 text-red-600' : ''}`} />
                   Favoris{favoritesCount > 0 ? ` (${favoritesCount})` : ''}
                 </Button>
@@ -633,24 +633,24 @@ export function HeaderClient() {
               {isAuthenticated ? (
                 <>
                   <Link href="/account" onClick={closeMobileMenu}>
-                    <Button variant="ghost" className="w-full justify-start h-12 rounded-xl text-[15px] font-medium -mx-1">
+                    <Button variant="ghost" className="w-full justify-start h-12 rounded-xl text-base font-medium leading-snug -mx-1">
                       <User className="h-5 w-5 mr-3 shrink-0" />
                       Mon Compte
                     </Button>
                   </Link>
                   <Link href="/account/orders" onClick={closeMobileMenu}>
-                    <Button variant="ghost" className="w-full justify-start h-12 rounded-xl text-[15px] font-medium -mx-1">
+                    <Button variant="ghost" className="w-full justify-start h-12 rounded-xl text-base font-medium leading-snug -mx-1">
                       <Package className="h-5 w-5 mr-3 shrink-0" />
                       Mes Commandes
                     </Button>
                   </Link>
-                  <Button variant="ghost" className="w-full justify-start h-12 rounded-xl text-[15px] font-medium text-red-600 -mx-1" onClick={() => { logout(); closeMobileMenu(); }}>
+                  <Button variant="ghost" className="w-full justify-start h-12 rounded-xl text-base font-medium leading-snug text-red-600 -mx-1" onClick={() => { logout(); closeMobileMenu(); }}>
                     Déconnexion
                   </Button>
                 </>
               ) : (
                 <Link href="/login" onClick={closeMobileMenu}>
-                  <Button variant="ghost" className="w-full justify-start h-12 rounded-xl text-[15px] font-medium -mx-1">
+                  <Button variant="ghost" className="w-full justify-start h-12 rounded-xl text-base font-medium leading-snug -mx-1">
                     <User className="h-5 w-5 mr-3 shrink-0" />
                     Connexion
                   </Button>
@@ -658,7 +658,7 @@ export function HeaderClient() {
               )}
               <Button
                 variant="ghost"
-                className="w-full justify-start h-12 rounded-xl text-[15px] font-medium -mx-1"
+                className="w-full justify-start h-12 rounded-xl text-base font-medium leading-snug -mx-1"
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               >
                 {theme === 'dark' ? <Sun className="h-5 w-5 mr-3 shrink-0" /> : <Moon className="h-5 w-5 mr-3 shrink-0" />}
@@ -670,7 +670,7 @@ export function HeaderClient() {
               <a
                 href={`tel:${PHONE.replace(/\s/g, '')}`}
                 onClick={closeMobileMenu}
-                className="flex items-center gap-3 py-3 text-[15px] font-medium text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-500 transition-colors"
+                className="flex items-center gap-3 py-3 text-base font-medium leading-snug text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-500 transition-colors"
                 aria-label={`Appeler ${PHONE}`}
               >
                 <Phone className="h-5 w-5 text-red-500 shrink-0" aria-hidden />
@@ -679,7 +679,7 @@ export function HeaderClient() {
               <a
                 href={`tel:${PHONE_FIXE.replace(/\s/g, '')}`}
                 onClick={closeMobileMenu}
-                className="flex items-center gap-3 py-3 text-[15px] font-medium text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-500 transition-colors"
+                className="flex items-center gap-3 py-3 text-base font-medium leading-snug text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-500 transition-colors"
                 aria-label={`Appeler ${PHONE_FIXE}`}
               >
                 <Phone className="h-5 w-5 text-red-500 shrink-0" aria-hidden />
@@ -690,7 +690,7 @@ export function HeaderClient() {
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={closeMobileMenu}
-                className="flex items-center gap-3 py-3 text-[15px] font-medium text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-500 transition-colors"
+                className="flex items-center gap-3 py-3 text-base font-medium leading-snug text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-500 transition-colors"
                 aria-label="Notre localisation"
               >
                 <MapPin className="h-5 w-5 text-red-500 shrink-0" aria-hidden />

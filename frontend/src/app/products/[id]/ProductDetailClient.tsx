@@ -1039,7 +1039,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       {product.zone1 || 'Description du produit'}
                     </h3>
                     <div
-                      className={`text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-base max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-p:text-gray-600 prose-p:dark:text-gray-400 prose-p:leading-relaxed prose-strong:text-gray-900 prose-strong:dark:text-white prose-img:rounded-lg prose-img:shadow-md overflow-hidden transition-[max-height] duration-300 ${descExpanded ? 'max-h-[5000px]' : 'max-h-60'}`}
+                      className={`text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-neutral prose-base max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-p:text-gray-600 prose-p:dark:text-gray-400 prose-p:leading-relaxed prose-strong:text-gray-900 prose-strong:dark:text-white prose-img:rounded-lg prose-img:shadow-md overflow-hidden transition-[max-height] duration-300 ${descExpanded ? 'max-h-[5000px]' : 'max-h-60'}`}
                       dangerouslySetInnerHTML={{ __html: product.description_fr || product.description_cover || 'Aucune description disponible.' }}
                     />
                     <button
@@ -1060,7 +1060,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     {hasNutritionContent ? (
                       <div className="w-full min-w-0 overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
                         <div
-                          className="nutrition-content text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-sm sm:prose-base max-w-none prose-p:leading-relaxed prose-p:my-1 sm:prose-p:my-2 prose-img:rounded-lg prose-img:shadow-md prose-img:max-w-full prose-img:h-auto prose-table:text-left prose-th:py-2 prose-th:px-2 sm:prose-th:px-3 prose-td:py-2 prose-td:px-2 sm:prose-td:px-3 prose-table:w-full min-w-[280px]"
+                          className="nutrition-content text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-neutral prose-sm sm:prose-base max-w-none prose-p:leading-relaxed prose-p:my-1 sm:prose-p:my-2 prose-img:rounded-lg prose-img:shadow-md prose-img:max-w-full prose-img:h-auto prose-table:text-left prose-th:py-2 prose-th:px-2 sm:prose-th:px-3 prose-td:py-2 prose-td:px-2 sm:prose-td:px-3 prose-table:w-full min-w-[280px]"
                           dangerouslySetInnerHTML={{ __html: product.nutrition_values || '' }}
                         />
                       </div>
@@ -1098,7 +1098,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       </div>
                     ) : hasLegacyQuestionsHtml ? (
                       <div
-                        className="text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-base max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-headings:mb-2 prose-headings:mt-4 prose-p:text-gray-600 prose-p:dark:text-gray-400 prose-p:leading-relaxed prose-p:my-2 prose-strong:text-gray-900 prose-strong:dark:text-white"
+                        className="text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-neutral prose-base max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-headings:mb-2 prose-headings:mt-4 prose-p:text-gray-600 prose-p:dark:text-gray-400 prose-p:leading-relaxed prose-p:my-2 prose-strong:text-gray-900 prose-strong:dark:text-white"
                         dangerouslySetInnerHTML={{ __html: product.questions || '' }}
                       />
                     ) : faqs.length > 0 ? (
@@ -1218,13 +1218,13 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                               <Star key={i} className={`h-3 w-3 sm:h-3.5 sm:w-3.5 ${i <= review.stars ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 text-gray-200 dark:fill-gray-700'}`} />
                             ))}
                           </div>
-                          <span className="text-[10px] sm:text-xs font-semibold text-gray-900 dark:text-white truncate">{review.user?.name || 'Client'}</span>
-                          <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 shrink-0">
+                          <span className="text-caption sm:text-xs font-semibold leading-snug text-gray-900 dark:text-white truncate">{review.user?.name || 'Client'}</span>
+                          <span className="text-caption sm:text-xs leading-snug text-gray-500 dark:text-gray-400 shrink-0">
                             {review.created_at ? new Date(review.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''}
                           </span>
                         </div>
                         {review.comment && (
-                          <p className="text-[10px] sm:text-xs text-gray-700 dark:text-gray-300 line-clamp-2">{review.comment}</p>
+                          <p className="text-caption sm:text-xs leading-relaxed text-gray-700 dark:text-gray-300 line-clamp-2">{review.comment}</p>
                         )}
                       </div>
                     ))}

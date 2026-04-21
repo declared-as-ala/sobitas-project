@@ -111,7 +111,7 @@ const CHATGPT_BASE = 'https://chat.openai.com/';
 const CHATGPT_QUERY_MAX_LEN = 2000;
 
 const articleBodyProseClass =
-  'article-content prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none ' +
+  'article-content prose prose-neutral prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none ' +
   'prose-headings:text-gray-900 dark:prose-headings:text-white ' +
   'prose-p:text-gray-700 dark:prose-p:text-gray-300 ' +
   'prose-strong:text-gray-900 dark:prose-strong:text-white ' +

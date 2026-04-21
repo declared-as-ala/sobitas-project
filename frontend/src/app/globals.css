@@ -26,10 +26,14 @@
     overflow-x: hidden;
     width: 100%;
     max-width: 100%;
+    font-size: var(--font-size);
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
+    font-size: var(--text-base);
+    line-height: var(--leading-relaxed);
+    font-feature-settings: "kern" 1, "liga" 1;
     overflow-x: hidden;
     width: 100%;
     max-width: 100%;
@@ -37,54 +41,67 @@
   }
 
   /**
-  * Default typography styles for HTML elements (h1-h4, p, label, button, input).
-  * These are in @layer base, so Tailwind utility classes (like text-sm, text-lg) automatically override them.
-  */
+   * Default typography for bare HTML (h1–h4, p, label, button, input).
+   * Tailwind utilities override these via specificity in components.
+   */
 
-  html {
-    font-size: var(--font-size);
+  h1,
+  h2,
+  h3,
+  h4 {
+    text-rendering: optimizeLegibility;
   }
 
   h1 {
-    font-size: var(--text-2xl);
-    font-weight: var(--font-weight-medium);
-    line-height: 1.5;
+    font-size: var(--text-3xl);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--leading-tight);
+    letter-spacing: var(--tracking-tight);
   }
 
   h2 {
-    font-size: var(--text-xl);
-    font-weight: var(--font-weight-medium);
-    line-height: 1.5;
+    font-size: var(--text-2xl);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--leading-snug);
+    letter-spacing: var(--tracking-tight);
   }
 
   h3 {
-    font-size: var(--text-lg);
+    font-size: var(--text-xl);
     font-weight: var(--font-weight-medium);
-    line-height: 1.5;
+    line-height: var(--leading-snug);
+    letter-spacing: var(--tracking-normal);
   }
 
   h4 {
-    font-size: var(--text-base);
+    font-size: var(--text-lg);
     font-weight: var(--font-weight-medium);
-    line-height: 1.5;
+    line-height: var(--leading-snug);
+    letter-spacing: var(--tracking-normal);
+  }
+
+  p {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-normal);
+    line-height: var(--leading-relaxed);
   }
 
   label {
-    font-size: var(--text-base);
+    font-size: var(--text-sm);
     font-weight: var(--font-weight-medium);
-    line-height: 1.5;
+    line-height: var(--leading-normal);
   }
 
   button {
-    font-size: var(--text-base);
+    font-size: var(--text-sm);
     font-weight: var(--font-weight-medium);
-    line-height: 1.5;
+    line-height: var(--leading-normal);
   }
 
   input {
     font-size: var(--text-base);
     font-weight: var(--font-weight-normal);
-    line-height: 1.5;
+    line-height: var(--leading-normal);
     user-select: text;
     -webkit-user-select: text;
     -moz-user-select: text;
@@ -92,6 +109,8 @@
   }
 
   textarea {
+    font-size: var(--text-base);
+    line-height: var(--leading-relaxed);
     user-select: text;
     -webkit-user-select: text;
     -moz-user-select: text;

@@ -99,6 +99,11 @@ const nextConfig = {
   async redirects() {
     return [
       {
+        source: '/about',
+        destination: '/qui-sommes-nous',
+        permanent: true,
+      },
+      {
         source: '/:path*',
         has: [
           {

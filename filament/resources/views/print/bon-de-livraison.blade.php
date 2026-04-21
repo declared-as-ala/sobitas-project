@@ -64,6 +64,7 @@
 @endphp
 
 @include('print.partials.styles-a4-bl-aligned', ['forPdf' => $isPdf])
+@include('print.partials.a4-ftva-footer-anchor-styles')
 
 <style>
 /* ═══════════════════════════════════════════════════════════════
@@ -460,7 +461,7 @@ table.ftva-totals tr.row-grand td:last-child {
 </div>
 @endif
 
-<div class="ftva-page">
+<div class="ftva-page ftva-page--footer-anchor">
 
 {{-- ── 2-COLUMN HEADER ─────────────────────────────────────────── --}}
 <header class="ftva-doc-header">
@@ -507,7 +508,7 @@ table.ftva-totals tr.row-grand td:last-child {
                 <div class="ftva-client-box__line"><b>Adresse :</b> {{ $clientAddress }}</div>
             @endif
             @if(!empty($printClient->matricule))
-                <div class="ftva-client-box__line"><b>Matricule :</b> {{ $printClient->matricule }}</div>
+                <div class="ftva-client-box__line"><b>MF :</b> {{ $printClient->matricule }}</div>
             @endif
             @if(!empty($printClient->phone_1))
                 <div class="ftva-client-box__line"><b>Tél :</b> {{ $printClient->phone_1 }}</div>
@@ -609,6 +610,8 @@ table.ftva-totals tr.row-grand td:last-child {
         <span id="ftva-words"><em style="color:#94a3b8;">calcul…</em></span>
     </div>
     <input type="hidden" id="ftva-total-val" value="{{ $netAPayer }}">
+
+    <div class="ftva-bottom__spacer" aria-hidden="true"></div>
 
     <div class="ftva-sig-rib">
         <div class="ftva-rib">

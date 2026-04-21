@@ -88,7 +88,7 @@ export function ProductsDropdown() {
               <div key={cat.id} className="min-w-0">
                 <LinkWithLoading
                   href={`/category/${cat.slug}`}
-                  className="font-bold text-[11px] tracking-wider text-red-600 dark:text-red-500 uppercase mb-3 hover:text-red-700 transition-colors block leading-tight"
+                  className="font-bold text-caption tracking-wide text-red-600 dark:text-red-500 uppercase mb-3 hover:text-red-700 transition-colors block leading-snug"
                   loadingMessage="Chargement..."
                   onMouseEnter={() => router.prefetch(`/category/${cat.slug}`)}
                   onClick={close}

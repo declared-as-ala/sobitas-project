@@ -42,7 +42,7 @@ function SelectTrigger({
       data-size={size}
       className={cn(
         "flex h-10 w-full items-center justify-between rounded-md border border-gray-300 dark:border-gray-700",
-        "bg-white dark:bg-gray-800 px-3 py-2 text-sm",
+        "bg-white dark:bg-gray-800 px-3 py-2 text-sm leading-snug",
         "ring-offset-white dark:ring-offset-gray-950",
         "placeholder:text-gray-500 dark:placeholder:text-gray-400",
         "focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2",
@@ -122,7 +122,7 @@ function SelectLabel({
   return (
     <SelectPrimitive.Label
       data-slot="select-label"
-      className={cn("text-muted-foreground px-2 py-1.5 text-xs", className)}
+      className={cn("text-muted-foreground px-2 py-1.5 text-xs font-medium leading-snug", className)}
       {...props}
     />
   );
@@ -137,7 +137,7 @@ function SelectItem({
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        "relative flex w-full cursor-pointer select-none items-center rounded-sm py-2.5 px-3 text-sm outline-none",
+        "relative flex w-full cursor-pointer select-none items-center rounded-sm py-2.5 px-3 text-sm leading-snug outline-none",
         "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
         "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         // Use data-highlighted instead of hover: to avoid sticky hover effects

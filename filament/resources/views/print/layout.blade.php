@@ -38,7 +38,8 @@
             $logoUrl = asset('logo.png');
         }
     @endphp
-    <div class="print-sheet" id="print-area">
+    <div class="print-sheet print-sheet--footer-anchor" id="print-area">
+        <div class="print-sheet-main">
         <header class="print-header">
             <div class="print-company">
                 <img src="{{ $logoUrl }}" alt="{{ $company->abbreviation ?? 'SOBITAS' }}" class="print-logo" onerror="this.style.display='none'; var f=document.getElementById('print-logo-fallback'); if(f) f.style.display='block';">
@@ -70,7 +71,7 @@
             <div class="print-client-details">
                 @if (($client->adresse ?? $client['adresse'] ?? null)) {{ $client->adresse ?? $client['adresse'] }}<br> @endif
                 @if (($client->phone_1 ?? $client['phone_1'] ?? null)) Tél. {{ $client->phone_1 ?? $client['phone_1'] }}<br> @endif
-                @if (($client->matricule ?? $client['matricule'] ?? null)) Matricule : {{ $client->matricule ?? $client['matricule'] }} @endif
+                @if (($client->matricule ?? $client['matricule'] ?? null)) MF : {{ $client->matricule ?? $client['matricule'] }} @endif
             </div>
         </section>
         @endif
@@ -89,19 +90,43 @@
                 @endforeach
             </div>
         </div>
+        </div>{{-- .print-sheet-main --}}
 
         @if (!empty($footerNote) || !empty($paymentTerms))
-        <footer class="print-footer">
+        <footer class="print-footer print-footer--anchored">
             @if (!empty($paymentTerms))<p class="print-payment-terms">{{ $paymentTerms }}</p> @endif
             @if (!empty($footerNote))<div class="print-note">{{ $footerNote }}</div> @endif
-            <div class="print-signature">Signature et cachet</div>
-            @if ($company && ($company->rib ?? null))<div class="print-rib">{{ $company->rib }}</div> @endif
+            <div class="print-footer-spacer" aria-hidden="true"></div>
+            <div class="print-footer-rib-sig">
+                <div class="print-rib print-rib--left">
+                    @if ($company && ($company->rib ?? null))
+                        <span class="print-rib-label">RIB :</span> {{ $company->rib }}
+                    @endif
+                </div>
+                <div class="print-signature-wrap">
+                    <div class="print-signature-line"></div>
+                    <div class="print-signature">Signature et cachet</div>
+                </div>
+            </div>
         </footer>
         @else
-        <footer class="print-footer">
-            <div class="print-signature">Signature client</div>
-            <div class="print-signature">Signature responsable</div>
-            @if ($company && ($company->rib ?? null))<div class="print-rib">{{ $company->rib }}</div> @endif
+        <footer class="print-footer print-footer--anchored">
+            <div class="print-footer-spacer" aria-hidden="true"></div>
+            <div class="print-footer-dual-sig">
+                <div class="print-signature-wrap">
+                    <div class="print-signature-line"></div>
+                    <div class="print-signature">Signature client</div>
+                </div>
+                <div class="print-signature-wrap">
+                    <div class="print-signature-line"></div>
+                    <div class="print-signature">Signature responsable</div>
+                </div>
+            </div>
+            @if ($company && ($company->rib ?? null))
+            <div class="print-rib print-rib--left print-rib--below-sig">
+                <span class="print-rib-label">RIB :</span> {{ $company->rib }}
+            </div>
+            @endif
         </footer>
         @endif
     </div>

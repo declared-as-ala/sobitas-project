@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Suspense } from "react";
 import Script from "next/script";
+import { cn } from "@/app/components/ui/utils";
 import "./globals.css";
 import { ThemeProvider } from "@/app/components/ThemeProvider";
 import { Providers } from "@/app/providers";
@@ -11,12 +12,13 @@ import { DeferredToaster } from "@/app/components/DeferredToaster";
 import { InstallAppBanner } from "@/app/components/InstallAppBanner";
 
 const inter = Inter({
-  subsets: ["latin"],
-  display: 'swap',
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
   preload: true,
-  variable: '--font-inter',
+  variable: "--font-inter",
   adjustFontFallback: true,
-  fallback: ['system-ui', 'arial'],
+  fallback: ["system-ui", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "sans-serif"],
 });
 
 export const metadata: Metadata = {
@@ -106,7 +108,7 @@ export default async function RootLayout({
   const websiteSchema = buildWebSiteSchema(baseUrl);
 
   return (
-    <html lang="fr" suppressHydrationWarning data-scroll-behavior="smooth">
+    <html lang="fr" suppressHydrationWarning data-scroll-behavior="smooth" className={inter.variable}>
       <head>
         <meta name="theme-color" content="#dc2626" />
         <meta name="mobile-web-app-capable" content="yes" />
@@ -130,7 +132,7 @@ export default async function RootLayout({
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }} />
       </head>
-      <body className={inter.className}>
+      <body className={cn("min-h-screen font-sans antialiased")}>
         {/* Google tag (gtag.js) — deferred with afterInteractive to avoid blocking FCP */}
         {/* Register service worker for PWA install support */}
         <Script id="register-sw" strategy="afterInteractive">

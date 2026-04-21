@@ -1,0 +1,4 @@
+/**
+ * Primary UI font is loaded via next/font in layout.tsx → --font-inter.
+ * Type scale tokens live in theme.css (--text-*, --leading-*, --tracking-*).
+ */

@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss"
+import typography from "@tailwindcss/typography"
 
 const config: Config = {
   darkMode: ["class"],
@@ -9,6 +10,28 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: [
+          "var(--font-inter)",
+          "system-ui",
+          "-apple-system",
+          "Segoe UI",
+          "Roboto",
+          "Helvetica Neue",
+          "Arial",
+          "sans-serif",
+        ],
+      },
+      fontSize: {
+        /** Page / section titles */
+        display: ["2.25rem", { lineHeight: "1.2", letterSpacing: "-0.02em", fontWeight: "600" }],
+        /** Hero sublines, large intros */
+        lead: ["1.125rem", { lineHeight: "1.55", fontWeight: "400" }],
+        /** Dense UI (filters, meta) */
+        ui: ["0.875rem", { lineHeight: "1.35", fontWeight: "500" }],
+        /** Captions, badges, legal */
+        caption: ["0.75rem", { lineHeight: "1.4", fontWeight: "500" }],
+      },
       colors: {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
@@ -56,9 +79,77 @@ const config: Config = {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      typography: ({ theme }) => ({
+        DEFAULT: {
+          css: {
+            maxWidth: "70ch",
+            lineHeight: "1.65",
+            fontSize: "1rem",
+            h1: {
+              fontWeight: "600",
+              letterSpacing: "-0.02em",
+              lineHeight: "1.2",
+              marginTop: "0",
+              marginBottom: "0.65em",
+            },
+            h2: {
+              fontWeight: "600",
+              letterSpacing: "-0.015em",
+              lineHeight: "1.25",
+              marginTop: "1.75em",
+              marginBottom: "0.65em",
+            },
+            h3: {
+              fontWeight: "600",
+              lineHeight: "1.3",
+              marginTop: "1.5em",
+              marginBottom: "0.5em",
+            },
+            h4: {
+              fontWeight: "600",
+              lineHeight: "1.35",
+              marginTop: "1.25em",
+              marginBottom: "0.5em",
+            },
+            p: {
+              marginTop: "0.75em",
+              marginBottom: "0.75em",
+            },
+            a: {
+              color: theme("colors.red.600"),
+              fontWeight: "500",
+              textDecoration: "underline",
+              textUnderlineOffset: "2px",
+              "&:hover": {
+                color: theme("colors.red.700"),
+              },
+            },
+            "ul > li, ol > li": {
+              paddingInlineStart: "0.35em",
+            },
+            code: {
+              fontWeight: "500",
+              fontSize: "0.9em",
+            },
+            pre: {
+              fontSize: "0.875em",
+            },
+          },
+        },
+        invert: {
+          css: {
+            a: {
+              color: theme("colors.red.400"),
+              "&:hover": {
+                color: theme("colors.red.300"),
+              },
+            },
+          },
+        },
+      }),
     },
   },
-  plugins: [],
+  plugins: [typography],
 }
 
 export default config

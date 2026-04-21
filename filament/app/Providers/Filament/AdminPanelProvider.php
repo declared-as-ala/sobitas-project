@@ -16,8 +16,6 @@ use App\Filament\Resources\AnnonceResource;
 use App\Filament\Resources\ArticleResource;
 use App\Filament\Resources\AromaResource;
 use App\Filament\Resources\BrandResource;
-use App\Filament\Resources\BlogCategoryResource;
-use App\Filament\Resources\BlogTagResource;
 use App\Filament\Resources\CategResource;
 use App\Filament\Resources\ClientResource;
 use App\Filament\Resources\CommandeResource;
@@ -154,8 +152,6 @@ class AdminPanelProvider extends PanelProvider
                 ArticleResource::class,
                 AromaResource::class,
                 BrandResource::class,
-                BlogCategoryResource::class,
-                BlogTagResource::class,
                 CategResource::class,
                 ClientResource::class,
                 CommandeResource::class,

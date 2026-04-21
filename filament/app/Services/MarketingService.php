@@ -12,9 +12,24 @@ class MarketingService
 {
     public const SMS_STOP_DEFAULT = 'STOP';
 
+    /**
+     * Absolute URL for the orange SOBITAS wordmark used in email templates (public/logo.png).
+     */
     public static function logoUrl(): string
     {
-        return url('/logo.png');
+        $configured = trim((string) config('marketing.logo_url', ''));
+
+        return $configured !== '' ? $configured : asset('logo.png');
+    }
+
+    /**
+     * Logo URL for admin send-email / iframe preview (can differ via MARKETING_PREVIEW_LOGO_URL).
+     */
+    public static function previewLogoUrl(): string
+    {
+        $configured = trim((string) config('marketing.preview_logo_url', ''));
+
+        return $configured !== '' ? $configured : self::logoUrl();
     }
 
     public static function unsubscribeUrl(string $channel, string $recipient, ?int $clientId = null): string

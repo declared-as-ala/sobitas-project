@@ -179,29 +179,29 @@ export const ProductCard = memo(function ProductCard({
         {/* Badges – top-left */}
         <div className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 z-10 flex flex-col gap-1 sm:gap-1.5 pointer-events-none">
           {!productData.isInStock && (
-            <span className="inline-flex items-center rounded-md bg-gray-900/90 dark:bg-gray-900 text-white font-bold text-[10px] sm:text-xs px-2.5 py-1 shadow-md backdrop-blur-sm">
+            <span className="inline-flex items-center rounded-md bg-gray-900/90 dark:bg-gray-900 text-white font-bold text-caption sm:text-xs px-2.5 py-1 shadow-md backdrop-blur-sm">
               Rupture
             </span>
           )}
           {productData.isInStock && productData.priceDisplay.hasPromo && productData.discount > 0 && (
-            <span className="inline-flex items-center rounded-md bg-red-600 text-white font-bold text-[10px] sm:text-xs px-2.5 py-1 shadow-md">
+            <span className="inline-flex items-center rounded-md bg-red-600 text-white font-bold text-caption sm:text-xs px-2.5 py-1 shadow-md">
               -{productData.discount}%
             </span>
           )}
           {!isCompact && (
             <>
               {productData.isInStock && showBadge && badgeText && (
-                <span className="inline-flex items-center rounded-md bg-green-600 text-white font-bold text-[10px] sm:text-xs px-2.5 py-1 shadow-md">
+                <span className="inline-flex items-center rounded-md bg-green-600 text-white font-bold text-caption sm:text-xs px-2.5 py-1 shadow-md">
                   {badgeText}
                 </span>
               )}
               {productData.isInStock && !productData.priceDisplay.hasPromo && !showBadge && productData.isNew && (
-                <span className="inline-flex items-center rounded-md bg-blue-600 text-white font-bold text-[10px] sm:text-xs px-2.5 py-1 shadow-md">
+                <span className="inline-flex items-center rounded-md bg-blue-600 text-white font-bold text-caption sm:text-xs px-2.5 py-1 shadow-md">
                   New
                 </span>
               )}
               {productData.isInStock && !productData.priceDisplay.hasPromo && !showBadge && productData.isBestSeller && (
-                <span className="inline-flex items-center rounded-md bg-amber-500 text-white font-bold text-[10px] sm:text-xs px-2.5 py-1 shadow-md">
+                <span className="inline-flex items-center rounded-md bg-amber-500 text-white font-bold text-caption sm:text-xs px-2.5 py-1 shadow-md">
                   Top Vendu
                 </span>
               )}
@@ -241,7 +241,7 @@ export const ProductCard = memo(function ProductCard({
                 {productData.priceDisplay.finalPrice} DT
               </span>
               <span
-                className="text-gray-400 dark:text-gray-500 line-through tabular-nums text-[11px] sm:text-sm"
+                className="text-gray-400 dark:text-gray-500 line-through tabular-nums text-xs leading-snug sm:text-sm sm:leading-normal"
                 style={{ textDecorationThickness: '1.5px' }}
                 aria-label={`Prix barré: ${productData.priceDisplay.oldPrice} DT`}
               >
@@ -275,7 +275,7 @@ export const ProductCard = memo(function ProductCard({
         <div className="flex-shrink-0 pt-2.5 sm:pt-3 mt-1 border-t border-gray-100 dark:border-gray-700 lg:hidden block">
           <Button
             size="sm"
-            className={`w-full min-h-[44px] h-auto py-2 gap-1 rounded-lg sm:rounded-xl px-2 sm:px-3 font-semibold text-[11px] sm:text-sm whitespace-normal active:scale-[0.98] transition-all duration-150 select-none flex flex-col sm:flex-row sm:gap-0 items-center justify-center ${productData.isInStock && canAddMore ? 'bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg' : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed text-white'}`}
+            className={`w-full min-h-[44px] h-auto py-2 gap-1 rounded-lg sm:rounded-xl px-2 sm:px-3 font-semibold text-xs leading-snug sm:text-sm sm:leading-normal whitespace-normal active:scale-[0.98] transition-all duration-150 select-none flex flex-col sm:flex-row sm:gap-0 items-center justify-center ${productData.isInStock && canAddMore ? 'bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg' : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed text-white'}`}
             onClick={handleAddToCart}
             disabled={isAdding || !productData.isInStock || !canAddMore}
             aria-label={`Ajouter ${productData.name} au panier`}

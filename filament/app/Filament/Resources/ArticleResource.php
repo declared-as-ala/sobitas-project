@@ -357,208 +357,63 @@ class ArticleResource extends Resource
                         Tab::make('SEO')
                             ->icon('heroicon-o-magnifying-glass')
                             ->schema([
-
-                                Grid::make(2)
+                                Section::make('Titre & Description')
+                                    ->icon('heroicon-o-tag')
                                     ->schema([
-                                        // Left: Titre & Description fields
-                                        Section::make('Titre & Description')
-                                            ->icon('heroicon-o-tag')
-                                            ->schema([
-                                                Forms\Components\TextInput::make('seo_title')
-                                                    ->label('SEO title (prioritaire)')
-                                                    ->visible(fn (): bool => self::hasArticleColumn('seo_title'))
-                                                    ->dehydrated(fn (): bool => self::hasArticleColumn('seo_title'))
-                                                    ->maxLength(255)
-                                                    ->columnSpanFull(),
-                                                Forms\Components\Textarea::make('seo_description')
-                                                    ->label('SEO description (prioritaire)')
-                                                    ->visible(fn (): bool => self::hasArticleColumn('seo_description'))
-                                                    ->dehydrated(fn (): bool => self::hasArticleColumn('seo_description'))
-                                                    ->maxLength(500)
-                                                    ->rows(4)
-                                                    ->columnSpanFull(),
-                                                Forms\Components\Textarea::make('seo_excerpt')
-                                                    ->label('Extrait SEO')
-                                                    ->visible(fn (): bool => self::hasArticleColumn('seo_excerpt'))
-                                                    ->dehydrated(fn (): bool => self::hasArticleColumn('seo_excerpt'))
-                                                    ->maxLength(1000)
-                                                    ->rows(3)
-                                                    ->columnSpanFull(),
-                                                Forms\Components\TextInput::make('meta_title')
-                                                    ->label('Titre SEO (meta title)')
-                                                    ->maxLength(255)
-                                                    ->placeholder('Titre affiché dans les résultats Google…')
-                                                    ->live(onBlur: true)
-                                                    ->hint(function ($state): string {
-                                                        return strlen($state ?? '') . ' / 60 recommandés';
-                                                    })
-                                                    ->hintColor(function ($state): string {
-                                                        $len = strlen($state ?? '');
-                                                        if ($len > 60) return 'danger';
-                                                        if ($len >= 40) return 'success';
-                                                        return 'gray';
-                                                    })
-                                                    ->helperText('Entre 40 et 60 caractères pour un meilleur affichage.')
-                                                    ->columnSpanFull(),
-
-                                                Forms\Components\Textarea::make('meta_description_fr')
-                                                    ->label('Meta description')
-                                                    ->maxLength(500)
-                                                    ->placeholder('Description visible dans les résultats de recherche Google…')
-                                                    ->rows(4)
-                                                    ->live(onBlur: true)
-                                                    ->hint(function ($state): string {
-                                                        return strlen($state ?? '') . ' / 160 recommandés';
-                                                    })
-                                                    ->hintColor(function ($state): string {
-                                                        $len = strlen($state ?? '');
-                                                        if ($len > 160) return 'danger';
-                                                        if ($len >= 120) return 'success';
-                                                        return 'gray';
-                                                    })
-                                                    ->helperText('Entre 120 et 160 caractères recommandés.')
-                                                    ->columnSpanFull(),
-                                                Forms\Components\TextInput::make('seo_canonical_url')
-                                                    ->label('Canonical URL')
-                                                    ->visible(fn (): bool => self::hasArticleColumn('seo_canonical_url'))
-                                                    ->dehydrated(fn (): bool => self::hasArticleColumn('seo_canonical_url'))
-                                                    ->url()
-                                                    ->maxLength(1024)
-                                                    ->columnSpanFull(),
-                                                Forms\Components\Toggle::make('seo_robots_index')
-                                                    ->label('Indexable')
-                                                    ->visible(fn (): bool => self::hasArticleColumn('seo_robots_index'))
-                                                    ->dehydrated(fn (): bool => self::hasArticleColumn('seo_robots_index'))
-                                                    ->default(true),
-                                                Forms\Components\Toggle::make('seo_robots_follow')
-                                                    ->label('Follow')
-                                                    ->visible(fn (): bool => self::hasArticleColumn('seo_robots_follow'))
-                                                    ->dehydrated(fn (): bool => self::hasArticleColumn('seo_robots_follow'))
-                                                    ->default(true),
-                                            ]),
-
-                                        // Right: Live SERP Preview
-                                        Section::make('Aperçu dans Google')
-                                            ->icon('heroicon-o-eye')
-                                            ->description('Prévisualisation dans les résultats de recherche.')
-                                            ->schema([
-                                                Forms\Components\Placeholder::make('serp_preview')
-                                                    ->hiddenLabel()
-                                                    ->content(function (Get $get): HtmlString {
-                                                        $rawTitle = $get('meta_title') ?: ($get('designation_fr') ?: 'Titre de votre article');
-                                                        $rawDesc  = $get('meta_description_fr') ?: 'Renseignez une meta description pour voir comment votre article apparaîtra dans les résultats de recherche Google.';
-                                                        $slug     = $get('slug') ?: 'votre-article';
-
-                                                        $title = htmlspecialchars($rawTitle, ENT_QUOTES, 'UTF-8');
-                                                        $desc  = htmlspecialchars($rawDesc,  ENT_QUOTES, 'UTF-8');
-                                                        $url   = htmlspecialchars(parse_url(self::BLOG_PUBLIC_BASE_URL, PHP_URL_HOST) . '/blog/' . $slug, ENT_QUOTES, 'UTF-8');
-
-                                                        return new HtmlString(
-                                                            '<div style="font-family:arial,sans-serif;padding:14px 16px;border:1px solid #dadce0;border-radius:10px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.06);">'
-                                                            . '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">'
-                                                            .   '<div style="width:26px;height:26px;background:#e8eaed;border-radius:50%;"></div>'
-                                                            .   '<div>'
-                                                            .     '<div style="font-size:13px;color:#202124;font-weight:500;line-height:1.2;">Votre site</div>'
-                                                            .     '<div style="font-size:11px;color:#4d5156;line-height:1.2;">' . $url . '</div>'
-                                                            .   '</div>'
-                                                            . '</div>'
-                                                            . '<div style="font-size:19px;color:#1a0dab;line-height:1.3;margin-bottom:4px;font-weight:400;">' . $title . '</div>'
-                                                            . '<div style="font-size:13px;color:#4d5156;line-height:1.58;">' . $desc . '</div>'
-                                                            . '</div>'
-                                                        );
-                                                    }),
-                                            ]),
-                                    ]),
-
-                                Section::make('Open Graph & Twitter')
-                                    ->icon('heroicon-o-share')
-                                    ->schema([
-                                        Grid::make(2)
-                                            ->schema([
-                                                Forms\Components\TextInput::make('og_title')
-                                                    ->label('OG title')
-                                                    ->visible(fn (): bool => self::hasArticleColumn('og_title'))
-                                                    ->dehydrated(fn (): bool => self::hasArticleColumn('og_title'))
-                                                    ->maxLength(255),
-                                                Forms\Components\Textarea::make('og_description')
-                                                    ->label('OG description')
-                                                    ->visible(fn (): bool => self::hasArticleColumn('og_description'))
-                                                    ->dehydrated(fn (): bool => self::hasArticleColumn('og_description'))
-                                                    ->maxLength(500)
-                                                    ->rows(3),
-                                                Forms\Components\FileUpload::make('og_image')
-                                                    ->label('OG image')
-                                                    ->visible(fn (): bool => self::hasArticleColumn('og_image'))
-                                                    ->dehydrated(fn (): bool => self::hasArticleColumn('og_image'))
-                                                    ->disk('public')
-                                                    ->directory('articles/seo')
-                                                    ->image()
-                                                    ->maxSize(5120),
-                                                Forms\Components\TextInput::make('twitter_card')
-                                                    ->label('Twitter card')
-                                                    ->visible(fn (): bool => self::hasArticleColumn('twitter_card'))
-                                                    ->dehydrated(fn (): bool => self::hasArticleColumn('twitter_card'))
-                                                    ->default('summary_large_image')
-                                                    ->datalist(['summary', 'summary_large_image'])
-                                                    ->maxLength(32),
-                                                Forms\Components\TextInput::make('twitter_title')
-                                                    ->label('Twitter title')
-                                                    ->visible(fn (): bool => self::hasArticleColumn('twitter_title'))
-                                                    ->dehydrated(fn (): bool => self::hasArticleColumn('twitter_title'))
-                                                    ->maxLength(255),
-                                                Forms\Components\Textarea::make('twitter_description')
-                                                    ->label('Twitter description')
-                                                    ->visible(fn (): bool => self::hasArticleColumn('twitter_description'))
-                                                    ->dehydrated(fn (): bool => self::hasArticleColumn('twitter_description'))
-                                                    ->maxLength(500)
-                                                    ->rows(3),
-                                                Forms\Components\FileUpload::make('twitter_image')
-                                                    ->label('Twitter image')
-                                                    ->visible(fn (): bool => self::hasArticleColumn('twitter_image'))
-                                                    ->dehydrated(fn (): bool => self::hasArticleColumn('twitter_image'))
-                                                    ->disk('public')
-                                                    ->directory('articles/seo')
-                                                    ->image()
-                                                    ->maxSize(5120),
-                                                Forms\Components\TextInput::make('seo_author_name')
-                                                    ->label('Auteur SEO')
-                                                    ->visible(fn (): bool => self::hasArticleColumn('seo_author_name'))
-                                                    ->dehydrated(fn (): bool => self::hasArticleColumn('seo_author_name'))
-                                                    ->maxLength(255),
-                                            ]),
-                                    ]),
-
-                                // Données structurées (collapsible)
-                                Section::make('Données structurées (JSON-LD)')
-                                    ->icon('heroicon-o-code-bracket')
-                                    ->collapsible()
-                                    ->collapsed()
-                                    ->description('Balises avancées pour les moteurs de recherche.')
-                                    ->schema([
-                                        Forms\Components\Textarea::make('meta')
-                                            ->label('Balises meta personnalisées')
-                                            ->placeholder('keywords;nutrition,sport / author;Sobitas / robots;index,follow')
+                                        Forms\Components\TextInput::make('seo_title')
+                                            ->label('SEO title (prioritaire)')
+                                            ->visible(fn (): bool => self::hasArticleColumn('seo_title'))
+                                            ->dehydrated(fn (): bool => self::hasArticleColumn('seo_title'))
+                                            ->maxLength(255)
+                                            ->columnSpanFull(),
+                                        Forms\Components\Textarea::make('seo_description')
+                                            ->label('SEO description (prioritaire)')
+                                            ->visible(fn (): bool => self::hasArticleColumn('seo_description'))
+                                            ->dehydrated(fn (): bool => self::hasArticleColumn('seo_description'))
+                                            ->maxLength(500)
+                                            ->rows(4)
+                                            ->columnSpanFull(),
+                                        Forms\Components\Textarea::make('seo_excerpt')
+                                            ->label('Extrait SEO')
+                                            ->visible(fn (): bool => self::hasArticleColumn('seo_excerpt'))
+                                            ->dehydrated(fn (): bool => self::hasArticleColumn('seo_excerpt'))
+                                            ->maxLength(1000)
                                             ->rows(3)
-                                            ->helperText('Format : nom;valeur — séparez plusieurs balises par des slashs ( / ).')
+                                            ->columnSpanFull(),
+                                        Forms\Components\TextInput::make('meta_title')
+                                            ->label('Titre SEO (meta title)')
+                                            ->maxLength(255)
+                                            ->placeholder('Titre affiché dans les résultats Google…')
+                                            ->live(onBlur: true)
+                                            ->hint(function ($state): string {
+                                                return strlen($state ?? '') . ' / 60 recommandés';
+                                            })
+                                            ->hintColor(function ($state): string {
+                                                $len = strlen($state ?? '');
+                                                if ($len > 60) return 'danger';
+                                                if ($len >= 40) return 'success';
+                                                return 'gray';
+                                            })
+                                            ->helperText('Entre 40 et 60 caractères pour un meilleur affichage.')
                                             ->columnSpanFull(),
 
-                                        Forms\Components\Textarea::make('content_seo')
-                                            ->label('Schema JSON-LD')
-                                            ->placeholder('{"@context":"https://schema.org","@type":"Article","name":"…"}')
-                                            ->rows(7)
+                                        Forms\Components\Textarea::make('meta_description_fr')
+                                            ->label('Meta description')
+                                            ->maxLength(500)
+                                            ->placeholder('Description visible dans les résultats de recherche Google…')
+                                            ->rows(4)
+                                            ->live(onBlur: true)
+                                            ->hint(function ($state): string {
+                                                return strlen($state ?? '') . ' / 160 recommandés';
+                                            })
+                                            ->hintColor(function ($state): string {
+                                                $len = strlen($state ?? '');
+                                                if ($len > 160) return 'danger';
+                                                if ($len >= 120) return 'success';
+                                                return 'gray';
+                                            })
+                                            ->helperText('Entre 120 et 160 caractères recommandés.')
                                             ->columnSpanFull(),
-
-                                        Grid::make(2)
-                                            ->schema([
-                                                Forms\Components\TextInput::make('review')
-                                                    ->label('Review (SEO)')
-                                                    ->maxLength(500),
-
-                                                Forms\Components\TextInput::make('aggregateRating')
-                                                    ->label('AggregateRating (SEO)')
-                                                    ->maxLength(500)
-                                                    ->placeholder('{"@type":"AggregateRating","ratingValue":"4.8","reviewCount":"12"}'),
-                                            ]),
                                     ]),
                             ]),
 

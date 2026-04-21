@@ -158,7 +158,7 @@ export function BlogSection({ articles }: BlogSectionProps) {
                     </LinkWithLoading>
 
                     <div className="p-2 sm:p-3 flex flex-col flex-grow">
-                      <div className="flex items-center gap-1.5 text-[9px] sm:text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-1.5 sm:mb-2">
+                      <div className="flex items-center gap-1.5 text-caption sm:text-xs font-medium leading-snug text-gray-500 dark:text-gray-400 mb-1.5 sm:mb-2">
                         <Calendar className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                         {article.created_at ? new Date(article.created_at).toLocaleDateString('fr-FR', {
                           day: 'numeric',
@@ -177,7 +177,7 @@ export function BlogSection({ articles }: BlogSectionProps) {
                       </h3>
 
                       <div
-                        className="text-gray-600 dark:text-gray-300 text-[11px] sm:text-xs line-clamp-2 sm:line-clamp-3 mb-2 sm:mb-3 flex-grow prose dark:prose-invert max-w-none"
+                        className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm leading-relaxed line-clamp-2 sm:line-clamp-3 mb-2 sm:mb-3 flex-grow prose prose-neutral prose-sm dark:prose-invert max-w-none"
                         dangerouslySetInnerHTML={{
                           __html: decodeHtmlEntities(article.description_fr || article.description || 'Découvrez cet article intéressant sur la nutrition et le sport.')
                         }}
@@ -185,7 +185,7 @@ export function BlogSection({ articles }: BlogSectionProps) {
 
                       <LinkWithLoading
                         href={`/blog/${article.slug}`}
-                        className="inline-flex items-center text-[11px] sm:text-xs font-semibold text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors mt-auto group/link"
+                        className="inline-flex items-center text-xs sm:text-sm font-semibold leading-snug text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors mt-auto group/link"
                         loadingMessage={`Chargement de ${article.designation_fr}...`}
                       >
                         Lire la suite

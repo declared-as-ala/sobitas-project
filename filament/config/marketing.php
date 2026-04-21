@@ -17,14 +17,14 @@ return [
     'sync_threshold' => (int) env('MARKETING_SYNC_THRESHOLD', 20),
 
     /*
-    | Absolute logo URL for emails (iframe preview + real emails).
-    | Must be absolute so srcdoc iframe and emails display the image.
-    | Default points to main site logo so email works when admin.sobitas.tn/logo.png 404s.
+    | Absolute logo URL for marketing emails (Send Email, campaigns, preview iframe).
+    | Leave empty to use this app’s public/logo.png (filament/public/logo.png).
+    | Set MARKETING_LOGO_URL only if you host the asset elsewhere (CDN, etc.).
     */
-    'logo_url' => env('MARKETING_LOGO_URL') ?: (env('FRONTEND_URL', 'https://protein.tn') . '/logo-sobitas.png'),
+    'logo_url' => env('MARKETING_LOGO_URL', ''),
 
     /*
-    | Logo URL used in the send-email preview iframe (admin panel).
+    | Logo URL for the send-email preview iframe only. Empty = same as logo_url / public logo.
     */
-    'preview_logo_url' => env('MARKETING_PREVIEW_LOGO_URL') ?: env('MARKETING_LOGO_URL') ?: (env('FRONTEND_URL', 'https://protein.tn') . '/logo-sobitas.png'),
+    'preview_logo_url' => env('MARKETING_PREVIEW_LOGO_URL', ''),
 ];

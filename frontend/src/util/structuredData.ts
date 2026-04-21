@@ -48,13 +48,6 @@ function formatSchemaPrice(price: number): string {
   return Number.isInteger(n) ? String(n) : n.toFixed(2);
 }
 
-/** priceValidUntil: today + 1 year in YYYY-MM-DD (fixes GSC warning). */
-function getPriceValidUntil(): string {
-  const d = new Date();
-  d.setFullYear(d.getFullYear() + 1);
-  return d.toISOString().slice(0, 10);
-}
-
 /** True if string looks like a storage path (e.g. produits/.../file.webp), not alt text or description. */
 function looksLikeImagePath(path: string): boolean {
   const s = path.trim();
@@ -77,7 +70,8 @@ function isValidImageUrl(url: string): boolean {
 /**
  * Builds Product JSON-LD for Google Rich Results (Product snippets).
  * Use buildProductJsonLd(product, canonicalUrl) so offers.url matches rel=canonical.
- * Always includes valid offers with price (normalized), priceValidUntil, availability, itemCondition.
+ * Always includes valid offers with price (normalized), availability, itemCondition.
+ * `priceValidUntil` is only set when the API provides a real promo/end date (never a synthetic +1 year).
  * Only adds aggregateRating/review when we have real data; author is always Person type.
  */
 export function buildProductSchema(product: Product, baseUrl: string): object | null {
@@ -89,10 +83,10 @@ export function buildProductSchema(product: Product, baseUrl: string): object | 
 
 /**
  * Builds Product JSON-LD. Pass canonicalUrl so it matches rel=canonical (one script per product page).
- * Price: valid format only (number); priceValidUntil = today + 1 year. No aggregateRating/review unless real data.
+ * Fallback when `json_ld_product` is missing from the API; prefer server-built graph from Laravel.
  */
 export function buildProductJsonLd(product: Product, canonicalUrl: string): object | null {
-  // Main product cover first so Google uses it as primary image (matches og:image and avoids wrong product image in search).
+  // Main product cover first so Google uses it as primary image in Product rich results.
   const rawImages = [product.schema?.image, product.seo?.image, product.cover, (product as { alt_cover?: string }).alt_cover].filter(Boolean) as string[];
   const imagePaths = rawImages.filter((path) => looksLikeImagePath(path));
   if (imagePaths.length === 0 && product.cover) imagePaths.push(product.cover);
@@ -102,10 +96,9 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
   const dedupedImages = [...new Set(imageArray)];
   const schemaPrice = parsePriceForSchema(product.schema?.price);
   const price = schemaPrice ?? getSchemaPrice(product);
-  const availability = product.schema?.availability
-    || (((product as { rupture?: number }).rupture !== 1)
-      ? 'https://schema.org/InStock'
-      : 'https://schema.org/OutOfStock');
+  const availability =
+    product.schema?.availability
+    ?? (isInStock(product) ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock');
   const description = stripHtml(
     product.seo?.description || product.seo_description || product.meta_description || product.description_cover || product.description_fr || '',
     500
@@ -132,7 +125,6 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
     price: formatSchemaPrice(price),
     availability,
     itemCondition: product.schema?.item_condition || 'https://schema.org/NewCondition',
-    priceValidUntil: product.schema?.price_valid_until || product.price_valid_until || getPriceValidUntil(),
     seller: { '@type': 'Organization', name: 'SOBITAS' },
     shippingDetails: {
       '@type': 'OfferShippingDetails',
@@ -144,6 +136,12 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
       },
     },
   };
+
+  const untilRaw = product.schema?.price_valid_until ?? product.price_valid_until;
+  const until = untilRaw != null && String(untilRaw).trim() !== '' ? String(untilRaw).trim().slice(0, 10) : '';
+  if (until) {
+    offersPayload.priceValidUntil = until;
+  }
 
   const schema: Record<string, unknown> = {
     '@context': 'https://schema.org',
@@ -167,24 +165,25 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
   }
 
   const reviewsRaw = product.reviews ?? (product as { avis?: Review[] }).avis ?? [];
-  const reviews = (reviewsRaw as Review[]).filter(
-    (r) => typeof r.stars === 'number' && (r.publier === undefined || r.publier === 1)
-  );
-  const apiReviewCount = (product as { review_count?: number; reviews_count?: number }).review_count
-    ?? (product as { review_count?: number; reviews_count?: number }).reviews_count
-    ?? reviews.length;
+  const reviews = (reviewsRaw as Review[]).filter((r) => {
+    if (r.publier !== undefined && r.publier !== 1) return false;
+    const star = typeof r.stars === 'number' ? r.stars : typeof r.note === 'number' ? r.note : NaN;
+    return Number.isFinite(star) && star >= 1 && star <= 5;
+  });
 
   /* Only add aggregateRating and review when real reviews exist (no fake ratings). */
   if (reviews.length > 0) {
-    const sum = reviews.reduce((s, r) => s + r.stars, 0);
+    const sum = reviews.reduce((s, r) => {
+      const v = typeof r.stars === 'number' ? r.stars : typeof r.note === 'number' ? r.note : 0;
+      return s + v;
+    }, 0);
     const ratingValue = Math.max(1, Math.min(5, Math.round((sum / reviews.length) * 10) / 10));
-    const reviewCount = Math.max(1, Math.floor(reviews.length));
+    const reviewCount = reviews.length;
     schema.aggregateRating = {
       '@type': 'AggregateRating',
       ratingValue: String(ratingValue),
       bestRating: 5,
       worstRating: 1,
-      ratingCount: reviewCount,
       reviewCount,
     };
     const reviewSnippets = reviews
@@ -192,7 +191,8 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
       .filter((r) => r.comment && String(r.comment).trim())
       .map((r) => {
         const authorName = (r.user?.name && String(r.user.name).trim()) || 'Client';
-        const ratingVal = typeof r.stars === 'number' ? Math.max(1, Math.min(5, r.stars)) : 5;
+        const raw = typeof r.stars === 'number' ? r.stars : typeof r.note === 'number' ? r.note : 5;
+        const ratingVal = Math.max(1, Math.min(5, raw));
         return {
           '@type': 'Review' as const,
           author: { '@type': 'Person' as const, name: authorName },

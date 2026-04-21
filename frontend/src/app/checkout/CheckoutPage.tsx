@@ -792,7 +792,7 @@ export default function CheckoutPage() {
                     <Truck className="h-5 w-5 text-red-600" aria-hidden="true" />
                     Adresse de livraison
                   </CardTitle>
-                  <p className="text-[13px] text-gray-500 dark:text-gray-400 mt-1">
+                  <p className="text-sm leading-snug text-gray-500 dark:text-gray-400 mt-1">
                     Remplissez les champs pour finaliser votre commande
                   </p>
                 </CardHeader>
@@ -803,27 +803,27 @@ export default function CheckoutPage() {
                       <h3 className="text-base font-semibold text-gray-900 dark:text-white">Contact</h3>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                          <Label htmlFor="livraison_nom" className="text-[13px] font-medium text-gray-700 dark:text-gray-300">
+                          <Label htmlFor="livraison_nom" className="text-sm leading-snug font-medium text-gray-700 dark:text-gray-300">
                             Nom <span className="text-red-600">*</span>
                           </Label>
                           <Input
                             id="livraison_nom"
                             value={formData.livraison_nom}
                             onChange={(e) => handleInputChange('livraison_nom', e.target.value)}
-                            className="min-h-[48px] sm:min-h-[52px] text-[15px] border border-gray-200 dark:border-gray-700 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 rounded-xl transition-all duration-200"
+                            className="min-h-[48px] sm:min-h-[52px] text-base leading-snug border border-gray-200 dark:border-gray-700 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 rounded-xl transition-all duration-200"
                             placeholder="Votre nom"
                             required
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <Label htmlFor="livraison_prenom" className="text-[13px] font-medium text-gray-700 dark:text-gray-300">
+                          <Label htmlFor="livraison_prenom" className="text-sm leading-snug font-medium text-gray-700 dark:text-gray-300">
                             Prénom <span className="text-red-600">*</span>
                           </Label>
                           <Input
                             id="livraison_prenom"
                             value={formData.livraison_prenom}
                             onChange={(e) => handleInputChange('livraison_prenom', e.target.value)}
-                            className="min-h-[48px] sm:min-h-[52px] text-[15px] border border-gray-200 dark:border-gray-700 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 rounded-xl transition-all duration-200"
+                            className="min-h-[48px] sm:min-h-[52px] text-base leading-snug border border-gray-200 dark:border-gray-700 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 rounded-xl transition-all duration-200"
                             placeholder="Votre prénom"
                             required
                           />
@@ -831,7 +831,7 @@ export default function CheckoutPage() {
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                          <Label htmlFor="livraison_email" className="text-[13px] font-medium text-gray-700 dark:text-gray-300">
+                          <Label htmlFor="livraison_email" className="text-sm leading-snug font-medium text-gray-700 dark:text-gray-300">
                             Email <span className="text-red-600">*</span>
                           </Label>
                           <Input
@@ -841,13 +841,13 @@ export default function CheckoutPage() {
                             onChange={(e) => handleInputChange('livraison_email', e.target.value)}
                             autoComplete="email"
                             inputMode="email"
-                            className="min-h-[48px] sm:min-h-[52px] text-[15px] border border-gray-200 dark:border-gray-700 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 rounded-xl transition-all duration-200"
+                            className="min-h-[48px] sm:min-h-[52px] text-base leading-snug border border-gray-200 dark:border-gray-700 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 rounded-xl transition-all duration-200"
                             placeholder="votre@email.com"
                             required
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <Label htmlFor="livraison_phone" className="text-[13px] font-medium text-gray-700 dark:text-gray-300">
+                          <Label htmlFor="livraison_phone" className="text-sm leading-snug font-medium text-gray-700 dark:text-gray-300">
                             Téléphone <span className="text-red-600">*</span>
                           </Label>
                           <Input
@@ -857,7 +857,7 @@ export default function CheckoutPage() {
                             onChange={(e) => handleInputChange('livraison_phone', e.target.value)}
                             inputMode="tel"
                             autoComplete="tel"
-                            className="min-h-[48px] sm:min-h-[52px] text-[15px] border border-gray-200 dark:border-gray-700 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 rounded-xl transition-all duration-200"
+                            className="min-h-[48px] sm:min-h-[52px] text-base leading-snug border border-gray-200 dark:border-gray-700 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 rounded-xl transition-all duration-200"
                             placeholder="+216 XX XXX XXX"
                             required
                           />
@@ -866,7 +866,7 @@ export default function CheckoutPage() {
                       <button
                         type="button"
                         onClick={() => setShowOptionalFields(!showOptionalFields)}
-                        className="text-[13px] font-medium text-red-600 dark:text-red-400 hover:underline flex items-center gap-1"
+                        className="text-sm leading-snug font-medium text-red-600 dark:text-red-400 hover:underline flex items-center gap-1"
                       >
                         {showOptionalFields ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                         {showOptionalFields ? 'Masquer les détails optionnels' : '+ Ajouter plus de détails'}
@@ -891,28 +891,28 @@ export default function CheckoutPage() {
                         required
                       />
                       <div className="space-y-1.5">
-                        <Label htmlFor="livraison_adresse1" className="text-[13px] font-medium text-gray-700 dark:text-gray-300">
+                        <Label htmlFor="livraison_adresse1" className="text-sm leading-snug font-medium text-gray-700 dark:text-gray-300">
                           Adresse ligne 1 <span className="text-red-600">*</span>
                         </Label>
                         <Input
                           id="livraison_adresse1"
                           value={formData.livraison_adresse1}
                           onChange={(e) => handleInputChange('livraison_adresse1', e.target.value)}
-                          className="min-h-[48px] sm:min-h-[52px] text-[15px] border border-gray-200 dark:border-gray-700 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 rounded-xl transition-all duration-200"
+                          className="min-h-[48px] sm:min-h-[52px] text-base leading-snug border border-gray-200 dark:border-gray-700 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 rounded-xl transition-all duration-200"
                           placeholder="Rue, numéro, bâtiment..."
                           required
                         />
                       </div>
                       {showOptionalFields && (
                         <div className="space-y-1.5">
-                            <Label htmlFor="note" className="text-[13px] font-medium text-gray-700 dark:text-gray-300">
+                            <Label htmlFor="note" className="text-sm leading-snug font-medium text-gray-700 dark:text-gray-300">
                               Notes de commande <span className="text-gray-400 text-xs">(optionnel)</span>
                             </Label>
                             <textarea
                               id="note"
                               value={formData.note}
                               onChange={(e) => handleInputChange('note', e.target.value)}
-                              className="w-full min-h-[100px] p-4 text-[15px] border border-gray-200 dark:border-gray-700 rounded-xl focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 resize-none"
+                              className="w-full min-h-[100px] p-4 text-base leading-snug border border-gray-200 dark:border-gray-700 rounded-xl focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 resize-none"
                               placeholder="Consignes de livraison, instructions..."
                             />
                         </div>
@@ -989,7 +989,7 @@ export default function CheckoutPage() {
                                   <span className="font-semibold text-gray-900 dark:text-white block">
                                     Carte Bancaire
                                   </span>
-                                  <span className="text-[13px] text-gray-500 dark:text-gray-400">
+                                  <span className="text-sm leading-snug text-gray-500 dark:text-gray-400">
                                     Paiement sécurisé SSL
                                   </span>
                                 </div>
@@ -1061,7 +1061,7 @@ export default function CheckoutPage() {
                     <ShoppingCart className="h-5 w-5 text-red-600" aria-hidden="true" />
                     Récapitulatif
                   </CardTitle>
-                  <p className="text-[13px] text-gray-500 dark:text-gray-400 mt-1">
+                  <p className="text-sm leading-snug text-gray-500 dark:text-gray-400 mt-1">
                     {items.length} {items.length === 1 ? 'article' : 'articles'}
                   </p>
                 </CardHeader>

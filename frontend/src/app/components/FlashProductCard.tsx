@@ -156,7 +156,7 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
             animate={{ opacity: 1, scale: 1 }}
             className="absolute top-2 sm:top-3 left-2 sm:left-3 z-10"
           >
-            <span className="inline-flex items-center justify-center rounded-lg bg-gray-900 text-white border-0 font-bold text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1 shadow-xl backdrop-blur-sm">
+            <span className="inline-flex items-center justify-center rounded-lg bg-gray-900 text-white border-0 font-bold text-caption sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1 shadow-xl backdrop-blur-sm">
               Rupture
             </span>
           </motion.div>
@@ -170,7 +170,7 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
                 initial={{ opacity: 0, x: -20, scale: 0.8 }}
                 animate={{ opacity: 1, x: 0, scale: 1 }}
                 transition={{ delay: index * 0.1, type: 'spring', stiffness: 200 }}
-                className={`inline-flex items-center justify-center rounded-lg text-white border-0 font-black text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1 shadow-2xl backdrop-blur-sm whitespace-nowrap ${
+                className={`inline-flex items-center justify-center rounded-lg text-white border-0 font-black text-caption sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1 shadow-2xl backdrop-blur-sm whitespace-nowrap ${
                   badge.color === 'red' 
                     ? 'bg-gradient-to-r from-red-600 to-red-700 border-2 border-red-400/50' 
                     : 'bg-gradient-to-r from-green-600 to-green-700 border-2 border-green-400/50'
@@ -225,7 +225,7 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
                   <motion.span
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="inline-flex items-center px-2 py-0.5 rounded-lg bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 font-bold text-[10px] sm:text-xs whitespace-nowrap"
+                    className="inline-flex items-center px-2 py-0.5 rounded-lg bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 font-bold text-caption sm:text-xs whitespace-nowrap"
                   >
                     -{productData.discount}%
                   </motion.span>
@@ -255,7 +255,7 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
           >
             <Button
               size="lg"
-              className="w-full min-h-[40px] max-[360px]:min-h-[38px] sm:min-h-[44px] md:min-h-[48px] rounded-xl font-black text-[11px] max-[360px]:text-[10px] sm:text-sm bg-gradient-to-r from-red-600 via-red-600 to-orange-600 hover:from-red-700 hover:via-red-700 hover:to-orange-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300 relative overflow-hidden group/btn whitespace-nowrap"
+              className="w-full min-h-[40px] max-[360px]:min-h-[38px] sm:min-h-[44px] md:min-h-[48px] rounded-xl font-black text-xs max-[360px]:text-caption leading-snug sm:text-sm sm:leading-normal bg-gradient-to-r from-red-600 via-red-600 to-orange-600 hover:from-red-700 hover:via-red-700 hover:to-orange-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300 relative overflow-hidden group/btn whitespace-nowrap"
               onClick={handleAddToCart}
               disabled={isAdding || !productData.isInStock || !canAddMore}
               aria-label={!canAddMore && productData.isInStock ? 'Stock maximum atteint' : `Ajouter ${productData.name} au panier`}

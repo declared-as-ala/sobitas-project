@@ -25,8 +25,8 @@
 @endif
 
 <div class="print-doc-root">
-    <div class="invoice-sheet">
-        <div class="invoice-sheet-inner">
+    <div class="invoice-sheet invoice-sheet--footer-anchor">
+        <div class="invoice-sheet-inner invoice-sheet-inner--footer-anchor">
             <div class="invoice-header-band"></div>
 
             <div class="invoice-header">
@@ -146,14 +146,26 @@
                 </div>
             @endif
 
-            <div class="invoice-footer">
+            <footer class="invoice-footer invoice-footer--anchored">
                 @if(!empty($paymentTerms ?? null))
                     <p class="invoice-payment-terms">{{ $paymentTerms }}</p>
                 @endif
                 @if(!empty($footerNote ?? null))
                     <p class="invoice-note">{{ $footerNote }}</p>
                 @endif
-            </div>
+                <div class="invoice-footer-anchor-spacer" aria-hidden="true"></div>
+                <div class="invoice-footer-rib-sig">
+                    <div class="invoice-rib">
+                        @if(($company ?? null) && !empty($company->rib))
+                            <span class="invoice-rib-label">RIB :</span>{{ $company->rib }}
+                        @endif
+                    </div>
+                    <div class="invoice-signature-wrap">
+                        <div class="invoice-signature-line"></div>
+                        <div class="invoice-signature">Signature et cachet</div>
+                    </div>
+                </div>
+            </footer>
         </div>
     </div>
 </div>

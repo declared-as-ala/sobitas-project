@@ -279,7 +279,7 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
                   <div className="relative z-10 min-w-0">
                     <div className="flex items-center gap-1.5 max-[360px]:gap-1 sm:gap-2 mb-2 max-[360px]:mb-2 sm:mb-4">
                       <Clock className="h-4 w-4 max-[360px]:h-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-white flex-shrink-0" />
-                      <span className="text-white/90 text-xs max-[320px]:text-[10px] max-[360px]:text-xs sm:text-base font-semibold uppercase tracking-wider truncate min-w-0">
+                      <span className="text-white/90 text-caption max-[360px]:text-xs sm:text-base font-semibold uppercase tracking-wide leading-snug truncate min-w-0">
                         Temps restant
                       </span>
                     </div>
@@ -297,7 +297,7 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
                               {String(countdown.days).padStart(2, '0')}
                             </motion.div>
                           </AnimatePresence>
-                          <div className="text-[8px] max-[320px]:text-[7px] max-[360px]:text-[9px] sm:text-[10px] lg:text-[10px] xl:text-xs text-white/80 mt-0.5 max-[360px]:mt-1 uppercase">
+                          <div className="text-caption sm:text-xs leading-tight text-white/80 mt-0.5 max-[360px]:mt-1 uppercase">
                             <span className="hidden min-[321px]:block lg:hidden xl:block truncate" title="Jours">Jours</span>
                             <span className="min-[321px]:hidden lg:block xl:hidden" title="Jours">J</span>
                           </div>
@@ -315,7 +315,7 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
                             {String(countdown.hours).padStart(2, '0')}
                           </motion.div>
                         </AnimatePresence>
-                        <div className="text-[8px] max-[320px]:text-[7px] max-[360px]:text-[9px] sm:text-[10px] lg:text-[10px] xl:text-xs text-white/80 mt-0.5 max-[360px]:mt-1 uppercase">
+                        <div className="text-caption sm:text-xs leading-tight text-white/80 mt-0.5 max-[360px]:mt-1 uppercase">
                           <span className="hidden min-[321px]:block lg:hidden xl:block truncate" title="Heures">Heures</span>
                           <span className="min-[321px]:hidden lg:block xl:hidden" title="Heures">H</span>
                         </div>
@@ -332,7 +332,7 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
                             {String(countdown.minutes).padStart(2, '0')}
                           </motion.div>
                         </AnimatePresence>
-                        <div className="text-[8px] max-[320px]:text-[7px] max-[360px]:text-[9px] sm:text-[10px] lg:text-[10px] xl:text-xs text-white/80 mt-0.5 max-[360px]:mt-1 uppercase">
+                        <div className="text-caption sm:text-xs leading-tight text-white/80 mt-0.5 max-[360px]:mt-1 uppercase">
                           <span className="hidden min-[321px]:block lg:hidden xl:block truncate" title="Minutes">Minutes</span>
                           <span className="min-[321px]:hidden lg:block xl:hidden" title="Minutes">Min</span>
                         </div>
@@ -349,7 +349,7 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
                             {String(countdown.seconds).padStart(2, '0')}
                           </motion.div>
                         </AnimatePresence>
-                        <div className="text-[8px] max-[320px]:text-[7px] max-[360px]:text-[9px] sm:text-[10px] lg:text-[10px] xl:text-xs text-white/80 mt-0.5 max-[360px]:mt-1 uppercase">
+                        <div className="text-caption sm:text-xs leading-tight text-white/80 mt-0.5 max-[360px]:mt-1 uppercase">
                           <span className="hidden min-[321px]:block lg:hidden xl:block truncate" title="Secondes">Secondes</span>
                           <span className="min-[321px]:hidden lg:block xl:hidden" title="Secondes">Sec</span>
                         </div>

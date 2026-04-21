@@ -152,7 +152,7 @@ export function MobileProductsMenu({ open, onOpenChange }: MobileProductsMenuPro
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-0.5">
                               <div className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
-                              <span className="font-bold text-[11px] tracking-wide text-red-600 dark:text-red-400 uppercase leading-tight">
+                              <span className="font-bold text-caption tracking-wide text-red-600 dark:text-red-400 uppercase leading-snug">
                                 {cat.designation_fr}
                               </span>
                             </div>

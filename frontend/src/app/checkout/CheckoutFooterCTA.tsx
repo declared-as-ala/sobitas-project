@@ -120,7 +120,7 @@ export function CheckoutFooterCTA({
           )}
         </Button>
 
-        <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-3 text-center flex items-center justify-center gap-2 flex-wrap">
+        <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400 mt-3 text-center flex items-center justify-center gap-2 flex-wrap">
           <span className="inline-flex items-center gap-1"><Shield className="h-3 w-3 shrink-0" /> Paiement sécurisé</span>
           <span aria-hidden>·</span>
           <span className="inline-flex items-center gap-1"><Truck className="h-3 w-3 shrink-0" /> Livraison</span>

@@ -323,7 +323,7 @@
                                     <b class="to"> <b>Nom :</b> {{ @$facture->client->name }}</b>
                                     <div class="address"><b>Adresse :</b> {{ @$facture->client->adresse }}</div>
                                     @if ($facture->client->matricule)
-                                        <div class="email"><a><b>Matricule</b> : {{ @$facture->client->matricule }}</a></div>
+                                        <div class="email"><a><b>MF</b> : {{ @$facture->client->matricule }}</a></div>
                                     @endif
                                     <div class="email"><a><b>Numéro de téléphone :</b> {{ @$facture->client->phone_1 }}</a>
                                     </div>

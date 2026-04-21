@@ -62,7 +62,7 @@ function ReviewCard({
           <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 mb-1 sm:mb-1.5">
             <span className="font-bold text-xs sm:text-sm lg:text-base text-gray-900 dark:text-white truncate">{review.user?.name || 'Client'}</span>
             <span className="text-gray-400 dark:text-gray-500 shrink-0">•</span>
-            <span className="text-[10px] sm:text-xs lg:text-sm text-gray-500 dark:text-gray-400">{dateStr}</span>
+            <span className="text-caption sm:text-xs lg:text-sm leading-snug text-gray-500 dark:text-gray-400">{dateStr}</span>
           </div>
           <div className="flex items-center gap-1 mb-1.5 sm:mb-2">
             {[1, 2, 3, 4, 5].map((i) => (
@@ -89,7 +89,7 @@ function ReviewCard({
               )}
             </>
           )}
-          <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-2 sm:mt-3">Avis à titre informatif, non médical.</p>
+          <p className="text-caption sm:text-xs leading-relaxed text-gray-500 dark:text-gray-400 mt-2 sm:mt-3">Avis à titre informatif, non médical.</p>
         </div>
       </div>
     </article>

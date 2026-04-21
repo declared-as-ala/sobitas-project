@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\ProductResource\Pages;
 use App\Filament\Support\ImagePath;
 use App\Models\Product;
+use App\Models\Review;
 use Filament\Actions;
 use Filament\Forms;
 use Filament\Forms\Components\FileUpload;
@@ -18,8 +19,9 @@ use Filament\Tables;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Schema as DbSchema;
+use Illuminate\Support\HtmlString;
+use Illuminate\Support\Str;
 
 class ProductResource extends Resource
 {
@@ -32,6 +34,8 @@ class ProductResource extends Resource
     protected static ?string $model = Product::class;
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-cube';
+
+    protected static ?string $navigationLabel = 'Produits';
 
     protected static string | \UnitEnum | null $navigationGroup = 'Catalogue';
 
@@ -345,103 +349,10 @@ class ProductResource extends Resource
                                             ->default(true),
                                     ]),
                                 ]),
-                            Section::make('Open Graph et Twitter')
+                            Section::make('Contenu & médias SEO')
+                                ->description('SKU, GTIN, MPN, stock, prix et avis dans le JSON-LD sont calculés automatiquement depuis le produit et les avis publiés.')
                                 ->schema([
                                     Grid::make(2)->schema([
-                                        Forms\Components\TextInput::make('og_title')
-                                            ->label('OG title')
-                                            ->visible(fn (): bool => self::hasProductColumn('og_title'))
-                                            ->dehydrated(fn (): bool => self::hasProductColumn('og_title'))
-                                            ->maxLength(255),
-                                        Forms\Components\Textarea::make('og_description')
-                                            ->label('OG description')
-                                            ->visible(fn (): bool => self::hasProductColumn('og_description'))
-                                            ->dehydrated(fn (): bool => self::hasProductColumn('og_description'))
-                                            ->rows(3)
-                                            ->maxLength(500),
-                                        Forms\Components\FileUpload::make('og_image')
-                                            ->label('OG image')
-                                            ->visible(fn (): bool => self::hasProductColumn('og_image'))
-                                            ->dehydrated(fn (): bool => self::hasProductColumn('og_image'))
-                                            ->disk('public')
-                                            ->directory('products/seo')
-                                            ->image()
-                                            ->maxSize(4096),
-                                        Forms\Components\TextInput::make('twitter_card')
-                                            ->label('Twitter card')
-                                            ->visible(fn (): bool => self::hasProductColumn('twitter_card'))
-                                            ->dehydrated(fn (): bool => self::hasProductColumn('twitter_card'))
-                                            ->default('summary_large_image')
-                                            ->datalist(['summary', 'summary_large_image'])
-                                            ->maxLength(32),
-                                        Forms\Components\TextInput::make('twitter_title')
-                                            ->label('Twitter title')
-                                            ->visible(fn (): bool => self::hasProductColumn('twitter_title'))
-                                            ->dehydrated(fn (): bool => self::hasProductColumn('twitter_title'))
-                                            ->maxLength(255),
-                                        Forms\Components\Textarea::make('twitter_description')
-                                            ->label('Twitter description')
-                                            ->visible(fn (): bool => self::hasProductColumn('twitter_description'))
-                                            ->dehydrated(fn (): bool => self::hasProductColumn('twitter_description'))
-                                            ->rows(3)
-                                            ->maxLength(500),
-                                        Forms\Components\FileUpload::make('twitter_image')
-                                            ->label('Twitter image')
-                                            ->visible(fn (): bool => self::hasProductColumn('twitter_image'))
-                                            ->dehydrated(fn (): bool => self::hasProductColumn('twitter_image'))
-                                            ->disk('public')
-                                            ->directory('products/seo')
-                                            ->image()
-                                            ->maxSize(4096),
-                                    ]),
-                                ]),
-                            Section::make('Donnees schema Product')
-                                ->schema([
-                                    Grid::make(2)->schema([
-                                        Forms\Components\TextInput::make('sku')
-                                            ->label('SKU')
-                                            ->visible(fn (): bool => self::hasProductColumn('sku'))
-                                            ->dehydrated(fn (): bool => self::hasProductColumn('sku'))
-                                            ->maxLength(120),
-                                        Forms\Components\TextInput::make('gtin')
-                                            ->label('GTIN / Barcode')
-                                            ->visible(fn (): bool => self::hasProductColumn('gtin'))
-                                            ->dehydrated(fn (): bool => self::hasProductColumn('gtin'))
-                                            ->maxLength(64),
-                                        Forms\Components\TextInput::make('mpn')
-                                            ->label('MPN')
-                                            ->visible(fn (): bool => self::hasProductColumn('mpn'))
-                                            ->dehydrated(fn (): bool => self::hasProductColumn('mpn'))
-                                            ->maxLength(120),
-                                        Forms\Components\Select::make('item_condition')
-                                            ->label('Condition')
-                                            ->visible(fn (): bool => self::hasProductColumn('item_condition'))
-                                            ->dehydrated(fn (): bool => self::hasProductColumn('item_condition'))
-                                            ->options([
-                                                'new' => 'NewCondition',
-                                                'used' => 'UsedCondition',
-                                                'refurbished' => 'RefurbishedCondition',
-                                            ])
-                                            ->native(false)
-                                            ->placeholder('NewCondition'),
-                                        Forms\Components\Select::make('availability_override')
-                                            ->label('Availability override')
-                                            ->visible(fn (): bool => self::hasProductColumn('availability_override'))
-                                            ->dehydrated(fn (): bool => self::hasProductColumn('availability_override'))
-                                            ->options([
-                                                'in_stock' => 'InStock',
-                                                'out_of_stock' => 'OutOfStock',
-                                                'preorder' => 'PreOrder',
-                                                'backorder' => 'BackOrder',
-                                                'limited_availability' => 'LimitedAvailability',
-                                                'discontinued' => 'Discontinued',
-                                            ])
-                                            ->native(false)
-                                            ->placeholder('Auto selon le stock'),
-                                        Forms\Components\DatePicker::make('price_valid_until')
-                                            ->label('Prix valide jusqu\'au')
-                                            ->visible(fn (): bool => self::hasProductColumn('price_valid_until'))
-                                            ->dehydrated(fn (): bool => self::hasProductColumn('price_valid_until')),
                                         Forms\Components\TextInput::make('seo_image_alt')
                                             ->label('Texte alternatif image SEO')
                                             ->visible(fn (): bool => self::hasProductColumn('seo_image_alt'))
@@ -454,24 +365,62 @@ class ProductResource extends Resource
                                             ->label('Description Cover (SEO)')
                                             ->maxLength(500),
                                         Forms\Components\Textarea::make('seo_schema_description')
-                                            ->label('Schema description (SEO)')
+                                            ->label('Description schema (texte brut / court)')
                                             ->visible(fn (): bool => self::hasProductColumn('seo_schema_description'))
                                             ->dehydrated(fn (): bool => self::hasProductColumn('seo_schema_description'))
+                                            ->helperText('Optionnel : prioritaire sur la description SEO pour le champ description du schema.org Product.')
                                             ->rows(3)
-                                            ->columnSpanFull(),
-                                        Forms\Components\Textarea::make('seo_review')
-                                            ->label('Review (SEO)')
-                                            ->visible(fn (): bool => self::hasProductColumn('seo_review'))
-                                            ->dehydrated(fn (): bool => self::hasProductColumn('seo_review'))
-                                            ->rows(3)
-                                            ->columnSpanFull(),
-                                        Forms\Components\TextInput::make('seo_aggregate_rating')
-                                            ->label('AggregateRating (SEO)')
-                                            ->visible(fn (): bool => self::hasProductColumn('seo_aggregate_rating'))
-                                            ->dehydrated(fn (): bool => self::hasProductColumn('seo_aggregate_rating'))
-                                            ->maxLength(512)
                                             ->columnSpanFull(),
                                     ]),
+                                ]),
+                            Section::make('Indicateurs schema (lecture seule)')
+                                ->collapsed()
+                                ->visible(fn ($record) => $record instanceof Product)
+                                ->schema([
+                                    Forms\Components\Placeholder::make('schema_sku')
+                                        ->label('SKU / productID (effectif)')
+                                        ->content(fn (?Product $record): string => $record ? e((string) $record->effective_sku) : '—'),
+                                    Forms\Components\Placeholder::make('schema_price')
+                                        ->label('Prix TTC affiché (schema Offer)')
+                                        ->content(fn (?Product $record): string => $record ? e(number_format($record->getEffectiveUnitPrice(), 3, ',', ' ')) . ' DT' : '—'),
+                                    Forms\Components\Placeholder::make('schema_availability')
+                                        ->label('Disponibilité (schema.org)')
+                                        ->content(fn (?Product $record): string => $record ? e($record->effective_availability_schema) : '—'),
+                                    Forms\Components\Placeholder::make('schema_condition')
+                                        ->label('État produit')
+                                        ->content(fn (?Product $record): string => $record ? e($record->effective_item_condition_schema) : '—'),
+                                    Forms\Components\Placeholder::make('schema_price_until')
+                                        ->label('priceValidUntil (si promo / date)')
+                                        ->content(function (?Product $record): string {
+                                            if (! $record) {
+                                                return '—';
+                                            }
+                                            $v = $record->effective_price_valid_until;
+
+                                            return $v ? e((string) $v) : '— (non envoyé sans promo ni date)';
+                                        }),
+                                    Forms\Components\Placeholder::make('schema_reviews')
+                                        ->label('Avis publiés (JSON-LD)')
+                                        ->content(function (?Product $record): HtmlString|string {
+                                            if (! $record?->id) {
+                                                return '—';
+                                            }
+                                            $published = $record->reviews()->where('publier', 1)->get();
+                                            $count = $published->count();
+                                            if ($count === 0) {
+                                                return new HtmlString('<span class="text-gray-500">Aucun avis publié — pas d’AggregateRating dans le schema.</span>');
+                                            }
+                                            $values = $published->map(function (Review $r): int {
+                                                $n = (int) ($r->stars ?? $r->note ?? 0);
+
+                                                return ($n >= 1 && $n <= 5) ? $n : 0;
+                                            })->filter(fn (int $n) => $n > 0);
+                                            $avg = $values->isNotEmpty() ? round($values->avg(), 1) : '—';
+
+                                            return new HtmlString(
+                                                '<strong>' . e((string) $count) . '</strong> avis — moyenne <strong>' . e((string) $avg) . '</strong> / 5'
+                                            );
+                                        }),
                                 ]),
                         ]),
 

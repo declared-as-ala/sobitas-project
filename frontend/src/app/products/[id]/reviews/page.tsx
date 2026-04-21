@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getProductDetails } from '@/services/api';
+import { getCachedProductDetails } from '@/services/getCachedProductDetails';
 import { ProductReviewsPageClient } from './ProductReviewsPageClient';
 
 interface ProductReviewsPageProps {
@@ -10,7 +10,7 @@ interface ProductReviewsPageProps {
 export async function generateMetadata({ params }: ProductReviewsPageProps): Promise<Metadata> {
   const { id } = await params;
   try {
-    const product = await getProductDetails(id);
+    const product = await getCachedProductDetails(id);
     return {
       title: `Avis clients – ${product.designation_fr} | SOBITAS`,
       description: `Lisez les avis et notes des clients pour ${product.designation_fr}. SOBITAS Tunisie.`,
@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: ProductReviewsPageProps): Pro
 export default async function ProductReviewsPage({ params }: ProductReviewsPageProps) {
   const { id } = await params;
   try {
-    const product = await getProductDetails(id);
+    const product = await getCachedProductDetails(id);
     if (!product?.id) notFound();
     return <ProductReviewsPageClient product={product} />;
   } catch (error: any) {

@@ -6,7 +6,7 @@
     <title>Facture {{ $facture->numero ?? '' }}</title>
     <style>
         @page { size: A4; margin: 12mm; }
-        .invoice-print { width: 210mm; min-height: 297mm; margin: 24px auto; padding: 12mm 15mm; background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.06); font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; font-size: 13px; line-height: 1.5; color: #1f2937; }
+        .invoice-print { width: 210mm; min-height: 297mm; margin: 24px auto; padding: 12mm 15mm; background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.06); font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; font-size: 13px; line-height: 1.5; color: #1f2937; display: flex; flex-direction: column; }
         @media print {
             body * { visibility: hidden; }
             .invoice-print, .invoice-print * { visibility: visible; }
@@ -42,11 +42,17 @@
         .invoice-totals-card .invoice-totals-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; font-size: 13px; color: #4b5563; }
         .invoice-totals-card .invoice-totals-row.invoice-totals-row-ttc { margin-top: 8px; padding-top: 12px; border-top: 2px solid #e5e7eb; font-size: 16px; font-weight: 700; color: #111827; }
         .invoice-totals-card .invoice-totals-row .amount { font-variant-numeric: tabular-nums; }
-        .invoice-footer { margin-top: 32px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280; }
-        .invoice-footer .invoice-note { margin-bottom: 16px; padding: 12px; background: #f9fafb; border-radius: 8px; border-left: 3px solid #9ca3af; }
-        .invoice-footer .invoice-note-label { font-weight: 600; color: #374151; margin-bottom: 4px; }
-        .invoice-footer .invoice-signature-area { margin-top: 24px; padding-top: 12px; text-align: center; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; text-decoration: underline; text-underline-offset: 4px; }
-        .invoice-footer .invoice-rib { margin-top: 16px; font-size: 11px; color: #9ca3af; text-align: center; }
+        .invoice-print-main { flex: 0 1 auto; }
+        .invoice-footer { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; margin-top: 24px; padding-top: 12px; border-top: none; font-size: 12px; color: #6b7280; }
+        .invoice-footer .invoice-note { margin-bottom: 16px; padding: 12px; background: #fffbeb; border-radius: 8px; border-left: 4px solid #f97316; flex-shrink: 0; }
+        .invoice-footer .invoice-note-label { font-weight: 600; color: #c2410c; margin-bottom: 4px; text-transform: uppercase; font-size: 10px; letter-spacing: 0.06em; }
+        .invoice-footer-spacer { flex: 1 1 auto; min-height: 22mm; }
+        .invoice-footer-rib-sig { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-shrink: 0; padding-top: 10px; border-top: 1px solid #e5e7eb; }
+        .invoice-footer .invoice-rib { margin-top: 0; font-size: 11px; color: #374151; text-align: left; font-weight: 500; letter-spacing: 0.04em; }
+        .invoice-footer .invoice-rib-label { color: #f97316; font-weight: 700; text-transform: uppercase; font-size: 10px; margin-right: 4px; }
+        .invoice-footer .invoice-signature-block { flex: 0 0 auto; min-width: 200px; max-width: 45%; text-align: center; }
+        .invoice-footer .invoice-signature-area { margin-top: 0; padding-top: 0; text-align: center; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: #475569; text-decoration: none; }
+        .invoice-footer .invoice-signature-line { border-top: 1px solid #94a3b8; margin-bottom: 8px; }
         @if (!request()->query('embed'))
         body { margin: 0; background: #f3f4f6; min-height: 100vh; }
         @endif
@@ -71,6 +77,7 @@
     @endif
 
     <div id="invoice-print" class="invoice-print">
+        <div class="invoice-print-main">
         {{-- A) Header: company left, FACTURE + meta right --}}
         <header class="invoice-header">
             <div class="invoice-company">
@@ -109,7 +116,7 @@
             <div class="invoice-client-details">
                 @if ($facture->client->adresse ?? null) {{ $facture->client->adresse }}<br> @endif
                 @if ($facture->client->phone_1 ?? null) Tél. {{ $facture->client->phone_1 }}<br> @endif
-                @if ($facture->client->matricule ?? null) Matricule : {{ $facture->client->matricule }} @endif
+                @if ($facture->client->matricule ?? null) MF : {{ $facture->client->matricule }} @endif
             </div>
         </div>
         @endif
@@ -169,8 +176,9 @@
                 </div>
             </div>
         </div>
+        </div>{{-- .invoice-print-main --}}
 
-        {{-- E) Footer: note, signature, optional RIB --}}
+        {{-- E) Footer: note, spacer, RIB + signature anchored low --}}
         <footer class="invoice-footer">
             @if ($coordonnee && !empty($coordonnee->note))
             <div class="invoice-note">
@@ -178,10 +186,18 @@
                 <div>{{ $coordonnee->note }} <span id="invoice-words"></span></div>
             </div>
             @endif
-            <div class="invoice-signature-area">Signature et cachet</div>
-            @if ($coordonnee && !empty($coordonnee->rib))
-            <div class="invoice-rib">{{ $coordonnee->rib }}</div>
-            @endif
+            <div class="invoice-footer-spacer" aria-hidden="true"></div>
+            <div class="invoice-footer-rib-sig">
+                <div class="invoice-rib">
+                    @if ($coordonnee && !empty($coordonnee->rib))
+                        <span class="invoice-rib-label">RIB :</span>{{ $coordonnee->rib }}
+                    @endif
+                </div>
+                <div class="invoice-signature-block">
+                    <div class="invoice-signature-line"></div>
+                    <div class="invoice-signature-area">Signature et cachet</div>
+                </div>
+            </div>
         </footer>
     </div>
 

@@ -3,10 +3,10 @@
 import React, { useState, useEffect, memo, useMemo } from 'react';
 import type { TouchEvent } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
+import { HeroTrustGuarantee } from '@/app/components/HeroTrustGuarantee';
 import { getStorageUrl } from '@/services/api';
 import type { Slide } from '@/types';
 
@@ -217,7 +217,7 @@ export const HeroSlider = memo(function HeroSlider({ slides }: HeroSliderProps) 
         <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" aria-hidden="true" />
 
         {/* Content - Responsive and centered; extra padding on mobile so arrows don't cover text */}
-        <div className="relative h-full w-full max-w-7xl mx-auto pl-14 pr-14 sm:pl-6 sm:pr-6 lg:px-8 flex items-center">
+        <div className="relative flex h-full w-full max-w-7xl mx-auto items-center pl-14 pr-14 pb-24 sm:pl-6 sm:pr-6 sm:pb-16 md:pb-12 lg:px-8 lg:pb-10">
           <div className="max-w-2xl lg:max-w-3xl">
             <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white mb-3 sm:mb-4 md:mb-6 leading-tight drop-shadow-lg">
               {currentSlideData.titre}
@@ -236,6 +236,7 @@ export const HeroSlider = memo(function HeroSlider({ slides }: HeroSliderProps) 
                 </LinkWithLoading>
               </Button>
             </div>
+            <HeroTrustGuarantee />
           </div>
         </div>
       </div>

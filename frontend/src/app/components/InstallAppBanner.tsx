@@ -135,7 +135,7 @@ export function InstallAppBanner() {
           <p className="text-[13px] font-bold text-gray-900 dark:text-white">
             Installer l&apos;application
           </p>
-          <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
+          <p className="text-xs leading-snug text-gray-500 dark:text-gray-400 truncate">
             Accès rapide · protein.tn
           </p>
         </div>
@@ -143,7 +143,7 @@ export function InstallAppBanner() {
         {/* CTA */}
         <button
           onClick={handleInstall}
-          className="flex shrink-0 items-center gap-1.5 rounded-lg bg-red-600 px-3 py-2 text-[12px] font-bold text-white active:bg-red-800 hover:bg-red-700 transition-colors"
+          className="flex shrink-0 items-center gap-1.5 rounded-lg bg-red-600 px-3 py-2 text-sm font-bold leading-snug text-white active:bg-red-800 hover:bg-red-700 transition-colors"
         >
           <Download className="h-3.5 w-3.5" />
           Installer

@@ -393,7 +393,7 @@ export function QuickOrderDrawer({
                           <span className="text-gray-500 dark:text-gray-400 line-through text-xs">{priceDisplay.oldPrice} DT</span>
                         )}
                         {discount > 0 && (
-                          <Badge className="bg-red-600 text-white text-[10px] px-1.5 py-0">-{discount}%</Badge>
+                          <Badge className="bg-red-600 text-white text-caption px-1.5 py-0 leading-none">-{discount}%</Badge>
                         )}
                       </div>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
