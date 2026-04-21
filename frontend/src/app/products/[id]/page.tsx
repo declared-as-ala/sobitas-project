@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
-import { getProductDetails, getSimilarProducts } from '@/services/api';
+import { getProductDetails, getSimilarProducts, getStorageUrl } from '@/services/api';
 import { ProductDetailClient } from './ProductDetailClient';
 import { ProductDetailFallbackClient } from '@/app/shop/ProductDetailFallbackClient';
 

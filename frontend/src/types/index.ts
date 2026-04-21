@@ -209,12 +209,11 @@ export interface Article {
   blog_type?: string | null;
   /** Optional: category slug for product recommendations (e.g. "whey") */
   category_slug?: string;
-  /** Optional: tags/keywords for matching products */
-  tags?: string[];
+  /** Optional: tags/keywords for matching products (legacy) or taxonomy tags from API. */
+  tags?: Array<string | BlogTagSummary>;
   /** Optional: admin-set product slugs for "Produits recommandés" (manual override) */
   recommended_product_slugs?: string[];
   categories?: BlogCategorySummary[];
-  tags?: BlogTagSummary[];
   seo?: {
     title?: string | null;
     description?: string | null;

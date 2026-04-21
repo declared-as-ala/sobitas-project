@@ -99,7 +99,8 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
         },
         alternates: { canonical: canonicalUrl },
         openGraph: {
-          type: 'product',
+          // Next Metadata OpenGraph type union does not include "product".
+          type: 'website',
           url: canonicalUrl,
           title: product.seo?.open_graph?.title || title,
           description: product.seo?.open_graph?.description || description,
