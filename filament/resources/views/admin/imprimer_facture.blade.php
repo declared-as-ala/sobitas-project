@@ -5,9 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <link href="//maxcdn.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
-    <script src="//maxcdn.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js"></script>
-    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <title>Bon de Livraison {{ @$facture->numero }}</title>
 </head>
 
@@ -175,6 +173,13 @@
             display: initial;
         }
 
+        .toolbar-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            padding: 10px 0;
+        }
+
         .table1 {}
 
         @media print {
@@ -268,10 +273,11 @@
         <div id="invoice">
 
             <div class="toolbar hidden-print hide_print ">
-                <div class="text-right">
-                    <button id="printInvoice" class="btn btn-info" onclick="print()"><i class="fa fa-print"></i>
-                        Imprimer</button>
-                    <a class="btn btn-info" href="{{ url()->previous() }}"><i class="fa fa-file-pdf-o"></i> Retour</a>
+                <div class="toolbar-actions">
+                    <button id="printInvoice" type="button" class="btn btn-primary">
+                        Imprimer
+                    </button>
+                    <a class="btn btn-outline-secondary" href="{{ url()->previous() }}">Retour</a>
                 </div>
                 <hr>
             </div>
@@ -479,9 +485,14 @@
     </script>
 
     <script>
-        function print() {
-            window.print()
-        }
+        document.addEventListener('DOMContentLoaded', function () {
+            const printButton = document.getElementById('printInvoice');
+            if (printButton) {
+                printButton.addEventListener('click', function () {
+                    window.print();
+                });
+            }
+        });
     </script>
 
 </body>

@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <title>Ticket {{ @$ticket->numero }}</title>
 </head>
 
@@ -154,34 +155,22 @@
             }
         }
 
-        .btn {
-            -webkit-font-smoothing: subpixel-antialiased;
-            border-radius: 3px;
-            font-size: 14px;
-            line-height: 1.57142857;
-            padding: 6px 15px;
-            transition: border .2s linear, color .2s linear, width .2s linear, background-color .2s linear;
-        }
-
-        .btn-info {
-            background: #3e46df;
-            border: 0;
-            border-radius: 3px;
-            color: #fff;
-            opacity: .9;
-            cursor: pointer;
-            text-decoration: none;
+        .toolbar-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            padding: 10px;
         }
     </style>
 
-    <body>
-
-        <div class="toolbar hidden-print hide_print ">
-            <div class="text-right" style="text-align: right; padding: 10px;">
-                <button id="printInvoice" class="btn btn-info" onclick="window.print()"><i class="fa fa-print"></i>
-                    Imprimer</button>
-                <a class="btn btn-info" href="{{ url()->previous() }}"><i class="fa fa-file-pdf-o"></i>
-                    Retour</a>
+        <div class="toolbar hidden-print hide_print">
+            <div class="toolbar-actions">
+                <button id="printInvoice" type="button" class="btn btn-primary">
+                    Imprimer
+                </button>
+                <a class="btn btn-outline-secondary" href="{{ url()->previous() }}">
+                    Retour
+                </a>
             </div>
             <hr>
         </div>
@@ -285,7 +274,14 @@
         </div>
 
         <script>
-            window.print()
+            document.addEventListener('DOMContentLoaded', function () {
+                const printButton = document.getElementById('printInvoice');
+                if (printButton) {
+                    printButton.addEventListener('click', function () {
+                        window.print();
+                    });
+                }
+            });
         </script>
 
     </body>
