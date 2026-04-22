@@ -29,6 +29,7 @@ use App\Models\Service;
 use App\Models\Slide;
 use App\Models\SousCategory;
 use App\Models\Tag;
+use App\Support\CategorySeoEnvelope;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -361,7 +362,7 @@ class ApisController extends Controller
     {
         $perPage = $this->resolvePerPage($request);
 
-        $category = Categ::where('slug', $slug)->select('id', 'slug', 'designation_fr', 'cover')->first();
+        $category = Categ::where('slug', $slug)->select('id', 'slug', 'designation_fr', 'cover', 'meta_title', 'meta_description')->first();
 
         if (! $category) {
             return response()->json(['error' => 'Category not found'], 404);
@@ -386,9 +387,16 @@ class ApisController extends Controller
             ->orderBy('designation_fr')
             ->get();
 
+        $frontendBase = (string) config('app.frontend_url', config('app.url'));
+
         return response()->json(array_merge(
             [
                 'category'        => $category,
+                'seo'             => CategorySeoEnvelope::forCateg($category, $frontendBase),
+                'breadcrumb'      => [
+                    ['name' => 'Accueil', 'url' => $frontendBase.'/'],
+                    ['name' => $category->designation_fr, 'url' => $frontendBase.'/category/'.rawurlencode((string) $category->slug)],
+                ],
                 'sous_categories' => $sousCategoriesPaginator->items(),
                 'products'        => $productsPaginator->items(),
                 'brands'          => $brands,
@@ -444,14 +452,31 @@ class ApisController extends Controller
      */
     public function productsBySubCategoryId(Request $request, string $slug): JsonResponse
     {
-        $sous_category = SousCategory::where('slug', $slug)
-            ->select('id', 'slug', 'designation_fr', 'categorie_id')
+        $sous_category = SousCategory::query()
+            ->where('slug', $slug)
             ->with('categorie:id,slug,designation_fr')
             ->first();
 
         if (! $sous_category) {
             return response()->json(['error' => 'Sous-catégorie introuvable'], 404);
         }
+
+        $frontendBase = (string) config('app.frontend_url', config('app.url'));
+        $seo = CategorySeoEnvelope::forSousCategory($sous_category, $frontendBase);
+        $breadcrumb = [
+            ['name' => 'Accueil', 'url' => $frontendBase.'/'],
+        ];
+        $cat = $sous_category->categorie;
+        if ($cat) {
+            $breadcrumb[] = [
+                'name' => $cat->designation_fr,
+                'url' => $frontendBase.'/category/'.rawurlencode((string) $cat->slug),
+            ];
+        }
+        $breadcrumb[] = [
+            'name' => ($seo['breadcrumb_label'] ?? '') !== '' ? (string) $seo['breadcrumb_label'] : $sous_category->designation_fr,
+            'url' => $frontendBase.'/category/'.rawurlencode((string) $sous_category->slug),
+        ];
 
         // Get ALL products for this subcategory using many-to-many relationship
         // Checks both legacy sous_categorie_id AND new pivot table
@@ -481,6 +506,8 @@ class ApisController extends Controller
 
         return response()->json([
             'sous_category'   => $sous_category,
+            'seo'             => $seo,
+            'breadcrumb'      => $breadcrumb,
             'products'        => $products,
             'brands'          => $brands,
             'sous_categories' => $sousCategories,

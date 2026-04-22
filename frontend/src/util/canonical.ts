@@ -1,6 +1,10 @@
 /**
  * SEO: canonical URLs and tracking-param stripping.
  * Use for alternates.canonical so search engines consolidate signals.
+ *
+ * Category routes (`/category/[slug]`) load listing data without shop filter query strings on the
+ * server; canonical should stay the clean category URL. If you later add query-based filter variants
+ * on those routes, use `metadata.robots` noindex for non-primary URLs or keep canonical without query.
  */
 
 const TRACKING_PARAM_PATTERN = /^(?:utm_[a-z_]*|fbclid|gclid|srsltid|msclkid|mc_[a-z_]*|ref|source)$/i;

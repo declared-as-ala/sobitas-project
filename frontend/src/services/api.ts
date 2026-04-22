@@ -26,6 +26,7 @@ import type {
 } from '@/types';
 import type { BackendOrderPayload } from '@/lib/orderPayload';
 import { SITE_LOGO_PUBLIC_PATH } from '@/constants/branding';
+import type { CategorySeoFromApi } from '@/util/resolveCategorySeo';
 
 // In browser on localhost: use same-origin API proxy to avoid CORS (next.config.js rewrites /api-proxy to backend).
 // Storage URL is always production so server and client render the same image URLs (avoids hydration mismatch).
@@ -385,16 +386,40 @@ export const getProductDetails = async (slug: string, cacheBust?: boolean): Prom
 
 /** Server-friendly: try subcategory first, then category. Uses apiFetch (429 retry, dedupe). */
 export async function fetchCategoryOrSubCategory(slug: string): Promise<
-  | { type: 'subcategory'; data: { sous_category: any; products: Product[]; brands: Brand[]; sous_categories: any[]; pagination?: any } }
-  | { type: 'category'; data: { category: Category; sous_categories: any[]; products: Product[]; brands: Brand[] } }
+  | {
+      type: 'subcategory';
+      data: {
+        sous_category: any;
+        products: Product[];
+        brands: Brand[];
+        sous_categories: any[];
+        pagination?: any;
+        seo?: CategorySeoFromApi;
+      };
+    }
+  | {
+      type: 'category';
+      data: {
+        category: Category;
+        sous_categories: any[];
+        products: Product[];
+        brands: Brand[];
+        seo?: CategorySeoFromApi;
+      };
+    }
 > {
   const cleanSlug = (slug || '').trim();
   if (!cleanSlug) throw new ApiError('Not found', 404);
 
   try {
-    const sub = await apiFetch<{ sous_category: any; products: Product[]; brands: Brand[]; sous_categories: any[]; pagination?: any }>(
-      `productsBySubCategoryId/${encodeURIComponent(cleanSlug)}?per_page=24&page=1`
-    );
+    const sub = await apiFetch<{
+      sous_category: any;
+      products: Product[];
+      brands: Brand[];
+      sous_categories: any[];
+      pagination?: any;
+      seo?: CategorySeoFromApi;
+    }>(`productsBySubCategoryId/${encodeURIComponent(cleanSlug)}?per_page=24&page=1`);
     if (sub?.sous_category?.id) return { type: 'subcategory', data: sub };
   } catch (e) {
     if (e instanceof ApiError && e.status === 404) {
@@ -405,9 +430,13 @@ export async function fetchCategoryOrSubCategory(slug: string): Promise<
   }
 
   try {
-    const cat = await apiFetch<{ category: Category; sous_categories: any[]; products: Product[]; brands: Brand[] }>(
-      `productsByCategoryId/${encodeURIComponent(cleanSlug)}`
-    );
+    const cat = await apiFetch<{
+      category: Category;
+      sous_categories: any[];
+      products: Product[];
+      brands: Brand[];
+      seo?: CategorySeoFromApi;
+    }>(`productsByCategoryId/${encodeURIComponent(cleanSlug)}`);
     if (cat?.category?.id) return { type: 'category', data: cat };
   } catch (e) {
     if (e instanceof ApiError && e.status === 404) throw e;

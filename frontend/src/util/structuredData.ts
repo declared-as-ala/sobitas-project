@@ -351,6 +351,28 @@ export function buildWebPageSchema(
 }
 
 /**
+ * CollectionPage schema for category listing pages (product grid).
+ */
+export function buildCollectionPageSchema(
+  name: string,
+  url: string,
+  baseUrl: string,
+  options?: { description?: string }
+): object {
+  const base = baseUrl.replace(/\/$/, '');
+  const fullUrl = url.startsWith('http') ? url : `${base}${url.startsWith('/') ? url : '/' + url}`;
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name,
+    url: fullUrl,
+    description: options?.description || undefined,
+    inLanguage: 'fr-TN',
+    isPartOf: { '@type': 'WebSite', url: base },
+  };
+}
+
+/**
  * ItemList schema for category pages (list of products).
  */
 export function buildItemListSchema(
@@ -515,7 +537,14 @@ export function buildFAQPageSchemaFromQA(
   };
 }
 
-export type StructuredDataType = 'Product' | 'BreadcrumbList' | 'Organization' | 'FAQPage' | 'LocalBusiness' | 'WebSite';
+export type StructuredDataType =
+  | 'Product'
+  | 'BreadcrumbList'
+  | 'Organization'
+  | 'FAQPage'
+  | 'LocalBusiness'
+  | 'WebSite'
+  | 'CollectionPage';
 
 /** Required fields per type for Google rich results (simplified checklist). */
 const REQUIRED: Record<StructuredDataType, string[]> = {
@@ -525,6 +554,7 @@ const REQUIRED: Record<StructuredDataType, string[]> = {
   FAQPage: ['mainEntity'],
   LocalBusiness: ['name', 'address'],
   WebSite: ['name', 'url'],
+  CollectionPage: ['name', 'url'],
 };
 
 /**
@@ -540,7 +570,7 @@ export function getRichResultsChecklist(): string[] {
     `1. Open ${RICH_RESULTS_TEST}`,
     '2. Enter your product page URL (e.g. https://protein.tn/shop/one-a-day-biotech-usa) and run the test',
     '3. Product: expect Product with offers (price, availability, itemCondition); optional AggregateRating/Review only if we have real data',
-    '4. Category/Product: expect BreadcrumbList',
+    '4. Category listing: BreadcrumbList + CollectionPage (+ ItemList when products render); FAQPage when FAQs are on-page',
     '5. Sitewide: Organization, LocalBusiness, WebSite',
     '6. FAQ page / product with FAQs: expect FAQPage',
     '7. Search Console: after fix is live, use “Validate Fix” for the “Extraits de produits” issue',
@@ -583,6 +613,9 @@ export function validateStructuredData(
   } else if (type === 'WebSite') {
     if (!s.name) errors.push('WebSite: missing name');
     if (!s.url) errors.push('WebSite: missing url');
+  } else if (type === 'CollectionPage') {
+    if (!s.name) errors.push('CollectionPage: missing name');
+    if (!s.url) errors.push('CollectionPage: missing url');
   }
 
   if (errors.length > 0) {

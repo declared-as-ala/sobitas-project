@@ -3,8 +3,15 @@ import { notFound, redirect } from 'next/navigation';
 import { getCategories } from '@/services/api';
 import { fetchCategoryOrSubCategory } from '@/services/api';
 import { buildCanonicalUrl } from '@/util/canonical';
-import { buildBreadcrumbListSchema, buildWebPageSchema, buildItemListSchema, validateStructuredData } from '@/util/structuredData';
+import {
+  buildBreadcrumbListSchema,
+  buildCollectionPageSchema,
+  buildItemListSchema,
+  buildFAQPageSchemaFromQA,
+  validateStructuredData,
+} from '@/util/structuredData';
 import { getCategorySeoContent } from '@/util/categorySeoContent';
+import { mergeCategorySeo, type CategorySeoFromApi } from '@/util/resolveCategorySeo';
 import { CategorySeoLanding } from '@/app/category/CategorySeoLanding';
 import { ShopPageClient } from '@/app/shop/ShopPageClient';
 import { Header } from '@/app/components/Header';
@@ -88,33 +95,41 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       type === 'subcategory'
         ? (data as any).sous_category?.designation_fr
         : (data as any).category?.designation_fr;
-    const seoContent = await getCategorySeoContent(canonicalSlug);
-    let metaTitle = (seoContent?.metaTitle && seoContent.metaTitle.length <= META_TITLE_MAX_LEN)
-      ? seoContent.metaTitle
-      : toMetaTitle(seoContent?.h1, apiTitle);
+    const apiSeo = (data as any).seo as CategorySeoFromApi | undefined;
+    const seoJson = await getCategorySeoContent(canonicalSlug);
+    const merged = mergeCategorySeo(seoJson, apiSeo);
+    let metaTitle =
+      merged.metaTitle && merged.metaTitle.length <= META_TITLE_MAX_LEN
+        ? merged.metaTitle
+        : toMetaTitle(merged.h1, apiTitle);
     if (metaTitle.length > META_TITLE_MAX_LEN) {
       const cut = metaTitle.slice(0, META_TITLE_MAX_LEN - 1);
       const lastSpace = cut.lastIndexOf(' ');
       metaTitle = lastSpace > 40 ? cut.slice(0, lastSpace) : cut;
     }
     metaTitle = metaTitle.slice(0, META_TITLE_MAX_LEN);
-    // Root layout has template "%s | Protein.tn" – use absolute so our capped title (≤60) is used as-is
-    const description = (seoContent?.metaDescription && seoContent.metaDescription.length <= 160)
-      ? seoContent.metaDescription
-      : (seoContent?.intro?.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160)
-        || `Découvrez notre sélection ${apiTitle ? `- ${apiTitle}` : ''}. Qualité premium, livraison rapide Tunisie.`);
-    const canonicalUrl = buildCanonicalUrl(`/category/${encodeURIComponent(canonicalSlug)}`);
+    const description =
+      merged.metaDescription && merged.metaDescription.length <= 160
+        ? merged.metaDescription
+        : (merged.intro?.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160) ||
+            `Découvrez notre sélection ${apiTitle ? `- ${apiTitle}` : ''}. Qualité premium, livraison rapide Tunisie.`);
+    const canonicalUrl =
+      merged.canonicalUrl && merged.canonicalUrl.length > 0
+        ? merged.canonicalUrl
+        : buildCanonicalUrl(`/category/${encodeURIComponent(canonicalSlug)}`);
     const descTrimmed = description.slice(0, 160);
-    const ogImage = seoContent?.ogImage || undefined;
+    const ogImage = merged.ogImage || undefined;
+    const ogAlt = (apiSeo?.og?.image_alt as string | undefined)?.trim() || merged.h1 || apiTitle || 'Catégorie';
     return {
       title: { absolute: metaTitle },
       description: descTrimmed,
       alternates: { canonical: canonicalUrl },
+      robots: { index: merged.robotsIndex, follow: merged.robotsFollow },
       openGraph: {
         title: metaTitle,
         description: descTrimmed,
         url: canonicalUrl,
-        ...(ogImage && { images: [{ url: ogImage, width: 1200, height: 630, alt: apiTitle || 'Catégorie' }] }),
+        ...(ogImage && { images: [{ url: ogImage, width: 1200, height: 630, alt: ogAlt }] }),
       },
       twitter: {
         card: 'summary_large_image',
@@ -166,54 +181,77 @@ export default async function CategoryPage({ params }: PageProps) {
       };
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
       const parentCat = sub.sous_category?.categorie;
+      const seoJson = await getCategorySeoContent(canonicalSlug);
+      const apiSeoSub = (sub as { seo?: CategorySeoFromApi }).seo;
+      const merged = mergeCategorySeo(seoJson, apiSeoSub);
+      const subCrumbName =
+        merged.breadcrumbLabel ||
+        merged.h1?.trim() ||
+        sub.sous_category?.designation_fr ||
+        canonicalSlug;
       const breadcrumbItems = [
         { name: 'Accueil', url: '/' },
         ...(parentCat?.slug
           ? [
               { name: parentCat.designation_fr || parentCat.slug, url: `/category/${parentCat.slug}` },
-              { name: sub.sous_category?.designation_fr || canonicalSlug, url: `/category/${canonicalSlug}` },
+              { name: subCrumbName, url: `/category/${canonicalSlug}` },
             ]
-          : [{ name: sub.sous_category?.designation_fr || canonicalSlug, url: `/category/${canonicalSlug}` }]),
+          : [{ name: subCrumbName, url: `/category/${canonicalSlug}` }]),
       ];
       const breadcrumbSchema = buildBreadcrumbListSchema(breadcrumbItems, baseUrl);
       validateStructuredData(breadcrumbSchema, 'BreadcrumbList');
-      const pageTitle = sub.sous_category?.designation_fr || canonicalSlug;
-      const webPageSchema = buildWebPageSchema(pageTitle, `/category/${canonicalSlug}`, baseUrl);
+      const pageTitle = merged.h1?.trim() || sub.sous_category?.designation_fr || canonicalSlug;
+      const collectionDesc =
+        (merged.metaDescription ||
+          merged.intro?.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() ||
+          '')
+          .slice(0, 500)
+          .trim() || undefined;
+      const collectionPageSchema = buildCollectionPageSchema(pageTitle, `/category/${canonicalSlug}`, baseUrl, {
+        description: collectionDesc,
+      });
+      validateStructuredData(collectionPageSchema, 'CollectionPage');
       const productList = (sub.products ?? []).slice(0, 20).map((p: any) => ({ name: p.designation_fr || p.slug, url: `/shop/${p.slug}` })).filter((p: { name: string; url: string }) => p.url !== '/shop/');
       const itemListSchema = productList.length > 0 ? buildItemListSchema(productList, baseUrl, { name: pageTitle }) : null;
 
-      const seoContent = await getCategorySeoContent(canonicalSlug);
-      const title = seoContent?.h1?.trim() || sub.sous_category?.designation_fr || canonicalSlug;
-      const relatedCategories = resolveRelatedCategories(
-        seoContent?.relatedCategorySlugs ?? [],
-        categories
-      );
+      const title = merged.h1?.trim() || sub.sous_category?.designation_fr || canonicalSlug;
+      const relatedCategories = resolveRelatedCategories(merged.relatedCategorySlugs ?? [], categories);
       const bestProducts = resolveBestProducts(
-        seoContent?.bestProductSlugs?.length ? seoContent.bestProductSlugs : (productsData.products as any[]).slice(0, 6).map((p: any) => p.slug).filter(Boolean),
+        merged.bestProductSlugs?.length ? merged.bestProductSlugs : (productsData.products as any[]).slice(0, 6).map((p: any) => p.slug).filter(Boolean),
         productsData.products as any[]
       );
+      const faqPageSchema = merged.faqs?.length ? buildFAQPageSchemaFromQA(merged.faqs) : null;
+      if (faqPageSchema) validateStructuredData(faqPageSchema, 'FAQPage');
       const categorySeoLanding = (
         <CategorySeoLanding
           title={title}
-          intro={seoContent?.intro ?? null}
-          howToChooseTitle={seoContent?.howToChooseTitle ?? null}
-          howToChooseBody={seoContent?.howToChooseBody ?? null}
-          faqs={seoContent?.faqs ?? []}
+          intro={merged.intro?.trim() ? merged.intro : null}
+          howToChooseTitle={merged.howToChooseTitle?.trim() ? merged.howToChooseTitle : null}
+          howToChooseBody={merged.howToChooseBody?.trim() ? merged.howToChooseBody : null}
+          faqs={merged.faqs ?? []}
           relatedCategories={relatedCategories}
           bestProducts={bestProducts}
+          withFaqSchema={false}
           section="header"
         />
       );
-      const hasSeoContentBelow = (seoContent?.intro ?? '').trim().length > 0 || (seoContent?.faqs?.length ?? 0) > 0 || relatedCategories.length > 0 || bestProducts.length > 0;
+      const hasHowTo = Boolean(merged.howToChooseTitle?.trim() && merged.howToChooseBody?.trim());
+      const hasSeoContentBelow =
+        (merged.intro ?? '').trim().length > 0 ||
+        (merged.faqs?.length ?? 0) > 0 ||
+        hasHowTo ||
+        relatedCategories.length > 0 ||
+        bestProducts.length > 0;
       const categorySeoLandingBottom = hasSeoContentBelow ? (
         <CategorySeoLanding
           title={title}
-          intro={seoContent?.intro ?? null}
-          howToChooseTitle={seoContent?.howToChooseTitle ?? null}
-          howToChooseBody={seoContent?.howToChooseBody ?? null}
-          faqs={seoContent?.faqs ?? []}
+          intro={merged.intro?.trim() ? merged.intro : null}
+          howToChooseTitle={merged.howToChooseTitle?.trim() ? merged.howToChooseTitle : null}
+          howToChooseBody={merged.howToChooseBody?.trim() ? merged.howToChooseBody : null}
+          faqs={merged.faqs ?? []}
           relatedCategories={relatedCategories}
           bestProducts={bestProducts}
+          withFaqSchema={false}
           section="below-fold"
         />
       ) : null;
@@ -221,8 +259,9 @@ export default async function CategoryPage({ params }: PageProps) {
       return (
         <>
           <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
-          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageSchema) }} />
+          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionPageSchema) }} />
           {itemListSchema && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }} />}
+          {faqPageSchema && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqPageSchema) }} />}
           <Suspense
             fallback={
               <>
@@ -241,6 +280,7 @@ export default async function CategoryPage({ params }: PageProps) {
               initialCategory={canonicalSlug}
               isSubcategory
               parentCategory={sub.sous_category?.categorie?.slug ?? undefined}
+              categoryBreadcrumbLabel={merged.breadcrumbLabel}
               categorySeoLanding={categorySeoLanding}
               categorySeoLandingBottom={categorySeoLandingBottom}
             />
@@ -262,47 +302,71 @@ export default async function CategoryPage({ params }: PageProps) {
         categories: [],
       };
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
+      const seoJsonCat = await getCategorySeoContent(canonicalSlug);
+      const apiSeoCat = (cat as { seo?: CategorySeoFromApi }).seo;
+      const mergedCat = mergeCategorySeo(seoJsonCat, apiSeoCat);
+      const catCrumbName = mergedCat.breadcrumbLabel || mergedCat.h1?.trim() || cat.category?.designation_fr || canonicalSlug;
       const breadcrumbItems = [
         { name: 'Accueil', url: '/' },
-        { name: cat.category?.designation_fr || canonicalSlug, url: `/category/${canonicalSlug}` },
+        { name: catCrumbName, url: `/category/${canonicalSlug}` },
       ];
       const breadcrumbSchema = buildBreadcrumbListSchema(breadcrumbItems, baseUrl);
       validateStructuredData(breadcrumbSchema, 'BreadcrumbList');
-      const pageTitleCat = cat.category?.designation_fr || canonicalSlug;
-      const webPageSchemaCat = buildWebPageSchema(pageTitleCat, `/category/${canonicalSlug}`, baseUrl);
+      const pageTitleCat = mergedCat.h1?.trim() || cat.category?.designation_fr || canonicalSlug;
+      const collectionDescCat =
+        (mergedCat.metaDescription ||
+          mergedCat.intro?.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() ||
+          '')
+          .slice(0, 500)
+          .trim() || undefined;
+      const collectionPageSchemaCat = buildCollectionPageSchema(pageTitleCat, `/category/${canonicalSlug}`, baseUrl, {
+        description: collectionDescCat,
+      });
+      validateStructuredData(collectionPageSchemaCat, 'CollectionPage');
       const productListCat = (cat.products ?? []).slice(0, 20).map((p: any) => ({ name: p.designation_fr || p.slug, url: `/shop/${p.slug}` })).filter((p: { name: string; url: string }) => p.url !== '/shop/');
       const itemListSchemaCat = productListCat.length > 0 ? buildItemListSchema(productListCat, baseUrl, { name: pageTitleCat }) : null;
 
-      const seoContent = await getCategorySeoContent(canonicalSlug);
-      const title = seoContent?.h1?.trim() || cat.category?.designation_fr || canonicalSlug;
-      const relatedSlugs = (seoContent?.relatedCategorySlugs?.length ? seoContent.relatedCategorySlugs : categories.filter((c) => c.slug !== canonicalSlug).slice(0, 6).map((c) => c.slug)) as string[];
+      const title = mergedCat.h1?.trim() || cat.category?.designation_fr || canonicalSlug;
+      const relatedSlugs = (mergedCat.relatedCategorySlugs?.length
+        ? mergedCat.relatedCategorySlugs
+        : categories.filter((c) => c.slug !== canonicalSlug).slice(0, 6).map((c) => c.slug)) as string[];
       const relatedCategories = resolveRelatedCategories(relatedSlugs, categories);
       const bestProducts = resolveBestProducts(
-        seoContent?.bestProductSlugs?.length ? seoContent.bestProductSlugs : (productsData.products as any[]).slice(0, 6).map((p: any) => p.slug).filter(Boolean),
+        mergedCat.bestProductSlugs?.length ? mergedCat.bestProductSlugs : (productsData.products as any[]).slice(0, 6).map((p: any) => p.slug).filter(Boolean),
         productsData.products as any[]
       );
+      const faqPageSchemaCat = mergedCat.faqs?.length ? buildFAQPageSchemaFromQA(mergedCat.faqs) : null;
+      if (faqPageSchemaCat) validateStructuredData(faqPageSchemaCat, 'FAQPage');
       const categorySeoLanding = (
         <CategorySeoLanding
           title={title}
-          intro={seoContent?.intro ?? null}
-          howToChooseTitle={seoContent?.howToChooseTitle ?? null}
-          howToChooseBody={seoContent?.howToChooseBody ?? null}
-          faqs={seoContent?.faqs ?? []}
+          intro={mergedCat.intro?.trim() ? mergedCat.intro : null}
+          howToChooseTitle={mergedCat.howToChooseTitle?.trim() ? mergedCat.howToChooseTitle : null}
+          howToChooseBody={mergedCat.howToChooseBody?.trim() ? mergedCat.howToChooseBody : null}
+          faqs={mergedCat.faqs ?? []}
           relatedCategories={relatedCategories}
           bestProducts={bestProducts}
+          withFaqSchema={false}
           section="header"
         />
       );
-      const hasSeoContentBelowCat = (seoContent?.intro ?? '').trim().length > 0 || (seoContent?.faqs?.length ?? 0) > 0 || relatedCategories.length > 0 || bestProducts.length > 0;
+      const hasHowToCat = Boolean(mergedCat.howToChooseTitle?.trim() && mergedCat.howToChooseBody?.trim());
+      const hasSeoContentBelowCat =
+        (mergedCat.intro ?? '').trim().length > 0 ||
+        (mergedCat.faqs?.length ?? 0) > 0 ||
+        hasHowToCat ||
+        relatedCategories.length > 0 ||
+        bestProducts.length > 0;
       const categorySeoLandingBottom = hasSeoContentBelowCat ? (
         <CategorySeoLanding
           title={title}
-          intro={seoContent?.intro ?? null}
-          howToChooseTitle={seoContent?.howToChooseTitle ?? null}
-          howToChooseBody={seoContent?.howToChooseBody ?? null}
-          faqs={seoContent?.faqs ?? []}
+          intro={mergedCat.intro?.trim() ? mergedCat.intro : null}
+          howToChooseTitle={mergedCat.howToChooseTitle?.trim() ? mergedCat.howToChooseTitle : null}
+          howToChooseBody={mergedCat.howToChooseBody?.trim() ? mergedCat.howToChooseBody : null}
+          faqs={mergedCat.faqs ?? []}
           relatedCategories={relatedCategories}
           bestProducts={bestProducts}
+          withFaqSchema={false}
           section="below-fold"
         />
       ) : null;
@@ -310,8 +374,9 @@ export default async function CategoryPage({ params }: PageProps) {
       return (
         <>
           <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
-          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageSchemaCat) }} />
+          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionPageSchemaCat) }} />
           {itemListSchemaCat && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchemaCat) }} />}
+          {faqPageSchemaCat && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqPageSchemaCat) }} />}
           <Suspense
             fallback={
               <>
@@ -328,6 +393,7 @@ export default async function CategoryPage({ params }: PageProps) {
               categories={categories}
               brands={cat.brands ?? []}
               initialCategory={canonicalSlug}
+              categoryBreadcrumbLabel={mergedCat.breadcrumbLabel}
               categorySeoLanding={categorySeoLanding}
               categorySeoLandingBottom={categorySeoLandingBottom}
             />

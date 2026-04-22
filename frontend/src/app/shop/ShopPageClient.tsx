@@ -39,13 +39,26 @@ interface ShopPageClientProps {
   isSubcategory?: boolean;
   parentCategory?: string;
   initialBrand?: number;
+  /** Overrides last breadcrumb label on category/subcategory shop views when set in admin (SEO). */
+  categoryBreadcrumbLabel?: string;
   /** Optional SEO landing block (H1, intro, how-to, FAQs). Rendered after breadcrumb. */
   categorySeoLanding?: React.ReactNode;
   /** Optional SEO block for bottom of page (Catégories associées + Produits phares). Rendered after product grid. */
   categorySeoLandingBottom?: React.ReactNode;
 }
 
-function ShopContent({ productsData, categories, brands, initialCategory, isSubcategory, parentCategory, initialBrand, categorySeoLanding, categorySeoLandingBottom }: ShopPageClientProps) {
+function ShopContent({
+  productsData,
+  categories,
+  brands,
+  initialCategory,
+  isSubcategory,
+  parentCategory,
+  initialBrand,
+  categoryBreadcrumbLabel,
+  categorySeoLanding,
+  categorySeoLandingBottom,
+}: ShopPageClientProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
@@ -618,7 +631,9 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
             // Try to find category or subcategory
             const category = categories.find(c => c.slug === initialCategory);
             if (category) {
-              breadcrumbItems.push({ label: category.designation_fr });
+              breadcrumbItems.push({
+                label: categoryBreadcrumbLabel?.trim() || category.designation_fr,
+              });
             } else {
               // Try to find subcategory
               const subcategory = categories
@@ -631,9 +646,11 @@ function ShopContent({ productsData, categories, brands, initialCategory, isSubc
                     breadcrumbItems.push({ label: parentCat.designation_fr, href: `/category/${parentCategory}` });
                   }
                 }
-                breadcrumbItems.push({ label: subcategory.designation_fr });
+                breadcrumbItems.push({
+                  label: categoryBreadcrumbLabel?.trim() || subcategory.designation_fr,
+                });
               } else {
-                breadcrumbItems.push({ label: initialCategory });
+                breadcrumbItems.push({ label: categoryBreadcrumbLabel?.trim() || initialCategory });
               }
             }
           }
