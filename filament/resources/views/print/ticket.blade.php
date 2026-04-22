@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <title>Ticket {{ @$ticket->numero }}</title>
 </head>
 
@@ -161,29 +162,36 @@
             }
         }
 
-        .btn {
-            -webkit-font-smoothing: subpixel-antialiased;
-            border-radius: 3px;
-            font-size: 14px;
-            line-height: 1.57142857;
-            padding: 6px 15px;
-            transition: border .2s linear, color .2s linear, width .2s linear, background-color .2s linear;
+        .toolbar {
+            position: relative;
+            z-index: 2000;
         }
 
-        .btn-info {
-            background: #3e46df;
-            border: 0;
-            border-radius: 3px;
-            color: #fff;
-            opacity: .9;
+        .toolbar-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            padding: 10px;
+        }
+
+        .toolbar-actions .btn {
+            cursor: pointer;
+            pointer-events: auto !important;
+            position: relative;
+            z-index: 2001;
         }
     </style>
 
         <div class="toolbar hidden-print hide_print ">
-            <div class="text-right">
-                <button id="printInvoice" class="btn btn-info" onclick="print()">
+            <div class="toolbar-actions">
+                <button
+                    id="printInvoice"
+                    type="button"
+                    class="btn btn-primary"
+                    onclick="window.print(); return false;"
+                >
                     Imprimer</button>
-                <a class="btn btn-info" href="{{ $backUrl ?? route('filament.admin.resources.tickets.index') }}">
+                <a class="btn btn-outline-secondary" href="{{ $backUrl ?? route('filament.admin.resources.tickets.index') }}">
                     Retour</a>
             </div>
             <hr>
@@ -291,11 +299,15 @@
         </div>
 
         <script>
-            window.print()
+            document.addEventListener('DOMContentLoaded', function () {
+                const printButton = document.getElementById('printInvoice');
 
-            function print() {
-                window.print()
-            }
+                if (printButton) {
+                    printButton.addEventListener('click', function () {
+                        window.print();
+                    });
+                }
+            });
         </script>
 
     </body>
