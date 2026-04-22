@@ -110,11 +110,18 @@ export const HeroSlider = memo(function HeroSlider({ slides }: HeroSliderProps) 
     if (filtered.length === 0) filtered = withImage;
 
     const sorted = [...filtered].sort((a: any, b: any) => (a.ordre || a.order || 0) - (b.ordre || b.order || 0));
-    const transformed = sorted.map((slide: any) => {
+    const transformed = sorted.map((slide: any, index: number) => {
       // Prefer cover over image (photo) for display
       const imagePath = slide.cover || slide.image || slide.image_path || slide.url || '';
+      // Stable id required for SSR/hydration — never use Math.random() here
+      const stableId =
+        slide.id != null && slide.id !== ''
+          ? slide.id
+          : slide.ordre != null || slide.order != null
+            ? `ordre-${slide.ordre ?? slide.order}-${index}`
+            : `slide-${index}`;
       return {
-        id: slide.id || Math.random(),
+        id: stableId,
         titre: slide.titre || slide.title || slide.designation_fr || 'Protéines Premium',
         description: slide.description || slide.description_fr || 'Découvrez nos produits premium',
         lien: slide.lien || slide.link || slide.btn_link || slide.url || '/shop',
@@ -216,9 +223,9 @@ export const HeroSlider = memo(function HeroSlider({ slides }: HeroSliderProps) 
         {/* Gradient Overlay for better text readability */}
         <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" aria-hidden="true" />
 
-        {/* Content - Responsive and centered; extra padding on mobile so arrows don't cover text */}
-        <div className="relative flex h-full w-full max-w-7xl mx-auto items-center pl-14 pr-14 pb-24 sm:pl-6 sm:pr-6 sm:pb-16 md:pb-12 lg:px-8 lg:pb-10">
-          <div className="max-w-2xl lg:max-w-3xl">
+        {/* Content: column on mobile (CTA block centered, trust docked at bottom); row + inline trust on lg */}
+        <div className="relative flex h-full w-full max-w-7xl mx-auto flex-col pl-14 pr-14 pb-28 pt-4 sm:pl-6 sm:pr-6 sm:pb-20 md:pb-16 lg:flex-row lg:items-center lg:px-8 lg:pb-10 lg:pt-0">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col justify-center lg:max-w-2xl lg:flex-none lg:justify-center xl:max-w-3xl">
             <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white mb-3 sm:mb-4 md:mb-6 leading-tight drop-shadow-lg">
               {currentSlideData.titre}
             </h2>
@@ -236,7 +243,14 @@ export const HeroSlider = memo(function HeroSlider({ slides }: HeroSliderProps) 
                 </LinkWithLoading>
               </Button>
             </div>
-            <HeroTrustGuarantee />
+            {/* Desktop / large tablet: trust directly under CTA */}
+            <div className="mt-6 hidden lg:block">
+              <HeroTrustGuarantee layout="inline" />
+            </div>
+          </div>
+          {/* Mobile / tablet: trust at bottom so product stays visible in upper hero */}
+          <div className="mb-1 shrink-0 pt-3 sm:mb-2 sm:pt-4 lg:hidden">
+            <HeroTrustGuarantee layout="docked" />
           </div>
         </div>
       </div>
@@ -261,9 +275,9 @@ export const HeroSlider = memo(function HeroSlider({ slides }: HeroSliderProps) 
 
       {/* Indicators - Much smaller on mobile, subtle opacity */}
       <div className="absolute bottom-3 sm:bottom-8 left-1/2 -translate-x-1/2 flex gap-1.5 sm:gap-3 z-10 items-center" role="tablist" aria-label="Indicateurs de diapositives">
-        {slidesToUse.map((slide: { id: number }, index: number) => (
+        {slidesToUse.map((slide: { id: string | number }, index: number) => (
           <button
-            key={slide.id}
+            key={`hero-dot-${String(slide.id)}-${index}`}
             onClick={() => setCurrentSlide(index)}
             role="tab"
             aria-selected={index === currentSlide}
