@@ -35,10 +35,14 @@ export const HeroTrustGuarantee = memo(function HeroTrustGuarantee() {
         <div className="relative flex items-stretch gap-3 px-3.5 py-3.5 sm:gap-4 sm:px-5 sm:py-4 md:px-6 md:py-5">
           {/* Icon column (first in RTL = visual right) */}
           <div className="flex shrink-0 flex-col items-center justify-center gap-1" aria-hidden>
-            <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-white/25 to-white/[0.06] shadow-inner ring-1 ring-white/30 sm:h-16 sm:w-16 md:h-[4.25rem] md:w-[4.25rem]">
+            <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500/30 via-emerald-600/15 to-white/[0.06] shadow-inner ring-1 ring-emerald-400/35 sm:h-16 sm:w-16 md:h-[4.25rem] md:w-[4.25rem]">
+              {/* Lucide defaults to fill=none; fill + text-* = solid green interior, color = stroke outline */}
               <Shield
-                className="h-7 w-7 text-emerald-100/95 drop-shadow-md sm:h-8 sm:w-8"
-                strokeWidth={2}
+                fill="currentColor"
+                className="h-7 w-7 text-emerald-500 drop-shadow-md sm:h-8 sm:w-8"
+                color="rgba(236, 253, 245, 0.92)"
+                strokeWidth={1.15}
+                aria-hidden
               />
               <div className="absolute -bottom-0.5 -left-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 shadow-md ring-2 ring-white/90 sm:h-7 sm:w-7">
                 <BadgeCheck className="h-3.5 w-3.5 text-white sm:h-4 sm:w-4" strokeWidth={2.5} aria-hidden />
