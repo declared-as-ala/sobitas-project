@@ -120,3 +120,17 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     notFound();
   }
 }
+import { BlogSeoBlock } from '@/app/components/BlogSeoBlock';
+
+export default function BlogPost({ params }) {
+  return (
+    <article className="prose dark:prose-invert mx-auto">
+      {/* Contenu de l'article */}
+      <h1>{post.title}</h1>
+      <div dangerouslySetInnerHTML={{ __html: post.content }} />
+
+      {/* Bloc SEO dynamique */}
+      <BlogSeoBlock slug={params.slug} />
+    </article>
+  );
+}
