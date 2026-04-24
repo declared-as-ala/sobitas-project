@@ -23,11 +23,12 @@ return new class extends Migration
             $table->unsignedBigInteger('created_by')->nullable();
             $table->timestamps();
 
-            $table->foreign('order_id')->references('id')->on('commandes')->nullOnDelete();
-            $table->foreign('promo_code_id')->references('id')->on('coupons')->nullOnDelete();
+            // Keep legacy references nullable/indexed without FK constraints to avoid
+            // type-mismatch failures on existing production schemas.
 
             $table->index(['partner_id', 'type', 'status']);
             $table->index(['order_id', 'type']);
+            $table->index('promo_code_id');
         });
     }
 

@@ -10,7 +10,8 @@ return new class extends Migration
     {
         Schema::create('loyalty_cards', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('client_id')->constrained('clients')->cascadeOnDelete();
+            // Use plain reference for compatibility with legacy clients table id type.
+            $table->unsignedBigInteger('client_id');
             $table->string('card_number', 20)->unique();
             $table->string('qr_token', 64)->unique();
             $table->enum('status', ['active', 'suspended', 'lost'])->default('active');

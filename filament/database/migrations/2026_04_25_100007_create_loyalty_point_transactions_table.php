@@ -10,7 +10,8 @@ return new class extends Migration
     {
         Schema::create('loyalty_point_transactions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('client_id')->constrained('clients')->cascadeOnDelete();
+            // Use plain reference for compatibility with legacy clients table id type.
+            $table->unsignedBigInteger('client_id');
             $table->unsignedBigInteger('order_id')->nullable();
             $table->enum('type', ['earn', 'redeem', 'reversal', 'adjustment']);
             $table->integer('points');
@@ -21,7 +22,8 @@ return new class extends Migration
             $table->unsignedBigInteger('created_by')->nullable();
             $table->timestamps();
 
-            $table->foreign('order_id')->references('id')->on('commandes')->nullOnDelete();
+            // Keep legacy order reference nullable/indexed without FK constraint to avoid
+            // type-mismatch failures on existing production schemas.
 
             $table->index(['client_id', 'type']);
             $table->index(['order_id', 'type']);
