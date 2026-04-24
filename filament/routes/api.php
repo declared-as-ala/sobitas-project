@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\ClientController;
 use App\Http\Controllers\Api\CommandeController;
 use App\Http\Controllers\Api\CouponController;
 use App\Http\Controllers\Api\LoyaltyController;
+use App\Http\Controllers\Api\StorefrontPasswordController;
 
 /*
 |--------------------------------------------------------------------------
@@ -97,6 +98,8 @@ Route::post('/send_mail', [ApisController::class, 'send_email'])->middleware(['a
 // Auth
 Route::post('/login', [ClientController::class, 'login']);
 Route::post('/register', [ClientController::class, 'register']);
+Route::post('/forgot-password', [StorefrontPasswordController::class, 'forgot']);
+Route::post('/reset-password', [StorefrontPasswordController::class, 'reset']);
 
 // ── Authenticated Routes ──────────────────────────────
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
@@ -120,4 +123,5 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::middleware(['auth:sanctum', 'can:accessFilament'])->group(function () {
     Route::post('/loyalty/scan', [LoyaltyController::class, 'scan']);
     Route::post('/loyalty/admin/add-points', [LoyaltyController::class, 'adminAddPoints']);
+    Route::post('/admin/customers/invite', [ClientController::class, 'inviteCustomerWebAccess']);
 });

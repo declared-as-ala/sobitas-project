@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { login as apiLogin, register as apiRegister, getProfile, updateProfile as apiUpdateProfile, getClientOrders, getOrderDetail } from '@/services/api';
+import { login as apiLogin, register as apiRegister, getProfile, updateProfile as apiUpdateProfile, getClientOrders, getOrderDetail, normalizeClientOrdersPayload } from '@/services/api';
 import type { User, LoginRequest, RegisterRequest, Order } from '@/types';
 
 interface AuthContextType {
@@ -14,6 +14,8 @@ interface AuthContextType {
   updateProfile: (data: Partial<User> & { password?: string }) => Promise<void>;
   refreshProfile: () => Promise<void>;
   orders: Order[];
+  ordersLoading: boolean;
+  ordersError: string | null;
   fetchOrders: () => Promise<void>;
   getOrderDetails: (id: number) => Promise<any>;
 }
@@ -24,6 +26,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersError, setOrdersError] = useState<string | null>(null);
   const isFetchingOrdersRef = useRef(false);
 
   // Load user from localStorage on mount
@@ -102,6 +106,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('user');
     setUser(null);
     setOrders([]);
+    setOrdersError(null);
+    setOrdersLoading(false);
   };
 
   const refreshProfile = async () => {
@@ -137,16 +143,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       isFetchingOrdersRef.current = true;
+      setOrdersLoading(true);
+      setOrdersError(null);
       const userOrders = await getClientOrders();
-      setOrders(userOrders);
+      setOrders(Array.isArray(userOrders) ? userOrders : normalizeClientOrdersPayload(userOrders));
     } catch (error: any) {
       console.error('Error fetching orders:', error);
-      // Don't throw error for 429 (rate limit) - just log it silently
+      setOrders([]);
       if (error.response?.status === 429) {
         console.warn('Rate limit reached. Please wait before retrying.');
+        setOrdersError('Trop de requêtes. Patientez un instant puis réessayez.');
+      } else {
+        setOrdersError('Impossible de charger vos commandes. Réessayez plus tard.');
       }
     } finally {
       isFetchingOrdersRef.current = false;
+      setOrdersLoading(false);
     }
   }, [user]);
 
@@ -172,6 +184,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         updateProfile,
         refreshProfile,
         orders,
+        ordersLoading,
+        ordersError,
         fetchOrders,
         getOrderDetails,
       }}

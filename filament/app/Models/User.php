@@ -58,6 +58,12 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasOne(\App\Models\Partner::class);
     }
 
+    /** CRM customer (loyalty, invoices) linked to this login. */
+    public function client(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Client::class);
+    }
+
     /**
      * Send the password reset notification using the SAME direct Mail::send()
      * path as order confirmation emails — bypasses the Notification system

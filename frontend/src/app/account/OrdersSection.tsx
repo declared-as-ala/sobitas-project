@@ -13,14 +13,14 @@ import { LoadingSpinner } from '@/app/components/LoadingSpinner';
 
 export function OrdersSection() {
   const router = useRouter();
-  const { orders, fetchOrders, isLoading } = useAuth();
+  const { orders, fetchOrders, isLoading, ordersLoading, ordersError } = useAuth();
+
+  const safeOrders = Array.isArray(orders) ? orders : [];
 
   useEffect(() => {
-    // Only fetch if orders are empty and not currently loading
-    if (!isLoading && (!orders || orders.length === 0)) {
+    if (!isLoading && safeOrders.length === 0 && !ordersLoading && !ordersError) {
       fetchOrders();
     }
-    // Only fetch once when component mounts, not on every fetchOrders change
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -38,7 +38,7 @@ export function OrdersSection() {
     return <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>;
   };
 
-  if (isLoading) {
+  if (isLoading || ordersLoading) {
     return (
       <Card>
         <CardContent className="py-12">
@@ -48,7 +48,21 @@ export function OrdersSection() {
     );
   }
 
-  if (!orders || orders.length === 0) {
+  if (ordersError) {
+    return (
+      <Card>
+        <CardContent className="py-12 text-center space-y-4">
+          <Package className="h-12 w-12 text-amber-500 mx-auto mb-2" />
+          <p className="text-gray-700 dark:text-gray-300">{ordersError}</p>
+          <Button type="button" variant="outline" onClick={() => fetchOrders()}>
+            Réessayer
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (safeOrders.length === 0) {
     return (
       <Card>
         <CardContent className="py-12 text-center">
@@ -67,7 +81,7 @@ export function OrdersSection() {
 
   return (
     <div className="space-y-4">
-      {orders.map((order) => (
+      {safeOrders.map((order) => (
         <Card key={order.id}>
           <CardHeader>
             <div className="flex items-center justify-between">

@@ -371,6 +371,8 @@ export interface User {
   phone?: string;
   role_id?: number;
   avatar?: string;
+  /** CRM client id when linked (Laravel `profil` / `update_profile`). */
+  client_id?: number | null;
 }
 
 export interface LoginRequest {

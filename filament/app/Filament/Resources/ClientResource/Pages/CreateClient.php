@@ -4,6 +4,7 @@ namespace App\Filament\Resources\ClientResource\Pages;
 
 use App\Filament\Resources\ClientResource;
 use App\Jobs\SendSmsJob;
+use App\Services\LoyaltyService;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 
@@ -14,6 +15,8 @@ class CreateClient extends CreateRecord
     protected function afterCreate(): void
     {
         $client = $this->record;
+
+        app(LoyaltyService::class)->getOrCreateCard($client);
 
         if ($client->sms && $client->phone_1) {
             $message = 'Bienvenue chez Sobitas ! Merci de nous faire confiance. Découvrez nos produits sur protein.tn';

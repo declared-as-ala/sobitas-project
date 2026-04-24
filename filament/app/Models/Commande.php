@@ -91,10 +91,22 @@ class Commande extends Model
 
     // ── Relationships ──────────────────────────────────
 
-    /** Client linked to this order. Prefer client_id when set; otherwise user_id (legacy). */
+    /** CRM customer for this order (loyalty, history). */
     public function client(): BelongsTo
     {
+        return $this->belongsTo(Client::class, 'client_id');
+    }
+
+    /** Legacy: guest checkout historically stored clients.id in user_id. Prefer client_id. */
+    public function legacyGuestClient(): BelongsTo
+    {
         return $this->belongsTo(Client::class, 'user_id');
+    }
+
+    /** Web user who placed the order (audit), when applicable. */
+    public function orderingUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function quotation(): BelongsTo

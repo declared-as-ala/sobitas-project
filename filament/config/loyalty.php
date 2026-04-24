@@ -52,8 +52,12 @@ return [
     |--------------------------------------------------------------------------
     | Order statuses that trigger earning points
     |--------------------------------------------------------------------------
+    | Comma-separated env e.g. "expidee" or "expidee,prete". Default: expidee (delivered).
     */
-    'earn_trigger_statuses' => ['expidee'],
+    'earn_trigger_statuses' => array_values(array_filter(array_map(
+        'trim',
+        explode(',', (string) (env('LOYALTY_EARN_TRIGGER_STATUSES', 'expidee') ?: 'expidee'))
+    ))) ?: ['expidee'],
 
     /*
     |--------------------------------------------------------------------------

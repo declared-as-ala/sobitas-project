@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Models\LoyaltyCard;
 use App\Models\LoyaltyPointTransaction;
+use App\Models\User;
+use App\Services\CustomerUserLinkService;
 use App\Services\LoyaltyService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -174,16 +176,12 @@ class LoyaltyController extends Controller
         $clientId = (int) $request->client_id;
         $points   = (int) $request->points;
 
-        $client = Client::findOrFail($clientId);
-        $this->loyalty->getOrCreateCard($client);
-
-        LoyaltyPointTransaction::create([
-            'client_id'   => $clientId,
-            'type'        => 'adjustment',
-            'points'      => $points,
-            'description' => $request->input('description', 'Ajustement admin'),
-            'created_by'  => auth()->id(),
-        ]);
+        $this->loyalty->adjustPoints(
+            $clientId,
+            $points,
+            $request->input('description', 'Ajustement admin'),
+            auth()->id()
+        );
 
         return response()->json([
             'success' => true,
@@ -196,10 +194,14 @@ class LoyaltyController extends Controller
     private function resolveClientId(Request $request): ?int
     {
         $user = $request->user();
-        if (! $user) {
+        if (! $user instanceof User) {
             return null;
         }
-        // Frontend uses Client model auth — find by user id
-        return $user->id;
+
+        if ($user->client) {
+            return (int) $user->client->id;
+        }
+
+        return (int) app(CustomerUserLinkService::class)->linkOrCreateClientForUser($user)->id;
     }
 }

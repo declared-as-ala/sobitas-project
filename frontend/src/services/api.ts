@@ -979,6 +979,21 @@ export const register = async (data: RegisterRequest): Promise<AuthResponse> => 
   return response.data;
 };
 
+export const requestPasswordReset = async (email: string): Promise<{ message: string }> => {
+  const response = await api.post<{ message: string }>('/forgot-password', { email });
+  return response.data;
+};
+
+export const resetPasswordWithToken = async (payload: {
+  email: string;
+  token: string;
+  password: string;
+  password_confirmation: string;
+}): Promise<{ message: string }> => {
+  const response = await api.post<{ message: string }>('/reset-password', payload);
+  return response.data;
+};
+
 export const getUser = async (): Promise<User> => {
   const response = await api.get<User>('/user');
   return response.data;
@@ -994,9 +1009,26 @@ export const updateProfile = async (data: Partial<User> & { password?: string })
   return response.data;
 };
 
+/** Normalize Laravel paginated `{ data, meta }` or raw array into `Order[]`. Safe for tests. */
+export function normalizeClientOrdersPayload(body: unknown): Order[] {
+  if (body === null || body === undefined) {
+    return [];
+  }
+  if (Array.isArray(body)) {
+    return body as Order[];
+  }
+  if (typeof body === 'object' && body !== null && 'data' in body) {
+    const inner = (body as { data?: unknown }).data;
+    if (Array.isArray(inner)) {
+      return inner as Order[];
+    }
+  }
+  return [];
+}
+
 export const getClientOrders = async (): Promise<Order[]> => {
-  const response = await api.get<Order[]>('/client_commandes');
-  return response.data;
+  const response = await api.get<unknown>('/client_commandes');
+  return normalizeClientOrdersPayload(response.data);
 };
 
 export const getOrderDetail = async (id: number): Promise<{

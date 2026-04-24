@@ -7,12 +7,37 @@ use App\Enums\LoyaltyTransactionType;
 use App\Models\Client;
 use App\Models\Commande;
 use App\Models\LoyaltyCard;
+use App\Models\User;
 use App\Models\LoyaltyPointTransaction;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class LoyaltyService
 {
+    /**
+     * Resolve CRM client id for loyalty on a commande (never treat users.id as clients.id).
+     */
+    public function resolveClientIdForCommande(Commande $commande): ?int
+    {
+        if ($commande->client_id) {
+            return (int) $commande->client_id;
+        }
+
+        if ($commande->user_id) {
+            $user = User::find((int) $commande->user_id);
+            if ($user?->client) {
+                return (int) $user->client->id;
+            }
+
+            // Legacy guest rows: commandes.user_id stored clients.id
+            if (Client::where('id', (int) $commande->user_id)->exists()) {
+                return (int) $commande->user_id;
+            }
+        }
+
+        return null;
+    }
+
     // ── Card management ──────────────────────────────────
 
     /**
@@ -57,7 +82,7 @@ class LoyaltyService
      */
     public function earnPointsForOrder(Commande $commande): ?LoyaltyPointTransaction
     {
-        $clientId = $commande->client_id ?? $commande->user_id;
+        $clientId = $this->resolveClientIdForCommande($commande);
         if (! $clientId) {
             return null;
         }
@@ -127,7 +152,7 @@ class LoyaltyService
             return null;
         }
 
-        $clientId = $commande->client_id ?? $commande->user_id;
+        $clientId = $this->resolveClientIdForCommande($commande);
         if (! $clientId) {
             return null;
         }
@@ -174,7 +199,7 @@ class LoyaltyService
      */
     public function reverseOrderTransactions(Commande $commande): void
     {
-        $clientId = $commande->client_id ?? $commande->user_id;
+        $clientId = $this->resolveClientIdForCommande($commande);
         if (! $clientId) {
             return;
         }
@@ -226,6 +251,25 @@ class LoyaltyService
                 'client_id' => $clientId,
             ]);
         });
+    }
+
+    /**
+     * Manual POS / admin adjustment (positive or negative points).
+     */
+    public function adjustPoints(int $clientId, int $points, ?string $description = null, ?int $createdBy = null): LoyaltyPointTransaction
+    {
+        $client = Client::findOrFail($clientId);
+        $this->getOrCreateCard($client);
+        $ppDt = (int) config('loyalty.points_per_dt', 10);
+
+        return LoyaltyPointTransaction::create([
+            'client_id'      => $clientId,
+            'type'           => LoyaltyTransactionType::Adjustment->value,
+            'points'         => $points,
+            'monetary_value' => $ppDt > 0 ? round($points / $ppDt, 3) : null,
+            'description'    => $description ?? 'Ajustement',
+            'created_by'     => $createdBy,
+        ]);
     }
 
     // ── Redemption validation ────────────────────────────

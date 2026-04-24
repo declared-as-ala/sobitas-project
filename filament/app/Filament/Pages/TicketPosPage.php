@@ -5,8 +5,10 @@ namespace App\Filament\Pages;
 use App\Models\Client;
 use App\Models\Coordinate;
 use App\Models\DetailsTicket;
+use App\Models\LoyaltyCard;
 use App\Models\Product;
 use App\Models\Ticket;
+use App\Services\LoyaltyService;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Page;
 use App\Filament\Resources\TicketResource;
@@ -227,5 +229,62 @@ class TicketPosPage extends Page
     public static function getUrl(array $parameters = [], bool $isAbsolute = true, ?string $panel = null, ?\Illuminate\Database\Eloquent\Model $tenant = null, bool $shouldGuessMissingParameters = false, ?string $configuration = null): string
     {
         return route('filament.admin.resources.tickets.pos', $parameters, $isAbsolute);
+    }
+
+    /** Attach CRM client from loyalty card QR token (paste). */
+    public function attachClientFromLoyaltyQr(string $token): void
+    {
+        $token = trim($token);
+        if ($token === '') {
+            Notification::make()->title('Token vide')->warning()->send();
+
+            return;
+        }
+
+        $card = LoyaltyCard::where('qr_token', $token)->with('client')->first();
+        if (! $card) {
+            Notification::make()->title('Carte fidélité introuvable')->danger()->send();
+
+            return;
+        }
+
+        $this->client_id = $card->client_id;
+        $this->updatedClientId($this->client_id);
+
+        $svc = app(LoyaltyService::class);
+        $pts = $svc->getBalance($card->client_id);
+        $val = $svc->getMonetaryValue($card->client_id);
+
+        Notification::make()
+            ->title('Client : ' . ($card->client->name ?? '#' . $card->client_id))
+            ->body("Points : {$pts} (~ " . number_format($val, 3, '.', ' ') . ' DT)')
+            ->success()
+            ->send();
+
+        $this->dispatch('loyalty-client-attached', clientId: (int) $this->client_id);
+    }
+
+    /** Add or remove loyalty points for the currently selected client (POS). */
+    public function loyaltyApplyAdjustment(int $points, string $description = 'Caisse ticket'): void
+    {
+        if (! $this->client_id) {
+            Notification::make()->title('Sélectionnez ou scannez un client')->warning()->send();
+
+            return;
+        }
+
+        app(LoyaltyService::class)->adjustPoints(
+            (int) $this->client_id,
+            $points,
+            $description,
+            auth()->id()
+        );
+
+        $bal = app(LoyaltyService::class)->getBalance((int) $this->client_id);
+        Notification::make()
+            ->title('Fidélité mise à jour')
+            ->body("Nouveau solde : {$bal} points")
+            ->success()
+            ->send();
     }
 }
