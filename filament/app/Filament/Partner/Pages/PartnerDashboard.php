@@ -8,7 +8,7 @@ use Filament\Pages\Page;
 
 class PartnerDashboard extends Page
 {
-    protected static string $view = 'filament.partner.pages.dashboard';
+    protected string $view = 'filament.partner.pages.dashboard';
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-home';
 
