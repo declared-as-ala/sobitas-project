@@ -13,7 +13,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from '@/app/components/ui/carousel';
-import { getStorageUrl, isStorageImageUrl } from '@/services/api';
+import { getStorageUrl } from '@/services/api';
 import type { Article } from '@/types';
 
 interface BlogSectionProps {
@@ -152,7 +152,6 @@ export function BlogSection({ articles }: BlogSectionProps) {
                         fill
                         className="object-cover transition-transform duration-500 group-hover:scale-110"
                         sizes="(max-width: 768px) 100vw, 50vw"
-                        unoptimized={isStorageImageUrl(article.cover ? getStorageUrl(article.cover) : '')}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     </LinkWithLoading>

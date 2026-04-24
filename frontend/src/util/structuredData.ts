@@ -125,7 +125,7 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
     price: formatSchemaPrice(price),
     availability,
     itemCondition: product.schema?.item_condition || 'https://schema.org/NewCondition',
-    seller: { '@type': 'Organization', name: 'SOBITAS' },
+    seller: { '@type': 'Organization', name: 'Proteine Tunisie' },
     shippingDetails: {
       '@type': 'OfferShippingDetails',
       shippingRate: { '@type': 'MonetaryAmount', value: 0, currency: 'TND' },
@@ -239,7 +239,7 @@ export function buildOrganizationSchema(baseUrl: string): object {
   return {
     '@context': 'https://schema.org',
     '@type': 'Organization',
-    name: 'SOBITAS',
+    name: 'Proteine Tunisie',
     url: base,
     logo: `${base}/icon.png`,
     description:
@@ -277,7 +277,7 @@ export function buildLocalBusinessSchema(baseUrl: string): object {
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',
     '@id': `${base}/#localbusiness`,
-    name: 'SOBITAS – Protéines & Compléments Alimentaires Tunisie',
+    name: 'Proteine Tunisie – Protéines & Compléments Alimentaires Tunisie',
     image: `${base}/icon.png`,
     url: base,
     telephone: '+21627612500',
@@ -307,13 +307,13 @@ export function buildWebSiteSchema(baseUrl: string): object {
   return {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
-    name: 'SOBITAS – Protéine Tunisie',
+    name: 'Proteine Tunisie',
     url: base,
     description:
       'Proteine Tunisie : boutique whey protein, créatine et compléments alimentaires. Livraison rapide Sousse, Tunis, Sfax.',
     publisher: {
       '@type': 'Organization',
-      name: 'SOBITAS',
+      name: 'Proteine Tunisie',
       logo: { '@type': 'ImageObject', url: `${base}/icon.png` },
     },
     inLanguage: 'fr-TN',
@@ -463,7 +463,7 @@ export function buildArticleSchema(article: {
     },
     articleSection: section,
     keywords,
-    publisher: { '@type': 'Organization', name: 'SOBITAS', logo: { '@type': 'ImageObject', url: `${base}/icon.png` } },
+    publisher: { '@type': 'Organization', name: 'Proteine Tunisie', logo: { '@type': 'ImageObject', url: `${base}/icon.png` } },
     inLanguage: 'fr-TN',
   };
 }

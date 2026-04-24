@@ -20,13 +20,13 @@ export async function generateMetadata({ params }: SubCategoryPageProps): Promis
 
     if (!subcategoryData || !subcategoryData.designation_fr) {
       return {
-        title: 'Sous-catégorie | SOBITAS',
+        title: 'Sous-catégorie | Proteine Tunisie',
         description: 'Découvrez nos produits par sous-catégorie.',
       };
     }
 
     const categoryName = subcategoryData.categorie?.designation_fr || '';
-    const title = `${subcategoryData.designation_fr} - ${categoryName} | SOBITAS Tunisie`;
+    const title = `${subcategoryData.designation_fr} - ${categoryName} | Proteine Tunisie`;
     const description = `Découvrez notre sélection de ${subcategoryData.designation_fr.toLowerCase()} en Tunisie. Qualité premium, livraison rapide.`;
     const canonicalUrl = buildCanonicalUrl(`/shop/${categorySlug}/${subcategorySlug}`);
 
@@ -45,7 +45,7 @@ export async function generateMetadata({ params }: SubCategoryPageProps): Promis
     };
   } catch {
     return {
-      title: 'Sous-catégorie | SOBITAS',
+      title: 'Sous-catégorie | Proteine Tunisie',
       description: 'Découvrez nos produits par sous-catégorie.',
     };
   }

@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import ContactPageClient from './ContactPageClient';
 
 export const metadata: Metadata = {
-  title: 'Contact – SOBITAS Sousse | Protéines & Compléments Tunisie',
+  title: 'Contact – Proteine Tunisie Sousse | Protéines & Compléments',
   description: 'Nous contacter à Sousse. Adresse, téléphone, email. Questions sur nos protéines et compléments en Tunisie.',
 };
 

@@ -83,7 +83,7 @@ function toMetaTitle(seoH1: string | undefined, fallbackName: string | undefined
     const lastSpace = cut.lastIndexOf(' ');
     return lastSpace > 40 ? cut.slice(0, lastSpace) : cut;
   }
-  return fallbackName ? `${fallbackName} | SOBITAS Tunisie` : 'Catégorie | SOBITAS';
+  return fallbackName ? `${fallbackName} | Proteine Tunisie` : 'Catégorie | Proteine Tunisie';
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -139,7 +139,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       },
     };
   } catch {
-    return { title: 'Catégorie | SOBITAS' };
+    return { title: 'Catégorie | Proteine Tunisie' };
   }
 }
 

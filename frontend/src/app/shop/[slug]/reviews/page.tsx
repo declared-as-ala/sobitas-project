@@ -12,11 +12,11 @@ export async function generateMetadata({ params }: ProductReviewsPageProps): Pro
   try {
     const product = await getCachedProductDetails(slug);
     return {
-      title: `Avis clients – ${product.designation_fr} | SOBITAS`,
-      description: `Lisez les avis et notes des clients pour ${product.designation_fr}. SOBITAS Tunisie.`,
+      title: `Avis clients – ${product.designation_fr} | Proteine Tunisie`,
+      description: `Lisez les avis et notes des clients pour ${product.designation_fr}. Proteine Tunisie Tunisie.`,
     };
   } catch {
-    return { title: 'Avis clients | SOBITAS' };
+    return { title: 'Avis clients | Proteine Tunisie' };
   }
 }
 

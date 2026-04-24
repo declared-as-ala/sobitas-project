@@ -46,7 +46,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       ? article.seo.canonical_url.trim()
       : buildCanonicalUrl(`/blog/${encodeURIComponent(article.slug || slug)}`);
     const title = article.seo?.title || article.seo_title || article.meta_title || article.designation_fr || 'Blog';
-    const descriptionWithTunisia = metaDescription.includes('Tunisie') ? metaDescription : `${metaDescription} Conseils nutrition sportive Tunisie – SOBITAS.`;
+    const descriptionWithTunisia = metaDescription.includes('Tunisie') ? metaDescription : `${metaDescription} Conseils nutrition sportive Tunisie – Proteine Tunisie.`;
     const twitterImage = article.seo?.twitter?.image || imageUrl || '';
     return {
       title,

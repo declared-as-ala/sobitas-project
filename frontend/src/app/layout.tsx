@@ -24,10 +24,10 @@ const inter = Inter({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn'),
   title: {
-    default: "Protéine Tunisie | Whey, Créatine & Compléments – SOBITAS",
+    default: "Proteine Tunisie | Whey, Créatine & Compléments Alimentaires",
     template: "%s | Protein.tn"
   },
-  description: "Protéine Tunisie : whey protein, créatine et compléments alimentaires. Livraison rapide à travers toute la Tunisie avec SOBITAS sur Protein.tn.",
+  description: "Proteine Tunisie : whey protein, créatine et compléments alimentaires. Livraison rapide à travers toute la Tunisie sur Protein.tn.",
   keywords: [
     "proteine tunisie",
     "protein tunisie",
@@ -55,29 +55,29 @@ export const metadata: Metadata = {
     "complément alimentaire tunisie",
     "nutrition sportive tunisie"
   ],
-  authors: [{ name: "SOBITAS" }],
-  creator: "SOBITAS",
-  publisher: "SOBITAS",
+  authors: [{ name: "Proteine Tunisie" }],
+  creator: "Proteine Tunisie",
+  publisher: "Proteine Tunisie",
   openGraph: {
     type: "website",
     locale: "fr_FR",
     url: "https://protein.tn",
     siteName: "Protein.tn",
-    title: "Protéine Tunisie | Whey, Créatine & Compléments – SOBITAS",
-    description: "Protéine Tunisie : whey protein, créatine et compléments alimentaires avec livraison rapide partout en Tunisie sur Protein.tn.",
+    title: "Proteine Tunisie | Whey, Créatine & Compléments Alimentaires",
+    description: "Proteine Tunisie : whey protein, créatine et compléments alimentaires avec livraison rapide partout en Tunisie sur Protein.tn.",
     images: [
       {
         url: "/favicon-512x512.png",
         width: 512,
         height: 512,
-        alt: "Protein.tn - Protéine Tunisie par SOBITAS",
+        alt: "Protein.tn - Proteine Tunisie",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Protéine Tunisie | Whey, Créatine & Compléments – SOBITAS",
-    description: "Protéine Tunisie : whey protein, créatine et compléments alimentaires avec livraison rapide partout en Tunisie sur Protein.tn.",
+    title: "Proteine Tunisie | Whey, Créatine & Compléments Alimentaires",
+    description: "Proteine Tunisie : whey protein, créatine et compléments alimentaires avec livraison rapide partout en Tunisie sur Protein.tn.",
     images: ["/favicon-512x512.png"],
   },
   robots: {

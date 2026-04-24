@@ -2,7 +2,7 @@
 
 import { memo, useMemo, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { FlashProductCard } from './FlashProductCard';
 import { Button } from '@/app/components/ui/button';
 import { ArrowRight, Flame, Clock, Zap, TrendingDown } from 'lucide-react';
@@ -15,92 +15,112 @@ interface FlashProduct {
   promo?: number;
   promo_expiration_date?: string;
   cover?: string;
-  /** API may send discount in % (prefer over computed) */
   discount_percent?: number;
   promo_percent?: number;
   [key: string]: unknown;
 }
 
-/** Clamp discount between 0 and 90 for display safety. */
 function clampDiscount(percent: number): number {
   if (!Number.isFinite(percent) || percent < 0) return 0;
   return Math.min(90, Math.round(percent));
 }
+
+interface CountdownState {
+  days: number;
+  hours: number;
+  minutes: number;
+  seconds: number;
+  isExpired: boolean;
+}
+
+// Isolated memo so the 1-second interval only re-renders this component, not the product list
+const CountdownDisplay = memo(function CountdownDisplay({ expirationDate }: { expirationDate: Date }) {
+  const [countdown, setCountdown] = useState<CountdownState>({ days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: false });
+
+  useEffect(() => {
+    const updateCountdown = () => {
+      const diff = Math.max(0, expirationDate.getTime() - Date.now());
+      if (diff <= 0) {
+        setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true });
+        return;
+      }
+      setCountdown({
+        days: Math.floor(diff / (24 * 3600 * 1000)),
+        hours: Math.floor((diff % (24 * 3600 * 1000)) / (3600 * 1000)),
+        minutes: Math.floor((diff % (3600 * 1000)) / (60 * 1000)),
+        seconds: Math.floor((diff % (60 * 1000)) / 1000),
+        isExpired: false,
+      });
+    };
+    updateCountdown();
+    const id = setInterval(updateCountdown, 1000);
+    return () => clearInterval(id);
+  }, [expirationDate]);
+
+  if (countdown.isExpired) return null;
+
+  const units = [
+    countdown.days > 0 ? { value: countdown.days, label: 'Jours', short: 'J' } : null,
+    { value: countdown.hours, label: 'Heures', short: 'H' },
+    { value: countdown.minutes, label: 'Min', short: 'Min' },
+    { value: countdown.seconds, label: 'Sec', short: 'Sec' },
+  ].filter(Boolean) as { value: number; label: string; short: string }[];
+
+  return (
+    <div className="relative bg-gradient-to-br from-red-600 to-red-700 dark:from-red-700 dark:to-red-800 rounded-2xl p-4 sm:p-6 shadow-2xl border-2 border-red-400/50 dark:border-red-600/50">
+      <div className="flex items-center gap-2 mb-3">
+        <Clock className="h-5 w-5 text-white flex-shrink-0" />
+        <span className="text-white/90 text-sm font-semibold uppercase tracking-wide">Temps restant</span>
+      </div>
+      <div className="grid grid-cols-4 gap-2">
+        {units.map(({ value, label, short }) => (
+          <div
+            key={label}
+            className="bg-white/10 rounded-lg p-2 sm:p-3 text-center border border-white/20"
+          >
+            <div className="text-2xl sm:text-3xl font-black text-white tabular-nums leading-none">
+              {String(value).padStart(2, '0')}
+            </div>
+            <div className="text-xs text-white/80 mt-1 uppercase">
+              <span className="hidden sm:block">{label}</span>
+              <span className="sm:hidden">{short}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+});
 
 interface VentesFlashSectionProps {
   products: FlashProduct[];
 }
 
 export const VentesFlashSection = memo(function VentesFlashSection({ products }: VentesFlashSectionProps) {
-  // Find the earliest expiration date for the main countdown timer
   const earliestExpiration = useMemo(() => {
     const validDates = products
       .map(p => p.promo_expiration_date)
-      .filter((date): date is string => !!date && new Date(date).getTime() > Date.now())
-      .map(date => new Date(date).getTime());
-    
+      .filter((d): d is string => !!d && new Date(d).getTime() > Date.now())
+      .map(d => new Date(d).getTime());
     if (validDates.length === 0) return null;
     return new Date(Math.min(...validDates));
   }, [products]);
 
-  // Real-time countdown timer state
-  const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: false });
-
-  // Update countdown every second
-  useEffect(() => {
-    if (!earliestExpiration) {
-      setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true });
-      return;
-    }
-
-    const updateCountdown = () => {
-      const currentTime = new Date();
-      const diff = Math.max(0, earliestExpiration.getTime() - currentTime.getTime());
-      
-      if (diff <= 0) {
-        setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true });
-        return;
-      }
-
-      const days = Math.floor(diff / (24 * 60 * 60 * 1000));
-      const hours = Math.floor((diff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
-      const minutes = Math.floor((diff % (60 * 60 * 1000)) / (60 * 1000));
-      const seconds = Math.floor((diff % (60 * 1000)) / 1000);
-
-      setCountdown({ days, hours, minutes, seconds, isExpired: false });
-    };
-
-    // Update immediately
-    updateCountdown();
-    // Then update every second
-    const interval = setInterval(updateCountdown, 1000);
-    return () => clearInterval(interval);
-  }, [earliestExpiration]);
-
-  // Max discount for "Jusqu'à X% de réduction" – compute from prix/promo for every product, then take MAX
   const maxDiscount = useMemo(() => {
-    if (products.length === 0) return 0;
     const discounts: number[] = [];
     for (const p of products) {
-      const rawOld = (p as any).prix ?? (p as any).price ?? (p as any).prix_ht;
-      const rawNew = (p as any).promo ?? (p as any).promo_prix;
-      const oldPrice = Number(rawOld) || 0;
-      const newPrice = Number(rawNew) || 0;
+      const oldPrice = Number((p as any).prix ?? (p as any).price ?? 0) || 0;
+      const newPrice = Number((p as any).promo ?? 0) || 0;
       if (oldPrice <= 0 || newPrice <= 0 || newPrice >= oldPrice) continue;
       const computed = Math.round(((oldPrice - newPrice) / oldPrice) * 100);
-      const apiPercent = (p as FlashProduct).discount_percent ?? (p as FlashProduct).promo_percent;
+      const apiPercent = p.discount_percent ?? p.promo_percent;
       const fromApi = typeof apiPercent === 'number' && Number.isFinite(apiPercent) ? clampDiscount(apiPercent) : 0;
       const percent = clampDiscount(Math.max(computed, fromApi));
       if (percent > 0) discounts.push(percent);
     }
-    const max = discounts.length > 0 ? Math.max(...discounts) : 0;
-    if (process.env.NODE_ENV === 'development' && products.length > 0) {
-      console.debug('[VentesFlash] maxDiscount:', max, 'products:', products.length, 'per-product %:', discounts.join(', '));
-    }
-    return max;
+    return discounts.length > 0 ? Math.max(...discounts) : 0;
   }, [products]);
 
-  // Early return after all hooks
   if (products.length === 0) return null;
 
   return (
@@ -108,76 +128,17 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
       id="ventes-flash"
       className="relative py-16 sm:py-20 md:py-24 lg:py-28 overflow-hidden"
     >
-      {/* Dynamic Animated Background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {/* Gradient overlay with animation */}
-        <motion.div
-          className="absolute inset-0 bg-gradient-to-br from-red-600/10 via-orange-500/10 to-red-600/10 dark:from-red-900/20 dark:via-orange-900/20 dark:to-red-900/20"
-          animate={{
-            backgroundPosition: ['0% 0%', '100% 100%'],
-          }}
-          transition={{
-            duration: 20,
-            repeat: Infinity,
-            repeatType: 'reverse',
-          }}
-        />
-        
-        {/* Animated orbs */}
-        <motion.div
-          className="absolute top-0 right-0 w-[600px] h-[600px] bg-red-400/20 dark:bg-red-900/20 rounded-full blur-3xl"
-          animate={{
-            scale: [1, 1.2, 1],
-            x: [0, 50, 0],
-            y: [0, -50, 0],
-          }}
-          transition={{
-            duration: 8,
-            repeat: Infinity,
-            ease: 'easeInOut',
-          }}
-        />
-        <motion.div
-          className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-orange-400/20 dark:bg-orange-900/20 rounded-full blur-3xl"
-          animate={{
-            scale: [1, 1.3, 1],
-            x: [0, -50, 0],
-            y: [0, 50, 0],
-          }}
-          transition={{
-            duration: 10,
-            repeat: Infinity,
-            ease: 'easeInOut',
-          }}
-        />
-        
-        {/* Sparkle effects */}
-        {[...Array(6)].map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute w-2 h-2 bg-red-500/40 rounded-full"
-            style={{
-              left: `${20 + i * 15}%`,
-              top: `${10 + (i % 3) * 30}%`,
-            }}
-            animate={{
-              opacity: [0.3, 1, 0.3],
-              scale: [0.5, 1.5, 0.5],
-            }}
-            transition={{
-              duration: 2 + i * 0.3,
-              repeat: Infinity,
-              delay: i * 0.2,
-            }}
-          />
-        ))}
-      </div>
+      {/* Static background — no animated orbs to reduce TBT */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        aria-hidden
+        style={{ background: 'linear-gradient(135deg, rgba(220,38,38,0.06) 0%, rgba(249,115,22,0.06) 50%, rgba(220,38,38,0.06) 100%)' }}
+      />
 
-      {/* Container with increased max-width */}
       <div className="relative max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Hero Header Section - Completely Redesigned */}
+        {/* Header */}
         <div className="mb-12 sm:mb-16 md:mb-20">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 lg:gap-8 mb-8 min-w-0">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 lg:gap-8 mb-8">
             {/* Left: Title & Stats */}
             <div className="flex-1 min-w-0 space-y-4">
               <motion.div
@@ -187,31 +148,9 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
                 transition={{ duration: 0.6 }}
                 className="flex items-center gap-4 flex-wrap"
               >
-                <motion.div
-                  className="relative flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-red-500 via-orange-500 to-red-600 shadow-2xl"
-                  animate={{
-                    rotate: [0, 5, -5, 0],
-                    scale: [1, 1.05, 1],
-                  }}
-                  transition={{
-                    duration: 3,
-                    repeat: Infinity,
-                    ease: 'easeInOut',
-                  }}
-                >
+                <div className="flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-red-500 via-orange-500 to-red-600 shadow-2xl flex-shrink-0">
                   <Flame className="h-7 w-7 sm:h-8 sm:w-8 text-white" />
-                  <motion.div
-                    className="absolute inset-0 rounded-2xl bg-red-500/50 blur-xl"
-                    animate={{
-                      opacity: [0.5, 0.8, 0.5],
-                    }}
-                    transition={{
-                      duration: 2,
-                      repeat: Infinity,
-                    }}
-                  />
-                </motion.div>
-                
+                </div>
                 <div>
                   <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black bg-gradient-to-r from-red-600 via-orange-600 to-red-600 dark:from-red-400 dark:via-orange-400 dark:to-red-400 bg-clip-text text-transparent leading-tight">
                     VENTES FLASH
@@ -226,7 +165,6 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
                 </div>
               </motion.div>
 
-              {/* Stats Bar */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -253,110 +191,16 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
               </motion.div>
             </div>
 
-            {/* Right: Countdown Timer - Large & Prominent; constrained on large screens so it stays on screen */}
-            {!countdown.isExpired && earliestExpiration && (
+            {/* Right: Countdown (isolated memo — only this re-renders every second) */}
+            {earliestExpiration && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.8, rotate: -5 }}
-                whileInView={{ opacity: 1, scale: 1, rotate: 0 }}
+                initial={{ opacity: 0, scale: 0.8 }}
+                whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, type: 'spring' }}
-                className="w-full min-w-0 shrink-0 lg:max-w-[min(100%,22rem)] xl:max-w-[min(100%,26rem)] overflow-hidden"
+                className="w-full shrink-0 lg:max-w-[min(100%,22rem)] xl:max-w-[min(100%,26rem)]"
               >
-                <div className="relative bg-gradient-to-br from-red-600 to-red-700 dark:from-red-700 dark:to-red-800 rounded-2xl p-3 max-[320px]:p-2 max-[360px]:p-4 sm:p-6 lg:p-5 xl:p-6 shadow-2xl border-2 border-red-400/50 dark:border-red-600/50 overflow-hidden">
-                  {/* Pulsing background effect */}
-                  <motion.div
-                    className="absolute inset-0 rounded-2xl bg-red-500/30 blur-2xl"
-                    animate={{
-                      scale: [1, 1.2, 1],
-                      opacity: [0.5, 0.8, 0.5],
-                    }}
-                    transition={{
-                      duration: 2,
-                      repeat: Infinity,
-                    }}
-                  />
-                  
-                  <div className="relative z-10 min-w-0">
-                    <div className="flex items-center gap-1.5 max-[360px]:gap-1 sm:gap-2 mb-2 max-[360px]:mb-2 sm:mb-4">
-                      <Clock className="h-4 w-4 max-[360px]:h-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-white flex-shrink-0" />
-                      <span className="text-white/90 text-caption max-[360px]:text-xs sm:text-base font-semibold uppercase tracking-wide leading-snug truncate min-w-0">
-                        Temps restant
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-4 gap-1 max-[320px]:gap-0.5 max-[360px]:gap-1.5 sm:gap-2 lg:gap-2 xl:gap-3 min-w-0 w-full">
-                      {countdown.days > 0 && (
-                        <div className="bg-white/10 backdrop-blur-sm rounded-lg max-[320px]:rounded-md p-2 max-[320px]:p-1.5 max-[360px]:p-2.5 sm:p-3 lg:p-3 xl:p-4 text-center border border-white/20 min-w-0 overflow-hidden">
-                          <AnimatePresence mode="wait">
-                            <motion.div
-                              key={countdown.days}
-                              initial={{ scale: 0.5, opacity: 0 }}
-                              animate={{ scale: 1, opacity: 1 }}
-                              exit={{ scale: 0.5, opacity: 0 }}
-                              className="text-2xl max-[320px]:text-xl max-[360px]:text-3xl sm:text-2xl md:text-3xl lg:text-3xl xl:text-4xl font-black text-white tabular-nums leading-none"
-                            >
-                              {String(countdown.days).padStart(2, '0')}
-                            </motion.div>
-                          </AnimatePresence>
-                          <div className="text-caption sm:text-xs leading-tight text-white/80 mt-0.5 max-[360px]:mt-1 uppercase">
-                            <span className="hidden min-[321px]:block lg:hidden xl:block truncate" title="Jours">Jours</span>
-                            <span className="min-[321px]:hidden lg:block xl:hidden" title="Jours">J</span>
-                          </div>
-                        </div>
-                      )}
-                      <div className="bg-white/10 backdrop-blur-sm rounded-lg max-[320px]:rounded-md p-2 max-[320px]:p-1.5 max-[360px]:p-2.5 sm:p-3 lg:p-3 xl:p-4 text-center border border-white/20 min-w-0 overflow-hidden">
-                        <AnimatePresence mode="wait">
-                          <motion.div
-                            key={countdown.hours}
-                            initial={{ scale: 0.5, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.5, opacity: 0 }}
-                            className="text-2xl max-[320px]:text-xl max-[360px]:text-3xl sm:text-2xl md:text-3xl lg:text-3xl xl:text-4xl font-black text-white tabular-nums leading-none"
-                          >
-                            {String(countdown.hours).padStart(2, '0')}
-                          </motion.div>
-                        </AnimatePresence>
-                        <div className="text-caption sm:text-xs leading-tight text-white/80 mt-0.5 max-[360px]:mt-1 uppercase">
-                          <span className="hidden min-[321px]:block lg:hidden xl:block truncate" title="Heures">Heures</span>
-                          <span className="min-[321px]:hidden lg:block xl:hidden" title="Heures">H</span>
-                        </div>
-                      </div>
-                      <div className="bg-white/10 backdrop-blur-sm rounded-lg max-[320px]:rounded-md p-2 max-[320px]:p-1.5 max-[360px]:p-2.5 sm:p-3 lg:p-3 xl:p-4 text-center border border-white/20 min-w-0 overflow-hidden">
-                        <AnimatePresence mode="wait">
-                          <motion.div
-                            key={countdown.minutes}
-                            initial={{ scale: 0.5, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.5, opacity: 0 }}
-                            className="text-2xl max-[320px]:text-xl max-[360px]:text-3xl sm:text-2xl md:text-3xl lg:text-3xl xl:text-4xl font-black text-white tabular-nums leading-none"
-                          >
-                            {String(countdown.minutes).padStart(2, '0')}
-                          </motion.div>
-                        </AnimatePresence>
-                        <div className="text-caption sm:text-xs leading-tight text-white/80 mt-0.5 max-[360px]:mt-1 uppercase">
-                          <span className="hidden min-[321px]:block lg:hidden xl:block truncate" title="Minutes">Minutes</span>
-                          <span className="min-[321px]:hidden lg:block xl:hidden" title="Minutes">Min</span>
-                        </div>
-                      </div>
-                      <div className="bg-white/10 backdrop-blur-sm rounded-lg max-[320px]:rounded-md p-2 max-[320px]:p-1.5 max-[360px]:p-2.5 sm:p-3 lg:p-3 xl:p-4 text-center border border-white/20 min-w-0 overflow-hidden">
-                        <AnimatePresence mode="wait">
-                          <motion.div
-                            key={countdown.seconds}
-                            initial={{ scale: 0.5, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.5, opacity: 0 }}
-                            className="text-2xl max-[320px]:text-xl max-[360px]:text-3xl sm:text-2xl md:text-3xl lg:text-3xl xl:text-4xl font-black text-white tabular-nums leading-none"
-                          >
-                            {String(countdown.seconds).padStart(2, '0')}
-                          </motion.div>
-                        </AnimatePresence>
-                        <div className="text-caption sm:text-xs leading-tight text-white/80 mt-0.5 max-[360px]:mt-1 uppercase">
-                          <span className="hidden min-[321px]:block lg:hidden xl:block truncate" title="Secondes">Secondes</span>
-                          <span className="min-[321px]:hidden lg:block xl:hidden" title="Secondes">Sec</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <CountdownDisplay expirationDate={earliestExpiration} />
               </motion.div>
             )}
           </div>
@@ -370,7 +214,7 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
             className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
           >
             <p className="text-base sm:text-lg text-gray-700 dark:text-gray-300 max-w-2xl leading-relaxed">
-              ⚡ <strong>Offres limitées dans le temps</strong> – Profitez de réductions exceptionnelles sur nos meilleurs produits. 
+              ⚡ <strong>Offres limitées dans le temps</strong> – Profitez de réductions exceptionnelles sur nos meilleurs produits.
               Ne manquez pas cette opportunité unique !
             </p>
             <Button
@@ -387,35 +231,17 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
           </motion.div>
         </div>
 
-        {/* Products Grid - Enhanced with staggered animations */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-[360px]:gap-1.5 sm:gap-4 md:gap-5 lg:gap-6">
-          {products.map((product, index) => (
-            <motion.div
-              key={product.id}
-              initial={{ opacity: 0, y: 50, scale: 0.9 }}
-              whileInView={{ opacity: 1, y: 0, scale: 1 }}
-              viewport={{ once: true, margin: '-100px' }}
-              transition={{ 
-                duration: 0.6, 
-                delay: index * 0.08,
-                type: 'spring',
-                stiffness: 100
-              }}
-              className="w-full min-w-0"
-            >
+        {/* Products Grid — no per-card motion wrapper; FlashProductCard already has its own animation */}
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4 md:gap-5 lg:gap-6">
+          {products.map((product) => (
+            <div key={product.id} className="w-full min-w-0">
               <FlashProductCard product={product} />
-            </motion.div>
+            </div>
           ))}
         </div>
 
         {/* Mobile CTA */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="mt-12 sm:mt-16 text-center md:hidden"
-        >
+        <div className="mt-12 sm:mt-16 text-center md:hidden">
           <Button
             variant="outline"
             className="w-full min-h-[52px] border-2 border-red-500 dark:border-red-400 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white dark:hover:bg-red-500 dark:hover:text-white transition-all duration-300 shadow-lg hover:shadow-xl rounded-xl font-semibold"
@@ -426,7 +252,7 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
               <ArrowRight className="h-5 w-5 ml-2" aria-hidden="true" />
             </Link>
           </Button>
-        </motion.div>
+        </div>
       </div>
     </section>
   );

@@ -97,7 +97,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
               <Link href="/" className="block max-w-[140px] opacity-90 hover:opacity-100 transition-opacity duration-300">
                 <Image
                   src={footerLogoUrl}
-                  alt="Protein.tn - SOBITAS"
+                  alt="Protein.tn - Proteine Tunisie"
                   width={140}
                   height={45}
                   className="w-full h-auto object-contain object-left"
@@ -107,7 +107,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
               </Link>
             </motion.div>
             <p className="text-sm text-gray-400 leading-relaxed max-w-full">
-              PROTEINE TUNISIE - SOBITAS votre distributeur officiel d&apos;articles de sport et de compléments alimentaires en Tunisie.
+              PROTEINE TUNISIE votre distributeur officiel d&apos;articles de sport et de compléments alimentaires en Tunisie.
             </p>
           </div>
 
@@ -240,7 +240,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
               />
             </div>
             <p className="text-sm text-gray-400 leading-relaxed">
-              PROTEINE TUNISIE - SOBITAS votre distributeur officiel d&apos;articles de sport et de compléments alimentaires en Tunisie.
+              PROTEINE TUNISIE votre distributeur officiel d&apos;articles de sport et de compléments alimentaires en Tunisie.
             </p>
 
             {/* Contact Details */}
@@ -424,7 +424,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
                 allowFullScreen
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
-                title="PROTÉINE TUNISIE – SOBITAS | Whey & Matériel Musculation Sousse"
+                title="PROTÉINE TUNISIE | Whey & Matériel Musculation Sousse"
               ></iframe>
             ) : (
               <div className="w-full h-full flex items-center justify-center text-gray-400 group-hover:text-red-500 transition-colors">
@@ -450,7 +450,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
               className="text-center md:text-left text-sm text-gray-400 cursor-pointer hover:text-red-500 transition-colors"
               onClick={() => typeof window !== 'undefined' && window.scrollTo({ top: 0, behavior: 'smooth' })}
             >
-              © {new Date().getFullYear()} <span className="text-red-500 font-bold">SOBITAS PROTEINE TUNISIE</span>. Tous droits réservés.
+              © {new Date().getFullYear()} <span className="text-red-500 font-bold">PROTEINE TUNISIE</span>. Tous droits réservés.
             </div>
           </div>
         </div>

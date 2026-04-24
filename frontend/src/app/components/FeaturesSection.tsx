@@ -364,7 +364,7 @@ export function FeaturesSection() {
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <h2 id="features-heading" className="sr-only">
-          Pourquoi choisir SOBITAS
+          Pourquoi choisir Proteine Tunisie
         </h2>
 
         {/* Mobile: horizontal carousel (scroll-snap). Desktop: grid */}

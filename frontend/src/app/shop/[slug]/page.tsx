@@ -64,14 +64,14 @@ function productDescription(product: Product, productName: string): string {
     if (plain) return plain.slice(0, 160);
   }
   const plain = (product.description_fr || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
-  if (plain) return `${plain} Prix Tunisie. Produits authentiques. Livraison 24-72h. SOBITAS Protein.tn`;
+  if (plain) return `${plain} Prix Tunisie. Produits authentiques. Livraison 24-72h. Proteine Tunisie Protein.tn`;
   return `Acheter ${productName} en Tunisie – Meilleur prix, livraison rapide, produits authentiques. Sousse, Tunis, toute la Tunisie. Protein.tn`;
 }
 
 export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const cleanSlug = slug?.trim();
-  if (!cleanSlug) return { title: 'Produit | SOBITAS Tunisie' };
+  if (!cleanSlug) return { title: 'Produit | Proteine Tunisie' };
   const search = searchParams ? await searchParams : undefined;
   try {
     const product = await getCachedProductDetails(cleanSlug);
@@ -96,9 +96,9 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     if (getErrorStatus(e) === 404) {
       permanentRedirect(buildCategoryRedirectUrl(cleanSlug, search));
     }
-    return { title: 'Produit | SOBITAS Tunisie' };
+    return { title: 'Produit | Proteine Tunisie' };
   }
-  return { title: 'Produit | SOBITAS Tunisie' };
+  return { title: 'Produit | Proteine Tunisie' };
 }
 
 /** Product detail page – official URL: /shop/:slug. Anti-404: if slug is not a product, try 301 to /category/:slug (preserve query). */

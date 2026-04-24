@@ -1,12 +1,12 @@
 'use client';
 
-import { useMemo, Suspense, useState, useEffect } from 'react';
+import { useMemo, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { HeroSlider } from '@/app/components/HeroSlider';
 
 import type { AccueilData, Product } from '@/types';
-import { getStorageUrl, getProductDetails } from '@/services/api';
+import { getStorageUrl } from '@/services/api';
 
 // Defer header and topbar - they're not critical for LCP but keep SSR for SEO
 const Header = dynamic(() => import('@/app/components/Header').then(mod => ({ default: mod.Header })), {
@@ -56,12 +56,6 @@ interface HomePageClientProps {
   slides: any[];
 }
 
-function getReviewCountFromProduct(p: { reviews?: { stars?: number; publier?: number }[]; avis?: { stars?: number; publier?: number }[] }): number {
-  const arr = p.reviews ?? p.avis ?? [];
-  if (!Array.isArray(arr)) return 0;
-  return arr.filter((r: any) => typeof r?.stars === 'number' && (r.publier === undefined || r.publier === 1)).length;
-}
-
 export function HomePageClient({ accueil, slides }: HomePageClientProps) {
   // Provide default empty structure if accueil is undefined/null
   const safeAccueil: AccueilData = accueil || {
@@ -72,35 +66,6 @@ export function HomePageClient({ accueil, slides }: HomePageClientProps) {
     packs: [],
     best_sellers: [],
   };
-
-  const [reviewCountsById, setReviewCountsById] = useState<Record<number, number>>({});
-
-  useEffect(() => {
-    const products = [
-      ...(safeAccueil.new_product || []).slice(0, 8),
-      ...(safeAccueil.best_sellers || []).slice(0, 4),
-      ...(safeAccueil.packs || []).slice(0, 4),
-      ...(safeAccueil.ventes_flash || []).slice(0, 4),
-    ];
-    const bySlug = new Map<string, { id: number }>();
-    products.forEach((p: any) => {
-      if (p?.slug && p?.id) bySlug.set(p.slug, { id: p.id });
-    });
-    const slugs = Array.from(bySlug.keys());
-    if (slugs.length === 0) return;
-    Promise.all(slugs.map((slug) => getProductDetails(slug).catch(() => null)))
-      .then((results) => {
-        const next: Record<number, number> = {};
-        results.forEach((product) => {
-          if (product?.id) {
-            const count = getReviewCountFromProduct(product);
-            if (count > 0) next[product.id] = count;
-          }
-        });
-        setReviewCountsById((prev) => ({ ...prev, ...next }));
-      })
-      .catch(() => {});
-  }, [safeAccueil.new_product, safeAccueil.best_sellers, safeAccueil.packs, safeAccueil.ventes_flash]);
 
   // Memoize product transformations to prevent unnecessary recalculations
   const transformProduct = useMemo(() => (product: Product) => {
@@ -146,25 +111,17 @@ export function HomePageClient({ accueil, slides }: HomePageClientProps) {
     };
   }, []);
 
-  const mergeReviewCounts = useMemo(() => (product: ReturnType<typeof transformProduct>) => {
-    const fetchedCount = reviewCountsById[product.id];
-    if (fetchedCount != null && fetchedCount > 0) {
-      return { ...product, review_count: fetchedCount, reviews_count: fetchedCount };
-    }
-    return product;
-  }, [reviewCountsById]);
-
   const newProducts = useMemo(
-    () => (safeAccueil.new_product || []).slice(0, 8).map(transformProduct).map(mergeReviewCounts),
-    [safeAccueil.new_product, transformProduct, mergeReviewCounts]
+    () => (safeAccueil.new_product || []).slice(0, 8).map(transformProduct),
+    [safeAccueil.new_product, transformProduct]
   );
   const bestSellers = useMemo(
-    () => (safeAccueil.best_sellers || []).slice(0, 4).map(transformProduct).map(mergeReviewCounts),
-    [safeAccueil.best_sellers, transformProduct, mergeReviewCounts]
+    () => (safeAccueil.best_sellers || []).slice(0, 4).map(transformProduct),
+    [safeAccueil.best_sellers, transformProduct]
   );
   const packs = useMemo(
-    () => (safeAccueil.packs || []).slice(0, 4).map(transformProduct).map(mergeReviewCounts),
-    [safeAccueil.packs, transformProduct, mergeReviewCounts]
+    () => (safeAccueil.packs || []).slice(0, 4).map(transformProduct),
+    [safeAccueil.packs, transformProduct]
   );
   // Ventes flash: only products with promo + future promo_expiration_date (match backend logic)
   const flashSales = useMemo(() => {
@@ -175,8 +132,8 @@ export function HomePageClient({ accueil, slides }: HomePageClientProps) {
       const exp = new Date(p.promo_expiration_date);
       return !isNaN(exp.getTime()) && exp.getTime() > now.getTime();
     });
-    return valid.map(transformProduct).map(mergeReviewCounts);
-  }, [safeAccueil.ventes_flash, transformProduct, mergeReviewCounts]);
+    return valid.map(transformProduct);
+  }, [safeAccueil.ventes_flash, transformProduct]);
 
   return (
     <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-white dark:bg-gray-950">

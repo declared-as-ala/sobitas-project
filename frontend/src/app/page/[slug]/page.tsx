@@ -27,13 +27,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       description:
         page.meta_description ??
         page.excerpt ??
-        `Découvrez ${page.title} sur SOBITAS - Protéine Tunisie`,
+        `Découvrez ${page.title} sur Proteine Tunisie`,
       keywords: page.meta_keywords ?? undefined,
     };
   } catch {
     return {
-      title: 'Page | SOBITAS',
-      description: 'Découvrez notre page sur SOBITAS - Protéine Tunisie',
+      title: 'Page | Proteine Tunisie',
+      description: 'Découvrez notre page sur Proteine Tunisie',
     };
   }
 }

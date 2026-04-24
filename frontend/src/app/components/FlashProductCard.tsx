@@ -6,7 +6,7 @@ import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { motion } from 'motion/react';
 import { ShoppingCart } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
-import { getStorageUrl, isStorageImageUrl } from '@/services/api';
+import { getStorageUrl } from '@/services/api';
 import { useCart } from '@/app/contexts/CartContext';
 import { toast } from 'sonner';
 import { getPriceDisplay } from '@/util/productPrice';
@@ -129,7 +129,6 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
               loading="lazy"
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
               quality={75}
-              unoptimized={isStorageImageUrl(productData.image)}
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 target.style.display = 'none';

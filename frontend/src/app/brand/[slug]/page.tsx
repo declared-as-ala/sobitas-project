@@ -38,12 +38,12 @@ export async function generateMetadata({ params }: BrandPageProps): Promise<Meta
 
     if (!brand) {
       return {
-        title: 'Marque non trouvée | SOBITAS',
+        title: 'Marque non trouvée | Proteine Tunisie',
         description: 'La marque demandée n\'existe pas.',
       };
     }
 
-    const title = `${brand.designation_fr} - Protéines & Compléments Tunisie | SOBITAS`;
+    const title = `${brand.designation_fr} - Protéines & Compléments Tunisie | Proteine Tunisie`;
     const description = `Découvrez tous les produits ${brand.designation_fr} en Tunisie. Qualité premium, livraison rapide.`;
 
     return {
@@ -61,7 +61,7 @@ export async function generateMetadata({ params }: BrandPageProps): Promise<Meta
     };
   } catch (error) {
     return {
-      title: 'Marque | SOBITAS',
+      title: 'Marque | Proteine Tunisie',
       description: 'Découvrez nos produits par marque.',
     };
   }

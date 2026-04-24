@@ -6,7 +6,7 @@ import { ArrowRight } from 'lucide-react';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import Image from 'next/image';
 import type { Category } from '@/types';
-import { getStorageUrl, isStorageImageUrl } from '@/services/api';
+import { getStorageUrl } from '@/services/api';
 
 // Placeholder when category has no cover or image fails (404/504) – sports/fitness themed
 const CATEGORY_PLACEHOLDER_SVG =
@@ -56,7 +56,6 @@ function CategoryCard({ category }: { category: Category }) {
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 33vw"
               loading="lazy"
               quality={70}
-              unoptimized={isStorageImageUrl(imageUrl)}
               onError={() => setImageError(true)}
             />
           ) : (

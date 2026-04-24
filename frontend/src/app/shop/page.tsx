@@ -15,7 +15,7 @@ export async function generateMetadata(props: { searchParams?: ShopSearchParams 
   const { prev, next } = getPrevNext(path, search, pageNum, totalPages);
 
   return {
-    title: 'Boutique Protéines & Compléments Alimentaires Tunisie | SOBITAS',
+    title: 'Boutique Protéines & Compléments Alimentaires Tunisie | Proteine Tunisie',
     description: 'Découvrez nos protéines, créatine, gainer et BCAA en Tunisie. Large choix, livraison rapide. Filtrez par marque et catégorie.',
     alternates: {
       canonical,

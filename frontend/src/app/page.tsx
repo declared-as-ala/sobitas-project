@@ -8,9 +8,9 @@ import type { AccueilData } from '@/types';
 
 export async function generateMetadata(): Promise<Metadata> {
   const canonical = buildCanonicalUrl('/');
-  const title = 'Protéine Tunisie | Whey, Créatine & Compléments – SOBITAS';
+  const title = 'Proteine Tunisie | Whey, Créatine & Compléments Alimentaires';
   const description =
-    'Protéine Tunisie : whey protein, créatine et compléments alimentaires. Livraison rapide à Sousse, Tunis, Sfax et partout en Tunisie avec SOBITAS sur Protein.tn.';
+    'Proteine Tunisie : whey protein, créatine et compléments alimentaires. Livraison rapide à Sousse, Tunis, Sfax et partout en Tunisie sur Protein.tn.';
 
   return {
     title,

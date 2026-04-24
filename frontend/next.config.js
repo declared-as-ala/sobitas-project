@@ -30,6 +30,9 @@ const nextConfig = {
       { protocol: 'http', hostname: 'localhost' },
       { protocol: 'http', hostname: '127.0.0.1' },
     ],
+    deviceSizes: [640, 750, 828, 1080, 1200],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    minimumCacheTTL: 2592000, // 30 days
     qualities: [25, 50, 70, 75, 80, 85, 90, 95, 100],
   },
   compress: true,
@@ -86,6 +89,14 @@ const nextConfig = {
       {
         source: '/manifest.json',
         headers: [{ key: 'Cache-Control', value: 'public, max-age=3600' }],
+      },
+      {
+        source: '/storage-proxy/:path*',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=2592000, stale-while-revalidate=86400' }],
+      },
+      {
+        source: '/api-proxy/accueil',
+        headers: [{ key: 'Cache-Control', value: 'public, s-maxage=300, stale-while-revalidate=600' }],
       },
     ];
   },

@@ -17,7 +17,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 
   try {
     const data = await getArticlesByBlogCategory(slug, page, 9);
-    const title = data.category.seo?.title || `Blog catégorie ${data.category.name} | SOBITAS`;
+    const title = data.category.seo?.title || `Blog catégorie ${data.category.name} | Proteine Tunisie`;
     const description = data.category.seo?.description || `Articles de blog dans la catégorie ${data.category.name}.`;
     const canonical = data.category.seo?.canonical_url || buildCanonicalUrl(`/blog/category/${data.category.slug}${page > 1 ? `?page=${page}` : ''}`);
     return {
@@ -30,7 +30,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
       },
     };
   } catch {
-    return { title: 'Catégorie blog | SOBITAS' };
+    return { title: 'Catégorie blog | Proteine Tunisie' };
   }
 }
 

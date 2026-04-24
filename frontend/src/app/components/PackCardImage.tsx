@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { ShoppingCart } from 'lucide-react';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
-import { isStorageImageUrl } from '@/services/api';
+
 import { cn } from '@/app/components/ui/utils';
 import type { ProductImageMode } from '@/util/productImagePresentation';
 
@@ -71,7 +71,6 @@ export function PackCardImage({
             loading="lazy"
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
             quality={85}
-            unoptimized={isStorageImageUrl(imageSrc)}
             onError={() => setHasError(true)}
           />
         ) : (

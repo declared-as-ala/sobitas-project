@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
         .replace(/\s+/g, ' ')
         .trim()
         .slice(0, 160)
-      || `Achetez ${product.designation_fr} en Tunisie – SOBITAS, protéines et compléments.`;
+      || `Achetez ${product.designation_fr} en Tunisie – Proteine Tunisie, protéines et compléments.`;
     const canonical = product.slug?.trim() ? buildCanonicalUrl(`/shop/${product.slug.trim()}`) : undefined;
 
     return {
@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
     };
   } catch (error) {
     return {
-      title: 'Produit | SOBITAS Tunisie',
+      title: 'Produit | Proteine Tunisie',
       description: 'Protéines, whey, créatine et compléments alimentaires en Tunisie.',
       robots: { index: false, follow: true },
     };
