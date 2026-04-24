@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, memo, useMemo } from 'react';
+import React, { useState, useEffect, useLayoutEffect, memo, useMemo } from 'react';
 import type { TouchEvent } from 'react';
 import Image from 'next/image';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -56,7 +56,9 @@ const SlideImage = memo(({
     );
   }
 
-  // First slide - critical for LCP; quality 75 saves ~9 KiB and improves LCP on mobile
+  // First slide - critical for LCP
+  // sizes="100vw" ensures Next.js picks the smallest breakpoint that covers the viewport:
+  // on a 360px mobile it will serve the w=384 or w=640 optimized image (~50-120 KB AVIF).
   return (
     <Image
       src={src}
@@ -65,18 +67,22 @@ const SlideImage = memo(({
       priority
       fetchPriority="high"
       className={className || imageClass}
-      sizes="(max-width: 768px) 100vw, 100vw"
+      sizes="100vw"
       quality={75}
     />
   );
 });
 SlideImage.displayName = 'SlideImage';
 
-// Hook: true when viewport is mobile (< MOBILE_BREAKPOINT_PX)
+// useLayoutEffect fires synchronously before the browser paints — use it instead of useEffect
+// so that mobile devices switch to mobile slides before the first paint, preventing the desktop
+// hero image from becoming the LCP element on mobile.
+const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
+
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
 
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT_PX - 1}px)`);
     const update = () => setIsMobile(mql.matches);
     update();
@@ -202,7 +208,7 @@ export const HeroSlider = memo(function HeroSlider({ slides }: HeroSliderProps) 
 
   return (
     <section 
-      className="relative w-full overflow-hidden bg-gray-900 min-h-[100dvh] h-[100dvh] sm:h-[70vh] sm:min-h-0 md:h-[80vh] md:min-h-[420px] lg:h-[520px] xl:h-[600px] 2xl:h-[680px]"
+      className="relative w-full overflow-hidden bg-gray-900 h-[85dvh] min-h-[480px] sm:h-[70vh] sm:min-h-0 md:h-[80vh] md:min-h-[420px] lg:h-[520px] xl:h-[600px] 2xl:h-[680px]"
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
@@ -211,7 +217,7 @@ export const HeroSlider = memo(function HeroSlider({ slides }: HeroSliderProps) 
       <div 
         key={currentSlide}
         className="absolute inset-0 transition-opacity duration-300 ease-in-out"
-        style={{ willChange: 'opacity' }}
+        style={{}}
       >
         <SlideImage
           src={currentSlideData.image}

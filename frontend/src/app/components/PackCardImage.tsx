@@ -41,7 +41,7 @@ export function PackCardImage({
   );
 
   const imageClasses = cn(
-    'transition-transform duration-300 ease-out will-change-transform',
+    'transition-transform duration-300 ease-out',
     isContain
       ? 'object-contain object-center [@media(hover:hover)]:group-hover:scale-[1.02]'
       : 'object-cover [@media(hover:hover)]:group-hover:scale-[1.06]'

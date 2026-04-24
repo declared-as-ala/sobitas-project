@@ -74,25 +74,49 @@ async function getHomeData(): Promise<{ accueil: AccueilData; slides: any[] }> {
   return { accueil: emptyAccueil, slides: [] };
 }
 
-/** First LCP candidate: hero image. Preload so the browser discovers it earlier. */
-function getFirstSlideImageUrl(slides: any[]): string | null {
-  if (!slides?.length) return null;
+function getSlidePath(slide: any): string | null {
+  if (!slide) return null;
+  const p = slide.cover || slide.image || slide.image_path || slide.url;
+  return p ? getStorageUrl(p) : null;
+}
+
+function getFirstSlideByType(slides: any[], type: 'mobile' | 'web'): string | null {
+  const filtered = slides.filter((s: any) => s && (s.cover || s.image || s.image_path || s.url) && (s.type || '').toLowerCase() === type);
+  const sorted = [...filtered].sort((a: any, b: any) => (a.ordre ?? a.order ?? 0) - (b.ordre ?? b.order ?? 0));
+  return getSlidePath(sorted[0] ?? null);
+}
+
+function getFirstSlideAnyType(slides: any[]): string | null {
   const withImage = slides.filter((s: any) => s && (s.cover || s.image || s.image_path || s.url));
   const sorted = [...withImage].sort((a: any, b: any) => (a.ordre ?? a.order ?? 0) - (b.ordre ?? b.order ?? 0));
-  const first = sorted[0] || withImage[0];
-  if (!first) return null;
-  const path = first.cover || first.image || first.image_path || first.url;
-  return path ? getStorageUrl(path) : null;
+  return getSlidePath(sorted[0] ?? null);
 }
 
 export default async function Home() {
   const { accueil, slides } = await getHomeData();
-  const firstHeroImageUrl = getFirstSlideImageUrl(slides);
+
+  // Preload the LCP hero image via Next.js optimization endpoint (not the raw storage URL).
+  // Use media queries so mobile downloads the mobile slide and desktop downloads the desktop slide.
+  // This fixes the root cause of LCP 7.7s on mobile: previously the raw 1.5 MB desktop image was
+  // being preloaded on all devices, saturating the Slow-4G connection before any JS ran.
+  const mobileFirstUrl = getFirstSlideByType(slides, 'mobile') ?? getFirstSlideAnyType(slides);
+  const desktopFirstUrl = getFirstSlideByType(slides, 'web') ?? getFirstSlideAnyType(slides);
+
+  const mobilePreload = mobileFirstUrl
+    ? `/_next/image?url=${encodeURIComponent(mobileFirstUrl)}&w=828&q=75`
+    : null;
+  const desktopPreload = desktopFirstUrl
+    ? `/_next/image?url=${encodeURIComponent(desktopFirstUrl)}&w=1920&q=75`
+    : null;
 
   return (
     <>
-      {firstHeroImageUrl && (
-        <link rel="preload" as="image" href={firstHeroImageUrl} fetchPriority="high" />
+      {/* Mobile: preload small optimized hero; Desktop: preload desktop hero */}
+      {mobilePreload && (
+        <link rel="preload" as="image" href={mobilePreload} media="(max-width: 767px)" fetchPriority="high" />
+      )}
+      {desktopPreload && (
+        <link rel="preload" as="image" href={desktopPreload} media="(min-width: 768px)" fetchPriority="high" />
       )}
       <HomePageClient accueil={accueil} slides={slides} />
     </>

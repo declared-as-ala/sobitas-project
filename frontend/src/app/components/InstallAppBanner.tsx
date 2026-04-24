@@ -127,7 +127,7 @@ export function InstallAppBanner() {
       >
         {/* App icon */}
         <div className="relative h-11 w-11 shrink-0 rounded-xl overflow-hidden border border-gray-100 dark:border-gray-700 shadow">
-          <Image src="/favicon-192x192.png" alt="Protein.tn" fill className="object-cover" unoptimized />
+          <Image src="/favicon-32x32.png" alt="Protein.tn" fill className="object-cover" />
         </div>
 
         {/* Labels */}
@@ -175,7 +175,7 @@ export function InstallAppBanner() {
             <div className="mb-5 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="relative h-10 w-10 overflow-hidden rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
-                  <Image src="/favicon-192x192.png" alt="Protein.tn" fill className="object-cover" unoptimized />
+                  <Image src="/favicon-32x32.png" alt="Protein.tn" fill className="object-cover" />
                 </div>
                 <div>
                   <p className="text-sm font-bold text-gray-900 dark:text-white">Protein.tn</p>
