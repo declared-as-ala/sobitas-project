@@ -12,6 +12,8 @@ use App\Models\CouponRedemption;
 use App\Models\Product;
 use App\Services\ClientService;
 use App\Services\CouponService;
+use App\Services\LoyaltyService;
+use App\Services\PartnerCommissionService;
 use App\Services\SmsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -43,15 +45,18 @@ class CommandeController extends Controller
             'panier.*.produit_id'    => ['required', 'integer', 'exists:products,id'],
             'panier.*.quantite'      => ['required', 'integer', 'min:1'],
             'panier.*.prix_unitaire' => ['nullable', 'numeric', 'min:0'], // CRIT-03: ignored; server uses DB price
-            'coupon_code'       => ['nullable', 'string', 'max:64'],
+            'coupon_code'            => ['nullable', 'string', 'max:64'],
+            'loyalty_points_redeem'  => ['nullable', 'integer', 'min:0'],
         ]);
 
         $commandeData = $request->commande;
 
         Log::info('filament.api.add_commande.start', ['payload_keys' => array_keys($commandeData ?? [])]);
 
-        $couponService = app(CouponService::class);
-        $new_facture = DB::transaction(function () use ($commandeData, $request, $couponService) {
+        $couponService   = app(CouponService::class);
+        $loyaltyService  = app(LoyaltyService::class);
+        $partnerService  = app(PartnerCommissionService::class);
+        $new_facture = DB::transaction(function () use ($commandeData, $request, $couponService, $loyaltyService, $partnerService) {
             $new_facture = new Commande();
 
             // Use livraison fields as primary source, fallback to billing fields
@@ -208,6 +213,32 @@ class CommandeController extends Controller
                 $redemption->discount_amount_ht = $discount_ht;
                 $redemption->discount_amount_ttc = $discount_ttc;
                 $redemption->save();
+
+                // Attach partner from coupon if applicable
+                if (Schema::hasColumn($new_facture->getTable(), 'partner_id')) {
+                    $partnerService->attachPartnerToOrder($new_facture);
+                }
+            }
+
+            // ── Loyalty points redemption ─────────────────────────────────────────
+            $pointsToRedeem = (int) ($request->input('loyalty_points_redeem', 0));
+            if ($pointsToRedeem > 0 && Schema::hasColumn($new_facture->getTable(), 'loyalty_points_redeemed')) {
+                $clientId = $new_facture->client_id ?? $new_facture->user_id;
+                if ($clientId) {
+                    $validation = $loyaltyService->validateRedemption(
+                        (int) $clientId,
+                        $all_price_ht - $discount_ht,
+                        $pointsToRedeem
+                    );
+                    if ($validation['valid']) {
+                        $loyaltyDiscount = $validation['discount'];
+                        $new_facture->loyalty_points_redeemed = $validation['points'];
+                        $new_facture->loyalty_discount        = $loyaltyDiscount;
+                        // Reduce prix_ttc by loyalty discount
+                        $new_facture->prix_ttc = max(0, $new_facture->prix_ttc - $loyaltyDiscount);
+                        $new_facture->save();
+                    }
+                }
             }
 
             return $new_facture;

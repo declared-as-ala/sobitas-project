@@ -69,6 +69,16 @@ class Client extends Model
 
     // ── Accessors ──────────────────────────────────────
 
+    public function loyaltyCard(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(LoyaltyCard::class);
+    }
+
+    public function loyaltyTransactions(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(LoyaltyPointTransaction::class);
+    }
+
     public function getFullNameAttribute(): string
     {
         return $this->name ?? $this->email ?? "Client #{$this->id}";

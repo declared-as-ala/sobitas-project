@@ -44,7 +44,18 @@ class User extends Authenticatable implements FilamentUser
 
     public function canAccessPanel(Panel $panel): bool
     {
+        if ($panel->getId() === 'partner') {
+            return \App\Models\Partner::where('user_id', $this->id)
+                ->where('status', 'active')
+                ->exists();
+        }
+
         return in_array((int) ($this->role_id ?? 0), [1, 3], true);
+    }
+
+    public function partner(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(\App\Models\Partner::class);
     }
 
     /**

@@ -25,6 +25,7 @@ import { ChevronDown, ChevronUp, Phone, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/app/components/ui/dialog';
 import { CheckoutFooterCTA } from '@/app/checkout/CheckoutFooterCTA';
+import { LoyaltyRedemption } from '@/app/checkout/LoyaltyRedemption';
 import { useKeyboardOpen } from '@/hooks/useKeyboardOpen';
 
 const FREE_SHIPPING_THRESHOLD = 300;
@@ -54,6 +55,10 @@ export default function CheckoutPage() {
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   const [couponMessage, setCouponMessage] = useState<string | null>(null);
   const [couponMessageType, setCouponMessageType] = useState<'success' | 'error' | null>(null);
+
+  // Loyalty points
+  const [loyaltyPointsRedeemed, setLoyaltyPointsRedeemed] = useState(0);
+  const [loyaltyDiscount, setLoyaltyDiscount] = useState(0);
 
   // Single address (livraison) selector state
   const [gouvernorat, setGouvernorat] = useState('');
@@ -149,9 +154,9 @@ export default function CheckoutPage() {
     [totalPrice]
   );
   const finalTotal = useMemo(() => {
-    if (appliedCoupon?.totals) return appliedCoupon.totals.total_ttc;
-    return totalPrice + shippingCost;
-  }, [totalPrice, shippingCost, appliedCoupon]);
+    const base = appliedCoupon?.totals ? appliedCoupon.totals.total_ttc : totalPrice + shippingCost;
+    return Math.max(0, base - loyaltyDiscount);
+  }, [totalPrice, shippingCost, appliedCoupon, loyaltyDiscount]);
 
   // Memoized handler to prevent unnecessary re-renders
   // Using a stable reference to avoid recreating the function on every render
@@ -308,6 +313,7 @@ export default function CheckoutPage() {
         })),
         user_id: user?.id,
         coupon_code: appliedCoupon?.code,
+        loyalty_points_redeem: loyaltyPointsRedeemed > 0 ? loyaltyPointsRedeemed : undefined,
       });
 
       const response = await createOrder(orderPayload);
@@ -1187,6 +1193,24 @@ export default function CheckoutPage() {
                     )}
                   </section>
 
+                  {/* Loyalty Redemption */}
+                  {isAuthenticated && (
+                    <section className="mt-2">
+                      <LoyaltyRedemption
+                        subtotal={getTotalPrice() - (appliedCoupon?.discount_ht ?? 0)}
+                        redeemedPoints={loyaltyPointsRedeemed}
+                        onRedeem={(points, discount) => {
+                          setLoyaltyPointsRedeemed(points);
+                          setLoyaltyDiscount(discount);
+                        }}
+                        onRemove={() => {
+                          setLoyaltyPointsRedeemed(0);
+                          setLoyaltyDiscount(0);
+                        }}
+                      />
+                    </section>
+                  )}
+
                   {/* Summary */}
                   <div className="border-t border-gray-200 dark:border-gray-800 pt-4 space-y-3">
                     <div className="flex justify-between items-center">
@@ -1198,6 +1222,14 @@ export default function CheckoutPage() {
                         <span className="text-gray-600 dark:text-gray-400">Remise ({appliedCoupon.code})</span>
                         <span className="font-semibold text-green-600 dark:text-green-400">
                           -{appliedCoupon.discount_ttc.toFixed(2)} DT
+                        </span>
+                      </div>
+                    )}
+                    {loyaltyDiscount > 0 && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600 dark:text-gray-400">Points fidélité ({loyaltyPointsRedeemed} pts)</span>
+                        <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                          -{loyaltyDiscount.toFixed(3)} DT
                         </span>
                       </div>
                     )}

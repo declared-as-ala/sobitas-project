@@ -45,6 +45,8 @@ export interface BackendOrderPayload {
   m_remise?: number;
   /** Code promo (validé côté client via /coupons/apply); re-validé côté serveur */
   coupon_code?: string;
+  /** Points de fidélité à utiliser (optionnel, validé côté serveur) */
+  loyalty_points_redeem?: number;
 }
 
 /**
@@ -69,10 +71,10 @@ export function buildBackendOrderPayload(params: {
   panier: Array<{ produit_id: number; quantite: number; prix_unitaire: number }>;
   user_id?: number;
   m_remise?: number;
-  /** Code promo appliqué côté client (optionnel). */
   coupon_code?: string;
+  loyalty_points_redeem?: number;
 }): BackendOrderPayload {
-  const { livraison, panier, user_id, m_remise, coupon_code } = params;
+  const { livraison, panier, user_id, m_remise, coupon_code, loyalty_points_redeem } = params;
   const commande: BackendCommandeFields = {
     livraison_nom: livraison.livraison_nom,
     livraison_prenom: livraison.livraison_prenom,
@@ -112,6 +114,9 @@ export function buildBackendOrderPayload(params: {
   }
   if (coupon_code != null && coupon_code.trim() !== '') {
     payload.coupon_code = coupon_code.trim();
+  }
+  if (loyalty_points_redeem != null && loyalty_points_redeem > 0) {
+    payload.loyalty_points_redeem = loyalty_points_redeem;
   }
   return payload;
 }

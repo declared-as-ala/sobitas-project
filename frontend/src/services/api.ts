@@ -1025,4 +1025,29 @@ export const getRedirections = async (): Promise<any[]> => {
   return response.data;
 };
 
+// ── Loyalty ────────────────────────────────────────────────────────────────
+
+import type { LoyaltyCardData, LoyaltyTransactionsData, RedemptionValidation } from '@/types/loyalty';
+
+export const getLoyaltyCard = async (): Promise<LoyaltyCardData> => {
+  const response = await api.get<LoyaltyCardData>('/loyalty/card');
+  return response.data;
+};
+
+export const getLoyaltyTransactions = async (): Promise<LoyaltyTransactionsData> => {
+  const response = await api.get<LoyaltyTransactionsData>('/loyalty/transactions');
+  return response.data;
+};
+
+export const validateLoyaltyRedemption = async (
+  points: number,
+  subtotal: number
+): Promise<RedemptionValidation> => {
+  const response = await api.post<RedemptionValidation>('/loyalty/validate-redemption', {
+    points,
+    subtotal,
+  });
+  return response.data;
+};
+
 export default api;

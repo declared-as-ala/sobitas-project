@@ -246,6 +246,7 @@ return [
         App\Providers\BroadcastServiceProvider::class,
         EventServiceProvider::class,
         AdminPanelProvider::class,
+        App\Providers\Filament\PartnerPanelProvider::class,
         RouteServiceProvider::class,
 
     ],

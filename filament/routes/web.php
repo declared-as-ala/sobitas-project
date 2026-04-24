@@ -40,6 +40,11 @@ Route::get('unsubscribe', function () {
 
 Route::redirect('login-redirect', 'login')->name('login');
 
+// QR code image — public but token-secured (no auth required, no sensitive data)
+Route::get('loyalty/qr/{token}', [\App\Http\Controllers\Api\LoyaltyController::class, 'qrImage'])
+    ->name('loyalty.qr')
+    ->where('token', '[a-zA-Z0-9]+');
+
 Route::middleware(['auth', 'no.cache.print'])->group(function () {
     Route::get('factures/{facture}/print', function (Facture $facture) {
         $facture->load('client');
@@ -316,6 +321,16 @@ Route::middleware(['auth'])->group(function () {
             'code_postale' => $c->code_postale
         ])]);
     })->name('api.pos-clients');
+
+    // ── Loyalty card print (admin-only) ──────────────────
+    Route::get('loyalty/cards/{card}/print', function (\App\Models\LoyaltyCard $card) {
+        $card->load('client');
+        $coordonnee = \App\Models\Coordinate::getCached();
+        $loyaltyService = app(\App\Services\LoyaltyService::class);
+        $points = $loyaltyService->getBalance($card->client_id);
+        $value  = $loyaltyService->getMonetaryValue($card->client_id);
+        return view('print.loyalty-card', compact('card', 'coordonnee', 'points', 'value'));
+    })->name('loyalty.card.print');
 
     Route::post('/api/pos-clients', function() {
         $data = request()->validate([
