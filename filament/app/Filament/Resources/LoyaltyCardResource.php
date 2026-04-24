@@ -36,7 +36,35 @@ class LoyaltyCardResource extends Resource
                 ->schema([
                     Forms\Components\Select::make('client_id')
                         ->label('Client')
-                        ->options(Client::orderBy('name')->pluck('name', 'id'))
+                        ->options(
+                            Client::query()
+                                ->orderBy('name')
+                                ->orderBy('id')
+                                ->get()
+                                ->mapWithKeys(fn (Client $c): array => [$c->id => $c->full_name])
+                                ->all()
+                        )
+                        ->getSearchResultsUsing(function (string $search): array {
+                            return Client::query()
+                                ->where(function (Builder $q) use ($search) {
+                                    $q->where('name', 'like', "%{$search}%")
+                                        ->orWhere('email', 'like', "%{$search}%")
+                                        ->orWhere('phone_1', 'like', "%{$search}%")
+                                        ->orWhere('id', $search);
+                                })
+                                ->orderBy('name')
+                                ->limit(50)
+                                ->get()
+                                ->mapWithKeys(fn (Client $c): array => [$c->id => $c->full_name])
+                                ->all();
+                        })
+                        ->getOptionLabelUsing(function ($value): string {
+                            if ($value === null || $value === '') {
+                                return '';
+                            }
+
+                            return Client::find($value)?->full_name ?? 'Client #' . $value;
+                        })
                         ->required()
                         ->searchable(),
                     Forms\Components\TextInput::make('card_number')
