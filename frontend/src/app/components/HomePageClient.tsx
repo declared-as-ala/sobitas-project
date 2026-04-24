@@ -7,6 +7,7 @@ import { HeroSlider } from '@/app/components/HeroSlider';
 
 import type { AccueilData, Product } from '@/types';
 import { getStorageUrl } from '@/services/api';
+import type { HeroFirstSlide } from '@/app/page';
 
 // Defer header and topbar - they're not critical for LCP but keep SSR for SEO
 const Header = dynamic(() => import('@/app/components/Header').then(mod => ({ default: mod.Header })), {
@@ -54,9 +55,11 @@ const ScrollToTop = dynamic(() => import('@/app/components/ScrollToTop').then(mo
 interface HomePageClientProps {
   accueil: AccueilData | null | undefined;
   slides: any[];
+  heroMobileFirst?: HeroFirstSlide;
+  heroDesktopFirst?: HeroFirstSlide;
 }
 
-export function HomePageClient({ accueil, slides }: HomePageClientProps) {
+export function HomePageClient({ accueil, slides, heroMobileFirst, heroDesktopFirst }: HomePageClientProps) {
   // Provide default empty structure if accueil is undefined/null
   const safeAccueil: AccueilData = accueil || {
     categories: [],
@@ -141,7 +144,7 @@ export function HomePageClient({ accueil, slides }: HomePageClientProps) {
 
       <main>
         {/* Above the fold - Critical content - Hero must render first */}
-        <HeroSlider slides={slides} />
+        <HeroSlider slides={slides} mobileFirst={heroMobileFirst} desktopFirst={heroDesktopFirst} />
         {/* SEO: single visible H1 for main query "proteine tunisie" + internal link creatine */}
         <section className="text-center py-4 px-4 bg-white dark:bg-gray-950" aria-label="Titre principal">
           <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">

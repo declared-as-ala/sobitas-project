@@ -17,9 +17,7 @@ export async function generateMetadata(): Promise<Metadata> {
     description,
     keywords:
       'proteine tunisie, protein tunisie, whey tunisie, whey protein tunisie, créatine tunisie, complément alimentaire tunisie, nutrition sportive tunisie, protéine musculation Tunisie',
-    alternates: {
-      canonical: canonical,
-    },
+    alternates: { canonical },
     openGraph: {
       title,
       description,
@@ -31,15 +29,8 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-// Home is loaded fresh each request (see getHomeData + noStore) so backend deploys don’t cache empty hero/products.
-
-// Preload critical hero image for LCP optimization
 export function generateViewport() {
-  return {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 5,
-  };
+  return { width: 'device-width', initialScale: 1, maximumScale: 5 };
 }
 
 const emptyAccueil: AccueilData = {
@@ -51,14 +42,11 @@ const emptyAccueil: AccueilData = {
   best_sellers: [],
 };
 
-/** Load home payload: no static cache + short retries when API is warming after a deploy. */
 async function getHomeData(): Promise<{ accueil: AccueilData; slides: any[] }> {
   noStore();
   const delays = [0, 600, 1600];
   for (let i = 0; i < delays.length; i++) {
-    if (delays[i]! > 0) {
-      await new Promise((r) => setTimeout(r, delays[i]!));
-    }
+    if (delays[i]! > 0) await new Promise((r) => setTimeout(r, delays[i]!));
     const [accueil, slides] = await Promise.all([getAccueil(), getSlides()]);
     const hasProducts =
       (accueil.new_product?.length ?? 0) > 0 ||
@@ -66,59 +54,98 @@ async function getHomeData(): Promise<{ accueil: AccueilData; slides: any[] }> {
       (accueil.ventes_flash?.length ?? 0) > 0 ||
       (accueil.categories?.length ?? 0) > 0 ||
       (accueil.packs?.length ?? 0) > 0;
-    const hasSlides = (slides?.length ?? 0) > 0;
-    if (hasProducts || hasSlides || i === delays.length - 1) {
-      return { accueil, slides };
-    }
+    if (hasProducts || (slides?.length ?? 0) > 0 || i === delays.length - 1) return { accueil, slides };
   }
   return { accueil: emptyAccueil, slides: [] };
 }
 
-function getSlidePath(slide: any): string | null {
+function getSlideData(slide: any): { imageUrl: string; title: string } | null {
   if (!slide) return null;
   const p = slide.cover || slide.image || slide.image_path || slide.url;
-  return p ? getStorageUrl(p) : null;
+  if (!p) return null;
+  return {
+    imageUrl: getStorageUrl(p),
+    title: slide.titre || slide.title || slide.designation_fr || 'Protéines Premium',
+  };
 }
 
-function getFirstSlideByType(slides: any[], type: 'mobile' | 'web'): string | null {
-  const filtered = slides.filter((s: any) => s && (s.cover || s.image || s.image_path || s.url) && (s.type || '').toLowerCase() === type);
+function getFirstSlideByType(slides: any[], type: 'mobile' | 'web') {
+  const filtered = slides.filter(
+    (s: any) => s && (s.cover || s.image || s.image_path || s.url) && (s.type || '').toLowerCase() === type
+  );
   const sorted = [...filtered].sort((a: any, b: any) => (a.ordre ?? a.order ?? 0) - (b.ordre ?? b.order ?? 0));
-  return getSlidePath(sorted[0] ?? null);
+  return getSlideData(sorted[0] ?? null);
 }
 
-function getFirstSlideAnyType(slides: any[]): string | null {
+function getFirstSlideAnyType(slides: any[]) {
   const withImage = slides.filter((s: any) => s && (s.cover || s.image || s.image_path || s.url));
   const sorted = [...withImage].sort((a: any, b: any) => (a.ordre ?? a.order ?? 0) - (b.ordre ?? b.order ?? 0));
-  return getSlidePath(sorted[0] ?? null);
+  return getSlideData(sorted[0] ?? null);
+}
+
+// Build Next.js image optimization URL
+function nextImgUrl(src: string, w: number, q = 75) {
+  return `/_next/image?url=${encodeURIComponent(src)}&w=${w}&q=${q}`;
+}
+
+// Build srcset string for <link rel="preload" imagesrcset> — browser picks correct width by DPR
+function buildImgSrcSet(src: string, widths: number[], q = 75) {
+  return widths.map((w) => `${nextImgUrl(src, w, q)} ${w}w`).join(', ');
+}
+
+export interface HeroFirstSlide {
+  imageUrl: string;
+  title: string;
 }
 
 export default async function Home() {
   const { accueil, slides } = await getHomeData();
 
-  // Preload the LCP hero image via Next.js optimization endpoint (not the raw storage URL).
-  // Use media queries so mobile downloads the mobile slide and desktop downloads the desktop slide.
-  // This fixes the root cause of LCP 7.7s on mobile: previously the raw 1.5 MB desktop image was
-  // being preloaded on all devices, saturating the Slow-4G connection before any JS ran.
-  const mobileFirstUrl = getFirstSlideByType(slides, 'mobile') ?? getFirstSlideAnyType(slides);
-  const desktopFirstUrl = getFirstSlideByType(slides, 'web') ?? getFirstSlideAnyType(slides);
+  // Pre-compute first slide for mobile and desktop at server time.
+  // These are passed as stable props so HeroSlider can render the first frame
+  // as a native <picture> element in SSR HTML — no JS execution required to
+  // show the hero image. This is the key fix for LCP 6.5s on mobile.
+  const mobileFirst = getFirstSlideByType(slides, 'mobile') ?? getFirstSlideAnyType(slides);
+  const desktopFirst = getFirstSlideByType(slides, 'web') ?? getFirstSlideAnyType(slides);
 
-  const mobilePreload = mobileFirstUrl
-    ? `/_next/image?url=${encodeURIComponent(mobileFirstUrl)}&w=828&q=75`
-    : null;
-  const desktopPreload = desktopFirstUrl
-    ? `/_next/image?url=${encodeURIComponent(desktopFirstUrl)}&w=1920&q=75`
-    : null;
+  // Correct preloads: use imagesrcset so the browser preloads the image at the
+  // right width for its DPR (Moto G Power needs w=1080, not w=828).
+  const mobileSrcSet = mobileFirst ? buildImgSrcSet(mobileFirst.imageUrl, [640, 750, 828, 1080]) : null;
+  const desktopSrcSet = desktopFirst ? buildImgSrcSet(desktopFirst.imageUrl, [1080, 1200]) : null;
 
   return (
     <>
-      {/* Mobile: preload small optimized hero; Desktop: preload desktop hero */}
-      {mobilePreload && (
-        <link rel="preload" as="image" href={mobilePreload} media="(max-width: 767px)" fetchPriority="high" />
+      {/* LCP hero preloads — media-specific so mobile only downloads mobile image */}
+      {mobileSrcSet && mobileFirst && (
+        <link
+          rel="preload"
+          as="image"
+          href={nextImgUrl(mobileFirst.imageUrl, 1080)}
+          // @ts-expect-error — imagesrcset/imagesizes are valid HTML but missing from React types
+          imagesrcset={mobileSrcSet}
+          imagesizes="100vw"
+          media="(max-width: 767px)"
+          fetchPriority="high"
+        />
       )}
-      {desktopPreload && (
-        <link rel="preload" as="image" href={desktopPreload} media="(min-width: 768px)" fetchPriority="high" />
+      {desktopSrcSet && desktopFirst && (
+        <link
+          rel="preload"
+          as="image"
+          href={nextImgUrl(desktopFirst.imageUrl, 1200)}
+          // @ts-expect-error — imagesrcset/imagesizes are valid HTML but missing from React types
+          imagesrcset={desktopSrcSet}
+          imagesizes="100vw"
+          media="(min-width: 768px)"
+          fetchPriority="high"
+        />
       )}
-      <HomePageClient accueil={accueil} slides={slides} />
+      <HomePageClient
+        accueil={accueil}
+        slides={slides}
+        heroMobileFirst={mobileFirst ?? undefined}
+        heroDesktopFirst={desktopFirst ?? undefined}
+      />
     </>
   );
 }

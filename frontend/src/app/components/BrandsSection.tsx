@@ -63,8 +63,7 @@ function BrandCard({ brand, index, onNavigate }: { brand: Brand; index: number; 
                   height={100}
                   className="object-contain max-w-full max-h-full p-1 sm:p-2 group-hover:scale-110 transition-transform duration-300"
                   sizes="(max-width: 640px) 192px, (max-width: 768px) 224px, 256px"
-                  loading={index < 5 ? "eager" : "lazy"}
-                  unoptimized
+                  loading="lazy"
                   onError={() => {
                     console.error('Brand image failed to load:', logoUrl);
                     setImageError(true);
