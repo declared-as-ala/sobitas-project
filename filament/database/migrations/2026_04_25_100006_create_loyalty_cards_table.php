@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('loyalty_cards')) {
+            return;
+        }
+
         Schema::create('loyalty_cards', function (Blueprint $table) {
             $table->id();
             // Use plain reference for compatibility with legacy clients table id type.
