@@ -13,7 +13,7 @@ use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Schema;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Schema as DbSchema;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
@@ -380,7 +380,7 @@ class MediaPage extends Page implements HasForms
         }
 
         $row = null;
-        if (Schema::hasTable('media_library_items')) {
+        if (DbSchema::hasTable('media_library_items')) {
             $row = MediaLibraryItem::query()
                 ->where('disk', $disk)
                 ->where('path', $this->selectedPath)
