@@ -12,7 +12,7 @@ use Illuminate\Contracts\Support\Htmlable;
 
 class ScannerFidelitePage extends Page
 {
-    protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-qr-code';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-qr-code';
 
     protected static ?string $navigationLabel = 'Scanner fidélité';
 

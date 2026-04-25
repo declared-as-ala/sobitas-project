@@ -29,7 +29,9 @@ use App\Models\Service;
 use App\Models\Slide;
 use App\Models\SousCategory;
 use App\Models\Tag;
+use App\Filament\Support\ImagePath;
 use App\Support\CategorySeoEnvelope;
+use App\Support\MediaLibrary\MediaLibraryPayload;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -168,7 +170,91 @@ class ApisController extends Controller
             ->limit(4)
             ->get();
 
+        $this->enrichProductCollectionWithCoverMedia($new_product);
+        $this->enrichProductCollectionWithCoverMedia($packs);
+        $this->enrichProductCollectionWithCoverMedia($ventes_flash);
+        $this->enrichProductCollectionWithCoverMedia($best_sellers);
+        $this->enrichArticleCollectionWithCoverMedia($last_articles);
+
         return compact('new_product', 'packs', 'last_articles', 'ventes_flash', 'best_sellers');
+    }
+
+    private function enrichProductCollectionWithCoverMedia(\Illuminate\Support\Collection $collection): void
+    {
+        if ($collection->isEmpty()) {
+            return;
+        }
+
+        $paths = $collection->pluck('cover')
+            ->map(fn ($p) => ImagePath::normalize($p))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($paths === []) {
+            return;
+        }
+
+        $map = MediaLibraryPayload::forPaths('public', $paths);
+
+        foreach ($collection as $product) {
+            $n = ImagePath::normalize($product->cover);
+            $product->setAttribute('cover_media', $n && isset($map[$n]) ? $map[$n] : null);
+        }
+    }
+
+    private function enrichArticleCollectionWithCoverMedia(\Illuminate\Support\Collection $collection): void
+    {
+        if ($collection->isEmpty()) {
+            return;
+        }
+
+        $paths = $collection->pluck('cover')
+            ->map(fn ($p) => ImagePath::normalize($p))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($paths === []) {
+            return;
+        }
+
+        $map = MediaLibraryPayload::forPaths('public', $paths);
+
+        foreach ($collection as $article) {
+            $n = ImagePath::normalize($article->cover);
+            $article->setAttribute('cover_media', $n && isset($map[$n]) ? $map[$n] : null);
+        }
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, \App\Models\Categ>  $items
+     * @return list<array<string, mixed>>
+     */
+    private function categoriesWithCoverMedia(\Illuminate\Support\Collection $items): array
+    {
+        if ($items->isEmpty()) {
+            return [];
+        }
+
+        $paths = $items->pluck('cover')
+            ->map(fn ($p) => ImagePath::normalize($p))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        $map = $paths === [] ? [] : MediaLibraryPayload::forPaths('public', $paths);
+
+        return $items->map(function (Categ $categ) use ($map): array {
+            $base = $categ->toArray();
+            $n = ImagePath::normalize($categ->cover);
+            $base['cover_media'] = $n && isset($map[$n]) ? $map[$n] : null;
+
+            return $base;
+        })->values()->all();
     }
 
     // ── Endpoints ───────────────────────────────────────
@@ -183,7 +269,7 @@ class ApisController extends Controller
             ->orderBy('id')
             ->paginate($perPage);
 
-        $data['categories'] = $categories->items();
+        $data['categories'] = $this->categoriesWithCoverMedia($categories->getCollection());
         $data['categories_meta'] = $this->paginationMeta($categories);
         $data['categories_links'] = $this->paginationLinks($categories);
 
@@ -204,6 +290,10 @@ class ApisController extends Controller
             ->orderBy('id')
             ->paginate($perPage);
 
+        $categories->setCollection(
+            collect($this->categoriesWithCoverMedia($categories->getCollection()))
+        );
+
         return $this->paginatedResponse($categories);
     }
 
@@ -215,16 +305,28 @@ class ApisController extends Controller
         // Handle both possible column names: titre/title, lien/link
         $slides = Slide::orderBy('id')->paginate($perPage);
 
+        $libraryPaths = $slides->getCollection()
+            ->pluck('image')
+            ->map(fn ($img) => ImagePath::normalize($img))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        $libraryByPath = $libraryPaths === []
+            ? []
+            : MediaLibraryPayload::forPaths('public', $libraryPaths);
+
         // Map response for backward compatibility with frontend
         // Frontend expects: cover, title, link
         // Database may have: image, titre/title, lien/link, type
-        $slides->getCollection()->transform(function ($slide) {
+        $slides->getCollection()->transform(function ($slide) use ($libraryByPath) {
             // Get title - handle both 'titre' and 'title' column names
             $title = $slide->titre ?? $slide->title ?? null;
-            
+
             // Get link - handle both 'lien' and 'link' column names
             $link = $slide->lien ?? $slide->link ?? null;
-            
+
             // Generate image URL - handle both relative paths and full URLs
             $imageUrl = null;
             if ($slide->image) {
@@ -235,12 +337,15 @@ class ApisController extends Controller
                 }
             }
 
+            $norm = ImagePath::normalize($slide->image);
+
             return [
                 'id' => $slide->id,
                 'cover' => $imageUrl,
                 'title' => $title,
                 'link' => $link,
                 'type' => $slide->type ?? 'web',
+                'image_media' => $norm ? ($libraryByPath[$norm] ?? null) : null,
             ];
         });
 

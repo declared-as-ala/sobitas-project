@@ -23,7 +23,7 @@ class MediaPage extends Page implements HasForms
     use InteractsWithForms;
     use WithFileUploads;
 
-    protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-photo';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-photo';
 
     protected static ?string $navigationLabel = 'Média';
 

@@ -2,7 +2,9 @@
 
 namespace App\Http\Resources;
 
+use App\Filament\Support\ImagePath;
 use App\Models\Article;
+use App\Support\MediaLibrary\MediaLibraryPayload;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
@@ -21,7 +23,17 @@ class ArticleDetailResource extends JsonResource
         $seoDescription = $this->effectiveSeoDescription();
         $seoImagePath = $this->og_image ?: $this->twitter_image ?: $this->cover;
 
+        $pathsForLibrary = array_filter([
+            ImagePath::normalize($this->cover),
+            ImagePath::normalize($this->og_image),
+            ImagePath::normalize($this->twitter_image),
+        ]);
+        $libraryByPath = MediaLibraryPayload::forPaths('public', array_values(array_unique($pathsForLibrary)));
+        $coverNorm = ImagePath::normalize($this->cover);
+        $coverMedia = $coverNorm ? ($libraryByPath[$coverNorm] ?? null) : null;
+
         return array_merge($base, [
+            'cover_media' => $coverMedia,
             'seo' => [
                 'title' => $seoTitle,
                 'description' => $seoDescription,
