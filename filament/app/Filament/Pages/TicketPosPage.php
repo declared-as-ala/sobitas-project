@@ -63,7 +63,7 @@ class TicketPosPage extends Page
     public ?Ticket $ticket = null;
 
     // ── Mount ───────────────────────────────────────────────────────────────
-    public function mount(?int $ticketId = null): void
+    public function mount(?int $ticketId = null, ?int $client_id = null): void
     {
         $this->coordonnee = Coordinate::getCached();
         $this->ticketId   = $ticketId;
@@ -87,6 +87,14 @@ class TicketPosPage extends Page
                 'qte'           => (float) $d->qte,
                 'prix_unitaire' => (float) ($d->prix_unitaire ?? 0),
             ])->toArray();
+        }
+
+        // Pre-load client when redirected from Scanner Fidélité page
+        if (! $ticketId && $client_id && $client = Client::find($client_id)) {
+            $this->client_id      = $client->id;
+            $this->client_adresse = $client->adresse ?? '';
+            $this->client_phone   = $client->phone_1 ?? '';
+            $this->loadClientLoyalty($client);
         }
 
         if (empty($this->lines)) {
@@ -114,22 +122,23 @@ class TicketPosPage extends Page
     {
         $card = $client->activeCard;
 
-        if (!$card) {
+        if (! $card) {
             $this->clearLoyalty();
             return;
         }
 
         $svc = app(LoyaltyService::class);
 
-        $this->loyalty_card_id      = $card->id;
-        $this->loyalty_card_number  = $card->card_number;
-        $this->loyalty_balance      = $client->loyalty_points_balance;
-        $this->loyalty_balance_dt   = number_format($svc->pointsToDiscount($client->loyalty_points_balance), 3, '.', ' ');
-        $this->loyalty_redeem_input = 0;
-        $this->loyalty_redeem_dt    = '0.000';
+        $this->loyalty_card_id       = $card->id;
+        $this->loyalty_card_number   = $card->card_number;
+        $this->loyalty_balance       = $client->loyalty_points_balance;
+        $this->loyalty_balance_dt    = number_format($svc->pointsToDiscount($client->loyalty_points_balance), 3, '.', ' ');
+        $this->loyalty_redeem_input  = 0;
+        $this->loyalty_redeem_dt     = '0.000';
         $this->loyalty_panel_visible = true;
 
         $this->recalcLoyaltyEarn();
+        $this->dispatchLoyaltyState();
     }
 
     protected function recalcLoyaltyEarn(): void
@@ -153,6 +162,7 @@ class TicketPosPage extends Page
         $this->loyalty_points_earn    = 0;
         $this->loyalty_points_earn_dt = '0.000';
         $this->loyalty_panel_visible  = false;
+        $this->dispatchLoyaltyState();
     }
 
     public function updatedLoyaltyRedeemInput(): void
@@ -160,13 +170,11 @@ class TicketPosPage extends Page
         $svc    = app(LoyaltyService::class);
         $points = max(0, (int) $this->loyalty_redeem_input);
 
-        // Cap to available balance
         if ($points > $this->loyalty_balance) {
             $points = $this->loyalty_balance;
             $this->loyalty_redeem_input = $points;
         }
 
-        // Cap to ticket value
         $maxFromTicket = (int) floor($this->prix_ttc * LoyaltyService::POINTS_PER_DT_VALUE);
         if ($points > $maxFromTicket) {
             $points = $maxFromTicket;
@@ -175,11 +183,12 @@ class TicketPosPage extends Page
 
         $this->loyalty_redeem_dt = number_format($svc->pointsToDiscount($points), 3, '.', ' ');
         $this->recalcLoyaltyEarn();
+        $this->dispatchLoyaltyState();
     }
 
     public function setMaxRedeem(): void
     {
-        $svc           = app(LoyaltyService::class);
+        $svc            = app(LoyaltyService::class);
         $maxFromBalance = $this->loyalty_balance;
         $maxFromTicket  = (int) floor($this->prix_ttc * LoyaltyService::POINTS_PER_DT_VALUE);
         $max            = min($maxFromBalance, $maxFromTicket);
@@ -187,6 +196,41 @@ class TicketPosPage extends Page
         $this->loyalty_redeem_input = $max;
         $this->loyalty_redeem_dt    = number_format($svc->pointsToDiscount($max), 3, '.', ' ');
         $this->recalcLoyaltyEarn();
+        $this->dispatchLoyaltyState();
+    }
+
+    // ── Dispatch loyalty state to JS (used because outer div is wire:ignore) ────
+    protected function dispatchLoyaltyState(): void
+    {
+        $this->dispatch('loyalty-state-updated', [
+            'panel_visible' => $this->loyalty_panel_visible,
+            'card_number'   => $this->loyalty_card_number,
+            'card_id'       => $this->loyalty_card_id,
+            'balance'       => $this->loyalty_balance,
+            'balance_dt'    => $this->loyalty_balance_dt,
+            'redeem_input'  => $this->loyalty_redeem_input,
+            'redeem_dt'     => $this->loyalty_redeem_dt,
+            'earn'          => $this->loyalty_points_earn,
+            'earn_dt'       => $this->loyalty_points_earn_dt,
+        ]);
+    }
+
+    // ── Public entry point for loyalty barcode scan from JS ──────────────────
+    public function scanLoyaltyCard(string $code): void
+    {
+        $found = $this->handleLoyaltyScan($code);
+
+        // If a card was matched and a client loaded, also push client fields to JS
+        if ($found && $this->client_id) {
+            $this->dispatch('loyalty-client-synced', [
+                'client_id'      => $this->client_id,
+                'client_name'    => Client::find($this->client_id)?->name ?? '',
+                'client_phone'   => $this->client_phone,
+                'client_adresse' => $this->client_adresse,
+            ]);
+        }
+
+        $this->dispatchLoyaltyState();
     }
 
     protected function handleLoyaltyScan(string $code): bool

@@ -469,49 +469,59 @@
     </div>
 
     {{-- ── LOYALTY PANEL ── --}}
-    <div id="loyalty-panel" style="{{ $loyalty_panel_visible ? '' : 'display:none;' }}
-        background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:16px;margin-bottom:16px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-            <span style="font-weight:700;color:#92400e;font-size:14px;">
-                🎴 Carte Fidélité :
-                <span id="lp-card-number" style="font-family:monospace;">{{ $loyalty_card_number ?? '—' }}</span>
-            </span>
-            <span style="color:#b45309;font-size:13px;">
-                Solde : <strong id="lp-balance">{{ $loyalty_balance }}</strong> pts
-                (= <strong id="lp-balance-dt">{{ $loyalty_balance_dt }}</strong> DT)
-            </span>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">
-            <div>
-                <label style="font-size:12px;font-weight:600;color:#78716c;display:block;margin-bottom:4px;">Points à utiliser (min 100)</label>
-                <div style="display:flex;gap:8px;align-items:center;">
-                    <input type="number"
-                           id="loyalty_redeem_input"
-                           min="0"
-                           step="10"
-                           value="{{ $loyalty_redeem_input }}"
-                           style="width:100px;border:1px solid #d6d3d1;border-radius:6px;padding:6px 10px;font-size:14px;"
-                           oninput="syncLoyaltyRedeem(this.value)"
-                           wire:model.live.debounce.400ms="loyalty_redeem_input" />
-                    <button type="button"
-                            onclick="setMaxLoyaltyRedeem()"
-                            style="background:#f59e0b;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;">
-                        Max
-                    </button>
-                    <span style="color:#dc2626;font-size:13px;">
-                        − <span id="lp-redeem-dt">{{ $loyalty_redeem_dt }}</span> DT
-                    </span>
+    <div id="loyalty-panel" style="{{ $loyalty_panel_visible ? '' : 'display:none;' }}margin-bottom:16px;">
+        <div style="background:#fef9c3;border:1.5px solid #fde047;border-radius:10px;overflow:hidden;">
+
+            {{-- Header --}}
+            <div style="background:#fef08a;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #fde047;flex-wrap:wrap;gap:8px;">
+                <span style="font-weight:700;color:#713f12;font-size:14px;">🎴 Programme Fidélité</span>
+                <span id="lp-card-number" style="font-family:'Courier New',monospace;font-size:13px;color:#92400e;background:#fff;padding:3px 10px;border-radius:5px;border:1px solid #fde047;letter-spacing:1px;">
+                    {{ $loyalty_card_number ?? '—' }}
+                </span>
+            </div>
+
+            {{-- Stats row --}}
+            <div style="padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div style="background:#fff;border:1px solid #fde047;border-radius:8px;padding:10px 14px;text-align:center;">
+                    <div style="font-size:10px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Solde disponible</div>
+                    <div style="font-size:24px;font-weight:900;color:#713f12;line-height:1.1;">
+                        <span id="lp-balance">{{ $loyalty_balance }}</span>
+                        <span style="font-size:13px;font-weight:600;"> pts</span>
+                    </div>
+                    <div style="font-size:12px;color:#b45309;margin-top:2px;">= <span id="lp-balance-dt">{{ $loyalty_balance_dt }}</span> DT</div>
+                </div>
+                <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 14px;text-align:center;">
+                    <div style="font-size:10px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Points à gagner</div>
+                    <div style="font-size:24px;font-weight:900;color:#15803d;line-height:1.1;">
+                        +<span id="lp-earn">{{ $loyalty_points_earn }}</span>
+                        <span style="font-size:13px;font-weight:600;"> pts</span>
+                    </div>
+                    <div style="font-size:12px;color:#16a34a;margin-top:2px;">= +<span id="lp-earn-dt">{{ $loyalty_points_earn_dt }}</span> DT</div>
                 </div>
             </div>
-            <div>
-                <label style="font-size:12px;font-weight:600;color:#78716c;display:block;margin-bottom:4px;">Points à gagner (estimé)</label>
-                <div style="color:#16a34a;font-size:14px;font-weight:600;padding:8px 0;">
-                    + <span id="lp-earn">{{ $loyalty_points_earn }}</span> pts
-                    (= + <span id="lp-earn-dt">{{ $loyalty_points_earn_dt }}</span> DT)
-                </div>
+
+            {{-- Redeem row --}}
+            <div style="padding:0 16px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+                <span style="font-size:12px;font-weight:600;color:#78716c;white-space:nowrap;">Utiliser des pts (min 100) :</span>
+                <input type="number"
+                       id="loyalty_redeem_input"
+                       min="0"
+                       step="10"
+                       value="{{ $loyalty_redeem_input }}"
+                       style="width:90px;border:1px solid #d6d3d1;border-radius:6px;padding:5px 8px;font-size:14px;"
+                       oninput="syncLoyaltyRedeem(this.value)" />
+                <button type="button"
+                        onclick="setMaxLoyaltyRedeem()"
+                        style="background:#f59e0b;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;">
+                    Max
+                </button>
+                <span style="font-size:13px;color:#dc2626;font-weight:600;">
+                    − <span id="lp-redeem-dt">{{ $loyalty_redeem_dt }}</span> DT
+                </span>
             </div>
+
+            <input type="hidden" id="loyalty_card_id_input" value="{{ $loyalty_card_id }}">
         </div>
-        <input type="hidden" id="loyalty_card_id_input" value="{{ $loyalty_card_id }}">
     </div>
 
     {{-- ── PRODUCTS TABLE ── --}}
@@ -734,16 +744,18 @@
         });
     }
 
-    // Client Selection
+    // Client Selection — also notifies Livewire so loyalty auto-loads
     function selectClient() {
         var select = document.getElementById('client_select');
         var option = select.options[select.selectedIndex];
-        if(option.value) {
+        if (option.value) {
             document.getElementById('client_adresse').value = option.getAttribute('data-adresse') || '';
-            document.getElementById('client_phone').value = option.getAttribute('data-phone') || '';
+            document.getElementById('client_phone').value   = option.getAttribute('data-phone') || '';
+            @this.set('client_id', option.value); // triggers updatedClientId → loadClientLoyalty
         } else {
             document.getElementById('client_adresse').value = '';
-            document.getElementById('client_phone').value = '';
+            document.getElementById('client_phone').value   = '';
+            @this.set('client_id', null);         // triggers clearLoyalty
         }
     }
 
@@ -859,15 +871,32 @@
         calculate();
     }
 
+    // Loyalty card detection patterns (same as LoyaltyService::isLoyaltyBarcode)
+    var _loyaltyCardRe  = /^[A-Z]{2,12}-\d{4,10}$/;
+    var _loyaltyUuidRe  = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    function isLoyaltyCode(code) {
+        return _loyaltyCardRe.test(code) || _loyaltyUuidRe.test(code);
+    }
+
     // Scanning Barcode
     function scanBarcode() {
         var input = document.getElementById('barcode_input');
         var code = input.value.trim();
-        if(!code) return;
+        if (!code) return;
 
-        // Visual feedback during scan
+        input.value    = '';
         input.disabled = true;
 
+        // Loyalty card detected → hand off to Livewire
+        if (isLoyaltyCode(code)) {
+            @this.call('scanLoyaltyCard', code).then(function () {
+                input.disabled = false;
+                input.focus();
+            });
+            return;
+        }
+
+        // Product barcode → fast REST path
         fetch('{{ route("api.pos-barcode") }}?code=' + encodeURIComponent(code))
             .then(res => res.json())
             .then(search => {
@@ -1035,12 +1064,46 @@
         @this.call('save', payload);
     }
 
-    // Sync loyalty panel state from Livewire updates
-    document.addEventListener('livewire:update', () => {
-        var panel   = document.getElementById('loyalty-panel');
-        var visible = @entangle('loyalty_panel_visible').defer;
-        if (panel) panel.style.display = {{ $loyalty_panel_visible ? 'true' : 'false' }} ? '' : 'none';
+    // ── Loyalty panel DOM update (called from Livewire events) ──────────────────
+    function updateLoyaltyPanel(d) {
+        var panel = document.getElementById('loyalty-panel');
+        if (!panel) return;
+        panel.style.display = d.panel_visible ? '' : 'none';
+        function setText(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; }
+        function setVal(id, val)  { var el = document.getElementById(id); if (el) el.value       = val; }
+        setText('lp-card-number',    d.card_number  || '—');
+        setText('lp-balance',        d.balance      || '0');
+        setText('lp-balance-dt',     d.balance_dt   || '0.000');
+        setText('lp-redeem-dt',      d.redeem_dt    || '0.000');
+        setText('lp-discount-total', d.redeem_dt    || '0.000');
+        setText('lp-earn',           d.earn         || '0');
+        setText('lp-earn-dt',        d.earn_dt      || '0.000');
+        setVal('loyalty_card_id_input',  d.card_id      || '');
+        setVal('loyalty_redeem_input',   d.redeem_input || 0);
         calculate();
+    }
+
+    // loyalty-state-updated: dispatched after every loyalty state change in PHP
+    document.addEventListener('livewire:initialized', function () {
+        Livewire.on('loyalty-state-updated', function (data) {
+            updateLoyaltyPanel(Array.isArray(data) ? data[0] : data);
+        });
+
+        // loyalty-client-synced: dispatched when a loyalty card scan also sets a client
+        Livewire.on('loyalty-client-synced', function (data) {
+            var d = Array.isArray(data) ? data[0] : data;
+            document.getElementById('client_adresse').value = d.client_adresse || '';
+            document.getElementById('client_phone').value   = d.client_phone   || '';
+            if (d.client_id) {
+                var $sel = $('#client_select');
+                if (!$sel.find('option[value="' + d.client_id + '"]').length) {
+                    var label = d.client_name + (d.client_phone ? ' (' + d.client_phone + ')' : '');
+                    $sel.append(new Option(label, d.client_id, true, true)).trigger('change');
+                } else {
+                    $sel.val(d.client_id).trigger('change.select2');
+                }
+            }
+        });
     });
 
     document.addEventListener('livewire:initialized', () => {
