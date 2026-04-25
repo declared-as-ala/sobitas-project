@@ -8,6 +8,7 @@ use App\Filament\Pages\Auth\EditProfile;
 use App\Filament\Pages\Auth\Login;
 use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\HistoriqueClient;
+use App\Filament\Pages\ScannerFidelitePage;
 use App\Filament\Pages\SendEmail;
 use App\Filament\Pages\SendSms;
 use App\Filament\Pages\Stock\StockDashboard;
@@ -26,6 +27,9 @@ use App\Filament\Resources\CreditNoteResource;
 use App\Filament\Resources\FactureResource;
 use App\Filament\Resources\FactureTvaResource;
 use App\Filament\Resources\FaqResource;
+use App\Filament\Resources\LoyaltyCardBatchResource;
+use App\Filament\Resources\LoyaltyCardResource;
+use App\Filament\Resources\LoyaltyTransactionResource;
 use App\Filament\Resources\MarketingTemplateResource;
 use App\Filament\Resources\MessageResource;
 use App\Filament\Resources\NewsletterResource;
@@ -161,6 +165,9 @@ class AdminPanelProvider extends PanelProvider
                 FactureResource::class,
                 FactureTvaResource::class,
                 FaqResource::class,
+                LoyaltyCardBatchResource::class,
+                LoyaltyCardResource::class,
+                LoyaltyTransactionResource::class,
                 MessageResource::class,
                 NewsletterResource::class,
                 PageResource::class,
@@ -178,6 +185,7 @@ class AdminPanelProvider extends PanelProvider
                 Dashboard::class,
                 HistoriqueClient::class,
                 MediaPage::class,
+                ScannerFidelitePage::class,
                 SendSms::class,
                 SendEmail::class,
                 StockDashboard::class,
