@@ -40,12 +40,11 @@ Route::get('unsubscribe', function () {
 
 Route::redirect('login-redirect', 'login')->name('login');
 
-// QR code image — public but token-secured (no auth required, no sensitive data)
-Route::get('loyalty/qr/{token}', [\App\Http\Controllers\Api\LoyaltyController::class, 'qrImage'])
-    ->name('loyalty.qr')
-    ->where('token', '[a-zA-Z0-9]+');
-
 Route::middleware(['auth', 'no.cache.print'])->group(function () {
+    // QR code image — staff only (boutique loyalty; not exposed to storefront)
+    Route::get('loyalty/qr/{token}', [\App\Http\Controllers\Api\LoyaltyController::class, 'qrImage'])
+        ->name('loyalty.qr')
+        ->where('token', '[a-zA-Z0-9]+');
     Route::get('factures/{facture}/print', function (Facture $facture) {
         $facture->load('client');
         $details_facture = DetailsFacture::where('facture_id', $facture->id)
@@ -86,22 +85,28 @@ Route::middleware(['auth', 'no.cache.print'])->group(function () {
     })->name('factures.print');
 
     Route::get('tickets/{ticket}/print', function (\App\Models\Ticket $ticket) {
-        $ticket->load('client');
+        $ticket->load(['client', 'loyaltyCard']);
         $details_ticket = \App\Models\DetailsTicket::where('ticket_id', $ticket->id)
             ->with('product:id,designation_fr')
             ->get();
         $coordonnee = \App\Models\Coordinate::getCached();
 
+        $loyaltyBalanceAfter = null;
+        if ($ticket->client_id) {
+            $loyaltyBalanceAfter = app(\App\Services\LoyaltyService::class)->getBalance((int) $ticket->client_id);
+        }
+
         return view('print.ticket', [
-            'ticket'         => $ticket,
-            'details_ticket' => $details_ticket,
-            'coordonnee'     => $coordonnee,
-            'company'        => $coordonnee,
-            'documentDate'   => $ticket->date_ticket
+            'ticket'                => $ticket,
+            'details_ticket'        => $details_ticket,
+            'coordonnee'            => $coordonnee,
+            'company'               => $coordonnee,
+            'documentDate'          => $ticket->date_ticket
                 ? \Carbon\Carbon::parse($ticket->date_ticket)->format('d/m/Y')
                 : ($ticket->created_at?->format('d/m/Y') ?? ''),
-            'documentTime'   => $ticket->created_at?->format('H:i') ?? '',
-            'backUrl'        => route('filament.admin.resources.tickets.index'),
+            'documentTime'          => $ticket->created_at?->format('H:i') ?? '',
+            'backUrl'               => route('filament.admin.resources.tickets.index'),
+            'loyaltyBalanceAfter'   => $loyaltyBalanceAfter,
         ]);
     })->name('tickets.print');
 

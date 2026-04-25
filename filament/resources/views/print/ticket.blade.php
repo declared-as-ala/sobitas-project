@@ -277,6 +277,28 @@
                     </table>
                 </div>
 
+                @if(($ticket->loyalty_points_redeemed ?? 0) > 0 || ($ticket->loyalty_points_earned ?? 0) > 0 || ($ticket->loyalty_discount_amount ?? 0) > 0)
+                    <div style="margin-top: 20px; padding-top: 12px; border-top: 1px dashed #000; font-size: 12px;">
+                        <strong>Fidélité</strong>
+                        @if($ticket->loyaltyCard?->card_number ?? null)
+                            <div>Carte : {{ $ticket->loyaltyCard->card_number }}</div>
+                        @endif
+                        @if(($ticket->loyalty_points_redeemed ?? 0) > 0)
+                            <div>Points utilisés : {{ (int) $ticket->loyalty_points_redeemed }} pts
+                                @if(($ticket->loyalty_discount_amount ?? 0) > 0)
+                                    = {{ number_format((float) $ticket->loyalty_discount_amount, 3, '.', '') }} DT
+                                @endif
+                            </div>
+                        @endif
+                        @if(($ticket->loyalty_points_earned ?? 0) > 0)
+                            <div>Points gagnés : {{ (int) $ticket->loyalty_points_earned }} pts</div>
+                        @endif
+                        @if($loyaltyBalanceAfter !== null)
+                            <div>Nouveau solde : {{ number_format((int) $loyaltyBalanceAfter, 0, ',', ' ') }} pts</div>
+                        @endif
+                    </div>
+                @endif
+
             </div>
 
             <br><br>

@@ -112,16 +112,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/update_profile', [ClientController::class, 'update_profile']);
     Route::post('/detail_commande/{id}', [ClientController::class, 'detail_commande']);
     Route::post('/add_review', [ApisController::class, 'add_review']);
-
-    // ── Loyalty (customer-facing) ─────────────────────────
-    Route::get('/loyalty/card', [LoyaltyController::class, 'card']);
-    Route::get('/loyalty/transactions', [LoyaltyController::class, 'transactions']);
-    Route::post('/loyalty/validate-redemption', [LoyaltyController::class, 'validateRedemption']);
 });
 
-// ── Loyalty admin routes ─────────────────────────────
+// ── Loyalty staff API (POS / hardware scanner) ───────
 Route::middleware(['auth:sanctum', 'can:accessFilament'])->group(function () {
     Route::post('/loyalty/scan', [LoyaltyController::class, 'scan']);
-    Route::post('/loyalty/admin/add-points', [LoyaltyController::class, 'adminAddPoints']);
     Route::post('/admin/customers/invite', [ClientController::class, 'inviteCustomerWebAccess']);
 });

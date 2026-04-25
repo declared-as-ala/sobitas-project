@@ -7,7 +7,6 @@ use App\Jobs\SendSmsJob;
 use App\Models\Commande;
 use App\Models\Message;
 use App\Models\User;
-use App\Services\LoyaltyService;
 use App\Services\PartnerCommissionService;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
@@ -52,8 +51,8 @@ class CommandeObserver
             return;
         }
 
-        // Always run commission/loyalty hooks on any status change (includes annuler reversal)
-        $this->handleCommissionAndLoyalty($commande);
+        // Commission hooks only (loyalty earn/redeem no longer tied to commandes)
+        $this->handleCommission($commande);
 
         if ($commande->etat === 'annuler') {
             return;
@@ -107,33 +106,25 @@ class CommandeObserver
         ]);
     }
 
-    private function handleCommissionAndLoyalty(Commande $commande): void
+    private function handleCommission(Commande $commande): void
     {
         $etat = $commande->etat;
 
         try {
             $commissionService = app(PartnerCommissionService::class);
-            $loyaltyService    = app(LoyaltyService::class);
 
             $earnStatuses    = config('loyalty.earn_trigger_statuses', ['expidee']);
             $reversalStatuses = config('loyalty.reversal_trigger_statuses', ['annuler']);
 
             if (in_array($etat, $earnStatuses, true)) {
-                // Earn commission for partner
                 $commissionService->createCommission($commande);
-                // Confirm loyalty redemption + earn points for client
-                $loyaltyService->recordRedemptionForOrder($commande);
-                $loyaltyService->earnPointsForOrder($commande);
             }
 
             if (in_array($etat, $reversalStatuses, true)) {
-                // Reverse commission
                 $commissionService->reverseCommission($commande);
-                // Reverse loyalty points
-                $loyaltyService->reverseOrderTransactions($commande);
             }
         } catch (\Throwable $e) {
-            Log::error('CommandeObserver: commission/loyalty hook failed', [
+            Log::error('CommandeObserver: commission hook failed', [
                 'commande_id' => $commande->id,
                 'etat'        => $etat,
                 'error'       => $e->getMessage(),

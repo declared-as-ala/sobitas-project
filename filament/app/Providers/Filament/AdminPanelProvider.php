@@ -8,6 +8,8 @@ use App\Filament\Pages\Auth\EditProfile;
 use App\Filament\Pages\Auth\Login;
 use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\HistoriqueClient;
+use App\Filament\Pages\ManageLoyaltyProgramSettings;
+use App\Filament\Pages\ScannerFidelite;
 use App\Filament\Pages\SendEmail;
 use App\Filament\Pages\SendSms;
 use App\Filament\Pages\Stock\StockDashboard;
@@ -193,6 +195,8 @@ class AdminPanelProvider extends PanelProvider
                 SendSms::class,
                 SendEmail::class,
                 StockDashboard::class,
+                ScannerFidelite::class,
+                ManageLoyaltyProgramSettings::class,
             ])
             ->widgets([
                 AccountWidget::class,

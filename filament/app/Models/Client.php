@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use App\Enums\LoyaltyCardStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Client extends Model
 {
@@ -76,9 +78,16 @@ class Client extends Model
 
     // ── Accessors ──────────────────────────────────────
 
-    public function loyaltyCard(): \Illuminate\Database\Eloquent\Relations\HasOne
+    /**
+     * Carte courante : dernière carte non « remplacée » (historique des anciennes cartes conservé).
+     */
+    public function loyaltyCard(): HasOne
     {
-        return $this->hasOne(LoyaltyCard::class);
+        return $this->hasOne(LoyaltyCard::class)->ofMany(
+            'id',
+            'max',
+            fn ($query) => $query->where('status', '!=', LoyaltyCardStatus::Replaced->value)
+        );
     }
 
     public function loyaltyTransactions(): \Illuminate\Database\Eloquent\Relations\HasMany

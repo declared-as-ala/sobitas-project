@@ -26,6 +26,7 @@ class LoyaltyPointTransactionResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (Builder $q) => $q->with(['client:id,name', 'order:id,numero', 'ticket:id,numero', 'loyaltyCard:id,card_number']))
             ->columns([
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Date')
@@ -33,7 +34,12 @@ class LoyaltyPointTransactionResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('client.name')
                     ->label('Client')
-                    ->searchable()
+                    ->formatStateUsing(fn ($state, $record) => (string) ($record->client?->full_name ?? $record->client?->name ?? '—'))
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        return $query->whereHas('client', fn ($q) => $q
+                            ->where('name', 'like', "%{$search}%")
+                            ->orWhere('phone_1', 'like', "%{$search}%"));
+                    })
                     ->sortable(),
                 Tables\Columns\TextColumn::make('type')
                     ->label('Type')
@@ -51,6 +57,12 @@ class LoyaltyPointTransactionResource extends Resource
                 Tables\Columns\TextColumn::make('order.numero')
                     ->label('Commande')
                     ->searchable()
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('ticket.numero')
+                    ->label('Ticket')
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('loyaltyCard.card_number')
+                    ->label('N° carte')
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('description')
                     ->label('Description')

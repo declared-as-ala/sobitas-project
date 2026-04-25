@@ -11,7 +11,7 @@ class LoyaltyPointTransaction extends Model
     protected $table = 'loyalty_point_transactions';
 
     protected $fillable = [
-        'client_id', 'order_id', 'type', 'points',
+        'client_id', 'order_id', 'ticket_id', 'loyalty_card_id', 'type', 'points',
         'monetary_value', 'description', 'metadata', 'created_by',
     ];
 
@@ -32,6 +32,16 @@ class LoyaltyPointTransaction extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Commande::class, 'order_id');
+    }
+
+    public function ticket(): BelongsTo
+    {
+        return $this->belongsTo(Ticket::class, 'ticket_id');
+    }
+
+    public function loyaltyCard(): BelongsTo
+    {
+        return $this->belongsTo(LoyaltyCard::class, 'loyalty_card_id');
     }
 
     public function createdBy(): BelongsTo

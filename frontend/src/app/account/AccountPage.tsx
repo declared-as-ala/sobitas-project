@@ -7,9 +7,8 @@ import { Footer } from '@/app/components/Footer';
 import { useAuth } from '@/contexts/AuthContext';
 import { ProfileSection } from './ProfileSection';
 import { OrdersSection } from './OrdersSection';
-import { LoyaltySection } from './LoyaltySection';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
-import { User, Package, Star } from 'lucide-react';
+import { User, Package } from 'lucide-react';
 import { motion } from 'motion/react';
 import { LoadingSpinner } from '@/app/components/LoadingSpinner';
 
@@ -53,7 +52,7 @@ export default function AccountPage() {
           </h1>
 
           <Tabs defaultValue="profile" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-8">
+            <TabsList className="grid w-full grid-cols-2 mb-8">
               <TabsTrigger value="profile" className="flex items-center gap-2">
                 <User className="h-4 w-4" />
                 Profil
@@ -61,10 +60,6 @@ export default function AccountPage() {
               <TabsTrigger value="orders" className="flex items-center gap-2">
                 <Package className="h-4 w-4" />
                 Mes Commandes
-              </TabsTrigger>
-              <TabsTrigger value="loyalty" className="flex items-center gap-2">
-                <Star className="h-4 w-4" />
-                Ma Carte Fidélité
               </TabsTrigger>
             </TabsList>
 
@@ -74,10 +69,6 @@ export default function AccountPage() {
 
             <TabsContent value="orders">
               <OrdersSection />
-            </TabsContent>
-
-            <TabsContent value="loyalty">
-              <LoyaltySection />
             </TabsContent>
           </Tabs>
         </motion.div>

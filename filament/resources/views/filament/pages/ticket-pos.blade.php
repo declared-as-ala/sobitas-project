@@ -465,6 +465,11 @@
                     <input type="number" id="loyalty_points_adj" placeholder="+/- points" step="1" style="width:140px;padding:8px;border:1px solid #e2e8f0;border-radius:6px;">
                     <button type="button" class="pos-btn-add-row" onclick="if(window.applyLoyaltyPoints) window.applyLoyaltyPoints();">Ajuster points</button>
                 </div>
+                <div class="pos-field" style="margin-top:12px;">
+                    <label>Points à utiliser sur ce ticket (remise)</label>
+                    <input type="number" id="loyalty_points_redeem" min="0" step="1" value="0" placeholder="0" style="width:100%;max-width:200px;padding:8px;border:1px solid #e2e8f0;border-radius:6px;">
+                    <p class="text-xs text-gray-500 mt-1">La remise est appliquée au net après remise boutique, puis enregistrée sur le ticket.</p>
+                </div>
             </div>
         </div>
     </div>
@@ -965,11 +970,15 @@
             }
         }
 
+        var redeemEl = document.getElementById('loyalty_points_redeem');
+        var redeemPts = redeemEl ? (parseInt(redeemEl.value, 10) || 0) : 0;
+
         let payload = {
             lines: finalLines,
             client_id: document.getElementById('client_select').value,
             remise: document.getElementById('m_remise').value || 0,
-            pourcentage_remise: document.getElementById('pourcen_remise').value || 0
+            pourcentage_remise: document.getElementById('pourcen_remise').value || 0,
+            loyalty_points_to_redeem: redeemPts
         };
         
         // Trigger the save method gracefully with payload

@@ -7,6 +7,7 @@ enum LoyaltyCardStatus: string
     case Active    = 'active';
     case Suspended = 'suspended';
     case Lost      = 'lost';
+    case Replaced  = 'replaced';
 
     public function label(): string
     {
@@ -14,6 +15,7 @@ enum LoyaltyCardStatus: string
             self::Active    => 'Active',
             self::Suspended => 'Suspendue',
             self::Lost      => 'Perdue',
+            self::Replaced  => 'Remplacée',
         };
     }
 
@@ -23,6 +25,7 @@ enum LoyaltyCardStatus: string
             self::Active    => 'success',
             self::Suspended => 'warning',
             self::Lost      => 'danger',
+            self::Replaced  => 'gray',
         };
     }
 

@@ -7,6 +7,7 @@ use App\Filament\Resources\LoyaltyCardResource\Pages;
 use App\Models\Client;
 use App\Models\LoyaltyCard;
 use App\Services\LoyaltyService;
+use Illuminate\Support\Facades\DB;
 use Filament\Actions;
 use Filament\Forms;
 use Filament\Notifications\Notification;
@@ -127,29 +128,83 @@ class LoyaltyCardResource extends Resource
                     ->url(fn (LoyaltyCard $record) => route('loyalty.card.print', $record->id))
                     ->openUrlInNewTab(),
                 Actions\Action::make('add_points')
-                    ->label('Ajouter points')
+                    ->label('Ajuster points')
                     ->icon('heroicon-o-plus-circle')
                     ->color('success')
                     ->form([
                         Forms\Components\TextInput::make('points')
-                            ->label('Points à ajouter')
+                            ->label('Points (+ ou −)')
                             ->integer()
-                            ->minValue(1)
                             ->required(),
                         Forms\Components\TextInput::make('description')
-                            ->label('Description')
-                            ->default('Ajout manuel admin')
+                            ->label('Motif')
+                            ->default('Ajustement admin')
                             ->maxLength(255),
                     ])
                     ->action(function (LoyaltyCard $record, array $data) {
-                        \App\Models\LoyaltyPointTransaction::create([
-                            'client_id'   => $record->client_id,
-                            'type'        => 'adjustment',
-                            'points'      => (int) $data['points'],
-                            'description' => $data['description'] ?? 'Ajout manuel',
-                            'created_by'  => auth()->id(),
-                        ]);
-                        Notification::make()->title('Points ajoutés')->success()->send();
+                        try {
+                            app(LoyaltyService::class)->adjustPoints(
+                                (int) $record->client_id,
+                                (int) $data['points'],
+                                $data['description'] ?? null,
+                                auth()->id() ? (int) auth()->id() : null
+                            );
+                            Notification::make()->title('Solde mis à jour')->success()->send();
+                        } catch (\InvalidArgumentException $e) {
+                            Notification::make()->title('Fidélité')->body($e->getMessage())->danger()->send();
+                        }
+                    }),
+                Actions\Action::make('suspend')
+                    ->label('Suspendre')
+                    ->icon('heroicon-o-pause-circle')
+                    ->color('warning')
+                    ->visible(fn (LoyaltyCard $record) => $record->status === LoyaltyCardStatus::Active)
+                    ->requiresConfirmation()
+                    ->action(function (LoyaltyCard $record) {
+                        $record->update(['status' => LoyaltyCardStatus::Suspended->value]);
+                        Notification::make()->title('Carte suspendue')->success()->send();
+                    }),
+                Actions\Action::make('reactivate')
+                    ->label('Réactiver')
+                    ->icon('heroicon-o-play-circle')
+                    ->color('success')
+                    ->visible(fn (LoyaltyCard $record) => $record->status === LoyaltyCardStatus::Suspended)
+                    ->requiresConfirmation()
+                    ->action(function (LoyaltyCard $record) {
+                        $record->update(['status' => LoyaltyCardStatus::Active->value]);
+                        Notification::make()->title('Carte réactivée')->success()->send();
+                    }),
+                Actions\Action::make('mark_lost')
+                    ->label('Perdue')
+                    ->icon('heroicon-o-exclamation-triangle')
+                    ->color('danger')
+                    ->visible(fn (LoyaltyCard $record) => $record->status !== LoyaltyCardStatus::Lost && $record->status !== LoyaltyCardStatus::Replaced)
+                    ->requiresConfirmation()
+                    ->action(function (LoyaltyCard $record) {
+                        $record->update(['status' => LoyaltyCardStatus::Lost->value]);
+                        Notification::make()->title('Carte marquée perdue')->success()->send();
+                    }),
+                Actions\Action::make('replace')
+                    ->label('Remplacer')
+                    ->icon('heroicon-o-arrow-path')
+                    ->color('gray')
+                    ->visible(fn (LoyaltyCard $record) => $record->status !== LoyaltyCardStatus::Replaced)
+                    ->requiresConfirmation()
+                    ->action(function (LoyaltyCard $record) {
+                        DB::transaction(function () use ($record) {
+                            $record->update([
+                                'status'      => LoyaltyCardStatus::Replaced->value,
+                                'replaced_at' => now(),
+                            ]);
+                            LoyaltyCard::create([
+                                'client_id'   => $record->client_id,
+                                'card_number' => LoyaltyCard::generateCardNumber(),
+                                'qr_token'    => LoyaltyCard::generateQrToken(),
+                                'status'      => LoyaltyCardStatus::Active->value,
+                                'issued_at'   => now(),
+                            ]);
+                        });
+                        Notification::make()->title('Nouvelle carte émise')->body('L’ancienne carte est marquée « Remplacée ».')->success()->send();
                     }),
                 Actions\EditAction::make(),
             ])

@@ -13,12 +13,13 @@ class LoyaltyCard extends Model
     protected $table = 'loyalty_cards';
 
     protected $fillable = [
-        'client_id', 'card_number', 'qr_token', 'status', 'issued_at',
+        'client_id', 'card_number', 'qr_token', 'status', 'issued_at', 'replaced_at',
     ];
 
     protected $casts = [
-        'issued_at' => 'datetime',
-        'status'    => LoyaltyCardStatus::class,
+        'issued_at'   => 'datetime',
+        'replaced_at' => 'datetime',
+        'status'      => LoyaltyCardStatus::class,
     ];
 
     // ── Relationships ────────────────────────────────────
@@ -30,7 +31,7 @@ class LoyaltyCard extends Model
 
     public function pointTransactions(): HasMany
     {
-        return $this->hasMany(LoyaltyPointTransaction::class, 'client_id', 'client_id');
+        return $this->hasMany(LoyaltyPointTransaction::class, 'loyalty_card_id');
     }
 
     // ── Points balance ───────────────────────────────────
@@ -55,8 +56,10 @@ class LoyaltyCard extends Model
 
     public static function generateCardNumber(): string
     {
+        $prefix = strtoupper(preg_replace('/[^A-Z0-9]/', '', (string) LoyaltyProgramSetting::val('card_prefix', 'PROT')) ?: 'PROT');
+
         do {
-            $number = 'PROT-' . strtoupper(Str::random(4)) . '-' . strtoupper(Str::random(4)) . '-' . strtoupper(Str::random(4));
+            $number = $prefix . '-' . strtoupper(Str::random(4)) . '-' . strtoupper(Str::random(4)) . '-' . strtoupper(Str::random(4));
         } while (static::where('card_number', $number)->exists());
 
         return $number;

@@ -3,6 +3,13 @@
 return [
     /*
     |--------------------------------------------------------------------------
+    | Master switch (also use Filament Loyalty settings when available)
+    |--------------------------------------------------------------------------
+    */
+    'enabled' => env('LOYALTY_ENABLED', true),
+
+    /*
+    |--------------------------------------------------------------------------
     | Points earning rate
     |--------------------------------------------------------------------------
     | points_per_currency: points earned per 1 DT spent (default: 1)
@@ -65,4 +72,35 @@ return [
     |--------------------------------------------------------------------------
     */
     'reversal_trigger_statuses' => ['annuler'],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Ticket (POS) — earn when status matches (comma-separated env)
+    |--------------------------------------------------------------------------
+    */
+    'ticket_earn_trigger_statuses' => array_values(array_filter(array_map(
+        'trim',
+        explode(',', (string) (env('LOYALTY_TICKET_EARN_STATUSES', 'paid') ?: 'paid'))
+    ))) ?: ['paid'],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Ticket statuses that reverse loyalty ledger rows for that ticket
+    |--------------------------------------------------------------------------
+    */
+    'ticket_reversal_trigger_statuses' => ['annulee', 'annuler', 'cancelled'],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Allow manual point adjustments from Filament / POS
+    |--------------------------------------------------------------------------
+    */
+    'allow_manual_adjustment' => env('LOYALTY_ALLOW_MANUAL_ADJUSTMENT', true),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Physical card number prefix (e.g. PTN)
+    |--------------------------------------------------------------------------
+    */
+    'card_prefix' => env('LOYALTY_CARD_PREFIX', 'PROT'),
 ];
