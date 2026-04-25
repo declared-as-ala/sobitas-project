@@ -7,10 +7,12 @@ use App\Models\LoyaltyCard;
 use App\Services\LoyaltyService;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Support\Enums\FontWeight;
+use Illuminate\Contracts\Support\Htmlable;
 
 class ScannerFidelitePage extends Page
 {
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-qr-code';
+    protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-qr-code';
 
     protected static ?string $navigationLabel = 'Scanner fidélité';
 

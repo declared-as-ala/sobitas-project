@@ -14,6 +14,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Tables\Actions\Action;
 
 class LoyaltyCardResource extends Resource
 {
@@ -115,7 +116,7 @@ class LoyaltyCardResource extends Resource
                                 ->limit(20)
                                 ->pluck('name', 'id')
                             )
-                            ->getOptionLabelUsing(fn ($value) => Client::find($value)?->name)
+                            ->getOptionLabelUsing(fn ($value) => Client::find($value)?->name ?? "Client #{$value}")
                             ->required(),
                     ])
                     ->action(function (LoyaltyCard $record, array $data) {

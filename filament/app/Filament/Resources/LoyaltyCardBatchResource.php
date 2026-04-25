@@ -5,7 +5,6 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\LoyaltyCardBatchResource\Pages;
 use App\Models\LoyaltyCardBatch;
 use App\Services\LoyaltyService;
-use Filament\Actions\Action;
 use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
@@ -13,7 +12,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Actions;
+use Filament\Tables\Actions\Action;
 
 class LoyaltyCardBatchResource extends Resource
 {
