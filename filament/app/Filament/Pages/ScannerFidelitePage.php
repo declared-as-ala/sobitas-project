@@ -10,11 +10,15 @@ use Filament\Pages\Page;
 
 class ScannerFidelitePage extends Page
 {
-    protected static ?string $navigationIcon  = 'heroicon-o-qr-code';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-qr-code';
+
     protected static ?string $navigationLabel = 'Scanner fidélité';
-    protected static ?string $title           = 'Scanner Fidélité';
-    protected static string|\UnitEnum|null $navigationGroup = 'Clients';
-    protected static ?int    $navigationSort  = 3;
+
+    protected static ?string $title = 'Scanner Fidélité';
+
+    protected static string | \UnitEnum | null $navigationGroup = 'Clients';
+
+    protected static ?int $navigationSort = 3;
     protected string $view = 'filament.pages.scanner-fidelite';
 
     // ── Scan state ──────────────────────────────────────────────────────────────
