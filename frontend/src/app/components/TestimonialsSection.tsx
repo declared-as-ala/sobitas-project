@@ -11,7 +11,7 @@ const testimonials = [
     role: 'Athlète professionnel',
     image: 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=200&h=200&fit=crop',
     rating: 5,
-    text: 'Excellent service et produits de qualité supérieure. La livraison est rapide et les prix sont compétitifs. Je recommande vivement Protein.tn!'
+    text: 'Excellent service et produits de qualité supérieure. La livraison est rapide et les prix sont compétitifs. Je recommande vivement Proteine Tunisie!'
   },
   {
     id: 2,
@@ -19,7 +19,7 @@ const testimonials = [
     role: 'Coach fitness',
     image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop',
     rating: 5,
-    text: 'Une équipe professionnelle et des produits authentiques. Protein.tn est devenu mon fournisseur principal pour tous mes compléments alimentaires.'
+    text: 'Une équipe professionnelle et des produits authentiques. Proteine Tunisie est devenu mon fournisseur principal pour tous mes compléments alimentaires.'
   },
   {
     id: 3,

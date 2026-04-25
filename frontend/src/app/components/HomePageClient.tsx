@@ -148,7 +148,7 @@ export function HomePageClient({ accueil, slides, heroMobileFirst, heroDesktopFi
         {/* SEO: single visible H1 for main query "proteine tunisie" + internal link creatine */}
         <section className="text-center py-4 px-4 bg-white dark:bg-gray-950" aria-label="Titre principal">
           <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">
-            Protéine Tunisie – Votre partenaire nutrition sportive
+            Proteine Tunisie
           </h1>
           <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
             <Link href="/category/proteine-whey" className="text-red-600 dark:text-red-400 hover:underline font-medium">
@@ -229,7 +229,7 @@ export function HomePageClient({ accueil, slides, heroMobileFirst, heroDesktopFi
             </h2>
             <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
               Chez <strong>SOBITAS</strong>, nous accompagnons depuis plusieurs années les athlètes et passionnés de
-              fitness à travers toute la <strong>nutrition sportive Tunisie</strong>. Sur <strong>Protein.tn</strong>,
+              fitness à travers toute la <strong>nutrition sportive Tunisie</strong>. Sur <strong>Proteine Tunisie</strong>,
               vous trouvez une sélection rigoureuse de protéines, gainers, acides aminés et vitamines pensée pour la
               performance, la prise de masse ou la sèche. Chaque référence est choisie pour sa traçabilité, son profil
               nutritionnel et son rapport qualité / prix afin de vous garantir une expérience fiable à chaque
@@ -264,7 +264,7 @@ export function HomePageClient({ accueil, slides, heroMobileFirst, heroDesktopFi
               délais optimisés pour Sousse, Tunis, Sfax et les autres régions. Les <strong>avis clients</strong> laissés
               sur nos produits vous permettent de vérifier la satisfaction des sportifs qui utilisent déjà nos
               protéines, <strong>whey</strong> et <strong>créatine</strong>. Commandez vos compléments en ligne en toute
-              confiance sur <strong>Protein.tn</strong> et rejoignez la communauté SOBITAS.
+              confiance sur <strong>Proteine Tunisie</strong> et rejoignez la communauté SOBITAS.
             </p>
           </div>
         </section>

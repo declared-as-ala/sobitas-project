@@ -245,7 +245,7 @@ const CMS_PAGE_SLUG_BY_ID: Record<number, string> = {
 
 /** Static list when API fails or returns empty so "Services & Ventes" always shows (excludes "Qui sommes nous"). */
 const CMS_PAGES_FALLBACK: CmsPage[] = [
-  { id: 2, title: 'Conditions générales de ventes - Protein.tn', slug: 'conditions-generale-de-ventes-protein.tn' },
+  { id: 2, title: 'Conditions générales de ventes - Proteine Tunisie', slug: 'conditions-generale-de-ventes-protein.tn' },
   { id: 7, title: 'Politique de remboursement', slug: 'politique-de-remboursement' },
   { id: 8, title: 'Politique des Cookies', slug: 'politique-des-cookies' },
   { id: 9, title: 'Proteine Tunisie', slug: 'proteine-tunisie' },

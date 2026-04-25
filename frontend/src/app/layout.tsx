@@ -24,10 +24,10 @@ const inter = Inter({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn'),
   title: {
-    default: "Proteine Tunisie | Whey, Créatine & Compléments Alimentaires",
-    template: "%s | Protein.tn"
+    default: "Proteine Tunisie | Whey, Créatine & Compléments",
+    template: "%s | Proteine Tunisie"
   },
-  description: "Proteine Tunisie : whey protein, créatine et compléments alimentaires. Livraison rapide à travers toute la Tunisie sur Protein.tn.",
+  description: "Proteine Tunisie : whey protein, créatine et compléments alimentaires. Livraison rapide à travers toute la Tunisie sur protein.tn.",
   keywords: [
     "proteine tunisie",
     "protein tunisie",
@@ -62,22 +62,22 @@ export const metadata: Metadata = {
     type: "website",
     locale: "fr_FR",
     url: "https://protein.tn",
-    siteName: "Protein.tn",
-    title: "Proteine Tunisie | Whey, Créatine & Compléments Alimentaires",
-    description: "Proteine Tunisie : whey protein, créatine et compléments alimentaires avec livraison rapide partout en Tunisie sur Protein.tn.",
+    siteName: "Proteine Tunisie",
+    title: "Proteine Tunisie",
+    description: "Proteine Tunisie : whey protein, créatine et compléments alimentaires avec livraison rapide partout en Tunisie sur protein.tn.",
     images: [
       {
         url: "/favicon-512x512.png",
         width: 512,
         height: 512,
-        alt: "Protein.tn - Proteine Tunisie",
+        alt: "Proteine Tunisie",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Proteine Tunisie | Whey, Créatine & Compléments Alimentaires",
-    description: "Proteine Tunisie : whey protein, créatine et compléments alimentaires avec livraison rapide partout en Tunisie sur Protein.tn.",
+    title: "Proteine Tunisie",
+    description: "Proteine Tunisie : whey protein, créatine et compléments alimentaires avec livraison rapide partout en Tunisie sur protein.tn.",
     images: ["/favicon-512x512.png"],
   },
   robots: {
@@ -92,7 +92,7 @@ export const metadata: Metadata = {
     },
   },
   verification: {
-    // Add Google Search Console verification if available
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || process.env.GOOGLE_SITE_VERIFICATION,
   },
 };
 
@@ -114,7 +114,10 @@ export default async function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Protein.tn" />
+        <meta name="apple-mobile-web-app-title" content="Proteine Tunisie" />
+        <meta property="og:site_name" content="Proteine Tunisie" />
+        <meta property="og:title" content="Proteine Tunisie" />
+        <meta name="twitter:title" content="Proteine Tunisie" />
         {/* Favicons */}
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />

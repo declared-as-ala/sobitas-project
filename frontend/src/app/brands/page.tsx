@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     title: 'Marques de Compléments Alimentaires | Proteine Tunisie',
     description: 'Optimum Nutrition, Biotech USA et plus. Marques de protéines et compléments en Tunisie.',
     url: 'https://protein.tn/brands',
-    siteName: 'Protein.tn',
+    siteName: 'Proteine Tunisie',
     images: [
       {
         url: 'https://protein.tn/favicon-512x512.png',

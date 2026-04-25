@@ -8,9 +8,9 @@ import type { AccueilData } from '@/types';
 
 export async function generateMetadata(): Promise<Metadata> {
   const canonical = buildCanonicalUrl('/');
-  const title = 'Proteine Tunisie | Whey, Créatine & Compléments Alimentaires';
+  const title = 'Proteine Tunisie | Whey, Créatine & Compléments';
   const description =
-    'Proteine Tunisie : whey protein, créatine et compléments alimentaires. Livraison rapide à Sousse, Tunis, Sfax et partout en Tunisie sur Protein.tn.';
+    'Proteine Tunisie : whey protein, créatine et compléments alimentaires. Livraison rapide à Sousse, Tunis, Sfax et partout en Tunisie sur protein.tn.';
 
   return {
     title,
@@ -19,7 +19,7 @@ export async function generateMetadata(): Promise<Metadata> {
       'proteine tunisie, protein tunisie, whey tunisie, whey protein tunisie, créatine tunisie, complément alimentaire tunisie, nutrition sportive tunisie, protéine musculation Tunisie',
     alternates: { canonical },
     openGraph: {
-      title,
+      title: 'Proteine Tunisie',
       description,
       images: ['/assets/img/logo/logo.webp'],
       url: canonical,

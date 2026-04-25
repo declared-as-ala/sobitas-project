@@ -48,12 +48,12 @@ function buildCategoryRedirectUrl(
   return query ? `${base}?${query}` : base;
 }
 
-/** CTR-optimized product title for Tunisia SERP (aim: position #1). Format: Product Name – Prix Tunisie & Livraison Rapide | Protein.tn */
+/** CTR-optimized product title for Tunisia SERP (aim: position #1). Format: Product Name – Prix Tunisie & Livraison Rapide | Proteine Tunisie */
 function productTitle(product: Product): string {
   const explicit = product.seo?.title || product.seo_title || product.meta_title;
   if (explicit?.trim()) return explicit.trim();
   const name = product.designation_fr ?? product.slug ?? 'Produit';
-  return `${name} – Prix Tunisie & Livraison Rapide | Protein.tn`;
+  return `${name} – Prix Tunisie & Livraison Rapide | Proteine Tunisie`;
 }
 
 /** Meta description: benefit + authenticity + delivery + location (Tunisie). Max 160 chars. */
@@ -64,8 +64,8 @@ function productDescription(product: Product, productName: string): string {
     if (plain) return plain.slice(0, 160);
   }
   const plain = (product.description_fr || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
-  if (plain) return `${plain} Prix Tunisie. Produits authentiques. Livraison 24-72h. Proteine Tunisie Protein.tn`;
-  return `Acheter ${productName} en Tunisie – Meilleur prix, livraison rapide, produits authentiques. Sousse, Tunis, toute la Tunisie. Protein.tn`;
+  if (plain) return `${plain} Prix Tunisie. Produits authentiques. Livraison 24-72h. Proteine Tunisie.`;
+  return `Acheter ${productName} en Tunisie – Meilleur prix, livraison rapide, produits authentiques. Sousse, Tunis, toute la Tunisie. Proteine Tunisie.`;
 }
 
 export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {

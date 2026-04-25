@@ -97,7 +97,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
               <Link href="/" className="block max-w-[140px] opacity-90 hover:opacity-100 transition-opacity duration-300">
                 <Image
                   src={footerLogoUrl}
-                  alt="Protein.tn - Proteine Tunisie"
+                  alt="Proteine Tunisie"
                   width={140}
                   height={45}
                   className="w-full h-auto object-contain object-left"
@@ -231,7 +231,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
             <div className="relative h-8 w-auto mb-6 shrink-0 flex items-center">
               <Image
                 src={footerLogoUrl}
-                alt="Protein.tn"
+                alt="Proteine Tunisie"
                 width={150}
                 height={48}
                 className="h-8 w-auto object-contain"

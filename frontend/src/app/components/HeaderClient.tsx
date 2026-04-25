@@ -230,10 +230,10 @@ export function HeaderClient() {
               scrolled ? 'h-12 py-2' : 'h-14 py-2.5'
             )}
           >
-            <Link href="/" className="flex items-center justify-start flex-1 min-w-0 max-w-[11rem] sm:max-w-[12rem] -ml-1" aria-label="Protein.tn - Accueil">
+            <Link href="/" className="flex items-center justify-start flex-1 min-w-0 max-w-[11rem] sm:max-w-[12rem] -ml-1" aria-label="Proteine Tunisie - Accueil">
               <Image
                 src={headerLogoUrl}
-                alt="Protein.tn"
+                alt="Proteine Tunisie"
                 width={140}
                 height={48}
                 className="h-9 min-h-[36px] w-auto max-w-full object-contain object-left drop-shadow-sm transition-all duration-300"
@@ -298,10 +298,10 @@ export function HeaderClient() {
         <div className="hidden md:block bg-red-600 dark:bg-red-700">
           <div className="max-w-7xl mx-auto px-4 lg:px-8">
             <div className="flex items-center justify-between h-16 gap-4">
-              <Link href="/" className="flex-shrink-0" aria-label="Protein.tn - Accueil">
+              <Link href="/" className="flex-shrink-0" aria-label="Proteine Tunisie - Accueil">
                 <Image
                   src={headerLogoUrl}
-                  alt="Protein.tn"
+                  alt="Proteine Tunisie"
                   width={200}
                   height={70}
                   className="h-10 lg:h-14 xl:h-16 w-auto object-contain brightness-0 invert"
@@ -573,7 +573,7 @@ export function HeaderClient() {
             <Link href="/" onClick={closeMobileMenu} className="block max-w-[120px]">
               <Image
                 src={headerLogoUrl}
-                alt="Protein.tn"
+                alt="Proteine Tunisie"
                 width={120}
                 height={38}
                 className="h-8 w-auto object-contain"

@@ -2,8 +2,8 @@ import { Metadata } from 'next';
 import { FavorisPageClient } from './FavorisPageClient';
 
 export const metadata: Metadata = {
-  title: 'Favoris | Protein.tn',
-  description: 'Vos produits favoris – Protein.tn',
+  title: 'Favoris | Proteine Tunisie',
+  description: 'Vos produits favoris – Proteine Tunisie',
 };
 
 export default function FavorisPage() {

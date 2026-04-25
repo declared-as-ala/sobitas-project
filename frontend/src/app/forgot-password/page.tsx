@@ -4,7 +4,7 @@ import ForgotPasswordClient from './ForgotPasswordClient';
 
 export const metadata: Metadata = {
   title: 'Mot de passe oublié',
-  description: 'Réinitialisez votre mot de passe Protein.tn',
+  description: 'Réinitialisez votre mot de passe Proteine Tunisie',
   robots: { index: false, follow: false },
 };
 

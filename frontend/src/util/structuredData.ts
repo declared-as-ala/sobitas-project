@@ -241,7 +241,7 @@ export function buildOrganizationSchema(baseUrl: string): object {
     '@type': 'Organization',
     name: 'Proteine Tunisie',
     url: base,
-    logo: `${base}/icon.png`,
+    logo: `${base}/logo.png`,
     description:
       'Distributeur officiel de protéines et compléments alimentaires en Tunisie. Whey, créatine, gainer, BCAA à Sousse. Livraison Tunis, Sousse et toute la Tunisie.',
     address: {

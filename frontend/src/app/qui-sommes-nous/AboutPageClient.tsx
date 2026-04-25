@@ -491,7 +491,7 @@ export default function AboutPageClient() {
                 </Link>
               </div>
               <p className="mt-6 sm:mt-8 text-xs sm:text-sm md:text-base lg:text-lg opacity-90 max-w-2xl mx-auto px-2">
-                <strong>Protein.tn – SOBITAS :</strong> Votre expert en nutrition sportive depuis 2010. Basé à Sousse, livraison rapide et gratuite partout en Tunisie.
+                <strong>Proteine Tunisie – SOBITAS :</strong> Votre expert en nutrition sportive depuis 2010. Basé à Sousse, livraison rapide et gratuite partout en Tunisie.
               </p>
             </motion.div>
           </div>
