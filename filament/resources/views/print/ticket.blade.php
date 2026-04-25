@@ -279,6 +279,35 @@
 
             </div>
 
+            @if($ticket->loyalty_card_id && ($ticket->loyalty_points_redeemed > 0 || $ticket->loyalty_points_earned > 0))
+            <div style="border-top:1px dashed #999;margin-top:10px;padding-top:8px;font-size:11px;">
+                <p style="font-weight:bold;text-align:center;margin-bottom:6px;">--- CARTE FIDÉLITÉ ---</p>
+                <table width="100%" cellpadding="2" style="font-size:11px;">
+                    <tr>
+                        <td>N° Carte</td>
+                        <td align="right">{{ $ticket->loyaltyCard->card_number ?? '—' }}</td>
+                    </tr>
+                    @if($ticket->loyalty_points_redeemed > 0)
+                    <tr>
+                        <td>Points utilisés</td>
+                        <td align="right" style="color:#c00000;">
+                            −{{ $ticket->loyalty_points_redeemed }} pts
+                            (−{{ number_format((float)$ticket->loyalty_discount_dt, 3) }} DT)
+                        </td>
+                    </tr>
+                    @endif
+                    <tr>
+                        <td>Points gagnés</td>
+                        <td align="right" style="color:#006600;">+{{ $ticket->loyalty_points_earned }} pts</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Nouveau solde</strong></td>
+                        <td align="right"><strong>{{ $ticket->client?->loyalty_points_balance ?? 0 }} pts</strong></td>
+                    </tr>
+                </table>
+            </div>
+            @endif
+
             <br><br>
             <h4>{{ $coordonnee->footer_ticket ?? '' }}</h4>
             <h3>Notre Site web <br>

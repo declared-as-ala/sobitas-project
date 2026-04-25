@@ -459,13 +459,59 @@
 
     {{-- ── BARCODE SCAN ── --}}
     <div class="pos-barcode-bar">
-        <label>Scanner code à barre</label>
+        <label>Scanner code à barre <span style="font-size:11px;font-weight:400;color:#6b7280;">(produit ou carte fidélité)</span></label>
         <input type="text"
                class="pos-barcode-input"
                placeholder="Cliquez ici pour scanner..."
                id="barcode_input"
                autocomplete="off"
                onchange="scanBarcode()">
+    </div>
+
+    {{-- ── LOYALTY PANEL ── --}}
+    <div id="loyalty-panel" style="{{ $loyalty_panel_visible ? '' : 'display:none;' }}
+        background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:16px;margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <span style="font-weight:700;color:#92400e;font-size:14px;">
+                🎴 Carte Fidélité :
+                <span id="lp-card-number" style="font-family:monospace;">{{ $loyalty_card_number ?? '—' }}</span>
+            </span>
+            <span style="color:#b45309;font-size:13px;">
+                Solde : <strong id="lp-balance">{{ $loyalty_balance }}</strong> pts
+                (= <strong id="lp-balance-dt">{{ $loyalty_balance_dt }}</strong> DT)
+            </span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">
+            <div>
+                <label style="font-size:12px;font-weight:600;color:#78716c;display:block;margin-bottom:4px;">Points à utiliser (min 100)</label>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <input type="number"
+                           id="loyalty_redeem_input"
+                           min="0"
+                           step="10"
+                           value="{{ $loyalty_redeem_input }}"
+                           style="width:100px;border:1px solid #d6d3d1;border-radius:6px;padding:6px 10px;font-size:14px;"
+                           oninput="syncLoyaltyRedeem(this.value)"
+                           wire:model.live.debounce.400ms="loyalty_redeem_input" />
+                    <button type="button"
+                            onclick="setMaxLoyaltyRedeem()"
+                            style="background:#f59e0b;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;">
+                        Max
+                    </button>
+                    <span style="color:#dc2626;font-size:13px;">
+                        − <span id="lp-redeem-dt">{{ $loyalty_redeem_dt }}</span> DT
+                    </span>
+                </div>
+            </div>
+            <div>
+                <label style="font-size:12px;font-weight:600;color:#78716c;display:block;margin-bottom:4px;">Points à gagner (estimé)</label>
+                <div style="color:#16a34a;font-size:14px;font-weight:600;padding:8px 0;">
+                    + <span id="lp-earn">{{ $loyalty_points_earn }}</span> pts
+                    (= + <span id="lp-earn-dt">{{ $loyalty_points_earn_dt }}</span> DT)
+                </div>
+            </div>
+        </div>
+        <input type="hidden" id="loyalty_card_id_input" value="{{ $loyalty_card_id }}">
     </div>
 
     {{-- ── PRODUCTS TABLE ── --}}
@@ -559,6 +605,13 @@
                 <div class="pos-tot-label">Poucentage Remise %</div>
                 <div class="pos-tot-value">
                     <input type="number" id="pourcen_remise" step="0.1" min="0" max="100" value="{{ $pourcentage_remise }}" onkeyup="calculate('pourcen_remise')" onchange="calculate('pourcen_remise')">
+                </div>
+            </div>
+            {{-- Loyalty discount row — only shown when panel is visible --}}
+            <div class="pos-tot-row" id="loyalty-discount-row" style="{{ $loyalty_panel_visible && $loyalty_redeem_input > 0 ? '' : 'display:none;' }}">
+                <div class="pos-tot-label" style="color:#dc2626;">Remise fidélité</div>
+                <div class="pos-tot-value" style="color:#dc2626;">
+                    − <span id="lp-discount-total">{{ $loyalty_redeem_dt }}</span> DT
                 </div>
             </div>
             <div class="pos-tot-row row-net">
@@ -910,11 +963,41 @@
             m_remise.value = ((m_totale_ht * pourcentage_remise.value) / 100).toFixed(3);
         }
         
-        var totale_remise = parseFloat(m_remise.value) || 0;
-        var m_totale_ttc = Math.max(0, m_totale_ht - totale_remise);
-        
+        var totale_remise    = parseFloat(m_remise.value) || 0;
+        var loyalty_discount = parseFloat(document.getElementById('loyalty_redeem_input')?.value || 0) / 10;
+        var m_totale_ttc     = Math.max(0, m_totale_ht - totale_remise - loyalty_discount);
+
         document.getElementById('p_ht').value = m_totale_ht.toFixed(3);
         document.getElementById('apres_remise').value = m_totale_ttc.toFixed(3);
+
+        // Update loyalty earn preview
+        var earnPts = Math.floor(m_totale_ttc);
+        var earnEl  = document.getElementById('lp-earn');
+        var earnDtEl = document.getElementById('lp-earn-dt');
+        if (earnEl)   earnEl.textContent   = earnPts;
+        if (earnDtEl) earnDtEl.textContent = (earnPts / 10).toFixed(3);
+
+        // Show/hide loyalty discount row in totals
+        var discRow = document.getElementById('loyalty-discount-row');
+        if (discRow) discRow.style.display = loyalty_discount > 0 ? '' : 'none';
+    }
+
+    // Loyalty redeem sync
+    function syncLoyaltyRedeem(val) {
+        var pts = parseInt(val) || 0;
+        var balance = parseInt(document.getElementById('loyalty_redeem_input')?.getAttribute('data-balance') || '{{ $loyalty_balance }}');
+        var maxFromTicket = Math.floor(parseFloat(document.getElementById('apres_remise')?.value || 0) * 10);
+        pts = Math.min(pts, balance, maxFromTicket);
+        var discount = (pts / 10).toFixed(3);
+        var discEl = document.getElementById('lp-redeem-dt');
+        var discTotal = document.getElementById('lp-discount-total');
+        if (discEl)   discEl.textContent   = discount;
+        if (discTotal) discTotal.textContent = discount;
+        calculate();
+    }
+
+    function setMaxLoyaltyRedeem() {
+        @this.call('setMaxRedeem');
     }
 
     // Send the final state directly to Livewire
@@ -943,12 +1026,22 @@
             lines: finalLines,
             client_id: document.getElementById('client_select').value,
             remise: document.getElementById('m_remise').value || 0,
-            pourcentage_remise: document.getElementById('pourcen_remise').value || 0
+            pourcentage_remise: document.getElementById('pourcen_remise').value || 0,
+            loyalty_card_id: document.getElementById('loyalty_card_id_input')?.value || null,
+            loyalty_redeem_input: parseInt(document.getElementById('loyalty_redeem_input')?.value || 0),
         };
         
         // Trigger the save method gracefully with payload
         @this.call('save', payload);
     }
+
+    // Sync loyalty panel state from Livewire updates
+    document.addEventListener('livewire:update', () => {
+        var panel   = document.getElementById('loyalty-panel');
+        var visible = @entangle('loyalty_panel_visible').defer;
+        if (panel) panel.style.display = {{ $loyalty_panel_visible ? 'true' : 'false' }} ? '' : 'none';
+        calculate();
+    });
 
     document.addEventListener('livewire:initialized', () => {
         Livewire.on('ticket-saved', (data) => {

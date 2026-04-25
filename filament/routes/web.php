@@ -234,6 +234,11 @@ Route::middleware(['auth', 'no.cache.print'])->group(function () {
         ]);
     })->name('quotations.print');
 
+    // Loyalty card print & CSV export
+    Route::get('print/loyalty-card/{card}', [\App\Http\Controllers\LoyaltyPrintController::class, 'single'])->name('loyalty.print.single');
+    Route::get('print/loyalty-card-batch/{batch}', [\App\Http\Controllers\LoyaltyPrintController::class, 'batch'])->name('loyalty.print.batch');
+    Route::get('export/loyalty-batch/{batch}/csv', [\App\Http\Controllers\LoyaltyPrintController::class, 'exportCsv'])->name('loyalty.export.csv');
+
     // PDF download (attachment, no print preview)
     Route::get('factures/{facture}/download', [\App\Http\Controllers\DocumentPdfController::class, 'downloadFacture'])->name('factures.download');
     Route::get('facture-tvas/{factureTva}/download', [\App\Http\Controllers\DocumentPdfController::class, 'downloadFactureTva'])->name('facture-tvas.download');

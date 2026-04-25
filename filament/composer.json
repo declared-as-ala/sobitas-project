@@ -22,6 +22,7 @@
         "laravel/nightwatch": "^1.12",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.8",
+        "simplesoftwareio/simple-qrcode": "^4.2",
         "squirephp/countries-en": "^3.3",
         "squirephp/currencies-en": "^3.3"
     },

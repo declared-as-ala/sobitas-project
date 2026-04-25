@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Client extends Model
 {
@@ -27,6 +28,7 @@ class Client extends Model
         'loyalty_enabled',
         'loyalty_percent',
         'loyalty_note',
+        'loyalty_points_balance',
     ];
 
     protected $hidden = [
@@ -34,10 +36,11 @@ class Client extends Model
     ];
 
     protected $casts = [
-        'sms' => 'boolean',
-        'loyalty_enabled' => 'boolean',
-        'email_unsubscribed_at' => 'datetime',
-        'sms_unsubscribed_at' => 'datetime',
+        'sms'                    => 'boolean',
+        'loyalty_enabled'        => 'boolean',
+        'loyalty_points_balance' => 'integer',
+        'email_unsubscribed_at'  => 'datetime',
+        'sms_unsubscribed_at'    => 'datetime',
     ];
 
     // ── Relationships ──────────────────────────────────
@@ -65,6 +68,38 @@ class Client extends Model
     public function quotations(): HasMany
     {
         return $this->hasMany(Quotation::class, 'client_id');
+    }
+
+    // ── Loyalty Relationships ──────────────────────────
+
+    public function loyaltyCards(): HasMany
+    {
+        return $this->hasMany(LoyaltyCard::class, 'client_id');
+    }
+
+    public function activeCard(): HasOne
+    {
+        return $this->hasOne(LoyaltyCard::class, 'client_id')
+            ->where('status', 'active')
+            ->latestOfMany('assigned_at');
+    }
+
+    public function loyaltyTransactions(): HasMany
+    {
+        return $this->hasMany(LoyaltyPointTransaction::class, 'client_id')
+            ->orderByDesc('created_at');
+    }
+
+    // ── Loyalty Helpers ────────────────────────────────
+
+    public function pointsToTnd(int $points): string
+    {
+        return number_format($points / 10, 3, '.', ' ');
+    }
+
+    public function tndToPoints(float $tnd): int
+    {
+        return (int) floor($tnd);
     }
 
     // ── Accessors ──────────────────────────────────────

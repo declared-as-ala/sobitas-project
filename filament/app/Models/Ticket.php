@@ -17,8 +17,12 @@ class Ticket extends Model
     protected $guarded = ['id'];
 
     protected $casts = [
-        'date_ticket' => 'date',
-        'prix_total' => 'float',
+        'date_ticket'            => 'date',
+        'prix_total'             => 'float',
+        'loyalty_discount_dt'    => 'decimal:3',
+        'loyalty_processed_at'   => 'datetime',
+        'loyalty_points_redeemed' => 'integer',
+        'loyalty_points_earned'  => 'integer',
     ];
 
     public function client(): BelongsTo
@@ -39,6 +43,16 @@ class Ticket extends Model
     public function factureTvasFromTicket(): HasMany
     {
         return $this->hasMany(FactureTva::class, 'source_ticket_id');
+    }
+
+    public function loyaltyCard(): BelongsTo
+    {
+        return $this->belongsTo(LoyaltyCard::class, 'loyalty_card_id');
+    }
+
+    public function loyaltyTransactions(): HasMany
+    {
+        return $this->hasMany(LoyaltyPointTransaction::class, 'ticket_id');
     }
 
     public function isTicketCaisse(): bool

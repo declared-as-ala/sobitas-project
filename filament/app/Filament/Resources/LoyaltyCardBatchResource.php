@@ -1,0 +1,164 @@
+<?php
+
+namespace App\Filament\Resources;
+
+use App\Filament\Resources\LoyaltyCardBatchResource\Pages;
+use App\Models\LoyaltyCardBatch;
+use App\Services\LoyaltyService;
+use Filament\Actions\Action;
+use Filament\Forms;
+use Filament\Notifications\Notification;
+use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
+use Filament\Tables;
+use Filament\Tables\Table;
+use Filament\Actions;
+
+class LoyaltyCardBatchResource extends Resource
+{
+    protected static ?string $model = LoyaltyCardBatch::class;
+
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-rectangle-stack';
+
+    protected static string|\UnitEnum|null $navigationGroup = 'Clients';
+
+    protected static ?int $navigationSort = 10;
+
+    protected static ?string $navigationLabel = 'Lots de cartes';
+
+    protected static ?string $modelLabel = 'Lot de cartes fidélité';
+
+    protected static ?string $pluralModelLabel = 'Lots de cartes fidélité';
+
+    public static function form(Schema $schema): Schema
+    {
+        return $schema->schema([
+            Section::make('Informations du lot')
+                ->schema([
+                    Forms\Components\TextInput::make('name')
+                        ->label('Nom du lot')
+                        ->placeholder('Ex: Ouverture boutique avril 2026')
+                        ->maxLength(100),
+                    Forms\Components\TextInput::make('prefix')
+                        ->label('Préfixe')
+                        ->default('SOBITAS')
+                        ->required()
+                        ->maxLength(10)
+                        ->hint('Ex: SOBITAS → SOBITAS-000001'),
+                    Forms\Components\TextInput::make('start_number')
+                        ->label('Numéro de début')
+                        ->numeric()
+                        ->default(1)
+                        ->minValue(1)
+                        ->required(),
+                    Forms\Components\TextInput::make('quantity')
+                        ->label('Quantité')
+                        ->numeric()
+                        ->default(100)
+                        ->minValue(1)
+                        ->maxValue(4000)
+                        ->required()
+                        ->hint('Maximum 4000 cartes par lot'),
+                    Forms\Components\TextInput::make('padding')
+                        ->label('Longueur du numéro')
+                        ->numeric()
+                        ->default(6)
+                        ->minValue(4)
+                        ->maxValue(8)
+                        ->hint('Ex: 6 → 000001'),
+                    Forms\Components\Textarea::make('notes')
+                        ->label('Notes')
+                        ->rows(2)
+                        ->columnSpanFull(),
+                ])->columns(2),
+        ]);
+    }
+
+    public static function table(Table $table): Table
+    {
+        return $table
+            ->columns([
+                Tables\Columns\TextColumn::make('name')
+                    ->label('Nom du lot')
+                    ->default('—')
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('prefix')
+                    ->label('Préfixe')
+                    ->badge(),
+                Tables\Columns\TextColumn::make('quantity')
+                    ->label('Quantité')
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('generated_count')
+                    ->label('Générées')
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('available_count')
+                    ->label('Disponibles')
+                    ->getStateUsing(fn (LoyaltyCardBatch $record) => $record->available_count)
+                    ->badge()
+                    ->color('gray'),
+                Tables\Columns\TextColumn::make('active_count')
+                    ->label('Actives')
+                    ->getStateUsing(fn (LoyaltyCardBatch $record) => $record->active_count)
+                    ->badge()
+                    ->color('success'),
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('Créé le')
+                    ->date('d/m/Y')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+            ])
+            ->defaultSort('created_at', 'desc')
+            ->actions([
+                Tables\Actions\Action::make('generate')
+                    ->label('Générer')
+                    ->icon('heroicon-o-sparkles')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->modalHeading(fn (LoyaltyCardBatch $record) => "Générer {$record->quantity} cartes ?")
+                    ->modalDescription('Les cartes seront créées avec des numéros séquentiels et des codes QR uniques.')
+                    ->visible(fn (LoyaltyCardBatch $record) => !$record->isGenerated())
+                    ->action(function (LoyaltyCardBatch $record) {
+                        try {
+                            app(LoyaltyService::class)->generateBatch($record);
+                            Notification::make()
+                                ->title("{$record->generated_count} cartes générées avec succès.")
+                                ->success()
+                                ->send();
+                        } catch (\Throwable $e) {
+                            Notification::make()
+                                ->title('Erreur lors de la génération')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
+                Tables\Actions\Action::make('print_batch')
+                    ->label('Imprimer')
+                    ->icon('heroicon-o-printer')
+                    ->color('info')
+                    ->url(fn (LoyaltyCardBatch $record) => route('loyalty.print.batch', $record))
+                    ->openUrlInNewTab()
+                    ->visible(fn (LoyaltyCardBatch $record) => $record->isGenerated()),
+                Tables\Actions\Action::make('export_csv')
+                    ->label('CSV')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('warning')
+                    ->url(fn (LoyaltyCardBatch $record) => route('loyalty.export.csv', $record))
+                    ->visible(fn (LoyaltyCardBatch $record) => $record->isGenerated()),
+                Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make()
+                    ->visible(fn (LoyaltyCardBatch $record) => !$record->isGenerated()),
+            ]);
+    }
+
+    public static function getPages(): array
+    {
+        return [
+            'index'  => Pages\ListLoyaltyCardBatches::route('/'),
+            'create' => Pages\CreateLoyaltyCardBatch::route('/create'),
+            'edit'   => Pages\EditLoyaltyCardBatch::route('/{record}/edit'),
+        ];
+    }
+}
