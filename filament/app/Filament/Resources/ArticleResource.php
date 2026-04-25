@@ -10,68 +10,35 @@ use App\Filament\Support\ImagePath;
 use App\Filament\Support\RichEditor\TextDirectionToolPlugin;
 use App\Models\Article;
 use Filament\Forms;
-use Filament\Schemas\Schema;
-use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\Grid;
-use Filament\Schemas\Components\Tabs;
-use Filament\Schemas\Components\Tabs\Tab;
-use Filament\Schemas\Components\Utilities\Set;
-use Filament\Schemas\Components\Utilities\Get;
+use Filament\Forms\Form;
+use Filament\Forms\Components\Section;
+use Filament\Forms\Components\Grid;
+use Filament\Forms\Components\Tabs;
+use Filament\Forms\Components\Tabs\Tab;
+use Filament\Forms\Set;
+use Filament\Forms\Get;
 use Filament\Resources\Resource;
 use Filament\Tables;
-use Filament\Actions;
-use Filament\Notifications\Notification;
-use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
-use Illuminate\Support\HtmlString;
+use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Schema as DbSchema;
-use Throwable;
 
 class ArticleResource extends Resource
 {
-    /** Public blog base URL (frontend) — must match production routes. */
     public const BLOG_PUBLIC_BASE_URL = 'https://protein.tn/blog';
 
     protected static ?string $model = Article::class;
-
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-newspaper';
-
     protected static string | \UnitEnum | null $navigationGroup = 'Blog';
-
     protected static ?string $navigationLabel = 'Blog';
-
-    protected static ?string $modelLabel = 'Blog';
-
-    protected static ?string $pluralModelLabel = 'Blogs';
-
+    protected static ?string $modelLabel = 'Article de Blog';
+    protected static ?string $pluralModelLabel = 'Articles de Blog';
     protected static ?int $navigationSort = 1;
-
     protected static ?string $recordTitleAttribute = 'designation_fr';
 
-    protected static bool $isGloballySearchable = false;
-
-    /** @var array<string, bool> */
-    private static array $articleColumnsCache = [];
-
-    private static function hasArticleColumn(string $column): bool
-    {
-        if (array_key_exists($column, self::$articleColumnsCache)) {
-            return self::$articleColumnsCache[$column];
-        }
-
-        try {
-            return self::$articleColumnsCache[$column] = DbSchema::hasColumn('articles', $column);
-        } catch (\Throwable) {
-            return self::$articleColumnsCache[$column] = false;
-        }
-    }
-
     /**
-     * Merge HTML staging into `description` when the editor is in HTML mode, then drop auxiliary keys.
-     *
-     * @param  array<string, mixed>  $data
-     * @return array<string, mixed>
+     * Fusionne les données de l'éditeur (Visuel ou HTML) avant sauvegarde.
      */
     public static function mergeDescriptionEditorFormData(array $data): array
     {
@@ -92,373 +59,138 @@ class ArticleResource extends Resource
         if (isset($data['description']) && is_string($data['description']) && $data['description'] !== '') {
             $normalized = ArticleBodyDocumentNormalizer::normalize($data['description']);
             $data['description'] = ArticleDescriptionHtml::sanitizeStoredHtml($normalized['html']);
-            self::mergeInferredDocumentLocale($data, $normalized);
+            
+            // Détection automatique de la langue et direction
+            if (blank($data['content_lang'] ?? null) && filled($normalized['lang'])) {
+                $data['content_lang'] = Str::limit((string) $normalized['lang'], 16, '');
+            }
+            if (($data['content_text_direction'] ?? 'auto') === 'auto' && filled($normalized['dir'])) {
+                $data['content_text_direction'] = strtolower($normalized['dir']);
+            }
         }
 
         return $data;
     }
 
-    /**
-     * @param  array<string, mixed>  $data
-     * @param  array{html: string, lang: ?string, dir: ?string}  $normalized
-     */
-    private static function mergeInferredDocumentLocale(array &$data, array $normalized): void
+    public static function form(Form $form): Form
     {
-        if (blank($data['content_lang'] ?? null) && filled($normalized['lang'])) {
-            $data['content_lang'] = Str::limit((string) $normalized['lang'], 16, '');
-        }
-
-        $direction = $data['content_text_direction'] ?? 'auto';
-        if (($direction === 'auto' || blank($direction)) && filled($normalized['dir'])) {
-            $d = strtolower((string) $normalized['dir']);
-            if ($d === 'rtl' || $d === 'ltr') {
-                $data['content_text_direction'] = $d;
-            }
-        }
-    }
-
-    public static function form(Schema $schema): Schema
-    {
-        return $schema
+        return $form
             ->columns(1)
             ->schema([
                 Tabs::make('article_tabs')
                     ->persistTabInQueryString()
                     ->columnSpanFull()
                     ->tabs([
-
-                        // ═══════════════════════════════════════════════════════
-                        // TAB 1 — CONTENU
-                        // ═══════════════════════════════════════════════════════
                         Tab::make('Contenu')
                             ->icon('heroicon-o-pencil-square')
                             ->schema([
-
                                 Section::make()
                                     ->schema([
                                         Forms\Components\TextInput::make('designation_fr')
-                                            ->label('Titre de l\'article')
-                                            ->placeholder('Donnez un titre accrocheur à votre article…')
+                                            ->label('Titre H1 (Français)')
                                             ->required()
                                             ->maxLength(255)
-                                            ->columnSpanFull()
                                             ->live(onBlur: true)
-                                            ->hint(function ($state): string {
-                                                $len = strlen($state ?? '');
-                                                return $len . ' / 255 caractères';
-                                            })
-                                            ->hintColor(function ($state): string {
-                                                $len = strlen($state ?? '');
-                                                if ($len > 200) return 'danger';
-                                                if ($len > 80) return 'success';
-                                                return 'gray';
-                                            })
-                                            ->afterStateUpdated(function (string $operation, $state, Set $set, Get $get): void {
-                                                if ($operation === 'create' || ($operation === 'edit' && empty($get('slug')))) {
-                                                    $set('slug', Str::slug($state));
-                                                }
-                                            }),
+                                            ->afterStateUpdated(fn (Set $set, $state) => $set('slug', Str::slug($state))),
 
                                         Forms\Components\TextInput::make('slug')
-                                            ->label('Slug URL')
-                                            ->placeholder('titre-de-larticle')
+                                            ->label('URL Slug')
                                             ->required()
-                                            ->maxLength(255)
                                             ->unique(ignoreRecord: true)
-                                            ->prefix('votresite.com/blog/')
-                                            ->prefixIcon('heroicon-o-globe-alt')
-                                            ->helperText('Généré automatiquement depuis le titre. Modifiable manuellement.')
-                                            ->rules(['regex:/^[a-z0-9\-]+$/'])
-                                            ->validationMessages(['regex' => 'Lettres minuscules, chiffres et tirets uniquement.'])
-                                            ->columnSpanFull(),
+                                            ->prefix('protein.tn/blog/'),
                                     ]),
 
-                                Section::make('Rédaction')
-                                    ->icon('heroicon-o-document-text')
-                                    ->iconColor('primary')
-                                    ->description('Rédigez le contenu complet de votre article. Passez en mode HTML pour coller du balisage ou ajuster la structure sémantique (titres, liens, tableaux). Si vous collez une page HTML complète (<!DOCTYPE>, <html>…), seul le contenu du <body> est conservé ; les balises <head> (meta, styles globaux) ne sont pas enregistrées — utilisez la section Affichage pour la langue / le sens du texte, et l’onglet SEO pour les meta.')
-                                    ->extraAttributes(['class' => 'article-redaction-section'])
+                                Section::make('Éditeur Professionnel')
+                                    ->description('Utilisez les titres H2-H4 pour structurer votre contenu pour le SEO.')
                                     ->schema([
                                         Forms\Components\ToggleButtons::make(ArticleDescriptionHtml::FIELD_EDITOR_MODE)
                                             ->label('Mode d\'édition')
-                                            ->helperText('Visuel : éditeur riche · HTML : source complète (collage, balises avancées)')
                                             ->options([
                                                 ArticleDescriptionHtml::MODE_VISUAL => 'Visuel',
-                                                ArticleDescriptionHtml::MODE_HTML => 'HTML',
+                                                ArticleDescriptionHtml::MODE_HTML => 'Code HTML',
                                             ])
                                             ->icons([
-                                                ArticleDescriptionHtml::MODE_VISUAL => Heroicon::OutlinedEye,
-                                                ArticleDescriptionHtml::MODE_HTML => Heroicon::OutlinedCodeBracket,
+                                                ArticleDescriptionHtml::MODE_VISUAL => 'heroicon-o-pencil',
+                                                ArticleDescriptionHtml::MODE_HTML => 'heroicon-o-code-bracket',
                                             ])
-                                            ->colors([
-                                                ArticleDescriptionHtml::MODE_VISUAL => 'primary',
-                                                ArticleDescriptionHtml::MODE_HTML => 'gray',
-                                            ])
-                                            ->grouped()
-                                            ->inline()
                                             ->default(ArticleDescriptionHtml::MODE_VISUAL)
                                             ->live()
-                                            ->columnSpanFull()
-                                            ->afterStateUpdated(function (mixed $state, Set $set, Get $get, mixed $old = null): void {
-                                                if ($state === ArticleDescriptionHtml::MODE_HTML) {
-                                                    $set(
-                                                        ArticleDescriptionHtml::FIELD_HTML_STAGING,
-                                                        ArticleDescriptionHtml::toStoredHtml($get('description')),
-                                                    );
-
-                                                    return;
-                                                }
-
-                                                // Only merge staging → RichEditor when leaving HTML mode.
-                                                // On first load, $old is null and staging may not be hydrated yet;
-                                                // running this would wipe `description` with an empty doc.
-                                                if ($state === ArticleDescriptionHtml::MODE_VISUAL && $old === ArticleDescriptionHtml::MODE_HTML) {
-                                                    $html = (string) ($get(ArticleDescriptionHtml::FIELD_HTML_STAGING) ?? '');
-
-                                                    try {
-                                                        $set(
-                                                            'description',
-                                                            ArticleDescriptionHtml::tipTapDocumentFromHtml($html),
-                                                        );
-                                                    } catch (Throwable $e) {
-                                                        $set(ArticleDescriptionHtml::FIELD_EDITOR_MODE, ArticleDescriptionHtml::MODE_HTML);
-                                                        Notification::make()
-                                                            ->title('HTML invalide')
-                                                            ->body('Impossible de repasser en mode Visuel : corrigez le HTML ou annulez avec Annuler / recharger la page.')
-                                                            ->danger()
-                                                            ->send();
-                                                    }
-                                                }
-                                            }),
+                                            ->inline(),
 
                                         Forms\Components\RichEditor::make('description')
-                                            ->hiddenLabel()
-                                            ->columnSpanFull()
-                                            ->extraFieldWrapperAttributes(['class' => 'article-redaction-rich-editor'])
-                                            ->visible(fn (Get $get): bool => ($get(ArticleDescriptionHtml::FIELD_EDITOR_MODE) ?? ArticleDescriptionHtml::MODE_VISUAL) === ArticleDescriptionHtml::MODE_VISUAL)
-                                            ->dehydrated(fn (Get $get): bool => ($get(ArticleDescriptionHtml::FIELD_EDITOR_MODE) ?? ArticleDescriptionHtml::MODE_VISUAL) === ArticleDescriptionHtml::MODE_VISUAL)
+                                            ->label('Corps de l\'article')
+                                            ->visible(fn (Get $get) => ($get(ArticleDescriptionHtml::FIELD_EDITOR_MODE) ?? ArticleDescriptionHtml::MODE_VISUAL) === ArticleDescriptionHtml::MODE_VISUAL)
                                             ->plugins([TextDirectionToolPlugin::make()])
                                             ->toolbarButtons([
+                                                ['h2', 'h3', 'h4'],
                                                 ['bold', 'italic', 'underline', 'strike'],
-                                                ['h2', 'h3'],
-                                                ['link'],
-                                                ['bulletList', 'orderedList'],
-                                                ['blockquote', 'codeBlock'],
+                                                ['link', 'blockquote'],
+                                                ['bulletList', 'orderedList', 'checkList'],
                                                 ['table', 'attachFiles'],
                                                 [TextDirectionToolPlugin::TOOL_AUTO, TextDirectionToolPlugin::TOOL_LTR, TextDirectionToolPlugin::TOOL_RTL],
-                                                ['horizontalRule', 'clearFormatting'],
                                                 ['undo', 'redo'],
-                                            ]),
+                                            ])
+                                            ->fileAttachmentsDisk('public')
+                                            ->fileAttachmentsDirectory('articles/content')
+                                            ->columnSpanFull(),
 
                                         Forms\Components\Textarea::make(ArticleDescriptionHtml::FIELD_HTML_STAGING)
-                                            ->label('Source HTML')
-                                            ->rows(22)
-                                            ->columnSpanFull()
-                                            ->dehydrated(false)
-                                            ->visible(fn (Get $get): bool => ($get(ArticleDescriptionHtml::FIELD_EDITOR_MODE) ?? ArticleDescriptionHtml::MODE_VISUAL) === ArticleDescriptionHtml::MODE_HTML)
-                                            ->live(debounce: 400)
-                                            ->extraFieldWrapperAttributes(['class' => 'article-redaction-html-field'])
-                                            ->extraInputAttributes([
-                                                'class' => 'article-html-source-input font-mono text-sm',
-                                                'spellcheck' => 'false',
-                                            ])
-                                            ->helperText(new HtmlString(
-                                                '<strong>SEO</strong> : utilisez H2/H3 pour structurer (le titre de l’article sert de H1 sur le site). '
-                                                . 'Rédigez des ancres de liens explicites, ajoutez <code>alt</code> sur les images inline. '
-                                                . 'À l’enregistrement, le HTML est assaini (scripts / balises dangereuses retirés).'
-                                            )),
-
-                                        Forms\Components\ViewField::make('_description_seo_metrics')
-                                            ->hiddenLabel()
-                                            ->view('filament.forms.components.article-description-seo-metrics')
-                                            ->extraFieldWrapperAttributes(['class' => 'article-redaction-seo-wrap'])
-                                            ->columnSpanFull()
-                                            ->dehydrated(false),
-                                    ]),
-
-                                Section::make('Affichage du texte (blog)')
-                                    ->icon('heroicon-o-language')
-                                    ->iconColor('gray')
-                                    ->description('Contrôle la direction et la langue du corps de l’article sur le site public. « Automatique » : pour l’affichage, le sens peut être déduit de la langue (ex. ar → RTL) côté site.')
-                                    ->schema([
-                                        Grid::make(2)
-                                            ->schema([
-                                                Forms\Components\Select::make('content_text_direction')
-                                                    ->label('Sens du texte')
-                                                    ->options([
-                                                        'auto' => 'Automatique',
-                                                        'ltr' => 'Gauche à droite (LTR)',
-                                                        'rtl' => 'Droite à gauche (RTL)',
-                                                    ])
-                                                    ->default('auto')
-                                                    ->required()
-                                                    ->native(false),
-
-                                                Forms\Components\TextInput::make('content_lang')
-                                                    ->label('Langue du contenu (ISO)')
-                                                    ->placeholder('fr, ar, …')
-                                                    ->maxLength(16)
-                                                    ->helperText('Optionnel. Ex. fr, ar. Améliore l’accessibilité (attribut lang) et peut guider le sens en mode Automatique.'),
-                                            ]),
+                                            ->label('Source HTML brute')
+                                            ->visible(fn (Get $get) => $get(ArticleDescriptionHtml::FIELD_EDITOR_MODE) === ArticleDescriptionHtml::MODE_HTML)
+                                            ->rows(20)
+                                            ->extraInputAttributes(['class' => 'font-mono'])
+                                            ->dehydrated(false) // Géré par mergeDescriptionEditorFormData
+                                            ->columnSpanFull(),
                                     ]),
                             ]),
 
-                        // ═══════════════════════════════════════════════════════
-                        // TAB 2 — MÉDIAS
-                        // ═══════════════════════════════════════════════════════
-                        Tab::make('Médias')
-                            ->icon('heroicon-o-photo')
-                            ->schema([
-
-                                Section::make('Image de couverture')
-                                    ->icon('heroicon-o-photo')
-                                    ->description('Format recommandé : 21:9  ·  JPEG, PNG ou WebP  ·  Max 5 Mo')
-                                    ->schema([
-                                        Forms\Components\FileUpload::make('cover')
-                                            ->hiddenLabel()
-                                            ->disk('public')
-                                            ->directory('articles')
-                                            ->image()
-                                            ->imageEditor()
-                                            ->imageEditorAspectRatios([null, '21:9', '16:9', '4:3', '1:1'])
-                                            ->maxSize(5120)
-                                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
-                                            ->columnSpanFull()
-                                            ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
-                                                $path = $file->store('articles', 'public');
-                                                if (! $path) {
-                                                    $ext  = $file->getClientOriginalExtension() ?: 'jpg';
-                                                    $path = $file->storeAs('articles', \Illuminate\Support\Str::uuid() . '.' . $ext, 'public');
-                                                }
-                                                return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp((string) $path) ?? (string) $path;
-                                            }),
-
-                                        Grid::make(2)
-                                            ->schema([
-                                                Forms\Components\TextInput::make('alt_cover')
-                                                    ->label('Texte alternatif (alt)')
-                                                    ->maxLength(255)
-                                                    ->placeholder('Ex : Protéine whey chocolat 1 kg')
-                                                    ->prefixIcon('heroicon-o-eye')
-                                                    ->helperText('Obligatoire pour l\'accessibilité et le référencement des images.'),
-
-                                                Forms\Components\TextInput::make('description_cover')
-                                                    ->label('Légende de l\'image')
-                                                    ->maxLength(255)
-                                                    ->placeholder('Légende affichée sous l\'image (optionnel)')
-                                                    ->prefixIcon('heroicon-o-chat-bubble-bottom-center-text'),
-                                            ]),
-                                    ]),
-                            ]),
-
-                        // ═══════════════════════════════════════════════════════
-                        // TAB 3 — SEO
-                        // ═══════════════════════════════════════════════════════
-                        Tab::make('SEO')
+                        Tab::make('SEO & Médias')
                             ->icon('heroicon-o-magnifying-glass')
                             ->schema([
-                                Section::make('Titre & Description')
-                                    ->icon('heroicon-o-tag')
-                                    ->schema([
-                                        Forms\Components\TextInput::make('seo_title')
-                                            ->label('SEO title (prioritaire)')
-                                            ->visible(fn (): bool => self::hasArticleColumn('seo_title'))
-                                            ->dehydrated(fn (): bool => self::hasArticleColumn('seo_title'))
-                                            ->maxLength(255)
-                                            ->columnSpanFull(),
-                                        Forms\Components\Textarea::make('seo_description')
-                                            ->label('SEO description (prioritaire)')
-                                            ->visible(fn (): bool => self::hasArticleColumn('seo_description'))
-                                            ->dehydrated(fn (): bool => self::hasArticleColumn('seo_description'))
-                                            ->maxLength(500)
-                                            ->rows(4)
-                                            ->columnSpanFull(),
-                                        Forms\Components\Textarea::make('seo_excerpt')
-                                            ->label('Extrait SEO')
-                                            ->visible(fn (): bool => self::hasArticleColumn('seo_excerpt'))
-                                            ->dehydrated(fn (): bool => self::hasArticleColumn('seo_excerpt'))
-                                            ->maxLength(1000)
-                                            ->rows(3)
-                                            ->columnSpanFull(),
-                                        Forms\Components\TextInput::make('meta_title')
-                                            ->label('Titre SEO (meta title)')
-                                            ->maxLength(255)
-                                            ->placeholder('Titre affiché dans les résultats Google…')
-                                            ->live(onBlur: true)
-                                            ->hint(function ($state): string {
-                                                return strlen($state ?? '') . ' / 60 recommandés';
-                                            })
-                                            ->hintColor(function ($state): string {
-                                                $len = strlen($state ?? '');
-                                                if ($len > 60) return 'danger';
-                                                if ($len >= 40) return 'success';
-                                                return 'gray';
-                                            })
-                                            ->helperText('Entre 40 et 60 caractères pour un meilleur affichage.')
-                                            ->columnSpanFull(),
+                                Grid::make(2)->schema([
+                                    Section::make('Image de couverture')
+                                        ->columnSpan(1)
+                                        ->schema([
+                                            Forms\Components\FileUpload::make('cover')
+                                                ->image()
+                                                ->directory('articles/covers')
+                                                ->imageEditor()
+                                                ->saveUploadedFileUsing(function ($file) {
+                                                    $path = $file->store('articles/covers', 'public');
+                                                    // Appel à votre service de conversion WebP
+                                                    return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp($path) ?? $path;
+                                                }),
+                                            Forms\Components\TextInput::make('alt_cover')
+                                                ->label('Texte ALT (Image)')
+                                                ->required(),
+                                        ]),
 
-                                        Forms\Components\Textarea::make('meta_description_fr')
-                                            ->label('Meta description')
-                                            ->maxLength(500)
-                                            ->placeholder('Description visible dans les résultats de recherche Google…')
-                                            ->rows(4)
-                                            ->live(onBlur: true)
-                                            ->hint(function ($state): string {
-                                                return strlen($state ?? '') . ' / 160 recommandés';
-                                            })
-                                            ->hintColor(function ($state): string {
-                                                $len = strlen($state ?? '');
-                                                if ($len > 160) return 'danger';
-                                                if ($len >= 120) return 'success';
-                                                return 'gray';
-                                            })
-                                            ->helperText('Entre 120 et 160 caractères recommandés.')
-                                            ->columnSpanFull(),
-                                    ]),
+                                    Section::make('Meta Tags')
+                                        ->columnSpan(1)
+                                        ->schema([
+                                            Forms\Components\TextInput::make('meta_title')
+                                                ->maxLength(60)
+                                                ->hint(fn ($state) => strlen($state ?? '') . '/60'),
+                                            Forms\Components\Textarea::make('meta_description_fr')
+                                                ->maxLength(160)
+                                                ->hint(fn ($state) => strlen($state ?? '') . '/160'),
+                                        ]),
+                                ]),
                             ]),
 
-                        // ═══════════════════════════════════════════════════════
-                        // TAB 4 — PARAMÈTRES
-                        // ═══════════════════════════════════════════════════════
                         Tab::make('Paramètres')
                             ->icon('heroicon-o-cog-6-tooth')
                             ->schema([
-
-                                Section::make('Statut de publication')
-                                    ->icon('heroicon-o-signal')
-                                    ->description('Contrôlez la visibilité de cet article sur votre site.')
-                                    ->schema([
-                                        Forms\Components\Select::make('blog_type')
-                                            ->label('Type d\'article')
-                                            ->options(BlogArticleType::options())
-                                            ->placeholder('— Non défini (filtre par mots-clés sur le site) —')
-                                            ->nullable()
-                                            ->native(false)
-                                            ->helperText('Optionnel. Les articles sans type restent classés par mots-clés comme avant.')
-                                            ->columnSpanFull(),
-                                        Forms\Components\Select::make('categories')
-                                            ->label('Catégories blog')
-                                            ->relationship('categories', 'name')
-                                            ->multiple()
-                                            ->searchable()
-                                            ->preload()
-                                            ->columnSpanFull(),
-                                        Forms\Components\Select::make('tags')
-                                            ->label('Tags blog')
-                                            ->relationship('tags', 'name')
-                                            ->multiple()
-                                            ->searchable()
-                                            ->preload()
-                                            ->columnSpanFull(),
-
-                                        Forms\Components\Toggle::make('publier')
-                                            ->label('Publier cet article')
-                                            ->default(false)
-                                            ->onColor('success')
-                                            ->offColor('gray')
-                                            ->helperText('Désactivez pour enregistrer en tant que brouillon — l\'article ne sera pas visible sur le site.'),
-                                    ]),
-
+                                Forms\Components\Select::make('blog_type')
+                                    ->options(BlogArticleType::class)
+                                    ->required(),
+                                Forms\Components\Select::make('categories')
+                                    ->relationship('categories', 'name')
+                                    ->multiple()
+                                    ->preload(),
+                                Forms\Components\Toggle::make('publier')
+                                    ->label('Publier immédiatement')
+                                    ->default(false),
                             ]),
                     ]),
             ]);
@@ -466,75 +198,36 @@ class ArticleResource extends Resource
 
     public static function table(Table $table): Table
     {
-        $selectCols = ['id', 'designation_fr', 'slug', 'cover', 'publier', 'created_at'];
-        if (Article::hasBlogTypeColumn()) {
-            $selectCols = ['id', 'designation_fr', 'slug', 'cover', 'publier', 'blog_type', 'created_at'];
-        }
-
-        $columns = [
-            Tables\Columns\ImageColumn::make('cover')
-                ->label('Image')
-                ->getStateUsing(fn ($record) => ImagePath::normalize($record->cover))
-                ->disk('public')
-                ->circular()
-                ->height(48)
-                ->width(48),
-
-            Tables\Columns\TextColumn::make('designation_fr')
-                ->label('Titre')
-                ->searchable()
-                ->sortable()
-                ->limit(70)
-                ->description(fn ($record) => $record->slug),
-        ];
-
-        if (Article::hasBlogTypeColumn()) {
-            $columns[] = Tables\Columns\TextColumn::make('blog_type')
-                ->label('Type')
-                ->formatStateUsing(function ($state): string {
-                    if ($state === null) {
-                        return '—';
-                    }
-                    if ($state instanceof BlogArticleType) {
-                        return $state->label();
-                    }
-
-                    return BlogArticleType::tryFrom((string) $state)?->label() ?? '—';
-                })
-                ->badge()
-                ->color(fn ($state): string => $state === null ? 'gray' : 'info')
-                ->toggleable();
-        }
-
-        $columns[] = Tables\Columns\IconColumn::make('publier')
-            ->label('Publié')
-            ->boolean();
-
-        $columns[] = Tables\Columns\TextColumn::make('created_at')
-            ->label('Date de création')
-            ->dateTime('d/m/Y')
-            ->sortable();
-
         return $table
-            ->modifyQueryUsing(fn (\Illuminate\Database\Eloquent\Builder $query) => $query->select($selectCols))
-            ->columns($columns)
-            ->defaultSort('created_at', 'desc')
-            ->defaultPaginationPageOption(25)
-            ->actions([
-                Actions\EditAction::make(),
-                Actions\DeleteAction::make(),
+            ->columns([
+                Tables\Columns\ImageColumn::make('cover')
+                    ->disk('public')
+                    ->circular(),
+                Tables\Columns\TextColumn::make('designation_fr')
+                    ->label('Titre')
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\IconColumn::make('publier')
+                    ->label('Statut')
+                    ->boolean(),
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('Date')
+                    ->dateTime('d/m/Y')
+                    ->sortable(),
             ])
-            ->bulkActions([
-                Actions\DeleteBulkAction::make(),
+            ->filters([])
+            ->actions([
+                Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ]);
     }
 
     public static function getPages(): array
     {
         return [
-            'index'  => Pages\ListArticles::route('/'),
+            'index' => Pages\ListArticles::route('/'),
             'create' => Pages\CreateArticle::route('/create'),
-            'edit'   => Pages\EditArticle::route('/{record}/edit'),
+            'edit' => Pages\EditArticle::route('/{record}/edit'),
         ];
     }
 }
