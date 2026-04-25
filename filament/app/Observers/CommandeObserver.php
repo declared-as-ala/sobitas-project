@@ -7,7 +7,6 @@ use App\Jobs\SendSmsJob;
 use App\Models\Commande;
 use App\Models\Message;
 use App\Models\User;
-use App\Services\PartnerCommissionService;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Log;
@@ -50,9 +49,6 @@ class CommandeObserver
         if (! $commande->wasChanged('etat')) {
             return;
         }
-
-        // Commission hooks only (loyalty earn/redeem no longer tied to commandes)
-        $this->handleCommission($commande);
 
         if ($commande->etat === 'annuler') {
             return;
@@ -104,31 +100,5 @@ class CommandeObserver
             'commande_id' => $commande->id,
             'etat'        => $commande->etat,
         ]);
-    }
-
-    private function handleCommission(Commande $commande): void
-    {
-        $etat = $commande->etat;
-
-        try {
-            $commissionService = app(PartnerCommissionService::class);
-
-            $earnStatuses    = config('loyalty.earn_trigger_statuses', ['expidee']);
-            $reversalStatuses = config('loyalty.reversal_trigger_statuses', ['annuler']);
-
-            if (in_array($etat, $earnStatuses, true)) {
-                $commissionService->createCommission($commande);
-            }
-
-            if (in_array($etat, $reversalStatuses, true)) {
-                $commissionService->reverseCommission($commande);
-            }
-        } catch (\Throwable $e) {
-            Log::error('CommandeObserver: commission hook failed', [
-                'commande_id' => $commande->id,
-                'etat'        => $etat,
-                'error'       => $e->getMessage(),
-            ]);
-        }
     }
 }

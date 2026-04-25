@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-// Partner/Loyalty — resolved at runtime; suppress static-analysis warnings
 
 class Commande extends Model
 {
@@ -24,8 +23,6 @@ class Commande extends Model
         'delivered_at', 'refund_amount', 'discount_amount', 'payment_method', 'is_returning_customer',
         'coupon_id', 'coupon_code_snapshot', 'coupon_type_snapshot', 'coupon_value_snapshot',
         'discount_ht', 'discount_ttc',
-        'partner_id', 'commission_base', 'estimated_commission',
-        'loyalty_points_redeemed', 'loyalty_discount', 'loyalty_points_earned',
     ];
 
     protected $casts = [
@@ -37,11 +34,6 @@ class Commande extends Model
         'discount_amount' => 'float',
         'discount_ht' => 'float',
         'discount_ttc' => 'float',
-        'commission_base' => 'float',
-        'estimated_commission' => 'float',
-        'loyalty_discount' => 'float',
-        'loyalty_points_redeemed' => 'integer',
-        'loyalty_points_earned' => 'integer',
         'sms_sent' => 'boolean',
         'is_returning_customer' => 'boolean',
         'delivered_at' => 'datetime',
@@ -91,22 +83,10 @@ class Commande extends Model
 
     // ── Relationships ──────────────────────────────────
 
-    /** CRM customer for this order (loyalty, history). */
+    /** Client linked to this order. Prefer client_id when set; otherwise user_id (legacy). */
     public function client(): BelongsTo
     {
-        return $this->belongsTo(Client::class, 'client_id');
-    }
-
-    /** Legacy: guest checkout historically stored clients.id in user_id. Prefer client_id. */
-    public function legacyGuestClient(): BelongsTo
-    {
         return $this->belongsTo(Client::class, 'user_id');
-    }
-
-    /** Web user who placed the order (audit), when applicable. */
-    public function orderingUser(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function quotation(): BelongsTo
@@ -144,21 +124,6 @@ class Commande extends Model
     public function coupon(): BelongsTo
     {
         return $this->belongsTo(Coupon::class, 'coupon_id');
-    }
-
-    public function partner(): BelongsTo
-    {
-        return $this->belongsTo(Partner::class, 'partner_id');
-    }
-
-    public function commissionTransactions(): HasMany
-    {
-        return $this->hasMany(PartnerCommissionTransaction::class, 'order_id');
-    }
-
-    public function loyaltyTransactions(): HasMany
-    {
-        return $this->hasMany(LoyaltyPointTransaction::class, 'order_id');
     }
 
     public function couponRedemption(): HasOne

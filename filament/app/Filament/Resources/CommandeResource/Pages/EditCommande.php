@@ -6,10 +6,7 @@ use App\Filament\Resources\CommandeResource;
 use App\Filament\Resources\ClientResource;
 use App\Filament\Widgets\DocumentTimelineWidget;
 use App\Models\Commande;
-use App\Models\LoyaltyCard;
-use App\Services\LoyaltyService;
 use Filament\Actions;
-use Filament\Forms;
 use Filament\Actions\ActionGroup;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
@@ -64,57 +61,9 @@ class EditCommande extends EditRecord
             Actions\Action::make('viewClient')
                 ->label('Voir client')
                 ->icon('heroicon-o-user')
-                ->visible(fn () => (bool) $this->record->client_id)
-                ->url(fn () => ClientResource::getUrl('edit', ['record' => $this->record->client_id]))
+                ->visible(fn () => (bool) $this->record->user_id)
+                ->url(fn () => ClientResource::getUrl('edit', ['record' => $this->record->user_id]))
                 ->openUrlInNewTab(),
-            Actions\Action::make('loyalty_qr_attach')
-                ->label('Fidélité QR')
-                ->icon('heroicon-o-qr-code')
-                ->color('gray')
-                ->form([
-                    Forms\Components\TextInput::make('qr_token')
-                        ->label('Token / code QR')
-                        ->required(),
-                ])
-                ->action(function (array $data): void {
-                    $card = LoyaltyCard::where('qr_token', trim($data['qr_token']))->first();
-                    if (! $card) {
-                        Notification::make()->title('Carte introuvable')->danger()->send();
-
-                        return;
-                    }
-                    $this->record->update(['client_id' => $card->client_id]);
-                    $this->record->refresh();
-                    $pts = app(LoyaltyService::class)->getBalance($card->client_id);
-                    Notification::make()
-                        ->title('Client CRM attaché')
-                        ->body("Solde fidélité : {$pts} points")
-                        ->success()
-                        ->send();
-                }),
-            Actions\Action::make('loyalty_points')
-                ->label('Points fidélité')
-                ->icon('heroicon-o-sparkles')
-                ->color('gray')
-                ->visible(fn () => (bool) $this->record->client_id)
-                ->form([
-                    Forms\Components\TextInput::make('points')
-                        ->label('Points (+ ou -)')
-                        ->numeric()
-                        ->required(),
-                    Forms\Components\TextInput::make('description')
-                        ->label('Motif')
-                        ->default('Caisse commande'),
-                ])
-                ->action(function (array $data): void {
-                    app(LoyaltyService::class)->adjustPoints(
-                        (int) $this->record->client_id,
-                        (int) $data['points'],
-                        $data['description'] ?? null,
-                        auth()->id()
-                    );
-                    Notification::make()->title('Points enregistrés')->success()->send();
-                }),
             Actions\Action::make('createBl')
                 ->label('Convertir en bon de livraison')
                 ->icon('heroicon-o-document-text')

@@ -10,9 +10,6 @@ use App\Models\Facture;
 use App\Models\FactureTva;
 use App\Models\Ticket;
 use App\Models\User;
-use App\Services\CustomerUserLinkService;
-use App\Services\LoyaltyService;
-use App\Services\WebAccessInviteService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -102,9 +99,6 @@ class ClientController extends Controller
             'password' => Hash::make($validated['password']),
         ]);
 
-        $client = app(CustomerUserLinkService::class)->linkOrCreateClientForUser($user);
-        app(LoyaltyService::class)->getOrCreateCard($client);
-
         $token = $user->createToken('authToken')->plainTextToken;
 
         return response()->json([
@@ -144,11 +138,10 @@ class ClientController extends Controller
         $user->save();
 
         return response()->json([
-            'id'        => $user->id,
-            'name'      => $user->name,
-            'email'     => $user->email,
-            'phone'     => $user->phone,
-            'client_id' => $user->client?->id,
+            'id'    => $user->id,
+            'name'  => $user->name,
+            'email' => $user->email,
+            'phone' => $user->phone,
         ]);
     }
 
@@ -158,11 +151,10 @@ class ClientController extends Controller
 
         // Never expose password hash or other sensitive fields
         return response()->json([
-            'id'        => $user->id,
-            'name'      => $user->name,
-            'email'     => $user->email,
-            'phone'     => $user->phone,
-            'client_id' => $user->client?->id,
+            'id'    => $user->id,
+            'name'  => $user->name,
+            'email' => $user->email,
+            'phone' => $user->phone,
         ]);
     }
 
@@ -173,16 +165,7 @@ class ClientController extends Controller
     {
         $perPage = $this->resolvePerPage($request);
 
-        $authUser = Auth::user();
-        $clientId = $authUser->client?->id;
-
-        $commandes = Commande::query()
-            ->where(function ($q) use ($authUser, $clientId) {
-                $q->where('user_id', $authUser->id);
-                if ($clientId) {
-                    $q->orWhere('client_id', $clientId);
-                }
-            })
+        $commandes = Commande::where('user_id', Auth::id())
             ->select('id', 'numero', 'etat', 'prix_ttc', 'created_at', 'region')
             ->latest()
             ->paginate($perPage);
@@ -192,16 +175,8 @@ class ClientController extends Controller
 
     public function detail_commande(int $id): JsonResponse
     {
-        $authUser = Auth::user();
-        $clientId = $authUser->client?->id;
-
         $commande = Commande::where('id', $id)
-            ->where(function ($q) use ($authUser, $clientId) {
-                $q->where('user_id', $authUser->id);
-                if ($clientId) {
-                    $q->orWhere('client_id', $clientId);
-                }
-            })
+            ->where('user_id', Auth::id())
             ->select('id', 'numero', 'nom', 'prenom', 'email', 'phone', 'region', 'ville', 'etat', 'prix_ht', 'prix_ttc', 'frais_livraison', 'created_at')
             ->first();
 
@@ -294,25 +269,5 @@ class ClientController extends Controller
             'user'         => $user,
             'tel'          => $tel,
         ]);
-    }
-
-    /**
-     * POST /api/admin/customers/invite — Filament staff: create web user + storefront reset mail.
-     */
-    public function inviteCustomerWebAccess(Request $request, WebAccessInviteService $invite): JsonResponse
-    {
-        $request->validate([
-            'client_id' => ['required', 'integer', 'exists:clients,id'],
-        ]);
-
-        $client = Client::findOrFail((int) $request->input('client_id'));
-
-        try {
-            $invite->invite($client);
-        } catch (\Throwable $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
-
-        return response()->json(['message' => 'Invitation envoyée.']);
     }
 }

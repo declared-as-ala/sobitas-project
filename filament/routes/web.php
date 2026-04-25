@@ -41,10 +41,6 @@ Route::get('unsubscribe', function () {
 Route::redirect('login-redirect', 'login')->name('login');
 
 Route::middleware(['auth', 'no.cache.print'])->group(function () {
-    // QR code image — staff only (boutique loyalty; not exposed to storefront)
-    Route::get('loyalty/qr/{token}', [\App\Http\Controllers\Api\LoyaltyController::class, 'qrImage'])
-        ->name('loyalty.qr')
-        ->where('token', '[a-zA-Z0-9]+');
     Route::get('factures/{facture}/print', function (Facture $facture) {
         $facture->load('client');
         $details_facture = DetailsFacture::where('facture_id', $facture->id)
@@ -85,28 +81,22 @@ Route::middleware(['auth', 'no.cache.print'])->group(function () {
     })->name('factures.print');
 
     Route::get('tickets/{ticket}/print', function (\App\Models\Ticket $ticket) {
-        $ticket->load(['client', 'loyaltyCard']);
+        $ticket->load('client');
         $details_ticket = \App\Models\DetailsTicket::where('ticket_id', $ticket->id)
             ->with('product:id,designation_fr')
             ->get();
         $coordonnee = \App\Models\Coordinate::getCached();
 
-        $loyaltyBalanceAfter = null;
-        if ($ticket->client_id) {
-            $loyaltyBalanceAfter = app(\App\Services\LoyaltyService::class)->getBalance((int) $ticket->client_id);
-        }
-
         return view('print.ticket', [
-            'ticket'                => $ticket,
-            'details_ticket'        => $details_ticket,
-            'coordonnee'            => $coordonnee,
-            'company'               => $coordonnee,
-            'documentDate'          => $ticket->date_ticket
+            'ticket'         => $ticket,
+            'details_ticket' => $details_ticket,
+            'coordonnee'     => $coordonnee,
+            'company'        => $coordonnee,
+            'documentDate'   => $ticket->date_ticket
                 ? \Carbon\Carbon::parse($ticket->date_ticket)->format('d/m/Y')
                 : ($ticket->created_at?->format('d/m/Y') ?? ''),
-            'documentTime'          => $ticket->created_at?->format('H:i') ?? '',
-            'backUrl'               => route('filament.admin.resources.tickets.index'),
-            'loyaltyBalanceAfter'   => $loyaltyBalanceAfter,
+            'documentTime'   => $ticket->created_at?->format('H:i') ?? '',
+            'backUrl'        => route('filament.admin.resources.tickets.index'),
         ]);
     })->name('tickets.print');
 
@@ -326,16 +316,6 @@ Route::middleware(['auth'])->group(function () {
             'code_postale' => $c->code_postale
         ])]);
     })->name('api.pos-clients');
-
-    // ── Loyalty card print (admin-only) ──────────────────
-    Route::get('loyalty/cards/{card}/print', function (\App\Models\LoyaltyCard $card) {
-        $card->load('client');
-        $coordonnee = \App\Models\Coordinate::getCached();
-        $loyaltyService = app(\App\Services\LoyaltyService::class);
-        $points = $loyaltyService->getBalance($card->client_id);
-        $value  = $loyaltyService->getMonetaryValue($card->client_id);
-        return view('print.loyalty-card', compact('card', 'coordonnee', 'points', 'value'));
-    })->name('loyalty.card.print');
 
     Route::post('/api/pos-clients', function() {
         $data = request()->validate([

@@ -2,11 +2,8 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Pages\ScannerFidelite;
-use App\Filament\Pages\TicketPosPage;
 use App\Filament\Resources\ClientResource\Pages;
 use App\Models\Client;
-use App\Services\LoyaltyService;
 use App\Jobs\SendSmsJob;
 use Filament\Forms;
 use Filament\Schemas\Components\Section;
@@ -16,7 +13,6 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Actions;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
 class ClientResource extends Resource
@@ -72,7 +68,6 @@ class ClientResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $q) => $q->with(['loyaltyCard'])->withMax('tickets', 'created_at'))
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->label('Nom')
@@ -93,26 +88,6 @@ class ClientResource extends Resource
                 Tables\Columns\IconColumn::make('sms')
                     ->label('SMS')
                     ->boolean(),
-                Tables\Columns\TextColumn::make('loyaltyCard.card_number')
-                    ->label('N° carte fidélité')
-                    ->placeholder('—')
-                    ->toggleable(),
-                Tables\Columns\TextColumn::make('loyalty_points')
-                    ->label('Points')
-                    ->getStateUsing(fn (Client $record): int => app(LoyaltyService::class)->getBalance((int) $record->id))
-                    ->alignEnd()
-                    ->toggleable(),
-                Tables\Columns\TextColumn::make('loyalty_value_dt')
-                    ->label('Valeur pts')
-                    ->getStateUsing(fn (Client $record): string => number_format(app(LoyaltyService::class)->getMonetaryValue((int) $record->id), 3, ',', ' ') . ' DT')
-                    ->alignEnd()
-                    ->toggleable(),
-                Tables\Columns\TextColumn::make('tickets_max_created_at')
-                    ->label('Dernier ticket')
-                    ->dateTime('d/m/Y H:i')
-                    ->placeholder('—')
-                    ->sortable()
-                    ->toggleable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Créé le')
                     ->dateTime('d/m/Y')
@@ -126,56 +101,6 @@ class ClientResource extends Resource
                     ->label('Accepte SMS'),
             ])
             ->actions([
-                Actions\Action::make('ticket_pos')
-                    ->label('Ticket POS')
-                    ->icon('heroicon-o-ticket')
-                    ->url(fn (Client $record): string => TicketPosPage::getUrl([]) . '?client_id=' . $record->id)
-                    ->openUrlInNewTab(),
-                Actions\Action::make('scanner_fidelite')
-                    ->label('Scanner fidélité')
-                    ->icon('heroicon-o-qr-code')
-                    ->url(fn (Client $record): string => ScannerFidelite::getUrl() . '?client=' . $record->id)
-                    ->openUrlInNewTab(),
-                Actions\Action::make('create_loyalty_card')
-                    ->label('Créer carte')
-                    ->icon('heroicon-o-credit-card')
-                    ->visible(fn (Client $record): bool => ! $record->loyaltyCard)
-                    ->action(function (Client $record): void {
-                        app(LoyaltyService::class)->getOrCreateCard($record);
-                        Notification::make()->title('Carte fidélité créée')->success()->send();
-                    }),
-                Actions\Action::make('print_loyalty_card')
-                    ->label('Imprimer carte')
-                    ->icon('heroicon-o-printer')
-                    ->visible(fn (Client $record): bool => (bool) $record->loyaltyCard)
-                    ->url(fn (Client $record): string => route('loyalty.card.print', ['card' => $record->loyaltyCard->id]))
-                    ->openUrlInNewTab(),
-                Actions\Action::make('adjust_loyalty_points')
-                    ->label('Ajuster points')
-                    ->icon('heroicon-o-sparkles')
-                    ->form([
-                        Forms\Components\TextInput::make('points')
-                            ->label('Points (+ ou −)')
-                            ->integer()
-                            ->required(),
-                        Forms\Components\TextInput::make('description')
-                            ->label('Motif')
-                            ->default('Ajustement admin')
-                            ->maxLength(255),
-                    ])
-                    ->action(function (Client $record, array $data): void {
-                        try {
-                            app(LoyaltyService::class)->adjustPoints(
-                                (int) $record->id,
-                                (int) $data['points'],
-                                $data['description'] ?? null,
-                                auth()->id() ? (int) auth()->id() : null
-                            );
-                            Notification::make()->title('Solde mis à jour')->success()->send();
-                        } catch (\InvalidArgumentException $e) {
-                            Notification::make()->title('Fidélité')->body($e->getMessage())->danger()->send();
-                        }
-                    }),
                 Actions\EditAction::make(),
                 Actions\DeleteAction::make(),
             ])

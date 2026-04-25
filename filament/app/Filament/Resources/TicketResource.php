@@ -3,10 +3,8 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\TicketResource\Pages;
-use App\Enums\LoyaltyCardStatus;
 use App\Models\Client;
 use App\Models\Coordinate;
-use App\Models\LoyaltyCard;
 use App\Models\Ticket;
 use Filament\Actions;
 use Filament\Forms;
@@ -188,43 +186,6 @@ class TicketResource extends Resource
                     ->columnSpan(1)
                     ->extraAttributes(['class' => 'doc-totaux-sidebar']),
             ])->columnSpanFull(),
-
-            Section::make('Fidélité')
-                ->description('Carte et montants fidélité (saisis au POS ou ici si le client est renseigné).')
-                ->schema([
-                    Forms\Components\Select::make('loyalty_card_id')
-                        ->label('Carte fidélité')
-                        ->options(function ($get) {
-                            $cid = $get('client_id');
-                            if (! $cid) {
-                                return [];
-                            }
-
-                            return LoyaltyCard::query()
-                                ->where('client_id', (int) $cid)
-                                ->where('status', '!=', LoyaltyCardStatus::Replaced->value)
-                                ->orderByDesc('id')
-                                ->pluck('card_number', 'id')
-                                ->all();
-                        })
-                        ->searchable()
-                        ->nullable(),
-                    Forms\Components\TextInput::make('loyalty_points_redeemed')
-                        ->label('Points utilisés')
-                        ->numeric()
-                        ->default(0)
-                        ->minValue(0),
-                    Forms\Components\TextInput::make('loyalty_discount_amount')
-                        ->label('Remise fidélité')
-                        ->numeric()
-                        ->default(0)
-                        ->minValue(0)
-                        ->suffix('DT'),
-                ])
-                ->columns(3)
-                ->visible(fn ($get) => (bool) $get('client_id'))
-                ->collapsible()
-                ->columnSpanFull(),
 
             Forms\Components\Hidden::make('numero'),
         ]);

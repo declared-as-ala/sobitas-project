@@ -19,18 +19,11 @@ class Ticket extends Model
     protected $casts = [
         'date_ticket' => 'date',
         'prix_total' => 'float',
-        'loyalty_discount_amount' => 'float',
-        'loyalty_processed_at' => 'datetime',
     ];
 
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class, 'client_id');
-    }
-
-    public function loyaltyCard(): BelongsTo
-    {
-        return $this->belongsTo(LoyaltyCard::class, 'loyalty_card_id');
     }
 
     public function commande(): BelongsTo

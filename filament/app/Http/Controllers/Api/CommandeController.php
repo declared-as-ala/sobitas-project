@@ -8,13 +8,10 @@ use App\Mail\OrderConfirmedCustomerMail;
 use App\Models\Commande;
 use App\Models\CommandeDetail;
 use App\Models\Message;
-use App\Models\User;
 use App\Models\CouponRedemption;
 use App\Models\Product;
 use App\Services\ClientService;
 use App\Services\CouponService;
-use App\Services\CustomerUserLinkService;
-use App\Services\PartnerCommissionService;
 use App\Services\SmsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,40 +19,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
-use Laravel\Sanctum\PersonalAccessToken;
 
 class CommandeController extends Controller
 {
-    /**
-     * @return array{user: ?User, forbidden: bool}
-     */
-    private function resolveStorefrontUser(\Illuminate\Http\Request $request, array $commandeData): array
-    {
-        $bearerUser = null;
-        if ($request->bearerToken()) {
-            $pat = PersonalAccessToken::findToken($request->bearerToken());
-            if ($pat && $pat->tokenable instanceof User) {
-                $bearerUser = $pat->tokenable;
-            }
-        }
-
-        $payloadUserId = (int) ($commandeData['user_id'] ?? 0);
-
-        if ($bearerUser) {
-            if ($payloadUserId > 0 && $payloadUserId !== (int) $bearerUser->id) {
-                return ['user' => null, 'forbidden' => true];
-            }
-
-            return ['user' => $bearerUser, 'forbidden' => false];
-        }
-
-        if ($payloadUserId > 0) {
-            return ['user' => User::find($payloadUserId), 'forbidden' => false];
-        }
-
-        return ['user' => null, 'forbidden' => false];
-    }
-
     /**
      * Store a new commande from the frontend API.
      *
@@ -77,21 +43,15 @@ class CommandeController extends Controller
             'panier.*.produit_id'    => ['required', 'integer', 'exists:products,id'],
             'panier.*.quantite'      => ['required', 'integer', 'min:1'],
             'panier.*.prix_unitaire' => ['nullable', 'numeric', 'min:0'], // CRIT-03: ignored; server uses DB price
-            'coupon_code'            => ['nullable', 'string', 'max:64'],
+            'coupon_code'       => ['nullable', 'string', 'max:64'],
         ]);
 
         $commandeData = $request->commande;
 
         Log::info('filament.api.add_commande.start', ['payload_keys' => array_keys($commandeData ?? [])]);
 
-        ['user' => $actingUser, 'forbidden' => $storefrontAuthForbidden] = $this->resolveStorefrontUser($request, $commandeData);
-        if ($storefrontAuthForbidden) {
-            return response()->json(['message' => 'Non autorisé'], 403);
-        }
-
-        $couponService   = app(CouponService::class);
-        $partnerService  = app(PartnerCommissionService::class);
-        $new_facture = DB::transaction(function () use ($commandeData, $request, $couponService, $partnerService, $actingUser) {
+        $couponService = app(CouponService::class);
+        $new_facture = DB::transaction(function () use ($commandeData, $request, $couponService) {
             $new_facture = new Commande();
 
             // Use livraison fields as primary source, fallback to billing fields
@@ -109,13 +69,11 @@ class CommandeController extends Controller
             $new_facture->frais_livraison = $commandeData['frais_livraison'] ?? null;
             $new_facture->note = $commandeData['note'] ?? null;
 
-            if ($actingUser) {
-                $client = app(CustomerUserLinkService::class)->linkOrCreateClientForUser($actingUser);
-                $new_facture->user_id = $actingUser->id;
+            if (! empty($commandeData['user_id'])) {
+                $new_facture->user_id = $commandeData['user_id'];
                 if (Schema::hasColumn($new_facture->getTable(), 'client_id')) {
-                    $new_facture->client_id = $client->id;
+                    $new_facture->client_id = $commandeData['user_id'];
                 }
-                Log::info('filament.api.add_commande.client_linked', ['client_id' => $client->id, 'user_id' => $actingUser->id]);
             } else {
                 $client = app(ClientService::class)->findOrCreateClientFromDeliveryInfo($commandeData);
                 if ($client) {
@@ -250,11 +208,6 @@ class CommandeController extends Controller
                 $redemption->discount_amount_ht = $discount_ht;
                 $redemption->discount_amount_ttc = $discount_ttc;
                 $redemption->save();
-
-                // Attach partner from coupon if applicable
-                if (Schema::hasColumn($new_facture->getTable(), 'partner_id')) {
-                    $partnerService->attachPartnerToOrder($new_facture);
-                }
             }
 
             return $new_facture;
@@ -369,12 +322,8 @@ class CommandeController extends Controller
         $authorized = false;
 
         if ($request->user()) {
-            $user = $request->user();
-            $userId = $user->id;
-            $linkedClientId = $user->client?->id;
-            $authorized = (int) $facture->user_id === (int) $userId
-                || ($linkedClientId && (int) $facture->client_id === (int) $linkedClientId)
-                || (int) $facture->client_id === (int) $userId;
+            $userId = $request->user()->id;
+            $authorized = $facture->user_id == $userId || $facture->client_id == $userId;
         }
 
         if (! $authorized) {

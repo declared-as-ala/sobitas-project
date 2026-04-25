@@ -454,23 +454,6 @@
                 <label>N° Tél</label>
                 <input type="text" id="client_phone" readonly placeholder="—" value="{{ $client_phone }}">
             </div>
-
-            <div class="pos-field" style="margin-top:12px;padding-top:12px;border-top:1px dashed #cbd5e1;">
-                <label>Fidélité — token QR (coller)</label>
-                <div style="display:flex;gap:8px;align-items:center;margin-top:4px;">
-                    <input type="text" id="loyalty_qr_input" class="pos-barcode-input" placeholder="Token carte fidélité" style="flex:1;">
-                    <button type="button" class="pos-btn-add-row" style="white-space:nowrap;" onclick="if(window.attachLoyaltyQr) window.attachLoyaltyQr();">Appliquer</button>
-                </div>
-                <div style="display:flex;gap:8px;align-items:center;margin-top:8px;">
-                    <input type="number" id="loyalty_points_adj" placeholder="+/- points" step="1" style="width:140px;padding:8px;border:1px solid #e2e8f0;border-radius:6px;">
-                    <button type="button" class="pos-btn-add-row" onclick="if(window.applyLoyaltyPoints) window.applyLoyaltyPoints();">Ajuster points</button>
-                </div>
-                <div class="pos-field" style="margin-top:12px;">
-                    <label>Points à utiliser sur ce ticket (remise)</label>
-                    <input type="number" id="loyalty_points_redeem" min="0" step="1" value="0" placeholder="0" style="width:100%;max-width:200px;padding:8px;border:1px solid #e2e8f0;border-radius:6px;">
-                    <p class="text-xs text-gray-500 mt-1">La remise est appliquée au net après remise boutique, puis enregistrée sur le ticket.</p>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -934,20 +917,6 @@
         document.getElementById('apres_remise').value = m_totale_ttc.toFixed(3);
     }
 
-    window.attachLoyaltyQr = function() {
-        var el = document.getElementById('loyalty_qr_input');
-        if (!el) return;
-        @this.call('attachClientFromLoyaltyQr', el.value || '');
-    };
-    window.applyLoyaltyPoints = function() {
-        var p = document.getElementById('loyalty_points_adj');
-        if (!p || p.value === '') return;
-        var n = parseInt(p.value, 10);
-        if (isNaN(n)) return;
-        @this.call('loyaltyApplyAdjustment', n, 'Caisse ticket');
-        p.value = '';
-    };
-
     // Send the final state directly to Livewire
     function prepareAndSave() {
         var btn = document.getElementById('btn-save');
@@ -970,15 +939,11 @@
             }
         }
 
-        var redeemEl = document.getElementById('loyalty_points_redeem');
-        var redeemPts = redeemEl ? (parseInt(redeemEl.value, 10) || 0) : 0;
-
         let payload = {
             lines: finalLines,
             client_id: document.getElementById('client_select').value,
             remise: document.getElementById('m_remise').value || 0,
-            pourcentage_remise: document.getElementById('pourcen_remise').value || 0,
-            loyalty_points_to_redeem: redeemPts
+            pourcentage_remise: document.getElementById('pourcen_remise').value || 0
         };
         
         // Trigger the save method gracefully with payload
@@ -986,21 +951,6 @@
     }
 
     document.addEventListener('livewire:initialized', () => {
-        Livewire.on('loyalty-client-attached', (payload) => {
-            var data = Array.isArray(payload) ? payload[0] : payload;
-            var id = data && (data.clientId ?? data.client_id);
-            if (!id) return;
-            var sel = document.getElementById('client_select');
-            if (!sel) return;
-            for (var i = 0; i < sel.options.length; i++) {
-                if (String(sel.options[i].value) === String(id)) {
-                    sel.selectedIndex = i;
-                    selectClient();
-                    return;
-                }
-            }
-        });
-
         Livewire.on('ticket-saved', (data) => {
             let eventData = Array.isArray(data) ? data[0] : data;
             

@@ -4,7 +4,6 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\CouponResource\Pages;
 use App\Models\Coupon;
-use App\Models\Partner;
 use Filament\Actions;
 use Filament\Forms;
 use Filament\Resources\Resource;
@@ -101,24 +100,6 @@ class CouponResource extends Resource
                         ->default('order'),
                 ])->columns(2),
 
-            Section::make('Partenaire affilié')
-                ->schema([
-                    Forms\Components\Select::make('partner_id')
-                        ->label('Partenaire (optionnel)')
-                        ->options(Partner::where('status', 'active')->pluck('name', 'id'))
-                        ->searchable()
-                        ->nullable()
-                        ->helperText('Si ce code appartient à un partenaire, les commissions seront calculées automatiquement.'),
-                    Forms\Components\TextInput::make('commission_rate')
-                        ->label('Taux commission spécifique (%)')
-                        ->numeric()
-                        ->minValue(0)
-                        ->maxValue(100)
-                        ->nullable()
-                        ->suffix('%')
-                        ->helperText('Laissez vide pour utiliser le taux par défaut du partenaire.'),
-                ])->columns(2)->collapsible(),
-
             Section::make('Notes')
                 ->schema([
                     Forms\Components\Textarea::make('notes')
@@ -168,10 +149,6 @@ class CouponResource extends Resource
                     ->sortable(query: function (Builder $query, string $direction): Builder {
                         return $query->withCount('redemptions')->orderBy('redemptions_count', $direction);
                     }),
-                Tables\Columns\TextColumn::make('partner.name')
-                    ->label('Partenaire')
-                    ->placeholder('—')
-                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('last_used_at')
                     ->label('Dernière utilisation')
                     ->getStateUsing(function (Coupon $record) {

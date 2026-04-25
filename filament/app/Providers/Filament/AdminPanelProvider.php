@@ -8,8 +8,6 @@ use App\Filament\Pages\Auth\EditProfile;
 use App\Filament\Pages\Auth\Login;
 use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\HistoriqueClient;
-use App\Filament\Pages\ManageLoyaltyProgramSettings;
-use App\Filament\Pages\ScannerFidelite;
 use App\Filament\Pages\SendEmail;
 use App\Filament\Pages\SendSms;
 use App\Filament\Pages\Stock\StockDashboard;
@@ -24,11 +22,6 @@ use App\Filament\Resources\CommandeResource;
 use App\Filament\Resources\ContactResource;
 use App\Filament\Resources\CoordinateResource;
 use App\Filament\Resources\CouponResource;
-use App\Filament\Resources\LoyaltyCardResource;
-use App\Filament\Resources\LoyaltyPointTransactionResource;
-use App\Filament\Resources\PartnerCommissionTransactionResource;
-use App\Filament\Resources\PartnerPayoutResource;
-use App\Filament\Resources\PartnerResource;
 use App\Filament\Resources\CreditNoteResource;
 use App\Filament\Resources\FactureResource;
 use App\Filament\Resources\FactureTvaResource;
@@ -180,13 +173,6 @@ class AdminPanelProvider extends PanelProvider
                 SousCategoryResource::class,
                 TicketResource::class,
                 UserResource::class,
-                // Partner / Affiliate
-                PartnerResource::class,
-                PartnerCommissionTransactionResource::class,
-                PartnerPayoutResource::class,
-                // Loyalty
-                LoyaltyCardResource::class,
-                LoyaltyPointTransactionResource::class,
             ])
             ->pages([
                 Dashboard::class,
@@ -195,8 +181,6 @@ class AdminPanelProvider extends PanelProvider
                 SendSms::class,
                 SendEmail::class,
                 StockDashboard::class,
-                ScannerFidelite::class,
-                ManageLoyaltyProgramSettings::class,
             ])
             ->widgets([
                 AccountWidget::class,
@@ -258,10 +242,6 @@ class AdminPanelProvider extends PanelProvider
                     ->icon('heroicon-o-cube'),
                 NavigationGroup::make('Blog')
                     ->icon('heroicon-o-newspaper'),
-                NavigationGroup::make('Partenaires')
-                    ->icon('heroicon-o-user-group'),
-                NavigationGroup::make('Fidélité')
-                    ->icon('heroicon-o-star'),
                 NavigationGroup::make('Marketing')
                     ->icon('heroicon-o-megaphone')
                     ->collapsed(),

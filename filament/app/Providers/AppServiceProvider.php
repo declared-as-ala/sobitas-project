@@ -6,11 +6,9 @@ use App\Filament\Widgets\TopCategoriesListWidget;
 use App\Filament\Widgets\TopRegionsWidget;
 use App\Models\Commande;
 use App\Models\Review;
-use App\Models\Ticket;
 use App\Models\User;
 use App\Observers\CommandeObserver;
 use App\Observers\ReviewObserver;
-use App\Observers\TicketObserver;
 use App\Observers\UserObserver;
 use Filament\Facades\Filament;
 use Illuminate\Auth\Notifications\ResetPassword;
@@ -57,7 +55,6 @@ class AppServiceProvider extends ServiceProvider
         // Database notifications: new commandes, new avis, new users
         Commande::observe(CommandeObserver::class);
         Review::observe(ReviewObserver::class);
-        Ticket::observe(TicketObserver::class);
         User::observe(UserObserver::class);
     }
 }
