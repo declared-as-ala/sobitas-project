@@ -7,6 +7,7 @@ use App\Filament\Resources\LoyaltyCardResource\Pages;
 use App\Models\Client;
 use App\Models\LoyaltyCard;
 use App\Services\LoyaltyService;
+use Filament\Actions\Action;
 use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
@@ -14,7 +15,6 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Tables\Actions\Action;
 
 class LoyaltyCardResource extends Resource
 {
@@ -102,7 +102,7 @@ class LoyaltyCardResource extends Resource
             ])
             ->actions([
                 // Assign to client (available cards only)
-                Tables\Actions\Action::make('assign')
+                Action::make('assign')
                     ->label('Attribuer')
                     ->icon('heroicon-o-user-plus')
                     ->color('success')
@@ -132,7 +132,7 @@ class LoyaltyCardResource extends Resource
                     }),
 
                 // Mark lost (active cards only)
-                Tables\Actions\Action::make('mark_lost')
+                Action::make('mark_lost')
                     ->label('Perdue')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
@@ -157,7 +157,7 @@ class LoyaltyCardResource extends Resource
                     }),
 
                 // Replace card (lost cards only)
-                Tables\Actions\Action::make('replace')
+                Action::make('replace')
                     ->label('Remplacer')
                     ->icon('heroicon-o-arrow-path')
                     ->color('warning')
@@ -187,7 +187,7 @@ class LoyaltyCardResource extends Resource
                     }),
 
                 // Print card
-                Tables\Actions\Action::make('print')
+                Action::make('print')
                     ->label('Imprimer')
                     ->icon('heroicon-o-printer')
                     ->color('info')

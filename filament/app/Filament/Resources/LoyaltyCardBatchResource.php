@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\LoyaltyCardBatchResource\Pages;
 use App\Models\LoyaltyCardBatch;
 use App\Services\LoyaltyService;
+use Filament\Actions\Action;
 use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
@@ -12,7 +13,6 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Tables\Actions\Action;
 
 class LoyaltyCardBatchResource extends Resource
 {
@@ -110,7 +110,7 @@ class LoyaltyCardBatchResource extends Resource
             ])
             ->defaultSort('created_at', 'desc')
             ->actions([
-                Tables\Actions\Action::make('generate')
+                Action::make('generate')
                     ->label('Générer')
                     ->icon('heroicon-o-sparkles')
                     ->color('success')
@@ -133,14 +133,14 @@ class LoyaltyCardBatchResource extends Resource
                                 ->send();
                         }
                     }),
-                Tables\Actions\Action::make('print_batch')
+                Action::make('print_batch')
                     ->label('Imprimer')
                     ->icon('heroicon-o-printer')
                     ->color('info')
                     ->url(fn (LoyaltyCardBatch $record) => route('loyalty.print.batch', $record))
                     ->openUrlInNewTab()
                     ->visible(fn (LoyaltyCardBatch $record) => $record->isGenerated()),
-                Tables\Actions\Action::make('export_csv')
+                Action::make('export_csv')
                     ->label('CSV')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('warning')

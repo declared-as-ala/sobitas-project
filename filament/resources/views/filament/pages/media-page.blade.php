@@ -83,7 +83,7 @@
                             <button type="button" wire:click="goToBreadcrumb('')" class="crumb-btn">Dashboard / Media</button>
                             @foreach ($breadcrumbs as $breadcrumb)
                                 <span>/</span>
-                                <button type="button" wire:click="goToBreadcrumb({{ json_encode($breadcrumb['path']) }})" class="crumb-btn">
+                                <button type="button" wire:click='goToBreadcrumb(@js($breadcrumb["path"]))' class="crumb-btn">
                                     {{ $breadcrumb['name'] }}
                                 </button>
                             @endforeach
@@ -145,7 +145,7 @@
                                         <div class="col-6 col-md-4 col-xl-3">
                                             <div class="card h-100">
                                                 <div class="card-body p-3">
-                                                    <button type="button" wire:click="openFolder({{ json_encode($directory['path']) }})" class="btn btn-link text-decoration-none text-start w-100 p-0">
+                                                    <button type="button" wire:click='openFolder(@js($directory["path"]))' class="btn btn-link text-decoration-none text-start w-100 p-0">
                                                         <div class="d-flex align-items-center gap-2 mb-2">
                                                             <x-filament::icon icon="heroicon-o-folder" class="h-7 w-7 text-primary-500" />
                                                             <span class="small fw-semibold text-truncate">{{ $directory['name'] }}</span>
@@ -162,7 +162,7 @@
                                                         <x-filament::button
                                                             size="xs"
                                                             color="danger"
-                                                            wire:click="deleteFolder({{ json_encode($directory['path']) }})"
+                                                            wire:click='deleteFolder(@js($directory["path"]))'
                                                             wire:confirm="Supprimer ce dossier vide ?"
                                                         >
                                                             Supprimer
@@ -182,7 +182,7 @@
                                         <div class="col-6 col-md-4 col-xl-3">
                                             <div
                                                 class="card h-100 card-thumb border {{ $selectedPath === $file['path'] ? 'is-selected border-2 border-primary' : '' }}"
-                                                wire:click="selectMedia({{ json_encode($file['path']) }})"
+                                                wire:click='selectMedia(@js($file["path"]))'
                                                 wire:key="media-file-{{ $file['path'] }}"
                                             >
                                                 <div class="card-body p-3 position-relative">
@@ -213,7 +213,7 @@
                                                         <x-filament::button
                                                             size="xs"
                                                             color="danger"
-                                                            wire:click="deleteFile({{ json_encode($file['path']) }})"
+                                                            wire:click='deleteFile(@js($file["path"]))'
                                                             wire:confirm="Supprimer ce fichier ?"
                                                         >
                                                             Supprimer
@@ -318,7 +318,7 @@
                                 <x-filament::button
                                     color="danger"
                                     icon="heroicon-o-trash"
-                                    wire:click="deleteFile({{ json_encode($selectedItem['path']) }})"
+                                    wire:click='deleteFile(@js($selectedItem["path"]))'
                                     wire:confirm="Supprimer ce média ?"
                                 >
                                     Supprimer le média

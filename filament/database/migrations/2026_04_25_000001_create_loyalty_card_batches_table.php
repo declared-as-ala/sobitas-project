@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('loyalty_card_batches')) {
+            return;
+        }
+
         Schema::create('loyalty_card_batches', function (Blueprint $table) {
             $table->id();
             $table->string('name', 100)->nullable();
