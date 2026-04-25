@@ -8,6 +8,7 @@ use App\Models\Client;
 use App\Models\LoyaltyCard;
 use App\Services\LoyaltyService;
 use Filament\Actions\Action;
+use Filament\Actions\EditAction;
 use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
@@ -194,7 +195,7 @@ class LoyaltyCardResource extends Resource
                     ->url(fn (LoyaltyCard $record) => route('loyalty.print.single', $record))
                     ->openUrlInNewTab(),
 
-                Tables\Actions\EditAction::make(),
+                EditAction::make(),
             ]);
     }
 

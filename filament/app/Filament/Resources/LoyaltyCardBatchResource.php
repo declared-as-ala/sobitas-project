@@ -6,6 +6,8 @@ use App\Filament\Resources\LoyaltyCardBatchResource\Pages;
 use App\Models\LoyaltyCardBatch;
 use App\Services\LoyaltyService;
 use Filament\Actions\Action;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\EditAction;
 use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
@@ -146,8 +148,8 @@ class LoyaltyCardBatchResource extends Resource
                     ->color('warning')
                     ->url(fn (LoyaltyCardBatch $record) => route('loyalty.export.csv', $record))
                     ->visible(fn (LoyaltyCardBatch $record) => $record->isGenerated()),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make()
+                EditAction::make(),
+                DeleteAction::make()
                     ->visible(fn (LoyaltyCardBatch $record) => !$record->isGenerated()),
             ]);
     }
