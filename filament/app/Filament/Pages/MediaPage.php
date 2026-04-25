@@ -13,6 +13,7 @@ use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Schema;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
@@ -378,10 +379,13 @@ class MediaPage extends Page implements HasForms
             return null;
         }
 
-        $row = MediaLibraryItem::query()
-            ->where('disk', $disk)
-            ->where('path', $this->selectedPath)
-            ->first();
+        $row = null;
+        if (Schema::hasTable('media_library_items')) {
+            $row = MediaLibraryItem::query()
+                ->where('disk', $disk)
+                ->where('path', $this->selectedPath)
+                ->first();
+        }
 
         $url = Storage::disk($disk)->url($this->selectedPath);
         $mime = $row?->mime_type;

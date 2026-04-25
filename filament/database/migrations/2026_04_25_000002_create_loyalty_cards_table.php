@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('loyalty_cards')) {
+            return;
+        }
+
         Schema::create('loyalty_cards', function (Blueprint $table) {
             $table->id();
             $table->foreignId('batch_id')->constrained('loyalty_card_batches')->cascadeOnDelete();

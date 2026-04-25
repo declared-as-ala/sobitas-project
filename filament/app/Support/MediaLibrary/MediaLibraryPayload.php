@@ -4,6 +4,7 @@ namespace App\Support\MediaLibrary;
 
 use App\Filament\Support\ImagePath;
 use App\Models\MediaLibraryItem;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
 class MediaLibraryPayload
@@ -14,6 +15,10 @@ class MediaLibraryPayload
      */
     public static function forPaths(string $disk, array $paths): array
     {
+        if (! Schema::hasTable('media_library_items')) {
+            return [];
+        }
+
         $normalized = [];
         foreach ($paths as $path) {
             $n = ImagePath::normalize($path);

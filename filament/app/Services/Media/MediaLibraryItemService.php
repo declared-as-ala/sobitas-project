@@ -4,6 +4,7 @@ namespace App\Services\Media;
 
 use App\Models\MediaLibraryItem;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class MediaLibraryItemService
@@ -20,6 +21,14 @@ class MediaLibraryItemService
     public function ensureFromDisk(string $disk, string $path): MediaLibraryItem
     {
         $path = $this->normalizeStoragePath($path);
+
+        if (! $this->hasMediaTable()) {
+            return new MediaLibraryItem([
+                'disk' => $disk,
+                'path' => $path,
+            ]);
+        }
+
         $item = MediaLibraryItem::firstOrNew([
             'disk' => $disk,
             'path' => $path,
@@ -42,6 +51,14 @@ class MediaLibraryItemService
     public function updateMetadata(string $disk, string $path, array $data): MediaLibraryItem
     {
         $path = $this->normalizeStoragePath($path);
+
+        if (! $this->hasMediaTable()) {
+            return new MediaLibraryItem([
+                'disk' => $disk,
+                'path' => $path,
+            ]);
+        }
+
         $item = MediaLibraryItem::where('disk', $disk)->where('path', $path)->firstOrFail();
 
         $item->fill([
@@ -59,6 +76,10 @@ class MediaLibraryItemService
 
     public function movePath(string $disk, string $from, string $to): void
     {
+        if (! $this->hasMediaTable()) {
+            return;
+        }
+
         $from = $this->normalizeStoragePath($from);
         $to = $this->normalizeStoragePath($to);
 
@@ -95,6 +116,10 @@ class MediaLibraryItemService
 
     public function deleteByPath(string $disk, string $path): void
     {
+        if (! $this->hasMediaTable()) {
+            return;
+        }
+
         $path = $this->normalizeStoragePath($path);
 
         MediaLibraryItem::where('disk', $disk)
@@ -113,6 +138,14 @@ class MediaLibraryItemService
     {
         if ($files === []) {
             return $files;
+        }
+
+        if (! $this->hasMediaTable()) {
+            return array_map(function (array $file): array {
+                $file['library'] = null;
+
+                return $file;
+            }, $files);
         }
 
         $paths = array_values(array_unique(array_filter(array_map(
@@ -171,5 +204,10 @@ class MediaLibraryItemService
         $base = str_replace(['-', '_'], ' ', $base);
 
         return Str::title(trim($base)) ?: basename($path);
+    }
+
+    private function hasMediaTable(): bool
+    {
+        return Schema::hasTable('media_library_items');
     }
 }
