@@ -8,6 +8,7 @@ use App\Models\LoyaltyCardBatch;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class LoyaltyPrintController extends Controller
@@ -35,7 +36,7 @@ class LoyaltyPrintController extends Controller
         return $this->renderCardView($cards, null, $request);
     }
 
-    public function singlePdf(LoyaltyCard $card): \Symfony\Component\HttpFoundation\BinaryFileResponse
+    public function singlePdf(LoyaltyCard $card): Response
     {
         $card->load(['client', 'batch']);
 
@@ -47,7 +48,7 @@ class LoyaltyPrintController extends Controller
         );
     }
 
-    public function batchPdf(LoyaltyCardBatch $batch): \Symfony\Component\HttpFoundation\BinaryFileResponse
+    public function batchPdf(LoyaltyCardBatch $batch): Response
     {
         $cards = $batch->cards()->with('client')->orderBy('card_number')->get();
 
@@ -59,7 +60,7 @@ class LoyaltyPrintController extends Controller
         );
     }
 
-    public function selectedPdf(Request $request): \Symfony\Component\HttpFoundation\BinaryFileResponse
+    public function selectedPdf(Request $request): Response
     {
         $cards = $this->cardsFromIds($request);
 
@@ -101,22 +102,28 @@ class LoyaltyPrintController extends Controller
             'cards' => $cards->values(),
             'batch' => $batch,
             'cardsPerPage' => $this->cardsPerPage($request),
+            'sideMode' => $this->sideMode($request),
             'logoDataUri' => $this->logoDataUri(),
             'isPdf' => false,
         ]);
     }
 
-    private function downloadPdf(Collection $cards, ?LoyaltyCardBatch $batch, string $filenamePrefix, Request $request): \Symfony\Component\HttpFoundation\BinaryFileResponse
+    private function downloadPdf(Collection $cards, ?LoyaltyCardBatch $batch, string $filenamePrefix, Request $request): Response
     {
+        $sideMode = $this->sideMode($request);
+
         $pdf = Pdf::loadView('print.loyalty-card', [
             'cards' => $cards->values(),
             'batch' => $batch,
             'cardsPerPage' => $this->cardsPerPage($request),
+            'sideMode' => $sideMode,
             'logoDataUri' => $this->logoDataUri(),
             'isPdf' => true,
         ])->setPaper('a4', 'portrait');
 
-        return $pdf->download($filenamePrefix . '.pdf');
+        $suffix = $sideMode === 'front' ? '-front' : '';
+
+        return $pdf->download($filenamePrefix . $suffix . '.pdf');
     }
 
     private function cardsFromIds(Request $request): Collection
@@ -144,6 +151,13 @@ class LoyaltyPrintController extends Controller
         $value = (int) $request->integer('per_page', self::DEFAULT_CARDS_PER_PAGE);
 
         return max(1, min(12, $value));
+    }
+
+    private function sideMode(Request $request): string
+    {
+        $mode = strtolower((string) $request->query('side', 'both'));
+
+        return in_array($mode, ['both', 'front'], true) ? $mode : 'both';
     }
 
     private function logoDataUri(): ?string

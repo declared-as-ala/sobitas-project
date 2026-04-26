@@ -151,11 +151,20 @@ class LoyaltyCardBatchResource extends Resource
                             ])
                             ->default(8)
                             ->required(),
+                        Forms\Components\Select::make('side')
+                            ->label('Faces à imprimer')
+                            ->options([
+                                'both' => 'Recto + verso',
+                                'front' => 'Recto uniquement',
+                            ])
+                            ->default('both')
+                            ->required(),
                     ])
                     ->action(function (LoyaltyCardBatch $record, array $data) {
                         return redirect()->away(route('loyalty.print.batch', [
                             'batch' => $record,
                             'per_page' => (int) ($data['per_page'] ?? 8),
+                            'side' => (string) ($data['side'] ?? 'both'),
                         ]));
                     })
                     ->visible(fn (LoyaltyCardBatch $record) => $record->isGenerated()),
@@ -175,11 +184,20 @@ class LoyaltyCardBatchResource extends Resource
                             ])
                             ->default(8)
                             ->required(),
+                        Forms\Components\Select::make('side')
+                            ->label('Faces dans le PDF')
+                            ->options([
+                                'both' => 'Recto + verso',
+                                'front' => 'Recto uniquement',
+                            ])
+                            ->default('front')
+                            ->required(),
                     ])
                     ->action(function (LoyaltyCardBatch $record, array $data) {
                         return redirect()->away(route('loyalty.export.batch.pdf', [
                             'batch' => $record,
                             'per_page' => (int) ($data['per_page'] ?? 8),
+                            'side' => (string) ($data['side'] ?? 'front'),
                         ]));
                     })
                     ->visible(fn (LoyaltyCardBatch $record) => $record->isGenerated()),
