@@ -81,7 +81,7 @@ Route::middleware(['auth', 'no.cache.print'])->group(function () {
     })->name('factures.print');
 
     Route::get('tickets/{ticket}/print', function (\App\Models\Ticket $ticket) {
-        $ticket->load('client');
+        $ticket->load(['client', 'loyaltyCard']);
         $details_ticket = \App\Models\DetailsTicket::where('ticket_id', $ticket->id)
             ->with('product:id,designation_fr')
             ->get();

@@ -645,8 +645,14 @@
 <script>
     // Constants
     const maxRows = {{ $maxRows }};
+    const pointsPerDtValue = {{ \App\Services\LoyaltyService::POINTS_PER_DT_VALUE }};
+    const pointsPerDt = {{ \App\Services\LoyaltyService::POINTS_PER_DT }};
     const produits = @json(json_decode($productsJson)); // Array of products for barcode
     let visibleRows = {{ count($startLines) }};
+    const loyaltyState = {
+        panelVisible: {{ $loyalty_panel_visible ? 'true' : 'false' }},
+        balance: {{ (int) $loyalty_balance }},
+    };
     
     // Format number wrapper
     function fnFormat(n) {
@@ -685,6 +691,18 @@
             var bc = document.getElementById('barcode_input');
             if (bc) bc.focus();
         }, 300);
+
+        updateLoyaltyPanel({
+            panel_visible: {{ $loyalty_panel_visible ? 'true' : 'false' }},
+            card_number: @js($loyalty_card_number),
+            card_id: @js($loyalty_card_id),
+            balance: {{ (int) $loyalty_balance }},
+            balance_dt: @js($loyalty_balance_dt),
+            redeem_input: {{ (int) $loyalty_redeem_input }},
+            redeem_dt: @js($loyalty_redeem_dt),
+            earn: {{ (int) $loyalty_points_earn }},
+            earn_dt: @js($loyalty_points_earn_dt),
+        });
 
         calculate();
     }
@@ -992,41 +1010,68 @@
             m_remise.value = ((m_totale_ht * pourcentage_remise.value) / 100).toFixed(3);
         }
         
-        var totale_remise    = parseFloat(m_remise.value) || 0;
-        var loyalty_discount = parseFloat(document.getElementById('loyalty_redeem_input')?.value || 0) / 10;
-        var m_totale_ttc     = Math.max(0, m_totale_ht - totale_remise - loyalty_discount);
+        var totale_remise = parseFloat(m_remise.value) || 0;
+        totale_remise = Math.min(totale_remise, m_totale_ht);
+        var base_after_regular_discount = Math.max(0, m_totale_ht - totale_remise);
+        var redeemInput = document.getElementById('loyalty_redeem_input');
+        var rawPoints = parseInt(redeemInput?.value || 0, 10) || 0;
+        var maxFromTicket = Math.floor(base_after_regular_discount * pointsPerDtValue);
+        var maxFromBalance = loyaltyState.balance || 0;
+        var redeemPoints = Math.max(0, Math.min(rawPoints, maxFromBalance, maxFromTicket));
+        if (redeemInput && redeemPoints !== rawPoints) {
+            redeemInput.value = redeemPoints;
+        }
+
+        var loyalty_discount = redeemPoints / pointsPerDtValue;
+        var m_totale_ttc = Math.max(0, base_after_regular_discount - loyalty_discount);
 
         document.getElementById('p_ht').value = m_totale_ht.toFixed(3);
         document.getElementById('apres_remise').value = m_totale_ttc.toFixed(3);
 
         // Update loyalty earn preview
-        var earnPts = Math.floor(m_totale_ttc);
+        var earnPts = Math.floor(m_totale_ttc * pointsPerDt);
         var earnEl  = document.getElementById('lp-earn');
         var earnDtEl = document.getElementById('lp-earn-dt');
         if (earnEl)   earnEl.textContent   = earnPts;
-        if (earnDtEl) earnDtEl.textContent = (earnPts / 10).toFixed(3);
+        if (earnDtEl) earnDtEl.textContent = (earnPts / pointsPerDtValue).toFixed(3);
+
+        var discEl = document.getElementById('lp-redeem-dt');
+        var discTotal = document.getElementById('lp-discount-total');
+        if (discEl) discEl.textContent = loyalty_discount.toFixed(3);
+        if (discTotal) discTotal.textContent = loyalty_discount.toFixed(3);
 
         // Show/hide loyalty discount row in totals
         var discRow = document.getElementById('loyalty-discount-row');
-        if (discRow) discRow.style.display = loyalty_discount > 0 ? '' : 'none';
+        if (discRow) discRow.style.display = loyaltyState.panelVisible && loyalty_discount > 0 ? '' : 'none';
     }
 
     // Loyalty redeem sync
     function syncLoyaltyRedeem(val) {
-        var pts = parseInt(val) || 0;
-        var balance = parseInt(document.getElementById('loyalty_redeem_input')?.getAttribute('data-balance') || '{{ $loyalty_balance }}');
-        var maxFromTicket = Math.floor(parseFloat(document.getElementById('apres_remise')?.value || 0) * 10);
-        pts = Math.min(pts, balance, maxFromTicket);
-        var discount = (pts / 10).toFixed(3);
-        var discEl = document.getElementById('lp-redeem-dt');
-        var discTotal = document.getElementById('lp-discount-total');
-        if (discEl)   discEl.textContent   = discount;
-        if (discTotal) discTotal.textContent = discount;
+        var pts = parseInt(val, 10) || 0;
+        var total = parseFloat(document.getElementById('p_ht')?.value || 0) || 0;
+        var regularDiscount = parseFloat(document.getElementById('m_remise')?.value || 0) || 0;
+        regularDiscount = Math.min(regularDiscount, total);
+        var baseAfterRegularDiscount = Math.max(0, total - regularDiscount);
+        var maxFromTicket = Math.floor(baseAfterRegularDiscount * pointsPerDtValue);
+        var maxFromBalance = loyaltyState.balance || 0;
+        pts = Math.max(0, Math.min(pts, maxFromBalance, maxFromTicket));
+        var redeemInput = document.getElementById('loyalty_redeem_input');
+        if (redeemInput) {
+            redeemInput.value = pts;
+        }
+
+        @this.set('loyalty_redeem_input', pts);
         calculate();
     }
 
     function setMaxLoyaltyRedeem() {
-        @this.call('setMaxRedeem');
+        var total = parseFloat(document.getElementById('p_ht')?.value || 0) || 0;
+        var regularDiscount = parseFloat(document.getElementById('m_remise')?.value || 0) || 0;
+        regularDiscount = Math.min(regularDiscount, total);
+        var baseAfterRegularDiscount = Math.max(0, total - regularDiscount);
+        var maxFromTicket = Math.floor(baseAfterRegularDiscount * pointsPerDtValue);
+        var maxPts = Math.max(0, Math.min(loyaltyState.balance || 0, maxFromTicket));
+        syncLoyaltyRedeem(maxPts);
     }
 
     // Send the final state directly to Livewire
@@ -1080,6 +1125,10 @@
         setText('lp-earn-dt',        d.earn_dt      || '0.000');
         setVal('loyalty_card_id_input',  d.card_id      || '');
         setVal('loyalty_redeem_input',   d.redeem_input || 0);
+        var redeemInput = document.getElementById('loyalty_redeem_input');
+        if (redeemInput) redeemInput.setAttribute('data-balance', d.balance || 0);
+        loyaltyState.panelVisible = !!d.panel_visible;
+        loyaltyState.balance = parseInt(d.balance || 0, 10) || 0;
         calculate();
     }
 

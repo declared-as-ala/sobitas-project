@@ -26,6 +26,7 @@ class LoyaltyService
     private ?bool $hasGivenToClientAtColumn = null;
     private ?bool $hasNotesColumn = null;
     private array $loyaltyTxColumnCache = [];
+    private array $ticketColumnCache = [];
 
     private function hasAssignedAtColumn(): bool
     {
@@ -70,6 +71,15 @@ class LoyaltyService
         }
 
         return $this->loyaltyTxColumnCache[$column] = Schema::hasColumn('loyalty_point_transactions', $column);
+    }
+
+    private function hasTicketColumn(string $column): bool
+    {
+        if (array_key_exists($column, $this->ticketColumnCache)) {
+            return $this->ticketColumnCache[$column];
+        }
+
+        return $this->ticketColumnCache[$column] = Schema::hasColumn('tickets', $column);
     }
 
     // ── Card generation ───────────────────────────────────────────────────────
@@ -220,34 +230,45 @@ class LoyaltyService
         Client $client,
         LoyaltyCard $card,
         int $pointsToRedeem,
-        float $prixTtc
+        float $baseAfterRegularDiscount
     ): array {
+        $lockedTicket = Ticket::query()
+            ->whereKey($ticket->id)
+            ->lockForUpdate()
+            ->firstOrFail();
+
         // Idempotency gate
-        if ($ticket->loyalty_processed_at !== null) {
-            return $ticket->loyaltyTransactions()->get()->all();
+        if ($lockedTicket->loyalty_processed_at !== null) {
+            return $lockedTicket->loyaltyTransactions()->get()->all();
         }
+
+        $lockedClient = Client::query()
+            ->whereKey($client->id)
+            ->lockForUpdate()
+            ->firstOrFail();
 
         $transactions   = [];
         $loyaltyDiscount = 0.0;
+        $oldBalance = (int) $lockedClient->loyalty_points_balance;
+        $newBalance = $oldBalance;
 
         // Redeem transaction
         if ($pointsToRedeem > 0) {
-            $validation = $this->validateRedemption($client, $pointsToRedeem, $prixTtc);
+            $validation = $this->validateRedemption($lockedClient, $pointsToRedeem, $baseAfterRegularDiscount);
             if (!$validation['valid']) {
                 throw new \RuntimeException(implode(' ', $validation['errors']));
             }
 
             $loyaltyDiscount = $this->pointsToDiscount($pointsToRedeem);
-
-            $newBalance = $client->loyalty_points_balance - $pointsToRedeem;
+            $newBalance -= $pointsToRedeem;
 
             $payload = [
-                'client_id'       => $client->id,
+                'client_id'       => $lockedClient->id,
                 'loyalty_card_id' => $card->id,
-                'ticket_id'       => $ticket->id,
+                'ticket_id'       => $lockedTicket->id,
                 'type'            => LoyaltyTransactionType::Redeem->value,
                 'points'          => -$pointsToRedeem,
-                'description'     => "Utilisation sur ticket {$ticket->numero}",
+                'description'     => "Utilisation sur ticket {$lockedTicket->numero}",
             ];
 
             if ($this->hasLoyaltyTransactionColumn('balance_after')) {
@@ -256,29 +277,26 @@ class LoyaltyService
             if ($this->hasLoyaltyTransactionColumn('processed_by')) {
                 $payload['processed_by'] = auth()->id();
             }
+            if ($this->hasLoyaltyTransactionColumn('monetary_value')) {
+                $payload['monetary_value'] = number_format($loyaltyDiscount, 3, '.', '');
+            }
 
             $transactions[] = LoyaltyPointTransaction::create($payload);
-
-            DB::table('clients')
-                ->where('id', $client->id)
-                ->decrement('loyalty_points_balance', $pointsToRedeem);
-
-            $client->loyalty_points_balance = $newBalance;
         }
 
         // Earn transaction
-        $pointsEarned = $this->calculateEarnablePoints($prixTtc, $loyaltyDiscount);
+        $pointsEarned = $this->calculateEarnablePoints($baseAfterRegularDiscount, $loyaltyDiscount);
 
         if ($pointsEarned > 0) {
-            $newBalance = $client->loyalty_points_balance + $pointsEarned;
+            $newBalance += $pointsEarned;
 
             $payload = [
-                'client_id'       => $client->id,
+                'client_id'       => $lockedClient->id,
                 'loyalty_card_id' => $card->id,
-                'ticket_id'       => $ticket->id,
+                'ticket_id'       => $lockedTicket->id,
                 'type'            => LoyaltyTransactionType::Earn->value,
                 'points'          => $pointsEarned,
-                'description'     => "Gain sur ticket {$ticket->numero}",
+                'description'     => "Gain sur ticket {$lockedTicket->numero}",
             ];
 
             if ($this->hasLoyaltyTransactionColumn('balance_after')) {
@@ -289,22 +307,29 @@ class LoyaltyService
             }
 
             $transactions[] = LoyaltyPointTransaction::create($payload);
-
-            DB::table('clients')
-                ->where('id', $client->id)
-                ->increment('loyalty_points_balance', $pointsEarned);
-
-            $client->loyalty_points_balance = $newBalance;
         }
 
+        DB::table('clients')
+            ->where('id', $lockedClient->id)
+            ->update(['loyalty_points_balance' => max(0, $newBalance)]);
+
         // Stamp ticket
-        DB::table('tickets')->where('id', $ticket->id)->update([
+        $ticketUpdate = [
             'loyalty_card_id'         => $card->id,
             'loyalty_points_redeemed' => $pointsToRedeem,
             'loyalty_discount_dt'     => number_format($loyaltyDiscount, 3, '.', ''),
             'loyalty_points_earned'   => $pointsEarned,
             'loyalty_processed_at'    => now(),
-        ]);
+        ];
+
+        if ($this->hasTicketColumn('loyalty_old_balance_points')) {
+            $ticketUpdate['loyalty_old_balance_points'] = $oldBalance;
+        }
+        if ($this->hasTicketColumn('loyalty_new_balance_points')) {
+            $ticketUpdate['loyalty_new_balance_points'] = max(0, $newBalance);
+        }
+
+        DB::table('tickets')->where('id', $lockedTicket->id)->update($ticketUpdate);
 
         return $transactions;
     }

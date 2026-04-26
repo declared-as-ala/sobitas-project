@@ -79,6 +79,7 @@ class TicketPosPage extends Page
             if ($this->ticket->client) {
                 $this->client_adresse = $this->ticket->client->adresse ?? '';
                 $this->client_phone   = $this->ticket->client->phone_1 ?? '';
+                $this->loadClientLoyalty($this->ticket->client);
             }
 
             $this->lines = $this->ticket->details->map(fn ($d) => [
@@ -105,6 +106,8 @@ class TicketPosPage extends Page
     // ── Client change ────────────────────────────────────────────────────────
     public function updatedClientId($value): void
     {
+        $this->clearLoyalty();
+
         if ($value && $client = Client::find($value)) {
             $this->client_adresse = $client->adresse ?? '';
             $this->client_phone   = $client->phone_1 ?? '';
@@ -120,7 +123,8 @@ class TicketPosPage extends Page
 
     protected function loadClientLoyalty(Client $client): void
     {
-        $card = $client->activeCard;
+        $freshClient = $client->fresh();
+        $card = $freshClient?->activeCard()->first();
 
         if (! $card) {
             $this->clearLoyalty();
@@ -131,8 +135,8 @@ class TicketPosPage extends Page
 
         $this->loyalty_card_id       = $card->id;
         $this->loyalty_card_number   = $card->card_number;
-        $this->loyalty_balance       = $client->loyalty_points_balance;
-        $this->loyalty_balance_dt    = number_format($svc->pointsToDiscount($client->loyalty_points_balance), 3, '.', ' ');
+        $this->loyalty_balance       = (int) ($freshClient?->loyalty_points_balance ?? 0);
+        $this->loyalty_balance_dt    = number_format($svc->pointsToDiscount($this->loyalty_balance), 3, '.', ' ');
         $this->loyalty_redeem_input  = 0;
         $this->loyalty_redeem_dt     = '0.000';
         $this->loyalty_panel_visible = true;
@@ -144,8 +148,8 @@ class TicketPosPage extends Page
     protected function recalcLoyaltyEarn(): void
     {
         $svc    = app(LoyaltyService::class);
-        $redeem = (float) $this->loyalty_redeem_dt;
-        $earn   = $svc->calculateEarnablePoints($this->prix_ttc, $redeem);
+        $totals = $this->computeTicketTotals();
+        $earn   = $svc->calculateEarnablePoints($totals['base_after_regular_discount'], $totals['loyalty_discount']);
 
         $this->loyalty_points_earn    = $earn;
         $this->loyalty_points_earn_dt = number_format($svc->pointsToDiscount($earn), 3, '.', ' ');
@@ -169,13 +173,14 @@ class TicketPosPage extends Page
     {
         $svc    = app(LoyaltyService::class);
         $points = max(0, (int) $this->loyalty_redeem_input);
+        $totals = $this->computeTicketTotals();
 
         if ($points > $this->loyalty_balance) {
             $points = $this->loyalty_balance;
             $this->loyalty_redeem_input = $points;
         }
 
-        $maxFromTicket = (int) floor($this->prix_ttc * LoyaltyService::POINTS_PER_DT_VALUE);
+        $maxFromTicket = (int) floor($totals['base_after_regular_discount'] * LoyaltyService::POINTS_PER_DT_VALUE);
         if ($points > $maxFromTicket) {
             $points = $maxFromTicket;
             $this->loyalty_redeem_input = $points;
@@ -189,8 +194,9 @@ class TicketPosPage extends Page
     public function setMaxRedeem(): void
     {
         $svc            = app(LoyaltyService::class);
+        $totals         = $this->computeTicketTotals();
         $maxFromBalance = $this->loyalty_balance;
-        $maxFromTicket  = (int) floor($this->prix_ttc * LoyaltyService::POINTS_PER_DT_VALUE);
+        $maxFromTicket  = (int) floor($totals['base_after_regular_discount'] * LoyaltyService::POINTS_PER_DT_VALUE);
         $max            = min($maxFromBalance, $maxFromTicket);
 
         $this->loyalty_redeem_input = $max;
@@ -343,26 +349,11 @@ class TicketPosPage extends Page
             if (isset($payload['loyalty_redeem_input'])) $this->loyalty_redeem_input = (int) $payload['loyalty_redeem_input'];
         }
 
-        $total = 0.0;
-        foreach ($this->lines as $line) {
-            if (! empty($line['produit_id'])) {
-                $total += (float) ($line['qte'] ?? 0) * (float) ($line['prix_unitaire'] ?? 0);
-            }
-        }
-
-        $remiseAmount = (float) $this->remise;
-        if ($this->pourcentage_remise > 0 && $total > 0) {
-            $remiseAmount = $total * $this->pourcentage_remise / 100;
-        }
-
-        // Apply loyalty discount on top of regular discount
-        $loyaltyDiscount = 0.0;
-        if ($this->loyalty_card_id && $this->loyalty_redeem_input > 0) {
-            $svc = app(LoyaltyService::class);
-            $loyaltyDiscount = $svc->pointsToDiscount($this->loyalty_redeem_input);
-        }
-
-        $net = max(0, $total - $remiseAmount - $loyaltyDiscount);
+        $totals = $this->computeTicketTotals();
+        $total = $totals['total_ht'];
+        $remiseAmount = $totals['regular_discount'];
+        $loyaltyDiscount = $totals['loyalty_discount'];
+        $net = $totals['final_paid_amount'];
         $this->prix_ttc = $net;
 
         $data = [
@@ -419,7 +410,7 @@ class TicketPosPage extends Page
                         $loyaltyClient,
                         $loyaltyCard,
                         (int) $this->loyalty_redeem_input,
-                        (float) $this->prix_ttc
+                        (float) $totals['base_after_regular_discount']
                     );
                 }
             }
@@ -442,5 +433,47 @@ class TicketPosPage extends Page
     public static function getUrl(array $parameters = [], bool $isAbsolute = true, ?string $panel = null, ?\Illuminate\Database\Eloquent\Model $tenant = null, bool $shouldGuessMissingParameters = false, ?string $configuration = null): string
     {
         return route('filament.admin.resources.tickets.pos', $parameters, $isAbsolute);
+    }
+
+    protected function computeTicketTotals(): array
+    {
+        $total = 0.0;
+        foreach ($this->lines as $line) {
+            if (! empty($line['produit_id'])) {
+                $total += (float) ($line['qte'] ?? 0) * (float) ($line['prix_unitaire'] ?? 0);
+            }
+        }
+
+        $manualDiscount = max(0.0, (float) $this->remise);
+        $percent = max(0.0, min(100.0, (float) $this->pourcentage_remise));
+        $percentDiscount = $percent > 0 ? $total * $percent / 100 : 0.0;
+        $regularDiscount = $percent > 0 ? $percentDiscount : $manualDiscount;
+        $regularDiscount = min($regularDiscount, $total);
+        $baseAfterRegularDiscount = max(0.0, $total - $regularDiscount);
+
+        $pointsToRedeem = max(0, (int) $this->loyalty_redeem_input);
+        if ($pointsToRedeem > $this->loyalty_balance) {
+            $pointsToRedeem = $this->loyalty_balance;
+            $this->loyalty_redeem_input = $pointsToRedeem;
+        }
+
+        $maxFromTicket = (int) floor($baseAfterRegularDiscount * LoyaltyService::POINTS_PER_DT_VALUE);
+        if ($pointsToRedeem > $maxFromTicket) {
+            $pointsToRedeem = $maxFromTicket;
+            $this->loyalty_redeem_input = $pointsToRedeem;
+        }
+
+        $loyaltyDiscount = $this->loyalty_card_id
+            ? app(LoyaltyService::class)->pointsToDiscount($pointsToRedeem)
+            : 0.0;
+        $loyaltyDiscount = min($loyaltyDiscount, $baseAfterRegularDiscount);
+
+        return [
+            'total_ht' => $total,
+            'regular_discount' => $regularDiscount,
+            'base_after_regular_discount' => $baseAfterRegularDiscount,
+            'loyalty_discount' => $loyaltyDiscount,
+            'final_paid_amount' => max(0.0, $baseAfterRegularDiscount - $loyaltyDiscount),
+        ];
     }
 }

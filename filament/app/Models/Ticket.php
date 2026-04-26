@@ -23,6 +23,8 @@ class Ticket extends Model
         'loyalty_processed_at'   => 'datetime',
         'loyalty_points_redeemed' => 'integer',
         'loyalty_points_earned'  => 'integer',
+        'loyalty_old_balance_points' => 'integer',
+        'loyalty_new_balance_points' => 'integer',
     ];
 
     public function client(): BelongsTo

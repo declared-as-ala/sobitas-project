@@ -281,18 +281,31 @@
 
             @if($ticket->loyalty_card_id && ($ticket->loyalty_points_redeemed > 0 || $ticket->loyalty_points_earned > 0))
             <div style="border-top:1px dashed #999;margin-top:10px;padding-top:8px;font-size:11px;">
-                <p style="font-weight:bold;text-align:center;margin-bottom:6px;">--- CARTE FIDÉLITÉ ---</p>
+                <p style="font-weight:bold;text-align:center;margin-bottom:6px;">Programme fidélité</p>
                 <table width="100%" cellpadding="2" style="font-size:11px;">
                     <tr>
-                        <td>N° Carte</td>
+                        <td>Carte</td>
                         <td align="right">{{ $ticket->loyaltyCard->card_number ?? '—' }}</td>
+                    </tr>
+                    @php
+                        $oldBalance = (int) ($ticket->loyalty_old_balance_points ?? 0);
+                        $newBalance = (int) ($ticket->loyalty_new_balance_points ?? ($ticket->client?->loyalty_points_balance ?? 0));
+                    @endphp
+                    <tr>
+                        <td>Ancien solde</td>
+                        <td align="right">{{ $oldBalance }} pts</td>
                     </tr>
                     @if($ticket->loyalty_points_redeemed > 0)
                     <tr>
                         <td>Points utilisés</td>
                         <td align="right" style="color:#c00000;">
-                            −{{ $ticket->loyalty_points_redeemed }} pts
-                            (−{{ number_format((float)$ticket->loyalty_discount_dt, 3) }} DT)
+                            {{ $ticket->loyalty_points_redeemed }} pts
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Remise fidélité</td>
+                        <td align="right" style="color:#c00000;">
+                            {{ number_format((float)$ticket->loyalty_discount_dt, 3, '.', '') }} DT
                         </td>
                     </tr>
                     @endif
@@ -302,7 +315,7 @@
                     </tr>
                     <tr>
                         <td><strong>Nouveau solde</strong></td>
-                        <td align="right"><strong>{{ $ticket->client?->loyalty_points_balance ?? 0 }} pts</strong></td>
+                        <td align="right"><strong>{{ $newBalance }} pts</strong></td>
                     </tr>
                 </table>
             </div>
