@@ -29,7 +29,6 @@ class LoyaltyCard extends Model
     ];
 
     protected $casts = [
-        'status'      => LoyaltyCardStatus::class,
         'printed_at'  => 'datetime',
         'assigned_at' => 'datetime',
         'lost_at'     => 'datetime',
@@ -83,12 +82,36 @@ class LoyaltyCard extends Model
 
     public function scopeAvailable(Builder $query): Builder
     {
-        return $query->where('status', LoyaltyCardStatus::Available);
+        return $query->where('status', LoyaltyCardStatus::Available->value);
     }
 
     public function scopeActive(Builder $query): Builder
     {
-        return $query->where('status', LoyaltyCardStatus::Active);
+        return $query->where('status', LoyaltyCardStatus::Active->value);
+    }
+
+    public function getStatusAttribute($value): LoyaltyCardStatus
+    {
+        if ($value instanceof LoyaltyCardStatus) {
+            return $value;
+        }
+
+        $normalized = is_string($value) ? trim($value) : '';
+
+        return LoyaltyCardStatus::tryFrom($normalized) ?? LoyaltyCardStatus::Available;
+    }
+
+    public function setStatusAttribute($value): void
+    {
+        if ($value instanceof LoyaltyCardStatus) {
+            $this->attributes['status'] = $value->value;
+
+            return;
+        }
+
+        $normalized = is_string($value) ? trim($value) : '';
+        $enum = LoyaltyCardStatus::tryFrom($normalized) ?? LoyaltyCardStatus::Available;
+        $this->attributes['status'] = $enum->value;
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
