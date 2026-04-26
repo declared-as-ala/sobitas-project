@@ -23,10 +23,13 @@
             --card-height: 54.00mm;
             --card-radius: 3.4mm;
         }
+        * { box-sizing: border-box; }
         body {
             background: #efefef;
             color: #1a1b1e;
             font-family: Arial, "Helvetica Neue", sans-serif;
+            margin: 0;
+            padding: 0;
         }
         .print-toolbar {
             position: sticky;
@@ -34,6 +37,7 @@
             z-index: 20;
             background: #fff;
             border-bottom: 1px solid #e5e7eb;
+            padding: 12px 20px;
         }
         .sheet {
             width: var(--sheet-width);
@@ -61,6 +65,8 @@
             align-content: start;
             justify-content: center;
         }
+
+        /* === FRONT CARD === */
         .sobitas-card {
             width: var(--card-width);
             height: var(--card-height);
@@ -72,7 +78,7 @@
             background: #fff;
         }
         .sobitas-front {
-            background: radial-gradient(circle at 20% 18%, rgba(255, 255, 255, .98) 0, rgba(255, 255, 255, .94) 48%, rgba(249, 249, 249, .98) 100%);
+            background: linear-gradient(135deg, #ffffff 0%, #fafafa 50%, #f5f5f6 100%);
         }
         .front-top-corner {
             position: absolute;
@@ -80,8 +86,8 @@
             left: 0;
             width: 11mm;
             height: 11mm;
-            clip-path: polygon(0 0, 100% 0, 0 100%);
             background: var(--sobitas-orange);
+            clip-path: polygon(0 0, 100% 0, 0 100%);
         }
         .front-top-corner-shadow {
             position: absolute;
@@ -89,8 +95,8 @@
             left: 4.4mm;
             width: 6.5mm;
             height: 6.5mm;
-            clip-path: polygon(0 0, 100% 0, 0 100%);
             background: #1f2022;
+            clip-path: polygon(0 0, 100% 0, 0 100%);
         }
         .watermark-pattern {
             position: absolute;
@@ -100,7 +106,6 @@
             height: 34mm;
             opacity: .08;
             background-image:
-                linear-gradient(transparent 0 0),
                 repeating-linear-gradient(0deg, rgba(17, 18, 20, .20) 0 1px, transparent 1px 5.5mm),
                 repeating-linear-gradient(90deg, rgba(17, 18, 20, .18) 0 1px, transparent 1px 8mm);
         }
@@ -114,6 +119,11 @@
             width: auto;
             object-fit: contain;
             margin-bottom: .9mm;
+        }
+        .logo-wrap strong {
+            font-size: 6mm;
+            font-weight: 900;
+            color: #1f2124;
         }
         .tagline {
             font-size: 2.65mm;
@@ -286,8 +296,10 @@
             font-size: 3.65mm;
             font-weight: 700;
         }
+
+        /* === BACK CARD === */
         .sobitas-back {
-            background: radial-gradient(circle at 84% 21%, rgba(0, 0, 0, .06) 0, rgba(0, 0, 0, .03) 50%, transparent 70%), #f5f5f6;
+            background: #f5f5f6;
         }
         .back-left-dark {
             position: absolute;
@@ -447,6 +459,7 @@
             height: 4.5mm;
             margin-left: .8mm;
         }
+
         @media print {
             body { background: #fff; }
             .print-toolbar { display: none !important; }
@@ -461,11 +474,12 @@
     </style>
 </head>
 <body>
-<div class="print-toolbar py-3 no-print">
-    <div class="container-fluid d-flex flex-wrap align-items-center gap-2">
+
+<div class="print-toolbar no-print">
+    <div class="d-flex flex-wrap align-items-center gap-2">
         <button class="btn btn-dark rounded-pill px-4" onclick="window.print()">Imprimer</button>
         <a href="{{ url()->previous() }}" class="btn btn-outline-secondary rounded-pill px-4">Retour</a>
-        <span class="badge text-bg-warning ms-1">{{ collect($cards)->count() }} cartes</span>
+        <span class="badge bg-warning text-dark">{{ collect($cards)->count() }} cartes</span>
         @if(isset($batch))
             <span class="small text-muted">Lot : <strong>{{ $batch->name ?: "Lot #{$batch->id}" }}</strong></span>
         @endif
@@ -475,7 +489,7 @@
 
 @foreach($cardChunks as $chunk)
     <section class="sheet">
-        <div class="sheet-title">Face avant · Sobitas / protein.tn</div>
+        <div class="sheet-title">Face avant &middot; Sobitas / protein.tn</div>
         <div class="cards-grid">
             @foreach($chunk as $card)
                 <article class="sobitas-card sobitas-front">
@@ -486,7 +500,9 @@
                     <div class="qr-block">
                         {!! \SimpleSoftwareIO\QrCode\Facades\QrCode::size(110)->margin(0)->generate($card->qr_token) !!}
                     </div>
-                    <div class="scan-pill"><span class="scan-icon">📱</span> SCAN ME</div>
+                    <div class="scan-pill">
+                        <span class="scan-icon">&#x1F4F1;</span> SCAN ME
+                    </div>
 
                     <div class="front-body">
                         <div class="logo-wrap">
@@ -498,7 +514,7 @@
                         </div>
                         <div class="tagline">NUTRITION &amp; PERFORMANCE</div>
                         <div class="label-carte">CARTE</div>
-                        <div class="label-fidelite">FIDÉLITÉ</div>
+                        <div class="label-fidelite">FID&Eacute;LIT&Eacute;</div>
                         <div class="front-program">PROGRAMME AVANTAGES BOUTIQUE</div>
                     </div>
 
@@ -510,24 +526,28 @@
                     <div class="bottom-content">
                         <div class="votre-carte">VOTRE CARTE</div>
                         <div class="card-number">{{ $card->card_number }}</div>
-                        <div class="front-note"><span class="arrow">›</span>Présentez cette carte en boutique</div>
+                        <div class="front-note">
+                            <span class="arrow">&#8250;</span>Pr&eacute;sentez cette carte en boutique
+                        </div>
                     </div>
-                    <div class="front-website"><span>◎</span> protein.tn</div>
+                    <div class="front-website">
+                        <span>&#x25CE;</span> protein.tn
+                    </div>
                 </article>
             @endforeach
         </div>
     </section>
 
-    @if(! $frontOnly)
+    @if(!$frontOnly)
         <section class="sheet">
-            <div class="sheet-title">Face arrière · Sobitas / protein.tn</div>
+            <div class="sheet-title">Face arri&egrave;re &middot; Sobitas / protein.tn</div>
             <div class="cards-grid">
                 @foreach($chunk as $card)
                     <article class="sobitas-card sobitas-back">
                         <div class="back-left-dark"></div>
                         <div class="back-orange-divider"></div>
                         <div class="back-white-divider"></div>
-                        <div class="weightmark">🏋</div>
+                        <div class="weightmark">&#x1F3CB;</div>
 
                         <div class="back-brand-icon">S</div>
                         <div class="back-advantages-title">Vos avantages</div>
@@ -535,14 +555,14 @@
                         <div class="back-rules">
                             <div class="rule-row">
                                 <div class="rule-icon">1</div>
-                                <div class="rule-text">1 DT dépensé<br><span class="orange">= 1 point gagné</span></div>
+                                <div class="rule-text">1 DT d&eacute;pens&eacute;<br><span class="orange">= 1 point gagn&eacute;</span></div>
                             </div>
                             <div class="rule-row">
-                                <div class="rule-icon">🎁</div>
-                                <div class="rule-text">10 points<br><span class="orange">= 1 DT de réduction</span></div>
+                                <div class="rule-icon">&#x1F381;</div>
+                                <div class="rule-text">10 points<br><span class="orange">= 1 DT de r&eacute;duction</span></div>
                             </div>
                             <div class="rule-row">
-                                <div class="rule-icon">📍</div>
+                                <div class="rule-icon">&#x1F4CD;</div>
                                 <div class="rule-text">Utilisable uniquement<br><span class="orange">en boutique</span></div>
                             </div>
                         </div>
@@ -553,9 +573,15 @@
                         </div>
 
                         <div class="back-footer-bar">
-                            <div class="back-footer-item">🛡 En cas de perte, contactez la boutique.</div>
-                            <div class="back-footer-item"><span class="back-footer-sep"></span> ☎ {{ $company?->phone_1 ?: '---' }}</div>
-                            <div class="back-footer-item"><span class="back-footer-sep"></span> 📍 {{ $company?->adresse ?: 'Rue Ribat, 4000 Sousse, Tunisie' }}</div>
+                            <div class="back-footer-item">&#x1F6E1; En cas de perte, contactez la boutique.</div>
+                            <div class="back-footer-item">
+                                <span class="back-footer-sep"></span>
+                                &#x260E; {{ $company?->phone_1 ?: '---' }}
+                            </div>
+                            <div class="back-footer-item">
+                                <span class="back-footer-sep"></span>
+                                &#x1F4CD; {{ $company?->adresse ?: 'Rue Ribat, 4000 Sousse, Tunisie' }}
+                            </div>
                         </div>
                     </article>
                 @endforeach
@@ -563,5 +589,6 @@
         </section>
     @endif
 @endforeach
+
 </body>
 </html>
