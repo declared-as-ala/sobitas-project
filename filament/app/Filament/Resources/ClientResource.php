@@ -121,12 +121,6 @@ class ClientResource extends Resource
                 Tables\Columns\IconColumn::make('sms')
                     ->label('SMS')
                     ->boolean(),
-                Tables\Columns\TextColumn::make('loyalty_points_balance')
-                    ->label('Points')
-                    ->sortable()
-                    ->badge()
-                    ->color('warning')
-                    ->toggleable(),
                 Tables\Columns\TextColumn::make('activeCard.card_number')
                     ->label('Carte active')
                     ->placeholder('—')
@@ -302,36 +296,6 @@ class ClientResource extends Resource
                                 ->body($wasAlreadyActiveForClient
                                     ? "La carte {$assignedCard->card_number} était déjà liée à {$record->name}."
                                     : "Carte {$assignedCard->card_number} attribuée à {$record->name}.")
-                                ->success()->send();
-                        } catch (\Throwable $e) {
-                            Notification::make()->title($e->getMessage())->danger()->send();
-                        }
-                    }),
-
-                // Adjust points manually
-                Actions\Action::make('adjust_points')
-                    ->label('Ajuster points')
-                    ->icon('heroicon-o-adjustments-horizontal')
-                    ->color('warning')
-                    ->form([
-                        Forms\Components\TextInput::make('delta')
-                            ->label('Points à ajouter / retirer (négatif pour retirer)')
-                            ->integer()
-                            ->required(),
-                        Forms\Components\TextInput::make('description')
-                            ->label('Raison')
-                            ->required()
-                            ->maxLength(255),
-                    ])
-                    ->action(function (Client $record, array $data) {
-                        try {
-                            app(LoyaltyService::class)->adjustPoints(
-                                $record,
-                                (int) $data['delta'],
-                                $data['description']
-                            );
-                            Notification::make()
-                                ->title("Solde ajusté. Nouveau solde : {$record->fresh()->loyalty_points_balance} pts")
                                 ->success()->send();
                         } catch (\Throwable $e) {
                             Notification::make()->title($e->getMessage())->danger()->send();
