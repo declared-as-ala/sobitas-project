@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Schema;
 
 class LoyaltyCardBatch extends Model
 {
@@ -40,16 +41,28 @@ class LoyaltyCardBatch extends Model
 
     public function getAvailableCountAttribute(): int
     {
+        if (! Schema::hasColumn('loyalty_cards', 'batch_id')) {
+            return 0;
+        }
+
         return $this->cards()->where('status', 'available')->count();
     }
 
     public function getPrintedCountAttribute(): int
     {
+        if (! Schema::hasColumn('loyalty_cards', 'batch_id')) {
+            return 0;
+        }
+
         return $this->cards()->whereNotNull('printed_at')->count();
     }
 
     public function getActiveCountAttribute(): int
     {
+        if (! Schema::hasColumn('loyalty_cards', 'batch_id')) {
+            return 0;
+        }
+
         return $this->cards()->where('status', 'active')->count();
     }
 

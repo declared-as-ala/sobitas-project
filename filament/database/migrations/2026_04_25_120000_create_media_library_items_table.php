@@ -8,10 +8,15 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('media_library_items')) {
+            return;
+        }
+
         Schema::create('media_library_items', function (Blueprint $table): void {
             $table->id();
             $table->string('disk', 64)->default('public');
-            $table->string('path', 1024);
+            // Keep indexable size for utf8mb4 + MySQL key limits.
+            $table->string('path', 700);
             $table->text('alt_text')->nullable();
             $table->string('title', 255)->nullable();
             $table->text('caption')->nullable();

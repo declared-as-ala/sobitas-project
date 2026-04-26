@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (! Schema::hasTable('clients') || Schema::hasColumn('clients', 'loyalty_points_balance')) {
+            return;
+        }
+
         Schema::table('clients', function (Blueprint $table) {
             $table->unsignedInteger('loyalty_points_balance')->default(0)->after('loyalty_note');
         });
@@ -15,6 +19,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (! Schema::hasTable('clients') || ! Schema::hasColumn('clients', 'loyalty_points_balance')) {
+            return;
+        }
+
         Schema::table('clients', function (Blueprint $table) {
             $table->dropColumn('loyalty_points_balance');
         });

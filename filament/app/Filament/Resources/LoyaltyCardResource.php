@@ -16,6 +16,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Schema as SchemaFacade;
 
 class LoyaltyCardResource extends Resource
 {
@@ -55,6 +56,8 @@ class LoyaltyCardResource extends Resource
 
     public static function table(Table $table): Table
     {
+        $hasBatchColumn = SchemaFacade::hasColumn('loyalty_cards', 'batch_id');
+
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('card_number')
@@ -75,10 +78,12 @@ class LoyaltyCardResource extends Resource
                     ->label('Statut')
                     ->formatStateUsing(fn (LoyaltyCardStatus $state) => $state->label())
                     ->color(fn (LoyaltyCardStatus $state) => $state->color()),
-                Tables\Columns\TextColumn::make('batch.name')
-                    ->label('Lot')
-                    ->placeholder('—')
-                    ->toggleable(),
+                ...($hasBatchColumn ? [
+                    Tables\Columns\TextColumn::make('batch.name')
+                        ->label('Lot')
+                        ->placeholder('—')
+                        ->toggleable(),
+                ] : []),
                 Tables\Columns\TextColumn::make('assigned_at')
                     ->label('Assignée le')
                     ->date('d/m/Y')
@@ -97,9 +102,12 @@ class LoyaltyCardResource extends Resource
                     ->options(collect(LoyaltyCardStatus::cases())->mapWithKeys(
                         fn ($case) => [$case->value => $case->label()]
                     )),
-                Tables\Filters\SelectFilter::make('batch_id')
-                    ->label('Lot')
-                    ->relationship('batch', 'name'),
+                ...($hasBatchColumn ? [
+                    Tables\Filters\SelectFilter::make('batch_id')
+                        ->label('Lot')
+                        ->relationship('batch', 'name')
+                        ->getOptionLabelFromRecordUsing(fn ($record): string => (string) ($record->name ?: "Lot #{$record->id}")),
+                ] : []),
             ])
             ->actions([
                 // Assign to client (available cards only)
@@ -112,12 +120,21 @@ class LoyaltyCardResource extends Resource
                         Forms\Components\Select::make('client_id')
                             ->label('Client')
                             ->searchable()
-                            ->getSearchResultsUsing(fn (string $search) => Client::where('name', 'like', "%{$search}%")
-                                ->orWhere('phone_1', 'like', "%{$search}%")
-                                ->limit(20)
-                                ->pluck('name', 'id')
-                            )
-                            ->getOptionLabelUsing(fn ($value) => Client::find($value)?->name ?? "Client #{$value}")
+                            ->getSearchResultsUsing(function (string $search): array {
+                                return Client::where('name', 'like', "%{$search}%")
+                                    ->orWhere('phone_1', 'like', "%{$search}%")
+                                    ->limit(20)
+                                    ->get(['id', 'name', 'phone_1'])
+                                    ->mapWithKeys(fn (Client $client): array => [
+                                        $client->id => (string) ($client->name ?: ($client->phone_1 ?: "Client #{$client->id}")),
+                                    ])
+                                    ->all();
+                            })
+                            ->getOptionLabelUsing(function ($value): string {
+                                $client = Client::find($value);
+
+                                return (string) ($client?->name ?: ($client?->phone_1 ?: "Client #{$value}"));
+                            })
                             ->required(),
                     ])
                     ->action(function (LoyaltyCard $record, array $data) {
@@ -172,7 +189,7 @@ class LoyaltyCardResource extends Resource
                                 ->limit(20)
                                 ->pluck('card_number', 'id')
                             )
-                            ->getOptionLabelUsing(fn ($value) => LoyaltyCard::find($value)?->card_number)
+                            ->getOptionLabelUsing(fn ($value): string => (string) (LoyaltyCard::find($value)?->card_number ?: "Carte #{$value}"))
                             ->required(),
                     ])
                     ->action(function (LoyaltyCard $record, array $data) {
