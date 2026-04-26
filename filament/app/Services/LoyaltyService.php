@@ -24,6 +24,7 @@ class LoyaltyService
     private ?bool $hasAssignedAtColumn = null;
     private ?bool $hasBarcodeValueColumn = null;
     private ?bool $hasGivenToClientAtColumn = null;
+    private ?bool $hasNotesColumn = null;
 
     private function hasAssignedAtColumn(): bool
     {
@@ -50,6 +51,15 @@ class LoyaltyService
         }
 
         return $this->hasGivenToClientAtColumn = Schema::hasColumn('loyalty_cards', 'given_to_client_at');
+    }
+
+    private function hasNotesColumn(): bool
+    {
+        if ($this->hasNotesColumn !== null) {
+            return $this->hasNotesColumn;
+        }
+
+        return $this->hasNotesColumn = Schema::hasColumn('loyalty_cards', 'notes');
     }
 
     // ── Card generation ───────────────────────────────────────────────────────
@@ -111,11 +121,16 @@ class LoyaltyService
             throw new \RuntimeException("Seule une carte active peut être marquée comme perdue.");
         }
 
-        $card->update([
+        $data = [
             'status'  => LoyaltyCardStatus::Lost->value,
             'lost_at' => now(),
-            'notes'   => $notes ?? $card->notes,
-        ]);
+        ];
+
+        if ($this->hasNotesColumn()) {
+            $data['notes'] = $notes ?? $card->notes;
+        }
+
+        $card->update($data);
 
         return $card->refresh();
     }

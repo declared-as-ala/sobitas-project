@@ -38,6 +38,8 @@ class LoyaltyCardResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
+        $hasNotesColumn = SchemaFacade::hasColumn('loyalty_cards', 'notes');
+
         return $schema->schema([
             Section::make()->schema([
                 Forms\Components\TextInput::make('card_number')
@@ -45,13 +47,16 @@ class LoyaltyCardResource extends Resource
                     ->disabled(),
                 Forms\Components\Select::make('status')
                     ->label('Statut')
+                    ->default(LoyaltyCardStatus::Available->value)
                     ->options(collect(LoyaltyCardStatus::cases())->mapWithKeys(
                         fn ($case) => [$case->value => $case->label()]
                     )),
-                Forms\Components\Textarea::make('notes')
-                    ->label('Notes')
-                    ->rows(2)
-                    ->columnSpanFull(),
+                ...($hasNotesColumn ? [
+                    Forms\Components\Textarea::make('notes')
+                        ->label('Notes')
+                        ->rows(2)
+                        ->columnSpanFull(),
+                ] : []),
             ])->columns(2),
         ]);
     }
@@ -60,6 +65,7 @@ class LoyaltyCardResource extends Resource
     {
         $hasBatchColumn = SchemaFacade::hasColumn('loyalty_cards', 'batch_id');
         $hasAssignedAtColumn = SchemaFacade::hasColumn('loyalty_cards', 'assigned_at');
+        $hasNotesColumn = SchemaFacade::hasColumn('loyalty_cards', 'notes');
 
         return $table
             ->columns([
@@ -163,11 +169,11 @@ class LoyaltyCardResource extends Resource
                     ->requiresConfirmation()
                     ->modalHeading('Marquer la carte comme perdue ?')
                     ->modalDescription('Le client conserve tous ses points. Vous pourrez attribuer une nouvelle carte.')
-                    ->form([
+                    ->form($hasNotesColumn ? [
                         Forms\Components\Textarea::make('notes')
                             ->label('Notes')
                             ->rows(2),
-                    ])
+                    ] : [])
                     ->action(function (LoyaltyCard $record, array $data) {
                         try {
                             app(LoyaltyService::class)->markCardLost($record, $data['notes'] ?? null);
