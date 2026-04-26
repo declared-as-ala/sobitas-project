@@ -47,10 +47,8 @@ class LoyaltyCardResource extends Resource
                     ->disabled(),
                 Forms\Components\Select::make('status')
                     ->label('Statut')
-                    ->default(LoyaltyCardStatus::Available->value)
-                    ->options(collect(LoyaltyCardStatus::cases())->mapWithKeys(
-                        fn ($case) => [$case->value => $case->label()]
-                    )),
+                    ->default(fn (): string => LoyaltyCard::preferredAvailableStatusValue())
+                    ->options(fn (): array => LoyaltyCard::getStatusSelectOptions()),
                 ...($hasNotesColumn ? [
                     Forms\Components\Textarea::make('notes')
                         ->label('Notes')
@@ -110,9 +108,7 @@ class LoyaltyCardResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->label('Statut')
-                    ->options(collect(LoyaltyCardStatus::cases())->mapWithKeys(
-                        fn ($case) => [$case->value => $case->label()]
-                    )),
+                    ->options(fn (): array => LoyaltyCard::getStatusSelectOptions()),
                 ...($hasBatchColumn ? [
                     Tables\Filters\SelectFilter::make('batch_id')
                         ->label('Lot')

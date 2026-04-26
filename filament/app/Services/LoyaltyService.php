@@ -86,7 +86,7 @@ class LoyaltyService
                 'batch_id'    => $batch->id,
                 'card_number' => $this->formatCardNumber($prefix, $start + $i, $padding),
                 'qr_token'    => (string) \Illuminate\Support\Str::uuid(),
-                'status'      => LoyaltyCardStatus::Available->value,
+                'status'      => LoyaltyCard::preferredAvailableStatusValue(),
                 'created_at'  => $now,
                 'updated_at'  => $now,
             ];

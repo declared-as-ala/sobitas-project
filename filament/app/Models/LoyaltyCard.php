@@ -8,10 +8,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class LoyaltyCard extends Model
 {
+    private static ?array $allowedStatusValuesCache = null;
+
     protected $table = 'loyalty_cards';
 
     protected $fillable = [
@@ -82,12 +85,12 @@ class LoyaltyCard extends Model
 
     public function scopeAvailable(Builder $query): Builder
     {
-        return $query->where('status', LoyaltyCardStatus::Available->value);
+        return $query->where('status', self::preferredAvailableStatusValue());
     }
 
     public function scopeActive(Builder $query): Builder
     {
-        return $query->where('status', LoyaltyCardStatus::Active->value);
+        return $query->where('status', self::preferredStatusValue('active'));
     }
 
     public function getStatusAttribute($value): LoyaltyCardStatus
@@ -103,15 +106,11 @@ class LoyaltyCard extends Model
 
     public function setStatusAttribute($value): void
     {
-        if ($value instanceof LoyaltyCardStatus) {
-            $this->attributes['status'] = $value->value;
+        $raw = $value instanceof LoyaltyCardStatus
+            ? $value->value
+            : (is_string($value) ? trim($value) : '');
 
-            return;
-        }
-
-        $normalized = is_string($value) ? trim($value) : '';
-        $enum = LoyaltyCardStatus::tryFrom($normalized) ?? LoyaltyCardStatus::Available;
-        $this->attributes['status'] = $enum->value;
+        $this->attributes['status'] = self::mapToAllowedStatus($raw);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
@@ -124,5 +123,108 @@ class LoyaltyCard extends Model
     public function isUsable(): bool
     {
         return $this->status === LoyaltyCardStatus::Active;
+    }
+
+    public static function getStatusSelectOptions(): array
+    {
+        $allowed = self::allowedStatusValues();
+        if ($allowed === []) {
+            return collect(LoyaltyCardStatus::cases())->mapWithKeys(
+                fn (LoyaltyCardStatus $case): array => [$case->value => $case->label()]
+            )->all();
+        }
+
+        return collect($allowed)->mapWithKeys(function (string $value): array {
+            $enum = LoyaltyCardStatus::tryFrom($value);
+            if ($enum) {
+                return [$value => $enum->label()];
+            }
+
+            return [$value => Str::ucfirst(str_replace(['_', '-'], ' ', $value))];
+        })->all();
+    }
+
+    public static function preferredAvailableStatusValue(): string
+    {
+        return self::preferredStatusValue('available');
+    }
+
+    public static function preferredStatusValue(string $kind): string
+    {
+        $allowed = self::allowedStatusValues();
+        if ($allowed === []) {
+            return $kind === 'available' ? LoyaltyCardStatus::Available->value : $kind;
+        }
+
+        $aliases = match ($kind) {
+            'available' => ['available', 'disponible'],
+            'active' => ['active', 'actif'],
+            'lost' => ['lost', 'perdue'],
+            'retired' => ['retired', 'archivee', 'archived'],
+            default => [$kind],
+        };
+
+        foreach ($aliases as $candidate) {
+            if (in_array($candidate, $allowed, true)) {
+                return $candidate;
+            }
+        }
+
+        return $allowed[0];
+    }
+
+    private static function mapToAllowedStatus(string $raw): string
+    {
+        $normalized = trim(strtolower($raw));
+        if ($normalized === '') {
+            return self::preferredAvailableStatusValue();
+        }
+
+        $allowed = self::allowedStatusValues();
+        if ($allowed === []) {
+            return LoyaltyCardStatus::tryFrom($normalized)?->value ?? LoyaltyCardStatus::Available->value;
+        }
+
+        if (in_array($normalized, $allowed, true)) {
+            return $normalized;
+        }
+
+        $kind = match ($normalized) {
+            'available', 'disponible' => 'available',
+            'active', 'actif' => 'active',
+            'lost', 'perdue' => 'lost',
+            'retired', 'archivee', 'archived' => 'retired',
+            default => 'available',
+        };
+
+        return self::preferredStatusValue($kind);
+    }
+
+    private static function allowedStatusValues(): array
+    {
+        if (self::$allowedStatusValuesCache !== null) {
+            return self::$allowedStatusValuesCache;
+        }
+
+        try {
+            $columnType = DB::table('information_schema.COLUMNS')
+                ->where('TABLE_SCHEMA', DB::getDatabaseName())
+                ->where('TABLE_NAME', 'loyalty_cards')
+                ->where('COLUMN_NAME', 'status')
+                ->value('COLUMN_TYPE');
+        } catch (\Throwable) {
+            return self::$allowedStatusValuesCache = [];
+        }
+
+        if (! is_string($columnType) || preg_match("/^enum\((.*)\)$/i", $columnType, $matches) !== 1) {
+            return self::$allowedStatusValuesCache = [];
+        }
+
+        $values = array_values(array_filter(array_map(
+            static fn (string $value): string => trim($value, " '\""),
+            explode(',', $matches[1])
+        )));
+
+        return self::$allowedStatusValuesCache = $values;
     }
 }
