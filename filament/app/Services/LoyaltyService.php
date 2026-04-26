@@ -11,6 +11,7 @@ use App\Models\LoyaltyPointTransaction;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class LoyaltyService
 {
@@ -19,6 +20,37 @@ class LoyaltyService
     public const POINTS_PER_DT       = 1;   // 1 point per 1 DT spent
     public const POINTS_PER_DT_VALUE = 10;  // 10 points = 1 DT discount
     public const MIN_REDEEM_POINTS   = 100; // minimum to redeem in one transaction
+
+    private ?bool $hasAssignedAtColumn = null;
+    private ?bool $hasBarcodeValueColumn = null;
+    private ?bool $hasGivenToClientAtColumn = null;
+
+    private function hasAssignedAtColumn(): bool
+    {
+        if ($this->hasAssignedAtColumn !== null) {
+            return $this->hasAssignedAtColumn;
+        }
+
+        return $this->hasAssignedAtColumn = Schema::hasColumn('loyalty_cards', 'assigned_at');
+    }
+
+    private function hasBarcodeValueColumn(): bool
+    {
+        if ($this->hasBarcodeValueColumn !== null) {
+            return $this->hasBarcodeValueColumn;
+        }
+
+        return $this->hasBarcodeValueColumn = Schema::hasColumn('loyalty_cards', 'barcode_value');
+    }
+
+    private function hasGivenToClientAtColumn(): bool
+    {
+        if ($this->hasGivenToClientAtColumn !== null) {
+            return $this->hasGivenToClientAtColumn;
+        }
+
+        return $this->hasGivenToClientAtColumn = Schema::hasColumn('loyalty_cards', 'given_to_client_at');
+    }
 
     // ── Card generation ───────────────────────────────────────────────────────
 
@@ -70,26 +102,7 @@ class LoyaltyService
 
     public function assignCard(LoyaltyCard $card, Client $client): LoyaltyCard
     {
-        if (!$card->isAssignable()) {
-            throw new \RuntimeException("La carte {$card->card_number} n'est pas disponible pour attribution.");
-        }
-
-        $existing = $client->activeCard;
-        if ($existing) {
-            throw new \RuntimeException(
-                "Le client possède déjà une carte active ({$existing->card_number}). Veuillez la remplacer ou la suspendre d'abord."
-            );
-        }
-
-        return DB::transaction(function () use ($card, $client) {
-            $card->update([
-                'client_id'   => $client->id,
-                'status'      => LoyaltyCardStatus::Active->value,
-                'assigned_at' => now(),
-            ]);
-
-            return $card->refresh();
-        });
+        return $this->assignCardToClient($card, $client, false);
     }
 
     public function markCardLost(LoyaltyCard $card, ?string $notes = null): LoyaltyCard
@@ -120,12 +133,17 @@ class LoyaltyService
         return DB::transaction(function () use ($newCard, $lostCard) {
             $client = $lostCard->client;
 
-            $newCard->update([
+            $data = [
                 'client_id'              => $client->id,
                 'status'                 => LoyaltyCardStatus::Active->value,
-                'assigned_at'            => now(),
                 'replacement_for_card_id' => $lostCard->id,
-            ]);
+            ];
+
+            if ($this->hasAssignedAtColumn()) {
+                $data['assigned_at'] = now();
+            }
+
+            $newCard->update($data);
 
             return $newCard->refresh();
         });
@@ -307,6 +325,75 @@ class LoyaltyService
             ->where('qr_token', trim($token))
             ->orWhere('card_number', trim($token))
             ->first();
+    }
+
+    public function findCardByScanCode(string $code): ?LoyaltyCard
+    {
+        $normalized = trim($code);
+        if ($normalized === '') {
+            return null;
+        }
+
+        $query = LoyaltyCard::query()
+            ->with(['client:id,name,phone_1', 'batch:id,name'])
+            ->where('card_number', $normalized)
+            ->orWhere('qr_token', $normalized);
+
+        if ($this->hasBarcodeValueColumn()) {
+            $query->orWhere('barcode_value', $normalized);
+        }
+
+        return $query->first();
+    }
+
+    public function assignCardToClient(LoyaltyCard $card, Client $client, bool $allowReplacement = false): LoyaltyCard
+    {
+        $card->loadMissing('client');
+        $client = $client->fresh();
+
+        if ($card->client_id && $card->client_id !== $client->id) {
+            $owner = $card->client?->name ?: "Client #{$card->client_id}";
+            throw new \RuntimeException("Cette carte est déjà attribuée à {$owner}.");
+        }
+
+        if (! $card->isAssignable()) {
+            throw new \RuntimeException("Cette carte ne peut pas être attribuée car son statut est : {$card->status->label()}.");
+        }
+
+        $existingActive = $client->activeCard()->first();
+        if ($existingActive && $existingActive->id !== $card->id && ! $allowReplacement) {
+            throw new \RuntimeException("Ce client possède déjà une carte active : {$existingActive->card_number}.");
+        }
+
+        return DB::transaction(function () use ($card, $client, $existingActive) {
+            if ($existingActive && $existingActive->id !== $card->id) {
+                $existingActive->update([
+                    'status' => LoyaltyCardStatus::Retired->value,
+                    'retired_at' => now(),
+                ]);
+            }
+
+            $cardData = [
+                'client_id' => $client->id,
+                'status' => LoyaltyCardStatus::Active->value,
+            ];
+
+            if ($this->hasAssignedAtColumn()) {
+                $cardData['assigned_at'] = now();
+            }
+
+            if ($this->hasGivenToClientAtColumn()) {
+                $cardData['given_to_client_at'] = now();
+            }
+
+            if ($existingActive && $existingActive->id !== $card->id) {
+                $cardData['replacement_for_card_id'] = $existingActive->id;
+            }
+
+            $card->update($cardData);
+
+            return $card->refresh();
+        });
     }
 
     // ── Balance rebuild ───────────────────────────────────────────────────────

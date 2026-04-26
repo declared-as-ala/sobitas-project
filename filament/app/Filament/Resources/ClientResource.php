@@ -3,8 +3,8 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\ClientResource\Pages;
+use App\Enums\LoyaltyCardStatus;
 use App\Models\Client;
-use App\Models\LoyaltyCard;
 use App\Jobs\SendSmsJob;
 use App\Services\LoyaltyService;
 use Filament\Forms;
@@ -114,6 +114,12 @@ class ClientResource extends Resource
                     ->badge()
                     ->color('warning')
                     ->toggleable(),
+                Tables\Columns\TextColumn::make('activeCard.card_number')
+                    ->label('Carte active')
+                    ->placeholder('—')
+                    ->badge()
+                    ->color('success')
+                    ->toggleable(),
                 Tables\Columns\IconColumn::make('loyalty_enabled')
                     ->label('Fidélité')
                     ->boolean()
@@ -136,24 +142,142 @@ class ClientResource extends Resource
                     ->label('Attribuer carte')
                     ->icon('heroicon-o-credit-card')
                     ->color('success')
+                    ->modalWidth('2xl')
+                    ->modalHeading('Attribuer carte')
+                    ->modalSubmitActionLabel('Confirmer l’attribution')
                     ->form([
-                        Forms\Components\Select::make('card_id')
-                            ->label('Carte disponible')
-                            ->searchable()
-                            ->getSearchResultsUsing(fn (string $search) => LoyaltyCard::available()
-                                ->where('card_number', 'like', "%{$search}%")
-                                ->limit(20)
-                                ->pluck('card_number', 'id')
-                            )
-                            ->getOptionLabelUsing(fn ($value) => LoyaltyCard::find($value)?->card_number)
-                            ->required(),
+                        Section::make('Client sélectionné')
+                            ->schema([
+                                Forms\Components\Placeholder::make('client_name')
+                                    ->label('Nom')
+                                    ->content(fn (Client $record): string => (string) ($record->name ?: "Client #{$record->id}")),
+                                Forms\Components\Placeholder::make('client_phone')
+                                    ->label('Téléphone')
+                                    ->content(fn (Client $record): string => (string) ($record->phone_1 ?: '—')),
+                                Forms\Components\Placeholder::make('client_card')
+                                    ->label('Carte active actuelle')
+                                    ->content(fn (Client $record): string => (string) ($record->activeCard?->card_number ?: 'Aucune')),
+                                Forms\Components\Placeholder::make('client_points')
+                                    ->label('Solde points')
+                                    ->content(fn (Client $record): string => (string) (($record->loyalty_points_balance ?? 0) . ' pts')),
+                            ])->columns(2),
+                        Section::make('Scan carte')
+                            ->schema([
+                                Forms\Components\TextInput::make('scan_code')
+                                    ->label('Scanner ou saisir le numéro de carte')
+                                    ->placeholder('Ex: SOBITAS-000100 / qr_token / barcode_value')
+                                    ->autofocus()
+                                    ->live(debounce: 250)
+                                    ->required()
+                                    ->afterStateUpdated(function ($state, callable $set, $record) {
+                                        if (! $record instanceof Client) {
+                                            return;
+                                        }
+
+                                        $set('found_card_id', null);
+                                        $set('lookup_state', null);
+                                        $set('lookup_message', null);
+                                        $set('preview_card_number', null);
+                                        $set('preview_status', null);
+                                        $set('preview_batch', null);
+                                        $set('preview_printed_at', null);
+
+                                        $code = trim((string) $state);
+                                        if ($code === '') {
+                                            return;
+                                        }
+
+                                        $service = app(LoyaltyService::class);
+                                        $card = $service->findCardByScanCode($code);
+
+                                        if (! $card) {
+                                            $set('lookup_state', 'not_found');
+                                            $set('lookup_message', 'Carte introuvable');
+                                            return;
+                                        }
+
+                                        $set('found_card_id', $card->id);
+                                        $set('preview_card_number', $card->card_number);
+                                        $set('preview_status', $card->status->label());
+                                        $set('preview_batch', $card->batch?->name ?: ($card->batch_id ? "Lot #{$card->batch_id}" : '—'));
+                                        $set('preview_printed_at', $card->printed_at?->format('d/m/Y H:i') ?: 'Non imprimée');
+
+                                        if ($card->client_id && $card->client_id !== $record->id) {
+                                            $owner = $card->client?->name ?: "Client #{$card->client_id}";
+                                            $set('lookup_state', 'assigned_other');
+                                            $set('lookup_message', "Cette carte est déjà attribuée à {$owner}.");
+                                            return;
+                                        }
+
+                                        if ($card->status !== LoyaltyCardStatus::Available) {
+                                            $set('lookup_state', 'not_available');
+                                            $set('lookup_message', "Cette carte ne peut pas être attribuée car son statut est : {$card->status->label()}.");
+                                            return;
+                                        }
+
+                                        $existing = $record->activeCard;
+                                        if ($existing && $existing->id !== $card->id) {
+                                            $set('lookup_state', 'client_has_active');
+                                            $set('lookup_message', "Ce client possède déjà une carte active : {$existing->card_number}.");
+                                            return;
+                                        }
+
+                                        $set('lookup_state', 'found');
+                                        $set('lookup_message', 'Carte trouvée');
+                                    }),
+                                Forms\Components\Placeholder::make('lookup_message_view')
+                                    ->hiddenLabel()
+                                    ->content(fn (callable $get): string => (string) ($get('lookup_message') ?: 'Scannez une carte puis validez avec Entrée.')),
+                                Forms\Components\Placeholder::make('card_preview')
+                                    ->label('Carte trouvée')
+                                    ->content(function (callable $get): string {
+                                        if (! $get('found_card_id')) {
+                                            return '—';
+                                        }
+
+                                        return implode("\n", [
+                                            'Numéro: ' . ($get('preview_card_number') ?: '—'),
+                                            'Statut: ' . ($get('preview_status') ?: '—'),
+                                            'Lot: ' . ($get('preview_batch') ?: '—'),
+                                            'Impression: ' . ($get('preview_printed_at') ?: '—'),
+                                        ]);
+                                    }),
+                                Forms\Components\Toggle::make('replace_existing')
+                                    ->label('Remplacer la carte')
+                                    ->helperText('Activez pour remplacer la carte active actuelle du client.')
+                                    ->default(false)
+                                    ->visible(fn (Client $record): bool => (bool) $record->activeCard),
+                                Forms\Components\Hidden::make('found_card_id'),
+                                Forms\Components\Hidden::make('lookup_state'),
+                                Forms\Components\Hidden::make('preview_card_number'),
+                                Forms\Components\Hidden::make('preview_status'),
+                                Forms\Components\Hidden::make('preview_batch'),
+                                Forms\Components\Hidden::make('preview_printed_at'),
+                            ]),
                     ])
                     ->action(function (Client $record, array $data) {
                         try {
-                            $card = LoyaltyCard::findOrFail($data['card_id']);
-                            app(LoyaltyService::class)->assignCard($card, $record);
+                            $scanCode = trim((string) ($data['scan_code'] ?? ''));
+                            if ($scanCode === '') {
+                                throw new \RuntimeException('Scanner ou saisir le numéro de carte.');
+                            }
+
+                            $service = app(LoyaltyService::class);
+                            $card = $service->findCardByScanCode($scanCode);
+
+                            if (! $card) {
+                                throw new \RuntimeException('Carte introuvable. Réessayez ou générez des cartes dans Lots de cartes.');
+                            }
+
+                            $assignedCard = $service->assignCardToClient(
+                                $card,
+                                $record,
+                                (bool) ($data['replace_existing'] ?? false),
+                            );
+
                             Notification::make()
-                                ->title("Carte {$card->card_number} attribuée à {$record->name}")
+                                ->title('Carte attribuée avec succès')
+                                ->body("Carte {$assignedCard->card_number} attribuée à {$record->name}.")
                                 ->success()->send();
                         } catch (\Throwable $e) {
                             Notification::make()->title($e->getMessage())->danger()->send();
