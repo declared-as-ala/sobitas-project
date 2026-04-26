@@ -80,7 +80,20 @@ class ClientResource extends Resource
                         ->label('Note fidélité')
                         ->rows(2)
                         ->columnSpanFull(),
+                    Forms\Components\Placeholder::make('active_card_info')
+                        ->label('Carte fidélité active')
+                        ->content(fn (?Client $record): string => (string) ($record?->activeCard?->card_number ?: '—'))
+                        ->visible(fn (?Client $record): bool => (bool) $record?->activeCard),
                 ])->columns(2)
+                ->visible(function (?Client $record): bool {
+                    if (! $record) {
+                        return false;
+                    }
+
+                    $record->loadMissing('activeCard');
+
+                    return (bool) $record->activeCard || ((int) ($record->loyalty_points_balance ?? 0) > 0);
+                })
                 ->collapsible(),
         ]);
     }
@@ -210,6 +223,12 @@ class ClientResource extends Resource
                                         }
 
                                         if ($card->status !== LoyaltyCardStatus::Available) {
+                                            if ($card->client_id === $record->id && $card->status === LoyaltyCardStatus::Active) {
+                                                $set('lookup_state', 'already_active_for_client');
+                                                $set('lookup_message', "Cette carte est déjà active pour ce client : {$card->card_number}.");
+                                                return;
+                                            }
+
                                             $set('lookup_state', 'not_available');
                                             $set('lookup_message', "Cette carte ne peut pas être attribuée car son statut est : {$card->status->label()}.");
                                             return;
@@ -269,6 +288,9 @@ class ClientResource extends Resource
                                 throw new \RuntimeException('Carte introuvable. Réessayez ou générez des cartes dans Lots de cartes.');
                             }
 
+                            $wasAlreadyActiveForClient = $card->client_id === $record->id
+                                && $card->status === LoyaltyCardStatus::Active;
+
                             $assignedCard = $service->assignCardToClient(
                                 $card,
                                 $record,
@@ -276,8 +298,10 @@ class ClientResource extends Resource
                             );
 
                             Notification::make()
-                                ->title('Carte attribuée avec succès')
-                                ->body("Carte {$assignedCard->card_number} attribuée à {$record->name}.")
+                                ->title($wasAlreadyActiveForClient ? 'Cette carte est déjà active pour ce client' : 'Carte attribuée avec succès')
+                                ->body($wasAlreadyActiveForClient
+                                    ? "La carte {$assignedCard->card_number} était déjà liée à {$record->name}."
+                                    : "Carte {$assignedCard->card_number} attribuée à {$record->name}.")
                                 ->success()->send();
                         } catch (\Throwable $e) {
                             Notification::make()->title($e->getMessage())->danger()->send();

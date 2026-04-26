@@ -356,6 +356,12 @@ class LoyaltyService
             throw new \RuntimeException("Cette carte est déjà attribuée à {$owner}.");
         }
 
+        // Idempotent: scanning an already active card linked to this same client
+        // should not fail the POS flow.
+        if ($card->client_id === $client->id && $card->status === LoyaltyCardStatus::Active) {
+            return $card->refresh();
+        }
+
         if (! $card->isAssignable()) {
             throw new \RuntimeException("Cette carte ne peut pas être attribuée car son statut est : {$card->status->label()}.");
         }
