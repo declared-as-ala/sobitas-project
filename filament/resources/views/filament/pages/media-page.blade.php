@@ -83,7 +83,7 @@
                             <button type="button" wire:click="goToBreadcrumb('')" class="crumb-btn">Dashboard / Media</button>
                             @foreach ($breadcrumbs as $breadcrumb)
                                 <span>/</span>
-                                <button type="button" wire:click='goToBreadcrumb(@js($breadcrumb["path"]))' class="crumb-btn">
+                                <button type="button" wire:click="goToBreadcrumb('{{ $breadcrumb['path'] }}')" class="crumb-btn">
                                     {{ $breadcrumb['name'] }}
                                 </button>
                             @endforeach
@@ -145,7 +145,7 @@
                                         <div class="col-6 col-md-4 col-xl-3">
                                             <div class="card h-100">
                                                 <div class="card-body p-3">
-                                                    <button type="button" wire:click='openFolder(@js($directory["path"]))' class="btn btn-link text-decoration-none text-start w-100 p-0">
+                                                    <button type="button" wire:click="openFolder('{{ $directory['path'] }}')" class="btn btn-link text-decoration-none text-start w-100 p-0">
                                                         <div class="d-flex align-items-center gap-2 mb-2">
                                                             <x-filament::icon icon="heroicon-o-folder" class="h-7 w-7 text-primary-500" />
                                                             <span class="small fw-semibold text-truncate">{{ $directory['name'] }}</span>
@@ -155,14 +155,14 @@
                                                         <x-filament::button
                                                             size="xs"
                                                             color="gray"
-                                                            x-on:click="const name = prompt('Nouveau nom du dossier', @js($directory['name'])); if (name && name.trim() !== '') { $wire.renameFolder(@js($directory['path']), name.trim()); }"
+                                                            x-on:click="const name = prompt('Nouveau nom du dossier', '{{ $directory['name'] }}'); if (name && name.trim() !== '') { $wire.renameFolder('{{ $directory['path'] }}', name.trim()); }"
                                                         >
                                                             Renommer
                                                         </x-filament::button>
                                                         <x-filament::button
                                                             size="xs"
                                                             color="danger"
-                                                            wire:click='deleteFolder(@js($directory["path"]))'
+                                                            wire:click="deleteFolder('{{ $directory['path'] }}')"
                                                             wire:confirm="Supprimer ce dossier vide ?"
                                                         >
                                                             Supprimer
@@ -182,7 +182,7 @@
                                         <div class="col-6 col-md-4 col-xl-3">
                                             <div
                                                 class="card h-100 card-thumb border {{ $selectedPath === $file['path'] ? 'is-selected border-2 border-primary' : '' }}"
-                                                wire:click='selectMedia(@js($file["path"]))'
+                                                wire:click="selectMedia('{{ $file['path'] }}')"
                                                 wire:key="media-file-{{ $file['path'] }}"
                                             >
                                                 <div class="card-body p-3 position-relative">
@@ -202,18 +202,18 @@
                                                     <div class="small text-secondary mb-2">{{ number_format($file['size'] / 1024, 1) }} Ko</div>
                                                     <div class="d-flex flex-wrap gap-1" wire:click.stop>
                                                         <x-filament::button size="xs" tag="a" href="{{ $file['url'] }}" target="_blank" color="gray">Aperçu</x-filament::button>
-                                                        <x-filament::button size="xs" color="gray" x-on:click="navigator.clipboard.writeText(@js($file['url'])); $wire.notifyUrlCopied()">Copier l’URL</x-filament::button>
+                                                        <x-filament::button size="xs" color="gray" x-on:click="navigator.clipboard.writeText('{{ $file['url'] }}'); $wire.notifyUrlCopied()">Copier l’URL</x-filament::button>
                                                         <x-filament::button
                                                             size="xs"
                                                             color="gray"
-                                                            x-on:click="const name = prompt('Nouveau nom du fichier', @js($file['name'])); if (name && name.trim() !== '') { $wire.renameFile(@js($file['path']), name.trim()); }"
+                                                            x-on:click="const name = prompt('Nouveau nom du fichier', '{{ $file['name'] }}'); if (name && name.trim() !== '') { $wire.renameFile('{{ $file['path'] }}', name.trim()); }"
                                                         >
                                                             Renommer
                                                         </x-filament::button>
                                                         <x-filament::button
                                                             size="xs"
                                                             color="danger"
-                                                            wire:click='deleteFile(@js($file["path"]))'
+                                                            wire:click="deleteFile('{{ $file['path'] }}')"
                                                             wire:confirm="Supprimer ce fichier ?"
                                                         >
                                                             Supprimer
@@ -272,7 +272,7 @@
                             <div class="mb-3">
                                 <label class="form-label fw-semibold small">URL du fichier</label>
                                 <input type="text" class="form-control form-control-sm font-monospace" readonly value="{{ $selectedItem['url'] }}" />
-                                <x-filament::button class="mt-2" size="sm" color="gray" x-on:click="navigator.clipboard.writeText(@js($selectedItem['url'])); $wire.notifyUrlCopied()">
+                                <x-filament::button class="mt-2" size="sm" color="gray" x-on:click="navigator.clipboard.writeText('{{ $selectedItem['url'] }}'); $wire.notifyUrlCopied()">
                                     Copier l’URL
                                 </x-filament::button>
                             </div>
@@ -318,7 +318,7 @@
                                 <x-filament::button
                                     color="danger"
                                     icon="heroicon-o-trash"
-                                    wire:click='deleteFile(@js($selectedItem["path"]))'
+                                    wire:click="deleteFile('{{ $selectedItem['path'] }}')"
                                     wire:confirm="Supprimer ce média ?"
                                 >
                                     Supprimer le média
