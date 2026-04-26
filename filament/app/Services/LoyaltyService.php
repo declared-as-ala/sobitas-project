@@ -362,6 +362,29 @@ class LoyaltyService
             return $card->refresh();
         }
 
+        // Legacy data recovery: some cards may already be "active" but not linked
+        // to any client yet. Allow linking them to the selected client.
+        if ($card->client_id === null && $card->status === LoyaltyCardStatus::Active) {
+            return DB::transaction(function () use ($card, $client) {
+                $data = [
+                    'client_id' => $client->id,
+                    'status' => LoyaltyCardStatus::Active->value,
+                ];
+
+                if ($this->hasAssignedAtColumn()) {
+                    $data['assigned_at'] = now();
+                }
+
+                if ($this->hasGivenToClientAtColumn()) {
+                    $data['given_to_client_at'] = now();
+                }
+
+                $card->update($data);
+
+                return $card->refresh();
+            });
+        }
+
         if (! $card->isAssignable()) {
             throw new \RuntimeException("Cette carte ne peut pas être attribuée car son statut est : {$card->status->label()}.");
         }

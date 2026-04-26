@@ -223,6 +223,12 @@ class ClientResource extends Resource
                                                 return;
                                             }
 
+                                            if ($card->client_id === null && $card->status === LoyaltyCardStatus::Active) {
+                                                $set('lookup_state', 'found');
+                                                $set('lookup_message', 'Carte trouvée (active sans client, attribution possible).');
+                                                return;
+                                            }
+
                                             $set('lookup_state', 'not_available');
                                             $set('lookup_message', "Cette carte ne peut pas être attribuée car son statut est : {$card->status->label()}.");
                                             return;
