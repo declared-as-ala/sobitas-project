@@ -79,9 +79,11 @@ class Client extends Model
 
     public function activeCard(): HasOne
     {
+        // Keep compatibility with deployments where assigned_at is not migrated yet.
+        // Using id avoids SQL errors on legacy schemas and still returns the latest active card.
         return $this->hasOne(LoyaltyCard::class, 'client_id')
             ->where('status', 'active')
-            ->latestOfMany('assigned_at');
+            ->latestOfMany('id');
     }
 
     public function loyaltyTransactions(): HasMany
