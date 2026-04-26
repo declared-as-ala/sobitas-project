@@ -234,9 +234,13 @@ Route::middleware(['auth', 'no.cache.print'])->group(function () {
         ]);
     })->name('quotations.print');
 
-    // Loyalty card print & CSV export
+    // Loyalty card print / PDF / CSV exports
     Route::get('print/loyalty-card/{card}', [\App\Http\Controllers\LoyaltyPrintController::class, 'single'])->name('loyalty.print.single');
     Route::get('print/loyalty-card-batch/{batch}', [\App\Http\Controllers\LoyaltyPrintController::class, 'batch'])->name('loyalty.print.batch');
+    Route::get('print/loyalty-card-selected', [\App\Http\Controllers\LoyaltyPrintController::class, 'selected'])->name('loyalty.print.selected');
+    Route::get('export/loyalty-card/{card}/pdf', [\App\Http\Controllers\LoyaltyPrintController::class, 'singlePdf'])->name('loyalty.export.single.pdf');
+    Route::get('export/loyalty-card-selected/pdf', [\App\Http\Controllers\LoyaltyPrintController::class, 'selectedPdf'])->name('loyalty.export.selected.pdf');
+    Route::get('export/loyalty-batch/{batch}/pdf', [\App\Http\Controllers\LoyaltyPrintController::class, 'batchPdf'])->name('loyalty.export.batch.pdf');
     Route::get('export/loyalty-batch/{batch}/csv', [\App\Http\Controllers\LoyaltyPrintController::class, 'exportCsv'])->name('loyalty.export.csv');
 
     // PDF download (attachment, no print preview)

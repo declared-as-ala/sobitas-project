@@ -136,16 +136,57 @@ class LoyaltyCardBatchResource extends Resource
                         }
                     }),
                 Action::make('print_batch')
-                    ->label('Imprimer')
+                    ->label('Imprimer le lot')
                     ->icon('heroicon-o-printer')
                     ->color('info')
-                    ->url(fn (LoyaltyCardBatch $record) => route('loyalty.print.batch', $record))
-                    ->openUrlInNewTab()
+                    ->form([
+                        Forms\Components\Select::make('per_page')
+                            ->label('Cartes par planche A4')
+                            ->options([
+                                4 => '4 cartes',
+                                6 => '6 cartes',
+                                8 => '8 cartes',
+                                10 => '10 cartes',
+                                12 => '12 cartes',
+                            ])
+                            ->default(8)
+                            ->required(),
+                    ])
+                    ->action(function (LoyaltyCardBatch $record, array $data) {
+                        return redirect()->away(route('loyalty.print.batch', [
+                            'batch' => $record,
+                            'per_page' => (int) ($data['per_page'] ?? 8),
+                        ]));
+                    })
+                    ->visible(fn (LoyaltyCardBatch $record) => $record->isGenerated()),
+                Action::make('export_batch_pdf')
+                    ->label('Exporter cartes pour impression')
+                    ->icon('heroicon-o-document-arrow-down')
+                    ->color('warning')
+                    ->form([
+                        Forms\Components\Select::make('per_page')
+                            ->label('Cartes par planche A4')
+                            ->options([
+                                4 => '4 cartes',
+                                6 => '6 cartes',
+                                8 => '8 cartes',
+                                10 => '10 cartes',
+                                12 => '12 cartes',
+                            ])
+                            ->default(8)
+                            ->required(),
+                    ])
+                    ->action(function (LoyaltyCardBatch $record, array $data) {
+                        return redirect()->away(route('loyalty.export.batch.pdf', [
+                            'batch' => $record,
+                            'per_page' => (int) ($data['per_page'] ?? 8),
+                        ]));
+                    })
                     ->visible(fn (LoyaltyCardBatch $record) => $record->isGenerated()),
                 Action::make('export_csv')
-                    ->label('CSV')
+                    ->label('Exporter lot CSV')
                     ->icon('heroicon-o-arrow-down-tray')
-                    ->color('warning')
+                    ->color('gray')
                     ->url(fn (LoyaltyCardBatch $record) => route('loyalty.export.csv', $record))
                     ->visible(fn (LoyaltyCardBatch $record) => $record->isGenerated()),
                 EditAction::make(),

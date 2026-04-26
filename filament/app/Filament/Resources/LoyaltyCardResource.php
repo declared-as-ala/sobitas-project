@@ -17,6 +17,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Schema as SchemaFacade;
+use Illuminate\Support\Collection;
 
 class LoyaltyCardResource extends Resource
 {
@@ -57,6 +58,7 @@ class LoyaltyCardResource extends Resource
     public static function table(Table $table): Table
     {
         $hasBatchColumn = SchemaFacade::hasColumn('loyalty_cards', 'batch_id');
+        $hasAssignedAtColumn = SchemaFacade::hasColumn('loyalty_cards', 'assigned_at');
 
         return $table
             ->columns([
@@ -84,11 +86,13 @@ class LoyaltyCardResource extends Resource
                         ->placeholder('—')
                         ->toggleable(),
                 ] : []),
-                Tables\Columns\TextColumn::make('assigned_at')
-                    ->label('Assignée le')
-                    ->date('d/m/Y')
-                    ->placeholder('—')
-                    ->sortable(),
+                ...($hasAssignedAtColumn ? [
+                    Tables\Columns\TextColumn::make('assigned_at')
+                        ->label('Assignée le')
+                        ->date('d/m/Y')
+                        ->placeholder('—')
+                        ->sortable(),
+                ] : []),
                 Tables\Columns\TextColumn::make('printed_at')
                     ->label('Imprimée le')
                     ->date('d/m/Y')
@@ -211,8 +215,80 @@ class LoyaltyCardResource extends Resource
                     ->color('info')
                     ->url(fn (LoyaltyCard $record) => route('loyalty.print.single', $record))
                     ->openUrlInNewTab(),
+                Action::make('export_pdf')
+                    ->label('Exporter PDF')
+                    ->icon('heroicon-o-document-arrow-down')
+                    ->color('warning')
+                    ->url(fn (LoyaltyCard $record) => route('loyalty.export.single.pdf', $record))
+                    ->openUrlInNewTab(),
 
                 EditAction::make(),
+            ])
+            ->bulkActions([
+                Tables\Actions\BulkAction::make('print_selected')
+                    ->label('Imprimer la sélection')
+                    ->icon('heroicon-o-printer')
+                    ->color('info')
+                    ->requiresConfirmation()
+                    ->form([
+                        Forms\Components\Select::make('per_page')
+                            ->label('Cartes par planche A4')
+                            ->options([
+                                4 => '4 cartes',
+                                6 => '6 cartes',
+                                8 => '8 cartes',
+                                10 => '10 cartes',
+                                12 => '12 cartes',
+                            ])
+                            ->default(8)
+                            ->required(),
+                    ])
+                    ->action(function (Collection $records, array $data) {
+                        $ids = $records->pluck('id')->implode(',');
+
+                        if ($ids === '') {
+                            Notification::make()->title('Aucune carte sélectionnée.')->warning()->send();
+
+                            return;
+                        }
+
+                        return redirect()->away(route('loyalty.print.selected', [
+                            'ids' => $ids,
+                            'per_page' => (int) ($data['per_page'] ?? 8),
+                        ]));
+                    }),
+                Tables\Actions\BulkAction::make('export_selected_pdf')
+                    ->label('Exporter sélection PDF')
+                    ->icon('heroicon-o-document-arrow-down')
+                    ->color('warning')
+                    ->requiresConfirmation()
+                    ->form([
+                        Forms\Components\Select::make('per_page')
+                            ->label('Cartes par planche A4')
+                            ->options([
+                                4 => '4 cartes',
+                                6 => '6 cartes',
+                                8 => '8 cartes',
+                                10 => '10 cartes',
+                                12 => '12 cartes',
+                            ])
+                            ->default(8)
+                            ->required(),
+                    ])
+                    ->action(function (Collection $records, array $data) {
+                        $ids = $records->pluck('id')->implode(',');
+
+                        if ($ids === '') {
+                            Notification::make()->title('Aucune carte sélectionnée.')->warning()->send();
+
+                            return;
+                        }
+
+                        return redirect()->away(route('loyalty.export.selected.pdf', [
+                            'ids' => $ids,
+                            'per_page' => (int) ($data['per_page'] ?? 8),
+                        ]));
+                    }),
             ]);
     }
 

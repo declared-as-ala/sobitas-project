@@ -2,284 +2,263 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Cartes Fidélité</title>
+    <title>Cartes Fidélité Sobitas</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    @php
+        $company = \App\Models\Coordinate::getCached();
+        $logoSrc = $logoDataUri ?? asset('logo.png');
+        $cardsPerPage = max(1, min(12, (int) ($cardsPerPage ?? 8)));
+        $cardChunks = collect($cards)->chunk($cardsPerPage);
+    @endphp
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
+        :root {
+            --sobitas-orange: #f97316;
+            --sobitas-black: #111111;
+            --sobitas-white: #ffffff;
+            --sheet-width: 210mm;
+            --sheet-height: 297mm;
+            --card-width: 85.60mm;
+            --card-height: 54.00mm;
+            --card-radius: 3.2mm;
+        }
         body {
-            font-family: 'Arial', sans-serif;
-            background: #f0f0f0;
+            background: #f4f4f5;
+            color: var(--sobitas-black);
+            font-family: "Segoe UI", Arial, sans-serif;
         }
-
-        .toolbar {
-            padding: 12px 20px;
+        .print-toolbar {
+            position: sticky;
+            top: 0;
+            z-index: 20;
             background: #fff;
-            border-bottom: 1px solid #ddd;
-            display: flex;
-            gap: 10px;
-            align-items: center;
+            border-bottom: 1px solid #e5e7eb;
         }
-
-        .toolbar .btn {
-            padding: 8px 20px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
-        }
-
-        .btn-print { background: #2563eb; color: #fff; }
-        .btn-back  { background: #e5e7eb; color: #374151; text-decoration: none; display: inline-block; padding: 8px 20px; border-radius: 6px; font-size:14px; font-weight:600; }
-
-        /* A4 page simulation */
-        .page {
-            width: 210mm;
-            min-height: 297mm;
+        .sheet {
+            width: var(--sheet-width);
+            min-height: var(--sheet-height);
+            margin: 20px auto;
             background: #fff;
-            margin: 24px auto;
+            border-radius: 14px;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
             padding: 8mm;
-            display: flex;
-            flex-wrap: wrap;
+            page-break-after: always;
+        }
+        .sheet:last-child { page-break-after: auto; }
+        .sheet-title {
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: .4px;
+            text-transform: uppercase;
+            margin-bottom: 6mm;
+            color: #374151;
+        }
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(2, var(--card-width));
             gap: 6mm;
-            align-content: flex-start;
+            align-content: start;
+            justify-content: center;
         }
-
-        /* ── Credit card: 85.6mm × 54mm (standard CR80) ── */
-        .card-wrap {
-            width: 85.6mm;
-            display: flex;
-            flex-direction: column;
-            gap: 2mm;
-        }
-
-        .card-face {
-            width: 85.6mm;
-            height: 54mm;
-            border-radius: 3mm;
+        .plastic-card {
+            width: var(--card-width);
+            height: var(--card-height);
+            border-radius: var(--card-radius);
+            border: .35mm solid #d4d4d8;
             overflow: hidden;
             position: relative;
-            border: 0.3mm solid #ddd;
+            background: var(--sobitas-white);
         }
-
-        /* ─────────────── FRONT ─────────────── */
-        .card-front {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-            color: #fff;
-            padding: 4mm 5mm;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
+        .front-accent {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4.5mm;
+            background: var(--sobitas-orange);
         }
-
-        .card-front .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
+        .front-content {
+            padding: 6mm 4.5mm 4.5mm;
+            height: 100%;
         }
-
-        .card-front .brand-name {
-            font-size: 7pt;
-            font-weight: 700;
-            letter-spacing: 1px;
-            color: #e2b96f;
+        .logo-wrap img {
+            height: 8.8mm;
+            width: auto;
+            object-fit: contain;
+        }
+        .card-title {
+            font-size: 5.4pt;
             text-transform: uppercase;
+            letter-spacing: 1.1px;
+            font-weight: 700;
+            color: #374151;
         }
-
-        .card-front .card-title {
-            font-size: 5.5pt;
-            color: rgba(255,255,255,0.7);
-            margin-top: 1mm;
+        .card-number {
+            font-family: "Consolas", "Courier New", monospace;
+            font-size: 8.2pt;
+            font-weight: 700;
+            letter-spacing: .7px;
         }
-
-        .card-front .qr-wrap {
-            width: 18mm;
-            height: 18mm;
-            background: #fff;
-            border-radius: 1mm;
+        .card-note {
+            font-size: 4.9pt;
+            color: #4b5563;
+        }
+        .qr-box {
+            width: 18.5mm;
+            height: 18.5mm;
+            border: .25mm solid #d4d4d8;
+            border-radius: 1.2mm;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             padding: 1mm;
-            flex-shrink: 0;
+            background: #fff;
         }
-
-        .card-front .qr-wrap svg,
-        .card-front .qr-wrap img {
+        .qr-box svg {
             width: 100%;
             height: 100%;
         }
-
-        .card-front .card-number {
-            font-size: 8pt;
-            font-weight: 700;
-            letter-spacing: 2px;
-            font-family: 'Courier New', monospace;
-            color: #e2b96f;
+        .back-top {
+            height: 8mm;
+            background: var(--sobitas-black);
         }
-
-        .card-front .card-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-        }
-
-        .card-front .card-instruction {
-            font-size: 4.5pt;
-            color: rgba(255,255,255,0.6);
-            max-width: 55mm;
-        }
-
-        .card-front .gold-stripe {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 5mm;
-            background: linear-gradient(90deg, #e2b96f, #f5d78e, #e2b96f);
-            opacity: 0.15;
-        }
-
-        /* ─────────────── BACK ─────────────── */
-        .card-back {
-            background: #f8f8f8;
-            color: #222;
-            padding: 4mm 5mm;
+        .back-content {
+            padding: 3.5mm 4.2mm 4mm;
+            height: calc(100% - 8mm);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
         }
-
-        .card-back .black-stripe {
-            background: #111;
-            height: 8mm;
-            margin: -4mm -5mm 3mm;
-        }
-
-        .card-back .rules-title {
-            font-size: 5pt;
-            font-weight: 700;
+        .rules-title {
+            color: var(--sobitas-orange);
+            font-size: 5.1pt;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 2mm;
-            color: #444;
-        }
-
-        .card-back .rule-line {
-            font-size: 5pt;
-            color: #333;
-            margin-bottom: 1mm;
-            display: flex;
-            align-items: center;
-            gap: 1.5mm;
-        }
-
-        .card-back .rule-icon {
-            display: inline-block;
-            width: 3mm;
-            height: 3mm;
-            background: #1a1a2e;
-            border-radius: 50%;
-            flex-shrink: 0;
-        }
-
-        .card-back .card-back-footer {
-            border-top: 0.2mm solid #ccc;
-            padding-top: 2mm;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-        }
-
-        .card-back .contact-info {
-            font-size: 4pt;
-            color: #666;
-            line-height: 1.5;
-        }
-
-        .card-back .card-number-back {
-            font-size: 5pt;
-            color: #aaa;
-            font-family: 'Courier New', monospace;
-        }
-
-        .card-label {
-            font-size: 9pt;
+            letter-spacing: .7px;
             font-weight: 700;
-            color: #555;
-            text-align: center;
-            padding: 1mm 0;
+            margin-bottom: 1.2mm;
         }
-
-        /* ── Print styles ── */
+        .rules-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .rules-list li {
+            font-size: 4.8pt;
+            margin-bottom: .8mm;
+            display: flex;
+            align-items: start;
+            gap: 1.1mm;
+        }
+        .bullet-dot {
+            width: 2.2mm;
+            height: 2.2mm;
+            border-radius: 9999px;
+            margin-top: .45mm;
+            background: var(--sobitas-orange);
+            flex: 0 0 auto;
+        }
+        .back-footer {
+            border-top: .2mm solid #d4d4d8;
+            padding-top: 1.5mm;
+        }
+        .contact {
+            font-size: 4.2pt;
+            line-height: 1.35;
+            color: #4b5563;
+        }
+        .token-label {
+            font-family: "Consolas", "Courier New", monospace;
+            font-size: 4.1pt;
+            color: #6b7280;
+        }
         @media print {
-            .toolbar { display: none !important; }
             body { background: #fff; }
-            .page {
+            .print-toolbar { display: none !important; }
+            .sheet {
                 margin: 0;
+                border-radius: 0;
                 box-shadow: none;
-                padding: 5mm;
+                padding: 6mm;
             }
-        }
-
-        /* Page breaks every 8 cards (A4 fits ~8) */
-        .card-wrap:nth-child(8n) {
-            page-break-after: always;
         }
     </style>
 </head>
 <body>
-
-<div class="toolbar no-print">
-    <button class="btn btn-print" onclick="window.print()">🖨 Imprimer</button>
-    <a class="btn-back" href="{{ url()->previous() }}">← Retour</a>
-    <span style="font-size:13px;color:#555;margin-left:10px;">
-        {{ $cards->count() }} carte(s)
-        @if(isset($batch)) · Lot : <strong>{{ $batch->name ?: "Lot #{$batch->id}" }}</strong> @endif
-    </span>
-</div>
-
-<div class="page">
-@foreach($cards as $card)
-<div class="card-wrap">
-    {{-- FRONT --}}
-    <div class="card-face card-front">
-        <div class="gold-stripe"></div>
-        <div class="card-header">
-            <div>
-                <div class="brand-name">Protein.tn</div>
-                <div class="card-title">CARTE FIDÉLITÉ</div>
-            </div>
-            <div class="qr-wrap">
-                {!! \SimpleSoftwareIO\QrCode\Facades\QrCode::size(60)->style('round')->generate($card->qr_token) !!}
-            </div>
-        </div>
-        <div class="card-footer">
-            <div>
-                <div class="card-number">{{ $card->card_number }}</div>
-                <div class="card-instruction">Présentez cette carte en boutique à chaque achat</div>
-            </div>
-        </div>
-    </div>
-
-    {{-- BACK --}}
-    <div class="card-face card-back">
-        <div class="black-stripe"></div>
-        <div>
-            <div class="rules-title">Programme Fidélité</div>
-            <div class="rule-line"><span class="rule-icon"></span> 1 DT dépensé = 1 point gagné</div>
-            <div class="rule-line"><span class="rule-icon"></span> 10 points = 1 DT de réduction</div>
-            <div class="rule-line"><span class="rule-icon"></span> Utilisable en boutique uniquement</div>
-            <div class="rule-line"><span class="rule-icon"></span> Valable à partir de 100 points</div>
-        </div>
-        <div class="card-back-footer">
-            <div class="contact-info">
-                En cas de perte, contactez la boutique<br>
-                protein.tn &nbsp;·&nbsp; {{ \App\Models\Coordinate::getCached()?->phone_1 ?? '' }}
-            </div>
-            <div class="card-number-back">{{ $card->card_number }}</div>
-        </div>
+<div class="print-toolbar py-3 no-print">
+    <div class="container-fluid d-flex flex-wrap align-items-center gap-2">
+        <button class="btn btn-dark rounded-pill px-4" onclick="window.print()">Imprimer</button>
+        <a href="{{ url()->previous() }}" class="btn btn-outline-secondary rounded-pill px-4">Retour</a>
+        <span class="badge text-bg-warning ms-1">{{ collect($cards)->count() }} cartes</span>
+        @if(isset($batch))
+            <span class="small text-muted">Lot : <strong>{{ $batch->name ?: "Lot #{$batch->id}" }}</strong></span>
+        @endif
+        <span class="small text-muted">Mise en page : {{ $cardsPerPage }} cartes / planche</span>
     </div>
 </div>
+
+@foreach($cardChunks as $chunk)
+    <section class="sheet">
+        <div class="sheet-title">Face avant · Sobitas / protein.tn</div>
+        <div class="cards-grid">
+            @foreach($chunk as $card)
+                <article class="plastic-card">
+                    <div class="front-accent"></div>
+                    <div class="front-content d-flex flex-column justify-content-between">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="logo-wrap mb-2">
+                                    @if($logoSrc)
+                                        <img src="{{ $logoSrc }}" alt="Sobitas logo">
+                                    @else
+                                        <strong>Sobitas</strong>
+                                    @endif
+                                </div>
+                                <div class="card-title">Carte Fidélité</div>
+                            </div>
+                            <div class="qr-box">
+                                {!! \SimpleSoftwareIO\QrCode\Facades\QrCode::size(92)->margin(0)->generate($card->qr_token) !!}
+                            </div>
+                        </div>
+                        <div>
+                            <div class="card-number mb-1">{{ $card->card_number }}</div>
+                            <div class="card-note">Présentez cette carte en boutique</div>
+                        </div>
+                    </div>
+                </article>
+            @endforeach
+        </div>
+    </section>
+
+    <section class="sheet">
+        <div class="sheet-title">Face arrière · Sobitas / protein.tn</div>
+        <div class="cards-grid">
+            @foreach($chunk as $card)
+                <article class="plastic-card">
+                    <div class="back-top"></div>
+                    <div class="back-content">
+                        <div>
+                            <div class="rules-title">Règles de fidélité</div>
+                            <ul class="rules-list">
+                                <li><span class="bullet-dot"></span><span>1 DT dépensé = 1 point gagné</span></li>
+                                <li><span class="bullet-dot"></span><span>10 points = 1 DT de réduction</span></li>
+                                <li><span class="bullet-dot"></span><span>Utilisable en boutique uniquement</span></li>
+                            </ul>
+                        </div>
+                        <div class="back-footer d-flex justify-content-between align-items-end">
+                            <div class="contact">
+                                protein.tn / Sobitas<br>
+                                {{ $company?->phone_1 ?: '' }} {{ $company?->adresse ? '· ' . $company->adresse : '' }}
+                            </div>
+                            <div class="token-label text-end">
+                                {{ $card->card_number }}<br>
+                                {{ $card->qr_token }}
+                            </div>
+                        </div>
+                    </div>
+                </article>
+            @endforeach
+        </div>
+    </section>
 @endforeach
-</div>
-
 </body>
 </html>
