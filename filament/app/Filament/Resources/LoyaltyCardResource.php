@@ -8,6 +8,7 @@ use App\Models\Client;
 use App\Models\LoyaltyCard;
 use App\Services\LoyaltyService;
 use Filament\Actions\Action;
+use Filament\Actions\BulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms;
 use Filament\Notifications\Notification;
@@ -225,7 +226,7 @@ class LoyaltyCardResource extends Resource
                 EditAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkAction::make('print_selected')
+                BulkAction::make('print_selected')
                     ->label('Imprimer la sélection')
                     ->icon('heroicon-o-printer')
                     ->color('info')
@@ -257,7 +258,7 @@ class LoyaltyCardResource extends Resource
                             'per_page' => (int) ($data['per_page'] ?? 8),
                         ]));
                     }),
-                Tables\Actions\BulkAction::make('export_selected_pdf')
+                BulkAction::make('export_selected_pdf')
                     ->label('Exporter sélection PDF')
                     ->icon('heroicon-o-document-arrow-down')
                     ->color('warning')
