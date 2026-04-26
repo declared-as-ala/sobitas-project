@@ -25,6 +25,7 @@ class LoyaltyService
     private ?bool $hasBarcodeValueColumn = null;
     private ?bool $hasGivenToClientAtColumn = null;
     private ?bool $hasNotesColumn = null;
+    private array $loyaltyTxColumnCache = [];
 
     private function hasAssignedAtColumn(): bool
     {
@@ -60,6 +61,15 @@ class LoyaltyService
         }
 
         return $this->hasNotesColumn = Schema::hasColumn('loyalty_cards', 'notes');
+    }
+
+    private function hasLoyaltyTransactionColumn(string $column): bool
+    {
+        if (array_key_exists($column, $this->loyaltyTxColumnCache)) {
+            return $this->loyaltyTxColumnCache[$column];
+        }
+
+        return $this->loyaltyTxColumnCache[$column] = Schema::hasColumn('loyalty_point_transactions', $column);
     }
 
     // ── Card generation ───────────────────────────────────────────────────────
@@ -231,16 +241,23 @@ class LoyaltyService
 
             $newBalance = $client->loyalty_points_balance - $pointsToRedeem;
 
-            $transactions[] = LoyaltyPointTransaction::create([
+            $payload = [
                 'client_id'       => $client->id,
                 'loyalty_card_id' => $card->id,
                 'ticket_id'       => $ticket->id,
                 'type'            => LoyaltyTransactionType::Redeem->value,
                 'points'          => -$pointsToRedeem,
-                'balance_after'   => $newBalance,
                 'description'     => "Utilisation sur ticket {$ticket->numero}",
-                'processed_by'    => auth()->id(),
-            ]);
+            ];
+
+            if ($this->hasLoyaltyTransactionColumn('balance_after')) {
+                $payload['balance_after'] = $newBalance;
+            }
+            if ($this->hasLoyaltyTransactionColumn('processed_by')) {
+                $payload['processed_by'] = auth()->id();
+            }
+
+            $transactions[] = LoyaltyPointTransaction::create($payload);
 
             DB::table('clients')
                 ->where('id', $client->id)
@@ -255,16 +272,23 @@ class LoyaltyService
         if ($pointsEarned > 0) {
             $newBalance = $client->loyalty_points_balance + $pointsEarned;
 
-            $transactions[] = LoyaltyPointTransaction::create([
+            $payload = [
                 'client_id'       => $client->id,
                 'loyalty_card_id' => $card->id,
                 'ticket_id'       => $ticket->id,
                 'type'            => LoyaltyTransactionType::Earn->value,
                 'points'          => $pointsEarned,
-                'balance_after'   => $newBalance,
                 'description'     => "Gain sur ticket {$ticket->numero}",
-                'processed_by'    => auth()->id(),
-            ]);
+            ];
+
+            if ($this->hasLoyaltyTransactionColumn('balance_after')) {
+                $payload['balance_after'] = $newBalance;
+            }
+            if ($this->hasLoyaltyTransactionColumn('processed_by')) {
+                $payload['processed_by'] = auth()->id();
+            }
+
+            $transactions[] = LoyaltyPointTransaction::create($payload);
 
             DB::table('clients')
                 ->where('id', $client->id)
@@ -303,15 +327,22 @@ class LoyaltyService
 
             $card = $client->activeCard;
 
-            return LoyaltyPointTransaction::create([
+            $payload = [
                 'client_id'       => $client->id,
                 'loyalty_card_id' => $card?->id,
                 'type'            => LoyaltyTransactionType::Adjustment->value,
                 'points'          => $delta,
-                'balance_after'   => $newBalance,
                 'description'     => $description,
-                'processed_by'    => $by?->id ?? auth()->id(),
-            ]);
+            ];
+
+            if ($this->hasLoyaltyTransactionColumn('balance_after')) {
+                $payload['balance_after'] = $newBalance;
+            }
+            if ($this->hasLoyaltyTransactionColumn('processed_by')) {
+                $payload['processed_by'] = $by?->id ?? auth()->id();
+            }
+
+            return LoyaltyPointTransaction::create($payload);
         });
     }
 

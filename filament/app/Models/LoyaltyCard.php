@@ -173,6 +173,11 @@ class LoyaltyCard extends Model
         return $allowed[0];
     }
 
+    public static function allowedStatusValuesForWrite(): array
+    {
+        return self::allowedStatusValues();
+    }
+
     private static function mapToAllowedStatus(string $raw): string
     {
         $normalized = trim(strtolower($raw));
@@ -213,7 +218,17 @@ class LoyaltyCard extends Model
                 ->where('COLUMN_NAME', 'status')
                 ->value('COLUMN_TYPE');
         } catch (\Throwable) {
-            return self::$allowedStatusValuesCache = [];
+            $columnType = null;
+        }
+
+        if (! is_string($columnType)) {
+            try {
+                $table = DB::getTablePrefix() . 'loyalty_cards';
+                $column = DB::selectOne("SHOW COLUMNS FROM `{$table}` LIKE 'status'");
+                $columnType = is_object($column) ? ($column->Type ?? null) : null;
+            } catch (\Throwable) {
+                return self::$allowedStatusValuesCache = [];
+            }
         }
 
         if (! is_string($columnType) || preg_match("/^enum\((.*)\)$/i", $columnType, $matches) !== 1) {
