@@ -63,8 +63,10 @@ class TicketPosPage extends Page
     public ?Ticket $ticket = null;
 
     // ── Mount ───────────────────────────────────────────────────────────────
-    public function mount(?int $ticketId = null, ?int $client_id = null): void
+    public function mount(?int $ticketId = null): void
     {
+        $clientIdFromQuery = request()->integer('client_id');
+
         $this->coordonnee = Coordinate::getCached();
         $this->ticketId   = $ticketId;
 
@@ -91,7 +93,7 @@ class TicketPosPage extends Page
         }
 
         // Pre-load client when redirected from Scanner Fidélité page
-        if (! $ticketId && $client_id && $client = Client::find($client_id)) {
+        if (! $ticketId && $clientIdFromQuery && $client = Client::find($clientIdFromQuery)) {
             $this->client_id      = $client->id;
             $this->client_adresse = $client->adresse ?? '';
             $this->client_phone   = $client->phone_1 ?? '';

@@ -13,7 +13,7 @@ return new class extends Migration
         }
 
         Schema::table('loyalty_cards', function (Blueprint $table): void {
-            $table->timestamp('assigned_at')->nullable()->after('printed_at');
+            $table->timestamp('assigned_at')->nullable();
         });
     }
 
