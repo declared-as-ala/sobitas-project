@@ -208,6 +208,11 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
     offers: offersPayload,
   };
 
+  // hasMerchantReturnPolicy: indicates if the product has a merchant return policy
+  if (product.schema?.has_merchant_return_policy === true) {
+    schema.hasMerchantReturnPolicy = true;
+  }
+
   if (dedupedImages.length > 0) {
     schema.image = dedupedImages;
     schema.associatedMedia = dedupedImages.map((url, index) => ({
@@ -345,6 +350,9 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
 
   if (product.gtin?.trim()) sanitized.gtin = product.gtin.trim();
   if (product.mpn?.trim()) sanitized.mpn = product.mpn.trim();
+  if (product.schema?.has_merchant_return_policy === true) {
+    sanitized.hasMerchantReturnPolicy = true;
+  }
 
   return sanitized;
 }

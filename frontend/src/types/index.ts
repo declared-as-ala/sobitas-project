@@ -87,6 +87,8 @@ export interface Product {
     /** Average rating from published reviews (API-computed). */
     rating_value?: number | null;
     review_count?: number | null;
+    /** Return policy indicator for schema.org Product */
+    has_merchant_return_policy?: boolean | null;
   };
   /** Server-built schema.org Product graph (preferred over client-side `buildProductJsonLd`). */
   json_ld_product?: Record<string, unknown> | null;
