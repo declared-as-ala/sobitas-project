@@ -95,28 +95,7 @@ Forms\Components\Textarea::make('excerpt')
                             ->columnSpanFull(),
                     ];
                 })
-                ->columnSpanFull(),
-            Section::make('Contenu HTML')
-                ->description('Saisissez le corps de la page en HTML brut. L’aperçu ci-dessous applique Bootstrap 5 au rendu (les balises <script> sont retirées dans l’aperçu uniquement).')
-                ->schema([
-                    Forms\Components\Textarea::make('body')
-                        ->label('Code HTML')
-                        ->rows(18)
-                        ->columnSpanFull()
-                        ->live(debounce: 600)
-                        ->helperText('Exemples : <h2>Titre</h2>, <p>Paragraphe</p>, <ul><li>…</li></ul>, <a href="…">lien</a>, classes Bootstrap : <div class="alert alert-info">…</div>.')
-                        ->extraInputAttributes([
-                            'class' => 'font-monospace text-sm',
-                            'spellcheck' => 'false',
-                            'style' => 'min-height: 280px;',
-                        ]),
-                    Forms\Components\ViewField::make('_body_html_preview')
-                        ->label('Aperçu')
-                        ->view('filament.forms.components.page-body-html-preview')
-                        ->dehydrated(false)
-                        ->columnSpanFull(),
-                ])
-                ->columnSpanFull(),
+->columnSpanFull(),
             FileUpload::make('image')
                 ->label('Image')
                 ->disk('public')

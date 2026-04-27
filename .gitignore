@@ -23,3 +23,5 @@ filament/node_modules/
 
 # Ignore the backend source tree from this repo snapshot
 # backend/
+temp_auto_push.bat
+temp_interactive_push.bat
