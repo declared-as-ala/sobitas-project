@@ -128,7 +128,6 @@ export default async function Home() {
           rel="preload"
           as="image"
           href={nextImgUrl(mobileFirst.imageUrl, 1080)}
-          // @ts-expect-error — imageSrcSet/imageSizes map to preload image attrs
           imageSrcSet={mobileSrcSet}
           imageSizes="100vw"
           media="(max-width: 767px)"
@@ -140,7 +139,6 @@ export default async function Home() {
           rel="preload"
           as="image"
           href={nextImgUrl(desktopFirst.imageUrl, 1200)}
-          // @ts-expect-error — imageSrcSet/imageSizes map to preload image attrs
           imageSrcSet={desktopSrcSet}
           imageSizes="100vw"
           media="(min-width: 768px)"
