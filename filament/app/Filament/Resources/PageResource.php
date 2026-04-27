@@ -49,9 +49,52 @@ class PageResource extends Resource
                 ->maxLength(255)
                 ->unique(ignoreRecord: true)
                 ->rules(['alpha_dash:ascii']),
-            Forms\Components\Textarea::make('excerpt')
+Forms\Components\Textarea::make('excerpt')
                 ->label('Extrait')
                 ->rows(2)
+                ->columnSpanFull(),
+            Forms\Components\Select::make('body_editor_type')
+                ->label('Type d\'éditeur')
+                ->options([
+                    'html' => 'HTML (code brut)',
+                    'rich' => 'Éditeur visuel (Rich Editor)',
+                ])
+                ->default('html')
+                ->live(),
+            Section::make('Contenu')
+                ->description('Saisissez le corps de la page en HTML brut ou utilisez l\'éditeur visuel. L\'aperçu ci-dessous applique Bootstrap 5 au rendu (les balises <script> sont retirées dans l\'aperçu uniquement).')
+                ->schema(function ($get) {
+                    $editorType = $get('body_editor_type') ?? 'html';
+                    
+                    if ($editorType === 'html') {
+                        return [
+                            Forms\Components\Textarea::make('body')
+                                ->label('Code HTML')
+                                ->rows(18)
+                                ->columnSpanFull()
+                                ->live(debounce: 600)
+                                ->helperText('Exemples : <h2>Titre</h2>, <p>Paragraphe</p>, <ul><li>…</li></ul>, <a href="…">lien</a>, classes Bootstrap : <div class="alert alert-info">…</div>.')
+                                ->extraInputAttributes([
+                                    'class' => 'font-monospace text-sm',
+                                    'spellcheck' => 'false',
+                                    'style' => 'min-height: 280px;',
+                                ]),
+                            Forms\Components\ViewField::make('_body_html_preview')
+                                ->label('Aperçu')
+                                ->view('filament.forms.components.page-body-html-preview')
+                                ->dehydrated(false)
+                                ->columnSpanFull(),
+                        ];
+                    }
+                    
+                    return [
+                        Forms\Components\RichEditor::make('body')
+                            ->label('Contenu')
+                            ->fileAttachmentsDisk('public')
+                            ->fileAttachmentsDirectory('pages/editor')
+                            ->columnSpanFull(),
+                    ];
+                })
                 ->columnSpanFull(),
             Section::make('Contenu HTML')
                 ->description('Saisissez le corps de la page en HTML brut. L’aperçu ci-dessous applique Bootstrap 5 au rendu (les balises <script> sont retirées dans l’aperçu uniquement).')

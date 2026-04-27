@@ -17,6 +17,7 @@ class Page extends Model
         'title',
         'excerpt',
         'body',
+        'body_editor_type',
         'image',
         'slug',
         'meta_description',
