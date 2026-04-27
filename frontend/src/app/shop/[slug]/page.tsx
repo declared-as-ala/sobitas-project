@@ -49,12 +49,12 @@ function buildCategoryRedirectUrl(
   return query ? `${base}?${query}` : base;
 }
 
-/** CTR-optimized product title for Tunisia SERP (aim: position #1). Format: Product Name – Prix Tunisie & Livraison Rapide | Proteine Tunisie */
+/** CTR-optimized product title for Tunisia SERP (aim: position #1). Format: Product Name – Prix Tunisie & Livraison Rapide | Protein Tunisie */
 function productTitle(product: Product): string {
   const explicit = product.seo?.title || product.seo_title || product.meta_title;
   if (explicit?.trim()) return explicit.trim();
   const name = product.designation_fr ?? product.slug ?? 'Produit';
-  return `${name} – Prix Tunisie & Livraison Rapide | Proteine Tunisie`;
+  return `${name} – Prix Tunisie & Livraison Rapide | Protein Tunisie`;
 }
 
 /** Meta description: benefit + authenticity + delivery + location (Tunisie). Max 160 chars. */
@@ -65,8 +65,8 @@ function productDescription(product: Product, productName: string): string {
     if (plain) return plain.slice(0, 160);
   }
   const plain = (product.description_fr || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
-  if (plain) return `${plain} Prix Tunisie. Produits authentiques. Livraison 24-72h. Proteine Tunisie.`;
-  return `Acheter ${productName} en Tunisie – Meilleur prix, livraison rapide, produits authentiques. Sousse, Tunis, toute la Tunisie. Proteine Tunisie.`;
+  if (plain) return `${plain} Prix Tunisie. Produits authentiques. Livraison 24-72h. Protein Tunisie.`;
+  return `Acheter ${productName} en Tunisie – Meilleur prix, livraison rapide, produits authentiques. Sousse, Tunis, toute la Tunisie. Protein Tunisie.`;
 }
 
 function productKeywords(product: Product): string[] {
@@ -100,7 +100,7 @@ function ensureProductionDomain(url: string, fallbackPath: string): string {
 export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const cleanSlug = slug?.trim();
-  if (!cleanSlug) return { title: 'Produit | Proteine Tunisie' };
+  if (!cleanSlug) return { title: 'Produit | Protein Tunisie' };
   const search = searchParams ? await searchParams : undefined;
   try {
     const product = await getCachedProductDetails(cleanSlug);
@@ -133,9 +133,9 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     if (getErrorStatus(e) === 404) {
       permanentRedirect(buildCategoryRedirectUrl(cleanSlug, search));
     }
-    return { title: 'Produit | Proteine Tunisie' };
+    return { title: 'Produit | Protein Tunisie' };
   }
-  return { title: 'Produit | Proteine Tunisie' };
+  return { title: 'Produit | Protein Tunisie' };
 }
 
 /** Product detail page – official URL: /shop/:slug. Anti-404: if slug is not a product, try 301 to /category/:slug (preserve query). */

@@ -40,13 +40,13 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       article.seo_description ||
       article.meta_description_fr ||
       description ||
-      `Découvrez ${article.designation_fr} sur le blog Sobitas - Conseils nutrition et sport`;
+      `Découvrez ${article.designation_fr} sur le blog Protein Tunisie - Conseils nutrition et sport`;
 
     const canonicalUrl = article.seo?.canonical_url?.trim()
       ? article.seo.canonical_url.trim()
       : buildCanonicalUrl(`/blog/${encodeURIComponent(article.slug || slug)}`);
     const title = article.seo?.title || article.seo_title || article.meta_title || article.designation_fr || 'Blog';
-    const descriptionWithTunisia = metaDescription.includes('Tunisie') ? metaDescription : `${metaDescription} Conseils nutrition sportive Tunisie – Proteine Tunisie.`;
+    const descriptionWithTunisia = metaDescription.includes('Tunisie') ? metaDescription : `${metaDescription} Conseils nutrition sportive Tunisie – Protein Tunisie.`;
     const twitterImage = article.seo?.twitter?.image || imageUrl || '';
     return {
       title,
@@ -74,7 +74,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
     };
   } catch (error) {
     return {
-      title: 'Article | Blog Sobitas',
+      title: 'Article | Blog Protein Tunisie',
       description: 'Découvrez nos articles sur la nutrition et le sport',
     };
   }

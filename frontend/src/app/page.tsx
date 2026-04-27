@@ -8,9 +8,9 @@ import type { AccueilData } from '@/types';
 
 export async function generateMetadata(): Promise<Metadata> {
   const canonical = buildCanonicalUrl('/');
-  const title = 'Proteine Tunisie | Whey, Créatine & Compléments';
+  const title = 'Protein Tunisie | Whey, Créatine & Compléments en Tunisie';
   const description =
-    'Proteine Tunisie : whey protein, créatine et compléments alimentaires. Livraison rapide à Sousse, Tunis, Sfax et partout en Tunisie sur protein.tn.';
+    'Protein Tunisie : proteine tunisie, whey, créatine, compléments alimentaires et matériel de musculation avec livraison rapide partout en Tunisie.';
 
   return {
     title,
@@ -19,11 +19,18 @@ export async function generateMetadata(): Promise<Metadata> {
       'proteine tunisie, protein tunisie, whey tunisie, whey protein tunisie, créatine tunisie, complément alimentaire tunisie, nutrition sportive tunisie, protéine musculation Tunisie',
     alternates: { canonical },
     openGraph: {
-      title: 'Proteine Tunisie',
+      title: 'Protein Tunisie | Whey, Créatine & Compléments en Tunisie',
       description,
       images: ['/assets/img/logo/logo.webp'],
       url: canonical,
       type: 'website',
+      siteName: 'Protein Tunisie',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: 'Protein Tunisie | Whey, Créatine & Compléments en Tunisie',
+      description,
+      images: ['/assets/img/logo/logo.webp'],
     },
     other: {},
   };
@@ -121,9 +128,9 @@ export default async function Home() {
           rel="preload"
           as="image"
           href={nextImgUrl(mobileFirst.imageUrl, 1080)}
-          // @ts-expect-error — imagesrcset/imagesizes are valid HTML but missing from React types
-          imagesrcset={mobileSrcSet}
-          imagesizes="100vw"
+          // @ts-expect-error — imageSrcSet/imageSizes map to preload image attrs
+          imageSrcSet={mobileSrcSet}
+          imageSizes="100vw"
           media="(max-width: 767px)"
           fetchPriority="high"
         />
@@ -133,9 +140,9 @@ export default async function Home() {
           rel="preload"
           as="image"
           href={nextImgUrl(desktopFirst.imageUrl, 1200)}
-          // @ts-expect-error — imagesrcset/imagesizes are valid HTML but missing from React types
-          imagesrcset={desktopSrcSet}
-          imagesizes="100vw"
+          // @ts-expect-error — imageSrcSet/imageSizes map to preload image attrs
+          imageSrcSet={desktopSrcSet}
+          imageSizes="100vw"
           media="(min-width: 768px)"
           fetchPriority="high"
         />

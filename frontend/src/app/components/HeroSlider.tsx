@@ -200,7 +200,7 @@ export const HeroSlider = memo(function HeroSlider({ slides, mobileFirst, deskto
 
   return (
     <section
-      className="relative w-full overflow-hidden bg-gray-900 h-[85dvh] min-h-[480px] sm:h-[70vh] sm:min-h-0 md:h-[80vh] md:min-h-[420px] lg:h-[520px] xl:h-[600px] 2xl:h-[680px]"
+      className="relative w-full overflow-hidden bg-gray-900 h-[82dvh] min-h-[500px] sm:h-[70vh] sm:min-h-0 md:h-[80vh] md:min-h-[420px] lg:h-[520px] xl:h-[600px] 2xl:h-[680px]"
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
@@ -221,21 +221,22 @@ export const HeroSlider = memo(function HeroSlider({ slides, mobileFirst, deskto
         )}
 
         {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" aria-hidden="true" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/58 via-black/24 to-transparent" aria-hidden="true" />
+        <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-black/30 via-black/10 to-transparent" aria-hidden="true" />
 
         {/* Content */}
-        <div className="relative flex h-full w-full max-w-7xl mx-auto flex-col pl-14 pr-14 pb-28 pt-4 sm:pl-6 sm:pr-6 sm:pb-20 md:pb-16 lg:flex-row lg:items-center lg:px-8 lg:pb-10 lg:pt-0">
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col justify-center lg:max-w-2xl lg:flex-none lg:justify-center xl:max-w-3xl">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white mb-3 sm:mb-4 md:mb-6 leading-tight drop-shadow-lg">
+        <div className="relative flex h-full w-full max-w-7xl mx-auto flex-col items-end px-6 pb-24 pt-16 sm:px-6 sm:pb-20 md:pb-16 lg:flex-row lg:items-center lg:px-8 lg:pb-10 lg:pt-0">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col items-end justify-start text-right lg:items-start lg:max-w-2xl lg:flex-none lg:justify-center lg:text-left xl:max-w-3xl">
+            <h2 className="text-[2.25rem] sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-slate-900 mb-2 sm:mb-4 md:mb-6 leading-[1.05] drop-shadow-lg max-w-[10ch] sm:max-w-[12ch]">
               {currentSlideData.titre}
             </h2>
-            <p className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-100 mb-4 sm:mb-6 md:mb-8 max-w-xl drop-shadow-md line-clamp-2 sm:line-clamp-none">
+            <p className="text-base sm:text-base md:text-lg lg:text-xl text-slate-800 mb-4 sm:mb-6 md:mb-8 max-w-[21ch] sm:max-w-[24ch] drop-shadow-md line-clamp-2 sm:line-clamp-none">
               {currentSlideData.description}
             </p>
             <div className="flex flex-wrap gap-2 sm:gap-3 md:gap-4">
               <Button
                 size="lg"
-                className="bg-red-600 hover:bg-red-700 text-white px-6 sm:px-8 md:px-10 lg:px-12 h-12 sm:h-14 md:h-16 text-sm sm:text-base md:text-lg lg:text-xl min-h-[56px] sm:min-h-[64px] md:min-h-[72px] min-w-[140px] sm:min-w-[160px] md:min-w-[180px] shadow-lg hover:shadow-xl transition-colors font-semibold"
+                className="bg-red-600 hover:bg-red-700 text-white px-6 sm:px-8 md:px-10 lg:px-12 h-11 sm:h-12 md:h-14 text-base sm:text-base md:text-lg lg:text-xl rounded-xl min-h-[48px] sm:min-h-[52px] md:min-h-[60px] min-w-[150px] sm:min-w-[170px] md:min-w-[190px] shadow-[0_8px_24px_rgba(220,38,38,0.32)] hover:shadow-[0_10px_28px_rgba(220,38,38,0.4)] transition-all font-semibold"
                 asChild
               >
                 <LinkWithLoading href="/shop" aria-label="Découvrir nos produits" loadingMessage="Chargement...">
@@ -247,16 +248,18 @@ export const HeroSlider = memo(function HeroSlider({ slides, mobileFirst, deskto
               <HeroTrustGuarantee layout="inline" />
             </div>
           </div>
-          <div className="mb-1 shrink-0 pt-3 sm:mb-2 sm:pt-4 lg:hidden">
-            <HeroTrustGuarantee layout="docked" />
-          </div>
+        </div>
+
+        {/* Mobile trust card: lower and less intrusive */}
+        <div className="absolute inset-x-0 bottom-14 z-[2] mx-auto w-[88%] max-w-sm scale-[0.94] sm:bottom-16 sm:w-[82%] sm:scale-100 lg:hidden">
+          <HeroTrustGuarantee layout="docked" />
         </div>
       </div>
 
       {/* Navigation arrows */}
       <button
         onClick={prevSlide}
-        className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white p-2 sm:p-3 rounded-full transition-all min-h-[44px] min-w-[44px] flex items-center justify-center z-10 shadow-lg"
+        className="absolute left-2 sm:left-4 top-[58%] sm:top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white p-2 sm:p-3 rounded-full transition-all min-h-[44px] min-w-[44px] flex items-center justify-center z-10 shadow-lg"
         aria-label="Slide précédent"
         type="button"
       >
@@ -264,7 +267,7 @@ export const HeroSlider = memo(function HeroSlider({ slides, mobileFirst, deskto
       </button>
       <button
         onClick={nextSlide}
-        className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white p-2 sm:p-3 rounded-full transition-all min-h-[44px] min-w-[44px] flex items-center justify-center z-10 shadow-lg"
+        className="absolute right-2 sm:right-4 top-[58%] sm:top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white p-2 sm:p-3 rounded-full transition-all min-h-[44px] min-w-[44px] flex items-center justify-center z-10 shadow-lg"
         aria-label="Slide suivant"
         type="button"
       >

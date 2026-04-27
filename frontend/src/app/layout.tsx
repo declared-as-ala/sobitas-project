@@ -23,11 +23,13 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn'),
+  applicationName: 'Protein Tunisie',
   title: {
-    default: "Proteine Tunisie | Whey, Créatine & Compléments",
-    template: "%s | Proteine Tunisie"
+    default: 'Protein Tunisie: Proteine Tunisie',
+    template: '%s | Protein Tunisie',
   },
-  description: "Proteine Tunisie : whey protein, créatine et compléments alimentaires. Livraison rapide à travers toute la Tunisie sur protein.tn.",
+  description:
+    'Protein Tunisie : proteine tunisie, whey, creatine, complements alimentaires, materiel de musculation et livraison rapide partout en Tunisie.',
   keywords: [
     "proteine tunisie",
     "protein tunisie",
@@ -55,29 +57,31 @@ export const metadata: Metadata = {
     "complément alimentaire tunisie",
     "nutrition sportive tunisie"
   ],
-  authors: [{ name: "Proteine Tunisie" }],
-  creator: "Proteine Tunisie",
-  publisher: "Proteine Tunisie",
+  authors: [{ name: 'Protein Tunisie' }],
+  creator: 'Protein Tunisie',
+  publisher: 'Protein Tunisie',
   openGraph: {
     type: "website",
     locale: "fr_FR",
     url: "https://protein.tn",
-    siteName: "Proteine Tunisie",
-    title: "Proteine Tunisie",
-    description: "Proteine Tunisie : whey protein, créatine et compléments alimentaires avec livraison rapide partout en Tunisie sur protein.tn.",
+    siteName: 'Protein Tunisie',
+    title: 'Protein Tunisie: Proteine Tunisie',
+    description:
+      'Protein Tunisie : proteine tunisie, whey, creatine, complements alimentaires, materiel de musculation et livraison rapide partout en Tunisie.',
     images: [
       {
         url: "/favicon-512x512.png",
         width: 512,
         height: 512,
-        alt: "Proteine Tunisie",
+        alt: 'Protein Tunisie',
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Proteine Tunisie",
-    description: "Proteine Tunisie : whey protein, créatine et compléments alimentaires avec livraison rapide partout en Tunisie sur protein.tn.",
+    title: 'Protein Tunisie: Proteine Tunisie',
+    description:
+      'Protein Tunisie : proteine tunisie, whey, creatine, complements alimentaires, materiel de musculation et livraison rapide partout en Tunisie.',
     images: ["/favicon-512x512.png"],
   },
   robots: {
@@ -114,8 +118,8 @@ export default async function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Proteine Tunisie" />
-        <meta property="og:site_name" content="Proteine Tunisie" />
+        <meta name="apple-mobile-web-app-title" content="Protein Tunisie" />
+        <meta property="og:site_name" content="Protein Tunisie" />
         {/* Favicons */}
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />

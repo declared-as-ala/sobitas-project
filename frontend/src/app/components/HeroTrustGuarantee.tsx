@@ -17,6 +17,8 @@ export const HeroTrustGuarantee = memo(function HeroTrustGuarantee({
   layout = 'inline',
 }: HeroTrustGuaranteeProps) {
   const isDocked = layout === 'docked';
+  const mainTextClass = isDocked ? 'text-white/95' : 'text-slate-900';
+  const mutedTextClass = isDocked ? 'text-white/[0.82]' : 'text-slate-700';
 
   return (
     <aside
@@ -87,15 +89,15 @@ export const HeroTrustGuarantee = memo(function HeroTrustGuarantee({
 
               <p
                 className={
-                  'min-w-0 flex-1 text-right font-medium leading-relaxed tracking-tight text-white/95 antialiased [text-shadow:0_1px_2px_rgba(0,0,0,0.35)] ' +
+                  `min-w-0 flex-1 text-right font-medium leading-relaxed tracking-tight ${mainTextClass} antialiased ` +
                   (isDocked
                     ? 'text-[0.8125rem] sm:text-[0.875rem]'
                     : 'text-[0.875rem] sm:text-[0.9375rem] md:text-[1.02rem] md:leading-[1.75]')
                 }
               >
-                <span className="font-normal text-white/[0.82]">تنجم ترجّع </span>
-                <span className="font-semibold text-white">فلوسك</span>
-                <span className="font-normal text-white/[0.82]"> في </span>
+                <span className={`font-normal ${mutedTextClass}`}>تنجم ترجّع </span>
+                <span className={`font-semibold ${mainTextClass}`}>فلوسك</span>
+                <span className={`font-normal ${mutedTextClass}`}> في </span>
                 <span className="mx-0.5 inline-flex align-middle">
                   <span
                     className={
@@ -106,7 +108,7 @@ export const HeroTrustGuarantee = memo(function HeroTrustGuarantee({
                     7 أيّام
                   </span>
                 </span>
-                <span className="font-normal text-white/[0.82]"> كان ما عجبكش المنتج </span>
+                <span className={`font-normal ${mutedTextClass}`}> كان ما عجبكش المنتج </span>
                 <span className="inline-block translate-y-px align-middle text-[1.08em] opacity-90" aria-hidden>
                   💯
                 </span>

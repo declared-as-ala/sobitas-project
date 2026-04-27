@@ -14,7 +14,7 @@ import { Badge } from '@/app/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 import { Input } from '@/app/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
-import { Minus, Plus, ShoppingCart, Star, Shield, Truck, Award, ArrowLeft, Heart, Share2, ZoomIn, CheckCircle2, Loader2, BadgeCheck, Search, Zap } from 'lucide-react';
+import { Minus, Plus, ShoppingCart, Star, Shield, ArrowLeft, Heart, Share2, ZoomIn, CheckCircle2, Loader2, BadgeCheck, Search, Zap } from 'lucide-react';
 import { useQuickOrder } from '@/contexts/QuickOrderContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import type { QuickOrderProduct } from '@/contexts/QuickOrderContext';
@@ -545,14 +545,14 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
         {/* Layout: 2 cols desktop (Image left, larger | Info + buy right), mobile single col. */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8 xl:gap-10 mb-6 sm:mb-8 lg:mb-10">
           {/* A) COLONNE GAUCHE — Gallery (desktop): image slightly smaller */}
-          <div className="hidden lg:block lg:col-span-6 min-w-0">
+          <div className="hidden lg:block lg:col-span-5 min-w-0">
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              className="sticky top-24"
+              className="sticky top-24 max-w-[520px] xl:max-w-[560px] ml-auto"
             >
               <div
-                className="relative w-full rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-lg group aspect-square min-h-[340px] xl:min-h-[420px] bg-gradient-to-b from-gray-50 to-white dark:from-gray-800 dark:to-gray-900/90"
+                className="relative w-full rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-lg group aspect-square min-h-[290px] xl:min-h-[350px] bg-gradient-to-b from-gray-50 to-white dark:from-gray-800 dark:to-gray-900/90"
                 onTouchStart={handleGalleryTouchStart}
                 onTouchEnd={handleGalleryTouchEnd}
               >
@@ -619,7 +619,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
           </div>
 
           {/* B) COLONNE DROITE — Infos + prix + quantité + CTAs + garanties (desktop) / mobile first block */}
-          <div className="lg:col-span-6 min-w-0 space-y-3 sm:space-y-4">
+          <div className="lg:col-span-7 min-w-0 space-y-3 sm:space-y-4">
             {/* Mobile Layout: Image First then badges, title, etc. */}
             <div className="lg:hidden space-y-4 sm:space-y-5">
               {/* Badges at top (stock from API: rupture + qte + low_stock_threshold) */}
@@ -749,6 +749,13 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 </span>
               </button>
 
+              {/* Meta Description - directly under reviews count */}
+              {metaDescription && (
+                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed px-1 line-clamp-3">
+                  {metaDescription}
+                </p>
+              )}
+
               {/* 3. Price - current + old + savings */}
               <div className="py-3 sm:py-4 border-y border-gray-200 dark:border-gray-800 px-1">
                 <div className="flex flex-wrap items-baseline gap-2 sm:gap-3">
@@ -767,13 +774,6 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   </p>
                 )}
               </div>
-
-              {/* 4. Meta Description - short SEO snippet */}
-              {metaDescription && (
-                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed px-1 line-clamp-3">
-                  {metaDescription}
-                </p>
-              )}
 
               {/* Category line only (directly above Arômes) — product code hidden on detail page */}
               {product.sous_categorie?.slug && (
@@ -808,29 +808,6 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       </span>
                     )}
                   </div>
-                </div>
-              )}
-              {/* Internal linking: Complétez avec créatine / whey (when product is not in that category) */}
-              {product.sous_categorie?.slug && (
-                <div className="px-1 space-y-2">
-                  {!product.sous_categorie.slug.toLowerCase().includes('creatine') && (
-                    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/50 p-3 sm:p-4">
-                      <p className="text-sm text-gray-700 dark:text-gray-300">
-                        Complétez avec la{' '}
-                        <Link href="/category/creatine" className="text-red-600 dark:text-red-400 font-medium hover:underline">créatine en Tunisie</Link>
-                        {' '}– meilleurs prix, livraison rapide.
-                      </p>
-                    </div>
-                  )}
-                  {!product.sous_categorie.slug.toLowerCase().includes('whey') && !product.sous_categorie.slug.toLowerCase().includes('proteine') && (
-                    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/50 p-3 sm:p-4">
-                      <p className="text-sm text-gray-700 dark:text-gray-300">
-                        Complétez avec la{' '}
-                        <Link href="/category/proteine-whey" className="text-red-600 dark:text-red-400 font-medium hover:underline">whey protein</Link>
-                        {' '}– meilleur prix, livraison Tunisie.
-                      </p>
-                    </div>
-                  )}
                 </div>
               )}
 
@@ -922,38 +899,6 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
               </div>
               <p className="lg:hidden text-xs text-gray-500 dark:text-gray-400 px-1">Paiement à la livraison • Livraison 24–72h • Produits authentiques</p>
 
-              {/* Trust badges — mobile: horizontal carousel (scroll-snap); tablet: 2 cols */}
-              <div className="pt-4 sm:pt-6 border-t border-gray-200 dark:border-gray-800 px-1">
-                <div
-                  className="flex md:grid overflow-x-auto md:overflow-visible gap-4 pb-2 md:pb-0 scrollbar-hide snap-x md:grid-cols-2 md:snap-none"
-                  style={{ WebkitOverflowScrolling: 'touch' }}
-                >
-                  <div className="flex items-center gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 shadow-sm min-h-[80px] flex-shrink-0 w-[240px] md:w-auto snap-start" style={{ scrollSnapAlign: 'start' }}>
-                    <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
-                      <Shield className="h-6 w-6 text-green-600 dark:text-green-400" strokeWidth={2} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-semibold text-gray-900 dark:text-white">Paiement Sécurisé</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 shadow-sm min-h-[80px] flex-shrink-0 w-[240px] md:w-auto snap-start" style={{ scrollSnapAlign: 'start' }}>
-                    <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
-                      <Truck className="h-6 w-6 text-blue-600 dark:text-blue-400" strokeWidth={2} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-semibold text-gray-900 dark:text-white">Livraison 2-3 jours</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 shadow-sm min-h-[80px] flex-shrink-0 w-[240px] md:w-auto snap-start" style={{ scrollSnapAlign: 'start' }}>
-                    <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
-                      <Award className="h-6 w-6 text-amber-600 dark:text-amber-400" strokeWidth={2} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-semibold text-gray-900 dark:text-white">Garantie Qualité</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
 
             {/* Desktop Layout: badges, title, rating, price, description, category, quantity, CTAs, arômes, service cards */}
@@ -1006,6 +951,9 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   </div>
                   <span className="text-sm text-primary-600 dark:text-primary-400 font-medium hover:underline">({rating > 0 ? rating.toFixed(1) : '0'}) – {reviewCount} avis</span>
                 </button>
+                {metaDescription && (
+                  <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-3">{metaDescription}</p>
+                )}
                 {/* Price */}
                 <div className="flex flex-wrap items-baseline gap-2">
                   <span className="text-2xl xl:text-3xl font-bold text-red-600 dark:text-red-400">{displayPrice} DT</span>
@@ -1086,9 +1034,6 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     <Share2 className="h-5 w-5" />
                   </Button>
                 </div>
-                {metaDescription && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-3">{metaDescription}</p>
-                )}
                 {product.sous_categorie?.slug && (
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
                     <Link href={`/category/${product.sous_categorie.slug}`} className="text-red-600 dark:text-red-400 hover:underline">
@@ -1119,46 +1064,6 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     )}
                   </div>
                 )}
-                {/* Internal linking: Complétez avec créatine / whey (when product is not in that category) */}
-                {product.sous_categorie?.slug && (
-                  <div className="space-y-2">
-                    {!product.sous_categorie.slug.toLowerCase().includes('creatine') && (
-                      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/50 p-3 sm:p-4">
-                        <p className="text-sm text-gray-700 dark:text-gray-300">
-                          Complétez avec la <Link href="/category/creatine" className="text-red-600 dark:text-red-400 font-medium hover:underline">créatine en Tunisie</Link> – meilleurs prix, livraison rapide.
-                        </p>
-                      </div>
-                    )}
-                    {!product.sous_categorie.slug.toLowerCase().includes('whey') && !product.sous_categorie.slug.toLowerCase().includes('proteine') && (
-                      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/50 p-3 sm:p-4">
-                        <p className="text-sm text-gray-700 dark:text-gray-300">
-                          Complétez avec la <Link href="/category/proteine-whey" className="text-red-600 dark:text-red-400 font-medium hover:underline">whey protein</Link> – meilleur prix, livraison Tunisie.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
-                {/* Service assurances */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-gray-200 dark:border-gray-800">
-                  <div className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30">
-                    <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
-                      <Shield className="h-5 w-5 text-green-600 dark:text-green-400" strokeWidth={2} />
-                    </div>
-                    <p className="font-medium text-sm text-gray-900 dark:text-white">Paiement Sécurisé</p>
-                  </div>
-                  <div className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30">
-                    <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
-                      <Truck className="h-5 w-5 text-blue-600 dark:text-blue-400" strokeWidth={2} />
-                    </div>
-                    <p className="font-medium text-sm text-gray-900 dark:text-white">Livraison 2-3 jours</p>
-                  </div>
-                  <div className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30">
-                    <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
-                      <Award className="h-5 w-5 text-amber-600 dark:text-amber-400" strokeWidth={2} />
-                    </div>
-                    <p className="font-medium text-sm text-gray-900 dark:text-white">Garantie Qualité</p>
-                  </div>
-                </div>
               </motion.div>
           </div>
         </div>
@@ -1186,9 +1091,6 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     <TabsTrigger value="description" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2.5 sm:py-2 min-h-[40px] sm:min-h-0 flex-shrink-0 sm:flex-1 min-w-0 px-4 min-[400px]:px-3 sm:px-2 whitespace-nowrap sm:truncate mr-0" title={product.zone1 || 'Description'}>
                       {product.zone1 || 'Description'}
                     </TabsTrigger>
-                    <TabsTrigger value="reviews" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2.5 sm:py-2 min-h-[40px] sm:min-h-0 flex-shrink-0 sm:flex-1 min-w-0 px-4 min-[400px]:px-3 sm:px-2 whitespace-nowrap sm:truncate mr-0" title={product.zone2 || 'Avis clients'}>
-                      {product.zone2 || 'Avis clients'}
-                    </TabsTrigger>
                     <TabsTrigger value="nutrition" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2.5 sm:py-2 min-h-[40px] sm:min-h-0 flex-shrink-0 sm:flex-1 min-w-0 px-4 min-[400px]:px-3 sm:px-2 whitespace-nowrap sm:truncate mr-0" title={product.zone3 || 'Valeurs nutritionnelles'}>
                       {product.zone3 || 'Valeurs nutritionnelles'}
                     </TabsTrigger>
@@ -1215,64 +1117,6 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     >
                       {descExpanded ? 'Voir moins' : 'Lire plus'}
                     </button>
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="reviews" className="mt-0 pt-0 rounded-xl sm:rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden focus-visible:outline-none data-[state=inactive]:hidden">
-                    <div className="p-4 sm:p-5 lg:p-6 pt-5 sm:pt-6 border-t border-gray-200 dark:border-gray-800 space-y-4">
-                      <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Avis clients</h2>
-                      <div className="flex items-center gap-2">
-                        {[1, 2, 3, 4, 5].map((i) => (
-                          <Star key={i} className={`h-4 w-4 ${i <= Math.round(rating) ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 text-gray-200 dark:fill-gray-700'}`} />
-                        ))}
-                        <span className="text-sm text-gray-600 dark:text-gray-400">
-                          {rating > 0 ? rating.toFixed(1) : '0.0'} ({reviewCount} avis)
-                        </span>
-                      </div>
-
-                      <div className="space-y-2">
-                        {[5, 4, 3, 2, 1].map((starLevel) => {
-                          const count = reviews.filter(r => r.stars === starLevel).length;
-                          const pct = reviewCount > 0 ? (count / reviewCount) * 100 : 0;
-                          return (
-                            <div key={starLevel} className="flex items-center gap-2">
-                              <span className="text-sm text-gray-700 dark:text-gray-300 w-6">{starLevel}</span>
-                              <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                              <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
-                              </div>
-                              <span className="text-sm text-gray-600 dark:text-gray-400 w-8 text-right">{count}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      <div className="space-y-3">
-                        {reviewsToShowOnPage.map((review) => (
-                          <div key={review.id} className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-                            <div className="flex items-center gap-2 mb-1">
-                              <div className="flex items-center gap-0.5">
-                                {[1, 2, 3, 4, 5].map((i) => (
-                                  <Star key={i} className={`h-3.5 w-3.5 ${i <= review.stars ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 text-gray-200 dark:fill-gray-700'}`} />
-                                ))}
-                              </div>
-                              <span className="text-xs font-semibold text-gray-900 dark:text-white truncate">{review.user?.name || 'Client vérifié'}</span>
-                              <span className="text-xs text-emerald-600 dark:text-emerald-400">Achat vérifié</span>
-                            </div>
-                            {review.comment && <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{review.comment}</p>}
-                          </div>
-                        ))}
-                      </div>
-
-                      {visibleReviewCount < filteredReviews.length && (
-                        <Button
-                          variant="outline"
-                          className="w-full"
-                          onClick={() => setVisibleReviewCount((prev) => prev + REVIEW_PAGE_SIZE)}
-                        >
-                          Charger plus d'avis ({filteredReviews.length - reviewsToShowOnPage.length} restants)
-                        </Button>
-                      )}
                     </div>
                   </TabsContent>
 

@@ -11,6 +11,7 @@ import type { Product, FAQ, Review } from '@/types';
 
 const RICH_RESULTS_TEST = 'https://search.google.com/test/rich-results';
 const PRODUCTION_ORIGIN = 'https://protein.tn';
+const SITE_BRAND_NAME = 'Protein Tunisie';
 
 export type BreadcrumbItem = { name: string; url: string };
 
@@ -175,7 +176,7 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
     price: formatSchemaPrice(price),
     availability,
     itemCondition: product.schema?.item_condition || 'https://schema.org/NewCondition',
-    seller: { '@type': 'Organization', name: 'Proteine Tunisie' },
+    seller: { '@type': 'Organization', name: SITE_BRAND_NAME },
     shippingDetails: {
       '@type': 'OfferShippingDetails',
       shippingRate: { '@type': 'MonetaryAmount', value: 0, currency: 'TND' },
@@ -286,7 +287,7 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
     (typeof product.schema?.availability === 'string' && product.schema.availability) ||
     (isInStock(product) ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock');
   const price = formatSchemaPrice(getSchemaPrice(product));
-  const brandName = (product.schema?.brand || product.brand?.designation_fr || 'Proteine Tunisie').toString();
+  const brandName = (product.schema?.brand || product.brand?.designation_fr || SITE_BRAND_NAME).toString();
 
   const offersInput =
     (source.offers && typeof source.offers === 'object' ? source.offers : null) as Record<string, unknown> | null;
@@ -301,7 +302,7 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
     seller: {
       '@type': 'Organization',
       '@id': `${PRODUCTION_ORIGIN}/#organization`,
-      name: 'Proteine Tunisie',
+      name: SITE_BRAND_NAME,
       url: PRODUCTION_ORIGIN,
     },
   };
@@ -378,9 +379,10 @@ export function buildOrganizationSchema(baseUrl: string): object {
   return {
     '@context': 'https://schema.org',
     '@type': 'Organization',
-    name: 'Proteine Tunisie',
+    '@id': `${base}/#organization`,
+    name: SITE_BRAND_NAME,
     url: base,
-    logo: `${base}/logo.png`,
+    logo: `${base}/sobitas-logo.png`,
     description:
       'Distributeur officiel de protéines et compléments alimentaires en Tunisie. Whey, créatine, gainer, BCAA à Sousse. Livraison Tunis, Sousse et toute la Tunisie.',
     address: {
@@ -398,12 +400,7 @@ export function buildOrganizationSchema(baseUrl: string): object {
       areaServed: 'TN',
       availableLanguage: 'French',
     },
-    sameAs: [
-      'https://www.facebook.com/sobitass/',
-      'https://www.instagram.com/sobitass/',
-      'https://twitter.com/TunisieProteine',
-      'https://www.tiktok.com/@sobitassousse',
-    ],
+    sameAs: [],
   };
 }
 
@@ -416,7 +413,7 @@ export function buildLocalBusinessSchema(baseUrl: string): object {
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',
     '@id': `${base}/#localbusiness`,
-    name: 'Proteine Tunisie – Protéines & Compléments Alimentaires Tunisie',
+    name: `${SITE_BRAND_NAME} – Protéines & Compléments Alimentaires Tunisie`,
     image: `${base}/icon.png`,
     url: base,
     telephone: '+21627612500',
@@ -446,22 +443,22 @@ export function buildWebSiteSchema(baseUrl: string): object {
   return {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
-    name: 'Proteine Tunisie',
+    '@id': `${base}/#website`,
+    name: SITE_BRAND_NAME,
+    alternateName: ['Proteine Tunisie', 'protein.tn', 'SOBITAS'],
     url: base,
     description:
       'Proteine Tunisie : boutique whey protein, créatine et compléments alimentaires. Livraison rapide Sousse, Tunis, Sfax.',
     publisher: {
       '@type': 'Organization',
-      name: 'Proteine Tunisie',
+      '@id': `${base}/#organization`,
+      name: SITE_BRAND_NAME,
       logo: { '@type': 'ImageObject', url: `${base}/icon.png` },
     },
     inLanguage: 'fr-TN',
     potentialAction: {
       '@type': 'SearchAction',
-      target: {
-        '@type': 'EntryPoint',
-        urlTemplate: `${base}/shop?search={search_term_string}`,
-      },
+      target: `${base}/search?q={search_term_string}`,
       'query-input': 'required name=search_term_string',
     },
   };
@@ -582,7 +579,7 @@ export function buildArticleSchema(article: {
   const schemaImage = article.seo?.image || article.schema?.image || imageUrl || undefined;
   const published = article.schema?.date_published || article.created_at || undefined;
   const modified = article.schema?.date_modified || article.updated_at || article.created_at || undefined;
-  const authorName = article.seo?.author || article.schema?.author || 'Sobitas';
+  const authorName = article.seo?.author || article.schema?.author || SITE_BRAND_NAME;
   return {
     '@context': 'https://schema.org',
     '@type': article.schema?.type || 'BlogPosting',
@@ -602,7 +599,7 @@ export function buildArticleSchema(article: {
     },
     articleSection: section,
     keywords,
-    publisher: { '@type': 'Organization', name: 'Proteine Tunisie', logo: { '@type': 'ImageObject', url: `${base}/icon.png` } },
+    publisher: { '@type': 'Organization', name: SITE_BRAND_NAME, logo: { '@type': 'ImageObject', url: `${base}/icon.png` } },
     inLanguage: 'fr-TN',
   };
 }

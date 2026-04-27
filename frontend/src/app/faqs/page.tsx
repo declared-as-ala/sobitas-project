@@ -4,7 +4,7 @@ import { buildFAQPageSchema, validateStructuredData } from '@/util/structuredDat
 import { FAQsPageClient } from './FAQsPageClient';
 
 export const metadata: Metadata = {
-  title: 'FAQ – Livraison, Paiement, Protéines | Sobitas Tunisie',
+  title: 'FAQ – Livraison, Paiement, Protéines | Protein Tunisie',
   description: 'Réponses sur commande, livraison, paiement et produits. Tout savoir sur l’achat de compléments alimentaires en Tunisie.',
 };
 
