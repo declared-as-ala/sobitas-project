@@ -751,7 +751,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
 
               {/* Meta Description - directly under reviews count */}
               {metaDescription && (
-                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed px-1 line-clamp-3">
+                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed px-1 whitespace-pre-wrap break-words">
                   {metaDescription}
                 </p>
               )}
@@ -952,7 +952,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   <span className="text-sm text-primary-600 dark:text-primary-400 font-medium hover:underline">({rating > 0 ? rating.toFixed(1) : '0'}) – {reviewCount} avis</span>
                 </button>
                 {metaDescription && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-3">{metaDescription}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap break-words">{metaDescription}</p>
                 )}
                 {/* Price */}
                 <div className="flex flex-wrap items-baseline gap-2">

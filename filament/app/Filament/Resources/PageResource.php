@@ -6,6 +6,7 @@ use App\Filament\Resources\PageResource\Pages;
 use App\Models\Page;
 use Filament\Forms;
 use Filament\Forms\Components\FileUpload;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -52,8 +53,26 @@ class PageResource extends Resource
                 ->label('Extrait')
                 ->rows(2)
                 ->columnSpanFull(),
-            Forms\Components\RichEditor::make('body')
-                ->label('Contenu')
+            Section::make('Contenu HTML')
+                ->description('Saisissez le corps de la page en HTML brut. L’aperçu ci-dessous applique Bootstrap 5 au rendu (les balises <script> sont retirées dans l’aperçu uniquement).')
+                ->schema([
+                    Forms\Components\Textarea::make('body')
+                        ->label('Code HTML')
+                        ->rows(18)
+                        ->columnSpanFull()
+                        ->live(debounce: 600)
+                        ->helperText('Exemples : <h2>Titre</h2>, <p>Paragraphe</p>, <ul><li>…</li></ul>, <a href="…">lien</a>, classes Bootstrap : <div class="alert alert-info">…</div>.')
+                        ->extraInputAttributes([
+                            'class' => 'font-monospace text-sm',
+                            'spellcheck' => 'false',
+                            'style' => 'min-height: 280px;',
+                        ]),
+                    Forms\Components\ViewField::make('_body_html_preview')
+                        ->label('Aperçu')
+                        ->view('filament.forms.components.page-body-html-preview')
+                        ->dehydrated(false)
+                        ->columnSpanFull(),
+                ])
                 ->columnSpanFull(),
             FileUpload::make('image')
                 ->label('Image')
