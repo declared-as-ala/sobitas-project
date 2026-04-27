@@ -402,7 +402,7 @@ class ApisController extends Controller
                 'sousCategorie.categorie:id,designation_fr,slug',
                 'tags:id,designation_fr',
                 'aromes:id,designation_fr',
-                'reviews' => fn ($q) => $q->where('publier', 1)->with('user:id,name,avatar')->latest()->limit(20),
+                'reviews' => fn ($q) => $q->where('publier', 1)->with('user:id,name,avatar')->latest(),
             ])
             ->first();
 

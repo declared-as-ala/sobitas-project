@@ -14,7 +14,7 @@ import { Badge } from '@/app/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 import { Input } from '@/app/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
-import { Minus, Plus, ShoppingCart, Star, Shield, Truck, Award, ArrowLeft, Heart, Share2, ZoomIn, CheckCircle2, Loader2, BadgeCheck, Search, ChevronRight, Zap } from 'lucide-react';
+import { Minus, Plus, ShoppingCart, Star, Shield, Truck, Award, ArrowLeft, Heart, Share2, ZoomIn, CheckCircle2, Loader2, BadgeCheck, Search, Zap } from 'lucide-react';
 import { useQuickOrder } from '@/contexts/QuickOrderContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import type { QuickOrderProduct } from '@/contexts/QuickOrderContext';
@@ -43,7 +43,18 @@ interface ProductDetailClientProps {
   breadcrumbItems?: BreadcrumbItem[];
 }
 
+function nameToSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .trim();
+}
+
 export function ProductDetailClient({ product: initialProduct, similarProducts, slugOverride, breadcrumbItems = [] }: ProductDetailClientProps) {
+  const REVIEW_PAGE_SIZE = 12;
   const router = useRouter();
   const params = useParams();
   const productSlug = (slugOverride ?? (params?.slug as string) ?? (params?.id as string)) ?? '';
@@ -60,6 +71,8 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
   const [reviewSearch, setReviewSearch] = useState('');
   const [descExpanded, setDescExpanded] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [visibleReviewCount, setVisibleReviewCount] = useState(12);
   const { openQuickOrder } = useQuickOrder();
   /** Selected aroma for display; add to cart / command use this or first aroma. */
   const [selectedAromaId, setSelectedAromaId] = useState<number | null>(null);
@@ -150,8 +163,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
     : 0);
   const reviewCount = reviews.length;
 
-  // Filter and sort reviews for display (on product page show first 20; full list on /shop/:slug/reviews)
-  const REVIEWS_ON_PRODUCT_PAGE = 20;
+  // Filter and sort reviews for display directly on product page (no separate reviews page required)
   const filteredReviews = [...reviews]
     .filter(r => !reviewSearch || (r.comment?.toLowerCase().includes(reviewSearch.toLowerCase())))
     .sort((a, b) => {
@@ -162,7 +174,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
       }
       return 0;
     });
-  const reviewsToShowOnPage = filteredReviews.slice(0, REVIEWS_ON_PRODUCT_PAGE);
+  const reviewsToShowOnPage = filteredReviews.slice(0, visibleReviewCount);
 
   /** Filament stores product FAQ as JSON array `{ q, a }[]` on `faq`; exposed as-is from `GET /product_details/{slug}`. */
   const productFaqItems = useMemo(() => {
@@ -178,8 +190,49 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
       .filter((item) => item.q.length > 0 || item.a.length > 0);
   }, [product]);
 
-  const images = product.cover ? [product.cover] : [];
-  const productImage = images[0] ? getStorageUrl(images[0]) : '';
+  const imageAltBase = (product.seo?.image_alt || product.alt_cover || product.designation_fr || 'Produit').trim();
+  const galleryImagePaths = useMemo(() => {
+    const extra = Array.isArray((product as any).images) ? (product as any).images : [];
+    const paths = [product.cover, ...extra]
+      .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+      .map((value) => value.trim());
+    return [...new Set(paths)];
+  }, [product]);
+  const galleryImages = useMemo(() => {
+    return galleryImagePaths
+      .map((path) => getStorageUrl(path))
+      .filter((url): url is string => typeof url === 'string' && url.length > 0);
+  }, [galleryImagePaths]);
+  const safeSelectedImage = selectedImage >= 0 && selectedImage < galleryImages.length ? selectedImage : 0;
+  const productImage = galleryImages[safeSelectedImage] || '';
+
+  useEffect(() => {
+    if (selectedImage >= galleryImages.length) {
+      setSelectedImage(0);
+    }
+  }, [galleryImages.length, selectedImage]);
+
+  useEffect(() => {
+    setVisibleReviewCount(REVIEW_PAGE_SIZE);
+  }, [reviewSearch, reviewSort, reviews.length, REVIEW_PAGE_SIZE]);
+
+  const handleGalleryTouchStart = (event: React.TouchEvent) => {
+    setTouchStartX(event.touches[0]?.clientX ?? null);
+  };
+
+  const handleGalleryTouchEnd = (event: React.TouchEvent) => {
+    if (touchStartX == null || galleryImages.length <= 1) return;
+
+    const endX = event.changedTouches[0]?.clientX ?? touchStartX;
+    const delta = touchStartX - endX;
+    if (Math.abs(delta) < 35) return;
+
+    setSelectedImage((prev) => {
+      if (delta > 0) return (prev + 1) % galleryImages.length;
+      return (prev - 1 + galleryImages.length) % galleryImages.length;
+    });
+    setTouchStartX(null);
+  };
 
   const slugLower = (product.slug || '').toLowerCase();
   const nameLower = (product.designation_fr || '').toLowerCase();
@@ -492,25 +545,28 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
         {/* Layout: 2 cols desktop (Image left, larger | Info + buy right), mobile single col. */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8 xl:gap-10 mb-6 sm:mb-8 lg:mb-10">
           {/* A) COLONNE GAUCHE — Gallery (desktop): image slightly smaller */}
-          <div className="hidden lg:block lg:col-span-7 min-w-0">
+          <div className="hidden lg:block lg:col-span-6 min-w-0">
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               className="sticky top-24"
             >
               <div
-                className="relative w-full rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-lg group aspect-square min-h-[420px] xl:min-h-[520px] bg-gradient-to-b from-gray-50 to-white dark:from-gray-800 dark:to-gray-900/90"
+                className="relative w-full rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-lg group aspect-square min-h-[340px] xl:min-h-[420px] bg-gradient-to-b from-gray-50 to-white dark:from-gray-800 dark:to-gray-900/90"
+                onTouchStart={handleGalleryTouchStart}
+                onTouchEnd={handleGalleryTouchEnd}
               >
                 {productImage ? (
                   <Image
                     src={productImage}
-                    alt={product.designation_fr ?? product.slug ?? 'Produit'}
+                    alt={safeSelectedImage === 0 ? imageAltBase : `${imageAltBase} – vue ${safeSelectedImage + 1}`}
+                    title={product.description_cover || product.designation_fr || 'Produit'}
                     fill
                     className="object-contain object-center p-4 sm:p-6 xl:p-8 transition-transform duration-300 [@media(hover:hover)]:group-hover:scale-[1.03]"
                     sizes="(max-width: 1024px) 100vw, 62vw"
-                    priority
-                    fetchPriority="high"
-                    unoptimized
+                    priority={safeSelectedImage === 0}
+                    loading={safeSelectedImage === 0 ? 'eager' : 'lazy'}
+                    fetchPriority={safeSelectedImage === 0 ? 'high' : 'auto'}
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
                       target.style.display = 'none';
@@ -531,11 +587,39 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   </div>
                 )}
               </div>
+              {galleryImages.length > 1 && (
+                <div className="mt-3 grid grid-cols-5 gap-2">
+                  {galleryImages.map((img, index) => (
+                    <button
+                      key={`${img}-${index}`}
+                      type="button"
+                      onClick={() => setSelectedImage(index)}
+                      className={cn(
+                        'relative aspect-square rounded-lg overflow-hidden border transition',
+                        index === safeSelectedImage
+                          ? 'border-red-500 ring-2 ring-red-200 dark:ring-red-900'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-red-300'
+                      )}
+                      aria-label={`Voir image ${index + 1}`}
+                    >
+                      <Image
+                        src={img}
+                        alt={`${imageAltBase} – miniature ${index + 1}`}
+                        title={product.description_cover || product.designation_fr || 'Produit'}
+                        fill
+                        loading="lazy"
+                        sizes="96px"
+                        className="object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
             </motion.div>
           </div>
 
           {/* B) COLONNE DROITE — Infos + prix + quantité + CTAs + garanties (desktop) / mobile first block */}
-          <div className="lg:col-span-5 min-w-0 space-y-3 sm:space-y-4">
+          <div className="lg:col-span-6 min-w-0 space-y-3 sm:space-y-4">
             {/* Mobile Layout: Image First then badges, title, etc. */}
             <div className="lg:hidden space-y-4 sm:space-y-5">
               {/* Badges at top (stock from API: rupture + qte + low_stock_threshold) */}
@@ -571,21 +655,24 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="w-full max-w-[320px] sm:max-w-[380px] mx-auto"
+                className="w-full max-w-[260px] sm:max-w-[320px] mx-auto"
               >
                 <div
                   className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-700 group w-full aspect-square bg-gradient-to-b from-gray-50 to-white dark:from-gray-800 dark:to-gray-900/90"
+                  onTouchStart={handleGalleryTouchStart}
+                  onTouchEnd={handleGalleryTouchEnd}
                 >
                   {productImage ? (
                     <Image
                       src={productImage}
-                      alt={product.designation_fr ?? product.slug ?? 'Produit'}
+                      alt={safeSelectedImage === 0 ? imageAltBase : `${imageAltBase} – vue ${safeSelectedImage + 1}`}
+                      title={product.description_cover || product.designation_fr || 'Produit'}
                       fill
                       className="object-contain object-center p-3 sm:p-4 transition-transform duration-500 group-hover:scale-[1.03]"
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 50vw"
-                      priority
-                      fetchPriority="high"
-                      unoptimized
+                      priority={safeSelectedImage === 0}
+                      loading={safeSelectedImage === 0 ? 'eager' : 'lazy'}
+                      fetchPriority={safeSelectedImage === 0 ? 'high' : 'auto'}
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
                         target.style.display = 'none';
@@ -606,6 +693,34 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     </div>
                   )}
                 </div>
+                {galleryImages.length > 1 && (
+                  <div className="mt-3 grid grid-cols-4 gap-2">
+                    {galleryImages.map((img, index) => (
+                      <button
+                        key={`mobile-${img}-${index}`}
+                        type="button"
+                        onClick={() => setSelectedImage(index)}
+                        className={cn(
+                          'relative aspect-square rounded-lg overflow-hidden border transition',
+                          index === safeSelectedImage
+                            ? 'border-red-500 ring-2 ring-red-200 dark:ring-red-900'
+                            : 'border-gray-200 dark:border-gray-700'
+                        )}
+                        aria-label={`Voir image ${index + 1}`}
+                      >
+                        <Image
+                          src={img}
+                          alt={`${imageAltBase} – miniature ${index + 1}`}
+                          title={product.description_cover || product.designation_fr || 'Produit'}
+                          fill
+                          loading="lazy"
+                          sizes="80px"
+                          className="object-cover"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                )}
               </motion.div>
 
               {/* 1. Title — mobile mirror of desktop H1; rendered as <p> to avoid duplicate H1 in DOM */}
@@ -667,6 +782,31 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     <Link href={`/category/${product.sous_categorie.slug}`} className="text-red-600 dark:text-red-400 hover:underline">
                       {product.sous_categorie.designation_fr}
                     </Link>
+                  </div>
+                </div>
+              )}
+              {(product.brand?.designation_fr || (product.tags?.length ?? 0) > 0) && (
+                <div className="px-1">
+                  <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                    {product.brand?.designation_fr && (
+                      <Link href={`/brand/${nameToSlug(product.brand.designation_fr)}`} className="text-red-600 dark:text-red-400 hover:underline">
+                        Marque: {product.brand.designation_fr}
+                      </Link>
+                    )}
+                    {product.tags?.map((tag) => (
+                      <Link
+                        key={tag.id}
+                        href={`/shop?search=${encodeURIComponent(tag.designation_fr)}`}
+                        className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 px-2 py-0.5 hover:border-red-300 hover:text-red-600"
+                      >
+                        #{tag.designation_fr.toLowerCase()}
+                      </Link>
+                    ))}
+                    {(product.sku || product.code_product) && (
+                      <span className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 px-2 py-0.5">
+                        SKU: {product.sku || product.code_product}
+                      </span>
+                    )}
                   </div>
                 </div>
               )}
@@ -956,6 +1096,29 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     </Link>
                   </div>
                 )}
+                {(product.brand?.designation_fr || (product.tags?.length ?? 0) > 0) && (
+                  <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                    {product.brand?.designation_fr && (
+                      <Link href={`/brand/${nameToSlug(product.brand.designation_fr)}`} className="text-red-600 dark:text-red-400 hover:underline">
+                        Marque: {product.brand.designation_fr}
+                      </Link>
+                    )}
+                    {product.tags?.map((tag) => (
+                      <Link
+                        key={tag.id}
+                        href={`/shop?search=${encodeURIComponent(tag.designation_fr)}&sort=relevance`}
+                        className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 px-2 py-0.5 hover:border-red-300 hover:text-red-600"
+                      >
+                        #{tag.designation_fr.toLowerCase()}
+                      </Link>
+                    ))}
+                    {(product.sku || product.code_product) && (
+                      <span className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 px-2 py-0.5">
+                        SKU: {product.sku || product.code_product}
+                      </span>
+                    )}
+                  </div>
+                )}
                 {/* Internal linking: Complétez avec créatine / whey (when product is not in that category) */}
                 {product.sous_categorie?.slug && (
                   <div className="space-y-2">
@@ -1023,6 +1186,9 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     <TabsTrigger value="description" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2.5 sm:py-2 min-h-[40px] sm:min-h-0 flex-shrink-0 sm:flex-1 min-w-0 px-4 min-[400px]:px-3 sm:px-2 whitespace-nowrap sm:truncate mr-0" title={product.zone1 || 'Description'}>
                       {product.zone1 || 'Description'}
                     </TabsTrigger>
+                    <TabsTrigger value="reviews" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2.5 sm:py-2 min-h-[40px] sm:min-h-0 flex-shrink-0 sm:flex-1 min-w-0 px-4 min-[400px]:px-3 sm:px-2 whitespace-nowrap sm:truncate mr-0" title={product.zone2 || 'Avis clients'}>
+                      {product.zone2 || 'Avis clients'}
+                    </TabsTrigger>
                     <TabsTrigger value="nutrition" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2.5 sm:py-2 min-h-[40px] sm:min-h-0 flex-shrink-0 sm:flex-1 min-w-0 px-4 min-[400px]:px-3 sm:px-2 whitespace-nowrap sm:truncate mr-0" title={product.zone3 || 'Valeurs nutritionnelles'}>
                       {product.zone3 || 'Valeurs nutritionnelles'}
                     </TabsTrigger>
@@ -1035,9 +1201,9 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
 
                   <TabsContent value="description" className="mt-0 pt-0 flex-1 min-h-0 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden focus-visible:outline-none data-[state=inactive]:hidden">
                     <div className="p-4 sm:p-5 lg:p-6 pt-5 sm:pt-6 border-t border-gray-200 dark:border-gray-800">
-                    <h3 className="text-lg sm:text-xl font-bold mb-3 text-gray-900 dark:text-white">
+                    <h2 className="text-lg sm:text-xl font-bold mb-3 text-gray-900 dark:text-white">
                       {product.zone1 || 'Description du produit'}
-                    </h3>
+                    </h2>
                     <div
                       className={`text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-neutral prose-base max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-p:text-gray-600 prose-p:dark:text-gray-400 prose-p:leading-relaxed prose-strong:text-gray-900 prose-strong:dark:text-white prose-img:rounded-lg prose-img:shadow-md overflow-hidden transition-[max-height] duration-300 ${descExpanded ? 'max-h-[5000px]' : 'max-h-60'}`}
                       dangerouslySetInnerHTML={{ __html: product.description_fr || product.description_cover || 'Aucune description disponible.' }}
@@ -1052,11 +1218,69 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     </div>
                   </TabsContent>
 
+                  <TabsContent value="reviews" className="mt-0 pt-0 rounded-xl sm:rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden focus-visible:outline-none data-[state=inactive]:hidden">
+                    <div className="p-4 sm:p-5 lg:p-6 pt-5 sm:pt-6 border-t border-gray-200 dark:border-gray-800 space-y-4">
+                      <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Avis clients</h2>
+                      <div className="flex items-center gap-2">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                          <Star key={i} className={`h-4 w-4 ${i <= Math.round(rating) ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 text-gray-200 dark:fill-gray-700'}`} />
+                        ))}
+                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                          {rating > 0 ? rating.toFixed(1) : '0.0'} ({reviewCount} avis)
+                        </span>
+                      </div>
+
+                      <div className="space-y-2">
+                        {[5, 4, 3, 2, 1].map((starLevel) => {
+                          const count = reviews.filter(r => r.stars === starLevel).length;
+                          const pct = reviewCount > 0 ? (count / reviewCount) * 100 : 0;
+                          return (
+                            <div key={starLevel} className="flex items-center gap-2">
+                              <span className="text-sm text-gray-700 dark:text-gray-300 w-6">{starLevel}</span>
+                              <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                              <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className="text-sm text-gray-600 dark:text-gray-400 w-8 text-right">{count}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div className="space-y-3">
+                        {reviewsToShowOnPage.map((review) => (
+                          <div key={review.id} className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="flex items-center gap-0.5">
+                                {[1, 2, 3, 4, 5].map((i) => (
+                                  <Star key={i} className={`h-3.5 w-3.5 ${i <= review.stars ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 text-gray-200 dark:fill-gray-700'}`} />
+                                ))}
+                              </div>
+                              <span className="text-xs font-semibold text-gray-900 dark:text-white truncate">{review.user?.name || 'Client vérifié'}</span>
+                              <span className="text-xs text-emerald-600 dark:text-emerald-400">Achat vérifié</span>
+                            </div>
+                            {review.comment && <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{review.comment}</p>}
+                          </div>
+                        ))}
+                      </div>
+
+                      {visibleReviewCount < filteredReviews.length && (
+                        <Button
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => setVisibleReviewCount((prev) => prev + REVIEW_PAGE_SIZE)}
+                        >
+                          Charger plus d'avis ({filteredReviews.length - reviewsToShowOnPage.length} restants)
+                        </Button>
+                      )}
+                    </div>
+                  </TabsContent>
+
                   <TabsContent value="nutrition" className="mt-0 pt-0 rounded-xl sm:rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden focus-visible:outline-none data-[state=inactive]:hidden data-[state=inactive]:absolute data-[state=inactive]:pointer-events-none">
                     <div className="p-3 sm:p-5 lg:p-6 pt-4 sm:pt-6 border-t border-gray-200 dark:border-gray-800">
-                      <h3 className="text-base sm:text-lg font-bold mb-3 text-gray-900 dark:text-white">
+                      <h2 className="text-base sm:text-lg font-bold mb-3 text-gray-900 dark:text-white">
                         {product.zone3 || 'Valeurs Nutritionnelles'}
-                      </h3>
+                      </h2>
                     {hasNutritionContent ? (
                       <div className="w-full min-w-0 overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
                         <div
@@ -1076,9 +1300,9 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
 
                   <TabsContent value="questions" className="mt-0 pt-0 flex-1 min-h-0 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden focus-visible:outline-none data-[state=inactive]:hidden">
                     <div className="p-4 sm:p-5 lg:p-6 pt-5 sm:pt-6 border-t border-gray-200 dark:border-gray-800">
-                    <h3 className="text-lg sm:text-xl font-bold mb-3 text-gray-900 dark:text-white">
+                    <h2 className="text-lg sm:text-xl font-bold mb-3 text-gray-900 dark:text-white">
                       {product.zone4 || 'Questions Fréquentes'}
-                    </h3>
+                    </h2>
                     {hasProductFaq ? (
                       <div className="space-y-5">
                         {productFaqItems.map((item) => (
@@ -1136,7 +1360,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
               className="min-w-0 pt-8 sm:pt-10 border-t border-gray-200 dark:border-gray-800 mt-8 sm:mt-10"
             >
             <div className="space-y-3 sm:space-y-4 lg:space-y-6">
-              <h3 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-800 pb-2 sm:pb-3">Avis clients</h3>
+              <h2 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-800 pb-2 sm:pb-3">Avis clients</h2>
 
               {reviewCount > 0 ? (
                 <>
@@ -1230,28 +1454,20 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     ))}
                   </div>
 
-                  {/* See more: link to full reviews page (e.g. /shop/serious-mass-5-45-kg-optimum-nutrition/reviews) */}
-                  <Button
-                    variant="outline"
-                    className="w-full min-h-[44px] py-2.5 leading-snug text-left sm:text-center text-xs sm:text-sm whitespace-normal border-gray-300 dark:border-gray-600"
-                    size="default"
-                    asChild
-                  >
-                    <Link
-                      href={product.slug ? `/shop/${encodeURIComponent(product.slug)}/reviews` : `/products/${product.id}/reviews`}
-                      className="flex items-center justify-center gap-2 flex-wrap"
+                  {visibleReviewCount < filteredReviews.length ? (
+                    <Button
+                      variant="outline"
+                      className="w-full min-h-[44px] py-2.5 leading-snug text-xs sm:text-sm whitespace-normal border-gray-300 dark:border-gray-600"
+                      size="default"
+                      onClick={() => setVisibleReviewCount((prev) => prev + REVIEW_PAGE_SIZE)}
                     >
-                      <span className="inline sm:hidden">
-                        {reviewCount > REVIEWS_ON_PRODUCT_PAGE ? `Plus d'avis (${reviewCount})` : `Tous les avis (${reviewCount})`}
-                      </span>
-                      <span className="hidden sm:inline">
-                        {reviewCount > REVIEWS_ON_PRODUCT_PAGE
-                          ? `Voir plus d'avis (${reviewCount} au total)`
-                          : `Voir tous les avis (${reviewCount})`}
-                      </span>
-                      <ChevronRight className="h-4 w-4 shrink-0" />
-                    </Link>
-                  </Button>
+                      Charger plus d'avis ({filteredReviews.length - reviewsToShowOnPage.length} restants sur {reviewCount})
+                    </Button>
+                  ) : (
+                    <p className="text-sm text-center text-gray-500 dark:text-gray-400">
+                      Tous les avis sont affichés ({reviewCount})
+                    </p>
+                  )}
 
                   {/* Add Review Button */}
                   {isAuthenticated && (

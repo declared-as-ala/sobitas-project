@@ -116,8 +116,6 @@ export default async function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Proteine Tunisie" />
         <meta property="og:site_name" content="Proteine Tunisie" />
-        <meta property="og:title" content="Proteine Tunisie" />
-        <meta name="twitter:title" content="Proteine Tunisie" />
         {/* Favicons */}
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />

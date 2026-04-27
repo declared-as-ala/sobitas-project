@@ -10,6 +10,7 @@ import { isInStock } from '@/util/cartStock';
 import type { Product, FAQ, Review } from '@/types';
 
 const RICH_RESULTS_TEST = 'https://search.google.com/test/rich-results';
+const PRODUCTION_ORIGIN = 'https://protein.tn';
 
 export type BreadcrumbItem = { name: string; url: string };
 
@@ -65,6 +66,55 @@ function isValidImageUrl(url: string): boolean {
   if (t.length > 500) return false;
   if (/\s/.test(t)) return false;
   return t.startsWith('http://') || t.startsWith('https://');
+}
+
+function normalizeProductionUrl(url: string, fallbackPath: string = '/'): string {
+  const cleanFallbackPath = fallbackPath.startsWith('/') ? fallbackPath : `/${fallbackPath}`;
+
+  try {
+    const parsed = new URL(url);
+    if (/sobitas\.tn$/i.test(parsed.hostname)) {
+      return `${PRODUCTION_ORIGIN}${parsed.pathname}${parsed.search}${parsed.hash}`;
+    }
+
+    return parsed.toString();
+  } catch {
+    if (url.startsWith('/')) {
+      return `${PRODUCTION_ORIGIN}${url}`;
+    }
+
+    return `${PRODUCTION_ORIGIN}${cleanFallbackPath}`;
+  }
+}
+
+function normalizeJsonLdImages(input: unknown): string[] {
+  const values = Array.isArray(input) ? input : [input];
+
+  return values
+    .map((value) => {
+      if (typeof value !== 'string' || !value.trim()) return null;
+      const trimmed = value.trim();
+      if (/^https?:\/\//i.test(trimmed)) return normalizeProductionUrl(trimmed);
+      if (looksLikeImagePath(trimmed)) {
+        const storageUrl = getStorageUrl(trimmed);
+        return storageUrl && isValidImageUrl(storageUrl) ? normalizeProductionUrl(storageUrl) : null;
+      }
+      return null;
+    })
+    .filter((value): value is string => !!value);
+}
+
+function sanitizeFaqEntries(
+  faqs: Array<{ q?: string; a?: string; question?: string; answer?: string }> | null | undefined
+): Array<{ question: string; answer: string }> {
+  const list = Array.isArray(faqs) ? faqs : [];
+
+  return list
+    .map((item) => ({
+      question: (item.q || item.question || '').trim(),
+      answer: (item.a || item.answer || '').trim(),
+    }))
+    .filter((item) => item.question.length > 0 && item.answer.length > 0);
 }
 
 /**
@@ -157,6 +207,18 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
     offers: offersPayload,
   };
 
+  if (dedupedImages.length > 0) {
+    schema.image = dedupedImages;
+    schema.associatedMedia = dedupedImages.map((url, index) => ({
+      '@type': 'ImageObject',
+      '@id': `${canonicalUrl}#image-${index + 1}`,
+      url,
+      contentUrl: url,
+      caption: (product.seo?.image_alt || product.alt_cover || product.designation_fr || 'Produit').trim(),
+      inLanguage: 'fr-TN',
+    }));
+  }
+
   if (product.gtin?.trim()) {
     schema.gtin = product.gtin.trim();
   }
@@ -207,6 +269,83 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
   }
 
   return schema;
+}
+
+/**
+ * Normalize backend JSON-LD to production-safe values.
+ * Prevents domain and branding leakage from legacy payloads before rendering.
+ */
+export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, canonicalUrl: string): object | null {
+  if (!raw || typeof raw !== 'object') return null;
+
+  const source = raw as Record<string, unknown>;
+  const canonical = normalizeProductionUrl(canonicalUrl, `/shop/${product.slug || product.id}`);
+  const normalizedImages = normalizeJsonLdImages(source.image ?? product.schema?.image ?? product.seo?.image ?? product.cover);
+  const sku = (product.schema?.sku || product.sku || product.code_product || product.id)?.toString();
+  const availability =
+    (typeof product.schema?.availability === 'string' && product.schema.availability) ||
+    (isInStock(product) ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock');
+  const price = formatSchemaPrice(getSchemaPrice(product));
+  const brandName = (product.schema?.brand || product.brand?.designation_fr || 'Proteine Tunisie').toString();
+
+  const offersInput =
+    (source.offers && typeof source.offers === 'object' ? source.offers : null) as Record<string, unknown> | null;
+  const offers: Record<string, unknown> = {
+    ...(offersInput ?? {}),
+    '@type': 'Offer',
+    url: canonical,
+    priceCurrency: (product.schema?.price_currency || 'TND').toString(),
+    price,
+    availability,
+    itemCondition: product.schema?.item_condition || 'https://schema.org/NewCondition',
+    seller: {
+      '@type': 'Organization',
+      '@id': `${PRODUCTION_ORIGIN}/#organization`,
+      name: 'Proteine Tunisie',
+      url: PRODUCTION_ORIGIN,
+    },
+  };
+
+  const sanitized: Record<string, unknown> = {
+    ...source,
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    '@id': `${canonical}#product`,
+    name: product.designation_fr || source.name || 'Produit',
+    url: canonical,
+    mainEntityOfPage: canonical,
+    sku,
+    productID: sku,
+    brand: {
+      '@type': 'Brand',
+      '@id': `${PRODUCTION_ORIGIN}/brand/${encodeURIComponent(brandName.toLowerCase().replace(/\s+/g, '-'))}`,
+      name: brandName,
+    },
+    image: normalizedImages.length > 0 ? normalizedImages : undefined,
+    description:
+      stripHtml(
+        product.seo?.description || product.meta_description || product.meta_description_fr || product.description_cover || product.description_fr || '',
+        500
+      ) || source.description,
+    offers,
+  };
+
+  if (normalizedImages.length > 0) {
+    sanitized.image = normalizedImages;
+    sanitized.associatedMedia = normalizedImages.map((url, index) => ({
+      '@type': 'ImageObject',
+      '@id': `${canonical}#image-${index + 1}`,
+      url,
+      contentUrl: url,
+      caption: (product.seo?.image_alt || product.alt_cover || product.designation_fr || 'Produit').trim(),
+      inLanguage: 'fr-TN',
+    }));
+  }
+
+  if (product.gtin?.trim()) sanitized.gtin = product.gtin.trim();
+  if (product.mpn?.trim()) sanitized.mpn = product.mpn.trim();
+
+  return sanitized;
 }
 
 /**
@@ -493,13 +632,7 @@ export function buildFAQPageSchema(faqs: FAQ[] | unknown): object | null {
 export function buildFAQPageSchemaFromProductFaq(
   faqs: Array<{ q?: string; a?: string; question?: string; answer?: string }> | null | undefined
 ): object | null {
-  const list = Array.isArray(faqs) ? faqs : [];
-  const normalized = list
-    .map((item) => ({
-      question: (item.q || item.question || '').trim(),
-      answer: (item.a || item.answer || '').trim(),
-    }))
-    .filter((item) => item.question && item.answer);
+  const normalized = sanitizeFaqEntries(faqs);
 
   if (!normalized.length) return null;
 

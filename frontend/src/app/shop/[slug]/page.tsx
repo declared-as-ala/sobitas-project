@@ -19,6 +19,7 @@ import {
   buildWebPageSchema,
   buildFAQPageSchema,
   buildFAQPageSchemaFromProductFaq,
+  sanitizeBackendProductJsonLd,
   validateStructuredData,
 } from '@/util/structuredData';
 import { ProductDetailClient } from '@/app/products/[id]/ProductDetailClient';
@@ -68,6 +69,34 @@ function productDescription(product: Product, productName: string): string {
   return `Acheter ${productName} en Tunisie – Meilleur prix, livraison rapide, produits authentiques. Sousse, Tunis, toute la Tunisie. Proteine Tunisie.`;
 }
 
+function productKeywords(product: Product): string[] {
+  const seed = [
+    'proteine tunisie',
+    'creatine tunisie',
+    'whey tunisie',
+    'complément alimentaire tunisie',
+    product.designation_fr,
+    product.brand?.designation_fr,
+    product.sous_categorie?.designation_fr,
+    ...(product.tags?.map((tag) => tag.designation_fr) ?? []),
+  ];
+
+  return [...new Set(seed.filter((value): value is string => !!value && value.trim().length > 0).map((value) => value.trim()))];
+}
+
+function ensureProductionDomain(url: string, fallbackPath: string): string {
+  try {
+    const parsed = new URL(url);
+    if (/sobitas\.tn$/i.test(parsed.hostname)) {
+      return `https://protein.tn${parsed.pathname}${parsed.search}${parsed.hash}`;
+    }
+    return parsed.toString();
+  } catch {
+    if (url.startsWith('/')) return `https://protein.tn${url}`;
+    return `https://protein.tn${fallbackPath.startsWith('/') ? fallbackPath : `/${fallbackPath}`}`;
+  }
+}
+
 export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const cleanSlug = slug?.trim();
@@ -78,17 +107,25 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     if (product?.id) {
       const title = productTitle(product);
       const description = productDescription(product, product.designation_fr ?? product.slug ?? 'Produit');
-      const canonicalUrl = product.seo?.canonical_url?.trim()
-        ? product.seo.canonical_url.trim()
-        : buildCanonicalUrl(`/shop/${product.slug || cleanSlug}`);
+      const canonicalUrl = ensureProductionDomain(
+        product.seo?.canonical_url?.trim() || buildCanonicalUrl(`/shop/${product.slug || cleanSlug}`),
+        `/shop/${product.slug || cleanSlug}`
+      );
       return {
         title: { absolute: title },
         description,
+        keywords: productKeywords(product),
         robots: {
           index: product.seo?.robots?.index ?? true,
           follow: product.seo?.robots?.follow ?? true,
         },
-        alternates: { canonical: canonicalUrl },
+        alternates: {
+          canonical: canonicalUrl,
+          languages: {
+            'fr-TN': canonicalUrl,
+            'x-default': canonicalUrl,
+          },
+        },
         ...buildShopProductSocialMetadata({ product, title, description, canonicalUrl }),
       };
     }
@@ -138,13 +175,14 @@ export default async function ShopProductPage({ params, searchParams }: PageProp
   const [similarProducts, faqs] = await Promise.all([similarPromise, faqsPromise]);
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
-  const canonicalUrl = safeProduct.seo?.canonical_url?.trim()
-    ? safeProduct.seo.canonical_url.trim()
-    : buildCanonicalUrl(`/shop/${safeProduct.slug || cleanSlug}`);
+  const canonicalUrl = ensureProductionDomain(
+    safeProduct.seo?.canonical_url?.trim() || buildCanonicalUrl(`/shop/${safeProduct.slug || cleanSlug}`),
+    `/shop/${safeProduct.slug || cleanSlug}`
+  );
   const apiLd = safeProduct.json_ld_product;
   const productSchema =
     apiLd != null && typeof apiLd === 'object' && Object.keys(apiLd).length > 0
-      ? apiLd
+      ? sanitizeBackendProductJsonLd(safeProduct, apiLd, canonicalUrl) ?? buildProductJsonLd(safeProduct, canonicalUrl)
       : buildProductJsonLd(safeProduct, canonicalUrl);
   if (productSchema) {
     validateStructuredData(productSchema as object, 'Product');
