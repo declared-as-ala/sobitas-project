@@ -431,6 +431,22 @@
     .pos-totals { width: 100%; }
     .pos-totals-wrap { justify-content: stretch; }
 }
+
+/* Loyalty panel: always reserve space; stays visible while scrolling ticket lines */
+#loyalty-panel.pos-loyalty-sticky-wrap {
+    position: sticky;
+    top: 4.75rem;
+    z-index: 25;
+    margin-bottom: 16px;
+}
+#loyalty-panel .loyalty-placeholder {
+    padding: 14px 16px;
+    font-size: 13px;
+    color: #78716c;
+    font-weight: 600;
+    text-align: center;
+    border-top: 1px solid #fde047;
+}
 </style>
 
 <div class="pos-wrap" id="pos-ticket-root" wire:ignore>
@@ -506,8 +522,8 @@
                onchange="scanBarcode()">
     </div>
 
-    {{-- ── LOYALTY PANEL ── --}}
-    <div id="loyalty-panel" style="{{ $loyalty_panel_visible ? '' : 'display:none;' }}margin-bottom:16px;">
+    {{-- ── LOYALTY PANEL (always mounted; JS toggles active vs placeholder — sticky on scroll) ── --}}
+    <div id="loyalty-panel" class="pos-loyalty-sticky-wrap">
         <div style="background:#fef9c3;border:1.5px solid #fde047;border-radius:10px;overflow:hidden;">
 
             {{-- Header --}}
@@ -517,6 +533,12 @@
                     {{ $loyalty_card_number ?? '—' }}
                 </span>
             </div>
+
+            <div id="loyalty-panel-placeholder" class="loyalty-placeholder" style="{{ $loyalty_panel_visible ? 'display:none;' : '' }}">
+                Sélectionnez un client titulaire d’une carte active pour afficher le solde et utiliser des points.
+            </div>
+
+            <div id="loyalty-panel-active" class="loyalty-panel-active" style="{{ $loyalty_panel_visible ? '' : 'display:none;' }}">
 
             {{-- Stats row --}}
             <div style="padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
@@ -546,12 +568,15 @@
                        min="0"
                        step="10"
                        value="{{ $loyalty_redeem_input }}"
+                       autocomplete="off"
                        style="width:90px;border:1px solid #d6d3d1;border-radius:6px;padding:5px 8px;font-size:14px;"
                        oninput="syncLoyaltyRedeem(this.value)"
-                       onblur="finalizeLoyaltyRedeemInput()" />
+                       onblur="finalizeLoyaltyRedeemInput()" {{ $loyalty_panel_visible ? '' : 'disabled' }} />
                 <button type="button"
+                        id="btn-loyalty-max"
                         onclick="setMaxLoyaltyRedeem()"
-                        style="background:#f59e0b;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;">
+                        style="background:#f59e0b;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;"
+                        {{ $loyalty_panel_visible ? '' : 'disabled' }}>
                     Max
                 </button>
                 <span style="font-size:13px;color:#dc2626;font-weight:600;">
@@ -560,6 +585,7 @@
             </div>
 
             <input type="hidden" id="loyalty_card_id_input" value="{{ $loyalty_card_id }}">
+            </div>{{-- /loyalty-panel-active --}}
         </div>
     </div>
 
@@ -693,7 +719,17 @@
         panelVisible: {{ $loyalty_panel_visible ? 'true' : 'false' }},
         balance: {{ (int) $loyalty_balance }},
     };
-    
+
+    /** Livewire action return value shape differs by version — normalize to loyalty snapshot. */
+    function unwrapLwPayload(raw) {
+        if (raw == null) return null;
+        if (typeof raw === 'object' && typeof raw.panel_visible !== 'undefined') return raw;
+        if (Array.isArray(raw) && raw.length && typeof raw[0] === 'object' && typeof raw[0].panel_visible !== 'undefined') {
+            return raw[0];
+        }
+        return raw;
+    }
+
     // Format number wrapper
     function fnFormat(n) {
         return parseFloat(n).toFixed(3);
@@ -818,17 +854,24 @@
         });
     }
 
-    // Client Selection — also notifies Livewire so loyalty auto-loads (use jQuery val: Select2 keeps native select in sync but timing differs).
+    // Client → Livewire sync (wire:ignore): use server round-trip so fidelity UI always matches DB.
     function selectClient() {
         var $sel = $('#client_select');
         if (!$sel.length) return;
         var val = $sel.val();
         var addrEl = document.getElementById('client_adresse');
         var phoneEl = document.getElementById('client_phone');
+
+        function applyPayload(res) {
+            var d = unwrapLwPayload(res);
+            if (d) updateLoyaltyPanel(d);
+            calculate();
+        }
+
         if (val === null || val === undefined || val === '') {
             if (addrEl) addrEl.value = '';
             if (phoneEl) phoneEl.value = '';
-            @this.set('client_id', null);
+            @this.call('syncClientFromPos', null).then(applyPayload).catch(function () { calculate(); });
             return;
         }
         var opt = $sel.find('option').filter(function () {
@@ -837,7 +880,13 @@
         if (addrEl) addrEl.value = opt.length ? (opt.attr('data-adresse') || '') : '';
         if (phoneEl) phoneEl.value = opt.length ? (opt.attr('data-phone') || '') : '';
         var cid = parseInt(String(val), 10);
-        @this.set('client_id', Number.isNaN(cid) ? null : cid);
+        if (Number.isNaN(cid)) {
+            if (addrEl) addrEl.value = '';
+            if (phoneEl) phoneEl.value = '';
+            @this.call('syncClientFromPos', null).then(applyPayload).catch(function () { calculate(); });
+            return;
+        }
+        @this.call('syncClientFromPos', cid).then(applyPayload).catch(function () { calculate(); });
     }
 
     function createTicketClient() {
@@ -974,7 +1023,13 @@
 
         // Loyalty card detected → hand off to Livewire
         if (isLoyaltyCode(code)) {
-            @this.call('scanLoyaltyCard', code).then(function () {
+            @this.call('scanLoyaltyCard', code).then(function (res) {
+                input.disabled = false;
+                input.focus();
+                var d = unwrapLwPayload(res);
+                if (d) updateLoyaltyPanel(d);
+                calculate();
+            }).catch(function () {
                 input.disabled = false;
                 input.focus();
             });
@@ -1115,9 +1170,11 @@
         if (discRow) discRow.style.display = loyaltyState.panelVisible && loyalty_discount > 0 ? '' : 'none';
     }
 
-    // Loyalty redeem: while typing, only clamp to balance/ticket cap — never enforce MIN_REDEEM here
-    // (otherwise digits below 100 vanish and Livewire resets the field every keystroke).
+    // Loyalty redeem: while typing, only clamp to balance/ticket cap — never enforce MIN_REDEEM here.
     function syncLoyaltyRedeem(val) {
+        var redeemInput = document.getElementById('loyalty_redeem_input');
+        if (!redeemInput || redeemInput.disabled) return;
+
         var parsed = parseInt(String(val).replace(/\s/g, ''), 10);
         var pts = Number.isNaN(parsed) ? 0 : parsed;
         var total = parseFloat(document.getElementById('p_ht')?.value || 0) || 0;
@@ -1127,8 +1184,9 @@
         var maxFromTicket = Math.floor(baseAfterRegularDiscount * pointsPerDtValue);
         var maxFromBalance = loyaltyState.balance || 0;
         pts = Math.max(0, Math.min(pts, maxFromBalance, maxFromTicket));
-        var redeemInput = document.getElementById('loyalty_redeem_input');
-        if (redeemInput && String(redeemInput.value) !== String(pts)) {
+
+        var redeemFocused = document.activeElement === redeemInput;
+        if (String(redeemInput.value) !== String(pts) && !redeemFocused) {
             redeemInput.value = pts;
         }
         calculate();
@@ -1136,19 +1194,30 @@
 
     function finalizeLoyaltyRedeemInput() {
         var redeemInput = document.getElementById('loyalty_redeem_input');
-        if (!redeemInput) return;
+        if (!redeemInput || redeemInput.disabled) return;
         var pts = parseInt(String(redeemInput.value || '').replace(/\s/g, ''), 10);
         if (Number.isNaN(pts)) pts = 0;
         if (pts > 0 && pts < minRedeemPoints) {
             pts = 0;
             redeemInput.value = 0;
         }
-        @this.set('loyalty_redeem_input', pts);
         calculate();
     }
 
     function setMaxLoyaltyRedeem() {
-        @this.call('setMaxRedeem');
+        if (!loyaltyState.panelVisible) return;
+        var redeemInput = document.getElementById('loyalty_redeem_input');
+        if (!redeemInput || redeemInput.disabled) return;
+
+        var total = parseFloat(document.getElementById('p_ht')?.value || 0) || 0;
+        var regularDiscount = parseFloat(document.getElementById('m_remise')?.value || 0) || 0;
+        regularDiscount = Math.min(regularDiscount, total);
+        var baseAfterRegularDiscount = Math.max(0, total - regularDiscount);
+        var maxFromTicket = Math.floor(baseAfterRegularDiscount * pointsPerDtValue);
+        var maxPts = Math.max(0, Math.min(loyaltyState.balance || 0, maxFromTicket));
+        if (maxPts > 0 && maxPts < minRedeemPoints) maxPts = 0;
+        redeemInput.value = maxPts;
+        calculate();
     }
 
     // Send the final state directly to Livewire
@@ -1200,45 +1269,68 @@
         });
     }
 
-    // ── Loyalty panel DOM update (called from Livewire events) ──────────────────
+    // ── Loyalty panel DOM update (server snapshot OR Livewire events) ───────────
     function updateLoyaltyPanel(d) {
+        if (!d || typeof d !== 'object') return;
         var panel = document.getElementById('loyalty-panel');
         if (!panel) return;
-        panel.style.display = d.panel_visible ? '' : 'none';
+
+        var vis = !!d.panel_visible;
+        var placeholder = document.getElementById('loyalty-panel-placeholder');
+        var active = document.getElementById('loyalty-panel-active');
+        if (placeholder) placeholder.style.display = vis ? 'none' : '';
+        if (active) active.style.display = vis ? '' : 'none';
+
         function setText(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; }
         function setVal(id, val)  { var el = document.getElementById(id); if (el) el.value       = val; }
         setText('lp-card-number',    d.card_number  || '—');
-        setText('lp-balance',        d.balance      || '0');
+        setText('lp-balance',        String(d.balance ?? '0'));
         setText('lp-balance-dt',     d.balance_dt   || '0.000');
         setText('lp-redeem-dt',      d.redeem_dt    || '0.000');
         setText('lp-discount-total', d.redeem_dt    || '0.000');
-        setText('lp-earn',           d.earn         || '0');
+        setText('lp-earn',           String(d.earn ?? '0'));
         setText('lp-earn-dt',        d.earn_dt      || '0.000');
-        setVal('loyalty_card_id_input',  d.card_id      || '');
-        setVal('loyalty_redeem_input',   d.redeem_input || 0);
+        setVal('loyalty_card_id_input',  d.card_id != null && d.card_id !== '' ? d.card_id : '');
+        setVal('loyalty_redeem_input',   d.redeem_input ?? 0);
+
         var redeemInput = document.getElementById('loyalty_redeem_input');
-        if (redeemInput) redeemInput.setAttribute('data-balance', d.balance || 0);
-        loyaltyState.panelVisible = !!d.panel_visible;
+        var maxBtn = document.getElementById('btn-loyalty-max');
+        if (redeemInput) {
+            redeemInput.disabled = !vis;
+            redeemInput.setAttribute('data-balance', d.balance || 0);
+        }
+        if (maxBtn) maxBtn.disabled = !vis;
+
+        loyaltyState.panelVisible = vis;
         loyaltyState.balance = parseInt(d.balance || 0, 10) || 0;
         calculate();
     }
 
-    // loyalty-state-updated: dispatched after every loyalty state change in PHP
-    document.addEventListener('livewire:initialized', function () {
+    function registerTicketPosLivewireListeners() {
+        if (window.__ticketPosLwHooks || typeof Livewire === 'undefined') return;
+        window.__ticketPosLwHooks = true;
+
         Livewire.on('loyalty-state-updated', function (data) {
-            updateLoyaltyPanel(Array.isArray(data) ? data[0] : data);
+            var raw = Array.isArray(data) ? data[0] : data;
+            var d = unwrapLwPayload(raw);
+            if (d && typeof d.panel_visible !== 'undefined') updateLoyaltyPanel(d);
         });
 
-        // loyalty-client-synced: dispatched when a loyalty card scan also sets a client
         Livewire.on('loyalty-client-synced', function (data) {
             var d = Array.isArray(data) ? data[0] : data;
-            document.getElementById('client_adresse').value = d.client_adresse || '';
-            document.getElementById('client_phone').value   = d.client_phone   || '';
+            if (!d) return;
+            var addr = document.getElementById('client_adresse');
+            var phone = document.getElementById('client_phone');
+            if (addr) addr.value = d.client_adresse || '';
+            if (phone) phone.value = d.client_phone || '';
             if (d.client_id) {
                 var $sel = $('#client_select');
                 var cid = String(d.client_id);
-                if (!$sel.find('option[value="' + cid + '"]').length) {
-                    var label = d.client_name + (d.client_phone ? ' (' + d.client_phone + ')' : '');
+                var hasOpt = $sel.find('option').filter(function () {
+                    return String($(this).val()) === cid;
+                }).length;
+                if (!hasOpt) {
+                    var label = (d.client_name || 'Client') + (d.client_phone ? ' (' + d.client_phone + ')' : '');
                     var opt = new Option(label, cid, true, true);
                     opt.setAttribute('data-adresse', d.client_adresse || '');
                     opt.setAttribute('data-phone', d.client_phone || '');
@@ -1246,39 +1338,39 @@
                 }
                 $sel.val(cid).trigger('change');
             }
+            if (typeof d.panel_visible !== 'undefined') updateLoyaltyPanel(d);
             calculate();
         });
 
         Livewire.on('loyalty-totals-recalc', function () {
             calculate();
         });
-    });
 
-    document.addEventListener('livewire:initialized', () => {
-        Livewire.on('ticket-saved', (data) => {
-            let eventData = Array.isArray(data) ? data[0] : data;
-            
-            if(eventData && eventData.printUrl) {
-                // Voyager-like flow: after save, navigate to print page in same tab.
+        Livewire.on('ticket-saved', function (data) {
+            var eventData = Array.isArray(data) ? data[0] : data;
+            if (eventData && eventData.printUrl) {
                 window.location.href = eventData.printUrl;
                 return;
             }
-            
             var btn = document.getElementById('btn-save');
-            if(btn) {
-                btn.innerHTML = "Enregistrer";
+            if (btn) {
+                btn.innerHTML = 'Enregistrer';
                 btn.disabled = false;
             }
         });
 
-        Livewire.on('ticket-save-failed', () => {
+        Livewire.on('ticket-save-failed', function () {
             var btn = document.getElementById('btn-save');
-            if(btn) {
-                btn.innerHTML = "Enregistrer";
+            if (btn) {
+                btn.innerHTML = 'Enregistrer';
                 btn.disabled = false;
             }
         });
-    });
+    }
+
+    document.addEventListener('livewire:init', registerTicketPosLivewireListeners);
+    document.addEventListener('livewire:initialized', registerTicketPosLivewireListeners);
+    registerTicketPosLivewireListeners();
 
 </script>
 

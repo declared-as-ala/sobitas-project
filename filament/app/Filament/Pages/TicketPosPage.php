@@ -240,22 +240,64 @@ class TicketPosPage extends Page
         $this->dispatch('loyalty-totals-recalc');
     }
 
+    /** Payload for JS inside wire:ignore (avoid relying on Livewire.on alone). */
+    public function loyaltyUiSnapshot(): array
+    {
+        return [
+            'panel_visible' => $this->loyalty_panel_visible,
+            'card_number'   => $this->loyalty_card_number,
+            'card_id'       => $this->loyalty_card_id,
+            'balance'       => $this->loyalty_balance,
+            'balance_dt'    => $this->loyalty_balance_dt,
+            'redeem_input'  => $this->loyalty_redeem_input,
+            'redeem_dt'     => $this->loyalty_redeem_dt,
+            'earn'          => $this->loyalty_points_earn,
+            'earn_dt'       => $this->loyalty_points_earn_dt,
+        ];
+    }
+
+    /**
+     * Called from POS JS when Select2 changes client (wire:ignore boundary).
+     */
+    public function syncClientFromPos(?int $clientId): array
+    {
+        $this->clearLoyalty();
+
+        $this->client_id = $clientId;
+        if ($clientId && ($client = Client::find($clientId))) {
+            $this->client_adresse = $client->adresse ?? '';
+            $this->client_phone   = $client->phone_1 ?? '';
+            $this->loadClientLoyalty($client);
+        } else {
+            $this->client_id      = null;
+            $this->client_adresse = '';
+            $this->client_phone   = '';
+            $this->clearLoyalty();
+        }
+
+        $this->dispatchTotalsRecalc();
+
+        return $this->loyaltyUiSnapshot();
+    }
+
     // ── Public entry point for loyalty barcode scan from JS ──────────────────
-    public function scanLoyaltyCard(string $code): void
+    public function scanLoyaltyCard(string $code): array
     {
         $found = $this->handleLoyaltyScan($code);
 
-        // If a card was matched and a client loaded, also push client fields to JS
+        // If a card was matched and a client loaded, also push client fields + loyalty snapshot to JS
         if ($found && $this->client_id) {
-            $this->dispatch('loyalty-client-synced', [
+            $this->dispatch('loyalty-client-synced', array_merge([
                 'client_id'      => $this->client_id,
                 'client_name'    => Client::find($this->client_id)?->name ?? '',
                 'client_phone'   => $this->client_phone,
                 'client_adresse' => $this->client_adresse,
-            ]);
+            ], $this->loyaltyUiSnapshot()));
         }
 
         $this->dispatchLoyaltyState();
+
+        return $this->loyaltyUiSnapshot();
     }
 
     protected function handleLoyaltyScan(string $code): bool
