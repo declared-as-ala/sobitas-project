@@ -156,6 +156,43 @@
     border-color: #e2e8f0;
 }
 
+/* Bootstrap 5–style primary button (scoped; avoids loading full Bootstrap over Filament) */
+.pos-client-block .btn-add-client-bs {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 400;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: #fff;
+    text-align: center;
+    vertical-align: middle;
+    cursor: pointer;
+    user-select: none;
+    border: 1px solid #0d6efd;
+    padding: 0.25rem 0.65rem;
+    border-radius: 0.25rem;
+    background-color: #0d6efd;
+    transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    box-shadow: none;
+    white-space: nowrap;
+}
+.pos-client-block .btn-add-client-bs:hover {
+    background-color: #0b5ed7;
+    border-color: #0a58ca;
+    color: #fff;
+}
+.pos-client-block .btn-add-client-bs:focus-visible {
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.35);
+}
+.pos-client-block .btn-add-client-bs:active {
+    background-color: #0a58ca;
+    border-color: #0a53be;
+}
+
 /* ── Barcode bar ── */
 .pos-barcode-bar {
     margin-bottom: 20px;
@@ -431,11 +468,12 @@
             <div class="pos-field">
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;">
                     <label style="margin:0;">Client (optionnel)</label>
-                    <button type="button" id="pos-btn-add-client" class="pos-btn-add-row" style="padding:6px 10px;font-size:12px;">
-                        Ajouter Client(e)
+                    <button type="button" id="pos-btn-add-client" class="btn-add-client-bs">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/></svg>
+                        Ajouter client
                     </button>
                 </div>
-                <select id="client_select" style="width:100%" onchange="selectClient()">
+                <select id="client_select" style="width:100%">
                     <option value="">— Choisir —</option>
                     @foreach($clients as $c)
                         <option value="{{ $c->id }}" data-adresse="{{ $c->adresse }}" data-phone="{{ $c->phone_1 }}" {{ $client_id == $c->id ? 'selected' : '' }}>
@@ -675,7 +713,13 @@
             }
         } catch (e) {}
 
-        $('#client_select').select2();
+        var $clientSel = $('#client_select');
+        $clientSel.select2({ width: '100%', placeholder: '— Choisir —', allowClear: true });
+        // Select2 does not reliably fire the native HTML onchange; sync Livewire on jQuery change.
+        $clientSel.off('change.ticketPosClient').on('change.ticketPosClient', function () {
+            selectClient();
+        });
+
         var addClientBtn = document.getElementById('pos-btn-add-client');
         if (addClientBtn) addClientBtn.onclick = createTicketClient;
 
@@ -766,15 +810,17 @@
     // Client Selection — also notifies Livewire so loyalty auto-loads
     function selectClient() {
         var select = document.getElementById('client_select');
+        if (!select) return;
+        var val = select.value;
         var option = select.options[select.selectedIndex];
-        if (option.value) {
-            document.getElementById('client_adresse').value = option.getAttribute('data-adresse') || '';
-            document.getElementById('client_phone').value   = option.getAttribute('data-phone') || '';
-            @this.set('client_id', option.value); // triggers updatedClientId → loadClientLoyalty
+        if (val) {
+            document.getElementById('client_adresse').value = option ? (option.getAttribute('data-adresse') || '') : '';
+            document.getElementById('client_phone').value   = option ? (option.getAttribute('data-phone') || '') : '';
+            @this.set('client_id', parseInt(val, 10)); // triggers updatedClientId → loadClientLoyalty + dispatch
         } else {
             document.getElementById('client_adresse').value = '';
             document.getElementById('client_phone').value   = '';
-            @this.set('client_id', null);         // triggers clearLoyalty
+            @this.set('client_id', null);
         }
     }
 
@@ -818,9 +864,13 @@
                 if (!client || !client.id) throw new Error('Création échouée');
                 var label = client.text || (client.name ? client.name + (client.phone_1 ? ' (' + client.phone_1 + ')' : '') : ('Client #' + client.id));
                 var $sel = $('#client_select');
-                $sel.append(new Option(label, client.id, true, true)).trigger('change');
+                var opt = new Option(label, String(client.id), true, true);
+                opt.setAttribute('data-adresse', client.adresse || '');
+                opt.setAttribute('data-phone', client.phone_1 || '');
+                $sel.append(opt);
                 document.getElementById('client_adresse').value = client.adresse || '';
                 document.getElementById('client_phone').value = client.phone_1 || '';
+                $sel.val(String(client.id)).trigger('change');
                 Swal.fire({ icon: 'success', title: 'Client créé', timer: 1200, showConfirmButton: false });
             })
             .catch(function (err) {
@@ -1157,12 +1207,15 @@
             document.getElementById('client_phone').value   = d.client_phone   || '';
             if (d.client_id) {
                 var $sel = $('#client_select');
-                if (!$sel.find('option[value="' + d.client_id + '"]').length) {
+                var cid = String(d.client_id);
+                if (!$sel.find('option[value="' + cid + '"]').length) {
                     var label = d.client_name + (d.client_phone ? ' (' + d.client_phone + ')' : '');
-                    $sel.append(new Option(label, d.client_id, true, true)).trigger('change');
-                } else {
-                    $sel.val(d.client_id).trigger('change.select2');
+                    var opt = new Option(label, cid, true, true);
+                    opt.setAttribute('data-adresse', d.client_adresse || '');
+                    opt.setAttribute('data-phone', d.client_phone || '');
+                    $sel.append(opt);
                 }
+                $sel.val(cid).trigger('change');
             }
             calculate();
         });

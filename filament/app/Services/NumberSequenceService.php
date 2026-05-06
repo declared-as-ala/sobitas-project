@@ -64,6 +64,12 @@ class NumberSequenceService
         return $this->getNext('TK');
     }
 
+    /** @deprecated Use {@see nextTicket()} */
+    public function nextTicketNumber(): string
+    {
+        return $this->nextTicket();
+    }
+
     public function nextCommande(): string
     {
         return $this->getNext('CMD');

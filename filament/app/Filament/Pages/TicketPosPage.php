@@ -391,7 +391,7 @@ class TicketPosPage extends Page
                     $ticket->update($data);
                     $ticket->details()->delete();
                 } else {
-                    $data['numero'] = app(NumberSequenceService::class)->nextTicketNumber();
+                    $data['numero'] = app(NumberSequenceService::class)->nextTicket();
                     $ticket = Ticket::create($data);
                     $this->ticketId = $ticket->id;
                 }
