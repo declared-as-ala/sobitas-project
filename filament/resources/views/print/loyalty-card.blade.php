@@ -83,17 +83,6 @@
             display: flex;
             flex-direction: column;
         }
-        /* Subtle “S” watermark — print/PDF safe */
-        .front-watermark-s {
-            position: absolute;
-            inset: 0;
-            z-index: 0;
-            pointer-events: none;
-            opacity: .055;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Ctext x='10' y='95' font-family='Arial Black,Arial,sans-serif' font-size='72' fill='%23111618'%3ES%3C/text%3E%3C/svg%3E");
-            background-size: 18mm 18mm;
-            background-position: 2mm 4mm;
-        }
         .front-top-corner {
             position: absolute;
             top: 0;
@@ -114,9 +103,9 @@
             grid-template-columns: 1fr 22mm;
             column-gap: 2.5mm;
             align-items: start;
-            padding: 4.5mm 4mm 1.5mm 4.2mm;
-            max-height: 35mm;
-            overflow: hidden;
+            padding: 4mm 4mm 2mm 4.2mm;
+            /* Do not clip max-height/overflow — QR + “SCAN ME” pill sit here and were cut off in print/PDF */
+            overflow: visible;
         }
         .front-upper-left {
             min-width: 0;
@@ -195,8 +184,10 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 1.2mm;
-            padding-top: .5mm;
+            justify-content: flex-start;
+            gap: 1mm;
+            padding-top: 0;
+            flex-shrink: 0;
         }
         .qr-block {
             width: 20mm;
@@ -217,14 +208,18 @@
             color: #fff;
             border-radius: 10mm;
             font-weight: 800;
-            font-size: 2.85mm;
-            letter-spacing: .04mm;
+            font-size: 2.65mm;
+            letter-spacing: .08mm;
             display: inline-flex;
             align-items: center;
-            gap: 1mm;
-            padding: 1mm 2.4mm;
-            line-height: 1;
+            justify-content: center;
+            gap: .75mm;
+            padding: .85mm 2mm .95mm;
+            line-height: 1.15;
             white-space: nowrap;
+            flex-shrink: 0;
+            box-sizing: border-box;
+            min-height: 4.6mm;
         }
         .scan-pill .scan-glyph {
             width: 3.6mm;
@@ -523,7 +518,6 @@
         <div class="cards-grid">
             @foreach($chunk as $card)
                 <article class="sobitas-card sobitas-front">
-                    <div class="front-watermark-s" aria-hidden="true"></div>
                     <div class="front-top-corner" aria-hidden="true"></div>
 
                     <div class="front-upper">
