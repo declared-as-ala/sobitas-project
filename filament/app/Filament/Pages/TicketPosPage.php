@@ -9,6 +9,7 @@ use App\Models\LoyaltyCard;
 use App\Models\Product;
 use App\Models\Ticket;
 use App\Services\LoyaltyService;
+use App\Services\NumberSequenceService;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Page;
 use App\Filament\Resources\TicketResource;
@@ -119,6 +120,8 @@ class TicketPosPage extends Page
             $this->client_phone   = '';
             $this->clearLoyalty();
         }
+
+        $this->dispatchTotalsRecalc();
     }
 
     // ── Loyalty helpers ───────────────────────────────────────────────────────
@@ -187,10 +190,15 @@ class TicketPosPage extends Page
             $points = $maxFromTicket;
             $this->loyalty_redeem_input = $points;
         }
+        if ($points > 0 && $points < LoyaltyService::MIN_REDEEM_POINTS) {
+            $points = 0;
+            $this->loyalty_redeem_input = 0;
+        }
 
         $this->loyalty_redeem_dt = number_format($svc->pointsToDiscount($points), 3, '.', ' ');
         $this->recalcLoyaltyEarn();
         $this->dispatchLoyaltyState();
+        $this->dispatchTotalsRecalc();
     }
 
     public function setMaxRedeem(): void
@@ -200,11 +208,15 @@ class TicketPosPage extends Page
         $maxFromBalance = $this->loyalty_balance;
         $maxFromTicket  = (int) floor($totals['base_after_regular_discount'] * LoyaltyService::POINTS_PER_DT_VALUE);
         $max            = min($maxFromBalance, $maxFromTicket);
+        if ($max > 0 && $max < LoyaltyService::MIN_REDEEM_POINTS) {
+            $max = 0;
+        }
 
         $this->loyalty_redeem_input = $max;
         $this->loyalty_redeem_dt    = number_format($svc->pointsToDiscount($max), 3, '.', ' ');
         $this->recalcLoyaltyEarn();
         $this->dispatchLoyaltyState();
+        $this->dispatchTotalsRecalc();
     }
 
     // ── Dispatch loyalty state to JS (used because outer div is wire:ignore) ────
@@ -221,6 +233,11 @@ class TicketPosPage extends Page
             'earn'          => $this->loyalty_points_earn,
             'earn_dt'       => $this->loyalty_points_earn_dt,
         ]);
+    }
+
+    protected function dispatchTotalsRecalc(): void
+    {
+        $this->dispatch('loyalty-totals-recalc');
     }
 
     // ── Public entry point for loyalty barcode scan from JS ──────────────────
@@ -367,56 +384,65 @@ class TicketPosPage extends Page
             'prix_ttc'           => $net,
         ];
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($data) {
-            if ($this->ticketId) {
-                $ticket = Ticket::findOrFail($this->ticketId);
-                $ticket->update($data);
-                $ticket->details()->delete();
-            } else {
-                $nb = Ticket::whereYear('created_at', date('Y'))->sharedLock()->count() + 1;
-                $data['numero'] = date('Y') . '/' . str_pad((string) $nb, 4, '0', STR_PAD_LEFT);
-                $ticket = Ticket::create($data);
-                $this->ticketId = $ticket->id;
-            }
-
-            $inserts = [];
-            foreach ($this->lines as $row) {
-                if (empty($row['produit_id'])) {
-                    continue;
+        try {
+            \Illuminate\Support\Facades\DB::transaction(function () use ($data, $totals) {
+                if ($this->ticketId) {
+                    $ticket = Ticket::findOrFail($this->ticketId);
+                    $ticket->update($data);
+                    $ticket->details()->delete();
+                } else {
+                    $data['numero'] = app(NumberSequenceService::class)->nextTicketNumber();
+                    $ticket = Ticket::create($data);
+                    $this->ticketId = $ticket->id;
                 }
-                $qte      = (float) ($row['qte'] ?? 1);
-                $pu       = (float) ($row['prix_unitaire'] ?? 0);
-                $lineTotal = $qte * $pu;
-                $inserts[] = [
-                    'ticket_id'     => $ticket->id,
-                    'produit_id'    => $row['produit_id'],
-                    'designation_fr' => $row['designation'] ?? '',
-                    'qte'           => $qte,
-                    'prix_unitaire' => $pu,
-                    'prix_ht'       => $lineTotal,
-                    'prix_ttc'      => $lineTotal,
-                ];
-            }
-            if (!empty($inserts)) {
-                DetailsTicket::insert($inserts);
-            }
 
-            // Process loyalty (idempotent — guarded by loyalty_processed_at)
-            if ($this->loyalty_card_id && $this->client_id) {
-                $loyaltyCard   = LoyaltyCard::find($this->loyalty_card_id);
-                $loyaltyClient = Client::find($this->client_id);
-
-                if ($loyaltyCard && $loyaltyClient && $loyaltyCard->isUsable()) {
-                    app(LoyaltyService::class)->processTicketLoyalty(
-                        $ticket,
-                        $loyaltyClient,
-                        $loyaltyCard,
-                        (int) $this->loyalty_redeem_input,
-                        (float) $totals['base_after_regular_discount']
-                    );
+                $inserts = [];
+                foreach ($this->lines as $row) {
+                    if (empty($row['produit_id'])) {
+                        continue;
+                    }
+                    $qte      = (float) ($row['qte'] ?? 1);
+                    $pu       = (float) ($row['prix_unitaire'] ?? 0);
+                    $lineTotal = $qte * $pu;
+                    $inserts[] = [
+                        'ticket_id'     => $ticket->id,
+                        'produit_id'    => $row['produit_id'],
+                        'designation_fr' => $row['designation'] ?? '',
+                        'qte'           => $qte,
+                        'prix_unitaire' => $pu,
+                        'prix_ht'       => $lineTotal,
+                        'prix_ttc'      => $lineTotal,
+                    ];
                 }
-            }
-        });
+                if (!empty($inserts)) {
+                    DetailsTicket::insert($inserts);
+                }
+
+                // Process loyalty (idempotent — guarded by loyalty_processed_at)
+                if ($this->loyalty_card_id && $this->client_id) {
+                    $loyaltyCard   = LoyaltyCard::find($this->loyalty_card_id);
+                    $loyaltyClient = Client::find($this->client_id);
+
+                    if ($loyaltyCard && $loyaltyClient && $loyaltyCard->isUsable()) {
+                        app(LoyaltyService::class)->processTicketLoyalty(
+                            $ticket,
+                            $loyaltyClient,
+                            $loyaltyCard,
+                            (int) $this->loyalty_redeem_input,
+                            (float) $totals['base_after_regular_discount']
+                        );
+                    }
+                }
+            });
+        } catch (\Throwable $e) {
+            Notification::make()
+                ->title('Échec de l’enregistrement du ticket')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+            $this->dispatch('ticket-save-failed', ['message' => $e->getMessage()]);
+            return null;
+        }
 
         Notification::make()
             ->title('Ticket enregistré — ouverture de l’impression.')
@@ -464,6 +490,10 @@ class TicketPosPage extends Page
             $pointsToRedeem = $maxFromTicket;
             $this->loyalty_redeem_input = $pointsToRedeem;
         }
+        if ($pointsToRedeem > 0 && $pointsToRedeem < LoyaltyService::MIN_REDEEM_POINTS) {
+            $pointsToRedeem = 0;
+            $this->loyalty_redeem_input = 0;
+        }
 
         $loyaltyDiscount = $this->loyalty_card_id
             ? app(LoyaltyService::class)->pointsToDiscount($pointsToRedeem)
@@ -473,6 +503,8 @@ class TicketPosPage extends Page
         return [
             'total_ht' => $total,
             'regular_discount' => $regularDiscount,
+            'manual_discount' => $manualDiscount,
+            'percent_discount' => $percentDiscount,
             'base_after_regular_discount' => $baseAfterRegularDiscount,
             'loyalty_discount' => $loyaltyDiscount,
             'final_paid_amount' => max(0.0, $baseAfterRegularDiscount - $loyaltyDiscount),

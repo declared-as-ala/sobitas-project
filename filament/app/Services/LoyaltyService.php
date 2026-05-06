@@ -414,7 +414,20 @@ class LoyaltyService
             $query->orWhere('barcode_value', $normalized);
         }
 
-        return $query->first();
+        $card = $query->first();
+        if ($card) {
+            return $card;
+        }
+
+        return LoyaltyCard::query()
+            ->with(['client:id,name,phone_1', 'batch:id,name'])
+            ->whereHas('client', function ($q) use ($normalized): void {
+                $q->where('phone_1', 'like', "%{$normalized}%")
+                    ->orWhere('name', 'like', "%{$normalized}%");
+            })
+            ->orderByDesc('assigned_at')
+            ->orderByDesc('id')
+            ->first();
     }
 
     public function assignCardToClient(LoyaltyCard $card, Client $client, bool $allowReplacement = false): LoyaltyCard

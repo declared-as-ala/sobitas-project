@@ -18,6 +18,7 @@ class LoyaltyPrintController extends Controller
     public function single(LoyaltyCard $card): \Illuminate\View\View
     {
         $card->load(['client', 'batch']);
+        $this->markCardsAsPrinted(collect([$card]));
 
         return $this->renderCardView(collect([$card]), null, request());
     }
@@ -25,6 +26,7 @@ class LoyaltyPrintController extends Controller
     public function batch(LoyaltyCardBatch $batch): \Illuminate\View\View
     {
         $cards = $batch->cards()->with('client')->orderBy('card_number')->get();
+        $this->markCardsAsPrinted($cards);
 
         return $this->renderCardView($cards, $batch, request());
     }
@@ -32,6 +34,7 @@ class LoyaltyPrintController extends Controller
     public function selected(Request $request): \Illuminate\View\View
     {
         $cards = $this->cardsFromIds($request);
+        $this->markCardsAsPrinted($cards);
 
         return $this->renderCardView($cards, null, $request);
     }
@@ -79,7 +82,7 @@ class LoyaltyPrintController extends Controller
         return response()->streamDownload(function () use ($batch) {
             $out = fopen('php://output', 'w');
 
-            fputcsv($out, ['card_number', 'qr_token', 'barcode_value', 'batch_name']);
+            fputcsv($out, ['card_number', 'qr_token', 'barcode_value', 'batch_name', 'print_status']);
 
             foreach ($batch->cards()->orderBy('card_number')->cursor() as $card) {
                 fputcsv($out, [
@@ -87,6 +90,7 @@ class LoyaltyPrintController extends Controller
                     $card->qr_token,
                     $card->qr_token,
                     $batch->name ?: "Lot #{$batch->id}",
+                    $card->print_status ?? 'not_printed',
                 ]);
             }
 
@@ -110,6 +114,7 @@ class LoyaltyPrintController extends Controller
 
     private function downloadPdf(Collection $cards, ?LoyaltyCardBatch $batch, string $filenamePrefix, Request $request): Response
     {
+        $this->markCardsAsExported($cards);
         $sideMode = $this->sideMode($request);
 
         $pdf = Pdf::loadView('print.loyalty-card', [
@@ -121,7 +126,11 @@ class LoyaltyPrintController extends Controller
             'isPdf' => true,
         ])->setPaper('a4', 'portrait');
 
-        $suffix = $sideMode === 'front' ? '-front' : '';
+        $suffix = match ($sideMode) {
+            'front' => '-front',
+            'back' => '-back',
+            default => '',
+        };
 
         return $pdf->download($filenamePrefix . $suffix . '.pdf');
     }
@@ -157,7 +166,37 @@ class LoyaltyPrintController extends Controller
     {
         $mode = strtolower((string) $request->query('side', 'both'));
 
-        return in_array($mode, ['both', 'front'], true) ? $mode : 'both';
+        return in_array($mode, ['both', 'front', 'back'], true) ? $mode : 'both';
+    }
+
+    private function markCardsAsExported(Collection $cards): void
+    {
+        $ids = $cards->pluck('id')->filter()->values()->all();
+        if ($ids === []) {
+            return;
+        }
+
+        LoyaltyCard::query()
+            ->whereIn('id', $ids)
+            ->update([
+                'print_status' => 'exported',
+                'exported_at' => now(),
+            ]);
+    }
+
+    private function markCardsAsPrinted(Collection $cards): void
+    {
+        $ids = $cards->pluck('id')->filter()->values()->all();
+        if ($ids === []) {
+            return;
+        }
+
+        LoyaltyCard::query()
+            ->whereIn('id', $ids)
+            ->update([
+                'print_status' => 'printed',
+                'printed_at' => now(),
+            ]);
     }
 
     private function logoDataUri(): ?string

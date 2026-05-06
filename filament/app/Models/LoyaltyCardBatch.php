@@ -66,6 +66,35 @@ class LoyaltyCardBatch extends Model
         return $this->cards()->where('status', 'active')->count();
     }
 
+    public function getAssignedCountAttribute(): int
+    {
+        if (! Schema::hasColumn('loyalty_cards', 'batch_id')) {
+            return 0;
+        }
+
+        return $this->cards()->whereNotNull('client_id')->count();
+    }
+
+    public function getLostCountAttribute(): int
+    {
+        if (! Schema::hasColumn('loyalty_cards', 'batch_id')) {
+            return 0;
+        }
+
+        return $this->cards()->where('status', 'lost')->count();
+    }
+
+    public function getNotPrintedCountAttribute(): int
+    {
+        if (! Schema::hasColumn('loyalty_cards', 'batch_id')) {
+            return 0;
+        }
+
+        return $this->cards()->where(function ($q): void {
+            $q->whereNull('print_status')->orWhere('print_status', 'not_printed');
+        })->count();
+    }
+
     public function isGenerated(): bool
     {
         return $this->generated_count > 0;

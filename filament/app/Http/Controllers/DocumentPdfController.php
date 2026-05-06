@@ -256,7 +256,7 @@ class DocumentPdfController extends Controller
     public function downloadTicket(Ticket $ticket)
     {
         try {
-            $ticket->load('client');
+            $ticket->load(['client', 'loyaltyCard']);
             $details_ticket = DetailsTicket::where('ticket_id', $ticket->id)
                 ->with('product:id,designation_fr')
                 ->get();

@@ -12,7 +12,7 @@ class DetailsTicket extends Model
     protected $guarded = ['id'];
 
     protected $casts = [
-        'quantite' => 'integer',
+        'qte' => 'float',
         'prix_unitaire' => 'float',
     ];
 
@@ -30,6 +30,6 @@ class DetailsTicket extends Model
 
     public function getTotalAttribute(): float
     {
-        return $this->quantite * $this->prix_unitaire;
+        return (float) ($this->qte ?? 0) * (float) ($this->prix_unitaire ?? 0);
     }
 }

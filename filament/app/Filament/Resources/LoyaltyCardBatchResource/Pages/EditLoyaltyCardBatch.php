@@ -14,7 +14,13 @@ class EditLoyaltyCardBatch extends EditRecord
     {
         return [
             Actions\DeleteAction::make()
-                ->visible(fn () => !$this->record->isGenerated()),
+                ->label('Supprimer le lot')
+                ->requiresConfirmation()
+                ->modalHeading('Supprimer ce lot de cartes ?')
+                ->modalDescription(fn (): string => $this->record->isGenerated()
+                    ? 'Toutes les cartes de ce lot seront supprimées. Les tickets liés perdront le lien carte (données fidélité sur le ticket restent).'
+                    : 'Ce lot ne contient pas encore de cartes générées.')
+                ->modalSubmitActionLabel('Supprimer'),
         ];
     }
 }

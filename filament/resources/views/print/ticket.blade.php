@@ -14,6 +14,10 @@
     @php
         // Must resolve here: assignments inside @include('print._logo') do not leak to this view.
         $logoUrl = \App\Support\PrintLogo::resolve($coordonnee ?? null);
+        $loyaltyDiscount = (float) ($ticket->loyalty_discount_dt ?? 0);
+        $totalHt = (float) ($ticket->prix_ht ?? 0);
+        $regularDiscount = (float) ($ticket->remise ?? 0);
+        $netToPay = (float) ($ticket->prix_ttc ?? 0);
     @endphp
 
     <style>
@@ -249,14 +253,14 @@
                             <tr>
                                 <td>Totale </td>
                                 <td></td>
-                                <td>{{ number_format((float) @$ticket->prix_ht, 3, '.', '') }}</td>
+                                <td>{{ number_format($totalHt, 3, '.', '') }}</td>
                             </tr>
                             <tr>
 
                                 <td >Remise</td>
                                 <td></td>
                                 <td >
-                                    {{ number_format((float) @$ticket->remise, 3, '.', '') }}</td>
+                                    {{ number_format($regularDiscount, 3, '.', '') }}</td>
                             </tr>
 
                             <tr>
@@ -267,10 +271,17 @@
                                     {{ number_format((float) @$ticket->pourcentage_remise, 1, '.', '') }}</td>
                             </tr>
 
+                            @if($loyaltyDiscount > 0)
                             <tr>
-                                <td>Totale HT</td>
+                                <td>Remise fidélité</td>
                                 <td></td>
-                                <td>{{ number_format((float) @$ticket->prix_ttc, 3, '.', '') }}</td>
+                                <td>-{{ number_format($loyaltyDiscount, 3, '.', '') }}</td>
+                            </tr>
+                            @endif
+                            <tr>
+                                <td>Net à payer</td>
+                                <td></td>
+                                <td>{{ number_format($netToPay, 3, '.', '') }}</td>
                             </tr>
                         </tfoot>
 

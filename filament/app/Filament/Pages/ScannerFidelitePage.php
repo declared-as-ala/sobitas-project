@@ -55,7 +55,7 @@ class ScannerFidelitePage extends Page
 
         if ($code === '') return;
 
-        $card = app(LoyaltyService::class)->findCardByToken($code);
+        $card = app(LoyaltyService::class)->findCardByScanCode($code);
 
         if (! $card) {
             $this->cardNotFound = true;

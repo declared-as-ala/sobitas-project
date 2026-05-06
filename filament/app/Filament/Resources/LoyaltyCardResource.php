@@ -22,6 +22,14 @@ use Illuminate\Support\Collection;
 
 class LoyaltyCardResource extends Resource
 {
+    protected static function clientOptionLabel(Client $client): string
+    {
+        $name = trim((string) ($client->name ?? '')) ?: 'Sans nom';
+        $phone = trim((string) ($client->phone_1 ?? ''));
+
+        return $phone !== '' ? "{$name} — {$phone}" : $name;
+    }
+
     protected static ?string $model = LoyaltyCard::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-credit-card';
@@ -49,6 +57,10 @@ class LoyaltyCardResource extends Resource
                     ->label('Statut')
                     ->default(fn (): string => LoyaltyCard::preferredAvailableStatusValue())
                     ->options(fn (): array => LoyaltyCard::getStatusSelectOptions()),
+                Forms\Components\Select::make('print_status')
+                    ->label('Statut impression')
+                    ->options(LoyaltyCard::printStatusOptions())
+                    ->default('not_printed'),
                 ...($hasNotesColumn ? [
                     Forms\Components\Textarea::make('notes')
                         ->label('Notes')
@@ -85,6 +97,15 @@ class LoyaltyCardResource extends Resource
                     ->label('Statut')
                     ->formatStateUsing(fn (LoyaltyCardStatus $state) => $state->label())
                     ->color(fn (LoyaltyCardStatus $state) => $state->color()),
+                Tables\Columns\BadgeColumn::make('print_status')
+                    ->label('Statut impression')
+                    ->formatStateUsing(fn (?string $state): string => LoyaltyCard::printStatusOptions()[$state ?? 'not_printed'] ?? 'Non imprimée')
+                    ->colors([
+                        'gray' => 'not_printed',
+                        'warning' => 'exported',
+                        'success' => 'printed',
+                        'info' => 'delivered_to_store',
+                    ]),
                 ...($hasBatchColumn ? [
                     Tables\Columns\TextColumn::make('batch.name')
                         ->label('Lot')
@@ -126,21 +147,43 @@ class LoyaltyCardResource extends Resource
                     ->form([
                         Forms\Components\Select::make('client_id')
                             ->label('Client')
+                            ->helperText('Choisissez dans la liste ou recherchez par nom ou n° de téléphone.')
                             ->searchable()
-                            ->getSearchResultsUsing(function (string $search): array {
-                                return Client::where('name', 'like', "%{$search}%")
-                                    ->orWhere('phone_1', 'like', "%{$search}%")
-                                    ->limit(20)
+                            ->preload()
+                            ->options(function (): array {
+                                return Client::query()
+                                    ->orderBy('name')
+                                    ->orderBy('id')
+                                    ->limit(200)
                                     ->get(['id', 'name', 'phone_1'])
                                     ->mapWithKeys(fn (Client $client): array => [
-                                        $client->id => (string) ($client->name ?: ($client->phone_1 ?: "Client #{$client->id}")),
+                                        $client->id => static::clientOptionLabel($client),
                                     ])
                                     ->all();
                             })
-                            ->getOptionLabelUsing(function ($value): string {
+                            ->getSearchResultsUsing(function (string $search): array {
+                                $q = trim($search);
+                                $query = Client::query()->orderBy('name')->orderBy('id');
+
+                                if ($q !== '') {
+                                    $query->where(function ($sub) use ($q): void {
+                                        $sub->where('name', 'like', "%{$q}%")
+                                            ->orWhere('phone_1', 'like', "%{$q}%");
+                                    });
+                                }
+
+                                return $query
+                                    ->limit(50)
+                                    ->get(['id', 'name', 'phone_1'])
+                                    ->mapWithKeys(fn (Client $client): array => [
+                                        $client->id => static::clientOptionLabel($client),
+                                    ])
+                                    ->all();
+                            })
+                            ->getOptionLabelUsing(function ($value): ?string {
                                 $client = Client::find($value);
 
-                                return (string) ($client?->name ?: ($client?->phone_1 ?: "Client #{$value}"));
+                                return $client ? static::clientOptionLabel($client) : null;
                             })
                             ->required(),
                     ])
@@ -216,14 +259,60 @@ class LoyaltyCardResource extends Resource
                     ->label('Imprimer')
                     ->icon('heroicon-o-printer')
                     ->color('info')
-                    ->url(fn (LoyaltyCard $record) => route('loyalty.print.single', $record))
-                    ->openUrlInNewTab(),
+                    ->form([
+                        Forms\Components\Select::make('side')
+                            ->label('Faces à imprimer')
+                            ->options([
+                                'both' => 'Recto + verso',
+                                'front' => 'Recto uniquement',
+                                'back' => 'Verso uniquement',
+                            ])
+                            ->default('both')
+                            ->required(),
+                    ])
+                    ->action(fn (LoyaltyCard $record, array $data) => redirect()->away(route('loyalty.print.single', [
+                        'card' => $record,
+                        'side' => (string) ($data['side'] ?? 'both'),
+                    ]))),
                 Action::make('export_pdf')
                     ->label('Exporter PDF')
                     ->icon('heroicon-o-document-arrow-down')
                     ->color('warning')
-                    ->url(fn (LoyaltyCard $record) => route('loyalty.export.single.pdf', $record))
-                    ->openUrlInNewTab(),
+                    ->form([
+                        Forms\Components\Select::make('side')
+                            ->label('Faces dans le PDF')
+                            ->options([
+                                'both' => 'Recto + verso',
+                                'front' => 'Recto uniquement',
+                                'back' => 'Verso uniquement',
+                            ])
+                            ->default('front')
+                            ->required(),
+                    ])
+                    ->action(fn (LoyaltyCard $record, array $data) => redirect()->away(route('loyalty.export.single.pdf', [
+                        'card' => $record,
+                        'side' => (string) ($data['side'] ?? 'front'),
+                    ]))),
+                Action::make('mark_printed')
+                    ->label('Marquer imprimée')
+                    ->icon('heroicon-o-check-badge')
+                    ->color('success')
+                    ->action(function (LoyaltyCard $record): void {
+                        $record->update([
+                            'print_status' => 'printed',
+                            'printed_at' => now(),
+                        ]);
+                    }),
+                Action::make('mark_delivered')
+                    ->label('Livrée magasin')
+                    ->icon('heroicon-o-truck')
+                    ->color('primary')
+                    ->action(function (LoyaltyCard $record): void {
+                        $record->update([
+                            'print_status' => 'delivered_to_store',
+                            'delivered_to_store_at' => now(),
+                        ]);
+                    }),
 
                 EditAction::make(),
             ])
@@ -245,6 +334,15 @@ class LoyaltyCardResource extends Resource
                             ])
                             ->default(8)
                             ->required(),
+                        Forms\Components\Select::make('side')
+                            ->label('Faces à imprimer')
+                            ->options([
+                                'both' => 'Recto + verso',
+                                'front' => 'Recto uniquement',
+                                'back' => 'Verso uniquement',
+                            ])
+                            ->default('both')
+                            ->required(),
                     ])
                     ->action(function (Collection $records, array $data) {
                         $ids = $records->pluck('id')->implode(',');
@@ -258,6 +356,7 @@ class LoyaltyCardResource extends Resource
                         return redirect()->away(route('loyalty.print.selected', [
                             'ids' => $ids,
                             'per_page' => (int) ($data['per_page'] ?? 8),
+                            'side' => (string) ($data['side'] ?? 'both'),
                         ]));
                     }),
                 BulkAction::make('export_selected_pdf')
@@ -277,6 +376,15 @@ class LoyaltyCardResource extends Resource
                             ])
                             ->default(8)
                             ->required(),
+                        Forms\Components\Select::make('side')
+                            ->label('Faces dans le PDF')
+                            ->options([
+                                'both' => 'Recto + verso',
+                                'front' => 'Recto uniquement',
+                                'back' => 'Verso uniquement',
+                            ])
+                            ->default('front')
+                            ->required(),
                     ])
                     ->action(function (Collection $records, array $data) {
                         $ids = $records->pluck('id')->implode(',');
@@ -290,7 +398,20 @@ class LoyaltyCardResource extends Resource
                         return redirect()->away(route('loyalty.export.selected.pdf', [
                             'ids' => $ids,
                             'per_page' => (int) ($data['per_page'] ?? 8),
+                            'side' => (string) ($data['side'] ?? 'front'),
                         ]));
+                    }),
+                BulkAction::make('mark_selected_printed')
+                    ->label('Marquer imprimées')
+                    ->icon('heroicon-o-check-badge')
+                    ->color('success')
+                    ->action(function (Collection $records): void {
+                        LoyaltyCard::query()
+                            ->whereIn('id', $records->pluck('id')->all())
+                            ->update([
+                                'print_status' => 'printed',
+                                'printed_at' => now(),
+                            ]);
                     }),
             ]);
     }

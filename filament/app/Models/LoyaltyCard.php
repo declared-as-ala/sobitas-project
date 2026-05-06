@@ -23,7 +23,10 @@ class LoyaltyCard extends Model
         'card_number',
         'qr_token',
         'status',
+        'print_status',
         'printed_at',
+        'exported_at',
+        'delivered_to_store_at',
         'assigned_at',
         'lost_at',
         'retired_at',
@@ -33,6 +36,8 @@ class LoyaltyCard extends Model
 
     protected $casts = [
         'printed_at'  => 'datetime',
+        'exported_at' => 'datetime',
+        'delivered_to_store_at' => 'datetime',
         'assigned_at' => 'datetime',
         'lost_at'     => 'datetime',
         'retired_at'  => 'datetime',
@@ -176,6 +181,16 @@ class LoyaltyCard extends Model
     public static function allowedStatusValuesForWrite(): array
     {
         return self::allowedStatusValues();
+    }
+
+    public static function printStatusOptions(): array
+    {
+        return [
+            'not_printed' => 'Non imprimée',
+            'exported' => 'Exportée',
+            'printed' => 'Imprimée',
+            'delivered_to_store' => 'Livrée magasin',
+        ];
     }
 
     private static function mapToAllowedStatus(string $raw): string

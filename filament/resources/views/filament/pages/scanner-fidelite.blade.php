@@ -194,7 +194,7 @@
                 type="text"
                 wire:model="scannedCode"
                 wire:keydown.enter="scanCard"
-                placeholder="Scanner ou saisir le code..."
+                placeholder="Scanner une carte fidélité..."
                 class="sf-scan-input"
                 autocomplete="off"
                 spellcheck="false"
@@ -320,12 +320,17 @@
                     <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
                     Historique points
                 </a>
+                <a href="{{ route('filament.admin.resources.loyalty-transactions.create') }}?client_id={{ $cardData['client_id'] }}" class="sf-action-btn sf-action-secondary">
+                    Ajuster points
+                </a>
+                <a href="{{ route('filament.admin.resources.loyalty-cards.index') }}?tableFilters[status][value]=available" class="sf-action-btn sf-action-secondary">
+                    Remplacer carte
+                </a>
                 @if($cardData['is_usable'])
                 <button
                     wire:click="markLost"
                     wire:confirm="Confirmer : marquer la carte {{ $cardData['card_number'] }} comme perdue ?"
                     class="sf-action-btn sf-action-danger"
-                    style="grid-column: span 2;"
                 >
                     <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
                     Marquer comme perdue

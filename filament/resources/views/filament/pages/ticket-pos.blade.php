@@ -647,6 +647,7 @@
     const maxRows = {{ $maxRows }};
     const pointsPerDtValue = {{ \App\Services\LoyaltyService::POINTS_PER_DT_VALUE }};
     const pointsPerDt = {{ \App\Services\LoyaltyService::POINTS_PER_DT }};
+    const minRedeemPoints = {{ \App\Services\LoyaltyService::MIN_REDEEM_POINTS }};
     const produits = @json(json_decode($productsJson)); // Array of products for barcode
     let visibleRows = {{ count($startLines) }};
     const loyaltyState = {
@@ -1060,6 +1061,11 @@
             redeemInput.value = pts;
         }
 
+        if (pts > 0 && pts < minRedeemPoints) {
+            pts = 0;
+            if (redeemInput) redeemInput.value = 0;
+        }
+
         @this.set('loyalty_redeem_input', pts);
         calculate();
     }
@@ -1106,7 +1112,13 @@
         };
         
         // Trigger the save method gracefully with payload
-        @this.call('save', payload);
+        @this.call('save', payload).catch(function () {
+            var btn = document.getElementById('btn-save');
+            if (btn) {
+                btn.innerHTML = "Enregistrer";
+                btn.disabled = false;
+            }
+        });
     }
 
     // ── Loyalty panel DOM update (called from Livewire events) ──────────────────
@@ -1152,6 +1164,11 @@
                     $sel.val(d.client_id).trigger('change.select2');
                 }
             }
+            calculate();
+        });
+
+        Livewire.on('loyalty-totals-recalc', function () {
+            calculate();
         });
     });
 
@@ -1165,6 +1182,14 @@
                 return;
             }
             
+            var btn = document.getElementById('btn-save');
+            if(btn) {
+                btn.innerHTML = "Enregistrer";
+                btn.disabled = false;
+            }
+        });
+
+        Livewire.on('ticket-save-failed', () => {
             var btn = document.getElementById('btn-save');
             if(btn) {
                 btn.innerHTML = "Enregistrer";

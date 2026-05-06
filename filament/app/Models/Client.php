@@ -47,7 +47,7 @@ class Client extends Model
 
     public function commandes(): HasMany
     {
-        return $this->hasMany(Commande::class, 'user_id');
+        return $this->hasMany(Commande::class, 'client_id');
     }
 
     public function factures(): HasMany

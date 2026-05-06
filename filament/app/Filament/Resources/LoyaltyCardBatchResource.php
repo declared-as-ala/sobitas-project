@@ -6,7 +6,9 @@ use App\Filament\Resources\LoyaltyCardBatchResource\Pages;
 use App\Models\LoyaltyCardBatch;
 use App\Services\LoyaltyService;
 use Filament\Actions\Action;
+use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms;
 use Filament\Notifications\Notification;
@@ -104,6 +106,26 @@ class LoyaltyCardBatchResource extends Resource
                     ->getStateUsing(fn (LoyaltyCardBatch $record) => $record->active_count)
                     ->badge()
                     ->color('success'),
+                Tables\Columns\TextColumn::make('assigned_count')
+                    ->label('Assignées')
+                    ->getStateUsing(fn (LoyaltyCardBatch $record) => $record->assigned_count)
+                    ->badge()
+                    ->color('info'),
+                Tables\Columns\TextColumn::make('lost_count')
+                    ->label('Perdues')
+                    ->getStateUsing(fn (LoyaltyCardBatch $record) => $record->lost_count)
+                    ->badge()
+                    ->color('danger'),
+                Tables\Columns\TextColumn::make('printed_count')
+                    ->label('Imprimées')
+                    ->getStateUsing(fn (LoyaltyCardBatch $record) => $record->printed_count)
+                    ->badge()
+                    ->color('success'),
+                Tables\Columns\TextColumn::make('not_printed_count')
+                    ->label('Non imprimées')
+                    ->getStateUsing(fn (LoyaltyCardBatch $record) => $record->not_printed_count)
+                    ->badge()
+                    ->color('gray'),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Créé le')
                     ->date('d/m/Y')
@@ -156,6 +178,7 @@ class LoyaltyCardBatchResource extends Resource
                             ->options([
                                 'both' => 'Recto + verso',
                                 'front' => 'Recto uniquement',
+                                'back' => 'Verso uniquement',
                             ])
                             ->default('both')
                             ->required(),
@@ -189,6 +212,7 @@ class LoyaltyCardBatchResource extends Resource
                             ->options([
                                 'both' => 'Recto + verso',
                                 'front' => 'Recto uniquement',
+                                'back' => 'Verso uniquement',
                             ])
                             ->default('front')
                             ->required(),
@@ -207,9 +231,50 @@ class LoyaltyCardBatchResource extends Resource
                     ->color('gray')
                     ->url(fn (LoyaltyCardBatch $record) => route('loyalty.export.csv', $record))
                     ->visible(fn (LoyaltyCardBatch $record) => $record->isGenerated()),
+                Action::make('mark_printed')
+                    ->label('Marquer imprimé')
+                    ->icon('heroicon-o-check-badge')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->visible(fn (LoyaltyCardBatch $record) => $record->isGenerated())
+                    ->action(function (LoyaltyCardBatch $record) {
+                        $record->cards()->update([
+                            'print_status' => 'printed',
+                            'printed_at' => now(),
+                        ]);
+                        Notification::make()->title('Lot marqué comme imprimé.')->success()->send();
+                    }),
+                Action::make('mark_delivered')
+                    ->label('Livré magasin')
+                    ->icon('heroicon-o-truck')
+                    ->color('primary')
+                    ->requiresConfirmation()
+                    ->visible(fn (LoyaltyCardBatch $record) => $record->isGenerated())
+                    ->action(function (LoyaltyCardBatch $record) {
+                        $record->cards()->update([
+                            'print_status' => 'delivered_to_store',
+                            'delivered_to_store_at' => now(),
+                        ]);
+                        Notification::make()->title('Lot marqué comme livré au magasin.')->success()->send();
+                    }),
                 EditAction::make(),
                 DeleteAction::make()
-                    ->visible(fn (LoyaltyCardBatch $record) => !$record->isGenerated()),
+                    ->label('Supprimer le lot')
+                    ->requiresConfirmation()
+                    ->modalHeading('Supprimer ce lot de cartes ?')
+                    ->modalDescription(fn (LoyaltyCardBatch $record): string => $record->isGenerated()
+                        ? 'Toutes les cartes de ce lot seront supprimées définitivement. Les tickets liés conserveront l’historique fidélité mais perdront le lien vers la carte (référence carte effacée).'
+                        : 'Ce lot ne contient pas encore de cartes générées.')
+                    ->modalSubmitActionLabel('Supprimer'),
+            ])
+            ->bulkActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make()
+                        ->label('Supprimer les lots sélectionnés')
+                        ->requiresConfirmation()
+                        ->modalHeading('Supprimer les lots sélectionnés ?')
+                        ->modalDescription('Les cartes de chaque lot seront supprimées (cascade). Les liens ticket→carte seront effacés.'),
+                ]),
             ]);
     }
 
