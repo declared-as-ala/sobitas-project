@@ -547,7 +547,8 @@
                        step="10"
                        value="{{ $loyalty_redeem_input }}"
                        style="width:90px;border:1px solid #d6d3d1;border-radius:6px;padding:5px 8px;font-size:14px;"
-                       oninput="syncLoyaltyRedeem(this.value)" />
+                       oninput="syncLoyaltyRedeem(this.value)"
+                       onblur="finalizeLoyaltyRedeemInput()" />
                 <button type="button"
                         onclick="setMaxLoyaltyRedeem()"
                         style="background:#f59e0b;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;">
@@ -714,11 +715,21 @@
         } catch (e) {}
 
         var $clientSel = $('#client_select');
-        $clientSel.select2({ width: '100%', placeholder: '— Choisir —', allowClear: true });
-        // Select2 does not reliably fire the native HTML onchange; sync Livewire on jQuery change.
-        $clientSel.off('change.ticketPosClient').on('change.ticketPosClient', function () {
-            selectClient();
+        $clientSel.select2({
+            width: '100%',
+            placeholder: '— Choisir —',
+            allowClear: true,
+            dropdownParent: $('body'),
         });
+        // Select2: native `change` can fire before internal value updates; bind explicit events + change.
+        function syncClientFromSelect2() {
+            requestAnimationFrame(function () {
+                selectClient();
+            });
+        }
+        $clientSel.off('.ticketPosClient');
+        $clientSel.on('change.ticketPosClient', syncClientFromSelect2);
+        $clientSel.on('select2:select.ticketPosClient select2:clear.ticketPosClient', syncClientFromSelect2);
 
         var addClientBtn = document.getElementById('pos-btn-add-client');
         if (addClientBtn) addClientBtn.onclick = createTicketClient;
@@ -807,21 +818,26 @@
         });
     }
 
-    // Client Selection — also notifies Livewire so loyalty auto-loads
+    // Client Selection — also notifies Livewire so loyalty auto-loads (use jQuery val: Select2 keeps native select in sync but timing differs).
     function selectClient() {
-        var select = document.getElementById('client_select');
-        if (!select) return;
-        var val = select.value;
-        var option = select.options[select.selectedIndex];
-        if (val) {
-            document.getElementById('client_adresse').value = option ? (option.getAttribute('data-adresse') || '') : '';
-            document.getElementById('client_phone').value   = option ? (option.getAttribute('data-phone') || '') : '';
-            @this.set('client_id', parseInt(val, 10)); // triggers updatedClientId → loadClientLoyalty + dispatch
-        } else {
-            document.getElementById('client_adresse').value = '';
-            document.getElementById('client_phone').value   = '';
+        var $sel = $('#client_select');
+        if (!$sel.length) return;
+        var val = $sel.val();
+        var addrEl = document.getElementById('client_adresse');
+        var phoneEl = document.getElementById('client_phone');
+        if (val === null || val === undefined || val === '') {
+            if (addrEl) addrEl.value = '';
+            if (phoneEl) phoneEl.value = '';
             @this.set('client_id', null);
+            return;
         }
+        var opt = $sel.find('option').filter(function () {
+            return String($(this).val()) === String(val);
+        }).first();
+        if (addrEl) addrEl.value = opt.length ? (opt.attr('data-adresse') || '') : '';
+        if (phoneEl) phoneEl.value = opt.length ? (opt.attr('data-phone') || '') : '';
+        var cid = parseInt(String(val), 10);
+        @this.set('client_id', Number.isNaN(cid) ? null : cid);
     }
 
     function createTicketClient() {
@@ -1065,11 +1081,14 @@
         totale_remise = Math.min(totale_remise, m_totale_ht);
         var base_after_regular_discount = Math.max(0, m_totale_ht - totale_remise);
         var redeemInput = document.getElementById('loyalty_redeem_input');
-        var rawPoints = parseInt(redeemInput?.value || 0, 10) || 0;
+        var rawPoints = parseInt(redeemInput?.value || 0, 10);
+        if (Number.isNaN(rawPoints)) rawPoints = 0;
         var maxFromTicket = Math.floor(base_after_regular_discount * pointsPerDtValue);
         var maxFromBalance = loyaltyState.balance || 0;
         var redeemPoints = Math.max(0, Math.min(rawPoints, maxFromBalance, maxFromTicket));
-        if (redeemInput && redeemPoints !== rawPoints) {
+        // Do not stomp the field while the user is typing (partial numbers / empty).
+        var redeemFocused = redeemInput && document.activeElement === redeemInput;
+        if (redeemInput && redeemPoints !== rawPoints && !redeemFocused) {
             redeemInput.value = redeemPoints;
         }
 
@@ -1096,9 +1115,11 @@
         if (discRow) discRow.style.display = loyaltyState.panelVisible && loyalty_discount > 0 ? '' : 'none';
     }
 
-    // Loyalty redeem sync
+    // Loyalty redeem: while typing, only clamp to balance/ticket cap — never enforce MIN_REDEEM here
+    // (otherwise digits below 100 vanish and Livewire resets the field every keystroke).
     function syncLoyaltyRedeem(val) {
-        var pts = parseInt(val, 10) || 0;
+        var parsed = parseInt(String(val).replace(/\s/g, ''), 10);
+        var pts = Number.isNaN(parsed) ? 0 : parsed;
         var total = parseFloat(document.getElementById('p_ht')?.value || 0) || 0;
         var regularDiscount = parseFloat(document.getElementById('m_remise')?.value || 0) || 0;
         regularDiscount = Math.min(regularDiscount, total);
@@ -1107,27 +1128,27 @@
         var maxFromBalance = loyaltyState.balance || 0;
         pts = Math.max(0, Math.min(pts, maxFromBalance, maxFromTicket));
         var redeemInput = document.getElementById('loyalty_redeem_input');
-        if (redeemInput) {
+        if (redeemInput && String(redeemInput.value) !== String(pts)) {
             redeemInput.value = pts;
         }
+        calculate();
+    }
 
+    function finalizeLoyaltyRedeemInput() {
+        var redeemInput = document.getElementById('loyalty_redeem_input');
+        if (!redeemInput) return;
+        var pts = parseInt(String(redeemInput.value || '').replace(/\s/g, ''), 10);
+        if (Number.isNaN(pts)) pts = 0;
         if (pts > 0 && pts < minRedeemPoints) {
             pts = 0;
-            if (redeemInput) redeemInput.value = 0;
+            redeemInput.value = 0;
         }
-
         @this.set('loyalty_redeem_input', pts);
         calculate();
     }
 
     function setMaxLoyaltyRedeem() {
-        var total = parseFloat(document.getElementById('p_ht')?.value || 0) || 0;
-        var regularDiscount = parseFloat(document.getElementById('m_remise')?.value || 0) || 0;
-        regularDiscount = Math.min(regularDiscount, total);
-        var baseAfterRegularDiscount = Math.max(0, total - regularDiscount);
-        var maxFromTicket = Math.floor(baseAfterRegularDiscount * pointsPerDtValue);
-        var maxPts = Math.max(0, Math.min(loyaltyState.balance || 0, maxFromTicket));
-        syncLoyaltyRedeem(maxPts);
+        @this.call('setMaxRedeem');
     }
 
     // Send the final state directly to Livewire
@@ -1152,13 +1173,21 @@
             }
         }
 
+        var selClient = $('#client_select').val();
+        var parsedClient = selClient ? parseInt(String(selClient), 10) : null;
+        if (parsedClient !== null && Number.isNaN(parsedClient)) parsedClient = null;
+
+        var redeemRaw = parseInt(String(document.getElementById('loyalty_redeem_input')?.value || '').replace(/\s/g, ''), 10);
+        if (Number.isNaN(redeemRaw)) redeemRaw = 0;
+        if (redeemRaw > 0 && redeemRaw < minRedeemPoints) redeemRaw = 0;
+
         let payload = {
             lines: finalLines,
-            client_id: document.getElementById('client_select').value,
+            client_id: parsedClient,
             remise: document.getElementById('m_remise').value || 0,
             pourcentage_remise: document.getElementById('pourcen_remise').value || 0,
             loyalty_card_id: document.getElementById('loyalty_card_id_input')?.value || null,
-            loyalty_redeem_input: parseInt(document.getElementById('loyalty_redeem_input')?.value || 0),
+            loyalty_redeem_input: redeemRaw,
         };
         
         // Trigger the save method gracefully with payload
