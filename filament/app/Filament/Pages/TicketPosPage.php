@@ -263,15 +263,16 @@ class TicketPosPage extends Page
     {
         $this->clearLoyalty();
 
-        $this->client_id = $clientId;
+        $this->client_id = null;
+        $this->client_adresse = '';
+        $this->client_phone   = '';
+
         if ($clientId && ($client = Client::find($clientId))) {
+            $this->client_id      = $clientId;
             $this->client_adresse = $client->adresse ?? '';
             $this->client_phone   = $client->phone_1 ?? '';
             $this->loadClientLoyalty($client);
         } else {
-            $this->client_id      = null;
-            $this->client_adresse = '';
-            $this->client_phone   = '';
             $this->clearLoyalty();
         }
 
