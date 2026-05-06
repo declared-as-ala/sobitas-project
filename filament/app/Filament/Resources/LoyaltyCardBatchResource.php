@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\LoyaltyCardBatchResource\Pages;
+use App\Models\LoyaltyCard;
 use App\Models\LoyaltyCardBatch;
 use App\Services\LoyaltyService;
 use Filament\Actions\Action;
@@ -238,10 +239,13 @@ class LoyaltyCardBatchResource extends Resource
                     ->requiresConfirmation()
                     ->visible(fn (LoyaltyCardBatch $record) => $record->isGenerated())
                     ->action(function (LoyaltyCardBatch $record) {
-                        $record->cards()->update([
+                        $payload = LoyaltyCard::onlyExistingColumnUpdates([
                             'print_status' => 'printed',
                             'printed_at' => now(),
                         ]);
+                        if ($payload !== []) {
+                            $record->cards()->update($payload);
+                        }
                         Notification::make()->title('Lot marqué comme imprimé.')->success()->send();
                     }),
                 Action::make('mark_delivered')
@@ -251,10 +255,13 @@ class LoyaltyCardBatchResource extends Resource
                     ->requiresConfirmation()
                     ->visible(fn (LoyaltyCardBatch $record) => $record->isGenerated())
                     ->action(function (LoyaltyCardBatch $record) {
-                        $record->cards()->update([
+                        $payload = LoyaltyCard::onlyExistingColumnUpdates([
                             'print_status' => 'delivered_to_store',
                             'delivered_to_store_at' => now(),
                         ]);
+                        if ($payload !== []) {
+                            $record->cards()->update($payload);
+                        }
                         Notification::make()->title('Lot marqué comme livré au magasin.')->success()->send();
                     }),
                 EditAction::make(),

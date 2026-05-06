@@ -176,12 +176,13 @@ class LoyaltyPrintController extends Controller
             return;
         }
 
-        LoyaltyCard::query()
-            ->whereIn('id', $ids)
-            ->update([
-                'print_status' => 'exported',
-                'exported_at' => now(),
-            ]);
+        $payload = LoyaltyCard::onlyExistingColumnUpdates([
+            'print_status' => 'exported',
+            'exported_at' => now(),
+        ]);
+        if ($payload !== []) {
+            LoyaltyCard::query()->whereIn('id', $ids)->update($payload);
+        }
     }
 
     private function markCardsAsPrinted(Collection $cards): void
@@ -191,12 +192,13 @@ class LoyaltyPrintController extends Controller
             return;
         }
 
-        LoyaltyCard::query()
-            ->whereIn('id', $ids)
-            ->update([
-                'print_status' => 'printed',
-                'printed_at' => now(),
-            ]);
+        $payload = LoyaltyCard::onlyExistingColumnUpdates([
+            'print_status' => 'printed',
+            'printed_at' => now(),
+        ]);
+        if ($payload !== []) {
+            LoyaltyCard::query()->whereIn('id', $ids)->update($payload);
+        }
     }
 
     private function logoDataUri(): ?string

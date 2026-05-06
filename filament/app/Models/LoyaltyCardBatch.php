@@ -50,7 +50,8 @@ class LoyaltyCardBatch extends Model
 
     public function getPrintedCountAttribute(): int
     {
-        if (! Schema::hasColumn('loyalty_cards', 'batch_id')) {
+        if (! Schema::hasColumn('loyalty_cards', 'batch_id')
+            || ! Schema::hasColumn('loyalty_cards', 'printed_at')) {
             return 0;
         }
 
@@ -88,6 +89,14 @@ class LoyaltyCardBatch extends Model
     {
         if (! Schema::hasColumn('loyalty_cards', 'batch_id')) {
             return 0;
+        }
+
+        if (! Schema::hasColumn('loyalty_cards', 'print_status')) {
+            if (Schema::hasColumn('loyalty_cards', 'printed_at')) {
+                return $this->cards()->whereNull('printed_at')->count();
+            }
+
+            return $this->cards()->count();
         }
 
         return $this->cards()->where(function ($q): void {

@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class LoyaltyCard extends Model
@@ -52,6 +53,21 @@ class LoyaltyCard extends Model
                 $card->qr_token = (string) Str::uuid();
             }
         });
+    }
+
+    /**
+     * Filter mass-update payloads so legacy DBs missing optional columns do not error.
+     *
+     * @param  array<string, mixed>  $attributes
+     * @return array<string, mixed>
+     */
+    public static function onlyExistingColumnUpdates(array $attributes): array
+    {
+        $table = (new static)->getTable();
+
+        return collect($attributes)
+            ->filter(fn ($_, string $column): bool => Schema::hasColumn($table, $column))
+            ->all();
     }
 
     // ── Relationships ────────────────────────────────────────────────────────
