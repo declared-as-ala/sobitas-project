@@ -46,6 +46,7 @@
 
 <!-- Select2 requirements -->
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -447,45 +448,16 @@
     text-align: center;
     border-top: 1px solid #fde047;
 }
+
+/* Limit Bootstrap reboot conflicts with Filament outside loyalty panel */
+#loyalty-panel.ticket-pos-loyalty-bs { font-size: 14px; }
+#loyalty-panel.ticket-pos-loyalty-bs .card { --bs-card-spacer-y: 0.75rem; --bs-card-spacer-x: 0.75rem; }
 </style>
 
-<div class="rounded-xl border border-slate-200 bg-slate-50 p-4 mb-4 max-w-4xl">
-    <div class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">Code partenaire (boutique)</div>
-    @if($ticket && $ticket->partner_commission_processed_at)
-        <p class="text-sm text-slate-700">
-            Verrouillé — code <strong>{{ $ticket->partner_code_snapshot ?? '—' }}</strong>
-            @if((float)($ticket->partner_discount_amount ?? 0) > 0)
-                · remise {{ number_format((float)$ticket->partner_discount_amount, 3, '.', ' ') }} DT
-            @endif
-        </p>
-        <p class="text-xs text-slate-500 mt-1">La commission ne peut plus être modifiée depuis le POS.</p>
-    @else
-        <div class="flex flex-wrap gap-2 items-end">
-            <div class="grow min-w-[200px]">
-                <label class="block text-xs font-semibold text-slate-600 mb-1">Code</label>
-                <input type="text" wire:model.live.debounce.400ms="partner_code_input"
-                       class="fi-input block w-full rounded-lg border-slate-300 text-sm shadow-sm"
-                       placeholder="Ex: COACH10" autocomplete="off">
-            </div>
-            <button type="button" wire:click="applyPartnerCode"
-                    class="fi-btn fi-btn-color-primary fi-btn-size-md inline-flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold text-white bg-orange-500 hover:bg-orange-600">
-                Appliquer
-            </button>
-            <button type="button" wire:click="clearPartnerCode" wire:loading.attr="disabled"
-                    class="fi-btn fi-btn-size-md inline-flex items-center rounded-lg px-4 py-2 text-sm font-semibold border border-slate-300 text-slate-700 hover:bg-white">
-                Effacer
-            </button>
-        </div>
-        <p class="text-xs text-slate-600 mt-3">
-            Commission estimée (interne, non imprimée) :
-            <strong><span id="pos-partner-commission-est">0.000</span> DT</strong>
-            <span class="text-slate-400">(<span id="pos-partner-commission-rate">0</span>%)</span>
-        </p>
-    @endif
-</div>
+<div class="pos-wrap" id="pos-ticket-root">
 
-<div class="pos-wrap" id="pos-ticket-root" wire:ignore>
-
+    {{-- Select2 + static client row: keep out of Livewire morphDOM --}}
+    <div wire:ignore>
     {{-- ── PRINT BUTTON (edit mode only) ── --}}
     @if($ticketId)
     <div style="display:flex; justify-content:flex-end; margin-bottom:16px;">
@@ -556,9 +528,10 @@
                autocomplete="off"
                onchange="scanBarcode()">
     </div>
+    </div>{{-- /wire:ignore client + barcode --}}
 
-    {{-- ── LOYALTY PANEL (always mounted; JS toggles active vs placeholder — sticky on scroll) ── --}}
-    <div id="loyalty-panel" class="pos-loyalty-sticky-wrap">
+    {{-- ── LOYALTY PANEL (+ code partenaire Bootstrap) — sticky on scroll ── --}}
+    <div id="loyalty-panel" class="pos-loyalty-sticky-wrap ticket-pos-loyalty-bs">
         <div style="background:#fef9c3;border:1.5px solid #fde047;border-radius:10px;overflow:hidden;">
 
             {{-- Header --}}
@@ -569,6 +542,52 @@
                 </span>
             </div>
 
+            {{-- Code partenaire (boutique) — sous l’en-tête fidélité, style Bootstrap --}}
+            <div class="card border-0 rounded-0 border-top border-warning bg-white shadow-sm mb-0">
+                <div class="card-body py-3 px-3">
+                    <h6 class="text-uppercase text-muted small fw-bold mb-3" style="letter-spacing:0.04em;">Code partenaire (boutique)</h6>
+                    @if($ticket && $ticket->partner_commission_processed_at)
+                        <div class="alert alert-secondary py-2 mb-0" role="status">
+                            <p class="small mb-1">
+                                <strong>Verrouillé</strong> — code <span class="font-monospace fw-semibold">{{ $ticket->partner_code_snapshot ?? '—' }}</span>
+                                @if((float)($ticket->partner_discount_amount ?? 0) > 0)
+                                    <span class="text-nowrap">· remise {{ number_format((float)$ticket->partner_discount_amount, 3, '.', ' ') }} DT</span>
+                                @endif
+                            </p>
+                            <p class="mb-0 small text-muted mt-1">La commission ne peut plus être modifiée depuis le POS.</p>
+                        </div>
+                    @else
+                        <div class="row g-2 align-items-end">
+                            <div class="col-12 col-md-auto flex-grow-1" style="min-width: 200px;">
+                                <label for="partner_code_input_pos" class="form-label small fw-semibold text-secondary mb-1">Code</label>
+                                <input type="text" id="partner_code_input_pos"
+                                       wire:model.live.debounce.400ms="partner_code_input"
+                                       class="form-control form-control-sm"
+                                       placeholder="Ex: COACH10" autocomplete="off">
+                            </div>
+                            <div class="col-6 col-md-auto d-grid d-md-block">
+                                <button type="button" wire:click="applyPartnerCode"
+                                        class="btn btn-primary btn-sm w-100">
+                                    Appliquer
+                                </button>
+                            </div>
+                            <div class="col-6 col-md-auto d-grid d-md-block">
+                                <button type="button" wire:click="clearPartnerCode" wire:loading.attr="disabled"
+                                        class="btn btn-outline-secondary btn-sm w-100">
+                                    Effacer
+                                </button>
+                            </div>
+                        </div>
+                        <p class="small text-secondary mt-3 mb-0">
+                            Commission estimée (interne, non imprimée) :
+                            <strong><span id="pos-partner-commission-est">0.000</span> DT</strong>
+                            <span class="text-muted">(<span id="pos-partner-commission-rate">0</span>%)</span>
+                        </p>
+                    @endif
+                </div>
+            </div>
+
+            <div wire:ignore>
             <div id="loyalty-panel-placeholder" class="loyalty-placeholder" style="{{ $loyalty_panel_visible ? 'display:none;' : '' }}">
                 Sélectionnez un client titulaire d’une carte active pour afficher le solde et utiliser des points.
             </div>
@@ -621,8 +640,12 @@
 
             <input type="hidden" id="loyalty_card_id_input" value="{{ $loyalty_card_id }}">
             </div>{{-- /loyalty-panel-active --}}
+            </div>{{-- /wire:ignore loyalty body --}}
         </div>
     </div>
+
+    {{-- Product lines + totals: JS + Select2; skip Livewire morph --}}
+    <div wire:ignore>
 
     {{-- ── PRODUCTS TABLE ── --}}
     <div class="pos-table-wrap">
@@ -745,6 +768,8 @@
             Enregistrer
         </button>
     </div>
+
+    </div>{{-- /wire:ignore products + totals --}}
 
 </div>
 
