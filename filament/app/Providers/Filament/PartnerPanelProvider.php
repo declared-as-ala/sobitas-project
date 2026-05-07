@@ -6,6 +6,7 @@ use App\Filament\Pages\Auth\EditProfile;
 use App\Filament\Pages\Auth\Login;
 use App\Filament\Partner\Pages\PartnerDashboard;
 use App\Filament\Partner\Pages\PartnerProfilePage;
+use App\Filament\Partner\Widgets\PartnerBalanceWidget;
 use App\Filament\Partner\Resources\PartnerLedgerReadResource;
 use App\Filament\Partner\Resources\PartnerPaymentReadResource;
 use App\Filament\Partner\Resources\PartnerPromoCodeReadResource;
@@ -46,6 +47,9 @@ class PartnerPanelProvider extends PanelProvider
             ->pages([
                 PartnerDashboard::class,
                 PartnerProfilePage::class,
+            ])
+            ->widgets([
+                PartnerBalanceWidget::class,
             ])
             ->middleware([
                 EncryptCookies::class,
