@@ -264,8 +264,8 @@ export const HeroSlider = memo(function HeroSlider({ slides, mobileFirst, deskto
           </div>
         </div>
 
-        {/* Mobile trust card: lower and less intrusive */}
-        <div className="absolute inset-x-0 bottom-[4.2rem] z-[2] mx-auto hidden w-[82%] max-w-sm scale-100 sm:block lg:hidden">
+        {/* Mobile trust card: visible on phones with safe spacing */}
+        <div className="absolute inset-x-0 bottom-[4.4rem] z-[2] mx-auto w-[86%] max-w-sm scale-[0.96] sm:bottom-[4.2rem] sm:w-[82%] sm:scale-100 lg:hidden">
           <HeroTrustGuarantee layout="docked" />
         </div>
       </div>
