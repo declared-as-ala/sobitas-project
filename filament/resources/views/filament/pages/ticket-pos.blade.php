@@ -566,14 +566,16 @@
                                        placeholder="Ex: COACH10" autocomplete="off">
                             </div>
                             <div class="col-6 col-md-auto d-grid d-md-block">
-                                <button type="button" wire:click="applyPartnerCode"
-                                        class="btn btn-primary btn-sm w-100">
+                                <button type="button" id="btn-apply-partner-code"
+                                        class="btn btn-primary btn-sm w-100"
+                                        onclick="ticketPosApplyPartnerCode(event)">
                                     Appliquer
                                 </button>
                             </div>
                             <div class="col-6 col-md-auto d-grid d-md-block">
-                                <button type="button" wire:click="clearPartnerCode" wire:loading.attr="disabled"
-                                        class="btn btn-outline-secondary btn-sm w-100">
+                                <button type="button" id="btn-clear-partner-code"
+                                        class="btn btn-outline-secondary btn-sm w-100"
+                                        onclick="ticketPosClearPartnerCode(event)">
                                     Effacer
                                 </button>
                             </div>
@@ -1305,6 +1307,56 @@
         if (maxPts > 0 && maxPts < minRedeemPoints) maxPts = 0;
         redeemInput.value = maxPts;
         calculate();
+    }
+
+    /** Same line shape as prepareAndSave — keeps Livewire totals in sync with the DOM (wire:ignore table). */
+    function buildPosSnapshotForLivewire() {
+        var finalLines = [];
+        for (var i = 0; i < maxRows; i++) {
+            var row = document.getElementById('row-' + i);
+            if (row && row.style.display !== 'none') {
+                var pid = $('#select_produit' + i).val();
+                if (pid) {
+                    finalLines.push({
+                        produit_id: parseInt(String(pid), 10),
+                        qte: document.getElementById('qte' + i).value,
+                        prix_unitaire: document.getElementById('p_unitaire' + i).value,
+                        designation: ($('#select_produit' + i + ' option:selected').text().split('(')[0].trim() || '')
+                    });
+                }
+            }
+        }
+        return {
+            lines: finalLines,
+            remise: parseFloat(document.getElementById('m_remise').value) || 0,
+            pourcentage_remise: parseFloat(document.getElementById('pourcen_remise').value) || 0
+        };
+    }
+
+    function ticketPosApplyPartnerCode(e) {
+        if (e && e.preventDefault) e.preventDefault();
+        var btn = document.getElementById('btn-apply-partner-code');
+        if (btn) { btn.disabled = true; }
+        var snap = buildPosSnapshotForLivewire();
+        @this.call('syncPosTotalsFromClient', snap)
+            .then(function () { return @this.call('applyPartnerCode'); })
+            .finally(function () {
+                if (btn) { btn.disabled = false; }
+                calculate();
+            });
+    }
+
+    function ticketPosClearPartnerCode(e) {
+        if (e && e.preventDefault) e.preventDefault();
+        var btn = document.getElementById('btn-clear-partner-code');
+        if (btn) { btn.disabled = true; }
+        var snap = buildPosSnapshotForLivewire();
+        @this.call('syncPosTotalsFromClient', snap)
+            .then(function () { return @this.call('clearPartnerCode'); })
+            .finally(function () {
+                if (btn) { btn.disabled = false; }
+                calculate();
+            });
     }
 
     // Send the final state directly to Livewire

@@ -273,6 +273,32 @@ class TicketPosPage extends Page
     }
 
     /**
+     * Sync lines + remise from the POS table (inside wire:ignore) so server totals match the DOM.
+     * Called from JS before applyPartnerCode / clearPartnerCode; save() already receives the same payload.
+     */
+    public function syncPosTotalsFromClient(array $payload): void
+    {
+        $rawLines = $payload['lines'] ?? [];
+        $normalized = [];
+        if (is_array($rawLines)) {
+            foreach ($rawLines as $row) {
+                if (! is_array($row) || empty($row['produit_id'])) {
+                    continue;
+                }
+                $normalized[] = [
+                    'produit_id'    => (int) $row['produit_id'],
+                    'qte'           => (float) ($row['qte'] ?? 1),
+                    'prix_unitaire' => (float) ($row['prix_unitaire'] ?? 0),
+                    'designation'   => (string) ($row['designation'] ?? ''),
+                ];
+            }
+        }
+        $this->lines = $normalized;
+        $this->remise = (float) ($payload['remise'] ?? 0);
+        $this->pourcentage_remise = (float) ($payload['pourcentage_remise'] ?? 0);
+    }
+
+    /**
      * Called from POS JS when Select2 changes client (wire:ignore boundary).
      */
     public function syncClientFromPos(?int $clientId): array
