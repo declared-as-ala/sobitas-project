@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\ProductResource\Pages;
 
 use App\Filament\Resources\ProductResource;
-use App\Services\Media\ConvertUploadedImageToWebp;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Support\Facades\Schema;
@@ -96,14 +95,6 @@ class EditProduct extends EditRecord
             if (! self::hasProductColumn($column)) {
                 unset($data[$column]);
             }
-        }
-
-        $converter = app(ConvertUploadedImageToWebp::class);
-        if (! empty($data['cover'])) {
-            $data['cover'] = $converter->convertStoredPathToWebp((string) $data['cover']);
-        }
-        if (! empty($data['images']) && is_array($data['images'])) {
-            $data['images'] = $converter->convertStoredPathsToWebp($data['images']);
         }
 
         return $data;

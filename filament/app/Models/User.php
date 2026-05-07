@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\PartnerStatus;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -42,9 +43,58 @@ class User extends Authenticatable implements FilamentUser
         'password' => 'hashed',
     ];
 
+    public function partner(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Partner::class, 'user_id');
+    }
+
     public function canAccessPanel(Panel $panel): bool
     {
-        return in_array((int) ($this->role_id ?? 0), [1, 3], true);
+        if ($panel->getId() === 'admin') {
+            return in_array((int) ($this->role_id ?? 0), config('partners.admin_role_ids', [1, 3]), true);
+        }
+
+        if ($panel->getId() === 'partner') {
+            $partner = $this->partner()->first();
+
+            return $partner !== null
+                && $partner->status === PartnerStatus::Active
+                && (int) ($this->role_id ?? 0) === Partner::availableCommissionRoleId();
+        }
+
+        return false;
+    }
+
+    /**
+     * Invitation password setup mail targeting the `/partner` Filament panel.
+     */
+    public function sendPartnerInvitationResetNotification(string $token): void
+    {
+        $resetUrl = \Filament\Facades\Filament::getPanel('partner')
+            ->getResetPasswordUrl($token, $this);
+
+        $user     = $this;
+        $fromAddr = config('mail.from.address', 'bitoutawalid@gmail.com');
+        $fromName = config('mail.from.name', 'Sobitas');
+
+        Log::info('PartnerInviteReset: attempting send', [
+            'to' => $user->email,
+            'reset_url' => $resetUrl,
+        ]);
+
+        Mail::send([], [], function ($message) use ($user, $resetUrl, $fromAddr, $fromName) {
+            $message
+                ->to($user->email, $user->name)
+                ->from($fromAddr, $fromName)
+                ->subject('Invitation espace partenaire — Sobitas')
+                ->html(
+                    view('mail.password-reset', [
+                        'resetUrl' => $resetUrl,
+                        'user' => $user,
+                        'expiry' => config('auth.passwords.users.expire', 60),
+                    ])->render()
+                );
+        });
     }
 
     /**

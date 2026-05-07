@@ -230,7 +230,7 @@ class LoyaltyService
         Client $client,
         LoyaltyCard $card,
         int $pointsToRedeem,
-        float $baseAfterRegularDiscount
+        float $baseHtBeforeLoyaltyDiscount
     ): array {
         $lockedTicket = Ticket::query()
             ->whereKey($ticket->id)
@@ -254,7 +254,7 @@ class LoyaltyService
 
         // Redeem transaction
         if ($pointsToRedeem > 0) {
-            $validation = $this->validateRedemption($lockedClient, $pointsToRedeem, $baseAfterRegularDiscount);
+            $validation = $this->validateRedemption($lockedClient, $pointsToRedeem, $baseHtBeforeLoyaltyDiscount);
             if (!$validation['valid']) {
                 throw new \RuntimeException(implode(' ', $validation['errors']));
             }

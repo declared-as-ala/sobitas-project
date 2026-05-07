@@ -42,7 +42,8 @@ jobs:
             echo "Pulling latest code from GitHub..."
             git fetch origin main
             git reset --hard origin/main
-            git clean -fd
+            # Never purge uploaded assets from storage with git clean.
+            git clean -fd -e filament/storage/app/public/ -e backend/storage/app/public/
             
             # Copy/sync backend files to SOBITAS-FULL-PROJECT if needed
             # (Backend #1 runs from SOBITAS-FULL-PROJECT, but we'll deploy V2 from sobitas-project)

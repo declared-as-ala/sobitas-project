@@ -3,6 +3,7 @@
 use App\Providers\AppServiceProvider;
 use App\Providers\EventServiceProvider;
 use App\Providers\Filament\AdminPanelProvider;
+use App\Providers\Filament\PartnerPanelProvider;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Auth\AuthServiceProvider;
 use Illuminate\Auth\Passwords\PasswordResetServiceProvider;
@@ -246,6 +247,7 @@ return [
         App\Providers\BroadcastServiceProvider::class,
         EventServiceProvider::class,
         AdminPanelProvider::class,
+        PartnerPanelProvider::class,
         RouteServiceProvider::class,
 
     ],

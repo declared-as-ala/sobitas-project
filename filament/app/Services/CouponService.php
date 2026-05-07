@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\PartnerAppliesChannel;
 use App\Models\Coordinate;
 use App\Models\Coupon;
 use App\Models\CouponRedemption;
@@ -38,6 +39,16 @@ class CouponService
 
         if (! $coupon->is_active) {
             return ['valid' => false, 'message' => __('Ce code promo n\'est plus actif.'), 'coupon' => null];
+        }
+
+        if ($coupon->is_partner_code) {
+            $channel = $coupon->applies_channel instanceof PartnerAppliesChannel
+                ? $coupon->applies_channel
+                : (PartnerAppliesChannel::tryFrom((string) ($coupon->applies_channel ?? 'website')) ?? PartnerAppliesChannel::Website);
+
+            if (! $channel->allowsWebsite()) {
+                return ['valid' => false, 'message' => __('Ce code est réservé à la boutique.'), 'coupon' => null];
+            }
         }
 
         $now = Carbon::now();

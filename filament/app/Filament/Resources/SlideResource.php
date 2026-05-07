@@ -87,7 +87,7 @@ class SlideResource extends Resource
             ->columns([
                 Tables\Columns\ImageColumn::make('image')
                     ->label('Couverture')
-                    ->getStateUsing(fn ($record) => ImagePath::normalize($record->image))
+                    ->getStateUsing(fn ($record) => ImagePath::normalizeExisting($record->image))
                     ->disk('public')
                     ->height(60)
                     ->width(120)
@@ -120,6 +120,12 @@ class SlideResource extends Resource
                         $path = ImagePath::normalize($record->image);
                         if ($path && Storage::disk('public')->exists($path)) {
                             Storage::disk('public')->delete($path);
+                            \Log::info('media.manual_delete', [
+                                'context' => 'slide.delete',
+                                'disk' => 'public',
+                                'path' => $path,
+                                'record_id' => $record->id,
+                            ]);
                         }
                     }),
             ])
@@ -130,6 +136,12 @@ class SlideResource extends Resource
                             $path = ImagePath::normalize($record->image);
                             if ($path && Storage::disk('public')->exists($path)) {
                                 Storage::disk('public')->delete($path);
+                                \Log::info('media.manual_delete', [
+                                    'context' => 'slide.bulk_delete',
+                                    'disk' => 'public',
+                                    'path' => $path,
+                                    'record_id' => $record->id,
+                                ]);
                             }
                         }
                     }),

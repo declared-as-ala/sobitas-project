@@ -15,6 +15,7 @@
         // Must resolve here: assignments inside @include('print._logo') do not leak to this view.
         $logoUrl = \App\Support\PrintLogo::resolve($coordonnee ?? null);
         $loyaltyDiscount = (float) ($ticket->loyalty_discount_dt ?? 0);
+        $partnerDiscount = (float) ($ticket->partner_discount_amount ?? 0);
         $totalHt = (float) ($ticket->prix_ht ?? 0);
         $regularDiscount = (float) ($ticket->remise ?? 0);
         $netToPay = (float) ($ticket->prix_ttc ?? 0);
@@ -271,6 +272,13 @@
                                     {{ number_format((float) @$ticket->pourcentage_remise, 1, '.', '') }}</td>
                             </tr>
 
+                            @if($partnerDiscount > 0)
+                            <tr>
+                                <td>Remise partenaire @if($ticket->partner_code_snapshot)({{ $ticket->partner_code_snapshot }})@endif</td>
+                                <td></td>
+                                <td>-{{ number_format($partnerDiscount, 3, '.', '') }}</td>
+                            </tr>
+                            @endif
                             @if($loyaltyDiscount > 0)
                             <tr>
                                 <td>Remise fidélité</td>

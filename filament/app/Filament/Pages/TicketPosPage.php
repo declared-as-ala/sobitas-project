@@ -2,14 +2,17 @@
 
 namespace App\Filament\Pages;
 
+use App\Enums\PartnerStatus;
 use App\Models\Client;
 use App\Models\Coordinate;
+use App\Models\Coupon;
 use App\Models\DetailsTicket;
 use App\Models\LoyaltyCard;
 use App\Models\Product;
 use App\Models\Ticket;
 use App\Services\LoyaltyService;
 use App\Services\NumberSequenceService;
+use App\Services\PartnerCommissionService;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Page;
 use App\Filament\Resources\TicketResource;
@@ -58,6 +61,11 @@ class TicketPosPage extends Page
     public string  $loyalty_points_earn_dt = '0.000';
     public bool    $loyalty_panel_visible  = false;
 
+    /** Partner promo (boutique) — coupon row ID when applied */
+    public ?int $partner_coupon_id = null;
+
+    public string $partner_code_input = '';
+
     // ── Computed ────────────────────────────────────────────────────────────
     public ?Coordinate $coordonnee = null;
 
@@ -91,6 +99,9 @@ class TicketPosPage extends Page
                 'qte'           => (float) $d->qte,
                 'prix_unitaire' => (float) ($d->prix_unitaire ?? 0),
             ])->toArray();
+
+            $this->partner_coupon_id = $this->ticket->partner_code_id;
+            $this->partner_code_input = (string) ($this->ticket->partner_code_snapshot ?? '');
         }
 
         // Pre-load client when redirected from Scanner Fidélité page
@@ -104,11 +115,15 @@ class TicketPosPage extends Page
         if (empty($this->lines)) {
             $this->lines = [];
         }
+
+        $this->dispatchTotalsRecalc();
     }
 
     // ── Client change ────────────────────────────────────────────────────────
     public function updatedClientId($value): void
     {
+        $this->partner_coupon_id = null;
+        $this->partner_code_input = '';
         $this->clearLoyalty();
 
         if ($value && $client = Client::find($value)) {
@@ -185,7 +200,7 @@ class TicketPosPage extends Page
             $this->loyalty_redeem_input = $points;
         }
 
-        $maxFromTicket = (int) floor($totals['base_after_regular_discount'] * LoyaltyService::POINTS_PER_DT_VALUE);
+        $maxFromTicket = (int) floor($totals['base_after_partner'] * LoyaltyService::POINTS_PER_DT_VALUE);
         if ($points > $maxFromTicket) {
             $points = $maxFromTicket;
             $this->loyalty_redeem_input = $points;
@@ -206,7 +221,7 @@ class TicketPosPage extends Page
         $svc            = app(LoyaltyService::class);
         $totals         = $this->computeTicketTotals();
         $maxFromBalance = $this->loyalty_balance;
-        $maxFromTicket  = (int) floor($totals['base_after_regular_discount'] * LoyaltyService::POINTS_PER_DT_VALUE);
+        $maxFromTicket  = (int) floor($totals['base_after_partner'] * LoyaltyService::POINTS_PER_DT_VALUE);
         $max            = min($maxFromBalance, $maxFromTicket);
         if ($max > 0 && $max < LoyaltyService::MIN_REDEEM_POINTS) {
             $max = 0;
@@ -238,6 +253,7 @@ class TicketPosPage extends Page
     protected function dispatchTotalsRecalc(): void
     {
         $this->dispatch('loyalty-totals-recalc');
+        $this->dispatchPartnerTotalsJs();
     }
 
     /** Payload for JS inside wire:ignore (avoid relying on Livewire.on alone). */
@@ -261,6 +277,8 @@ class TicketPosPage extends Page
      */
     public function syncClientFromPos(?int $clientId): array
     {
+        $this->partner_coupon_id = null;
+        $this->partner_code_input = '';
         $this->clearLoyalty();
 
         $this->client_id = null;
@@ -279,6 +297,88 @@ class TicketPosPage extends Page
         $this->dispatchTotalsRecalc();
 
         return $this->loyaltyUiSnapshot();
+    }
+
+    public function applyPartnerCode(): void
+    {
+        if ($this->ticket && $this->ticket->partner_commission_processed_at) {
+            Notification::make()
+                ->title('La commission est déjà verrouillée pour ce ticket.')
+                ->warning()
+                ->send();
+
+            return;
+        }
+
+        $code = trim($this->partner_code_input);
+        if ($code === '') {
+            $this->partner_coupon_id = null;
+            $this->dispatchTotalsRecalc();
+
+            return;
+        }
+
+        $svc = app(PartnerCommissionService::class);
+        $draftTotals = $this->computeTicketTotals(withoutPartnerDiscount: true);
+
+        $val = $svc->validatePartnerCodeForTicket(
+            $code,
+            $draftTotals['base_after_regular_discount'],
+            $this->client_id,
+            $this->client_phone,
+            null
+        );
+
+        if (! $val['valid']) {
+            $this->partner_coupon_id = null;
+            Notification::make()
+                ->title($val['message'])
+                ->danger()
+                ->send();
+            $this->dispatchTotalsRecalc();
+
+            return;
+        }
+
+        $this->partner_coupon_id = $val['coupon']->id;
+        $this->partner_code_input = strtoupper(trim($code));
+
+        Notification::make()
+            ->title('Code partenaire appliqué')
+            ->success()
+            ->send();
+
+        $this->recalcLoyaltyEarn();
+        $this->dispatchTotalsRecalc();
+    }
+
+    public function clearPartnerCode(): void
+    {
+        $this->partner_coupon_id = null;
+        $this->partner_code_input = '';
+        $this->recalcLoyaltyEarn();
+        $this->dispatchTotalsRecalc();
+    }
+
+    protected function dispatchPartnerTotalsJs(): void
+    {
+        $t = $this->computeTicketTotals();
+        $estimate = 0.0;
+        $rate = 0.0;
+        if ($this->partner_coupon_id) {
+            $coupon = Coupon::query()->with('partner')->find($this->partner_coupon_id);
+            if ($coupon && $coupon->partner) {
+                $p = app(PartnerCommissionService::class)->previewFromTotals($coupon, $coupon->partner, $t);
+                $estimate = $p['commission_amount'];
+                $rate = $p['rate'];
+            }
+        }
+
+        $this->dispatch('pos-partner-updated', [
+            'partner_discount' => $t['partner_discount'],
+            'commission_estimate' => $estimate,
+            'commission_rate' => $rate,
+        ]);
     }
 
     // ── Public entry point for loyalty barcode scan from JS ──────────────────
@@ -414,9 +514,42 @@ class TicketPosPage extends Page
         $totals = $this->computeTicketTotals();
         $total = $totals['total_ht'];
         $remiseAmount = $totals['regular_discount'];
-        $loyaltyDiscount = $totals['loyalty_discount'];
         $net = $totals['final_paid_amount'];
         $this->prix_ttc = $net;
+
+        $existingTicket = $this->ticketId ? Ticket::find($this->ticketId) : null;
+        $partnerCommissionFrozen = $existingTicket?->partner_commission_processed_at !== null;
+
+        $partnerSvc = app(PartnerCommissionService::class);
+
+        if ($this->partner_coupon_id && ! $partnerCommissionFrozen) {
+            $coupon = Coupon::query()->with('partner')->find($this->partner_coupon_id);
+            if (! $coupon || ! $coupon->is_partner_code) {
+                Notification::make()
+                    ->title('Code partenaire invalide.')
+                    ->danger()
+                    ->send();
+
+                return null;
+            }
+
+            $val = $partnerSvc->validatePartnerCodeForTicket(
+                $coupon->code,
+                $totals['base_after_regular_discount'],
+                $this->client_id,
+                $this->client_phone,
+                null
+            );
+
+            if (! $val['valid']) {
+                Notification::make()
+                    ->title($val['message'])
+                    ->danger()
+                    ->send();
+
+                return null;
+            }
+        }
 
         $data = [
             'type'               => Ticket::TYPE_TICKET_CAISSE,
@@ -426,6 +559,34 @@ class TicketPosPage extends Page
             'prix_ht'            => $total,
             'prix_ttc'           => $net,
         ];
+
+        if ($partnerCommissionFrozen && $existingTicket) {
+            $data['partner_id'] = $existingTicket->partner_id;
+            $data['partner_code_id'] = $existingTicket->partner_code_id;
+            $data['partner_code_snapshot'] = $existingTicket->partner_code_snapshot;
+            $data['partner_discount_amount'] = $existingTicket->partner_discount_amount;
+            $data['partner_commission_base'] = $existingTicket->partner_commission_base;
+            $data['partner_commission_rate'] = $existingTicket->partner_commission_rate;
+            $data['partner_commission_amount'] = $existingTicket->partner_commission_amount;
+        } elseif ($this->partner_coupon_id) {
+            $coupon = Coupon::query()->with('partner')->findOrFail($this->partner_coupon_id);
+            $preview = $partnerSvc->previewFromTotals($coupon, $coupon->partner, $totals);
+            $data['partner_id'] = $coupon->partner_id;
+            $data['partner_code_id'] = $coupon->id;
+            $data['partner_code_snapshot'] = strtoupper(trim((string) $coupon->code));
+            $data['partner_discount_amount'] = $preview['discount_ht'];
+            $data['partner_commission_base'] = $preview['commission_base'];
+            $data['partner_commission_rate'] = $preview['rate'];
+            $data['partner_commission_amount'] = $preview['commission_amount'];
+        } else {
+            $data['partner_id'] = null;
+            $data['partner_code_id'] = null;
+            $data['partner_code_snapshot'] = null;
+            $data['partner_discount_amount'] = 0;
+            $data['partner_commission_base'] = 0;
+            $data['partner_commission_rate'] = 0;
+            $data['partner_commission_amount'] = 0;
+        }
 
         try {
             \Illuminate\Support\Facades\DB::transaction(function () use ($data, $totals) {
@@ -472,10 +633,13 @@ class TicketPosPage extends Page
                             $loyaltyClient,
                             $loyaltyCard,
                             (int) $this->loyalty_redeem_input,
-                            (float) $totals['base_after_regular_discount']
+                            (float) $totals['base_after_partner']
                         );
                     }
                 }
+
+                $ticket->refresh();
+                app(PartnerCommissionService::class)->processTicketCommission($ticket);
             });
         } catch (\Throwable $e) {
             Notification::make()
@@ -506,7 +670,7 @@ class TicketPosPage extends Page
         return route('filament.admin.resources.tickets.pos', $parameters, $isAbsolute);
     }
 
-    protected function computeTicketTotals(): array
+    public function computeTicketTotals(bool $withoutPartnerDiscount = false): array
     {
         $total = 0.0;
         foreach ($this->lines as $line) {
@@ -522,13 +686,29 @@ class TicketPosPage extends Page
         $regularDiscount = min($regularDiscount, $total);
         $baseAfterRegularDiscount = max(0.0, $total - $regularDiscount);
 
+        $partnerDiscount = 0.0;
+        $effectivePartnerCouponId = $withoutPartnerDiscount ? null : $this->partner_coupon_id;
+
+        if ($effectivePartnerCouponId) {
+            $coupon = Coupon::query()->with('partner')->find($effectivePartnerCouponId);
+            if (
+                $coupon && $coupon->is_partner_code && $coupon->partner
+                && $coupon->partner->status === PartnerStatus::Active
+            ) {
+                $partnerDiscount = app(PartnerCommissionService::class)
+                    ->computePartnerDiscountHt($coupon, $baseAfterRegularDiscount);
+            }
+        }
+
+        $baseAfterPartner = max(0.0, $baseAfterRegularDiscount - $partnerDiscount);
+
         $pointsToRedeem = max(0, (int) $this->loyalty_redeem_input);
         if ($pointsToRedeem > $this->loyalty_balance) {
             $pointsToRedeem = $this->loyalty_balance;
             $this->loyalty_redeem_input = $pointsToRedeem;
         }
 
-        $maxFromTicket = (int) floor($baseAfterRegularDiscount * LoyaltyService::POINTS_PER_DT_VALUE);
+        $maxFromTicket = (int) floor($baseAfterPartner * LoyaltyService::POINTS_PER_DT_VALUE);
         if ($pointsToRedeem > $maxFromTicket) {
             $pointsToRedeem = $maxFromTicket;
             $this->loyalty_redeem_input = $pointsToRedeem;
@@ -541,7 +721,7 @@ class TicketPosPage extends Page
         $loyaltyDiscount = $this->loyalty_card_id
             ? app(LoyaltyService::class)->pointsToDiscount($pointsToRedeem)
             : 0.0;
-        $loyaltyDiscount = min($loyaltyDiscount, $baseAfterRegularDiscount);
+        $loyaltyDiscount = min($loyaltyDiscount, $baseAfterPartner);
 
         return [
             'total_ht' => $total,
@@ -549,8 +729,10 @@ class TicketPosPage extends Page
             'manual_discount' => $manualDiscount,
             'percent_discount' => $percentDiscount,
             'base_after_regular_discount' => $baseAfterRegularDiscount,
+            'partner_discount' => $partnerDiscount,
+            'base_after_partner' => $baseAfterPartner,
             'loyalty_discount' => $loyaltyDiscount,
-            'final_paid_amount' => max(0.0, $baseAfterRegularDiscount - $loyaltyDiscount),
+            'final_paid_amount' => max(0.0, $baseAfterPartner - $loyaltyDiscount),
         ];
     }
 }

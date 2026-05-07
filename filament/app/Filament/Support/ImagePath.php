@@ -2,6 +2,8 @@
 
 namespace App\Filament\Support;
 
+use Illuminate\Support\Facades\Storage;
+
 /**
  * Normalizes image path values stored by Voyager or Filament.
  *
@@ -19,6 +21,8 @@ namespace App\Filament\Support;
  */
 class ImagePath
 {
+    public const FALLBACK_PLACEHOLDER = 'placeholders/missing-media.svg';
+
     public static function normalize(?string $value): ?string
     {
         if (! $value || trim($value) === '') {
@@ -59,5 +63,29 @@ class ImagePath
         return array_values(array_filter(
             array_map(fn ($v) => self::normalize($v), $values)
         ));
+    }
+
+    /**
+     * Normalize path and return a fallback placeholder when file is missing.
+     */
+    public static function normalizeExisting(
+        ?string $value,
+        string $disk = 'public',
+        ?string $fallback = self::FALLBACK_PLACEHOLDER
+    ): ?string {
+        $path = self::normalize($value);
+        if (! $path) {
+            return $fallback;
+        }
+
+        try {
+            if (Storage::disk($disk)->exists($path)) {
+                return $path;
+            }
+        } catch (\Throwable) {
+            return $fallback;
+        }
+
+        return $fallback;
     }
 }

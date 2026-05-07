@@ -3,6 +3,7 @@
 namespace App\Services\Media;
 
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
@@ -49,10 +50,31 @@ class ConvertUploadedImageToWebp
             $newRelative = ($dir !== '.' && $dir !== '') ? $dir.'/'.$newBase : $newBase;
 
             $disk->put($newRelative, $encoded);
-            $disk->delete($relativePath);
+            try {
+                $disk->delete($relativePath);
+            } catch (Throwable $e) {
+                Log::warning('media.webp.delete_original_failed', [
+                    'disk' => $diskName,
+                    'old_path' => $relativePath,
+                    'new_path' => $newRelative,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
+            Log::info('media.webp.converted', [
+                'disk' => $diskName,
+                'old_path' => $relativePath,
+                'new_path' => $newRelative,
+                'quality' => $this->quality,
+            ]);
 
             return $newRelative;
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            Log::warning('media.webp.conversion_failed', [
+                'disk' => $diskName,
+                'path' => $relativePath,
+                'error' => $e->getMessage(),
+            ]);
             return $relativePath;
         }
     }

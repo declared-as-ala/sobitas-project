@@ -474,7 +474,7 @@ class ArticleResource extends Resource
         $columns = [
             Tables\Columns\ImageColumn::make('cover')
                 ->label('Image')
-                ->getStateUsing(fn ($record) => ImagePath::normalize($record->cover))
+                ->getStateUsing(fn ($record) => ImagePath::normalizeExisting($record->cover))
                 ->disk('public')
                 ->circular()
                 ->height(48)

@@ -94,7 +94,7 @@ class CategResource extends Resource
             ->columns([
                 Tables\Columns\ImageColumn::make('cover')
                     ->label('Image')
-                    ->getStateUsing(fn ($record) => ImagePath::normalize($record->cover))
+                    ->getStateUsing(fn ($record) => ImagePath::normalizeExisting($record->cover))
                     ->disk('public')
                     ->size(80)
                     ->height(60)
@@ -123,6 +123,12 @@ class CategResource extends Resource
                         $path = \App\Filament\Support\ImagePath::normalize($record->cover);
                         if ($path && Storage::disk('public')->exists($path)) {
                             Storage::disk('public')->delete($path);
+                            \Log::info('media.manual_delete', [
+                                'context' => 'categ.delete',
+                                'disk' => 'public',
+                                'path' => $path,
+                                'record_id' => $record->id,
+                            ]);
                         }
                     }),
             ])
@@ -133,6 +139,12 @@ class CategResource extends Resource
                             $path = \App\Filament\Support\ImagePath::normalize($record->cover);
                             if ($path && Storage::disk('public')->exists($path)) {
                                 Storage::disk('public')->delete($path);
+                                \Log::info('media.manual_delete', [
+                                    'context' => 'categ.bulk_delete',
+                                    'disk' => 'public',
+                                    'path' => $path,
+                                    'record_id' => $record->id,
+                                ]);
                             }
                         }
                     }),

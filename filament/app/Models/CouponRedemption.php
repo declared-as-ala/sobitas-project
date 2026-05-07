@@ -10,7 +10,7 @@ class CouponRedemption extends Model
     protected $table = 'coupon_redemptions';
 
     protected $fillable = [
-        'coupon_id', 'order_id', 'client_id',
+        'coupon_id', 'order_id', 'ticket_id', 'client_id',
         'phone_snapshot', 'email_snapshot',
         'discount_amount_ht', 'discount_amount_ttc',
     ];
@@ -28,6 +28,11 @@ class CouponRedemption extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Commande::class, 'order_id');
+    }
+
+    public function ticket(): BelongsTo
+    {
+        return $this->belongsTo(Ticket::class, 'ticket_id');
     }
 
     public function client(): BelongsTo

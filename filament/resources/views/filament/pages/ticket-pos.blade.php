@@ -449,6 +449,41 @@
 }
 </style>
 
+<div class="rounded-xl border border-slate-200 bg-slate-50 p-4 mb-4 max-w-4xl">
+    <div class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">Code partenaire (boutique)</div>
+    @if($ticket && $ticket->partner_commission_processed_at)
+        <p class="text-sm text-slate-700">
+            Verrouillé — code <strong>{{ $ticket->partner_code_snapshot ?? '—' }}</strong>
+            @if((float)($ticket->partner_discount_amount ?? 0) > 0)
+                · remise {{ number_format((float)$ticket->partner_discount_amount, 3, '.', ' ') }} DT
+            @endif
+        </p>
+        <p class="text-xs text-slate-500 mt-1">La commission ne peut plus être modifiée depuis le POS.</p>
+    @else
+        <div class="flex flex-wrap gap-2 items-end">
+            <div class="grow min-w-[200px]">
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Code</label>
+                <input type="text" wire:model.live.debounce.400ms="partner_code_input"
+                       class="fi-input block w-full rounded-lg border-slate-300 text-sm shadow-sm"
+                       placeholder="Ex: COACH10" autocomplete="off">
+            </div>
+            <button type="button" wire:click="applyPartnerCode"
+                    class="fi-btn fi-btn-color-primary fi-btn-size-md inline-flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold text-white bg-orange-500 hover:bg-orange-600">
+                Appliquer
+            </button>
+            <button type="button" wire:click="clearPartnerCode" wire:loading.attr="disabled"
+                    class="fi-btn fi-btn-size-md inline-flex items-center rounded-lg px-4 py-2 text-sm font-semibold border border-slate-300 text-slate-700 hover:bg-white">
+                Effacer
+            </button>
+        </div>
+        <p class="text-xs text-slate-600 mt-3">
+            Commission estimée (interne, non imprimée) :
+            <strong><span id="pos-partner-commission-est">0.000</span> DT</strong>
+            <span class="text-slate-400">(<span id="pos-partner-commission-rate">0</span>%)</span>
+        </p>
+    @endif
+</div>
+
 <div class="pos-wrap" id="pos-ticket-root" wire:ignore>
 
     {{-- ── PRINT BUTTON (edit mode only) ── --}}
@@ -682,6 +717,12 @@
                     <input type="number" id="pourcen_remise" step="0.1" min="0" max="100" value="{{ $pourcentage_remise }}" onkeyup="calculate('pourcen_remise')" onchange="calculate('pourcen_remise')">
                 </div>
             </div>
+            <div class="pos-tot-row" id="partner-discount-row" style="display:none;">
+                <div class="pos-tot-label" style="color:#0369a1;">Remise partenaire</div>
+                <div class="pos-tot-value" style="color:#0369a1;">
+                    − <span id="partner-discount-display">0.000</span> DT
+                </div>
+            </div>
             {{-- Loyalty discount row — only shown when panel is visible --}}
             <div class="pos-tot-row" id="loyalty-discount-row" style="{{ $loyalty_panel_visible && $loyalty_redeem_input > 0 ? '' : 'display:none;' }}">
                 <div class="pos-tot-label" style="color:#dc2626;">Remise fidélité</div>
@@ -715,6 +756,7 @@
     const minRedeemPoints = {{ \App\Services\LoyaltyService::MIN_REDEEM_POINTS }};
     const produits = @json(json_decode($productsJson)); // Array of products for barcode
     let visibleRows = {{ count($startLines) }};
+    window.partnerDiscountHt = window.partnerDiscountHt || 0;
     const loyaltyState = {
         panelVisible: {{ $loyalty_panel_visible ? 'true' : 'false' }},
         balance: {{ (int) $loyalty_balance }},
@@ -1135,10 +1177,13 @@
         var totale_remise = parseFloat(m_remise.value) || 0;
         totale_remise = Math.min(totale_remise, m_totale_ht);
         var base_after_regular_discount = Math.max(0, m_totale_ht - totale_remise);
+        var pdRaw = typeof window.partnerDiscountHt !== 'undefined' ? window.partnerDiscountHt : 0;
+        var partner_discount = Math.min(Math.max(0, parseFloat(pdRaw) || 0), base_after_regular_discount);
+        var base_after_partner = Math.max(0, base_after_regular_discount - partner_discount);
         var redeemInput = document.getElementById('loyalty_redeem_input');
         var rawPoints = parseInt(redeemInput?.value || 0, 10);
         if (Number.isNaN(rawPoints)) rawPoints = 0;
-        var maxFromTicket = Math.floor(base_after_regular_discount * pointsPerDtValue);
+        var maxFromTicket = Math.floor(base_after_partner * pointsPerDtValue);
         var maxFromBalance = loyaltyState.balance || 0;
         var redeemPoints = Math.max(0, Math.min(rawPoints, maxFromBalance, maxFromTicket));
         // Do not stomp the field while the user is typing (partial numbers / empty).
@@ -1148,13 +1193,26 @@
         }
 
         var loyalty_discount = redeemPoints / pointsPerDtValue;
-        var m_totale_ttc = Math.max(0, base_after_regular_discount - loyalty_discount);
+        loyalty_discount = Math.min(loyalty_discount, base_after_partner);
+        var m_totale_ttc = Math.max(0, base_after_partner - loyalty_discount);
 
         document.getElementById('p_ht').value = m_totale_ht.toFixed(3);
         document.getElementById('apres_remise').value = m_totale_ttc.toFixed(3);
 
+        var pRow = document.getElementById('partner-discount-row');
+        var pDisc = document.getElementById('partner-discount-display');
+        if (pRow && pDisc) {
+            if (partner_discount > 0.0005) {
+                pRow.style.display = '';
+                pDisc.textContent = partner_discount.toFixed(3);
+            } else {
+                pRow.style.display = 'none';
+                pDisc.textContent = '0.000';
+            }
+        }
+
         // Update loyalty earn preview
-        var earnPts = Math.floor(m_totale_ttc * pointsPerDt);
+        var earnPts = Math.floor(Math.max(0, base_after_partner - loyalty_discount) * pointsPerDt);
         var earnEl  = document.getElementById('lp-earn');
         var earnDtEl = document.getElementById('lp-earn-dt');
         if (earnEl)   earnEl.textContent   = earnPts;
@@ -1181,7 +1239,9 @@
         var regularDiscount = parseFloat(document.getElementById('m_remise')?.value || 0) || 0;
         regularDiscount = Math.min(regularDiscount, total);
         var baseAfterRegularDiscount = Math.max(0, total - regularDiscount);
-        var maxFromTicket = Math.floor(baseAfterRegularDiscount * pointsPerDtValue);
+        var pd = typeof window.partnerDiscountHt !== 'undefined' ? Math.min(Math.max(0, parseFloat(window.partnerDiscountHt) || 0), baseAfterRegularDiscount) : 0;
+        var baseAfterPartner = Math.max(0, baseAfterRegularDiscount - pd);
+        var maxFromTicket = Math.floor(baseAfterPartner * pointsPerDtValue);
         var maxFromBalance = loyaltyState.balance || 0;
         pts = Math.max(0, Math.min(pts, maxFromBalance, maxFromTicket));
 
@@ -1213,7 +1273,9 @@
         var regularDiscount = parseFloat(document.getElementById('m_remise')?.value || 0) || 0;
         regularDiscount = Math.min(regularDiscount, total);
         var baseAfterRegularDiscount = Math.max(0, total - regularDiscount);
-        var maxFromTicket = Math.floor(baseAfterRegularDiscount * pointsPerDtValue);
+        var pd = typeof window.partnerDiscountHt !== 'undefined' ? Math.min(Math.max(0, parseFloat(window.partnerDiscountHt) || 0), baseAfterRegularDiscount) : 0;
+        var baseAfterPartner = Math.max(0, baseAfterRegularDiscount - pd);
+        var maxFromTicket = Math.floor(baseAfterPartner * pointsPerDtValue);
         var maxPts = Math.max(0, Math.min(loyaltyState.balance || 0, maxFromTicket));
         if (maxPts > 0 && maxPts < minRedeemPoints) maxPts = 0;
         redeemInput.value = maxPts;
@@ -1343,6 +1405,17 @@
         });
 
         Livewire.on('loyalty-totals-recalc', function () {
+            calculate();
+        });
+
+        Livewire.on('pos-partner-updated', function (payload) {
+            var raw = Array.isArray(payload) ? payload[0] : payload;
+            if (!raw || typeof raw !== 'object') return;
+            window.partnerDiscountHt = parseFloat(raw.partner_discount) || 0;
+            var ce = document.getElementById('pos-partner-commission-est');
+            var cr = document.getElementById('pos-partner-commission-rate');
+            if (ce) ce.textContent = (parseFloat(raw.commission_estimate) || 0).toFixed(3);
+            if (cr) cr.textContent = String(parseFloat(raw.commission_rate) || 0);
             calculate();
         });
 
