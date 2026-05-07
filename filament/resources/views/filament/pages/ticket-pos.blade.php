@@ -433,12 +433,173 @@
     .pos-totals-wrap { justify-content: stretch; }
 }
 
-/* Loyalty panel: always reserve space; stays visible while scrolling ticket lines */
-#loyalty-panel.pos-loyalty-sticky-wrap {
+/* Avantages boutique — fidélité + code partenaire (pile verticale) */
+#loyalty-panel.pos-rewards-stack.pos-loyalty-sticky-wrap {
     position: sticky;
     top: 4.75rem;
     z-index: 25;
     margin-bottom: 16px;
+    font-size: 14px;
+}
+.pos-rewards-stack-shell {
+    background: linear-gradient(180deg, #fffbeb 0%, #fef3c7 8%, #fffbeb 100%);
+    border: 1.5px solid #fbbf24;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 14px rgba(245, 158, 11, 0.12);
+}
+.pos-rewards-stack-ribbon {
+    background: linear-gradient(90deg, #d97706 0%, #f59e0b 50%, #d97706 100%);
+    color: #fff;
+    font-weight: 800;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-align: center;
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.25);
+}
+.pos-rewards-section {
+    padding: 0;
+}
+.pos-rewards-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 14px;
+    background: rgba(254, 243, 199, 0.85);
+    border-bottom: 1px solid #fde68a;
+}
+.pos-rewards-section-head .pos-rewards-label {
+    font-weight: 800;
+    font-size: 13px;
+    color: #78350f;
+}
+.pos-rewards-badge-card {
+    font-family: ui-monospace, 'Courier New', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    color: #92400e;
+    background: #fff;
+    padding: 4px 12px;
+    border-radius: 6px;
+    border: 1px solid #fde047;
+    letter-spacing: 0.06em;
+}
+.pos-rewards-divider {
+    height: 0;
+    margin: 0;
+    border: none;
+    border-top: 2px dashed rgba(217, 119, 6, 0.35);
+    background: transparent;
+}
+.pos-rewards-section--partner {
+    background: #fffef7;
+    border-top: none;
+}
+.pos-rewards-section--partner .pos-rewards-section-head {
+    background: rgba(255, 247, 237, 0.95);
+    border-bottom: 1px solid #fed7aa;
+}
+.pos-rewards-section--partner .pos-rewards-label {
+    color: #9a3412;
+}
+.pos-partner-form {
+    padding: 14px 14px 16px;
+}
+.pos-partner-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: flex-end;
+}
+.pos-partner-field {
+    flex: 1 1 200px;
+    min-width: 180px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.pos-partner-field label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #78716c;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.pos-partner-input {
+    width: 100%;
+    border: 1px solid #d6d3d1;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 14px;
+    background: #fff;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+.pos-partner-input:focus {
+    outline: none;
+    border-color: #f97316;
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2);
+}
+.pos-partner-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.pos-btn-partner-go {
+    appearance: none;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 18px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    background: #ea580c;
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(234, 88, 12, 0.35);
+    transition: background 0.15s, transform 0.1s;
+}
+.pos-btn-partner-go:hover {
+    background: #c2410c;
+}
+.pos-btn-partner-go:active {
+    transform: translateY(1px);
+}
+.pos-btn-partner-muted {
+    appearance: none;
+    border: 1px solid #d6d3d1;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    background: #fff;
+    color: #57534e;
+}
+.pos-btn-partner-muted:hover {
+    background: #f5f5f4;
+    border-color: #a8a29e;
+}
+.pos-partner-note {
+    margin: 12px 0 0;
+    font-size: 12px;
+    color: #78716c;
+}
+.pos-partner-locked {
+    margin: 0;
+    padding: 12px 14px;
+    background: #f5f5f4;
+    border: 1px solid #e7e5e4;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #44403c;
+}
+.pos-partner-locked .muted {
+    font-size: 12px;
+    color: #78716c;
+    margin-top: 6px;
 }
 #loyalty-panel .loyalty-placeholder {
     padding: 14px 16px;
@@ -446,12 +607,8 @@
     color: #78716c;
     font-weight: 600;
     text-align: center;
-    border-top: 1px solid #fde047;
+    border-top: none;
 }
-
-/* Limit Bootstrap reboot conflicts with Filament outside loyalty panel */
-#loyalty-panel.ticket-pos-loyalty-bs { font-size: 14px; }
-#loyalty-panel.ticket-pos-loyalty-bs .card { --bs-card-spacer-y: 0.75rem; --bs-card-spacer-x: 0.75rem; }
 </style>
 
 <div class="pos-wrap" id="pos-ticket-root">
@@ -530,57 +687,109 @@
     </div>
     </div>{{-- /wire:ignore client + barcode --}}
 
-    {{-- ── LOYALTY PANEL (+ code partenaire Bootstrap) — sticky on scroll ── --}}
-    <div id="loyalty-panel" class="pos-loyalty-sticky-wrap ticket-pos-loyalty-bs">
-        <div style="background:#fef9c3;border:1.5px solid #fde047;border-radius:10px;overflow:hidden;">
+    {{-- Fidélité + code partenaire — un seul bloc visuel, empilés (fidélité puis partenaire) --}}
+    <div id="loyalty-panel" class="pos-loyalty-sticky-wrap pos-rewards-stack">
+        <div class="pos-rewards-stack-shell">
+            <div class="pos-rewards-stack-ribbon">Fidélité &amp; partenaire boutique</div>
 
-            {{-- Header --}}
-            <div style="background:#fef08a;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #fde047;flex-wrap:wrap;gap:8px;">
-                <span style="font-weight:700;color:#713f12;font-size:14px;">🎴 Programme Fidélité</span>
-                <span id="lp-card-number" style="font-family:'Courier New',monospace;font-size:13px;color:#92400e;background:#fff;padding:3px 10px;border-radius:5px;border:1px solid #fde047;letter-spacing:1px;">
-                    {{ $loyalty_card_number ?? '—' }}
-                </span>
-            </div>
+            {{-- 1. Programme fidélité --}}
+            <div class="pos-rewards-section pos-rewards-section--loyalty">
+                <div class="pos-rewards-section-head">
+                    <span class="pos-rewards-label">🎴 Programme fidélité</span>
+                    <span id="lp-card-number" class="pos-rewards-badge-card">{{ $loyalty_card_number ?? '—' }}</span>
+                </div>
 
-            {{-- Code partenaire (boutique) — sous l’en-tête fidélité, style Bootstrap --}}
-            <div class="card border-0 rounded-0 border-top border-warning bg-white shadow-sm mb-0">
-                <div class="card-body py-3 px-3">
-                    <h6 class="text-uppercase text-muted small fw-bold mb-3" style="letter-spacing:0.04em;">Code partenaire (boutique)</h6>
+                <div wire:ignore>
+                <div id="loyalty-panel-placeholder" class="loyalty-placeholder" style="{{ $loyalty_panel_visible ? 'display:none;' : '' }}">
+                    Sélectionnez un client titulaire d’une carte active pour afficher le solde et utiliser des points.
+                </div>
+
+                <div id="loyalty-panel-active" class="loyalty-panel-active" style="{{ $loyalty_panel_visible ? '' : 'display:none;' }}">
+
+                {{-- Stats row --}}
+                <div style="padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div style="background:#fff;border:1px solid #fde047;border-radius:8px;padding:10px 14px;text-align:center;">
+                        <div style="font-size:10px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Solde disponible</div>
+                        <div style="font-size:24px;font-weight:900;color:#713f12;line-height:1.1;">
+                            <span id="lp-balance">{{ $loyalty_balance }}</span>
+                            <span style="font-size:13px;font-weight:600;"> pts</span>
+                        </div>
+                        <div style="font-size:12px;color:#b45309;margin-top:2px;">= <span id="lp-balance-dt">{{ $loyalty_balance_dt }}</span> DT</div>
+                    </div>
+                    <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 14px;text-align:center;">
+                        <div style="font-size:10px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Points à gagner</div>
+                        <div style="font-size:24px;font-weight:900;color:#15803d;line-height:1.1;">
+                            +<span id="lp-earn">{{ $loyalty_points_earn }}</span>
+                            <span style="font-size:13px;font-weight:600;"> pts</span>
+                        </div>
+                        <div style="font-size:12px;color:#16a34a;margin-top:2px;">= +<span id="lp-earn-dt">{{ $loyalty_points_earn_dt }}</span> DT</div>
+                    </div>
+                </div>
+
+                {{-- Redeem row --}}
+                <div style="padding:0 16px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+                    <span style="font-size:12px;font-weight:600;color:#78716c;white-space:nowrap;">Utiliser des pts (min 100) :</span>
+                    <input type="number"
+                           id="loyalty_redeem_input"
+                           min="0"
+                           step="10"
+                           value="{{ $loyalty_redeem_input }}"
+                           autocomplete="off"
+                           style="width:90px;border:1px solid #d6d3d1;border-radius:6px;padding:5px 8px;font-size:14px;"
+                           oninput="syncLoyaltyRedeem(this.value)"
+                           onblur="finalizeLoyaltyRedeemInput()" {{ $loyalty_panel_visible ? '' : 'disabled' }} />
+                    <button type="button"
+                            id="btn-loyalty-max"
+                            onclick="setMaxLoyaltyRedeem()"
+                            style="background:#f59e0b;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;"
+                            {{ $loyalty_panel_visible ? '' : 'disabled' }}>
+                        Max
+                    </button>
+                    <span style="font-size:13px;color:#dc2626;font-weight:600;">
+                        − <span id="lp-redeem-dt">{{ $loyalty_redeem_dt }}</span> DT
+                    </span>
+                </div>
+
+                <input type="hidden" id="loyalty_card_id_input" value="{{ $loyalty_card_id }}">
+                </div>{{-- /loyalty-panel-active --}}
+                </div>{{-- /wire:ignore loyalty body --}}
+            </div>{{-- /pos-rewards-section--loyalty --}}
+
+            <hr class="pos-rewards-divider" aria-hidden="true">
+
+            {{-- 2. Code promo partenaire — sous le programme fidélité --}}
+            <div class="pos-rewards-section pos-rewards-section--partner">
+                <div class="pos-rewards-section-head">
+                    <span class="pos-rewards-label">🤝 Code promo partenaire (boutique)</span>
+                </div>
+                <div class="pos-partner-form">
                     @if($ticket && $ticket->partner_commission_processed_at)
-                        <div class="alert alert-secondary py-2 mb-0" role="status">
-                            <p class="small mb-1">
-                                <strong>Verrouillé</strong> — code <span class="font-monospace fw-semibold">{{ $ticket->partner_code_snapshot ?? '—' }}</span>
-                                @if((float)($ticket->partner_discount_amount ?? 0) > 0)
-                                    <span class="text-nowrap">· remise {{ number_format((float)$ticket->partner_discount_amount, 3, '.', ' ') }} DT</span>
-                                @endif
-                            </p>
-                            <p class="mb-0 small text-muted mt-1">La commission ne peut plus être modifiée depuis le POS.</p>
+                        <div class="pos-partner-locked" role="status">
+                            <strong>Verrouillé</strong> — code <span style="font-family:ui-monospace,'Courier New',monospace;font-weight:700;">{{ $ticket->partner_code_snapshot ?? '—' }}</span>
+                            @if((float)($ticket->partner_discount_amount ?? 0) > 0)
+                                <span> · remise {{ number_format((float)$ticket->partner_discount_amount, 3, '.', ' ') }} DT</span>
+                            @endif
+                            <div class="muted">La commission ne peut plus être modifiée depuis le POS.</div>
                         </div>
                     @else
-                        <div class="row g-2 align-items-end">
-                            <div class="col-12 col-md-auto flex-grow-1" style="min-width: 200px;">
-                                <label for="partner_code_input_pos" class="form-label small fw-semibold text-secondary mb-1">Code</label>
+                        <div class="pos-partner-row">
+                            <div class="pos-partner-field">
+                                <label for="partner_code_input_pos">Saisir le code</label>
                                 <input type="text" id="partner_code_input_pos"
                                        wire:model.live.debounce.400ms="partner_code_input"
-                                       class="form-control form-control-sm"
-                                       placeholder="Ex: COACH10" autocomplete="off">
+                                       class="pos-partner-input"
+                                       placeholder="Ex. COACH10" autocomplete="off">
                             </div>
-                            <div class="col-6 col-md-auto d-grid d-md-block">
+                            <div class="pos-partner-actions">
                                 <button type="button" id="btn-apply-partner-code"
-                                        class="btn btn-primary btn-sm w-100"
-                                        onclick="ticketPosApplyPartnerCode(event)">
-                                    Appliquer
-                                </button>
-                            </div>
-                            <div class="col-6 col-md-auto d-grid d-md-block">
+                                        class="pos-btn-partner-go"
+                                        onclick="ticketPosApplyPartnerCode(event)">Appliquer</button>
                                 <button type="button" id="btn-clear-partner-code"
-                                        class="btn btn-outline-secondary btn-sm w-100"
-                                        onclick="ticketPosClearPartnerCode(event)">
-                                    Effacer
-                                </button>
+                                        class="pos-btn-partner-muted"
+                                        onclick="ticketPosClearPartnerCode(event)">Effacer</button>
                             </div>
                         </div>
-                        <p class="small text-secondary mt-3 mb-0">
+                        <p class="pos-partner-note">
                             Commission estimée (interne, non imprimée) :
                             <strong><span id="pos-partner-commission-est">0.000</span> DT</strong>
                             <span class="text-muted">(<span id="pos-partner-commission-rate">0</span>%)</span>
@@ -588,61 +797,6 @@
                     @endif
                 </div>
             </div>
-
-            <div wire:ignore>
-            <div id="loyalty-panel-placeholder" class="loyalty-placeholder" style="{{ $loyalty_panel_visible ? 'display:none;' : '' }}">
-                Sélectionnez un client titulaire d’une carte active pour afficher le solde et utiliser des points.
-            </div>
-
-            <div id="loyalty-panel-active" class="loyalty-panel-active" style="{{ $loyalty_panel_visible ? '' : 'display:none;' }}">
-
-            {{-- Stats row --}}
-            <div style="padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                <div style="background:#fff;border:1px solid #fde047;border-radius:8px;padding:10px 14px;text-align:center;">
-                    <div style="font-size:10px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Solde disponible</div>
-                    <div style="font-size:24px;font-weight:900;color:#713f12;line-height:1.1;">
-                        <span id="lp-balance">{{ $loyalty_balance }}</span>
-                        <span style="font-size:13px;font-weight:600;"> pts</span>
-                    </div>
-                    <div style="font-size:12px;color:#b45309;margin-top:2px;">= <span id="lp-balance-dt">{{ $loyalty_balance_dt }}</span> DT</div>
-                </div>
-                <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 14px;text-align:center;">
-                    <div style="font-size:10px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Points à gagner</div>
-                    <div style="font-size:24px;font-weight:900;color:#15803d;line-height:1.1;">
-                        +<span id="lp-earn">{{ $loyalty_points_earn }}</span>
-                        <span style="font-size:13px;font-weight:600;"> pts</span>
-                    </div>
-                    <div style="font-size:12px;color:#16a34a;margin-top:2px;">= +<span id="lp-earn-dt">{{ $loyalty_points_earn_dt }}</span> DT</div>
-                </div>
-            </div>
-
-            {{-- Redeem row --}}
-            <div style="padding:0 16px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
-                <span style="font-size:12px;font-weight:600;color:#78716c;white-space:nowrap;">Utiliser des pts (min 100) :</span>
-                <input type="number"
-                       id="loyalty_redeem_input"
-                       min="0"
-                       step="10"
-                       value="{{ $loyalty_redeem_input }}"
-                       autocomplete="off"
-                       style="width:90px;border:1px solid #d6d3d1;border-radius:6px;padding:5px 8px;font-size:14px;"
-                       oninput="syncLoyaltyRedeem(this.value)"
-                       onblur="finalizeLoyaltyRedeemInput()" {{ $loyalty_panel_visible ? '' : 'disabled' }} />
-                <button type="button"
-                        id="btn-loyalty-max"
-                        onclick="setMaxLoyaltyRedeem()"
-                        style="background:#f59e0b;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;"
-                        {{ $loyalty_panel_visible ? '' : 'disabled' }}>
-                    Max
-                </button>
-                <span style="font-size:13px;color:#dc2626;font-weight:600;">
-                    − <span id="lp-redeem-dt">{{ $loyalty_redeem_dt }}</span> DT
-                </span>
-            </div>
-
-            <input type="hidden" id="loyalty_card_id_input" value="{{ $loyalty_card_id }}">
-            </div>{{-- /loyalty-panel-active --}}
-            </div>{{-- /wire:ignore loyalty body --}}
         </div>
     </div>
 
