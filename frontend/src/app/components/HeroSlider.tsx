@@ -216,27 +216,41 @@ export const HeroSlider = memo(function HeroSlider({ slides, mobileFirst, deskto
             src={currentSlideData.image}
             alt={currentSlideData.titre}
             isFirst={currentSlide === 0}
-            className="object-cover object-center"
+            className="object-cover object-[68%_52%] sm:object-[62%_46%] md:object-center brightness-[0.84] contrast-[1.08] saturate-[0.92] md:brightness-100 md:contrast-100 md:saturate-100"
           />
         )}
 
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/58 via-black/24 to-transparent" aria-hidden="true" />
-        <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-black/30 via-black/10 to-transparent" aria-hidden="true" />
+        {/* Mobile-first cinematic overlays for text readability and cleaner hierarchy */}
+        <div
+          className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/42 to-black/24 md:bg-gradient-to-r md:from-black/58 md:via-black/24 md:to-transparent"
+          aria-hidden="true"
+        />
+        <div
+          className="absolute inset-x-0 top-0 h-[44%] bg-gradient-to-b from-black/88 via-black/68 to-transparent backdrop-blur-[1px] md:hidden"
+          aria-hidden="true"
+        />
+        <div
+          className="absolute -right-20 top-[22%] h-64 w-64 rounded-full bg-amber-200/10 blur-3xl md:hidden"
+          aria-hidden="true"
+        />
+        <div
+          className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-black/62 via-black/28 to-transparent md:h-44 md:from-black/30 md:via-black/10"
+          aria-hidden="true"
+        />
 
         {/* Content */}
-        <div className="relative flex h-full w-full max-w-7xl mx-auto flex-col items-end px-6 pb-24 pt-16 sm:px-6 sm:pb-20 md:pb-16 lg:flex-row lg:items-center lg:px-8 lg:pb-10 lg:pt-0">
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col items-end justify-start text-right lg:items-start lg:max-w-2xl lg:flex-none lg:justify-center lg:text-left xl:max-w-3xl">
-            <h2 className="text-[2.25rem] sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-slate-900 mb-2 sm:mb-4 md:mb-6 leading-[1.05] drop-shadow-lg max-w-[10ch] sm:max-w-[12ch]">
+        <div className="relative mx-auto flex h-full w-full max-w-7xl flex-col px-5 pb-24 pt-[calc(env(safe-area-inset-top)+1.25rem)] sm:px-6 sm:pb-20 md:pb-16 md:pt-16 lg:flex-row lg:items-center lg:px-8 lg:pb-10 lg:pt-0">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col items-start justify-start text-left lg:max-w-2xl lg:flex-none lg:justify-center xl:max-w-3xl">
+            <h2 className="max-w-[13ch] text-[2.05rem] font-extrabold leading-[1.04] tracking-tight text-white drop-shadow-[0_3px_12px_rgba(0,0,0,0.65)] sm:max-w-[14ch] sm:text-4xl md:text-4xl lg:text-5xl xl:text-6xl">
               {currentSlideData.titre}
             </h2>
-            <p className="text-base sm:text-base md:text-lg lg:text-xl text-slate-800 mb-4 sm:mb-6 md:mb-8 max-w-[21ch] sm:max-w-[24ch] drop-shadow-md line-clamp-2 sm:line-clamp-none">
+            <p className="mt-3 max-w-[28ch] text-sm leading-relaxed text-white/92 drop-shadow-[0_2px_10px_rgba(0,0,0,0.58)] sm:mt-4 sm:max-w-[32ch] sm:text-base md:text-lg lg:text-xl">
               {currentSlideData.description}
             </p>
-            <div className="flex flex-wrap gap-2 sm:gap-3 md:gap-4">
+            <div className="mt-5 flex flex-wrap gap-3 sm:mt-6 md:mt-7 md:gap-4">
               <Button
                 size="lg"
-                className="bg-red-600 hover:bg-red-700 text-white px-6 sm:px-8 md:px-10 lg:px-12 h-11 sm:h-12 md:h-14 text-base sm:text-base md:text-lg lg:text-xl rounded-xl min-h-[48px] sm:min-h-[52px] md:min-h-[60px] min-w-[150px] sm:min-w-[170px] md:min-w-[190px] shadow-[0_8px_24px_rgba(220,38,38,0.32)] hover:shadow-[0_10px_28px_rgba(220,38,38,0.4)] transition-all font-semibold"
+                className="min-h-[50px] min-w-[178px] rounded-xl bg-gradient-to-b from-red-500 to-red-600 px-7 text-base font-semibold text-white shadow-[0_12px_28px_rgba(239,68,68,0.34)] transition-all hover:from-red-500 hover:to-red-700 hover:shadow-[0_14px_30px_rgba(239,68,68,0.45)] sm:min-h-[52px] sm:min-w-[190px] sm:px-8 md:min-h-[60px] md:px-10 md:text-lg lg:px-12 lg:text-xl"
                 asChild
               >
                 <LinkWithLoading href="/shop" aria-label="Découvrir nos produits" loadingMessage="Chargement...">
@@ -251,7 +265,7 @@ export const HeroSlider = memo(function HeroSlider({ slides, mobileFirst, deskto
         </div>
 
         {/* Mobile trust card: lower and less intrusive */}
-        <div className="absolute inset-x-0 bottom-14 z-[2] mx-auto w-[88%] max-w-sm scale-[0.94] sm:bottom-16 sm:w-[82%] sm:scale-100 lg:hidden">
+        <div className="absolute inset-x-0 bottom-[4.2rem] z-[2] mx-auto hidden w-[82%] max-w-sm scale-100 sm:block lg:hidden">
           <HeroTrustGuarantee layout="docked" />
         </div>
       </div>
@@ -259,7 +273,7 @@ export const HeroSlider = memo(function HeroSlider({ slides, mobileFirst, deskto
       {/* Navigation arrows */}
       <button
         onClick={prevSlide}
-        className="absolute left-2 sm:left-4 top-[58%] sm:top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white p-2 sm:p-3 rounded-full transition-all min-h-[44px] min-w-[44px] flex items-center justify-center z-10 shadow-lg"
+        className="absolute left-2 top-[58%] hidden min-h-[44px] min-w-[44px] -translate-y-1/2 items-center justify-center rounded-full bg-white/10 p-2 text-white shadow-lg backdrop-blur-md transition-all hover:bg-white/20 sm:left-4 sm:top-1/2 sm:flex sm:p-3"
         aria-label="Slide précédent"
         type="button"
       >
@@ -267,7 +281,7 @@ export const HeroSlider = memo(function HeroSlider({ slides, mobileFirst, deskto
       </button>
       <button
         onClick={nextSlide}
-        className="absolute right-2 sm:right-4 top-[58%] sm:top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white p-2 sm:p-3 rounded-full transition-all min-h-[44px] min-w-[44px] flex items-center justify-center z-10 shadow-lg"
+        className="absolute right-2 top-[58%] hidden min-h-[44px] min-w-[44px] -translate-y-1/2 items-center justify-center rounded-full bg-white/10 p-2 text-white shadow-lg backdrop-blur-md transition-all hover:bg-white/20 sm:right-4 sm:top-1/2 sm:flex sm:p-3"
         aria-label="Slide suivant"
         type="button"
       >
