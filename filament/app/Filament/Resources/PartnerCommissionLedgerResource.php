@@ -52,11 +52,23 @@ class PartnerCommissionLedgerResource extends Resource
                 Tables\Columns\TextColumn::make('partner.name')->label('Partenaire')->searchable()->sortable(),
                 Tables\Columns\TextColumn::make('type')
                     ->label('Type')
-                    ->formatStateUsing(fn (?string $state): string => PartnerCommissionTransactionType::tryFrom((string) $state)?->label() ?? (string) $state),
+                    ->formatStateUsing(function (mixed $state): string {
+                        if ($state instanceof PartnerCommissionTransactionType) {
+                            return $state->label();
+                        }
+
+                        return PartnerCommissionTransactionType::tryFrom((string) $state)?->label() ?? (string) $state;
+                    }),
                 Tables\Columns\TextColumn::make('status')
                     ->label('Statut')
                     ->badge()
-                    ->formatStateUsing(fn (?string $state): string => PartnerCommissionTransactionStatus::tryFrom((string) $state)?->label() ?? (string) $state),
+                    ->formatStateUsing(function (mixed $state): string {
+                        if ($state instanceof PartnerCommissionTransactionStatus) {
+                            return $state->label();
+                        }
+
+                        return PartnerCommissionTransactionStatus::tryFrom((string) $state)?->label() ?? (string) $state;
+                    }),
                 Tables\Columns\TextColumn::make('ticket.numero')->label('Ticket')->placeholder('—'),
                 Tables\Columns\TextColumn::make('partnerCode.code')->label('Code')->placeholder('—'),
                 Tables\Columns\TextColumn::make('commission_base')->label('Base')->numeric(decimalPlaces: 3)->alignEnd(),

@@ -53,7 +53,13 @@ class PartnerPayoutAdminResource extends Resource
                 Tables\Columns\TextColumn::make('status')
                     ->label('Statut')
                     ->badge()
-                    ->formatStateUsing(fn (?string $state): string => PartnerPayoutStatus::tryFrom((string) $state)?->label() ?? (string) $state),
+                    ->formatStateUsing(function (mixed $state): string {
+                        if ($state instanceof PartnerPayoutStatus) {
+                            return $state->label();
+                        }
+
+                        return PartnerPayoutStatus::tryFrom((string) $state)?->label() ?? (string) $state;
+                    }),
                 Tables\Columns\TextColumn::make('paid_at')->label('Payé le')->dateTime('d/m/Y H:i')->placeholder('—'),
                 Tables\Columns\TextColumn::make('payment_reference')->label('Référence')->placeholder('—'),
             ])

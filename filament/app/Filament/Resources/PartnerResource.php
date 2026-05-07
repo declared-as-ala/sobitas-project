@@ -130,12 +130,24 @@ class PartnerResource extends Resource
                 Tables\Columns\TextColumn::make('name')->label('Nom')->searchable()->sortable(),
                 Tables\Columns\TextColumn::make('type')
                     ->label('Type')
-                    ->formatStateUsing(fn (?string $state): string => PartnerType::tryFrom((string) $state)?->label() ?? (string) $state),
+                    ->formatStateUsing(function (mixed $state): string {
+                        if ($state instanceof PartnerType) {
+                            return $state->label();
+                        }
+
+                        return PartnerType::tryFrom((string) $state)?->label() ?? (string) $state;
+                    }),
                 Tables\Columns\TextColumn::make('email')->label('Email')->searchable(),
                 Tables\Columns\TextColumn::make('status')
                     ->label('Statut')
                     ->badge()
-                    ->formatStateUsing(fn (?string $state): string => PartnerStatus::tryFrom((string) $state)?->label() ?? (string) $state),
+                    ->formatStateUsing(function (mixed $state): string {
+                        if ($state instanceof PartnerStatus) {
+                            return $state->label();
+                        }
+
+                        return PartnerStatus::tryFrom((string) $state)?->label() ?? (string) $state;
+                    }),
                 Tables\Columns\TextColumn::make('default_commission_rate')->label('Com. %')->alignEnd(),
                 Tables\Columns\TextColumn::make('user.email')->label('Compte')->placeholder('—'),
             ])
