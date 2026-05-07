@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages\Stock;
 
+use App\Filament\Support\ImagePath;
 use App\Filament\Resources\ProductResource;
 use App\Models\Product;
 use App\Services\StockReportService;
@@ -122,6 +123,7 @@ class StockDashboard extends Page implements HasTable
             ->columns([
                 Tables\Columns\ImageColumn::make('cover')
                     ->label('')
+                    ->getStateUsing(fn ($record) => ImagePath::normalizeExisting($record->cover))
                     ->disk('public')
                     ->circular()
                     ->size(34),

@@ -129,31 +129,31 @@ class ProductResource extends Resource
                                     FileUpload::make('cover')
                                         ->label('Couverture (image principale)')
                                         ->disk('public')
-                                        ->directory('products')
+                                        ->directory('produits')
                                         ->image()
                                         ->imageEditor()
                                         ->maxSize(4096)
                                         ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
-                                            $path = $file->store('products', 'public');
+                                            $path = $file->store('produits', 'public');
                                             if (! $path) {
                                                 $ext  = $file->getClientOriginalExtension() ?: 'jpg';
-                                                $path = $file->storeAs('products', \Illuminate\Support\Str::uuid() . '.' . $ext, 'public');
+                                                $path = $file->storeAs('produits', \Illuminate\Support\Str::uuid() . '.' . $ext, 'public');
                                             }
                                             return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp((string) $path) ?? (string) $path;
                                         }),
                                     FileUpload::make('images')
                                         ->label('Gallery (images secondaires)')
                                         ->disk('public')
-                                        ->directory('products')
+                                        ->directory('produits')
                                         ->image()
                                         ->multiple()
                                         ->reorderable()
                                         ->maxSize(4096)
                                         ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
-                                            $path = $file->store('products', 'public');
+                                            $path = $file->store('produits', 'public');
                                             if (! $path) {
                                                 $ext  = $file->getClientOriginalExtension() ?: 'jpg';
-                                                $path = $file->storeAs('products', \Illuminate\Support\Str::uuid() . '.' . $ext, 'public');
+                                                $path = $file->storeAs('produits', \Illuminate\Support\Str::uuid() . '.' . $ext, 'public');
                                             }
                                             return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp((string) $path) ?? (string) $path;
                                         }),

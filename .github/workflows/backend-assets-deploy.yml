@@ -44,7 +44,8 @@ jobs:
             echo "Pulling latest code from GitHub..."
             git fetch origin main
             git reset --hard origin/main
-            git clean -fd
+            # Keep uploaded media files in storage.
+            git clean -fd -e filament/storage/app/public/ -e backend/storage/app/public/
             
             # Compile assets on HOST (not in container) since backend is volume-mounted
             # Files compiled on host will be available in container via volume mount

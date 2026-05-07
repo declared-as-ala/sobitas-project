@@ -93,7 +93,7 @@ class BrandResource extends Resource
             ->columns([
                 Tables\Columns\ImageColumn::make('logo')
                     ->label('Logo')
-                    ->getStateUsing(fn ($record) => ImagePath::normalize($record->logo))
+                    ->getStateUsing(fn ($record) => ImagePath::normalizeExisting($record->logo))
                     ->disk('public')
                     ->circular()
                     ->size(88),

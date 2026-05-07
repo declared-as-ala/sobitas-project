@@ -3,6 +3,7 @@
 namespace App\Filament\Pages\Stock;
 
 use App\Filament\Resources\ProductResource;
+use App\Filament\Support\ImagePath;
 use App\Models\Product;
 use App\Services\StockService;
 use Filament\Actions;
@@ -47,6 +48,7 @@ class StockProductsPage extends Page implements HasTable
             ->columns([
                 Tables\Columns\ImageColumn::make('cover')
                     ->label('Image')
+                    ->getStateUsing(fn ($record) => ImagePath::normalizeExisting($record->cover))
                     ->disk('public')
                     ->circular()
                     ->size(40),
