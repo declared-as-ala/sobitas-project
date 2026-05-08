@@ -325,15 +325,18 @@ class TicketPosPage extends Page
         return $this->loyaltyUiSnapshot();
     }
 
-    public function applyPartnerCode(): void
+    /**
+     * @return array{toast: bool, variant?: string, title?: string, body?: string}
+     */
+    public function applyPartnerCode(): array
     {
         if ($this->ticket && $this->ticket->partner_commission_processed_at) {
-            Notification::make()
-                ->title('La commission est déjà verrouillée pour ce ticket.')
-                ->warning()
-                ->send();
-
-            return;
+            return [
+                'toast' => true,
+                'variant' => 'warning',
+                'title' => __('Commission verrouillée'),
+                'body' => __('La commission est déjà verrouillée pour ce ticket.'),
+            ];
         }
 
         $code = trim($this->partner_code_input);
@@ -341,7 +344,7 @@ class TicketPosPage extends Page
             $this->partner_code_id = null;
             $this->dispatchTotalsRecalc();
 
-            return;
+            return ['toast' => false];
         }
 
         $svc = app(PartnerTransactionService::class);
@@ -357,25 +360,36 @@ class TicketPosPage extends Page
 
         if (! $val['valid']) {
             $this->partner_code_id = null;
-            Notification::make()
-                ->title($val['message'])
-                ->danger()
-                ->send();
             $this->dispatchTotalsRecalc();
 
-            return;
+            return [
+                'toast' => true,
+                'variant' => 'danger',
+                'title' => __('Code partenaire'),
+                'body' => $val['message'],
+            ];
         }
 
         $this->partner_code_id = $val['partnerCode']->id;
         $this->partner_code_input = strtoupper(trim($code));
 
-        Notification::make()
-            ->title('Code partenaire appliqué')
-            ->success()
-            ->send();
+        $partner = $val['partner'];
+        $label = $partner ? trim((string) ($partner->business_name ?: $partner->name)) : '';
 
         $this->recalcLoyaltyEarn();
         $this->dispatchTotalsRecalc();
+
+        $displayCode = $this->partner_code_input;
+        $body = $label !== ''
+            ? __('Le code « :code » est actif — :partner. Les totaux ont été mis à jour.', ['code' => $displayCode, 'partner' => $label])
+            : __('Le code « :code » est actif. Les totaux ont été mis à jour.', ['code' => $displayCode]);
+
+        return [
+            'toast' => true,
+            'variant' => 'success',
+            'title' => __('Code partenaire appliqué'),
+            'body' => $body,
+        ];
     }
 
     public function clearPartnerCode(): void

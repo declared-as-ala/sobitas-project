@@ -49,6 +49,7 @@
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <style>
@@ -582,6 +583,34 @@
     background: #f5f5f4;
     border-color: #a8a29e;
 }
+/* ── Partner code Bootstrap toast (POS) ── */
+.pos-partner-toast-host {
+    z-index: 10850;
+    max-width: min(420px, calc(100vw - 1.5rem));
+    pointer-events: none;
+}
+.pos-partner-toast-host .toast {
+    pointer-events: auto;
+    min-width: 280px;
+    border-radius: 0.65rem;
+    overflow: hidden;
+}
+.pos-partner-toast-host .toast-body {
+    padding: 0.85rem 1rem;
+}
+.pos-partner-toast-host .toast-body .pos-partner-toast-title {
+    font-size: 0.95rem;
+    letter-spacing: 0.01em;
+}
+.pos-partner-toast-host .toast-body .pos-partner-toast-sub {
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    margin-top: 0.25rem;
+}
+.pos-partner-toast-host .btn-close {
+    flex-shrink: 0;
+}
+
 .pos-partner-note {
     margin: 12px 0 0;
     font-size: 12px;
@@ -612,6 +641,20 @@
 </style>
 
 <div class="pos-wrap" id="pos-ticket-root">
+
+    {{-- Bootstrap toast: code partenaire (Appliquer) --}}
+    <div class="toast-container position-fixed top-0 end-0 p-3 pos-partner-toast-host" aria-live="polite" aria-atomic="true">
+        <div id="pos-partner-toast"
+             class="toast align-items-center border-0 shadow-lg"
+             role="alert"
+             data-bs-autohide="true"
+             data-bs-delay="5500">
+            <div class="d-flex w-100 align-items-start">
+                <div class="toast-body flex-grow-1 pt-3 pb-3"></div>
+                <button type="button" class="btn-close me-2 mt-2" data-bs-dismiss="toast" aria-label="{{ __('Fermer') }}"></button>
+            </div>
+        </div>
+    </div>
 
     {{-- Select2 + static client row: keep out of Livewire morphDOM --}}
     <div wire:ignore>
@@ -1487,6 +1530,45 @@
         };
     }
 
+    function ticketPosEscapeHtml(s) {
+        if (s === null || s === undefined) return '';
+        return String(s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    /** Bootstrap 5 toast for partner code apply (success / erreur / avertissement). */
+    function showPosPartnerToast(variant, title, body) {
+        var el = document.getElementById('pos-partner-toast');
+        if (!el) return;
+        if (typeof bootstrap === 'undefined' || !bootstrap.Toast) return;
+
+        var v = variant === 'danger' ? 'danger' : variant === 'warning' ? 'warning' : 'success';
+        el.className = 'toast align-items-center border-0 shadow-lg text-bg-' + v;
+
+        var closeBtn = el.querySelector('.btn-close');
+        if (closeBtn) {
+            if (v === 'warning') {
+                closeBtn.classList.remove('btn-close-white');
+            } else {
+                closeBtn.classList.add('btn-close-white');
+            }
+        }
+
+        var bodyEl = el.querySelector('.toast-body');
+        if (bodyEl) {
+            var sub = body
+                ? '<div class="pos-partner-toast-sub opacity-90">' + ticketPosEscapeHtml(body) + '</div>'
+                : '';
+            bodyEl.innerHTML = '<div class="pos-partner-toast-title fw-semibold">' + ticketPosEscapeHtml(title) + '</div>' + sub;
+        }
+
+        var inst = bootstrap.Toast.getOrCreateInstance(el, { autohide: true, delay: 5500 });
+        inst.show();
+    }
+
     function ticketPosApplyPartnerCode(e) {
         if (e && e.preventDefault) e.preventDefault();
         var btn = document.getElementById('btn-apply-partner-code');
@@ -1494,6 +1576,11 @@
         var snap = buildPosSnapshotForLivewire();
         @this.call('syncPosTotalsFromClient', snap)
             .then(function () { return @this.call('applyPartnerCode'); })
+            .then(function (res) {
+                if (res && res.toast) {
+                    showPosPartnerToast(res.variant || 'success', res.title || '', res.body || '');
+                }
+            })
             .finally(function () {
                 if (btn) { btn.disabled = false; }
                 calculate();
