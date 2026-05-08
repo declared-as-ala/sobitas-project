@@ -21,7 +21,7 @@ class PartnerCouponOnlineGuardTest extends TestCase
             'name' => 'Coach Guard',
             'email' => 'coach-guard@test.local',
             'status' => PartnerStatus::Active->value,
-            'default_commission_rate' => 10,
+            'commission_rate' => 10,
         ]);
 
         Coupon::query()->create([

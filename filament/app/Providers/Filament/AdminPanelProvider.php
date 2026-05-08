@@ -7,7 +7,6 @@ use App\Models\Coordinate;
 use App\Filament\Pages\Auth\EditProfile;
 use App\Filament\Pages\Auth\Login;
 use App\Filament\Pages\Dashboard;
-use App\Filament\Pages\PartnerReportsPage;
 use App\Filament\Pages\HistoriqueClient;
 use App\Filament\Pages\ScannerFidelitePage;
 use App\Filament\Pages\SendEmail;
@@ -34,10 +33,7 @@ use App\Filament\Resources\LoyaltyTransactionResource;
 use App\Filament\Resources\MarketingTemplateResource;
 use App\Filament\Resources\MessageResource;
 use App\Filament\Resources\NewsletterResource;
-use App\Filament\Resources\PartnerCoachResource;
 use App\Filament\Resources\PartnerCommissionLedgerResource;
-use App\Filament\Resources\PartnerGymResource;
-use App\Filament\Resources\PartnerPayoutAdminResource;
 use App\Filament\Resources\PartnerPromoCodeResource;
 use App\Filament\Resources\PartnerResource;
 use App\Filament\Resources\PageResource;
@@ -170,11 +166,8 @@ class AdminPanelProvider extends PanelProvider
                 CoordinateResource::class,
                 CouponResource::class,
                 PartnerResource::class,
-                PartnerCoachResource::class,
-                PartnerGymResource::class,
                 PartnerPromoCodeResource::class,
                 PartnerCommissionLedgerResource::class,
-                PartnerPayoutAdminResource::class,
                 FactureResource::class,
                 FactureTvaResource::class,
                 FaqResource::class,
@@ -202,7 +195,6 @@ class AdminPanelProvider extends PanelProvider
                 SendSms::class,
                 SendEmail::class,
                 StockDashboard::class,
-                PartnerReportsPage::class,
             ])
             ->widgets([
                 AccountWidget::class,

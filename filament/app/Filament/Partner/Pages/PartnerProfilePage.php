@@ -38,6 +38,7 @@ class PartnerProfilePage extends Page implements HasForms
 
         $this->data = [
             'name' => $partner->name,
+            'email' => $partner->email,
             'business_name' => $partner->business_name,
             'phone' => $partner->phone,
             'address' => $partner->address,
@@ -52,6 +53,7 @@ class PartnerProfilePage extends Page implements HasForms
     {
         return $schema->statePath('data')->schema([
             Forms\Components\TextInput::make('name')->label('Nom')->required()->maxLength(255),
+            Forms\Components\TextInput::make('email')->label('Email')->email()->disabled()->dehydrated(false),
             Forms\Components\TextInput::make('business_name')->label('Raison sociale')->maxLength(255),
             Forms\Components\TextInput::make('phone')->label('Téléphone')->tel()->maxLength(64),
             Forms\Components\Textarea::make('address')->label('Adresse')->rows(3)->columnSpanFull(),

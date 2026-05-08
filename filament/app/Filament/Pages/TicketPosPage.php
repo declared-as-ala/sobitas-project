@@ -5,14 +5,14 @@ namespace App\Filament\Pages;
 use App\Enums\PartnerStatus;
 use App\Models\Client;
 use App\Models\Coordinate;
-use App\Models\Coupon;
+use App\Models\PartnerCode;
 use App\Models\DetailsTicket;
 use App\Models\LoyaltyCard;
 use App\Models\Product;
 use App\Models\Ticket;
 use App\Services\LoyaltyService;
 use App\Services\NumberSequenceService;
-use App\Services\PartnerCommissionService;
+use App\Services\PartnerTransactionService;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Page;
 use App\Filament\Resources\TicketResource;
@@ -61,8 +61,8 @@ class TicketPosPage extends Page
     public string  $loyalty_points_earn_dt = '0.000';
     public bool    $loyalty_panel_visible  = false;
 
-    /** Partner promo (boutique) — coupon row ID when applied */
-    public ?int $partner_coupon_id = null;
+    /** Partner promo (boutique) — partner_codes.id when applied */
+    public ?int $partner_code_id = null;
 
     public string $partner_code_input = '';
 
@@ -100,7 +100,7 @@ class TicketPosPage extends Page
                 'prix_unitaire' => (float) ($d->prix_unitaire ?? 0),
             ])->toArray();
 
-            $this->partner_coupon_id = $this->ticket->partner_code_id;
+            $this->partner_code_id = $this->ticket->partner_code_id;
             $this->partner_code_input = (string) ($this->ticket->partner_code_snapshot ?? '');
         }
 
@@ -122,7 +122,7 @@ class TicketPosPage extends Page
     // ── Client change ────────────────────────────────────────────────────────
     public function updatedClientId($value): void
     {
-        $this->partner_coupon_id = null;
+        $this->partner_code_id = null;
         $this->partner_code_input = '';
         $this->clearLoyalty();
 
@@ -303,7 +303,7 @@ class TicketPosPage extends Page
      */
     public function syncClientFromPos(?int $clientId): array
     {
-        $this->partner_coupon_id = null;
+        $this->partner_code_id = null;
         $this->partner_code_input = '';
         $this->clearLoyalty();
 
@@ -338,13 +338,13 @@ class TicketPosPage extends Page
 
         $code = trim($this->partner_code_input);
         if ($code === '') {
-            $this->partner_coupon_id = null;
+            $this->partner_code_id = null;
             $this->dispatchTotalsRecalc();
 
             return;
         }
 
-        $svc = app(PartnerCommissionService::class);
+        $svc = app(PartnerTransactionService::class);
         $draftTotals = $this->computeTicketTotals(withoutPartnerDiscount: true);
 
         $val = $svc->validatePartnerCodeForTicket(
@@ -356,7 +356,7 @@ class TicketPosPage extends Page
         );
 
         if (! $val['valid']) {
-            $this->partner_coupon_id = null;
+            $this->partner_code_id = null;
             Notification::make()
                 ->title($val['message'])
                 ->danger()
@@ -366,7 +366,7 @@ class TicketPosPage extends Page
             return;
         }
 
-        $this->partner_coupon_id = $val['coupon']->id;
+        $this->partner_code_id = $val['partnerCode']->id;
         $this->partner_code_input = strtoupper(trim($code));
 
         Notification::make()
@@ -380,7 +380,7 @@ class TicketPosPage extends Page
 
     public function clearPartnerCode(): void
     {
-        $this->partner_coupon_id = null;
+        $this->partner_code_id = null;
         $this->partner_code_input = '';
         $this->recalcLoyaltyEarn();
         $this->dispatchTotalsRecalc();
@@ -391,10 +391,10 @@ class TicketPosPage extends Page
         $t = $this->computeTicketTotals();
         $estimate = 0.0;
         $rate = 0.0;
-        if ($this->partner_coupon_id) {
-            $coupon = Coupon::query()->with('partner')->find($this->partner_coupon_id);
-            if ($coupon && $coupon->partner) {
-                $p = app(PartnerCommissionService::class)->previewFromTotals($coupon, $coupon->partner, $t);
+        if ($this->partner_code_id) {
+            $partnerCode = PartnerCode::query()->with('partner')->find($this->partner_code_id);
+            if ($partnerCode && $partnerCode->partner) {
+                $p = app(PartnerTransactionService::class)->previewFromTotals($partnerCode, $partnerCode->partner, $t);
                 $estimate = $p['commission_amount'];
                 $rate = $p['rate'];
             }
@@ -546,11 +546,11 @@ class TicketPosPage extends Page
         $existingTicket = $this->ticketId ? Ticket::find($this->ticketId) : null;
         $partnerCommissionFrozen = $existingTicket?->partner_commission_processed_at !== null;
 
-        $partnerSvc = app(PartnerCommissionService::class);
+        $partnerSvc = app(PartnerTransactionService::class);
 
-        if ($this->partner_coupon_id && ! $partnerCommissionFrozen) {
-            $coupon = Coupon::query()->with('partner')->find($this->partner_coupon_id);
-            if (! $coupon || ! $coupon->is_partner_code) {
+        if ($this->partner_code_id && ! $partnerCommissionFrozen) {
+            $partnerCode = PartnerCode::query()->with('partner')->find($this->partner_code_id);
+            if (! $partnerCode || ! $partnerCode->partner) {
                 Notification::make()
                     ->title('Code partenaire invalide.')
                     ->danger()
@@ -560,7 +560,7 @@ class TicketPosPage extends Page
             }
 
             $val = $partnerSvc->validatePartnerCodeForTicket(
-                $coupon->code,
+                $partnerCode->code,
                 $totals['base_after_regular_discount'],
                 $this->client_id,
                 $this->client_phone,
@@ -594,12 +594,12 @@ class TicketPosPage extends Page
             $data['partner_commission_base'] = $existingTicket->partner_commission_base;
             $data['partner_commission_rate'] = $existingTicket->partner_commission_rate;
             $data['partner_commission_amount'] = $existingTicket->partner_commission_amount;
-        } elseif ($this->partner_coupon_id) {
-            $coupon = Coupon::query()->with('partner')->findOrFail($this->partner_coupon_id);
-            $preview = $partnerSvc->previewFromTotals($coupon, $coupon->partner, $totals);
-            $data['partner_id'] = $coupon->partner_id;
-            $data['partner_code_id'] = $coupon->id;
-            $data['partner_code_snapshot'] = strtoupper(trim((string) $coupon->code));
+        } elseif ($this->partner_code_id) {
+            $partnerCode = PartnerCode::query()->with('partner')->findOrFail($this->partner_code_id);
+            $preview = $partnerSvc->previewFromTotals($partnerCode, $partnerCode->partner, $totals);
+            $data['partner_id'] = $partnerCode->partner_id;
+            $data['partner_code_id'] = $partnerCode->id;
+            $data['partner_code_snapshot'] = strtoupper(trim((string) $partnerCode->code));
             $data['partner_discount_amount'] = $preview['discount_ht'];
             $data['partner_commission_base'] = $preview['commission_base'];
             $data['partner_commission_rate'] = $preview['rate'];
@@ -665,7 +665,7 @@ class TicketPosPage extends Page
                 }
 
                 $ticket->refresh();
-                app(PartnerCommissionService::class)->processTicketCommission($ticket);
+                app(PartnerTransactionService::class)->processTicketCommission($ticket);
             });
         } catch (\Throwable $e) {
             Notification::make()
@@ -713,16 +713,16 @@ class TicketPosPage extends Page
         $baseAfterRegularDiscount = max(0.0, $total - $regularDiscount);
 
         $partnerDiscount = 0.0;
-        $effectivePartnerCouponId = $withoutPartnerDiscount ? null : $this->partner_coupon_id;
+        $effectivePartnerCodeId = $withoutPartnerDiscount ? null : $this->partner_code_id;
 
-        if ($effectivePartnerCouponId) {
-            $coupon = Coupon::query()->with('partner')->find($effectivePartnerCouponId);
+        if ($effectivePartnerCodeId) {
+            $partnerCode = PartnerCode::query()->with('partner')->find($effectivePartnerCodeId);
             if (
-                $coupon && $coupon->is_partner_code && $coupon->partner
-                && $coupon->partner->status === PartnerStatus::Active
+                $partnerCode && $partnerCode->partner
+                && $partnerCode->partner->status === PartnerStatus::Active
             ) {
-                $partnerDiscount = app(PartnerCommissionService::class)
-                    ->computePartnerDiscountHt($coupon, $baseAfterRegularDiscount);
+                $partnerDiscount = app(PartnerTransactionService::class)
+                    ->computePartnerDiscountHt($partnerCode, $baseAfterRegularDiscount);
             }
         }
 

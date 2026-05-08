@@ -2,11 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Enums\PartnerCodeStatus;
 use App\Enums\PartnerStatus;
 use App\Enums\PartnerType;
-use App\Models\Coupon;
 use App\Models\Partner;
-use App\Services\PartnerCommissionService;
+use App\Models\PartnerCode;
+use App\Services\PartnerTransactionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -21,21 +22,22 @@ class PartnerSuspendedValidationTest extends TestCase
             'name' => 'Coach Susp',
             'email' => 'coach-susp@test.local',
             'status' => PartnerStatus::Suspended->value,
-            'default_commission_rate' => 10,
+            'commission_rate' => 10,
+            'current_balance' => 0,
+            'total_earned' => 0,
+            'total_paid' => 0,
         ]);
 
-        Coupon::query()->create([
+        PartnerCode::query()->create([
             'partner_id' => $partner->id,
-            'is_partner_code' => true,
             'code' => 'SUSP01',
-            'type' => Coupon::TYPE_PERCENT,
-            'value' => 10,
-            'applies_channel' => 'boutique',
-            'is_active' => true,
-            'applies_to' => Coupon::APPLIES_TO_ORDER,
+            'discount_type' => 'percentage',
+            'discount_value' => 10,
+            'status' => PartnerCodeStatus::Active->value,
+            'used_count' => 0,
         ]);
 
-        $svc = app(PartnerCommissionService::class);
+        $svc = app(PartnerTransactionService::class);
         $result = $svc->validatePartnerCodeForTicket('SUSP01', 50.0, null, null, null);
 
         $this->assertFalse($result['valid']);

@@ -2,14 +2,16 @@
 
 namespace Tests\Feature;
 
-use App\Enums\PartnerCommissionTransactionType;
+use App\Enums\PartnerCodeStatus;
 use App\Enums\PartnerStatus;
+use App\Enums\PartnerTransactionType;
 use App\Enums\PartnerType;
 use App\Models\Client;
-use App\Models\Coupon;
 use App\Models\Partner;
+use App\Models\PartnerCode;
+use App\Models\PartnerTransaction;
 use App\Models\Ticket;
-use App\Services\PartnerCommissionService;
+use App\Services\PartnerTransactionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -24,19 +26,20 @@ class PartnerCommissionIdempotencyTest extends TestCase
             'name' => 'Coach Test',
             'email' => 'coach@test.local',
             'status' => PartnerStatus::Active->value,
-            'default_commission_rate' => 10,
+            'commission_rate' => 10,
+            'current_balance' => 0,
+            'total_earned' => 0,
+            'total_paid' => 0,
         ]);
 
-        $coupon = Coupon::query()->create([
+        $code = PartnerCode::query()->create([
             'partner_id' => $partner->id,
-            'is_partner_code' => true,
             'code' => 'TESTPART',
-            'type' => Coupon::TYPE_PERCENT,
-            'value' => 5,
+            'discount_type' => 'percentage',
+            'discount_value' => 5,
             'commission_rate' => 10,
-            'applies_channel' => 'boutique',
-            'is_active' => true,
-            'applies_to' => Coupon::APPLIES_TO_ORDER,
+            'status' => PartnerCodeStatus::Active->value,
+            'used_count' => 0,
         ]);
 
         $client = Client::query()->create([
@@ -54,7 +57,7 @@ class PartnerCommissionIdempotencyTest extends TestCase
             'prix_ht' => 100,
             'prix_ttc' => 90,
             'partner_id' => $partner->id,
-            'partner_code_id' => $coupon->id,
+            'partner_code_id' => $code->id,
             'partner_code_snapshot' => 'TESTPART',
             'partner_discount_amount' => 10,
             'partner_commission_base' => 90,
@@ -63,14 +66,18 @@ class PartnerCommissionIdempotencyTest extends TestCase
             'partner_commission_processed_at' => null,
         ]);
 
-        $svc = app(PartnerCommissionService::class);
+        $svc = app(PartnerTransactionService::class);
         $svc->processTicketCommission($ticket);
         $svc->processTicketCommission($ticket->fresh());
 
-        $this->assertDatabaseCount('partner_commission_transactions', 1);
+        $this->assertDatabaseCount('partner_transactions', 1);
         $this->assertNotNull($ticket->fresh()->partner_commission_processed_at);
 
-        $row = \App\Models\PartnerCommissionTransaction::query()->firstOrFail();
-        $this->assertEquals(PartnerCommissionTransactionType::Commission, $row->type);
+        $row = PartnerTransaction::query()->firstOrFail();
+        $this->assertEquals(PartnerTransactionType::Commission, $row->type);
+
+        $partner->refresh();
+        $this->assertEquals(9.0, $row->amount);
+        $this->assertEquals(9.0, (float) $partner->current_balance);
     }
 }

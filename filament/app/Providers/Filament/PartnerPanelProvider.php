@@ -9,7 +9,6 @@ use App\Filament\Partner\Pages\PartnerProfilePage;
 use App\Filament\Partner\Widgets\PartnerBalanceWidget;
 use App\Filament\Partner\Resources\PartnerLedgerReadResource;
 use App\Filament\Partner\Resources\PartnerPaymentReadResource;
-use App\Filament\Partner\Resources\PartnerPromoCodeReadResource;
 use App\Filament\Partner\Resources\PartnerSaleTicketResource;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -40,7 +39,6 @@ class PartnerPanelProvider extends PanelProvider
             ])
             ->resources([
                 PartnerSaleTicketResource::class,
-                PartnerPromoCodeReadResource::class,
                 PartnerLedgerReadResource::class,
                 PartnerPaymentReadResource::class,
             ])

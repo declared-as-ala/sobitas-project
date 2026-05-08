@@ -2,10 +2,10 @@
 
 namespace App\Filament\Partner\Resources;
 
-use App\Enums\PartnerCommissionTransactionStatus;
-use App\Enums\PartnerCommissionTransactionType;
+use App\Enums\PartnerTransactionStatus;
+use App\Enums\PartnerTransactionType;
 use App\Filament\Partner\Resources\PartnerLedgerReadResource\Pages;
-use App\Models\PartnerCommissionTransaction;
+use App\Models\PartnerTransaction;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 class PartnerLedgerReadResource extends Resource
 {
-    protected static ?string $model = PartnerCommissionTransaction::class;
+    protected static ?string $model = PartnerTransaction::class;
 
     protected static ?string $slug = 'my-commissions';
 
@@ -41,7 +41,9 @@ class PartnerLedgerReadResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         $pid = auth()->user()?->partner?->id;
-        $q = parent::getEloquentQuery()->with(['ticket', 'partnerCode']);
+        $q = parent::getEloquentQuery()
+            ->with(['ticket', 'partnerCode'])
+            ->where('type', PartnerTransactionType::Commission->value);
 
         return $pid ? $q->where('partner_id', $pid) : $q->whereRaw('1 = 0');
     }
@@ -53,22 +55,22 @@ class PartnerLedgerReadResource extends Resource
                 Tables\Columns\TextColumn::make('created_at')->label('Date')->dateTime('d/m/Y H:i')->sortable(),
                 Tables\Columns\TextColumn::make('type')
                     ->label('Type')
-                    ->formatStateUsing(function (PartnerCommissionTransactionType|string|null $state): string {
-                        if ($state instanceof PartnerCommissionTransactionType) {
+                    ->formatStateUsing(function (PartnerTransactionType|string|null $state): string {
+                        if ($state instanceof PartnerTransactionType) {
                             return $state->label();
                         }
 
-                        return PartnerCommissionTransactionType::tryFrom((string) $state)?->label() ?? (string) $state;
+                        return PartnerTransactionType::tryFrom((string) $state)?->label() ?? (string) $state;
                     }),
                 Tables\Columns\TextColumn::make('status')
                     ->label('Statut')
                     ->badge()
-                    ->formatStateUsing(function (PartnerCommissionTransactionStatus|string|null $state): string {
-                        if ($state instanceof PartnerCommissionTransactionStatus) {
+                    ->formatStateUsing(function (PartnerTransactionStatus|string|null $state): string {
+                        if ($state instanceof PartnerTransactionStatus) {
                             return $state->label();
                         }
 
-                        return PartnerCommissionTransactionStatus::tryFrom((string) $state)?->label() ?? (string) $state;
+                        return PartnerTransactionStatus::tryFrom((string) $state)?->label() ?? (string) $state;
                     }),
                 Tables\Columns\TextColumn::make('ticket.numero')->label('Ticket')->placeholder('—'),
                 Tables\Columns\TextColumn::make('amount')->label('Montant')->numeric(decimalPlaces: 3)->alignEnd(),

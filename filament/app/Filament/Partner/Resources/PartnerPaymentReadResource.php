@@ -2,9 +2,10 @@
 
 namespace App\Filament\Partner\Resources;
 
-use App\Enums\PartnerPayoutStatus;
+use App\Enums\PartnerTransactionStatus;
+use App\Enums\PartnerTransactionType;
 use App\Filament\Partner\Resources\PartnerPaymentReadResource\Pages;
-use App\Models\PartnerPayout;
+use App\Models\PartnerTransaction;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -12,7 +13,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 class PartnerPaymentReadResource extends Resource
 {
-    protected static ?string $model = PartnerPayout::class;
+    protected static ?string $model = PartnerTransaction::class;
 
     protected static ?string $slug = 'my-payouts';
 
@@ -40,7 +41,8 @@ class PartnerPaymentReadResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         $pid = auth()->user()?->partner?->id;
-        $q = parent::getEloquentQuery();
+        $q = parent::getEloquentQuery()
+            ->where('type', PartnerTransactionType::Payment->value);
 
         return $pid ? $q->where('partner_id', $pid) : $q->whereRaw('1 = 0');
     }
@@ -49,14 +51,22 @@ class PartnerPaymentReadResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('created_at')->label('Créé')->dateTime('d/m/Y H:i')->sortable(),
-                Tables\Columns\TextColumn::make('amount')->label('Montant')->numeric(decimalPlaces: 3)->alignEnd(),
+                Tables\Columns\TextColumn::make('created_at')->label('Date')->dateTime('d/m/Y H:i')->sortable(),
+                Tables\Columns\TextColumn::make('amount')
+                    ->label('Montant payé')
+                    ->formatStateUsing(fn ($state): string => number_format(abs((float) $state), 3, '.', ' '))
+                    ->alignEnd(),
                 Tables\Columns\TextColumn::make('status')
                     ->label('Statut')
                     ->badge()
-                    ->formatStateUsing(fn (?string $state): string => PartnerPayoutStatus::tryFrom((string) $state)?->label() ?? (string) $state),
-                Tables\Columns\TextColumn::make('paid_at')->label('Payé le')->dateTime('d/m/Y H:i')->placeholder('—'),
-                Tables\Columns\TextColumn::make('payment_reference')->label('Référence')->placeholder('—'),
+                    ->formatStateUsing(function (PartnerTransactionStatus|string|null $state): string {
+                        if ($state instanceof PartnerTransactionStatus) {
+                            return $state->label();
+                        }
+
+                        return PartnerTransactionStatus::tryFrom((string) $state)?->label() ?? (string) $state;
+                    }),
+                Tables\Columns\TextColumn::make('description')->label('Description')->limit(30),
             ])
             ->defaultSort('created_at', 'desc');
     }

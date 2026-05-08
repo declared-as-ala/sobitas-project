@@ -2,9 +2,9 @@
 
 namespace App\Filament\Resources;
 
-use App\Enums\PartnerAppliesChannel;
+use App\Enums\PartnerCodeStatus;
 use App\Filament\Resources\PartnerPromoCodeResource\Pages;
-use App\Models\Coupon;
+use App\Models\PartnerCode;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
@@ -16,7 +16,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 class PartnerPromoCodeResource extends Resource
 {
-    protected static ?string $model = Coupon::class;
+    protected static ?string $model = PartnerCode::class;
 
     protected static ?string $slug = 'partner-promo-codes';
 
@@ -24,17 +24,17 @@ class PartnerPromoCodeResource extends Resource
 
     protected static string | \UnitEnum | null $navigationGroup = 'Partenaires';
 
-    protected static ?string $navigationLabel = 'Codes promo partenaires';
+    protected static ?string $navigationLabel = 'Codes partenaires';
 
     protected static ?string $modelLabel = 'Code partenaire';
 
-    protected static ?string $pluralModelLabel = 'Codes promo partenaires';
+    protected static ?string $pluralModelLabel = 'Codes partenaires';
 
     protected static ?int $navigationSort = 10;
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->where('is_partner_code', true)->with(['partner'])->withCount('redemptions');
+        return parent::getEloquentQuery()->with(['partner']);
     }
 
     public static function form(Schema $schema): Schema
@@ -48,7 +48,6 @@ class PartnerPromoCodeResource extends Resource
                         ->searchable()
                         ->preload()
                         ->required(),
-                    Forms\Components\Hidden::make('is_partner_code')->default(true),
                     Forms\Components\TextInput::make('code')
                         ->label('Code')
                         ->required()
@@ -56,38 +55,30 @@ class PartnerPromoCodeResource extends Resource
                         ->unique(ignoreRecord: true)
                         ->live(onBlur: true)
                         ->afterStateUpdated(fn ($state, callable $set) => $set('code', $state ? strtoupper(trim((string) $state)) : $state)),
-                    Forms\Components\Select::make('type')
-                        ->label('Type')
+                    Forms\Components\Select::make('discount_type')
+                        ->label('Type de remise')
                         ->options([
-                            Coupon::TYPE_PERCENT => 'Pourcentage',
-                            Coupon::TYPE_FIXED => 'Montant fixe',
+                            'percentage' => 'Pourcentage',
+                            'fixed' => 'Montant fixe (HT)',
                         ])
-                        ->default(Coupon::TYPE_PERCENT)
+                        ->default('percentage')
                         ->required(),
-                    Forms\Components\TextInput::make('value')
-                        ->label('Valeur')
+                    Forms\Components\TextInput::make('discount_value')
+                        ->label('Valeur remise')
                         ->numeric()
                         ->default(10)
-                        ->required(),
+                        ->required()
+                        ->helperText('Pourcentage (ex. 10) ou montant HT selon le type'),
                     Forms\Components\TextInput::make('commission_rate')
                         ->label('Commission % (optionnel)')
                         ->numeric()
-                        ->nullable(),
-                    Forms\Components\Select::make('applies_channel')
-                        ->label('Canal')
-                        ->options([
-                            PartnerAppliesChannel::Boutique->value => PartnerAppliesChannel::Boutique->label(),
-                            PartnerAppliesChannel::Both->value => PartnerAppliesChannel::Both->label(),
-                            PartnerAppliesChannel::Website->value => PartnerAppliesChannel::Website->label(),
-                        ])
-                        ->default(PartnerAppliesChannel::Boutique->value)
+                        ->nullable()
+                        ->helperText('Vide = taux du partenaire'),
+                    Forms\Components\Select::make('status')
+                        ->label('Statut')
+                        ->options(collect(PartnerCodeStatus::cases())->mapWithKeys(fn (PartnerCodeStatus $s) => [$s->value => $s->label()]))
+                        ->default(PartnerCodeStatus::Active->value)
                         ->required(),
-                    Forms\Components\DateTimePicker::make('starts_at')->label('Début')->nullable(),
-                    Forms\Components\DateTimePicker::make('ends_at')->label('Fin')->nullable(),
-                    Forms\Components\Toggle::make('is_active')->label('Actif')->default(true),
-                    Forms\Components\TextInput::make('min_order_amount')->label('Montant min HT')->numeric()->nullable(),
-                    Forms\Components\TextInput::make('usage_limit_total')->label('Limite totale')->integer()->nullable(),
-                    Forms\Components\TextInput::make('usage_limit_per_client')->label('Limite / client')->integer()->nullable(),
                 ])->columns(2),
         ]);
     }
@@ -98,9 +89,11 @@ class PartnerPromoCodeResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('partner.name')->label('Partenaire')->sortable()->searchable(),
                 Tables\Columns\TextColumn::make('code')->label('Code')->searchable(),
-                Tables\Columns\TextColumn::make('applies_channel')->label('Canal'),
-                Tables\Columns\IconColumn::make('is_active')->label('Actif')->boolean(),
-                Tables\Columns\TextColumn::make('redemptions_count')->counts('redemptions')->label('Utilisations'),
+                Tables\Columns\TextColumn::make('discount_type')->label('Type remise'),
+                Tables\Columns\TextColumn::make('discount_value')->label('Valeur remise')->alignEnd(),
+                Tables\Columns\TextColumn::make('commission_rate')->label('Com. %')->alignEnd()->placeholder('—'),
+                Tables\Columns\TextColumn::make('status')->label('Statut')->badge(),
+                Tables\Columns\TextColumn::make('used_count')->label('Utilisations')->alignEnd(),
             ])
             ->actions([
                 Actions\EditAction::make(),

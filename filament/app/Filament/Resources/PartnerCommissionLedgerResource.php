@@ -2,18 +2,19 @@
 
 namespace App\Filament\Resources;
 
-use App\Enums\PartnerCommissionTransactionStatus;
-use App\Enums\PartnerCommissionTransactionType;
+use App\Enums\PartnerTransactionStatus;
+use App\Enums\PartnerTransactionType;
 use App\Filament\Resources\PartnerCommissionLedgerResource\Pages;
-use App\Models\PartnerCommissionTransaction;
+use App\Models\PartnerTransaction;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\Filter;
 use Illuminate\Database\Eloquent\Builder;
-
 class PartnerCommissionLedgerResource extends Resource
 {
-    protected static ?string $model = PartnerCommissionTransaction::class;
+    protected static ?string $model = PartnerTransaction::class;
 
     protected static ?string $slug = 'partner-commission-ledger';
 
@@ -21,11 +22,11 @@ class PartnerCommissionLedgerResource extends Resource
 
     protected static string | \UnitEnum | null $navigationGroup = 'Partenaires';
 
-    protected static ?string $navigationLabel = 'Commissions partenaires';
+    protected static ?string $navigationLabel = 'Historique partenaires';
 
     protected static ?string $modelLabel = 'Écriture';
 
-    protected static ?string $pluralModelLabel = 'Commissions';
+    protected static ?string $pluralModelLabel = 'Transactions';
 
     protected static ?int $navigationSort = 20;
 
@@ -53,31 +54,55 @@ class PartnerCommissionLedgerResource extends Resource
                 Tables\Columns\TextColumn::make('type')
                     ->label('Type')
                     ->formatStateUsing(function (mixed $state): string {
-                        if ($state instanceof PartnerCommissionTransactionType) {
+                        if ($state instanceof PartnerTransactionType) {
                             return $state->label();
                         }
 
-                        return PartnerCommissionTransactionType::tryFrom((string) $state)?->label() ?? (string) $state;
+                        return PartnerTransactionType::tryFrom((string) $state)?->label() ?? (string) $state;
                     }),
                 Tables\Columns\TextColumn::make('status')
                     ->label('Statut')
                     ->badge()
                     ->formatStateUsing(function (mixed $state): string {
-                        if ($state instanceof PartnerCommissionTransactionStatus) {
+                        if ($state instanceof PartnerTransactionStatus) {
                             return $state->label();
                         }
 
-                        return PartnerCommissionTransactionStatus::tryFrom((string) $state)?->label() ?? (string) $state;
+                        return PartnerTransactionStatus::tryFrom((string) $state)?->label() ?? (string) $state;
                     }),
                 Tables\Columns\TextColumn::make('ticket.numero')->label('Ticket')->placeholder('—'),
                 Tables\Columns\TextColumn::make('partnerCode.code')->label('Code')->placeholder('—'),
-                Tables\Columns\TextColumn::make('commission_base')->label('Base')->numeric(decimalPlaces: 3)->alignEnd(),
-                Tables\Columns\TextColumn::make('commission_rate')->label('Taux %')->alignEnd(),
                 Tables\Columns\TextColumn::make('amount')->label('Montant')->numeric(decimalPlaces: 3)->alignEnd(),
                 Tables\Columns\TextColumn::make('balance_after')->label('Solde après')->numeric(decimalPlaces: 3)->alignEnd(),
+                Tables\Columns\TextColumn::make('description')->label('Description')->limit(40)->tooltip(fn ($state) => $state),
             ])
             ->defaultSort('created_at', 'desc')
-            ->filters([])
+            ->filters([
+                SelectFilter::make('partner_id')
+                    ->label('Partenaire')
+                    ->relationship('partner', 'name')
+                    ->searchable()
+                    ->preload(),
+                SelectFilter::make('type')
+                    ->label('Type')
+                    ->options(collect(PartnerTransactionType::cases())->mapWithKeys(fn (PartnerTransactionType $t) => [$t->value => $t->label()])),
+                Filter::make('created_at')
+                    ->form([
+                        \Filament\Forms\Components\DatePicker::make('from')->label('Du'),
+                        \Filament\Forms\Components\DatePicker::make('until')->label('Au'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['from'] ?? null,
+                                fn (Builder $q, $date): Builder => $q->whereDate('created_at', '>=', $date),
+                            )
+                            ->when(
+                                $data['until'] ?? null,
+                                fn (Builder $q, $date): Builder => $q->whereDate('created_at', '<=', $date),
+                            );
+                    }),
+            ])
             ->actions([])
             ->bulkActions([]);
     }

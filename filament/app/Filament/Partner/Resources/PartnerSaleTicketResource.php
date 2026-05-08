@@ -17,7 +17,7 @@ class PartnerSaleTicketResource extends Resource
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-receipt-percent';
 
-    protected static ?string $navigationLabel = 'Mes ventes boutique';
+    protected static ?string $navigationLabel = 'Mes tickets';
 
     protected static ?string $modelLabel = 'Ticket';
 
@@ -55,7 +55,8 @@ class PartnerSaleTicketResource extends Resource
                 Tables\Columns\TextColumn::make('numero')->label('N°')->searchable()->sortable(),
                 Tables\Columns\TextColumn::make('created_at')->label('Date')->dateTime('d/m/Y H:i')->sortable(),
                 Tables\Columns\TextColumn::make('client.name')->label('Client')->placeholder('—'),
-                Tables\Columns\TextColumn::make('prix_ttc')->label('Net')->numeric(decimalPlaces: 3)->alignEnd(),
+                Tables\Columns\TextColumn::make('prix_ttc')->label('Montant')->numeric(decimalPlaces: 3)->alignEnd(),
+                Tables\Columns\TextColumn::make('partner_commission_amount')->label('Commission')->numeric(decimalPlaces: 3)->alignEnd()->placeholder('—'),
                 Tables\Columns\TextColumn::make('partner_code_snapshot')->label('Code')->placeholder('—'),
             ])
             ->defaultSort('created_at', 'desc')

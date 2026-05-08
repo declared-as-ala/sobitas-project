@@ -69,7 +69,7 @@ class Ticket extends Model
 
     public function partnerCode(): BelongsTo
     {
-        return $this->belongsTo(Coupon::class, 'partner_code_id');
+        return $this->belongsTo(PartnerCode::class, 'partner_code_id');
     }
 
     public function isTicketCaisse(): bool
