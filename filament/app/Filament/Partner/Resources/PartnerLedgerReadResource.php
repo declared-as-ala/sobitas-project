@@ -53,11 +53,23 @@ class PartnerLedgerReadResource extends Resource
                 Tables\Columns\TextColumn::make('created_at')->label('Date')->dateTime('d/m/Y H:i')->sortable(),
                 Tables\Columns\TextColumn::make('type')
                     ->label('Type')
-                    ->formatStateUsing(fn (?string $state): string => PartnerCommissionTransactionType::tryFrom((string) $state)?->label() ?? (string) $state),
+                    ->formatStateUsing(function (PartnerCommissionTransactionType|string|null $state): string {
+                        if ($state instanceof PartnerCommissionTransactionType) {
+                            return $state->label();
+                        }
+
+                        return PartnerCommissionTransactionType::tryFrom((string) $state)?->label() ?? (string) $state;
+                    }),
                 Tables\Columns\TextColumn::make('status')
                     ->label('Statut')
                     ->badge()
-                    ->formatStateUsing(fn (?string $state): string => PartnerCommissionTransactionStatus::tryFrom((string) $state)?->label() ?? (string) $state),
+                    ->formatStateUsing(function (PartnerCommissionTransactionStatus|string|null $state): string {
+                        if ($state instanceof PartnerCommissionTransactionStatus) {
+                            return $state->label();
+                        }
+
+                        return PartnerCommissionTransactionStatus::tryFrom((string) $state)?->label() ?? (string) $state;
+                    }),
                 Tables\Columns\TextColumn::make('ticket.numero')->label('Ticket')->placeholder('—'),
                 Tables\Columns\TextColumn::make('amount')->label('Montant')->numeric(decimalPlaces: 3)->alignEnd(),
             ])
