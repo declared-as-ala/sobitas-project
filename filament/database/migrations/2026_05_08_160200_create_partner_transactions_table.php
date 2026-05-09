@@ -13,10 +13,16 @@ return new class extends Migration
             return;
         }
 
-        Schema::create('partner_transactions', function (Blueprint $table) {
+        $ticketIdColumnKind = $this->resolveTicketIdColumnKind();
+
+        Schema::create('partner_transactions', function (Blueprint $table) use ($ticketIdColumnKind) {
             $table->id();
             $table->foreignId('partner_id')->constrained('partners')->cascadeOnDelete();
-            $table->foreignId('ticket_id')->nullable()->constrained('tickets')->nullOnDelete();
+            if ($ticketIdColumnKind === 'unsignedInteger') {
+                $table->unsignedInteger('ticket_id')->nullable();
+            } else {
+                $table->unsignedBigInteger('ticket_id')->nullable();
+            }
             $table->foreignId('partner_code_id')->nullable()->constrained('partner_codes')->nullOnDelete();
             $table->string('type', 32);
             $table->decimal('amount', 14, 3);
@@ -30,6 +36,12 @@ return new class extends Migration
             $table->index(['partner_id', 'type', 'status']);
             $table->index(['partner_id', 'created_at']);
         });
+
+        if (Schema::hasTable('tickets')) {
+            DB::statement(
+                'ALTER TABLE `partner_transactions` ADD CONSTRAINT `partner_transactions_ticket_id_foreign` FOREIGN KEY (`ticket_id`) REFERENCES `tickets` (`id`) ON DELETE SET NULL'
+            );
+        }
 
         if (! Schema::hasTable('partner_commission_transactions')) {
             $this->seedBalancesFromNothing();
@@ -170,5 +182,29 @@ return new class extends Migration
                 'total_paid' => 0,
             ]);
         }
+    }
+
+    private function resolveTicketIdColumnKind(): string
+    {
+        if (! Schema::hasTable('tickets')) {
+            return 'unsignedBigInteger';
+        }
+
+        $dbName = DB::getDatabaseName();
+        if (! $dbName) {
+            return 'unsignedBigInteger';
+        }
+
+        $columnType = DB::table('information_schema.COLUMNS')
+            ->where('TABLE_SCHEMA', $dbName)
+            ->where('TABLE_NAME', 'tickets')
+            ->where('COLUMN_NAME', 'id')
+            ->value('COLUMN_TYPE');
+
+        if (is_string($columnType) && str_contains(strtolower($columnType), 'int') && ! str_contains(strtolower($columnType), 'bigint')) {
+            return 'unsignedInteger';
+        }
+
+        return 'unsignedBigInteger';
     }
 };
