@@ -59,6 +59,16 @@ interface HomePageClientProps {
   heroDesktopFirst?: HeroFirstSlide;
 }
 
+/** High-intent category URLs — reinforces internal linking for rankings (créatine, whey, etc.). */
+const PRIORITY_SHOP_CATEGORY_LINKS = [
+  { href: '/category/creatine', label: 'Créatine Tunisie' },
+  { href: '/category/proteine-whey', label: 'Whey protein Tunisie' },
+  { href: '/category/bcaa', label: 'BCAA Tunisie' },
+  { href: '/category/glutamine', label: 'Glutamine Tunisie' },
+  { href: '/category/pre-workout', label: 'Pre workout Tunisie' },
+  { href: '/category/acides-amines', label: 'Acides aminés Tunisie' },
+] as const;
+
 export function HomePageClient({ accueil, slides, heroMobileFirst, heroDesktopFirst }: HomePageClientProps) {
   // Provide default empty structure if accueil is undefined/null
   const safeAccueil: AccueilData = accueil || {
@@ -148,7 +158,7 @@ export function HomePageClient({ accueil, slides, heroMobileFirst, heroDesktopFi
         {/* SEO: single visible H1 for main query "proteine tunisie" + internal link creatine */}
         <section className="text-center py-4 px-4 bg-white dark:bg-gray-950" aria-label="Titre principal">
           <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">
-            Proteine Tunisie
+            Protéine Tunisie
           </h1>
           <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
             <Link href="/category/proteine-whey" className="text-red-600 dark:text-red-400 hover:underline font-medium">
@@ -227,6 +237,17 @@ export function HomePageClient({ accueil, slides, heroMobileFirst, heroDesktopFi
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-4">
               Nutrition sportive Tunisie : protéine, whey et créatine de qualité
             </h2>
+            <nav aria-label="Catégories compléments populaires" className="mb-6 flex flex-wrap gap-2 sm:gap-3">
+              {PRIORITY_SHOP_CATEGORY_LINKS.map(({ href, label }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/80 px-3 py-1.5 text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-100 hover:border-red-400 hover:text-red-600 dark:hover:border-red-700 dark:hover:text-red-400 transition-colors"
+                >
+                  {label}
+                </Link>
+              ))}
+            </nav>
             <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
               Chez <strong>SOBITAS</strong>, nous accompagnons depuis plusieurs années les athlètes et passionnés de
               fitness à travers toute la <strong>nutrition sportive Tunisie</strong>. Sur <strong>Proteine Tunisie</strong>,

@@ -11,7 +11,7 @@ import {
   validateStructuredData,
 } from '@/util/structuredData';
 import { getCategorySeoContent } from '@/util/categorySeoContent';
-import { mergeCategorySeo, type CategorySeoFromApi } from '@/util/resolveCategorySeo';
+import { mergeCategorySeo, type CategorySeoFromApi, type MergedCategorySeo } from '@/util/resolveCategorySeo';
 import { CategorySeoLanding } from '@/app/category/CategorySeoLanding';
 import { ShopPageClient } from '@/app/shop/ShopPageClient';
 import { Header } from '@/app/components/Header';
@@ -86,6 +86,13 @@ function toMetaTitle(seoH1: string | undefined, fallbackName: string | undefined
   return fallbackName ? `${fallbackName} | Proteine Tunisie` : 'Catégorie | Proteine Tunisie';
 }
 
+function metaKeywordsList(merged: MergedCategorySeo): string[] | undefined {
+  const raw = merged.metaKeywords?.trim();
+  if (!raw) return undefined;
+  const parts = raw.split(/[,;]/).map((s) => s.trim()).filter(Boolean);
+  return parts.length ? [...new Set(parts)] : undefined;
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const canonicalSlug = getCanonicalSlug(slug?.trim() ?? '');
@@ -120,22 +127,29 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const descTrimmed = description.slice(0, 160);
     const ogImage = merged.ogImage || undefined;
     const ogAlt = (apiSeo?.og?.image_alt as string | undefined)?.trim() || merged.h1 || apiTitle || 'Catégorie';
+    const ogTitleMeta = (merged.ogTitle ?? '').trim() || metaTitle;
+    const ogDescMeta = (merged.ogDescription ?? '').trim() || descTrimmed;
+    const twitterTitleMeta = (merged.twitterTitle ?? '').trim() || ogTitleMeta;
+    const twitterDescMeta = (merged.twitterDescription ?? '').trim() || ogDescMeta;
+    const twitterImg = (merged.twitterImage ?? '').trim() || ogImage;
+    const kw = metaKeywordsList(merged);
     return {
       title: { absolute: metaTitle },
       description: descTrimmed,
+      ...(kw ? { keywords: kw } : {}),
       alternates: { canonical: canonicalUrl },
       robots: { index: merged.robotsIndex, follow: merged.robotsFollow },
       openGraph: {
-        title: metaTitle,
-        description: descTrimmed,
+        title: ogTitleMeta,
+        description: ogDescMeta.slice(0, 200),
         url: canonicalUrl,
         ...(ogImage && { images: [{ url: ogImage, width: 1200, height: 630, alt: ogAlt }] }),
       },
       twitter: {
         card: 'summary_large_image',
-        title: metaTitle,
-        description: descTrimmed,
-        ...(ogImage && { images: [ogImage] }),
+        title: twitterTitleMeta,
+        description: twitterDescMeta.slice(0, 200),
+        ...(twitterImg && { images: [twitterImg] }),
       },
     };
   } catch {
@@ -225,7 +239,9 @@ export default async function CategoryPage({ params }: PageProps) {
       const categorySeoLanding = (
         <CategorySeoLanding
           title={title}
+          banners={merged.banners}
           intro={merged.intro?.trim() ? merged.intro : null}
+          longBottomHtml={null}
           howToChooseTitle={merged.howToChooseTitle?.trim() ? merged.howToChooseTitle : null}
           howToChooseBody={merged.howToChooseBody?.trim() ? merged.howToChooseBody : null}
           faqs={merged.faqs ?? []}
@@ -236,16 +252,19 @@ export default async function CategoryPage({ params }: PageProps) {
         />
       );
       const hasHowTo = Boolean(merged.howToChooseTitle?.trim() && merged.howToChooseBody?.trim());
+      const hasLongBottom = Boolean((merged.longBottomHtml ?? '').trim().length > 0);
       const hasSeoContentBelow =
         (merged.intro ?? '').trim().length > 0 ||
         (merged.faqs?.length ?? 0) > 0 ||
         hasHowTo ||
+        hasLongBottom ||
         relatedCategories.length > 0 ||
         bestProducts.length > 0;
       const categorySeoLandingBottom = hasSeoContentBelow ? (
         <CategorySeoLanding
           title={title}
           intro={merged.intro?.trim() ? merged.intro : null}
+          longBottomHtml={merged.longBottomHtml?.trim() ? merged.longBottomHtml : null}
           howToChooseTitle={merged.howToChooseTitle?.trim() ? merged.howToChooseTitle : null}
           howToChooseBody={merged.howToChooseBody?.trim() ? merged.howToChooseBody : null}
           faqs={merged.faqs ?? []}
@@ -262,6 +281,14 @@ export default async function CategoryPage({ params }: PageProps) {
           <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionPageSchema) }} />
           {itemListSchema && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }} />}
           {faqPageSchema && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqPageSchema) }} />}
+          {merged.extraJsonLd.map((obj, i) => (
+            <script
+              // eslint-disable-next-line react/no-array-index-key -- supplementary schemas are stable per deploy
+              key={`extra-ld-${canonicalSlug}-${i}`}
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{ __html: JSON.stringify(obj) }}
+            />
+          ))}
           <Suspense
             fallback={
               <>
@@ -340,7 +367,9 @@ export default async function CategoryPage({ params }: PageProps) {
       const categorySeoLanding = (
         <CategorySeoLanding
           title={title}
+          banners={mergedCat.banners}
           intro={mergedCat.intro?.trim() ? mergedCat.intro : null}
+          longBottomHtml={null}
           howToChooseTitle={mergedCat.howToChooseTitle?.trim() ? mergedCat.howToChooseTitle : null}
           howToChooseBody={mergedCat.howToChooseBody?.trim() ? mergedCat.howToChooseBody : null}
           faqs={mergedCat.faqs ?? []}
@@ -351,16 +380,19 @@ export default async function CategoryPage({ params }: PageProps) {
         />
       );
       const hasHowToCat = Boolean(mergedCat.howToChooseTitle?.trim() && mergedCat.howToChooseBody?.trim());
+      const hasLongBottomCat = Boolean((mergedCat.longBottomHtml ?? '').trim().length > 0);
       const hasSeoContentBelowCat =
         (mergedCat.intro ?? '').trim().length > 0 ||
         (mergedCat.faqs?.length ?? 0) > 0 ||
         hasHowToCat ||
+        hasLongBottomCat ||
         relatedCategories.length > 0 ||
         bestProducts.length > 0;
       const categorySeoLandingBottom = hasSeoContentBelowCat ? (
         <CategorySeoLanding
           title={title}
           intro={mergedCat.intro?.trim() ? mergedCat.intro : null}
+          longBottomHtml={mergedCat.longBottomHtml?.trim() ? mergedCat.longBottomHtml : null}
           howToChooseTitle={mergedCat.howToChooseTitle?.trim() ? mergedCat.howToChooseTitle : null}
           howToChooseBody={mergedCat.howToChooseBody?.trim() ? mergedCat.howToChooseBody : null}
           faqs={mergedCat.faqs ?? []}
@@ -377,6 +409,13 @@ export default async function CategoryPage({ params }: PageProps) {
           <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionPageSchemaCat) }} />
           {itemListSchemaCat && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchemaCat) }} />}
           {faqPageSchemaCat && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqPageSchemaCat) }} />}
+          {mergedCat.extraJsonLd.map((obj, i) => (
+            <script
+              key={`extra-ld-cat-${canonicalSlug}-${i}`}
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{ __html: JSON.stringify(obj) }}
+            />
+          ))}
           <Suspense
             fallback={
               <>

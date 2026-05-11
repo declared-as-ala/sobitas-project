@@ -1,7 +1,7 @@
 {
-  "name": "Protein Tunisie",
-  "short_name": "Protein Tunisie",
-  "description": "Protéine Tunisie : whey protein, créatine et compléments alimentaires avec livraison rapide partout en Tunisie.",
+  "name": "Protéine Tunisie",
+  "short_name": "Protéine Tunisie",
+  "description": "Achetez whey protein, créatine, vitamines et compléments alimentaires en Tunisie avec livraison rapide et produits authentiques.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

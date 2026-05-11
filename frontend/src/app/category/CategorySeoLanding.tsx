@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import type { CategorySeoContent } from '@/types/categorySeo';
 import { buildFAQPageSchemaFromQA, validateStructuredData } from '@/util/structuredData';
 import { CategorySeoLandingExpandable } from '@/app/category/CategorySeoLandingExpandable';
@@ -12,8 +13,12 @@ export interface RelatedLink {
 interface CategorySeoLandingProps {
   /** Page title (H1). Required for top/all. */
   title: string;
+  /** Optional SEO hero banners from API (absolute URLs). */
+  banners?: { desktop?: string; mobile?: string };
   /** Intro HTML or plain text (newlines → paragraphs). Server-rendered. */
   intro: string | null;
+  /** Long-form bottom SEO HTML from API (distinct from JSON “how-to”). */
+  longBottomHtml?: string | null;
   howToChooseTitle: string | null;
   howToChooseBody: string | null;
   faqs: Array<{ question: string; answer: string }>;
@@ -43,7 +48,9 @@ function textToParagraphs(text: string): React.ReactNode {
 
 export function CategorySeoLanding({
   title,
+  banners,
   intro,
+  longBottomHtml,
   howToChooseTitle,
   howToChooseBody,
   faqs,
@@ -52,7 +59,11 @@ export function CategorySeoLanding({
   withFaqSchema = true,
   section = 'all',
 }: CategorySeoLandingProps) {
+  const heroDesktop = banners?.desktop?.trim();
+  const heroMobile = banners?.mobile?.trim();
+  const heroSrc = heroDesktop || heroMobile;
   const hasIntro = intro && intro.trim().length > 0;
+  const hasLongBottom = Boolean(longBottomHtml && longBottomHtml.trim().length > 0);
   const hasHowTo = howToChooseTitle && howToChooseBody;
   const hasFaqs = faqs.length > 0;
   const hasRelated = relatedCategories.length > 0;
@@ -78,9 +89,26 @@ export function CategorySeoLanding({
         />
       )}
 
-      {/* Header only (above product grid): trust row + H1 */}
+      {/* Header only (above product grid): optional banner + trust row + H1 */}
       {showHeader && (
         <>
+      {heroSrc && (
+        <div className="relative w-full overflow-hidden rounded-xl sm:rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 mb-4 sm:mb-6 aspect-[21/9] max-h-[260px] sm:max-h-[320px]">
+          <picture className="contents">
+            {heroMobile ? (
+              <source media="(max-width: 767px)" srcSet={heroMobile} />
+            ) : null}
+            <Image
+              src={heroDesktop || heroMobile!}
+              alt={title ? `Bannière — ${title}` : 'Bannière catégorie'}
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, min(1400px, 100vw)"
+              priority
+            />
+          </picture>
+        </div>
+      )}
       <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-3 sm:mb-4">
         Paiement à la livraison • Livraison 24–72h • Produits authentiques
       </p>
@@ -120,6 +148,21 @@ export function CategorySeoLanding({
             )}
           </div>
         </section>
+      )}
+
+      {(showTop || showContentBelowFold) && hasLongBottom && (
+        <article
+          className="rounded-xl sm:rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 sm:p-6 lg:p-8 shadow-sm"
+          aria-labelledby="category-seo-long-heading"
+        >
+          <h2 id="category-seo-long-heading" className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-4">
+            En savoir plus
+          </h2>
+          <div
+            className="prose prose-gray dark:prose-invert max-w-none prose-p:text-gray-700 dark:prose-p:text-gray-300 prose-headings:text-gray-900 dark:prose-headings:text-white prose-a:text-red-600 dark:prose-a:text-red-400 text-sm sm:text-base"
+            dangerouslySetInnerHTML={{ __html: longBottomHtml! }}
+          />
+        </article>
       )}
 
       {(showTop || showContentBelowFold) && hasFaqs && (

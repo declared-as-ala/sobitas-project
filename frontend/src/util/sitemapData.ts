@@ -5,7 +5,7 @@ import type { Product, Article, Category, Brand, SubCategory } from '@/types';
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
 
 const staticPages: MetadataRoute.Sitemap = [
-  { url: BASE_URL, lastModified: new Date(), changeFrequency: 'daily', priority: 1.0 },
+  { url: BASE_URL, lastModified: new Date(), changeFrequency: 'daily', priority: 0.95 },
   { url: `${BASE_URL}/shop`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.95 },
   { url: `${BASE_URL}/packs`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
   { url: `${BASE_URL}/offres`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
@@ -37,6 +37,29 @@ interface ItemWithDates {
   created_at?: string;
 }
 
+const ALLOWED_CHANGEFREQ = new Set([
+  'always',
+  'hourly',
+  'daily',
+  'weekly',
+  'monthly',
+  'yearly',
+  'never',
+]);
+
+function normalizeSitemapChangefreq(
+  v: string | null | undefined
+): NonNullable<MetadataRoute.Sitemap[0]['changeFrequency']> {
+  const s = (v ?? '').trim().toLowerCase();
+  if (s && ALLOWED_CHANGEFREQ.has(s)) return s as NonNullable<MetadataRoute.Sitemap[0]['changeFrequency']>;
+  return 'weekly';
+}
+
+function clampPriority(n: number | null | undefined, fallback: number): number {
+  if (n == null || Number.isNaN(Number(n))) return fallback;
+  return Math.min(1, Math.max(0, Number(n)));
+}
+
 /** Returns sitemap entries for XML. Used by app/sitemap.ts (Next.js metadata file → /sitemap.xml as application/xml). */
 export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
   const sitemapEntries: MetadataRoute.Sitemap = [...staticPages];
@@ -44,7 +67,7 @@ export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
   // Fetch all data in parallel so the sitemap responds quickly when requested (e.g. by Google).
   const [productsRes, categories, brands, articles, blogCategories, blogTags] = await Promise.allSettled([
     getAllProducts({ perPage: 5000, page: 1 }),
-    getCategories(),
+    getCategories(undefined, { perPage: 500 }),
     getAllBrands(),
     getAllArticles(),
     getBlogCategories(),
@@ -73,25 +96,36 @@ export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
   try {
     if (categories.status === 'fulfilled' && Array.isArray(categories.value) && categories.value.length > 0) {
       categories.value.forEach((category: Category) => {
-        if (category.slug) {
+        if (!category.slug) return;
+        const catIdx =
+          category.sitemap_include !== false &&
+          category.robots_index !== false &&
+          category.seo_enabled !== false;
+        if (catIdx) {
           sitemapEntries.push({
             url: `${BASE_URL}/category/${category.slug}`,
             lastModified: new Date(),
-            changeFrequency: 'weekly' as const,
-            priority: 0.8,
+            changeFrequency: normalizeSitemapChangefreq(category.sitemap_changefreq ?? undefined),
+            priority: clampPriority(category.sitemap_priority ?? undefined, 0.85),
           });
-          if (category.sous_categories && Array.isArray(category.sous_categories)) {
-            category.sous_categories.forEach((subCategory: SubCategory) => {
-              if (subCategory.slug) {
-                sitemapEntries.push({
-                  url: `${BASE_URL}/category/${subCategory.slug}`,
-                  lastModified: getLastModified(subCategory as ItemWithDates),
-                  changeFrequency: 'weekly' as const,
-                  priority: 0.75,
-                });
-              }
+        }
+        if (category.sous_categories && Array.isArray(category.sous_categories)) {
+          category.sous_categories.forEach((subCategory: SubCategory) => {
+            if (!subCategory.slug) return;
+            if (
+              subCategory.sitemap_include === false ||
+              subCategory.robots_index === false ||
+              subCategory.seo_enabled === false
+            ) {
+              return;
+            }
+            sitemapEntries.push({
+              url: `${BASE_URL}/category/${subCategory.slug}`,
+              lastModified: getLastModified(subCategory as ItemWithDates),
+              changeFrequency: normalizeSitemapChangefreq(subCategory.sitemap_changefreq ?? undefined),
+              priority: clampPriority(subCategory.sitemap_priority ?? undefined, 0.8),
             });
-          }
+          });
         }
       });
     }

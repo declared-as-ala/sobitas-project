@@ -16,7 +16,48 @@ class Categ extends Model
         'cover',
         'meta_title',
         'meta_description',
+        'meta_keywords',
+        'h1_title',
+        'short_intro',
+        'long_bottom_content',
+        'canonical_url',
+        'og_title',
+        'og_description',
+        'og_image',
+        'og_image_alt',
+        'twitter_title',
+        'twitter_description',
+        'twitter_image',
+        'breadcrumb_label',
+        'primary_keyword',
+        'secondary_keywords',
+        'robots_index',
+        'robots_follow',
+        'seo_enabled',
+        'seo_banner_desktop',
+        'seo_banner_mobile',
+        'sitemap_include',
+        'sitemap_priority',
+        'sitemap_changefreq',
+        'extra_json_ld',
+        'related_category_slugs',
+        'faq',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'secondary_keywords' => 'array',
+            'related_category_slugs' => 'array',
+            'faq' => 'array',
+            'extra_json_ld' => 'array',
+            'robots_index' => 'boolean',
+            'robots_follow' => 'boolean',
+            'seo_enabled' => 'boolean',
+            'sitemap_include' => 'boolean',
+            'sitemap_priority' => 'float',
+        ];
+    }
 
     public function sousCategories(): HasMany
     {
@@ -34,37 +75,33 @@ class Categ extends Model
      */
     public function getCoverUrlAttribute(): ?string
     {
-        if (!$this->cover) {
+        if (! $this->cover) {
             return null;
         }
 
-        // If it's already a full URL, extract the relative path
         if (filter_var($this->cover, FILTER_VALIDATE_URL)) {
-            // Extract path from URL (e.g., https://admin.sobitas.tn/storage/categories/image.webp -> categories/image.webp)
             $path = parse_url($this->cover, PHP_URL_PATH);
             $path = ltrim($path, '/');
             if (str_starts_with($path, 'storage/')) {
-                $path = substr($path, 8); // Remove 'storage/' prefix
+                $path = substr($path, 8);
             }
+
             return Storage::disk('public')->url($path);
         }
 
-        // If it's a relative path, use it directly
         return Storage::disk('public')->url($this->cover);
     }
 
     /**
      * Mutator to normalize cover path to relative path only.
-     * Removes full URLs and stores only the relative path.
      */
     public function setCoverAttribute($value): void
     {
         if ($value && filter_var($value, FILTER_VALIDATE_URL)) {
-            // Extract relative path from full URL
             $path = parse_url($value, PHP_URL_PATH);
             $path = ltrim($path, '/');
             if (str_starts_with($path, 'storage/')) {
-                $path = substr($path, 8); // Remove 'storage/' prefix
+                $path = substr($path, 8);
             }
             $this->attributes['cover'] = $path;
         } else {

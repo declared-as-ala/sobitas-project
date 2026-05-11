@@ -6,6 +6,7 @@ use App\Filament\Resources\ArticleResource;
 use App\Filament\Support\ArticleDescriptionHtml;
 use App\Models\Article;
 use Filament\Actions;
+use Illuminate\Support\Facades\Schema;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Support\Enums\Width;
@@ -31,6 +32,16 @@ class EditArticle extends EditRecord
             $data['description'] = Article::prepareDescriptionForRichEditorForm($data['description']);
         }
 
+        if (Schema::hasColumn('articles', 'related_shop_category_slugs')) {
+            $slugs = $data['related_shop_category_slugs'] ?? [];
+            $list = is_array($slugs) ? $slugs : [];
+            if ($list !== [] && isset($list[0]) && is_string($list[0])) {
+                $data['related_shop_slugs_repeater'] = array_map(static fn (string $s): array => ['slug' => $s], $list);
+            } else {
+                $data['related_shop_slugs_repeater'] = [];
+            }
+        }
+
         return $data;
     }
 
@@ -49,7 +60,24 @@ class EditArticle extends EditRecord
             $data[ArticleDescriptionHtml::FIELD_EDITOR_MODE] = $raw[ArticleDescriptionHtml::FIELD_EDITOR_MODE];
         }
 
-        return ArticleResource::mergeDescriptionEditorFormData($data);
+        $data = ArticleResource::mergeDescriptionEditorFormData($data);
+
+        if (Schema::hasColumn('articles', 'related_shop_category_slugs')) {
+            $raw = $this->form->getRawState();
+            $rows = $raw['related_shop_slugs_repeater'] ?? [];
+            $slugs = [];
+            foreach ((array) $rows as $row) {
+                if (is_array($row) && isset($row['slug'])) {
+                    $s = trim((string) $row['slug']);
+                    if ($s !== '') {
+                        $slugs[] = $s;
+                    }
+                }
+            }
+            $data['related_shop_category_slugs'] = array_values(array_unique($slugs));
+        }
+
+        return $data;
     }
 
     public function getMaxContentWidth(): Width | string | null

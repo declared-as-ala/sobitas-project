@@ -3,10 +3,13 @@
 namespace App\Filament\Resources\SousCategoryResource\Pages;
 
 use App\Filament\Resources\SousCategoryResource;
+use App\Filament\Support\NormalizesCategorySeoRecord;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateSousCategory extends CreateRecord
 {
+    use NormalizesCategorySeoRecord;
+
     protected static string $resource = SousCategoryResource::class;
 
     /**
@@ -15,20 +18,6 @@ class CreateSousCategory extends CreateRecord
      */
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        $rows = $data['secondary_keywords'] ?? [];
-        if (is_array($rows)) {
-            $terms = [];
-            foreach ($rows as $row) {
-                if (is_array($row) && isset($row['term'])) {
-                    $t = trim((string) $row['term']);
-                    if ($t !== '') {
-                        $terms[] = $t;
-                    }
-                }
-            }
-            $data['secondary_keywords'] = $terms;
-        }
-
-        return $data;
+        return $this->normalizeCategorySeoBeforeSave($data);
     }
 }

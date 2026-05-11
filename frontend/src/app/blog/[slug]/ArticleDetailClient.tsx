@@ -312,6 +312,28 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
                   />
                 )}
               </div>
+              {article.related_shop_categories && article.related_shop_categories.length > 0 ? (
+                <nav
+                  className="mt-8 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/40 p-4 sm:p-6"
+                  aria-label="Catégories boutique liées"
+                >
+                  <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                    Voir aussi sur la boutique
+                  </h2>
+                  <ul className="flex flex-wrap gap-2 sm:gap-3">
+                    {article.related_shop_categories.map((c) => (
+                      <li key={c.slug}>
+                        <Link
+                          href={`/category/${encodeURIComponent(c.slug)}`}
+                          className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm font-medium text-gray-800 dark:text-gray-100 hover:border-red-300 hover:text-red-600 dark:hover:border-red-800 dark:hover:text-red-400 transition-colors"
+                        >
+                          {c.slug.replace(/-/g, ' ')}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </nav>
+              ) : null}
               {children}
             </div>
           </article>

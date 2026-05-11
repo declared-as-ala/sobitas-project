@@ -264,8 +264,15 @@ class ApisController extends Controller
         $perPage = $this->resolvePerPage($request);
         $data = $this->buildHomeData();
 
-        $categories = Categ::select('id', 'cover', 'slug', 'designation_fr')
-            ->with(['sousCategories' => fn ($q) => $q->select('id', 'slug', 'designation_fr', 'categorie_id')])
+        $categories = Categ::query()
+            ->select([
+                'id', 'cover', 'slug', 'designation_fr',
+                'sitemap_include', 'sitemap_priority', 'sitemap_changefreq', 'robots_index', 'seo_enabled',
+            ])
+            ->with(['sousCategories' => fn ($q) => $q->select(
+                'id', 'slug', 'designation_fr', 'categorie_id',
+                'sitemap_include', 'sitemap_priority', 'sitemap_changefreq', 'robots_index', 'seo_enabled',
+            )])
             ->orderBy('id')
             ->paginate($perPage);
 
@@ -285,8 +292,15 @@ class ApisController extends Controller
     {
         $perPage = $this->resolvePerPage($request);
 
-        $categories = Categ::select('id', 'cover', 'slug', 'designation_fr')
-            ->with(['sousCategories' => fn ($q) => $q->select('id', 'slug', 'designation_fr', 'categorie_id')])
+        $categories = Categ::query()
+            ->select([
+                'id', 'cover', 'slug', 'designation_fr',
+                'sitemap_include', 'sitemap_priority', 'sitemap_changefreq', 'robots_index', 'seo_enabled',
+            ])
+            ->with(['sousCategories' => fn ($q) => $q->select(
+                'id', 'slug', 'designation_fr', 'categorie_id',
+                'sitemap_include', 'sitemap_priority', 'sitemap_changefreq', 'robots_index', 'seo_enabled',
+            )])
             ->orderBy('id')
             ->paginate($perPage);
 
@@ -467,7 +481,7 @@ class ApisController extends Controller
     {
         $perPage = $this->resolvePerPage($request);
 
-        $category = Categ::where('slug', $slug)->select('id', 'slug', 'designation_fr', 'cover', 'meta_title', 'meta_description')->first();
+        $category = Categ::where('slug', $slug)->first();
 
         if (! $category) {
             return response()->json(['error' => 'Category not found'], 404);

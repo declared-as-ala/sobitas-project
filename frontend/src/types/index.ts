@@ -107,6 +107,12 @@ export interface Category {
   designation_fr: string;
   cover?: string;
   sous_categories?: SubCategory[];
+  /** From Laravel — drives sitemap / indexing hints when present */
+  sitemap_include?: boolean;
+  sitemap_priority?: number | null;
+  sitemap_changefreq?: string | null;
+  robots_index?: boolean;
+  seo_enabled?: boolean;
 }
 
 export interface SubCategory {
@@ -115,6 +121,11 @@ export interface SubCategory {
   designation_fr: string;
   categorie_id?: number;
   categorie?: Category;
+  sitemap_include?: boolean;
+  sitemap_priority?: number | null;
+  sitemap_changefreq?: string | null;
+  robots_index?: boolean;
+  seo_enabled?: boolean;
 }
 
 export interface Brand {
@@ -235,6 +246,8 @@ export interface Article {
     date_modified?: string | null;
     section?: string | null;
   };
+  /** Shop category slugs for internal linking (from Filament). */
+  related_shop_categories?: Array<{ slug: string; url: string }>;
 }
 
 export interface BlogCategorySummary {

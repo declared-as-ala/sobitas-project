@@ -4,11 +4,12 @@ namespace App\Support;
 
 use App\Models\Categ;
 use App\Models\SousCategory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 
 /**
  * Normalized SEO payload for category/subcategory API consumers (frontend).
- * `meta_title` / `meta_description` map to `title` / `meta_description` in the envelope.
+ * Additive keys — keep backward compatibility for existing consumers.
  */
 final class CategorySeoEnvelope
 {
@@ -17,74 +18,134 @@ final class CategorySeoEnvelope
      */
     public static function forSousCategory(SousCategory $s, string $publicBaseUrl): array
     {
+        return self::buildFromModel($s, $publicBaseUrl);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public static function forCateg(Categ $c, string $publicBaseUrl): array
+    {
+        return self::buildFromModel($c, $publicBaseUrl);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function buildFromModel(Model $model, string $publicBaseUrl): array
+    {
         $publicBaseUrl = rtrim($publicBaseUrl, '/');
-        $slug = (string) ($s->slug ?? '');
+        $slug = (string) ($model->slug ?? '');
         $defaultCanonical = $publicBaseUrl.'/category/'.rawurlencode($slug);
 
-        $canonical = trim((string) ($s->canonical_url ?? ''));
+        $canonical = trim((string) ($model->canonical_url ?? ''));
         if ($canonical === '') {
             $canonical = $defaultCanonical;
         } elseif (! str_starts_with($canonical, 'http')) {
             $canonical = $publicBaseUrl.'/'.ltrim($canonical, '/');
         }
 
-        $ogImage = self::absoluteAssetUrl((string) ($s->og_image ?? ''), $publicBaseUrl);
-        if ($ogImage === '' && ! empty($s->cover)) {
-            $ogImage = self::absoluteAssetUrl((string) $s->cover, $publicBaseUrl);
-        }
+        $designation = trim((string) ($model->designation_fr ?? ''));
 
-        $faq = self::normalizeFaq($s->faq);
-
-        $secondary = $s->secondary_keywords ?? null;
-        if (is_array($secondary)) {
-            $secondary = array_values(array_filter(array_map(function ($row) {
-                if (is_string($row)) {
-                    return trim($row);
-                }
-                if (is_array($row) && isset($row['term'])) {
-                    return trim((string) $row['term']);
-                }
-
-                return null;
-            }, $secondary)));
-        } else {
-            $secondary = [];
-        }
-
-        $h1 = trim((string) ($s->h1_title ?? ''));
+        $h1 = trim((string) ($model->h1_title ?? ''));
         if ($h1 === '') {
-            $h1 = trim((string) ($s->designation_fr ?? ''));
+            $h1 = $designation;
         }
 
-        $title = trim((string) ($s->meta_title ?? ''));
+        $title = trim((string) ($model->meta_title ?? ''));
         if ($title === '') {
             $title = $h1;
         }
 
-        $metaDescription = trim((string) ($s->meta_description ?? ''));
+        $metaDescription = trim((string) ($model->meta_description ?? ''));
+        $metaKeywords = trim((string) ($model->meta_keywords ?? ''));
 
-        $ogTitle = trim((string) ($s->og_title ?? ''));
+        $ogTitle = trim((string) ($model->og_title ?? ''));
         if ($ogTitle === '') {
             $ogTitle = $title;
         }
-        $ogDescription = trim((string) ($s->og_description ?? ''));
+        $ogDescription = trim((string) ($model->og_description ?? ''));
         if ($ogDescription === '') {
             $ogDescription = $metaDescription;
         }
-        $ogImageAlt = trim((string) ($s->og_image_alt ?? ''));
+
+        $ogImage = self::absoluteAssetUrl((string) ($model->og_image ?? ''), $publicBaseUrl);
+        if ($ogImage === '' && ! empty($model->cover)) {
+            $ogImage = self::absoluteAssetUrl((string) $model->cover, $publicBaseUrl);
+        }
+
+        $ogImageAlt = trim((string) ($model->og_image_alt ?? ''));
         if ($ogImageAlt === '') {
-            $ogImageAlt = trim((string) ($s->alt_cover ?? '')) ?: $h1;
+            $ogImageAlt = trim((string) ($model->alt_cover ?? '')) ?: $h1;
+        }
+
+        $twitterTitle = trim((string) ($model->twitter_title ?? ''));
+        if ($twitterTitle === '') {
+            $twitterTitle = $ogTitle;
+        }
+        $twitterDescription = trim((string) ($model->twitter_description ?? ''));
+        if ($twitterDescription === '') {
+            $twitterDescription = $ogDescription;
+        }
+        $twitterImageRaw = trim((string) ($model->twitter_image ?? ''));
+        $twitterImage = $twitterImageRaw !== ''
+            ? self::absoluteAssetUrl($twitterImageRaw, $publicBaseUrl)
+            : ($ogImage !== '' ? $ogImage : self::absoluteAssetUrl((string) ($model->cover ?? ''), $publicBaseUrl));
+
+        $faq = self::normalizeFaq(is_array($model->faq ?? null) ? $model->faq : null);
+
+        $secondary = $model->secondary_keywords ?? null;
+        $secondary = self::normalizeSecondaryKeywords($secondary);
+
+        $seoTags = $model->seo_tags ?? null;
+        $seoTagsList = [];
+        if (is_array($seoTags)) {
+            foreach ($seoTags as $tag) {
+                if (is_string($tag)) {
+                    $t = trim($tag);
+                    if ($t !== '') {
+                        $seoTagsList[] = $t;
+                    }
+                }
+            }
+        }
+
+        $relatedSlugs = $model->related_category_slugs ?? null;
+        $relatedCategorySlugs = [];
+        if (is_array($relatedSlugs)) {
+            foreach ($relatedSlugs as $s) {
+                if (is_string($s)) {
+                    $x = trim($s);
+                    if ($x !== '') {
+                        $relatedCategorySlugs[] = $x;
+                    }
+                }
+            }
+        }
+
+        $extraRaw = $model->extra_json_ld ?? null;
+        $extraJsonLd = is_array($extraRaw)
+            ? ExtraJsonLdValidator::sanitizedObjectsFromDatabase($extraRaw)
+            : [];
+
+        $bannerDesktop = self::absoluteAssetUrl((string) ($model->seo_banner_desktop ?? ''), $publicBaseUrl);
+        $bannerMobile = self::absoluteAssetUrl((string) ($model->seo_banner_mobile ?? ''), $publicBaseUrl);
+
+        $seoEnabled = $model->seo_enabled ?? true;
+        if ($seoEnabled === null) {
+            $seoEnabled = true;
         }
 
         return [
-            'enabled' => (bool) ($s->seo_enabled ?? true),
+            'enabled' => (bool) $seoEnabled,
             'title' => $title,
             'meta_description' => $metaDescription,
+            'meta_keywords' => $metaKeywords,
             'h1' => $h1,
             'canonical_url' => $canonical,
             'robots' => [
-                'index' => (bool) ($s->robots_index ?? true),
-                'follow' => (bool) ($s->robots_follow ?? true),
+                'index' => (bool) ($model->robots_index ?? true),
+                'follow' => (bool) ($model->robots_follow ?? true),
             ],
             'og' => [
                 'title' => $ogTitle,
@@ -92,15 +153,56 @@ final class CategorySeoEnvelope
                 'image' => $ogImage,
                 'image_alt' => $ogImageAlt,
             ],
-            'keywords' => [
-                'primary' => trim((string) ($s->primary_keyword ?? '')),
-                'secondary' => $secondary,
+            'twitter' => [
+                'title' => $twitterTitle,
+                'description' => $twitterDescription,
+                'image' => $twitterImage,
             ],
-            'breadcrumb_label' => trim((string) ($s->breadcrumb_label ?? '')),
-            'short_intro_html' => (string) ($s->short_intro ?? ''),
-            'long_bottom_html' => (string) ($s->long_bottom_content ?? ''),
+            'keywords' => [
+                'primary' => trim((string) ($model->primary_keyword ?? '')),
+                'secondary' => $secondary,
+                'tags' => $seoTagsList,
+            ],
+            'breadcrumb_label' => trim((string) ($model->breadcrumb_label ?? '')),
+            'short_intro_html' => (string) ($model->short_intro ?? ''),
+            'long_bottom_html' => (string) ($model->long_bottom_content ?? ''),
             'faq' => $faq,
+            'banners' => [
+                'desktop' => $bannerDesktop,
+                'mobile' => $bannerMobile,
+            ],
+            'related_category_slugs' => array_values(array_unique($relatedCategorySlugs)),
+            'extra_json_ld' => $extraJsonLd,
+            'sitemap' => [
+                'include' => (bool) ($model->sitemap_include ?? true),
+                'priority' => $model->sitemap_priority !== null ? (float) $model->sitemap_priority : null,
+                'changefreq' => $model->sitemap_changefreq !== null && $model->sitemap_changefreq !== ''
+                    ? (string) $model->sitemap_changefreq
+                    : null,
+            ],
         ];
+    }
+
+    /**
+     * @param  mixed  $secondary
+     * @return list<string>
+     */
+    private static function normalizeSecondaryKeywords(mixed $secondary): array
+    {
+        if (! is_array($secondary)) {
+            return [];
+        }
+
+        return array_values(array_filter(array_map(function ($row) {
+            if (is_string($row)) {
+                return trim($row);
+            }
+            if (is_array($row) && isset($row['term'])) {
+                return trim((string) $row['term']);
+            }
+
+            return null;
+        }, $secondary), fn ($t) => $t !== null && $t !== ''));
     }
 
     /**
@@ -142,44 +244,5 @@ final class CategorySeoEnvelope
         }
 
         return Storage::disk('public')->url($path);
-    }
-
-    /**
-     * Parent category (categs): only meta_title / meta_description today — same envelope shape for API consistency.
-     *
-     * @return array<string, mixed>
-     */
-    public static function forCateg(Categ $c, string $publicBaseUrl): array
-    {
-        $publicBaseUrl = rtrim($publicBaseUrl, '/');
-        $slug = (string) ($c->slug ?? '');
-        $defaultCanonical = $publicBaseUrl.'/category/'.rawurlencode($slug);
-        $h1 = trim((string) ($c->designation_fr ?? ''));
-        $title = trim((string) ($c->meta_title ?? ''));
-        if ($title === '') {
-            $title = $h1;
-        }
-        $metaDescription = trim((string) ($c->meta_description ?? ''));
-        $ogImage = self::absoluteAssetUrl((string) ($c->cover ?? ''), $publicBaseUrl);
-
-        return [
-            'enabled' => true,
-            'title' => $title,
-            'meta_description' => $metaDescription,
-            'h1' => $h1,
-            'canonical_url' => $defaultCanonical,
-            'robots' => ['index' => true, 'follow' => true],
-            'og' => [
-                'title' => $title,
-                'description' => $metaDescription,
-                'image' => $ogImage,
-                'image_alt' => $h1,
-            ],
-            'keywords' => ['primary' => '', 'secondary' => []],
-            'breadcrumb_label' => '',
-            'short_intro_html' => '',
-            'long_bottom_html' => '',
-            'faq' => [],
-        ];
     }
 }

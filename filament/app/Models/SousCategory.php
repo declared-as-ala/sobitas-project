@@ -16,9 +16,14 @@ class SousCategory extends Model
     protected $casts = [
         'faq' => 'array',
         'secondary_keywords' => 'array',
+        'seo_tags' => 'array',
+        'related_category_slugs' => 'array',
+        'extra_json_ld' => 'array',
         'robots_index' => 'boolean',
         'robots_follow' => 'boolean',
         'seo_enabled' => 'boolean',
+        'sitemap_include' => 'boolean',
+        'sitemap_priority' => 'float',
     ];
 
     public function categorie(): BelongsTo

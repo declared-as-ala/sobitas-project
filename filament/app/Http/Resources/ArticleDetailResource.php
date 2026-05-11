@@ -32,6 +32,23 @@ class ArticleDetailResource extends JsonResource
         $coverNorm = ImagePath::normalize($this->cover);
         $coverMedia = $coverNorm ? ($libraryByPath[$coverNorm] ?? null) : null;
 
+        $frontendBase = rtrim((string) config('app.frontend_url', config('app.url', 'https://protein.tn')), '/');
+        $shopSlugs = is_array($this->related_shop_category_slugs ?? null) ? $this->related_shop_category_slugs : [];
+        $relatedShopCategories = [];
+        foreach ($shopSlugs as $slug) {
+            if (! is_string($slug)) {
+                continue;
+            }
+            $s = trim($slug);
+            if ($s === '') {
+                continue;
+            }
+            $relatedShopCategories[] = [
+                'slug' => $s,
+                'url' => $frontendBase.'/category/'.rawurlencode($s),
+            ];
+        }
+
         return array_merge($base, [
             'cover_media' => $coverMedia,
             'seo' => [
@@ -77,6 +94,7 @@ class ArticleDetailResource extends JsonResource
                 'name' => $tag->name,
                 'slug' => $tag->slug,
             ])->values(),
+            'related_shop_categories' => $relatedShopCategories,
         ]);
     }
 

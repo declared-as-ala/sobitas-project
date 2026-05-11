@@ -11,7 +11,7 @@ import type { Product, FAQ, Review } from '@/types';
 
 const RICH_RESULTS_TEST = 'https://search.google.com/test/rich-results';
 const PRODUCTION_ORIGIN = 'https://protein.tn';
-const SITE_BRAND_NAME = 'Protein Tunisie';
+const SITE_BRAND_NAME = 'Protéine Tunisie';
 
 export type BreadcrumbItem = { name: string; url: string };
 
@@ -392,7 +392,7 @@ export function buildOrganizationSchema(baseUrl: string): object {
     url: base,
     logo: `${base}/sobitas-logo.png`,
     description:
-      'Distributeur officiel de protéines et compléments alimentaires en Tunisie. Whey, créatine, gainer, BCAA à Sousse. Livraison Tunis, Sousse et toute la Tunisie.',
+      'Whey protein, créatine, vitamines et compléments alimentaires en Tunisie — livraison rapide et produits authentiques. Boutique à Sousse, livraison dans tout le pays.',
     address: {
       '@type': 'PostalAddress',
       streetAddress: 'Rue Rihab',
@@ -452,17 +452,9 @@ export function buildWebSiteSchema(baseUrl: string): object {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     '@id': `${base}/#website`,
-    name: SITE_BRAND_NAME,
-    alternateName: ['Proteine Tunisie', 'protein.tn', 'SOBITAS'],
+    name: 'Protéine Tunisie',
+    alternateName: ['Protein Tunisie', 'Proteine Tunisie', 'protein.tn', 'SOBITAS'],
     url: base,
-    description:
-      'Proteine Tunisie : boutique whey protein, créatine et compléments alimentaires. Livraison rapide Sousse, Tunis, Sfax.',
-    publisher: {
-      '@type': 'Organization',
-      '@id': `${base}/#organization`,
-      name: SITE_BRAND_NAME,
-      logo: { '@type': 'ImageObject', url: `${base}/icon.png` },
-    },
     inLanguage: 'fr-TN',
     potentialAction: {
       '@type': 'SearchAction',

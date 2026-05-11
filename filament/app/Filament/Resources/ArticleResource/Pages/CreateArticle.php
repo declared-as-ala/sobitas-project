@@ -5,6 +5,7 @@ namespace App\Filament\Resources\ArticleResource\Pages;
 use App\Filament\Resources\ArticleResource;
 use App\Filament\Support\ArticleDescriptionHtml;
 use Filament\Actions;
+use Illuminate\Support\Facades\Schema;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Support\Enums\Width;
 
@@ -27,7 +28,24 @@ class CreateArticle extends CreateRecord
             $data[ArticleDescriptionHtml::FIELD_EDITOR_MODE] = $raw[ArticleDescriptionHtml::FIELD_EDITOR_MODE];
         }
 
-        return ArticleResource::mergeDescriptionEditorFormData($data);
+        $data = ArticleResource::mergeDescriptionEditorFormData($data);
+
+        if (Schema::hasColumn('articles', 'related_shop_category_slugs')) {
+            $raw = $this->form->getRawState();
+            $rows = $raw['related_shop_slugs_repeater'] ?? [];
+            $slugs = [];
+            foreach ((array) $rows as $row) {
+                if (is_array($row) && isset($row['slug'])) {
+                    $s = trim((string) $row['slug']);
+                    if ($s !== '') {
+                        $slugs[] = $s;
+                    }
+                }
+            }
+            $data['related_shop_category_slugs'] = array_values(array_unique($slugs));
+        }
+
+        return $data;
     }
 
     public function getMaxContentWidth(): Width | string | null

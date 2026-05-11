@@ -203,8 +203,13 @@ export const getHome = async (): Promise<HomeData> => {
 };
 
 // Categories
-export const getCategories = async (signal?: AbortSignal): Promise<Category[]> => {
-  const response = await api.get<any>('/categories', { signal });
+export const getCategories = async (
+  signal?: AbortSignal,
+  opts?: { perPage?: number }
+): Promise<Category[]> => {
+  const params =
+    opts?.perPage != null && opts.perPage > 0 ? { per_page: Math.min(opts.perPage, 1000) } : undefined;
+  const response = await api.get<any>('/categories', { signal, params });
   const raw = response.data;
   // Backend returns paginated response {data: [...], meta: {}, links: {}}
   return Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);

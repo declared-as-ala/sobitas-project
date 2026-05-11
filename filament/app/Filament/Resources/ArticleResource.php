@@ -415,6 +415,25 @@ class ArticleResource extends Resource
                                             ->helperText('Entre 120 et 160 caractères recommandés.')
                                             ->columnSpanFull(),
                                     ]),
+
+                                Section::make('Maillage boutique')
+                                    ->description('Liens vers les pages catégories du site (slugs /category/…).')
+                                    ->icon('heroicon-o-link')
+                                    ->schema([
+                                        Forms\Components\Repeater::make('related_shop_slugs_repeater')
+                                            ->label('Catégories boutique liées')
+                                            ->visible(fn (): bool => self::hasArticleColumn('related_shop_category_slugs'))
+                                            ->dehydrated(false)
+                                            ->schema([
+                                                Forms\Components\TextInput::make('slug')
+                                                    ->label('Slug catégorie')
+                                                    ->placeholder('ex. creatine, proteine-whey')
+                                                    ->maxLength(255)
+                                                    ->required(),
+                                            ])
+                                            ->default([])
+                                            ->columnSpanFull(),
+                                    ]),
                             ]),
 
                         // ═══════════════════════════════════════════════════════

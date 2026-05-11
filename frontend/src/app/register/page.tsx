@@ -3,7 +3,7 @@ import RegisterPage from './RegisterPage';
 
 export const metadata: Metadata = {
   title: 'Inscription - Créer un compte',
-  description: 'Créez votre compte sur Protein Tunisie pour profiter de nos services',
+  description: 'Créez votre compte sur Protéine Tunisie pour profiter de nos services',
   robots: {
     index: false,
     follow: false,

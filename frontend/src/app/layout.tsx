@@ -21,68 +21,63 @@ const inter = Inter({
   fallback: ["system-ui", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "sans-serif"],
 });
 
+const SITE_TITLE_DEFAULT =
+  'Protéine Tunisie | Whey, Créatine & Compléments en Tunisie';
+const SITE_DESCRIPTION =
+  'Achetez whey protein, créatine, vitamines et compléments alimentaires en Tunisie avec livraison rapide et produits authentiques.';
+
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn'),
-  applicationName: 'Protein Tunisie',
+  applicationName: 'Protéine Tunisie',
   title: {
-    default: 'Protein Tunisie: Proteine Tunisie',
-    template: '%s | Protein Tunisie',
+    default: SITE_TITLE_DEFAULT,
+    template: '%s | Protéine Tunisie',
   },
-  description:
-    'Protein Tunisie : proteine tunisie, whey, creatine, complements alimentaires, materiel de musculation et livraison rapide partout en Tunisie.',
+  description: SITE_DESCRIPTION,
   keywords: [
-    "proteine tunisie",
-    "protein tunisie",
-    "whey tunisie",
-    "whey protein",
-    "whey proteine tunisie",
-    "protéine whey tunisie",
-    "créatine tunisie",
-    "créatine monohydrate tunisie",
-    "gainer tunisie",
-    "mass gainer tunisie",
-    "BCAA tunisie",
-    "oméga 3 tunisie",
-    "meilleure whey tunisie",
-    "prix protéine tunisie",
-    "prix whey tunisie",
-    "acheter protéine tunisie",
-    "achat protéine tunisie",
-    "où acheter protéine en tunisie",
-    "proteine pas cher tunisie",
-    "proteine en ligne tunisie",
-    "proteine musculation tunisie",
-    "proteine isolate tunisie",
-    "proteine vegan tunisie",
-    "complément alimentaire tunisie",
-    "nutrition sportive tunisie"
+    'protéine tunisie',
+    'proteine tunisie',
+    'whey tunisie',
+    'whey protein tunisie',
+    'créatine tunisie',
+    'créatine monohydrate tunisie',
+    'compléments alimentaires tunisie',
+    'vitamines tunisie',
+    'gainer tunisie',
+    'mass gainer tunisie',
+    'BCAA tunisie',
+    'oméga 3 tunisie',
+    'nutrition sportive tunisie',
+    'acheter protéine tunisie',
+    'meilleure whey tunisie',
+    'prix whey tunisie',
+    'protein tunisie',
+    'protein.tn',
   ],
-  authors: [{ name: 'Protein Tunisie' }],
-  creator: 'Protein Tunisie',
-  publisher: 'Protein Tunisie',
+  authors: [{ name: 'Protéine Tunisie' }],
+  creator: 'Protéine Tunisie',
+  publisher: 'Protéine Tunisie',
   openGraph: {
-    type: "website",
-    locale: "fr_FR",
-    url: "https://protein.tn",
-    siteName: 'Protein Tunisie',
-    title: 'Protein Tunisie: Proteine Tunisie',
-    description:
-      'Protein Tunisie : proteine tunisie, whey, creatine, complements alimentaires, materiel de musculation et livraison rapide partout en Tunisie.',
+    type: 'website',
+    locale: 'fr_FR',
+    url: 'https://protein.tn',
+    siteName: 'Protéine Tunisie',
+    title: SITE_TITLE_DEFAULT,
+    description: SITE_DESCRIPTION,
     images: [
       {
-        url: "/favicon-512x512.png",
+        url: '/favicon-512x512.png',
         width: 512,
         height: 512,
-        alt: 'Protein Tunisie',
+        alt: 'Protéine Tunisie — whey, créatine et compléments en Tunisie',
       },
     ],
   },
   twitter: {
-    card: "summary_large_image",
-    title: 'Protein Tunisie: Proteine Tunisie',
-    description:
-      'Protein Tunisie : proteine tunisie, whey, creatine, complements alimentaires, materiel de musculation et livraison rapide partout en Tunisie.',
-    images: ["/favicon-512x512.png"],
+    card: 'summary_large_image',
+    title: SITE_TITLE_DEFAULT,
+    description: SITE_DESCRIPTION,
+    images: ['/favicon-512x512.png'],
   },
   robots: {
     index: true,
@@ -90,9 +85,9 @@ export const metadata: Metadata = {
     googleBot: {
       index: true,
       follow: true,
-      "max-video-preview": -1,
-      "max-image-preview": "large",
-      "max-snippet": -1,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
     },
   },
   verification: {
@@ -118,8 +113,7 @@ export default async function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Protein Tunisie" />
-        <meta property="og:site_name" content="Protein Tunisie" />
+        <meta name="apple-mobile-web-app-title" content="Protéine Tunisie" />
         {/* Favicons */}
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />

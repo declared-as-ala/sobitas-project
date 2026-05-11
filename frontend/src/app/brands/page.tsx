@@ -2,27 +2,27 @@ import { Metadata } from 'next';
 import BrandsPageClient from './BrandsPageClient';
 
 export const metadata: Metadata = {
-  title: 'Marques de Compléments Alimentaires | Protein Tunisie',
+  title: 'Marques de Compléments Alimentaires | Protéine Tunisie',
   description: 'Optimum Nutrition, Biotech USA, MyProtein et plus. Toutes nos marques de protéines et compléments en Tunisie.',
   openGraph: {
-    title: 'Marques de Compléments Alimentaires | Protein Tunisie',
+    title: 'Marques de Compléments Alimentaires | Protéine Tunisie',
     description: 'Optimum Nutrition, Biotech USA et plus. Marques de protéines et compléments en Tunisie.',
     url: 'https://protein.tn/brands',
-    siteName: 'Protein Tunisie',
+    siteName: 'Protéine Tunisie',
     images: [
       {
         url: 'https://protein.tn/favicon-512x512.png',
         width: 512,
         height: 512,
-        alt: 'Protein Tunisie – Marques Compléments',
+        alt: 'Protéine Tunisie — marques compléments',
       },
     ],
-    locale: 'fr_TN',
+    locale: 'fr_FR',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Marques de Compléments Alimentaires | Protein Tunisie',
+    title: 'Marques de Compléments Alimentaires | Protéine Tunisie',
     description: 'Optimum Nutrition, Biotech USA et plus. Marques de protéines et compléments en Tunisie.',
     images: ['https://protein.tn/favicon-512x512.png'],
   },

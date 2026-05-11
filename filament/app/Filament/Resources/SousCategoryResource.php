@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\SousCategoryResource\Pages;
 use App\Filament\Resources\ProductResource;
+use App\Filament\Support\CategorySeoForm;
 use App\Models\Categ;
 use App\Models\SousCategory;
 use Filament\Actions;
@@ -21,7 +22,6 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
-use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 
 class SousCategoryResource extends Resource
@@ -118,165 +118,7 @@ class SousCategoryResource extends Resource
 
                         Tab::make('SEO')
                             ->icon('heroicon-o-magnifying-glass')
-                            ->schema([
-                                Section::make('Référencement — aperçu')
-                                    ->description('Les champs structurés alimentent automatiquement le site (balises meta, Open Graph, JSON-LD). `meta_title` = titre SEO affiché dans Google (recommandé ≤ 60 caractères).')
-                                    ->schema([
-                                        Forms\Components\Toggle::make('seo_enabled')
-                                            ->label('SEO activé pour cette sous-catégorie')
-                                            ->helperText('Si désactivé, le site peut ignorer ces champs et utiliser le contenu JSON de secours.')
-                                            ->default(true),
-                                        Forms\Components\TextInput::make('meta_title')
-                                            ->label('Titre SEO (balise title)')
-                                            ->maxLength(255)
-                                            ->live(debounce: 400)
-                                            ->helperText(fn (?string $state): string => 'Longueur : '.mb_strlen((string) ($state ?? '')).' car. — idéal ≤ 60 pour le SERP.'),
-                                        Forms\Components\Textarea::make('meta_description')
-                                            ->label('Meta description')
-                                            ->rows(3)
-                                            ->maxLength(500)
-                                            ->live(debounce: 400)
-                                            ->helperText(fn (?string $state): string => 'Longueur : '.mb_strlen((string) ($state ?? '')).' car. — idéal 150–160.'),
-                                        Forms\Components\TextInput::make('h1_title')
-                                            ->label('Titre H1 sur la page (optionnel)')
-                                            ->maxLength(255)
-                                            ->helperText('Si vide, la désignation de la sous-catégorie est utilisée comme H1.'),
-                                        Forms\Components\TextInput::make('breadcrumb_label')
-                                            ->label('Libellé fil d’Ariane (optionnel)')
-                                            ->maxLength(255)
-                                            ->helperText('Remplace le nom dans le fil d’Ariane public pour cette page uniquement.'),
-                                        Forms\Components\ViewField::make('_seo_preview')
-                                            ->hiddenLabel()
-                                            ->view('filament.forms.components.sous-category-seo-preview')
-                                            ->dehydrated(false)
-                                            ->columnSpanFull(),
-                                    ]),
-
-                                Section::make('Contenu visible (page catégorie)')
-                                    ->description('Texte réellement affiché sur protein.tn — rédigé pour l’utilisateur, puis optimisé pour la recherche.')
-                                    ->schema([
-                                        Forms\Components\RichEditor::make('short_intro')
-                                            ->label('Introduction (au-dessus de la grille produits)')
-                                            ->toolbarButtons([
-                                                'bold', 'italic', 'underline', 'strike', 'link',
-                                                'h2', 'h3', 'bulletList', 'orderedList', 'blockquote',
-                                            ])
-                                            ->columnSpanFull(),
-                                        Forms\Components\RichEditor::make('long_bottom_content')
-                                            ->label('Bloc bas de page (guide d’achat, infos utiles)')
-                                            ->toolbarButtons([
-                                                'bold', 'italic', 'underline', 'strike', 'link',
-                                                'h2', 'h3', 'bulletList', 'orderedList', 'blockquote',
-                                            ])
-                                            ->columnSpanFull(),
-                                        Forms\Components\Repeater::make('faq')
-                                            ->label('FAQ (affichée sur la page + JSON-LD FAQPage si rempli)')
-                                            ->schema([
-                                                Forms\Components\TextInput::make('q')
-                                                    ->label('Question')
-                                                    ->required(),
-                                                Forms\Components\Textarea::make('a')
-                                                    ->label('Réponse')
-                                                    ->rows(3)
-                                                    ->required(),
-                                            ])
-                                            ->default([])
-                                            ->collapsible()
-                                            ->columnSpanFull(),
-                                    ]),
-
-                                Section::make('Open Graph')
-                                    ->schema([
-                                        Forms\Components\TextInput::make('og_title')
-                                            ->label('og:title (optionnel)')
-                                            ->maxLength(255),
-                                        Forms\Components\Textarea::make('og_description')
-                                            ->label('og:description (optionnel)')
-                                            ->rows(2)
-                                            ->maxLength(500),
-                                        Forms\Components\TextInput::make('og_image')
-                                            ->label('og:image (chemin storage ou URL absolue)')
-                                            ->maxLength(512)
-                                            ->helperText('Ex. categories/photo.webp ou URL https://…'),
-                                        Forms\Components\TextInput::make('og_image_alt')
-                                            ->label('Texte alternatif og:image')
-                                            ->maxLength(255),
-                                    ]),
-
-                                Section::make('Image & couverture')
-                                    ->schema([
-                                        Grid::make(2)->schema([
-                                            Forms\Components\TextInput::make('alt_cover')
-                                                ->label('Alt image couverture')
-                                                ->maxLength(255),
-                                            Forms\Components\TextInput::make('description_cover')
-                                                ->label('Description cover (SEO court)')
-                                                ->maxLength(500),
-                                        ]),
-                                    ]),
-
-                                Section::make('Mots-clés & URL canonique')
-                                    ->schema([
-                                        Forms\Components\TextInput::make('primary_keyword')
-                                            ->label('Mot-clé principal')
-                                            ->maxLength(255),
-                                        Forms\Components\Repeater::make('secondary_keywords')
-                                            ->label('Mots-clés secondaires')
-                                            ->schema([
-                                                Forms\Components\TextInput::make('term')
-                                                    ->label('Mot-clé')
-                                                    ->maxLength(80)
-                                                    ->required(),
-                                            ])
-                                            ->default([])
-                                            ->reorderable(false)
-                                            ->columnSpanFull(),
-                                        Forms\Components\TextInput::make('canonical_url')
-                                            ->label('URL canonique (optionnel)')
-                                            ->maxLength(512)
-                                            ->helperText('Laissez vide pour utiliser https://protein.tn/category/{slug}. Sinon URL absolue ou chemin /category/…'),
-                                        Grid::make(2)->schema([
-                                            Forms\Components\Toggle::make('robots_index')
-                                                ->label('Indexation (index)')
-                                                ->default(true),
-                                            Forms\Components\Toggle::make('robots_follow')
-                                                ->label('Suivi des liens (follow)')
-                                                ->default(true),
-                                        ]),
-                                    ]),
-
-                                Section::make('Legacy & données structurées')
-                                    ->collapsed()
-                                    ->schema([
-                                        Forms\Components\Textarea::make('seo_schema_description')
-                                            ->label('Schema description (legacy / JSON-LD complément)')
-                                            ->rows(4)
-                                            ->columnSpanFull(),
-                                        Forms\Components\Textarea::make('meta')
-                                            ->label('Meta brute (legacy)')
-                                            ->visible(fn (?SousCategory $record): bool => filled($record?->meta))
-                                            ->rows(4)
-                                            ->helperText('Ancien format — migrez vers les champs structurés puis videz ce champ.'),
-                                    ]),
-
-                                Section::make('Avertissement — avis / AggregateRating')
-                                    ->icon('heroicon-o-exclamation-triangle')
-                                    ->iconColor('danger')
-                                    ->description(new HtmlString(
-                                        '<strong>Ne pas utiliser</strong> pour des pages catégorie sauf si des avis <em>réels et visibles</em> sont affichés sur la page. '
-                                        .'Les données structurées Product / Review sur les fiches produit restent sur les pages produit.'
-                                    ))
-                                    ->collapsed()
-                                    ->schema([
-                                        Forms\Components\Textarea::make('review_seo')
-                                            ->label('Review (legacy — à éviter ici)')
-                                            ->rows(2)
-                                            ->maxLength(255),
-                                        Forms\Components\TextInput::make('aggregate_rating_seo')
-                                            ->label('AggregateRating (legacy — à éviter ici)')
-                                            ->maxLength(255),
-                                    ]),
-                            ]),
+                            ->schema(CategorySeoForm::seoSections(true)),
 
                         Tab::make('Détails')
                             ->icon('heroicon-o-document-text')

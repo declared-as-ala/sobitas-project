@@ -8,29 +8,30 @@ import type { AccueilData } from '@/types';
 
 export async function generateMetadata(): Promise<Metadata> {
   const canonical = buildCanonicalUrl('/');
-  const title = 'Protein Tunisie | Whey, Créatine & Compléments en Tunisie';
+  const title = 'Protéine Tunisie | Whey, Créatine & Compléments en Tunisie';
   const description =
-    'Protein Tunisie : proteine tunisie, whey, créatine, compléments alimentaires et matériel de musculation avec livraison rapide partout en Tunisie.';
+    'Achetez whey protein, créatine, vitamines et compléments alimentaires en Tunisie avec livraison rapide et produits authentiques.';
 
   return {
     title,
     description,
     keywords:
-      'proteine tunisie, protein tunisie, whey tunisie, whey protein tunisie, créatine tunisie, complément alimentaire tunisie, nutrition sportive tunisie, protéine musculation Tunisie',
+      'protéine tunisie, whey tunisie, créatine tunisie, compléments alimentaires tunisie, vitamines tunisie, nutrition sportive tunisie, protein tunisie, protein.tn',
     alternates: { canonical },
     openGraph: {
-      title: 'Protein Tunisie | Whey, Créatine & Compléments en Tunisie',
+      title,
       description,
-      images: ['/assets/img/logo/logo.webp'],
+      images: [{ url: '/favicon-512x512.png', width: 512, height: 512, alt: 'Protéine Tunisie' }],
       url: canonical,
       type: 'website',
-      siteName: 'Protein Tunisie',
+      siteName: 'Protéine Tunisie',
+      locale: 'fr_FR',
     },
     twitter: {
       card: 'summary_large_image',
-      title: 'Protein Tunisie | Whey, Créatine & Compléments en Tunisie',
+      title,
       description,
-      images: ['/assets/img/logo/logo.webp'],
+      images: ['/favicon-512x512.png'],
     },
     other: {},
   };

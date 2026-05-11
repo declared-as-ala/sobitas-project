@@ -3,16 +3,24 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\CategResource\Pages;
+use App\Filament\Support\CategorySeoForm;
 use App\Filament\Support\ImagePath;
 use App\Models\Categ;
 use Filament\Forms;
-use Filament\Schemas\Schema;
-use Filament\Resources\Resource;
 use Filament\Forms\Components\FileUpload;
+use Filament\Resources\Resource;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Tabs;
+use Filament\Schemas\Components\Tabs\Tab;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Actions;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class CategResource extends Resource
 {
@@ -34,58 +42,78 @@ class CategResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema->columns(1)->schema([
-            \Filament\Schemas\Components\Section::make('Identification')
-                ->schema([
-                    Forms\Components\TextInput::make('designation_fr')
-                        ->label('Désignation')
-                        ->required()
-                        ->maxLength(255),
-                    Forms\Components\TextInput::make('slug')
-                        ->label('Slug')
-                        ->required()
-                        ->maxLength(255)
-                        ->unique(ignoreRecord: true)
-                        ->helperText('Utilisé dans les URLs — lettres minuscules, chiffres et tirets uniquement.'),
-                ]),
+        return $schema
+            ->columns(1)
+            ->schema([
+                Tabs::make('categ_tabs')
+                    ->persistTabInQueryString()
+                    ->columnSpanFull()
+                    ->tabs([
+                        Tab::make('Général')
+                            ->icon('heroicon-o-pencil-square')
+                            ->schema([
+                                Forms\Components\Hidden::make('_slug_auto_source')
+                                    ->dehydrated(false),
+                                Section::make('Identification')
+                                    ->schema([
+                                        Grid::make(2)->schema([
+                                            Forms\Components\TextInput::make('designation_fr')
+                                                ->label('Désignation')
+                                                ->required()
+                                                ->maxLength(255)
+                                                ->live(debounce: 400)
+                                                ->afterStateUpdated(function ($state, Set $set, Get $get): void {
+                                                    $des = (string) ($state ?? '');
+                                                    $newSlug = Str::slug($des);
+                                                    $slug = (string) ($get('slug') ?? '');
+                                                    $syncFrom = (string) ($get('_slug_auto_source') ?? '');
+                                                    $expected = Str::slug($syncFrom);
+                                                    if ($slug === '' || $slug === $expected) {
+                                                        $set('slug', $newSlug);
+                                                    }
+                                                    $set('_slug_auto_source', $des);
+                                                }),
+                                            Forms\Components\TextInput::make('slug')
+                                                ->label('Slug')
+                                                ->required()
+                                                ->maxLength(255)
+                                                ->unique(ignoreRecord: true)
+                                                ->helperText('Utilisé dans les URLs — lettres minuscules, chiffres et tirets uniquement.'),
+                                        ]),
+                                    ]),
+                                Section::make('Image')
+                                    ->schema([
+                                        FileUpload::make('cover')
+                                            ->label('Image de couverture')
+                                            ->disk('public')
+                                            ->directory('categories')
+                                            ->image()
+                                            ->imageEditor()
+                                            ->imagePreviewHeight('250')
+                                            ->imageEditorAspectRatios([null, '16:9', '4:3', '1:1'])
+                                            ->visibility('public')
+                                            ->preserveFilenames(false)
+                                            ->maxSize(4096)
+                                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+                                            ->helperText('Formats acceptés : JPEG, PNG, WebP, GIF — Max 4 Mo')
+                                            ->columnSpanFull()
+                                            ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
+                                                $path = $file->store('categories', 'public');
+                                                if (! $path) {
+                                                    $ext = $file->getClientOriginalExtension() ?: 'jpg';
+                                                    $path = $file->storeAs('categories', Str::uuid().'.'.$ext, 'public');
+                                                }
 
-            \Filament\Schemas\Components\Section::make('Image')
-                ->schema([
-                    FileUpload::make('cover')
-                        ->label('Image de couverture')
-                        ->disk('public')
-                        ->directory('categories')
-                        ->image()
-                        ->imageEditor()
-                        ->imagePreviewHeight('250')
-                        ->imageEditorAspectRatios([null, '16:9', '4:3', '1:1'])
-                        ->visibility('public')
-                        ->preserveFilenames(false)
-                        ->maxSize(4096)
-                        ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
-                        ->helperText('Formats acceptés : JPEG, PNG, WebP, GIF — Max 4 Mo')
-                        ->columnSpanFull()
-                        ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
-                            $path = $file->store('categories', 'public');
-                            if (! $path) {
-                                $ext  = $file->getClientOriginalExtension() ?: 'jpg';
-                                $path = $file->storeAs('categories', \Illuminate\Support\Str::uuid() . '.' . $ext, 'public');
-                            }
-                            return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp((string) $path) ?? (string) $path;
-                        }),
-                ]),
-
-            \Filament\Schemas\Components\Section::make('SEO')
-                ->collapsed()
-                ->schema([
-                    Forms\Components\TextInput::make('meta_title')
-                        ->label('Meta Title')
-                        ->maxLength(255),
-                    Forms\Components\TextInput::make('meta_description')
-                        ->label('Meta Description')
-                        ->maxLength(255),
-                ]),
-        ]);
+                                                return (new \App\Services\Media\ConvertUploadedImageToWebp)->convertStoredPathToWebp((string) $path) ?? (string) $path;
+                                            }),
+                                    ]),
+                            ]),
+                        Tab::make('SEO')
+                            ->icon('heroicon-o-magnifying-glass')
+                            ->schema(CategorySeoForm::seoSections(false)),
+                    ])
+                    ->columnSpanFull(),
+            ]);
     }
 
     public static function table(Table $table): Table
@@ -154,10 +182,9 @@ class CategResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index'  => Pages\ListCategs::route('/'),
+            'index' => Pages\ListCategs::route('/'),
             'create' => Pages\CreateCateg::route('/create'),
-            'edit'   => Pages\EditCateg::route('/{record}/edit'),
+            'edit' => Pages\EditCateg::route('/{record}/edit'),
         ];
     }
 }
-

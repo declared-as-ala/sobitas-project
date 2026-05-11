@@ -78,6 +78,14 @@ class Article extends Model
             $casts['blog_type'] = BlogArticleType::class;
         }
 
+        try {
+            if (Schema::hasTable('articles') && Schema::hasColumn('articles', 'related_shop_category_slugs')) {
+                $casts['related_shop_category_slugs'] = 'array';
+            }
+        } catch (\Throwable) {
+            // ignore
+        }
+
         return $casts;
     }
 
