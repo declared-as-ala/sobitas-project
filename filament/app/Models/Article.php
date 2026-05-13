@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\BlogArticleType;
 use App\Filament\Support\ArticleDescriptionHtml;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -92,6 +93,11 @@ class Article extends Model
     public function scopePublished($query)
     {
         return $query->where('publier', 1);
+    }
+
+    public function articleType(): BelongsTo
+    {
+        return $this->belongsTo(ArticleType::class, 'article_type_id');
     }
 
     public function categories(): BelongsToMany

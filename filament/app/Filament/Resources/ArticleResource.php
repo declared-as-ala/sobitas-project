@@ -2,8 +2,8 @@
 
 namespace App\Filament\Resources;
 
-use App\Enums\BlogArticleType;
 use App\Filament\Resources\ArticleResource\Pages;
+use App\Models\ArticleType;
 use App\Filament\Support\ArticleBodyDocumentNormalizer;
 use App\Filament\Support\ArticleDescriptionHtml;
 use App\Filament\Support\ImagePath;
@@ -447,20 +447,23 @@ class ArticleResource extends Resource
                                     ->icon('heroicon-o-signal')
                                     ->description('Contrôlez la visibilité de cet article sur votre site.')
                                     ->schema([
-                                        Forms\Components\Select::make('blog_type')
+                                        Forms\Components\Select::make('article_type_id')
                                             ->label('Type d\'article')
-                                            ->options(BlogArticleType::options())
-                                            ->placeholder('— Non défini (filtre par mots-clés sur le site) —')
+                                            ->relationship('articleType', 'name')
+                                            ->options(fn () => ArticleType::orderBy('sort_order')->pluck('name', 'id'))
+                                            ->placeholder('— Non défini —')
                                             ->nullable()
                                             ->native(false)
-                                            ->helperText('Optionnel. Les articles sans type restent classés par mots-clés comme avant.')
-                                            ->columnSpanFull(),
-                                        Forms\Components\Select::make('categories')
-                                            ->label('Catégories blog')
-                                            ->relationship('categories', 'name')
-                                            ->multiple()
                                             ->searchable()
                                             ->preload()
+                                            ->helperText('Gérez les types disponibles dans Blog → Types d\'articles.')
+                                            ->suffixAction(
+                                                Forms\Components\Actions\Action::make('manage_types')
+                                                    ->label('Gérer les types')
+                                                    ->icon('heroicon-o-arrow-top-right-on-square')
+                                                    ->url(fn () => route('filament.admin.resources.article-types.index'))
+                                                    ->openUrlInNewTab()
+                                            )
                                             ->columnSpanFull(),
                                         Forms\Components\Select::make('tags')
                                             ->label('Tags blog')
@@ -485,10 +488,7 @@ class ArticleResource extends Resource
 
     public static function table(Table $table): Table
     {
-        $selectCols = ['id', 'designation_fr', 'slug', 'cover', 'publier', 'created_at'];
-        if (Article::hasBlogTypeColumn()) {
-            $selectCols = ['id', 'designation_fr', 'slug', 'cover', 'publier', 'blog_type', 'created_at'];
-        }
+        $selectCols = ['id', 'designation_fr', 'slug', 'cover', 'publier', 'article_type_id', 'created_at'];
 
         $columns = [
             Tables\Columns\ImageColumn::make('cover')
@@ -507,23 +507,13 @@ class ArticleResource extends Resource
                 ->description(fn ($record) => $record->slug),
         ];
 
-        if (Article::hasBlogTypeColumn()) {
-            $columns[] = Tables\Columns\TextColumn::make('blog_type')
-                ->label('Type')
-                ->formatStateUsing(function ($state): string {
-                    if ($state === null) {
-                        return '—';
-                    }
-                    if ($state instanceof BlogArticleType) {
-                        return $state->label();
-                    }
-
-                    return BlogArticleType::tryFrom((string) $state)?->label() ?? '—';
-                })
-                ->badge()
-                ->color(fn ($state): string => $state === null ? 'gray' : 'info')
-                ->toggleable();
-        }
+        $columns[] = Tables\Columns\TextColumn::make('articleType.name')
+            ->label('Type')
+            ->badge()
+            ->color(fn ($state): string => $state ? 'info' : 'gray')
+            ->default('—')
+            ->toggleable()
+            ->sortable();
 
         $columns[] = Tables\Columns\IconColumn::make('publier')
             ->label('Publié')
@@ -535,7 +525,7 @@ class ArticleResource extends Resource
             ->sortable();
 
         return $table
-            ->modifyQueryUsing(fn (\Illuminate\Database\Eloquent\Builder $query) => $query->select($selectCols))
+            ->modifyQueryUsing(fn (\Illuminate\Database\Eloquent\Builder $query) => $query->select($selectCols)->with('articleType'))
             ->columns($columns)
             ->defaultSort('created_at', 'desc')
             ->defaultPaginationPageOption(25)

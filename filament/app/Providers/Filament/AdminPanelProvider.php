@@ -15,6 +15,7 @@ use App\Filament\Pages\Stock\StockDashboard;
 use App\Filament\Pages\MediaPage;
 use App\Filament\Resources\AnnonceResource;
 use App\Filament\Resources\ArticleResource;
+use App\Filament\Resources\ArticleTypeResource;
 use App\Filament\Resources\AromaResource;
 use App\Filament\Resources\BrandResource;
 use App\Filament\Resources\CategResource;
@@ -157,6 +158,7 @@ class AdminPanelProvider extends PanelProvider
             ->resources([
                 AnnonceResource::class,
                 ArticleResource::class,
+                ArticleTypeResource::class,
                 AromaResource::class,
                 BrandResource::class,
                 CategResource::class,
