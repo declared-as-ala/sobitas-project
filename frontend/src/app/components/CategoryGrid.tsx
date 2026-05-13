@@ -53,7 +53,7 @@ function CategoryCard({ category }: { category: Category }) {
               alt={category.designation_fr}
               fill
               className="object-cover object-center block transition-transform duration-300 sm:group-hover:scale-110"
-              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 33vw"
+              sizes="(max-width: 640px) 48vw, (max-width: 1024px) 48vw, 30vw"
               loading="lazy"
               quality={70}
               onError={() => setImageError(true)}
@@ -65,7 +65,7 @@ function CategoryCard({ category }: { category: Category }) {
               alt=""
               fill
               className="object-cover object-center block"
-              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 33vw"
+              sizes="(max-width: 640px) 48vw, (max-width: 1024px) 48vw, 30vw"
               aria-hidden="true"
               unoptimized
             />

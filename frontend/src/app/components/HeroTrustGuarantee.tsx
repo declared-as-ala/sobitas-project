@@ -56,24 +56,9 @@ export const HeroTrustGuarantee = memo(function HeroTrustGuarantee({
             {/* Text */}
             <p
               id={headingId}
-              className="flex min-w-0 flex-1 flex-wrap items-baseline justify-end gap-x-1.5 gap-y-0.5 text-right"
+              className="text-[0.8125rem] font-medium leading-snug text-white/90 text-right"
             >
-              <span className="text-[0.8125rem] font-medium leading-snug text-white/90">
-                ضمان استرجاع فلوسك في
-              </span>
-              <span className="
-                inline-flex items-center rounded-lg
-                bg-gradient-to-b from-red-500 to-red-600
-                px-2.5 py-0.5 text-[0.72rem] font-extrabold text-white
-                shadow-[0_2px_12px_rgba(220,38,38,0.42)]
-                ring-1 ring-inset ring-white/20
-              ">
-                7&nbsp;أيّام
-              </span>
-              <span className="text-[0.8125rem] font-medium leading-snug text-white/90">
-                كاملة&nbsp;بدون&nbsp;أسئلة
-              </span>
-              <span aria-hidden className="translate-y-px text-[0.9em] opacity-90">💯</span>
+              تنجم ترجع فلوسك في 7ايام كان معجبك منتوج
             </p>
           </div>
         </div>
@@ -137,31 +122,13 @@ export const HeroTrustGuarantee = memo(function HeroTrustGuarantee({
             {/* Text block */}
             <div className="flex min-w-0 flex-1 flex-col gap-2 text-right">
 
-              {/* Headline + badge row */}
-              <div className="flex flex-wrap items-center justify-end gap-x-2.5 gap-y-1.5">
-                <h2
-                  id={headingId}
-                  className="text-[1.0rem] font-bold leading-tight tracking-[-0.01em] text-white sm:text-[1.0625rem]"
-                >
-                  ضمان استرجاع المال
-                </h2>
-                <span className="
-                  inline-flex items-center rounded-xl
-                  bg-gradient-to-b from-red-500 to-red-600
-                  px-3 py-[0.3rem] text-[0.8125rem] font-extrabold text-white
-                  shadow-[0_4px_16px_rgba(220,38,38,0.45)]
-                  ring-1 ring-inset ring-white/20
-                  transition-shadow duration-300
-                  group-hover:shadow-[0_6px_20px_rgba(220,38,38,0.55)]
-                ">
-                  7&nbsp;أيّام
-                </span>
-              </div>
-
-              {/* Body copy */}
-              <p className="text-[0.855rem] leading-[1.65] text-white/[0.72] sm:text-[0.88rem]">
-                كان ما عجبكك المنتج بأي سبب&mdash;نرجّعلك فلوسك كاملة&nbsp;بدون&nbsp;أسئلة
-              </p>
+              {/* Headline */}
+              <h2
+                id={headingId}
+                className="text-[1.0rem] font-bold leading-snug tracking-[-0.01em] text-white sm:text-[1.0625rem]"
+              >
+                تنجم ترجع فلوسك في 7ايام كان معجبك منتوج
+              </h2>
             </div>
           </div>
 

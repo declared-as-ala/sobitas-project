@@ -127,7 +127,7 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
               height={500}
               className="size-full object-contain p-3 sm:p-4 md:p-5 lg:p-6 transition-transform duration-500 group-hover:scale-105"
               loading="lazy"
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
+              sizes="(max-width: 640px) 90vw, (max-width: 1024px) 46vw, (max-width: 1280px) 32vw, 24vw"
               quality={75}
               onError={(e) => {
                 const target = e.target as HTMLImageElement;

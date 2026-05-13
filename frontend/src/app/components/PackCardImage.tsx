@@ -69,7 +69,7 @@ export function PackCardImage({
               transform: !isContain && scale > 1 ? `scale(${scale})` : undefined,
             }}
             loading="lazy"
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
+            sizes="(max-width: 640px) 46vw, (max-width: 768px) 32vw, (max-width: 1024px) 26vw, (max-width: 1280px) 20vw, 16vw"
             quality={85}
             onError={() => setHasError(true)}
           />
