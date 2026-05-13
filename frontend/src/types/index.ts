@@ -42,6 +42,8 @@ export interface Product {
   qte?: number;
   low_stock_threshold?: number;
   nutrition_values?: string | null;
+  /** Array of image paths for the nutrition facts section (stored in storage/public/produits/nutrition) */
+  nutrition_images?: string[] | null;
   /** Filament repeater: [{ q, a }, …] — product-specific FAQ shown on detail page */
   faq?: Array<{ q?: string; a?: string; question?: string; answer?: string }> | null;
   /** Legacy HTML block (older backends); optional fallback if `faq` is empty */

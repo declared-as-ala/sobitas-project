@@ -14,14 +14,14 @@ import { Badge } from '@/app/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 import { Input } from '@/app/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
-import { Minus, Plus, ShoppingCart, Star, Shield, ArrowLeft, Heart, Share2, ZoomIn, CheckCircle2, Loader2, BadgeCheck, Search, Zap } from 'lucide-react';
+import { Minus, Plus, ShoppingCart, Star, Shield, ArrowLeft, Heart, Share2, ZoomIn, CheckCircle2, Loader2, BadgeCheck, Search, Zap, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useQuickOrder } from '@/contexts/QuickOrderContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import type { QuickOrderProduct } from '@/contexts/QuickOrderContext';
 import { motion } from 'motion/react';
 import { Card, CardContent } from '@/app/components/ui/card';
-import type { Product, Review, FAQ } from '@/types';
-import { getStorageUrl, addReview, getProductDetails, getFAQs } from '@/services/api';
+import type { Product, Review } from '@/types';
+import { getStorageUrl, addReview, getProductDetails } from '@/services/api';
 import { hasValidPromo } from '@/util/productPrice';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -76,6 +76,8 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
   const { openQuickOrder } = useQuickOrder();
   /** Selected aroma for display; add to cart / command use this or first aroma. */
   const [selectedAromaId, setSelectedAromaId] = useState<number | null>(null);
+  /** Nutrition image lightbox: index of the open image (-1 = closed) */
+  const [nutritionLightbox, setNutritionLightbox] = useState<number>(-1);
 
   // Use state to manage product data so we can update it after adding a review
   const [product, setProduct] = useState<Product>(initialProduct);
@@ -91,7 +93,6 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
   // Backend already filters reviews by publier = 1 in the relationship, so use all reviews returned
   // The publier field is hidden in JSON response, so we can't filter on frontend
   const [reviews, setReviews] = useState<Review[]>(initialProduct.reviews || []);
-  const [faqs, setFaqs] = useState<FAQ[]>([]);
 
   // Scroll to avis section when URL has #reviews (e.g. after opening shared link)
   useEffect(() => {
@@ -130,16 +131,6 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
       setSelectedAromaId(null);
     }
 
-    // Debug: Log nutrition_values to check if it's being returned
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Product nutrition_values:', initialProduct.nutrition_values);
-      console.log('Product questions:', initialProduct.questions);
-    }
-
-    // Fetch FAQs
-    getFAQs().then(data => {
-      setFaqs(data);
-    }).catch(err => console.error('Error fetching FAQs:', err));
   }, [initialProduct]);
 
   // Clamp quantity to 1..stockDisponible when stock changes
@@ -1082,7 +1073,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 String(product.questions).trim() !== '<p></p>' &&
                 String(product.questions).trim() !== '<p><br></p>';
               const hasProductFaq = productFaqItems.length > 0;
-              const hasQuestionsTab = hasLegacyQuestionsHtml || hasProductFaq || faqs.length > 0;
+              const hasQuestionsTab = hasLegacyQuestionsHtml || hasProductFaq;
 
               return (
                 <Tabs defaultValue="description" className="w-full flex flex-col gap-4 sm:gap-5">
@@ -1121,25 +1112,145 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   </TabsContent>
 
                   <TabsContent value="nutrition" className="mt-0 pt-0 rounded-xl sm:rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden focus-visible:outline-none data-[state=inactive]:hidden data-[state=inactive]:absolute data-[state=inactive]:pointer-events-none">
-                    <div className="p-3 sm:p-5 lg:p-6 pt-4 sm:pt-6 border-t border-gray-200 dark:border-gray-800">
-                      <h2 className="text-base sm:text-lg font-bold mb-3 text-gray-900 dark:text-white">
-                        {product.zone3 || 'Valeurs Nutritionnelles'}
-                      </h2>
-                    {hasNutritionContent ? (
-                      <div className="w-full min-w-0 overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
-                        <div
-                          className="nutrition-content text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-neutral prose-sm sm:prose-base max-w-none prose-p:leading-relaxed prose-p:my-1 sm:prose-p:my-2 prose-img:rounded-lg prose-img:shadow-md prose-img:max-w-full prose-img:h-auto prose-table:text-left prose-th:py-2 prose-th:px-2 sm:prose-th:px-3 prose-td:py-2 prose-td:px-2 sm:prose-td:px-3 prose-table:w-full min-w-[280px]"
-                          dangerouslySetInnerHTML={{ __html: product.nutrition_values || '' }}
-                        />
-                      </div>
-                    ) : (
-                      <div className="text-center py-6 sm:py-8">
-                        <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base">
-                          Les valeurs nutritionnelles ne sont pas disponibles pour ce produit.
-                        </p>
-                      </div>
-                    )}
-                    </div>
+                    {(() => {
+                      const nutritionImages = Array.isArray((product as any).nutrition_images)
+                        ? ((product as any).nutrition_images as string[]).filter(Boolean)
+                        : [];
+                      const hasNutritionImages = nutritionImages.length > 0;
+                      return (
+                        <div className="p-3 sm:p-5 lg:p-6 pt-4 sm:pt-6 border-t border-gray-200 dark:border-gray-800">
+                          <h2 className="text-base sm:text-lg font-bold mb-4 text-gray-900 dark:text-white">
+                            {product.zone3 || 'Valeurs Nutritionnelles'}
+                          </h2>
+
+                          {/* Nutrition Images Gallery */}
+                          {hasNutritionImages && (
+                            <div className="mb-6">
+                              {nutritionImages.length === 1 ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setNutritionLightbox(0)}
+                                  className="relative group block w-full max-w-lg mx-auto rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-200 cursor-zoom-in"
+                                  aria-label="Agrandir l'image nutritionnelle"
+                                >
+                                  <Image
+                                    src={getStorageUrl(nutritionImages[0])}
+                                    alt={`${product.designation_fr || 'Produit'} — valeurs nutritionnelles`}
+                                    width={600}
+                                    height={400}
+                                    className="w-full h-auto object-contain"
+                                    unoptimized
+                                  />
+                                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200 flex items-center justify-center">
+                                    <ZoomIn className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 drop-shadow-lg" size={32} />
+                                  </div>
+                                </button>
+                              ) : (
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                  {nutritionImages.map((imgPath, idx) => (
+                                    <button
+                                      key={idx}
+                                      type="button"
+                                      onClick={() => setNutritionLightbox(idx)}
+                                      className="relative group aspect-square rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 cursor-zoom-in bg-gray-50 dark:bg-gray-800"
+                                      aria-label={`Image nutritionnelle ${idx + 1}`}
+                                    >
+                                      <Image
+                                        src={getStorageUrl(imgPath)}
+                                        alt={`${product.designation_fr || 'Produit'} — valeurs nutritionnelles ${idx + 1}`}
+                                        fill
+                                        sizes="(max-width: 640px) 50vw, 33vw"
+                                        className="object-contain p-1"
+                                        unoptimized
+                                      />
+                                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200 flex items-center justify-center">
+                                        <ZoomIn className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 drop-shadow-lg" size={20} />
+                                      </div>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Nutrition Text Content */}
+                          {hasNutritionContent ? (
+                            <div className="w-full min-w-0 overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
+                              <div
+                                className="nutrition-content text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-neutral prose-sm sm:prose-base max-w-none prose-p:leading-relaxed prose-p:my-1 sm:prose-p:my-2 prose-img:rounded-lg prose-img:shadow-md prose-img:max-w-full prose-img:h-auto prose-table:text-left prose-th:py-2 prose-th:px-2 sm:prose-th:px-3 prose-td:py-2 prose-td:px-2 sm:prose-td:px-3 prose-table:w-full min-w-[280px]"
+                                dangerouslySetInnerHTML={{ __html: product.nutrition_values || '' }}
+                              />
+                            </div>
+                          ) : !hasNutritionImages ? (
+                            <div className="text-center py-6 sm:py-8">
+                              <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base">
+                                Les valeurs nutritionnelles ne sont pas disponibles pour ce produit.
+                              </p>
+                            </div>
+                          ) : null}
+
+                          {/* Lightbox */}
+                          {nutritionLightbox >= 0 && (
+                            <div
+                              className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
+                              onClick={() => setNutritionLightbox(-1)}
+                              role="dialog"
+                              aria-modal="true"
+                              aria-label="Visionneuse d'image nutritionnelle"
+                            >
+                              <button
+                                type="button"
+                                onClick={() => setNutritionLightbox(-1)}
+                                className="absolute top-4 right-4 text-white/80 hover:text-white bg-black/30 hover:bg-black/60 rounded-full p-2 transition-colors z-10"
+                                aria-label="Fermer"
+                              >
+                                <X size={22} />
+                              </button>
+
+                              {nutritionImages.length > 1 && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); setNutritionLightbox((nutritionLightbox - 1 + nutritionImages.length) % nutritionImages.length); }}
+                                    className="absolute left-3 sm:left-6 text-white/80 hover:text-white bg-black/30 hover:bg-black/60 rounded-full p-2 transition-colors z-10"
+                                    aria-label="Image précédente"
+                                  >
+                                    <ChevronLeft size={26} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); setNutritionLightbox((nutritionLightbox + 1) % nutritionImages.length); }}
+                                    className="absolute right-3 sm:right-6 text-white/80 hover:text-white bg-black/30 hover:bg-black/60 rounded-full p-2 transition-colors z-10"
+                                    aria-label="Image suivante"
+                                  >
+                                    <ChevronRight size={26} />
+                                  </button>
+                                </>
+                              )}
+
+                              <div
+                                className="relative max-w-[90vw] max-h-[90vh] flex items-center justify-center"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Image
+                                  src={getStorageUrl(nutritionImages[nutritionLightbox] ?? '')}
+                                  alt={`${product.designation_fr || 'Produit'} — valeurs nutritionnelles ${nutritionLightbox + 1}`}
+                                  width={900}
+                                  height={700}
+                                  className="max-w-[90vw] max-h-[90vh] w-auto h-auto object-contain rounded-lg shadow-2xl"
+                                  unoptimized
+                                />
+                                {nutritionImages.length > 1 && (
+                                  <span className="absolute bottom-3 left-1/2 -translate-x-1/2 text-white/70 text-xs bg-black/40 px-2 py-0.5 rounded-full">
+                                    {nutritionLightbox + 1} / {nutritionImages.length}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </TabsContent>
 
                   <TabsContent value="questions" className="mt-0 pt-0 flex-1 min-h-0 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden focus-visible:outline-none data-[state=inactive]:hidden">
@@ -1169,25 +1280,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                         className="text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-neutral prose-base max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-headings:mb-2 prose-headings:mt-4 prose-p:text-gray-600 prose-p:dark:text-gray-400 prose-p:leading-relaxed prose-p:my-2 prose-strong:text-gray-900 prose-strong:dark:text-white"
                         dangerouslySetInnerHTML={{ __html: product.questions || '' }}
                       />
-                    ) : faqs.length > 0 ? (
-                    <div className="space-y-4">
-                      {faqs.map((faq) => (
-                        <div key={faq.id} className="border-b border-gray-100 dark:border-gray-800 pb-4 last:border-0 last:pb-0">
-                          <h4 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-start gap-2">
-                            <span className="text-red-600 dark:text-red-400 shrink-0">Q.</span>
-                            {faq.question}
-                          </h4>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 pl-6 whitespace-pre-wrap">
-                            {faq.reponse ?? faq.answer ?? ''}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
-                      Aucune question pour le moment. N'hésitez pas à nous contacter si vous avez des questions spécifiques.
-                    </p>
-                  )}
+                    ) : null}
                     </div>
                 </TabsContent>
               </Tabs>

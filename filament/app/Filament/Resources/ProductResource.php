@@ -291,10 +291,26 @@ class ProductResource extends Resource
                                         ->cloneable()
                                         ->columnSpanFull(),
                                     Forms\Components\Textarea::make('nutrition_values')
-                                        ->label('Nutrition Values')
+                                        ->label('Valeurs Nutritionnelles (texte/HTML)')
                                         ->visible(fn (): bool => self::hasProductColumn('nutrition_values'))
                                         ->dehydrated(fn (): bool => self::hasProductColumn('nutrition_values'))
                                         ->rows(6)
+                                        ->columnSpanFull(),
+                                    FileUpload::make('nutrition_images')
+                                        ->label('Images Nutritionnelles')
+                                        ->helperText('Uploadez une ou plusieurs images du tableau nutritionnel (JPG, PNG, WebP — max 4 Mo chacune).')
+                                        ->visible(fn (): bool => self::hasProductColumn('nutrition_images'))
+                                        ->dehydrated(fn (): bool => self::hasProductColumn('nutrition_images'))
+                                        ->disk('public')
+                                        ->directory('produits/nutrition')
+                                        ->multiple()
+                                        ->reorderable()
+                                        ->image()
+                                        ->imageEditor()
+                                        ->maxSize(4096)
+                                        ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+                                        ->maxFiles(10)
+                                        ->panelLayout('grid')
                                         ->columnSpanFull(),
                                 ]),
                         ]),

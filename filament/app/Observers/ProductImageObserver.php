@@ -18,5 +18,9 @@ class ProductImageObserver
         if ($product->isDirty('images') && $product->images !== null) {
             $product->images = $converter->convertStoredPathsToWebp($product->images);
         }
+
+        if ($product->isDirty('nutrition_images') && $product->nutrition_images !== null) {
+            $product->nutrition_images = $converter->convertStoredPathsToWebp($product->nutrition_images);
+        }
     }
 }
