@@ -457,13 +457,6 @@ class ArticleResource extends Resource
                                             ->searchable()
                                             ->preload()
                                             ->helperText('Gérez les types disponibles dans Blog → Types d\'articles.')
-                                            ->suffixAction(
-                                                Forms\Components\Actions\Action::make('manage_types')
-                                                    ->label('Gérer les types')
-                                                    ->icon('heroicon-o-arrow-top-right-on-square')
-                                                    ->url(fn () => route('filament.admin.resources.article-types.index'))
-                                                    ->openUrlInNewTab()
-                                            )
                                             ->columnSpanFull(),
                                         Forms\Components\Select::make('tags')
                                             ->label('Tags blog')
