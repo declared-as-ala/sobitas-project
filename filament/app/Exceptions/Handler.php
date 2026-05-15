@@ -4,6 +4,8 @@ namespace App\Exceptions;
 
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Validation\ValidationException;
+use League\Flysystem\UnableToRetrieveMetadata;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Throwable;
 
@@ -38,6 +40,12 @@ class Handler extends ExceptionHandler
     {
         $this->reportable(function (Throwable $e): void {
             //
+        });
+
+        $this->renderable(function (UnableToRetrieveMetadata $e, $request) {
+            throw ValidationException::withMessages([
+                'image' => ['Le fichier image a expiré. Veuillez le sélectionner à nouveau et resoumettre.'],
+            ]);
         });
     }
 

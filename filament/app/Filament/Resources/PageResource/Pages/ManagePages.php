@@ -15,13 +15,11 @@ class ManagePages extends ManageRecords
         return [
             Actions\CreateAction::make()
                 ->label('Ajouter nouveau')
-                ->slideOver(),
+                ->slideOver()
+                ->mutateFormDataUsing(function (array $data): array {
+                    $data['author_id'] = auth()->id();
+                    return $data;
+                }),
         ];
-    }
-
-    protected function mutateFormDataBeforeCreate(array $data): array
-    {
-        $data['author_id'] = $data['author_id'] ?? auth()->id();
-        return $data;
     }
 }

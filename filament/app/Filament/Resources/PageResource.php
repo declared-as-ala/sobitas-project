@@ -102,7 +102,6 @@ Forms\Components\Textarea::make('excerpt')
                 ->directory('pages')
                 ->image()
                 ->imageEditor()
-                ->maxSize(4096)
                 ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
                     $path = $file->store('pages', 'public');
                     if (! $path) {
