@@ -6,44 +6,74 @@ use App\Models\Categ;
 use Illuminate\Database\Seeder;
 use App\Console\Commands\SeoContentData;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\Console\Output\OutputInterface;
 
 class CategorySeoSeeder extends Seeder
 {
+    protected ?OutputInterface $output = null;
+
+    protected function getOutput(): ?OutputInterface
+    {
+        if ($this->output === null) {
+            $this->output = $this->command ? $this->command->getOutput() : null;
+        }
+        return $this->output;
+    }
+
+    protected function info(string $message): void
+    {
+        $out = $this->getOutput();
+        if ($out) {
+            $out->writeln($message);
+        }
+    }
+
+    protected function warn(string $message): void
+    {
+        $out = $this->getOutput();
+        if ($out) {
+            $out->writeln("<comment>{$message}</comment>");
+        }
+    }
+
+    protected function getForce(): bool
+    {
+        if ($this->command && method_exists($this->command, 'option')) {
+            return $this->command->option('force') ?? false;
+        }
+        return false;
+    }
+
     public function run(): void
     {
-        $this->command->info('🏷️ Seeding Category SEO content...');
+        $this->info('🏷️ Seeding Category SEO content...');
         
         $categoriesData = SeoContentData::getCategoriesData();
         $updated = 0;
         $skipped = 0;
         $missing = [];
+        $force = $this->getForce();
 
         foreach ($categoriesData as $slug => $data) {
-            // Find category by slug
             $category = Categ::where('slug', $slug)->first();
 
             if (!$category) {
-                // Try to find by normalized name
                 $category = Categ::where('slug', 'like', '%' . SeoContentData::normalizeSlug($data['name']) . '%')
                     ->first();
             }
 
             if (!$category) {
                 $missing[] = $data['name'];
-                $this->command->warn("  ⚠️ Category not found: {$data['name']} (slug: {$slug})");
+                $this->warn("  ⚠️ Category not found: {$data['name']} (slug: {$slug})");
                 continue;
             }
-
-            // Check if SEO content already exists (only update if empty)
-            $force = $this->command->option('force') ?? false;
 
             if (!$force && filled($category->meta_title)) {
                 $skipped++;
-                $this->command->info("  ⏭️ Skipped (already has SEO): {$category->designation_fr}");
+                $this->info("  ⏭️ Skipped (already has SEO): {$category->designation_fr}");
                 continue;
             }
 
-            // Update SEO fields
             $category->update([
                 'meta_title' => $data['meta_title'],
                 'meta_description' => $data['meta_description'],
@@ -61,24 +91,25 @@ class CategorySeoSeeder extends Seeder
             ]);
 
             $updated++;
-            $this->command->info("  ✅ Updated: {$category->designation_fr}");
+            $this->info("  ✅ Updated: {$category->designation_fr}");
         }
 
-        $this->command->info('');
-        $this->command->info("📊 Summary:");
-        $this->command->info("  - Categories updated: {$updated}");
-        $this->command->info("  - Categories skipped: {$skipped}");
+        $this->info('');
+        $this->info("📊 Summary:");
+        $this->info("  - Categories updated: {$updated}");
+        $this->info("  - Categories skipped: {$skipped}");
         
         if (count($missing) > 0) {
-            $this->command->warn("  - Categories not found: " . implode(', ', $missing));
+            $this->warn("  - Categories not found: " . implode(', ', $missing));
         }
     }
 
     public function runDryRun(): void
     {
-        $this->command->info('🏷️ DRY RUN - Category SEO content (no changes will be made)');
+        $this->info('🏷️ DRY RUN - Category SEO content (no changes will be made)');
         
         $categoriesData = SeoContentData::getCategoriesData();
+        $force = $this->getForce();
         
         foreach ($categoriesData as $slug => $data) {
             $category = Categ::where('slug', $slug)->first();
@@ -89,11 +120,11 @@ class CategorySeoSeeder extends Seeder
             }
 
             if (!$category) {
-                $this->command->warn("  ⚠️ Would create: {$data['name']} (slug: {$slug})");
-            } elseif (filled($category->meta_title) && !($this->command->option('force') ?? false)) {
-                $this->command->info("  ⏭️ Would skip (has SEO): {$category->designation_fr}");
+                $this->warn("  ⚠️ Would create: {$data['name']} (slug: {$slug})");
+            } elseif (filled($category->meta_title) && !$force) {
+                $this->info("  ⏭️ Would skip (has SEO): {$category->designation_fr}");
             } else {
-                $this->command->info("  ✅ Would update: {$category->designation_fr}");
+                $this->info("  ✅ Would update: {$category->designation_fr}");
             }
         }
     }

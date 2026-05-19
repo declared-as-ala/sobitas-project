@@ -7,27 +7,59 @@ use Illuminate\Database\Seeder;
 use App\Console\Commands\SeoContentData;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
+use Symfony\Component\Console\Output\OutputInterface;
 
 class BlogSeoSeeder extends Seeder
 {
+    protected ?OutputInterface $output = null;
+
+    protected function getOutput(): ?OutputInterface
+    {
+        if ($this->output === null) {
+            $this->output = $this->command ? $this->command->getOutput() : null;
+        }
+        return $this->output;
+    }
+
+    protected function info(string $message): void
+    {
+        $out = $this->getOutput();
+        if ($out) {
+            $out->writeln($message);
+        }
+    }
+
+    protected function warn(string $message): void
+    {
+        $out = $this->getOutput();
+        if ($out) {
+            $out->writeln("<comment>{$message}</comment>");
+        }
+    }
+
+    protected function getForce(): bool
+    {
+        if ($this->command && method_exists($this->command, 'option')) {
+            return $this->command->option('force') ?? false;
+        }
+        return false;
+    }
+
     public function run(): void
     {
-        $this->command->info('📝 Seeding Blog Articles SEO content...');
+        $this->info('📝 Seeding Blog Articles SEO content...');
         
         $articlesData = SeoContentData::getBlogArticlesData();
         $created = 0;
         $skipped = 0;
         $updated = 0;
-
-        $force = $this->command->option('force') ?? false;
+        $force = $this->getForce();
 
         foreach ($articlesData as $articleData) {
-            // Check if article already exists by slug
             $article = Article::where('slug', $articleData['slug'])->first();
 
             if ($article) {
                 if ($force) {
-                    // Update existing article
                     $article->update([
                         'designation_fr' => $articleData['title'],
                         'description_fr' => $articleData['description'],
@@ -42,20 +74,14 @@ class BlogSeoSeeder extends Seeder
                         'publier' => $articleData['publier'] ?? 0,
                     ]);
                     $updated++;
-                    $this->command->info("  🔄 Updated: {$article->designation_fr}");
+                    $this->info("  🔄 Updated: {$article->designation_fr}");
                 } else {
                     $skipped++;
-                    $this->command->info("  ⏭️ Skipped (exists): {$article->designation_fr}");
+                    $this->info("  ⏭️ Skipped (exists): {$article->designation_fr}");
                 }
                 continue;
             }
 
-            // Check if we should only update existing (no creation)
-            if ($this->command->option('only-update') ?? false) {
-                continue;
-            }
-
-            // Create new article
             try {
                 $article = Article::create([
                     'designation_fr' => $articleData['title'],
@@ -78,33 +104,34 @@ class BlogSeoSeeder extends Seeder
                 ]);
 
                 $created++;
-                $this->command->info("  ✅ Created: {$article->designation_fr}");
+                $this->info("  ✅ Created: {$article->designation_fr}");
             } catch (\Exception $e) {
-                $this->command->warn("  ⚠️ Error creating {$articleData['title']}: {$e->getMessage()}");
+                $this->warn("  ⚠️ Error creating {$articleData['title']}: {$e->getMessage()}");
             }
         }
 
-        $this->command->info('');
-        $this->command->info("📊 Summary:");
-        $this->command->info("  - Articles created: {$created}");
-        $this->command->info("  - Articles updated: {$updated}");
-        $this->command->info("  - Articles skipped (exists): {$skipped}");
+        $this->info('');
+        $this->info("📊 Summary:");
+        $this->info("  - Articles created: {$created}");
+        $this->info("  - Articles updated: {$updated}");
+        $this->info("  - Articles skipped (exists): {$skipped}");
     }
 
     public function runDryRun(): void
     {
-        $this->command->info('📝 DRY RUN - Blog Articles (no changes will be made)');
+        $this->info('📝 DRY RUN - Blog Articles (no changes will be made)');
         
         $articlesData = SeoContentData::getBlogArticlesData();
+        $force = $this->getForce();
         
         foreach ($articlesData as $articleData) {
             $article = Article::where('slug', $articleData['slug'])->first();
             
             if ($article) {
-                $status = ($this->command->option('force') ?? false) ? 'would update' : 'exists (skip)';
-                $this->command->info("  ⏭️ {$status}: {$article->designation_fr}");
+                $status = $force ? 'would update' : 'exists (skip)';
+                $this->info("  ⏭️ {$status}: {$article->designation_fr}");
             } else {
-                $this->command->info("  ✅ Would create: {$articleData['title']}");
+                $this->info("  ✅ Would create: {$articleData['title']}");
             }
         }
     }
