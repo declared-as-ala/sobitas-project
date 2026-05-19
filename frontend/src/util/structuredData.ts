@@ -128,7 +128,13 @@ function sanitizeFaqEntries(
 export function buildProductSchema(product: Product, baseUrl: string): object | null {
   const base = baseUrl.replace(/\/$/, '');
   const slug = (product.slug || '').trim() || String(product.id);
-  const canonicalUrl = `${base}/shop/${slug}`;
+  // Prefer new SEO-friendly /{sousCategorySlug}/{productSlug} canonical when available.
+  const sub =
+    (product.sous_categories && product.sous_categories[0]) ||
+    product.sous_categorie;
+  const canonicalUrl = sub?.slug
+    ? `${base}/${sub.slug}/${slug}`
+    : `${base}/shop/${slug}`;
   return buildProductJsonLd(product, canonicalUrl);
 }
 
@@ -408,7 +414,12 @@ export function buildOrganizationSchema(baseUrl: string): object {
       areaServed: 'TN',
       availableLanguage: 'French',
     },
-    sameAs: [],
+    sameAs: [
+      'https://www.facebook.com/protein.tn',
+      'https://www.instagram.com/protein.tn',
+      'https://www.tiktok.com/@protein.tn',
+      'https://www.youtube.com/@proteinetunisie',
+    ],
   };
 }
 
@@ -423,6 +434,7 @@ export function buildLocalBusinessSchema(baseUrl: string): object {
     '@id': `${base}/#localbusiness`,
     name: `${SITE_BRAND_NAME} – Protéines & Compléments Alimentaires Tunisie`,
     image: `${base}/icon.png`,
+    logo: `${base}/sobitas-logo.png`,
     url: base,
     telephone: '+21627612500',
     email: 'contact@protein.tn',
@@ -433,13 +445,25 @@ export function buildLocalBusinessSchema(baseUrl: string): object {
       postalCode: '4000',
       addressCountry: 'TN',
     },
+    geo: {
+      '@type': 'GeoCoordinates',
+      latitude: 35.8256,
+      longitude: 10.6369,
+    },
+    areaServed: { '@type': 'Country', name: 'Tunisia' },
     priceRange: '$$',
+    currenciesAccepted: 'TND',
+    paymentAccepted: 'Cash on delivery, Bank transfer',
     openingHoursSpecification: {
       '@type': 'OpeningHoursSpecification',
       dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
       opens: '09:00',
       closes: '19:00',
     },
+    sameAs: [
+      'https://www.facebook.com/protein.tn',
+      'https://www.instagram.com/protein.tn',
+    ],
   };
 }
 
@@ -458,9 +482,13 @@ export function buildWebSiteSchema(baseUrl: string): object {
     inLanguage: 'fr-TN',
     potentialAction: {
       '@type': 'SearchAction',
-      target: `${base}/search?q={search_term_string}`,
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: `${base}/shop?search={search_term_string}`,
+      },
       'query-input': 'required name=search_term_string',
     },
+    publisher: { '@id': `${base}/#organization` },
   };
 }
 

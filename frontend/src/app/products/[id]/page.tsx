@@ -5,6 +5,7 @@ import { getCachedProductDetails } from '@/services/getCachedProductDetails';
 import { ProductDetailClient } from './ProductDetailClient';
 import { ProductDetailFallbackClient } from '@/app/shop/ProductDetailFallbackClient';
 import { buildCanonicalUrl } from '@/util/canonical';
+import { buildProductUrlPath, getProductPrimarySubCategory, buildProductCanonicalUrl } from '@/util/productUrl';
 
 interface ProductPageProps {
   params: Promise<{ id: string }>;
@@ -25,7 +26,11 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
         .trim()
         .slice(0, 160)
       || `Achetez ${product.designation_fr} en Tunisie – Proteine Tunisie, protéines et compléments.`;
-    const canonical = product.slug?.trim() ? buildCanonicalUrl(`/shop/${product.slug.trim()}`) : undefined;
+    const canonical = product.slug?.trim()
+      ? (getProductPrimarySubCategory(product)?.slug
+          ? buildProductCanonicalUrl(product)
+          : buildCanonicalUrl(`/shop/${product.slug.trim()}`))
+      : undefined;
 
     return {
       title: product.designation_fr,
@@ -54,9 +59,14 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
     if (!product?.id) {
       notFound();
     }
-    // Canonical product URL is /shop/:slug; permanently redirect /products/:id to consolidate SEO
+    // Canonical product URL is /{sousCategorySlug}/{productSlug}.
+    // Permanent 301 directly to the new URL — no chain through /shop/.
     if (product.slug) {
-      permanentRedirect(`/shop/${encodeURIComponent(product.slug)}`);
+      const sub = getProductPrimarySubCategory(product);
+      const dest = sub?.slug
+        ? buildProductUrlPath(product)
+        : `/shop/${encodeURIComponent(product.slug)}`;
+      permanentRedirect(dest);
     }
     const similarData = product.sous_categorie_id
       ? await getSimilarProducts(product.sous_categorie_id).catch(() => ({ products: [] }))

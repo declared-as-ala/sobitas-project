@@ -11,6 +11,79 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 final class CategorySeoForm
 {
     /**
+     * Coerce any legacy stored value into an array of rows shaped for a Repeater.
+     * Handles: null, JSON-encoded scalar/string, comma-separated string,
+     * flat list of scalars (e.g. ['whey','creatine']), and already-correct rows.
+     *
+     * @param  mixed  $state  value coming from the cast attribute
+     * @param  string  $rowKey  field name used inside the Repeater item (e.g. 'term', 'slug', 'tag')
+     */
+    public static function normalizeRepeaterRows(mixed $state, string $rowKey): array
+    {
+        if ($state === null || $state === '') {
+            return [];
+        }
+        if (is_string($state)) {
+            $decoded = json_decode($state, true);
+            if (is_array($decoded)) {
+                $state = $decoded;
+            } else {
+                // Comma/semicolon separated legacy string
+                $state = array_values(array_filter(array_map('trim', preg_split('/[,;]/', $state) ?: [])));
+            }
+        }
+        if (! is_array($state)) {
+            return [];
+        }
+
+        $rows = [];
+        foreach ($state as $item) {
+            if (is_array($item) || is_object($item)) {
+                $rows[] = (array) $item;
+                continue;
+            }
+            if (is_scalar($item) && (string) $item !== '') {
+                $rows[] = [$rowKey => (string) $item];
+            }
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Coerce a FAQ stored value into the [{q,a}, …] shape expected by the Repeater.
+     * Accepts legacy {question,answer} keys.
+     */
+    public static function normalizeFaqRows(mixed $state): array
+    {
+        if ($state === null || $state === '') {
+            return [];
+        }
+        if (is_string($state)) {
+            $decoded = json_decode($state, true);
+            $state = is_array($decoded) ? $decoded : [];
+        }
+        if (! is_array($state)) {
+            return [];
+        }
+
+        $rows = [];
+        foreach ($state as $item) {
+            if (! is_array($item) && ! is_object($item)) {
+                continue;
+            }
+            $item = (array) $item;
+            $q = trim((string) ($item['q'] ?? $item['question'] ?? ''));
+            $a = trim((string) ($item['a'] ?? $item['answer'] ?? $item['reponse'] ?? ''));
+            if ($q !== '' || $a !== '') {
+                $rows[] = ['q' => $q, 'a' => $a];
+            }
+        }
+
+        return $rows;
+    }
+
+    /**
      * @return array<int, \Filament\Schemas\Components\Component>
      */
     public static function seoSections(bool $forSubCategory): array
@@ -85,6 +158,7 @@ final class CategorySeoForm
                                 ->required(),
                         ])
                         ->default([])
+                        ->formatStateUsing(fn ($state) => self::normalizeFaqRows($state))
                         ->collapsible()
                         ->columnSpanFull(),
                 ]),
@@ -134,6 +208,7 @@ final class CategorySeoForm
                                 ->required(),
                         ])
                         ->default([])
+                        ->formatStateUsing(fn ($state) => self::normalizeRepeaterRows($state, 'term'))
                         ->reorderable(false)
                         ->columnSpanFull(),
                     Forms\Components\Repeater::make('seo_tags')
@@ -145,6 +220,7 @@ final class CategorySeoForm
                                 ->required(),
                         ])
                         ->default([])
+                        ->formatStateUsing(fn ($state) => self::normalizeRepeaterRows($state, 'tag'))
                         ->columnSpanFull(),
                     Forms\Components\Repeater::make('related_category_slugs')
                         ->label('Slugs catégories associées (interne)')
@@ -156,6 +232,7 @@ final class CategorySeoForm
                                 ->required(),
                         ])
                         ->default([])
+                        ->formatStateUsing(fn ($state) => self::normalizeRepeaterRows($state, 'slug'))
                         ->columnSpanFull(),
                     Forms\Components\TextInput::make('canonical_url')
                         ->label('URL canonique (optionnel)')

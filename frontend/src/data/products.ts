@@ -16,7 +16,7 @@ export const productsData: Product[] = [
     price: 300,
     priceText: "300 DT279 DT",
     image: "https://admin.protein.tn/storage/produits/September2023/mass_gainer_zero_7kg_-_eric_favre.webp",
-    link: "https://protein.tn/shop/mass-gainer-zero-7kg-eric-favre",
+    link: "/prise-de-masse/mass-gainer-zero-7kg-eric-favre",
     category: "Prise de Masse",
     description: null
   },
@@ -26,7 +26,7 @@ export const productsData: Product[] = [
     price: 400,
     priceText: "400 DT380 DT",
     image: "https://admin.protein.tn/storage/produits/January2026/NqjHvc3rQVXZyLwEuNiJ.webp",
-    link: "https://protein.tn/shop/serious-mass-5-45-kg-optimum-nutrition",
+    link: "/prise-de-masse/serious-mass-5-45-kg-optimum-nutrition",
     category: "Prise de Masse",
     description: null
   },
@@ -36,7 +36,7 @@ export const productsData: Product[] = [
     price: 300,
     priceText: "300 DT279 DT",
     image: "https://admin.protein.tn/storage/produits/September2023/levro_legendary_mass_68kg_-_kevin_levrone.webp",
-    link: "https://protein.tn/shop/levro-legendary-mass-6-8kg-kevin-levrone",
+    link: "/prise-de-masse/levro-legendary-mass-6-8kg-kevin-levrone",
     category: "Prise de Masse",
     description: null
   },
@@ -46,7 +46,7 @@ export const productsData: Product[] = [
     price: 280,
     priceText: "280 DT259 DT",
     image: "https://admin.protein.tn/storage/produits/September2023/big_monster_7_kg_-_hx_nutrition.webp",
-    link: "https://protein.tn/shop/big-monster-7-kg-hx-nutrition",
+    link: "/prise-de-masse/big-monster-7-kg-hx-nutrition",
     category: "Prise de Masse",
     description: null
   },
@@ -56,7 +56,7 @@ export const productsData: Product[] = [
     price: 330,
     priceText: "330 DT289 DT",
     image: "https://admin.protein.tn/storage/produits/January2026/100_pure_whey_227kg_-_biotech_usa.webp",
-    link: "https://protein.tn/shop/100-pure-whey-2-27kg-biotech-usa",
+    link: "/proteine-whey/100-pure-whey-2-27kg-biotech-usa",
     category: "Protéines",
     description: null
   },
@@ -66,7 +66,7 @@ export const productsData: Product[] = [
     price: 400,
     priceText: "400 DT359 DT",
     image: "https://admin.protein.tn/storage/produits/May2024/iso_sensation_93_227kg.webp",
-    link: "https://protein.tn/shop/iso-sensation-93-2-27kg",
+    link: "/proteine-whey/iso-sensation-93-2-27kg",
     category: "Protéines",
     description: null
   },
@@ -76,7 +76,7 @@ export const productsData: Product[] = [
     price: 400,
     priceText: "400 DT359 DT",
     image: "https://admin.protein.tn/storage/produits/July2025/iso_hd_22kg_-_bpi_sports.webp",
-    link: "https://protein.tn/shop/iso-hd-2-2kg-bpi-sports",
+    link: "/proteine-whey/iso-hd-2-2kg-bpi-sports",
     category: "Protéines",
     description: null
   },
@@ -86,7 +86,7 @@ export const productsData: Product[] = [
     price: 350,
     priceText: "350 DT299 DT",
     image: "https://admin.protein.tn/storage/produits/September2023/gold_iso_2_kg_-_kevin_levrone.webp",
-    link: "https://protein.tn/shop/gold-iso-2-kg-kevin-levrone",
+    link: "/proteine-whey/gold-iso-2-kg-kevin-levrone",
     category: "Protéines",
     description: null
   },
@@ -96,7 +96,7 @@ export const productsData: Product[] = [
     price: 450,
     priceText: "450 DT399 DT",
     image: "https://admin.protein.tn/storage/produits/April2024/pack_seche_extreme.webp",
-    link: "https://protein.tn/shop/pack-seche-extreme",
+    link: "/shop/pack-seche-extreme",
     category: "Packs",
     description: null
   },
@@ -106,7 +106,7 @@ export const productsData: Product[] = [
     price: 450,
     priceText: "450 DT399 DT",
     image: "https://admin.protein.tn/storage/produits/April2024/pack_prise_de_masse-2.webp",
-    link: "https://protein.tn/shop/pack-prise-de-masse-2",
+    link: "/shop/pack-prise-de-masse-2",
     category: "Packs",
     description: null
   },
@@ -116,7 +116,7 @@ export const productsData: Product[] = [
     price: 400,
     priceText: "400 DT349 DT",
     image: "https://admin.protein.tn/storage/produits/April2024/pack_muscle_sec.webp",
-    link: "https://protein.tn/shop/pack-muscle-sec",
+    link: "/shop/pack-muscle-sec",
     category: "Packs",
     description: null
   },
@@ -126,7 +126,7 @@ export const productsData: Product[] = [
     price: 400,
     priceText: "400 DT349 DT",
     image: "https://admin.protein.tn/storage/produits/April2024/pack_prise_de_masse.webp",
-    link: "https://protein.tn/shop/pack-prise-de-masse",
+    link: "/shop/pack-prise-de-masse",
     category: "Packs",
     description: null
   }

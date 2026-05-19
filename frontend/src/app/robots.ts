@@ -17,10 +17,18 @@ export default function robots(): MetadataRoute.Robots {
     '/cart',
     '/login',
     '/register',
+    '/forgot-password',
+    '/reset-password',
     '/api/',
     '/admin',
     '/admin/',
     '/order-confirmation/',
+    // Query-parameter URLs that produce duplicate content. Leave /product/ and /products/
+    // crawlable so Googlebot can honor the 301 and forget those URLs.
+    '/*?search=',
+    '/*?category=',
+    '/*?brand=',
+    '/*?page=',
   ];
 
   // Liste exhaustive des robots d'IA majeurs à autoriser explicitement

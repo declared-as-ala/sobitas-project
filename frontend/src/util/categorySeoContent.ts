@@ -34,6 +34,22 @@ export const CONTENT_SLUG_ALIASES: Record<string, string> = {
   // Proteins – general
   'proteine': 'proteines',
   'proteines-tunisie': 'proteines',
+  // BCAA – common URL variants
+  'bcaa': 'bcaa',
+  'bcaa-tunisie': 'bcaa',
+  'acides-amines': 'bcaa',
+  'eaa': 'bcaa',
+  // Glutamine
+  'glutamine': 'glutamine',
+  'glutamine-tunisie': 'glutamine',
+  // Fat burners / weight loss – all share the same hub content
+  'bruleurs-de-graisse': 'bruleurs-de-graisse',
+  'bruleur-de-graisse': 'bruleurs-de-graisse',
+  'fat-burner': 'bruleurs-de-graisse',
+  'perte-de-poids': 'bruleurs-de-graisse',
+  'l-carnitine': 'bruleurs-de-graisse',
+  'cla': 'bruleurs-de-graisse',
+  'minceur': 'bruleurs-de-graisse',
 };
 
 function getContentPath(contentSlug: string): string {
