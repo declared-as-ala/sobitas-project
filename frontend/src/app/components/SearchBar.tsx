@@ -13,6 +13,7 @@ import { useDebounce } from '@/util/debounce';
 import { searchProducts } from '@/services/api';
 import { getStorageUrl, isStorageImageUrl } from '@/services/api';
 import { getPriceDisplay } from '@/util/productPrice';
+import { buildProductUrlPath } from '@/util/productUrl';
 import type { Product } from '@/types';
 import { cn } from '@/app/components/ui/utils';
 
@@ -79,7 +80,7 @@ function SearchResults({
       {listProducts.map((product) => (
         <LinkWithLoading
           key={product.id}
-          href={`/shop/${encodeURIComponent(product.slug ?? String(product.id))}`}
+          href={buildProductUrlPath(product)}
           onClick={onProductClick}
           className="flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800 focus:bg-gray-100 dark:focus:bg-gray-800 focus:outline-none"
           loadingMessage="Chargement"

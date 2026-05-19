@@ -27,6 +27,7 @@ import { searchProducts, getStorageUrl } from '@/services/api';
 import { useSiteLogos } from '@/hooks/useSiteLogos';
 import { getPriceDisplay } from '@/util/productPrice';
 import { useDebounce } from '@/util/debounce';
+import { buildProductUrlPath } from '@/util/productUrl';
 import type { Product } from '@/types';
 
 const SCROLL_THRESHOLD = 24;
@@ -374,7 +375,7 @@ export function HeaderClient() {
                           {searchResults.slice(0, 6).map((product) => (
                             <Link
                               key={product.id}
-                              href={`/shop/${encodeURIComponent(product.slug ?? String(product.id))}`}
+                              href={buildProductUrlPath(product)}
                               onClick={() => {
                                 setSearchQuery('');
                                 setShowSearchResults(false);

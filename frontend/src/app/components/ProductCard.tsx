@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { getPriceDisplay } from '@/util/productPrice';
 import { getStockDisponible, isInStock } from '@/util/cartStock';
 import { getProductImagePresentation } from '@/util/productImagePresentation';
+import { buildProductUrlPath } from '@/util/productUrl';
 import { useState, useMemo, memo, useCallback } from 'react';
 type Product = ApiProduct | {
   id: number;
@@ -164,6 +165,7 @@ export const ProductCard = memo(function ProductCard({
           mode={productData.imagePresentation.mode}
           objectPosition={productData.imagePresentation.objectPosition}
           scale={productData.imagePresentation.scale}
+          product={product as any}
         />
 
         {/* Favoris – top-right */}
@@ -214,7 +216,7 @@ export const ProductCard = memo(function ProductCard({
       {/* Content – clean padding, no top gap since image is flush */}
       <div className="flex flex-col flex-1 min-h-0 min-w-0 px-3 py-3 sm:px-4 sm:py-4 gap-2 sm:gap-2.5">
         <LinkWithLoading
-          href={`/shop/${encodeURIComponent(productData.slug || String(product.id))}`}
+          href={buildProductUrlPath(product as any)}
           className="block min-w-0"
           loadingMessage="Chargement"
         >

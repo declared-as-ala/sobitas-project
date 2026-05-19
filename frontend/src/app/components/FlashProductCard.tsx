@@ -11,6 +11,7 @@ import { useCart } from '@/app/contexts/CartContext';
 import { toast } from 'sonner';
 import { getPriceDisplay } from '@/util/productPrice';
 import { getStockDisponible, isInStock } from '@/util/cartStock';
+import { buildProductUrlPath } from '@/util/productUrl';
 import { useState, useMemo, memo, useCallback } from 'react';
 
 type FlashProduct = {
@@ -114,7 +115,7 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
       {/* Image Container - Fixed height to prevent layout shift */}
       <div className="relative aspect-square w-full flex-shrink-0 overflow-hidden bg-gray-50 dark:bg-gray-700/50 rounded-t-3xl">
         <LinkWithLoading 
-          href={`/shop/${encodeURIComponent(productData.slug || String(product.id))}`} 
+          href={buildProductUrlPath(product as any)} 
           className="block size-full" 
           aria-label={`Voir ${productData.name}`}
           loadingMessage="Chargement"
@@ -195,7 +196,7 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
       <div className="relative flex flex-col flex-1 min-h-0 min-w-0 p-2 max-[320px]:p-1.5 max-[360px]:p-2 sm:p-4 md:p-5 overflow-hidden">
         {/* Product Name – 2 lines on very small, 3 on larger mobile; full name in title for tooltip */}
         <LinkWithLoading 
-          href={`/shop/${encodeURIComponent(productData.slug || String(product.id))}`} 
+          href={buildProductUrlPath(product as any)} 
           className="block mb-1.5 sm:mb-2.5 min-w-0 flex-shrink-0"
           loadingMessage="Chargement"
         >

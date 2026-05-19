@@ -7,6 +7,8 @@ import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 
 import { cn } from '@/app/components/ui/utils';
 import type { ProductImageMode } from '@/util/productImagePresentation';
+import { buildProductUrlPath } from '@/util/productUrl';
+import type { Product } from '@/types';
 
 interface PackCardImageProps {
   imageSrc: string;
@@ -16,6 +18,7 @@ interface PackCardImageProps {
   mode: ProductImageMode;
   objectPosition?: string;
   scale?: number;
+  product?: Product;
 }
 
 export function PackCardImage({
@@ -26,9 +29,10 @@ export function PackCardImage({
   mode,
   objectPosition = 'center center',
   scale = 1,
+  product,
 }: PackCardImageProps) {
   const [hasError, setHasError] = useState(false);
-  const productHref = `/shop/${encodeURIComponent(slug || String(productId))}`;
+  const productHref = product ? buildProductUrlPath(product) : `/shop/${encodeURIComponent(slug || String(productId))}`;
 
   const isContain = mode === 'contain';
 
