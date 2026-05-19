@@ -82,13 +82,11 @@ class SeedSeoContentCommand extends Command
         $this->info('═══════════════════════════════════════════════════════════════');
 
         if ($dryRun) {
-            $seeder = new CategorySeoSeeder($this->output);
+            $seeder = new CategorySeoSeeder($this);
             $seeder->runDryRun();
         } else {
-            $this->call('db:seed', [
-                '--class' => CategorySeoSeeder::class,
-                '--force' => $force,
-            ]);
+            $seeder = new CategorySeoSeeder($this);
+            $seeder->run();
         }
     }
 
@@ -100,13 +98,11 @@ class SeedSeoContentCommand extends Command
         $this->info('═══════════════════════════════════════════════════════════════');
 
         if ($dryRun) {
-            $seeder = new SousCategorySeoSeeder($this->output);
+            $seeder = new SousCategorySeoSeeder($this);
             $seeder->runDryRun();
         } else {
-            $this->call('db:seed', [
-                '--class' => SousCategorySeoSeeder::class,
-                '--force' => $force,
-            ]);
+            $seeder = new SousCategorySeoSeeder($this);
+            $seeder->run();
         }
     }
 
@@ -117,7 +113,7 @@ class SeedSeoContentCommand extends Command
         $this->info(' 3️⃣  BLOG ARTICLES SEO CONTENT');
         $this->info('═══════════════════════════════════════════════════════════════');
 
-        $seeder = new BlogSeoSeeder($this->command);
+        $seeder = new BlogSeoSeeder($this);
         if ($dryRun) {
             $seeder->runDryRun();
         } else {
