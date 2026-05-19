@@ -39,8 +39,13 @@ class BlogSeoSeeder extends Seeder
 
     protected function getForce(): bool
     {
-        if ($this->command && method_exists($this->command, 'option')) {
-            return $this->command->option('force') ?? false;
+        // Only check for force option if command is available and method exists
+        try {
+            if ($this->command && is_callable([$this->command, 'option'])) {
+                return (bool) $this->command->option('force');
+            }
+        } catch (\Exception $e) {
+            // Option doesn't exist or command not available
         }
         return false;
     }
@@ -53,7 +58,14 @@ class BlogSeoSeeder extends Seeder
         $created = 0;
         $skipped = 0;
         $updated = 0;
-        $force = $this->getForce();
+        
+        // Get force option safely - default to false if not available
+        $force = false;
+        try {
+            $force = $this->getForce();
+        } catch (\Exception $e) {
+            // Ignore - default to false
+        }
 
         foreach ($articlesData as $articleData) {
             $article = Article::where('slug', $articleData['slug'])->first();

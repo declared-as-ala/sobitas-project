@@ -117,14 +117,12 @@ class SeedSeoContentCommand extends Command
         $this->info(' 3️⃣  BLOG ARTICLES SEO CONTENT');
         $this->info('═══════════════════════════════════════════════════════════════');
 
+        $seeder = new BlogSeoSeeder($this->command);
         if ($dryRun) {
-            $seeder = new BlogSeoSeeder($this->output);
             $seeder->runDryRun();
         } else {
-            $this->call('db:seed', [
-                '--class' => BlogSeoSeeder::class,
-                '--force' => $force,
-            ]);
+            // Run directly instead of via db:seed to avoid option passing issues
+            $seeder->run();
         }
     }
 }
