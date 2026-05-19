@@ -81,13 +81,14 @@ export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
       if (Array.isArray(products) && products.length > 0) {
         const productUrls = products
           .filter((p: Product) => p.slug && p.publier === 1)
-          .map((p: Product) => {
-            // Use new SEO-friendly URL format: /{sousCategorySlug}/{productSlug}
-            // Fall back to legacy /shop/{slug} only if no subcategory (edge case)
+          .filter((p: Product) => {
+            // Only include products that have a subcategory (new SEO-friendly URL format)
             const subCategory = getProductPrimarySubCategory(p);
-            const url = subCategory?.slug 
-              ? buildProductUrl(p, BASE_URL)
-              : `${BASE_URL}/shop/${p.slug}`;
+            return subCategory?.slug;
+          })
+          .map((p: Product) => {
+            // Only new SEO-friendly URL format: /{sousCategorySlug}/{productSlug}
+            const url = buildProductUrl(p, BASE_URL);
             return {
               url,
               lastModified: getLastModified(p as ItemWithDates),

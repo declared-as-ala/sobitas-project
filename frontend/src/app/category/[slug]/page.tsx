@@ -64,12 +64,17 @@ function resolveRelatedCategories(
 /** Resolve product slugs to links from a product list. */
 function resolveBestProducts(
   slugs: string[],
-  products: Array<{ slug?: string; designation_fr?: string }>
+  products: Array<{ slug?: string; designation_fr?: string; sous_categorie?: { slug?: string }; sous_categories?: Array<{ slug?: string }> }>
 ): Array<{ slug: string; name: string; url: string }> {
   const bySlug = new Map(products.map((p) => [p.slug ?? '', p]));
   return slugs.slice(0, 6).reduce<Array<{ slug: string; name: string; url: string }>>((acc, s) => {
     const p = bySlug.get(s);
-    if (p) acc.push({ slug: s, name: p.designation_fr ?? s, url: `/shop/${s}` });
+    if (p) {
+      // Use new SEO-friendly URL format if subcategory exists
+      const subCategory = p.sous_categories?.[0] || p.sous_categorie;
+      const url = subCategory?.slug ? `/${subCategory.slug}/${s}` : null;
+      acc.push({ slug: s, name: p.designation_fr ?? s, url: url || `/category/${s}` });
+    }
     return acc;
   }, []);
 }
