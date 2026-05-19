@@ -12,13 +12,13 @@ import {
   sanitizeBackendProductJsonLd,
   validateStructuredData,
 } from '@/util/structuredData';
-import { buildProductCanonicalUrl, buildProductUrlPath, getProductBreadcrumbs, isProductInSubCategory, isReservedRouteSlug, getProductPrimarySubCategory } from '@/util/productUrl';
+import { buildProductCanonicalUrl, buildProductUrlPath, getProductBreadcrumbs, isReservedRouteSlug, getProductPrimarySubCategory } from '@/util/productUrl';
 import { buildShopProductSocialMetadata } from '@/util/productSeo';
 import { ProductDetailClient } from '@/app/products/[id]/ProductDetailClient';
 import type { Product } from '@/types';
 
 export type PageProps = {
-  params: Promise<{ sousCategorySlug: string; productSlug: string }>;
+  params: Promise<{ slug: string; productSlug: string }>;
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
@@ -82,11 +82,10 @@ function ensureProductionDomain(url: string): string {
   }
 }
 
-export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
-  const { sousCategorySlug, productSlug } = await params;
-  const cleanSubCatSlug = sousCategorySlug?.trim();
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug, productSlug } = await params;
+  const cleanSubCatSlug = slug?.trim();
   const cleanProductSlug = productSlug?.trim();
-  const search = searchParams ? await searchParams : undefined;
 
   // Check for reserved route conflicts - redirect to shop
   if (cleanSubCatSlug && isReservedRouteSlug(cleanSubCatSlug)) {
@@ -154,9 +153,9 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
  * New product page at /{sousCategorySlug}/{productSlug}
  * Validates product belongs to the claimed subcategory.
  */
-export default async function NewProductPage({ params, searchParams }: PageProps) {
-  const { sousCategorySlug, productSlug } = await params;
-  const cleanSubCatSlug = sousCategorySlug?.trim();
+export default async function NewProductPage({ params }: PageProps) {
+  const { slug, productSlug } = await params;
+  const cleanSubCatSlug = slug?.trim();
   const cleanProductSlug = productSlug?.trim();
 
   // Check for reserved route conflicts
@@ -165,8 +164,6 @@ export default async function NewProductPage({ params, searchParams }: PageProps
   }
 
   if (!cleanProductSlug) notFound();
-
-  const search = searchParams ? await searchParams : undefined;
 
   let product: Product | null = null;
   try {
