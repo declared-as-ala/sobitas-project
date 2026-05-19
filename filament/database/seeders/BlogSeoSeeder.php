@@ -109,7 +109,10 @@ class BlogSeoSeeder extends Seeder
                     'seo_robots_index' => true,
                     'seo_robots_follow' => true,
                     'related_shop_category_slugs' => json_encode($articleData['related_category_slugs'] ?? []),
-                    'blog_type' => $articleData['blog_type'] ?? 'article',
+                    // Valid blog_type values: complements, lifestyle, nutrition, recettes, sport
+                    'blog_type' => in_array($articleData['blog_type'], ['complements', 'lifestyle', 'nutrition', 'recettes', 'sport']) 
+                        ? $articleData['blog_type'] 
+                        : 'complements',
                     'publier' => $articleData['publier'] ?? 0,
                     'created_at' => Carbon::now(),
                     'updated_at' => Carbon::now(),
