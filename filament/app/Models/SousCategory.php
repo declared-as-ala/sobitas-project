@@ -11,6 +11,47 @@ class SousCategory extends Model
 {
     protected $table = 'sous_categories';
 
+    protected $fillable = [
+        'designation_fr',
+        'slug',
+        'cover',
+        'alt_cover',
+        'description_cover',
+        'description_fr',
+        'categorie_id',
+        'meta_title',
+        'meta_description',
+        'meta_keywords',
+        'h1_title',
+        'short_intro',
+        'long_bottom_content',
+        'canonical_url',
+        'og_title',
+        'og_description',
+        'og_image',
+        'og_image_alt',
+        'twitter_title',
+        'twitter_description',
+        'twitter_image',
+        'breadcrumb_label',
+        'primary_keyword',
+        'secondary_keywords',
+        'seo_tags',
+        'robots_index',
+        'robots_follow',
+        'seo_enabled',
+        'seo_banner_desktop',
+        'seo_banner_mobile',
+        'sitemap_include',
+        'sitemap_priority',
+        'sitemap_changefreq',
+        'extra_json_ld',
+        'related_category_slugs',
+        'faq',
+        'nutrition_values',
+        'more_details',
+    ];
+
     protected $guarded = ['id'];
 
     protected $casts = [

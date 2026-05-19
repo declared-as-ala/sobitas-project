@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { getAllProducts, getAllArticles, getCategories, getAllBrands, getBlogCategories, getBlogTags } from '@/services/api';
 import type { Product, Article, Category, Brand, SubCategory } from '@/types';
+import { buildProductUrl, getProductPrimarySubCategory } from '@/util/productUrl';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
 
@@ -80,12 +81,20 @@ export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
       if (Array.isArray(products) && products.length > 0) {
         const productUrls = products
           .filter((p: Product) => p.slug && p.publier === 1)
-          .map((p: Product) => ({
-            url: `${BASE_URL}/shop/${p.slug}`,
-            lastModified: getLastModified(p as ItemWithDates),
-            changeFrequency: 'weekly' as const,
-            priority: 0.7,
-          }));
+          .map((p: Product) => {
+            // Use new SEO-friendly URL format: /{sousCategorySlug}/{productSlug}
+            // Fall back to legacy /shop/{slug} only if no subcategory (edge case)
+            const subCategory = getProductPrimarySubCategory(p);
+            const url = subCategory?.slug 
+              ? buildProductUrl(p, BASE_URL)
+              : `${BASE_URL}/shop/${p.slug}`;
+            return {
+              url,
+              lastModified: getLastModified(p as ItemWithDates),
+              changeFrequency: 'weekly' as const,
+              priority: 0.7,
+            };
+          });
         sitemapEntries.push(...productUrls);
       }
     }

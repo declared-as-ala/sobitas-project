@@ -5,6 +5,7 @@ import { getCachedProductDetails } from '@/services/getCachedProductDetails';
 import { ApiError } from '@/services/http';
 import { buildCanonicalUrl } from '@/util/canonical';
 import { buildShopProductSocialMetadata } from '@/util/productSeo';
+import { buildProductCanonicalUrl, buildProductUrlPath, getProductPrimarySubCategory } from '@/util/productUrl';
 
 /** Extract HTTP status from error. Only use for deciding redirect: redirect only when status === 404 (never on 5xx/timeout/network). */
 function getErrorStatus(e: unknown): number | null {
@@ -107,10 +108,14 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     if (product?.id) {
       const title = productTitle(product);
       const description = productDescription(product, product.designation_fr ?? product.slug ?? 'Produit');
+      
+      // New canonical URL uses the new SEO-friendly format
+      const newCanonicalUrl = buildProductCanonicalUrl(product);
       const canonicalUrl = ensureProductionDomain(
-        product.seo?.canonical_url?.trim() || buildCanonicalUrl(`/shop/${product.slug || cleanSlug}`),
-        `/shop/${product.slug || cleanSlug}`
+        product.seo?.canonical_url?.trim() || newCanonicalUrl,
+        buildProductUrlPath(product)
       );
+      
       return {
         title: { absolute: title },
         description,
@@ -138,7 +143,10 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   return { title: 'Produit | Protéine Tunisie' };
 }
 
-/** Product detail page – official URL: /shop/:slug. Anti-404: if slug is not a product, try 301 to /category/:slug (preserve query). */
+/** Product detail page – legacy URL /shop/:slug. 
+ * Now redirects with 301 to new SEO-friendly URL /{sousCategorySlug}/{productSlug}
+ * unless the product has no subcategory (edge case).
+ */
 export default async function ShopProductPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
   const cleanSlug = slug?.trim();
@@ -146,26 +154,35 @@ export default async function ShopProductPage({ params, searchParams }: PageProp
 
   const search = searchParams ? await searchParams : undefined;
 
-  // 1) Try product first – if found, always 200 (never redirect a valid product)
+  // 1) Try product first
   let product: Product | null = null;
   try {
     product = await getCachedProductDetails(cleanSlug);
   } catch (e) {
     if (getErrorStatus(e) === 404) {
+      // Product not found → try category redirect
       permanentRedirect(buildCategoryRedirectUrl(cleanSlug, search));
     }
     notFound();
   }
 
-  if (product?.id) {
-    // Valid product → render product page (no redirect)
-  } else {
-    // 2) Product not found → redirect to /category/:slug (old /shop/* links). Category page will 404 if slug doesn't exist.
+  if (!product?.id) {
+    // Product not found → redirect to category
     permanentRedirect(buildCategoryRedirectUrl(cleanSlug, search));
   }
 
-  // From here product is defined and has id
   const safeProduct = product!;
+  
+  // 2) Check if product has a subcategory - if yes, redirect to new URL with 301
+  const subCategory = getProductPrimarySubCategory(safeProduct);
+  if (subCategory?.slug) {
+    // Product has subcategory → permanent 301 redirect to new URL
+    const newUrl = buildProductCanonicalUrl(safeProduct);
+    permanentRedirect(newUrl);
+  }
+  
+  // Edge case: product has no subcategory → stay on legacy URL (no redirect)
+  // This handles products that don't belong to any subcategory
 
   const similarPromise = safeProduct.sous_categorie_id
     ? getSimilarProducts(safeProduct.sous_categorie_id).then((s) => s?.products ?? []).catch(() => [] as Product[])
@@ -175,9 +192,12 @@ export default async function ShopProductPage({ params, searchParams }: PageProp
   const [similarProducts, faqs] = await Promise.all([similarPromise, faqsPromise]);
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
+  
+  // Use new canonical URL even for legacy display (edge case products)
+  const newCanonicalUrl = buildProductCanonicalUrl(safeProduct);
   const canonicalUrl = ensureProductionDomain(
-    safeProduct.seo?.canonical_url?.trim() || buildCanonicalUrl(`/shop/${safeProduct.slug || cleanSlug}`),
-    `/shop/${safeProduct.slug || cleanSlug}`
+    safeProduct.seo?.canonical_url?.trim() || newCanonicalUrl,
+    buildProductUrlPath(safeProduct)
   );
   const apiLd = safeProduct.json_ld_product;
   const productSchema =
@@ -191,6 +211,7 @@ export default async function ShopProductPage({ params, searchParams }: PageProp
     }
   }
 
+  // Build breadcrumbs with new URLs where applicable
   const breadcrumbItems = [
     { name: 'Accueil', url: '/' },
     { name: 'Boutique', url: '/shop' },
@@ -199,10 +220,14 @@ export default async function ShopProductPage({ params, searchParams }: PageProp
   const sub = safeProduct.sous_categorie;
   if (cat?.slug) breadcrumbItems.push({ name: cat.designation_fr || cat.slug, url: `/category/${cat.slug}` });
   if (sub?.slug && sub.slug !== cat?.slug) breadcrumbItems.push({ name: sub.designation_fr || sub.slug, url: `/category/${sub.slug}` });
-  breadcrumbItems.push({ name: safeProduct.designation_fr || safeProduct.slug || 'Produit', url: `/shop/${safeProduct.slug || cleanSlug}` });
+  // For products with subcategory, use new URL; otherwise use legacy
+  const productUrl = sub?.slug 
+    ? buildProductUrlPath(safeProduct) 
+    : `/shop/${safeProduct.slug || cleanSlug}`;
+  breadcrumbItems.push({ name: safeProduct.designation_fr || safeProduct.slug || 'Produit', url: productUrl });
   const breadcrumbSchema = buildBreadcrumbListSchema(breadcrumbItems, baseUrl);
   validateStructuredData(breadcrumbSchema, 'BreadcrumbList');
-  const webPageSchema = buildWebPageSchema(safeProduct.designation_fr, `/shop/${cleanSlug}`, baseUrl, {
+  const webPageSchema = buildWebPageSchema(safeProduct.designation_fr, productUrl, baseUrl, {
     description: (safeProduct.description_fr || '').replace(/<[^>]*>/g, ' ').trim().slice(0, 200),
   });
 

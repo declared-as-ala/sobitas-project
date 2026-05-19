@@ -12,6 +12,8 @@ import {
 } from '@/util/structuredData';
 import { getCategorySeoContent } from '@/util/categorySeoContent';
 import { mergeCategorySeo, type CategorySeoFromApi, type MergedCategorySeo } from '@/util/resolveCategorySeo';
+import { getTunisiaKeywordsForCategory, generateTunisiaMetaTitle, generateTunisiaMetaDescription, generateTunisiaH1 } from '@/util/tunisiaCategoryKeywords';
+import { getProductLink, getProductPrimarySubCategory } from '@/util/productUrl';
 import { CategorySeoLanding } from '@/app/category/CategorySeoLanding';
 import { ShopPageClient } from '@/app/shop/ShopPageClient';
 import { Header } from '@/app/components/Header';
@@ -75,13 +77,20 @@ function resolveBestProducts(
 /** CTR-optimized meta title: 55–60 chars, keyword + Tunisia + brand. */
 const META_TITLE_MAX_LEN = 60;
 
-function toMetaTitle(seoH1: string | undefined, fallbackName: string | undefined): string {
+function toMetaTitle(seoH1: string | undefined, fallbackName: string | undefined, slug?: string): string {
   if (seoH1?.trim()) {
     const trimmed = seoH1.trim();
     if (trimmed.length <= META_TITLE_MAX_LEN) return trimmed;
     const cut = trimmed.slice(0, META_TITLE_MAX_LEN - 1);
     const lastSpace = cut.lastIndexOf(' ');
     return lastSpace > 40 ? cut.slice(0, lastSpace) : cut;
+  }
+  if (fallbackName && slug) {
+    const tunisiaKeywords = getTunisiaKeywordsForCategory(slug);
+    if (tunisiaKeywords) {
+      return generateTunisiaMetaTitle(fallbackName, tunisiaKeywords);
+    }
+    return `${fallbackName} | Protéine Tunisie`;
   }
   return fallbackName ? `${fallbackName} | Proteine Tunisie` : 'Catégorie | Proteine Tunisie';
 }
@@ -108,18 +117,19 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     let metaTitle =
       merged.metaTitle && merged.metaTitle.length <= META_TITLE_MAX_LEN
         ? merged.metaTitle
-        : toMetaTitle(merged.h1, apiTitle);
+        : toMetaTitle(merged.h1, apiTitle, canonicalSlug);
     if (metaTitle.length > META_TITLE_MAX_LEN) {
       const cut = metaTitle.slice(0, META_TITLE_MAX_LEN - 1);
       const lastSpace = cut.lastIndexOf(' ');
       metaTitle = lastSpace > 40 ? cut.slice(0, lastSpace) : cut;
     }
     metaTitle = metaTitle.slice(0, META_TITLE_MAX_LEN);
+    const tunisiaKeywords = getTunisiaKeywordsForCategory(canonicalSlug);
     const description =
       merged.metaDescription && merged.metaDescription.length <= 160
         ? merged.metaDescription
         : (merged.intro?.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160) ||
-            `Découvrez notre sélection ${apiTitle ? `- ${apiTitle}` : ''}. Qualité premium, livraison rapide Tunisie.`);
+            generateTunisiaMetaDescription(apiTitle || canonicalSlug, tunisiaKeywords));
     const canonicalUrl =
       merged.canonicalUrl && merged.canonicalUrl.length > 0
         ? merged.canonicalUrl
@@ -133,10 +143,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const twitterDescMeta = (merged.twitterDescription ?? '').trim() || ogDescMeta;
     const twitterImg = (merged.twitterImage ?? '').trim() || ogImage;
     const kw = metaKeywordsList(merged);
+    const fallbackKeywords = tunisiaKeywords ? [tunisiaKeywords.primary, ...tunisiaKeywords.variations] : [];
+    const allKeywords = kw ? [...kw, ...fallbackKeywords] : (fallbackKeywords.length > 0 ? fallbackKeywords : undefined);
     return {
       title: { absolute: metaTitle },
       description: descTrimmed,
-      ...(kw ? { keywords: kw } : {}),
+      ...(allKeywords ? { keywords: allKeywords } : {}),
       alternates: { canonical: canonicalUrl },
       robots: { index: merged.robotsIndex, follow: merged.robotsFollow },
       openGraph: {
@@ -225,7 +237,13 @@ export default async function CategoryPage({ params }: PageProps) {
         description: collectionDesc,
       });
       validateStructuredData(collectionPageSchema, 'CollectionPage');
-      const productList = (sub.products ?? []).slice(0, 20).map((p: any) => ({ name: p.designation_fr || p.slug, url: `/shop/${p.slug}` })).filter((p: { name: string; url: string }) => p.url !== '/shop/');
+      const productList = (sub.products ?? []).slice(0, 20).map((p: any) => {
+        const subCategory = p.sous_categorie || (p.sous_categories && p.sous_categories[0]);
+        const url = subCategory?.slug 
+          ? `/${subCategory.slug}/${p.slug}` 
+          : `/shop/${p.slug}`;
+        return { name: p.designation_fr || p.slug, url };
+      }).filter((p: { name: string; url: string }) => p.url !== '/shop/');
       const itemListSchema = productList.length > 0 ? buildItemListSchema(productList, baseUrl, { name: pageTitle }) : null;
 
       const title = merged.h1?.trim() || sub.sous_category?.designation_fr || canonicalSlug;
@@ -350,7 +368,13 @@ export default async function CategoryPage({ params }: PageProps) {
         description: collectionDescCat,
       });
       validateStructuredData(collectionPageSchemaCat, 'CollectionPage');
-      const productListCat = (cat.products ?? []).slice(0, 20).map((p: any) => ({ name: p.designation_fr || p.slug, url: `/shop/${p.slug}` })).filter((p: { name: string; url: string }) => p.url !== '/shop/');
+      const productListCat = (cat.products ?? []).slice(0, 20).map((p: any) => {
+        const subCategory = p.sous_categorie || (p.sous_categories && p.sous_categories[0]);
+        const url = subCategory?.slug 
+          ? `/${subCategory.slug}/${p.slug}` 
+          : `/shop/${p.slug}`;
+        return { name: p.designation_fr || p.slug, url };
+      }).filter((p: { name: string; url: string }) => p.url !== '/shop/');
       const itemListSchemaCat = productListCat.length > 0 ? buildItemListSchema(productListCat, baseUrl, { name: pageTitleCat }) : null;
 
       const title = mergedCat.h1?.trim() || cat.category?.designation_fr || canonicalSlug;
