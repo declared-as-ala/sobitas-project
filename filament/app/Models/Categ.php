@@ -32,6 +32,7 @@ class Categ extends Model
         'breadcrumb_label',
         'primary_keyword',
         'secondary_keywords',
+        'seo_tags',
         'robots_index',
         'robots_follow',
         'seo_enabled',
@@ -74,6 +75,14 @@ class Categ extends Model
     {
         return Attribute::make(
             get: fn ($value) => self::decodeRepeaterRows($value, 'term'),
+            set: fn ($value) => is_array($value) ? json_encode(array_values($value), JSON_UNESCAPED_UNICODE) : $value,
+        );
+    }
+
+    protected function seoTags(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value) => self::decodeRepeaterRows($value, 'tag'),
             set: fn ($value) => is_array($value) ? json_encode(array_values($value), JSON_UNESCAPED_UNICODE) : $value,
         );
     }

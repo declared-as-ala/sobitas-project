@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\SiteNavigationItemResource\Pages;
 use App\Models\SiteNavigationItem;
+use App\Rules\SiteNavigationUrl;
 use Filament\Actions;
 use Filament\Forms;
 use Filament\Resources\Resource;
@@ -54,22 +55,7 @@ class SiteNavigationItemResource extends Resource
                             ->required()
                             ->maxLength(1024)
                             ->helperText('Exemples: /packs, /creatine, https://example.com, tel:+216...')
-                            ->rules([
-                                function (string $attribute, mixed $value, \Closure $fail): void {
-                                    $url = trim((string) $value);
-                                    if ($url === '') {
-                                        return;
-                                    }
-
-                                    $allowed = str_starts_with($url, '/')
-                                        || str_starts_with($url, '#')
-                                        || preg_match('/^(https?:|mailto:|tel:)/i', $url) === 1;
-
-                                    if (! $allowed) {
-                                        $fail('Utilisez une URL relative (/page), absolue (https://...), mailto:, tel: ou une ancre #.');
-                                    }
-                                },
-                            ])
+                            ->rules([new SiteNavigationUrl()])
                             ->columnSpanFull(),
                         Forms\Components\Select::make('icon')
                             ->label('Icone')

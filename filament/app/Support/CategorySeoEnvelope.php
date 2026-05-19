@@ -107,31 +107,9 @@ final class CategorySeoEnvelope
         $secondary = $model->secondary_keywords ?? null;
         $secondary = self::normalizeSecondaryKeywords($secondary);
 
-        $seoTags = $model->seo_tags ?? null;
-        $seoTagsList = [];
-        if (is_array($seoTags)) {
-            foreach ($seoTags as $tag) {
-                if (is_string($tag)) {
-                    $t = trim($tag);
-                    if ($t !== '') {
-                        $seoTagsList[] = $t;
-                    }
-                }
-            }
-        }
+        $seoTagsList = self::normalizeRepeaterList($model->seo_tags ?? null, 'tag');
 
-        $relatedSlugs = $model->related_category_slugs ?? null;
-        $relatedCategorySlugs = [];
-        if (is_array($relatedSlugs)) {
-            foreach ($relatedSlugs as $s) {
-                if (is_string($s)) {
-                    $x = trim($s);
-                    if ($x !== '') {
-                        $relatedCategorySlugs[] = $x;
-                    }
-                }
-            }
-        }
+        $relatedCategorySlugs = self::normalizeRepeaterList($model->related_category_slugs ?? null, 'slug');
 
         $extraRaw = $model->extra_json_ld ?? null;
         $extraJsonLd = is_array($extraRaw)
@@ -199,20 +177,44 @@ final class CategorySeoEnvelope
      */
     private static function normalizeSecondaryKeywords(mixed $secondary): array
     {
-        if (! is_array($secondary)) {
+        return self::normalizeRepeaterList($secondary, 'term');
+    }
+
+    /**
+     * @param  mixed  $value
+     * @return list<string>
+     */
+    private static function normalizeRepeaterList(mixed $value, string $rowKey): array
+    {
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            $value = is_array($decoded)
+                ? $decoded
+                : array_values(array_filter(array_map('trim', preg_split('/[,;]/', $value) ?: [])));
+        }
+
+        if (! is_array($value)) {
             return [];
         }
 
-        return array_values(array_filter(array_map(function ($row) {
-            if (is_string($row)) {
-                return trim($row);
-            }
-            if (is_array($row) && isset($row['term'])) {
-                return trim((string) $row['term']);
+        $items = [];
+        foreach ($value as $row) {
+            if (is_string($row) || is_numeric($row)) {
+                $item = trim((string) $row);
+            } elseif (is_array($row) && isset($row[$rowKey])) {
+                $item = trim((string) $row[$rowKey]);
+            } elseif (is_object($row) && isset($row->{$rowKey})) {
+                $item = trim((string) $row->{$rowKey});
+            } else {
+                $item = '';
             }
 
-            return null;
-        }, $secondary), fn ($t) => $t !== null && $t !== ''));
+            if ($item !== '') {
+                $items[] = $item;
+            }
+        }
+
+        return array_values(array_unique($items));
     }
 
     /**

@@ -27,7 +27,7 @@ import type {
 } from '@/types';
 import type { BackendOrderPayload } from '@/lib/orderPayload';
 import { SITE_LOGO_PUBLIC_PATH } from '@/constants/branding';
-import type { CategorySeoFromApi } from '@/util/resolveCategorySeo';
+import { withCategorySeoEntityFallbacks, type CategorySeoFromApi } from '@/util/resolveCategorySeo';
 
 // In browser on localhost: use same-origin API proxy to avoid CORS (next.config.js rewrites /api-proxy to backend).
 // Storage URL is always production so server and client render the same image URLs (avoids hydration mismatch).
@@ -426,7 +426,15 @@ export async function fetchCategoryOrSubCategory(slug: string): Promise<
       pagination?: any;
       seo?: CategorySeoFromApi;
     }>(`productsBySubCategoryId/${encodeURIComponent(cleanSlug)}?per_page=24&page=1`);
-    if (sub?.sous_category?.id) return { type: 'subcategory', data: sub };
+    if (sub?.sous_category?.id) {
+      return {
+        type: 'subcategory',
+        data: {
+          ...sub,
+          seo: withCategorySeoEntityFallbacks(sub.seo, sub.sous_category),
+        },
+      };
+    }
   } catch (e) {
     if (e instanceof ApiError && e.status === 404) {
       // try category
@@ -443,7 +451,15 @@ export async function fetchCategoryOrSubCategory(slug: string): Promise<
       brands: Brand[];
       seo?: CategorySeoFromApi;
     }>(`productsByCategoryId/${encodeURIComponent(cleanSlug)}`);
-    if (cat?.category?.id) return { type: 'category', data: cat };
+    if (cat?.category?.id) {
+      return {
+        type: 'category',
+        data: {
+          ...cat,
+          seo: withCategorySeoEntityFallbacks(cat.seo, cat.category),
+        },
+      };
+    }
   } catch (e) {
     if (e instanceof ApiError && e.status === 404) throw e;
     throw e;

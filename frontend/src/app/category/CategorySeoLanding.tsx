@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import type { CategorySeoContent } from '@/types/categorySeo';
 import { buildFAQPageSchemaFromQA, validateStructuredData } from '@/util/structuredData';
 import { CategorySeoLandingExpandable } from '@/app/category/CategorySeoLandingExpandable';
 
@@ -46,6 +45,14 @@ function textToParagraphs(text: string): React.ReactNode {
   ));
 }
 
+function plainTextFromContent(value: string): string {
+  return value
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&[a-z]+;/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export function CategorySeoLanding({
   title,
   banners,
@@ -79,6 +86,7 @@ export function CategorySeoLanding({
   const showTop = section === 'top' || section === 'all';
   const showContentBelowFold = section === 'below-fold';
   const showBottom = section === 'bottom' || section === 'all' || section === 'below-fold';
+  const headerIntro = section === 'header' && hasIntro ? plainTextFromContent(intro) : '';
 
   return (
     <div className="space-y-8 sm:space-y-10 lg:space-y-12">
@@ -116,6 +124,11 @@ export function CategorySeoLanding({
         <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white tracking-tight">
           {title}
         </h1>
+        {headerIntro && (
+          <p className="mt-3 max-w-4xl text-sm sm:text-base text-gray-600 dark:text-gray-300 leading-relaxed line-clamp-3-fallback">
+            {headerIntro}
+          </p>
+        )}
       </header>
         </>
       )}
