@@ -157,10 +157,10 @@ export function BrandsSection() {
     setLoading(true);
     
     // Prefetch the page for faster navigation
-    router.prefetch(`/brand/${slug}`);
+    router.prefetch(`/${slug}`);
     // Navigate immediately - the loading state will persist until page loads
     try {
-      await router.push(`/brand/${slug}`);
+      await router.push(`/${slug}`);
     } catch (error) {
       console.error('Navigation error:', error);
       setIsNavigating(false);

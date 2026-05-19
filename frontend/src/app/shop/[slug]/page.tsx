@@ -34,12 +34,12 @@ export type PageProps = {
 // ISR: revalidate every 5min for product pages
 export const revalidate = 300;
 
-/** Build /category/:slug URL and preserve query params (UTM, etc.) for 301 redirect. */
+/** Build /:slug category URL and preserve query params (UTM, etc.) for redirect. */
 function buildCategoryRedirectUrl(
   slug: string,
   searchParams: Record<string, string | string[] | undefined> | undefined
 ): string {
-  const base = `/category/${encodeURIComponent(slug)}`;
+  const base = `/${encodeURIComponent(slug)}`;
   if (!searchParams || Object.keys(searchParams).length === 0) return base;
   const q = new URLSearchParams();
   Object.entries(searchParams).forEach(([key, value]) => {
@@ -218,8 +218,8 @@ export default async function ShopProductPage({ params, searchParams }: PageProp
   ];
   const cat = safeProduct.sous_categorie?.categorie;
   const sub = safeProduct.sous_categorie;
-  if (cat?.slug) breadcrumbItems.push({ name: cat.designation_fr || cat.slug, url: `/category/${cat.slug}` });
-  if (sub?.slug && sub.slug !== cat?.slug) breadcrumbItems.push({ name: sub.designation_fr || sub.slug, url: `/category/${sub.slug}` });
+  if (cat?.slug) breadcrumbItems.push({ name: cat.designation_fr || cat.slug, url: `/${cat.slug}` });
+  if (sub?.slug && sub.slug !== cat?.slug) breadcrumbItems.push({ name: sub.designation_fr || sub.slug, url: `/${sub.slug}` });
   // For products with subcategory, use new URL; otherwise use legacy
   const productUrl = sub?.slug 
     ? buildProductUrlPath(safeProduct) 

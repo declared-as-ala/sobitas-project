@@ -251,7 +251,7 @@ export default function BrandsPageClient() {
 function BrandCard({ brand, index, onBrandClick }: { brand: Brand; index: number; onBrandClick: (e: React.MouseEvent, href: string) => void }) {
   const [imageError, setImageError] = useState(false);
   const logoUrl = brand.logo ? getStorageUrl(brand.logo) : null;
-  const href = `/brand/${nameToSlug(brand.designation_fr)}`;
+  const href = `/${nameToSlug(brand.designation_fr)}`;
 
   return (
     <motion.div
@@ -300,7 +300,7 @@ function BrandCard({ brand, index, onBrandClick }: { brand: Brand; index: number
 function BrandMobileListItem({ brand, index, onBrandClick }: { brand: Brand; index: number; onBrandClick: (e: React.MouseEvent, href: string) => void }) {
   const [imageError, setImageError] = useState(false);
   const logoUrl = brand.logo ? getStorageUrl(brand.logo) : null;
-  const href = `/brand/${nameToSlug(brand.designation_fr)}`;
+  const href = `/${nameToSlug(brand.designation_fr)}`;
 
   return (
     <motion.div
@@ -352,7 +352,7 @@ function BrandMobileListItem({ brand, index, onBrandClick }: { brand: Brand; ind
 function BrandListItem({ brand, index, onBrandClick }: { brand: Brand; index: number; onBrandClick: (e: React.MouseEvent, href: string) => void }) {
   const [imageError, setImageError] = useState(false);
   const logoUrl = brand.logo ? getStorageUrl(brand.logo) : null;
-  const href = `/brand/${nameToSlug(brand.designation_fr)}`;
+  const href = `/${nameToSlug(brand.designation_fr)}`;
 
   return (
     <motion.div

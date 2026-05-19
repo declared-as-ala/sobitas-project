@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next';
-import { getAllProducts, getAllArticles, getCategories, getAllBrands, getBlogCategories, getBlogTags } from '@/services/api';
-import type { Product, Article, Category, Brand, SubCategory } from '@/types';
+import { getAllProducts, getAllArticles, getCategories, getAllBrands, getBlogCategories, getBlogTags, getAppPages } from '@/services/api';
+import type { Product, Article, Category, Brand, SubCategory, Page } from '@/types';
 import { buildProductUrl, getProductPrimarySubCategory } from '@/util/productUrl';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
@@ -66,10 +66,11 @@ export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
   const sitemapEntries: MetadataRoute.Sitemap = [...staticPages];
 
   // Fetch all data in parallel so the sitemap responds quickly when requested (e.g. by Google).
-  const [productsRes, categories, brands, articles, blogCategories, blogTags] = await Promise.allSettled([
+  const [productsRes, categories, brands, pages, articles, blogCategories, blogTags] = await Promise.allSettled([
     getAllProducts({ perPage: 5000, page: 1 }),
     getCategories(undefined, { perPage: 500 }),
     getAllBrands(),
+    getAppPages(),
     getAllArticles(),
     getBlogCategories(),
     getBlogTags(),
@@ -113,7 +114,7 @@ export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
           category.seo_enabled !== false;
         if (catIdx) {
           sitemapEntries.push({
-            url: `${BASE_URL}/category/${category.slug}`,
+            url: `${BASE_URL}/${category.slug}`,
             lastModified: new Date(),
             changeFrequency: normalizeSitemapChangefreq(category.sitemap_changefreq ?? undefined),
             priority: clampPriority(category.sitemap_priority ?? undefined, 0.85),
@@ -130,7 +131,7 @@ export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
               return;
             }
             sitemapEntries.push({
-              url: `${BASE_URL}/category/${subCategory.slug}`,
+              url: `${BASE_URL}/${subCategory.slug}`,
               lastModified: getLastModified(subCategory as ItemWithDates),
               changeFrequency: normalizeSitemapChangefreq(subCategory.sitemap_changefreq ?? undefined),
               priority: clampPriority(subCategory.sitemap_priority ?? undefined, 0.8),
@@ -148,7 +149,7 @@ export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
       brands.value.forEach((brand: Brand) => {
         if (brand.id && brand.designation_fr) {
           sitemapEntries.push({
-            url: `${BASE_URL}/brand/${nameToSlug(brand.designation_fr)}`,
+            url: `${BASE_URL}/${nameToSlug(brand.designation_fr)}`,
             lastModified: new Date(),
             changeFrequency: 'weekly' as const,
             priority: 0.75,
@@ -158,6 +159,23 @@ export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
     }
   } catch (error) {
     console.error('Error processing brands for sitemap:', error);
+  }
+
+  try {
+    if (pages.status === 'fulfilled' && Array.isArray(pages.value) && pages.value.length > 0) {
+      pages.value
+        .filter((page: Page) => page.slug)
+        .forEach((page: Page) => {
+          sitemapEntries.push({
+            url: `${BASE_URL}/${page.slug}`,
+            lastModified: getLastModified(page as ItemWithDates),
+            changeFrequency: 'monthly' as const,
+            priority: 0.55,
+          });
+        });
+    }
+  } catch (error) {
+    console.error('Error processing pages for sitemap:', error);
   }
 
   try {

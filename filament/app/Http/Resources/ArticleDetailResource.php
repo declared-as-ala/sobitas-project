@@ -45,7 +45,7 @@ class ArticleDetailResource extends JsonResource
             }
             $relatedShopCategories[] = [
                 'slug' => $s,
-                'url' => $frontendBase.'/category/'.rawurlencode($s),
+                'url' => $frontendBase.'/'.rawurlencode($s),
             ];
         }
 
@@ -111,4 +111,3 @@ class ArticleDetailResource extends JsonResource
         return url(Storage::disk('public')->url((string) $path));
     }
 }
-

@@ -155,14 +155,14 @@ export function getProductBreadcrumbs(product: Product): Array<{ name: string; u
   if (subCategory?.categorie) {
     breadcrumbs.push({
       name: subCategory.categorie.designation_fr || subCategory.categorie.slug,
-      url: `/category/${subCategory.categorie.slug}`,
+      url: `/${subCategory.categorie.slug}`,
     });
   }
   
   if (subCategory?.slug) {
     breadcrumbs.push({
       name: subCategory.designation_fr || subCategory.slug,
-      url: `/category/${subCategory.slug}`,
+      url: `/${subCategory.slug}`,
     });
   }
   

@@ -87,10 +87,10 @@ export function ProductsDropdown() {
             return (
               <div key={cat.id} className="min-w-0">
                 <LinkWithLoading
-                  href={`/category/${cat.slug}`}
+                  href={`/${cat.slug}`}
                   className="font-bold text-caption tracking-wide text-red-600 dark:text-red-500 uppercase mb-3 hover:text-red-700 transition-colors block leading-snug"
                   loadingMessage="Chargement..."
-                  onMouseEnter={() => router.prefetch(`/category/${cat.slug}`)}
+                  onMouseEnter={() => router.prefetch(`/${cat.slug}`)}
                   onClick={close}
                 >
                   {cat.designation_fr}
@@ -102,10 +102,10 @@ export function ProductsDropdown() {
                   {subs.map((sub) => (
                     <li key={sub.id}>
                       <LinkWithLoading
-                        href={`/category/${sub.slug}`}
+                        href={`/${sub.slug}`}
                         className="group flex items-center gap-1.5 text-[13px] text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors py-0.5 leading-snug"
                         loadingMessage="Chargement..."
-                        onMouseEnter={() => router.prefetch(`/category/${sub.slug}`)}
+                        onMouseEnter={() => router.prefetch(`/${sub.slug}`)}
                         onClick={close}
                       >
                         <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600 group-hover:bg-red-500 transition-colors flex-shrink-0" />

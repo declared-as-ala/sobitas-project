@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getPageBySlug } from '@/services/api';
+import { getPageBySlug, getStorageUrl } from '@/services/api';
+import { buildCanonicalUrl } from '@/util/canonical';
 import { PageContentClient } from './PageContentClient';
 
 export type PageProps = {
@@ -20,20 +21,34 @@ const slugMapping: Record<string, string> = {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const apiSlug = slugMapping[slug] ?? slug;
+
   try {
     const page = await getPageBySlug(apiSlug);
+    const canonical = page.canonical_url?.trim() || buildCanonicalUrl(`/${encodeURIComponent(page.slug || apiSlug)}`);
+    const description = page.meta_description ?? page.excerpt ?? `Decouvrez ${page.title} sur Proteine Tunisie`;
+    const ogImage = page.og_image ? getStorageUrl(page.og_image) : undefined;
+
     return {
-      title: page.title ?? 'Page',
-      description:
-        page.meta_description ??
-        page.excerpt ??
-        `Découvrez ${page.title} sur Proteine Tunisie`,
+      title: { absolute: page.meta_title?.trim() || page.title || 'Page' },
+      description,
       keywords: page.meta_keywords ?? undefined,
+      alternates: { canonical },
+      robots: {
+        index: page.robots_index ?? true,
+        follow: page.robots_follow ?? true,
+      },
+      openGraph: {
+        title: page.og_title?.trim() || page.meta_title?.trim() || page.title || 'Page',
+        description: page.og_description?.trim() || description,
+        url: canonical,
+        type: 'website',
+        ...(ogImage ? { images: [{ url: ogImage }] } : {}),
+      },
     };
   } catch {
     return {
       title: 'Page | Proteine Tunisie',
-      description: 'Découvrez notre page sur Proteine Tunisie',
+      description: 'Decouvrez notre page sur Proteine Tunisie',
     };
   }
 }

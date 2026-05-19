@@ -770,7 +770,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
               {product.sous_categorie?.slug && (
                 <div className="px-1">
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
-                    <Link href={`/category/${product.sous_categorie.slug}`} className="text-red-600 dark:text-red-400 hover:underline">
+                    <Link href={`/${product.sous_categorie.slug}`} className="text-red-600 dark:text-red-400 hover:underline">
                       {product.sous_categorie.designation_fr}
                     </Link>
                   </div>
@@ -780,7 +780,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 <div className="px-1">
                   <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                     {product.brand?.designation_fr && (
-                      <Link href={`/brand/${nameToSlug(product.brand.designation_fr)}`} className="text-red-600 dark:text-red-400 hover:underline">
+                      <Link href={`/${nameToSlug(product.brand.designation_fr)}`} className="text-red-600 dark:text-red-400 hover:underline">
                         Marque: {product.brand.designation_fr}
                       </Link>
                     )}
@@ -1027,7 +1027,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 </div>
                 {product.sous_categorie?.slug && (
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
-                    <Link href={`/category/${product.sous_categorie.slug}`} className="text-red-600 dark:text-red-400 hover:underline">
+                    <Link href={`/${product.sous_categorie.slug}`} className="text-red-600 dark:text-red-400 hover:underline">
                       {product.sous_categorie.designation_fr}
                     </Link>
                   </div>
@@ -1035,7 +1035,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 {(product.brand?.designation_fr || (product.tags?.length ?? 0) > 0) && (
                   <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                     {product.brand?.designation_fr && (
-                      <Link href={`/brand/${nameToSlug(product.brand.designation_fr)}`} className="text-red-600 dark:text-red-400 hover:underline">
+                      <Link href={`/${nameToSlug(product.brand.designation_fr)}`} className="text-red-600 dark:text-red-400 hover:underline">
                         Marque: {product.brand.designation_fr}
                       </Link>
                     )}

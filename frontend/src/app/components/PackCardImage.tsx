@@ -74,7 +74,7 @@ export function PackCardImage({
             }}
             loading="lazy"
             sizes="(max-width: 640px) 46vw, (max-width: 768px) 32vw, (max-width: 1024px) 26vw, (max-width: 1280px) 20vw, 16vw"
-            quality={85}
+            quality={75}
             onError={() => setHasError(true)}
           />
         ) : (

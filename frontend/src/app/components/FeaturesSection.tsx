@@ -234,11 +234,9 @@ const cardVariants: Variants = {
 
 function FeatureCard({
   feature,
-  index,
   isInView,
 }: {
   feature: (typeof features)[0];
-  index: number;
   isInView: boolean;
 }) {
   const [hovered, setHovered] = useState(false);
@@ -299,21 +297,27 @@ function FeatureCard({
 // ─── Section (mobile: carousel with scroll-snap, desktop: grid) ───────────────
 
 const MOBILE_BREAKPOINT = 768;
+const CAROUSEL_GAP = 16;
 
 export function FeaturesSection() {
   const ref = useRef<HTMLElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollRafRef = useRef<number | null>(null);
+  const carouselStepRef = useRef(0);
   const isInView = useInView(ref, { once: true, margin: '-80px', amount: 0.2 });
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(true);
 
-  const CAROUSEL_GAP = 16;
+  const measureCarousel = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    carouselStepRef.current = el.clientWidth * 0.88 + CAROUSEL_GAP;
+  }, []);
 
   const updateCarouselIndex = useCallback(() => {
     const el = scrollRef.current;
-    if (!el || el.scrollWidth <= el.clientWidth) return;
-    const cardWidth = el.clientWidth * 0.88;
-    const step = cardWidth + CAROUSEL_GAP;
+    const step = carouselStepRef.current;
+    if (!el || step <= 0) return;
     const index = Math.round(el.scrollLeft / step);
     setCarouselIndex(Math.min(Math.max(0, index), features.length - 1));
   }, []);
@@ -329,15 +333,39 @@ export function FeaturesSection() {
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    el.addEventListener('scroll', updateCarouselIndex, { passive: true });
-    return () => el.removeEventListener('scroll', updateCarouselIndex);
-  }, [updateCarouselIndex]);
+    measureCarousel();
+
+    const onScroll = () => {
+      if (scrollRafRef.current != null) return;
+      scrollRafRef.current = requestAnimationFrame(() => {
+        scrollRafRef.current = null;
+        updateCarouselIndex();
+      });
+    };
+
+    const resizeObserver =
+      typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(() => {
+            measureCarousel();
+            updateCarouselIndex();
+          })
+        : null;
+
+    resizeObserver?.observe(el);
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      el.removeEventListener('scroll', onScroll);
+      resizeObserver?.disconnect();
+      if (scrollRafRef.current != null) cancelAnimationFrame(scrollRafRef.current);
+    };
+  }, [measureCarousel, updateCarouselIndex]);
 
   const scrollToIndex = (index: number) => {
     const el = scrollRef.current;
     if (!el) return;
-    const cardWidth = el.clientWidth * 0.88;
-    const step = cardWidth + CAROUSEL_GAP;
+    if (carouselStepRef.current <= 0) measureCarousel();
+    const step = carouselStepRef.current;
+    if (step <= 0) return;
     el.scrollTo({ left: index * step, behavior: 'smooth' });
   };
 
@@ -378,7 +406,7 @@ export function FeaturesSection() {
           initial="hidden"
           animate={isInView ? 'visible' : 'hidden'}
         >
-          {features.map((feature, index) => (
+          {features.map((feature) => (
             <div
               key={feature.id}
               className="flex-shrink-0 w-[88%] sm:w-[85%] md:w-auto md:flex-shrink snap-start snap-always"
@@ -386,7 +414,6 @@ export function FeaturesSection() {
             >
               <FeatureCard
                 feature={feature}
-                index={index}
                 isInView={isInView}
               />
             </div>

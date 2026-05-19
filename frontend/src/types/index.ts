@@ -460,11 +460,29 @@ export interface Page {
   body?: string | null;
   excerpt?: string | null;
   image?: string | null;
+  meta_title?: string | null;
   meta_description?: string | null;
   meta_keywords?: string | null;
+  canonical_url?: string | null;
+  robots_index?: boolean | null;
+  robots_follow?: boolean | null;
+  og_title?: string | null;
+  og_description?: string | null;
+  og_image?: string | null;
   status?: string;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface SiteNavigationItem {
+  id: number;
+  location: 'navbar' | 'sidebar' | string;
+  label: string;
+  url: string;
+  icon?: string | null;
+  is_visible?: boolean;
+  sort_order?: number;
+  opens_new_tab?: boolean;
 }
 
 // SEO Types

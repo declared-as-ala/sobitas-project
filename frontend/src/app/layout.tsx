@@ -134,7 +134,7 @@ export default async function RootLayout({
       <body className={cn("min-h-screen font-sans antialiased")}>
         {/* Google tag (gtag.js) — deferred with afterInteractive to avoid blocking FCP */}
         {/* Register service worker for PWA install support */}
-        <Script id="register-sw" strategy="afterInteractive">
+        <Script id="register-sw" strategy="lazyOnload">
           {`if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').catch(() => {}); }`}
         </Script>
         <Script src="https://www.googletagmanager.com/gtag/js?id=G-0J0J27JZ7D" strategy="lazyOnload" />

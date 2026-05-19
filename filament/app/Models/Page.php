@@ -20,13 +20,21 @@ class Page extends Model
         'body_editor_type',
         'image',
         'slug',
+        'meta_title',
         'meta_description',
         'meta_keywords',
+        'canonical_url',
+        'robots_index',
+        'robots_follow',
+        'og_title',
+        'og_description',
+        'og_image',
         'status',
     ];
 
     protected $casts = [
-        //
+        'robots_index' => 'boolean',
+        'robots_follow' => 'boolean',
     ];
 
     public function author(): BelongsTo

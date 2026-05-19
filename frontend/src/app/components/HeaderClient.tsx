@@ -1,10 +1,36 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { ShoppingCart, User, Menu, Moon, Sun, Phone, Package, MapPin, Truck, Search, X, Loader2, ArrowRight, ChevronRight, Heart } from 'lucide-react';
+import {
+  ShoppingCart,
+  User,
+  Menu,
+  Moon,
+  Sun,
+  Phone,
+  Package,
+  MapPin,
+  Truck,
+  Search,
+  X,
+  Loader2,
+  ArrowRight,
+  ChevronRight,
+  Heart,
+  Home,
+  ShoppingBag,
+  Store,
+  Newspaper,
+  Mail,
+  Info,
+  Star,
+  Tag,
+  Gift,
+  type LucideIcon,
+} from 'lucide-react';
 import { SearchBar } from './SearchBar';
 import { Button } from '@/app/components/ui/button';
 import { useTheme } from 'next-themes';
@@ -23,12 +49,12 @@ import {
 } from '@/app/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/app/components/ui/sheet';
 import { cn } from '@/app/components/ui/utils';
-import { searchProducts, getStorageUrl } from '@/services/api';
+import { searchProducts, getStorageUrl, getNavigationItems } from '@/services/api';
 import { useSiteLogos } from '@/hooks/useSiteLogos';
 import { getPriceDisplay } from '@/util/productPrice';
 import { useDebounce } from '@/util/debounce';
 import { buildProductUrlPath } from '@/util/productUrl';
-import type { Product } from '@/types';
+import type { Product, SiteNavigationItem } from '@/types';
 
 const SCROLL_THRESHOLD = 24;
 const MOBILE_NAV_SCROLL_THRESHOLD = 20;
@@ -39,6 +65,87 @@ const PHONE_FIXE = '+216 73 200 169';
 const MAPS_URL = 'https://maps.app.goo.gl/w2ytnYAKSZDmjznh6';
 const DELIVERY_MSG = 'Livraison gratuite à partir de 300 DT';
 
+type HeaderNavLink = {
+  href: string;
+  label: string;
+  icon?: string | null;
+  opensNewTab?: boolean;
+};
+
+const FALLBACK_NAV_LINKS: HeaderNavLink[] = [
+  { href: '/', label: 'ACCUEIL', icon: 'home' },
+  { href: '/packs', label: 'PACKS', icon: 'package' },
+  { href: '/brands', label: 'MARQUES', icon: 'store' },
+  { href: '/blog', label: 'BLOG', icon: 'newspaper' },
+  { href: '/contact', label: 'CONTACT', icon: 'mail' },
+  { href: '/qui-sommes-nous', label: 'QUI SOMMES NOUS', icon: 'info' },
+];
+
+const NAV_ICON_MAP: Record<string, LucideIcon> = {
+  home: Home,
+  'shopping-bag': ShoppingBag,
+  package: Package,
+  store: Store,
+  newspaper: Newspaper,
+  mail: Mail,
+  phone: Phone,
+  info: Info,
+  star: Star,
+  heart: Heart,
+  tag: Tag,
+  gift: Gift,
+};
+
+function normalizeNavigationItems(items: SiteNavigationItem[]): HeaderNavLink[] {
+  return items
+    .filter((item) => item?.is_visible !== false && item.label && item.url)
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.id - b.id)
+    .map((item) => ({
+      href: item.url,
+      label: item.label,
+      icon: item.icon,
+      opensNewTab: item.opens_new_tab,
+    }));
+}
+
+function isExternalHref(href: string): boolean {
+  return /^(https?:|mailto:|tel:)/i.test(href);
+}
+
+function NavigationIcon({ name, className }: { name?: string | null; className: string }) {
+  const Icon = name ? NAV_ICON_MAP[name] : undefined;
+  return Icon ? <Icon className={className} aria-hidden /> : null;
+}
+
+function NavigationLink({
+  item,
+  className,
+  children,
+  onClick,
+}: {
+  item: HeaderNavLink;
+  className: string;
+  children?: ReactNode;
+  onClick?: () => void;
+}) {
+  const content = children ?? item.label;
+  const targetProps = item.opensNewTab ? { target: '_blank', rel: 'noopener noreferrer' } : {};
+
+  if (isExternalHref(item.href)) {
+    return (
+      <a href={item.href} className={className} onClick={onClick} {...targetProps}>
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <Link href={item.href} className={className} onClick={onClick} {...targetProps}>
+      {content}
+    </Link>
+  );
+}
+
 export function HeaderClient() {
   const { headerLogoUrl } = useSiteLogos();
   const router = useRouter();
@@ -47,28 +154,53 @@ export function HeaderClient() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileNavVisible, setMobileNavVisible] = useState(true);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const isMobileViewportRef = useRef(false);
   const lastScrollYRef = useRef(0);
   const tickingRef = useRef(false);
   const { theme, setTheme } = useTheme();
+  const [dynamicNavigation, setDynamicNavigation] = useState<{
+    navbar: HeaderNavLink[];
+    sidebar: HeaderNavLink[];
+  }>({ navbar: [], sidebar: [] });
 
   useEffect(() => {
-    const check = () => {
-      const mobile = typeof window !== 'undefined' && window.innerWidth <= MOBILE_BREAKPOINT;
+    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);
+    const syncViewport = () => {
+      const mobile = mql.matches;
+      isMobileViewportRef.current = mobile;
       setIsMobileViewport(mobile);
-      if (mobile) {
-        const y = Math.max(0, window.scrollY);
-        lastScrollYRef.current = y;
-        setMobileNavVisible(y <= MOBILE_NAV_SCROLL_THRESHOLD);
-      }
+
+      const y = Math.max(0, window.scrollY);
+      lastScrollYRef.current = y;
+      setScrolled(y > SCROLL_THRESHOLD);
+      if (mobile) setMobileNavVisible(y <= MOBILE_NAV_SCROLL_THRESHOLD);
+      else setMobileNavVisible(true);
     };
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
+
+    syncViewport();
+    mql.addEventListener('change', syncViewport);
+    return () => mql.removeEventListener('change', syncViewport);
   }, []);
   const { getTotalItems, cartDrawerOpen, setCartDrawerOpen } = useCart();
   const { count: favoritesCount } = useFavorites();
   const { isAuthenticated, user, logout } = useAuth();
   const cartItemsCount = getTotalItems();
+
+  useEffect(() => {
+    let active = true;
+
+    getNavigationItems().then((items) => {
+      if (!active) return;
+      setDynamicNavigation({
+        navbar: normalizeNavigationItems(items.navbar),
+        sidebar: normalizeNavigationItems(items.sidebar),
+      });
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Product[]>([]);
@@ -115,12 +247,11 @@ export function HeaderClient() {
   }, []);
 
   const onScroll = useCallback(() => {
-    const w = typeof window === 'undefined' ? 0 : window.innerWidth;
     const currentScrollY = Math.max(0, (typeof window === 'undefined' ? 0 : window.scrollY));
     const last = lastScrollYRef.current;
+    setScrolled(currentScrollY > SCROLL_THRESHOLD);
 
-    if (w > MOBILE_BREAKPOINT) {
-      setScrolled(currentScrollY > SCROLL_THRESHOLD);
+    if (!isMobileViewportRef.current) {
       lastScrollYRef.current = currentScrollY;
       return;
     }
@@ -162,14 +293,12 @@ export function HeaderClient() {
     }
   }, [mobileMenuOpen, mobileProductsMenuOpen]);
 
-  const navLinks = [
-    { href: '/', label: 'ACCUEIL' },
-    { href: '/packs', label: 'PACKS' },
-    { href: '/brands', label: 'MARQUES' },
-    { href: '/blog', label: 'BLOG' },
-    { href: '/contact', label: 'CONTACT' },
-    { href: '/qui-sommes-nous', label: 'QUI SOMMES NOUS' },
-  ];
+  const navLinks = dynamicNavigation.navbar.length > 0 ? dynamicNavigation.navbar : FALLBACK_NAV_LINKS;
+  const sidebarLinks = dynamicNavigation.sidebar.length > 0 ? dynamicNavigation.sidebar : navLinks;
+  const homeNavLink = navLinks.find((link) => link.href === '/') ?? navLinks[0];
+  const navLinksAfterProducts = navLinks.filter((link) => link !== homeNavLink);
+  const sidebarHomeLink = sidebarLinks.find((link) => link.href === '/') ?? sidebarLinks[0];
+  const sidebarLinksAfterProducts = sidebarLinks.filter((link) => link !== sidebarHomeLink);
 
   const mobileNavHidden = isMobileViewport && !mobileNavVisible;
 
@@ -542,25 +671,26 @@ export function HeaderClient() {
         </div>
 
         <nav className="hidden md:flex items-center justify-center gap-5 xl:gap-8 py-3 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 flex-wrap" aria-label="Navigation principale">
-          <Link href="/" className="text-sm font-semibold text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-400 transition-colors whitespace-nowrap py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
-            ACCUEIL
-          </Link>
+          {homeNavLink && (
+            <NavigationLink
+              item={homeNavLink}
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-400 transition-colors whitespace-nowrap py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+            >
+              <NavigationIcon name={homeNavLink.icon} className="h-4 w-4" />
+              <span>{homeNavLink.label}</span>
+            </NavigationLink>
+          )}
           <ProductsDropdown />
-          <Link href="/packs" className="text-sm font-semibold text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-400 transition-colors whitespace-nowrap py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
-            PACKS
-          </Link>
-          <Link href="/brands" className="text-sm font-semibold text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-400 transition-colors whitespace-nowrap py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
-            MARQUES
-          </Link>
-          <Link href="/blog" className="text-sm font-semibold text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-400 transition-colors whitespace-nowrap py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
-            BLOG
-          </Link>
-          <Link href="/contact" className="text-sm font-semibold text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-400 transition-colors whitespace-nowrap py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
-            CONTACT
-          </Link>
-          <Link href="/qui-sommes-nous" className="text-sm font-semibold text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-400 transition-colors whitespace-nowrap py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
-            QUI SOMMES NOUS
-          </Link>
+          {navLinksAfterProducts.map((link) => (
+            <NavigationLink
+              key={`${link.href}-${link.label}`}
+              item={link}
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-400 transition-colors whitespace-nowrap py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+            >
+              <NavigationIcon name={link.icon} className="h-4 w-4" />
+              <span>{link.label}</span>
+            </NavigationLink>
+          ))}
         </nav>
       </header>
 
@@ -586,13 +716,16 @@ export function HeaderClient() {
             <div className="px-4 pb-4">
               <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 px-3 mb-2">Navigation</h3>
               <nav className="space-y-0.5">
-                <Link
-                  href="/"
-                  onClick={closeMobileMenu}
-                  className="block py-3 px-3 text-base font-medium leading-snug text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-red-600 dark:hover:text-red-500 rounded-xl transition-colors -mx-1"
-                >
-                  ACCUEIL
-                </Link>
+                {sidebarHomeLink && (
+                  <NavigationLink
+                    item={sidebarHomeLink}
+                    onClick={closeMobileMenu}
+                    className="flex items-center gap-3 py-3 px-3 text-base font-medium leading-snug text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-red-600 dark:hover:text-red-500 rounded-xl transition-colors -mx-1"
+                  >
+                    <NavigationIcon name={sidebarHomeLink.icon} className="h-5 w-5 shrink-0 text-red-500" />
+                    <span>{sidebarHomeLink.label}</span>
+                  </NavigationLink>
+                )}
                 <button
                   onClick={() => {
                     closeMobileMenu();
@@ -603,15 +736,16 @@ export function HeaderClient() {
                   <span>NOS PRODUITS</span>
                   <ChevronRight className="h-4 w-4 text-gray-400" />
                 </button>
-                {navLinks.slice(1).map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
+                {sidebarLinksAfterProducts.map((link) => (
+                  <NavigationLink
+                    key={`${link.href}-${link.label}`}
+                    item={link}
                     onClick={closeMobileMenu}
-                    className="block py-3 px-3 text-base font-medium leading-snug text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-red-600 dark:hover:text-red-500 rounded-xl transition-colors -mx-1"
+                    className="flex items-center gap-3 py-3 px-3 text-base font-medium leading-snug text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-red-600 dark:hover:text-red-500 rounded-xl transition-colors -mx-1"
                   >
-                    {link.label}
-                  </Link>
+                    <NavigationIcon name={link.icon} className="h-5 w-5 shrink-0 text-red-500" />
+                    <span>{link.label}</span>
+                  </NavigationLink>
                 ))}
               </nav>
             </div>

@@ -20,6 +20,7 @@ import type {
   FAQ,
   Page,
   SeoPage,
+  SiteNavigationItem,
   HomeData,
   AccueilData,
   Review,
@@ -801,6 +802,22 @@ export const getPageBySlug = async (slug: string): Promise<Page> => {
 };
 
 // FAQs — Filament `ApisController::faqs` returns paginated `{ data, meta, links }` with `question` + `answer`
+export const getNavigationItems = async (): Promise<{
+  navbar: SiteNavigationItem[];
+  sidebar: SiteNavigationItem[];
+}> => {
+  try {
+    const response = await api.get('/navigation-items', { timeout: 10000 });
+    const data = response.data;
+    return {
+      navbar: Array.isArray(data?.navbar) ? data.navbar : [],
+      sidebar: Array.isArray(data?.sidebar) ? data.sidebar : [],
+    };
+  } catch {
+    return { navbar: [], sidebar: [] };
+  }
+};
+
 export const getFAQs = async (): Promise<FAQ[]> => {
   const response = await api.get('/faqs?per_page=100');
   const raw = response.data;

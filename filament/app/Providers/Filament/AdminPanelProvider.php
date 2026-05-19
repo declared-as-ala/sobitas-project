@@ -43,6 +43,7 @@ use App\Filament\Resources\ProductResource;
 use App\Filament\Resources\QuotationResource;
 use App\Filament\Resources\ReviewResource;
 use App\Filament\Resources\ServiceResource;
+use App\Filament\Resources\SiteNavigationItemResource;
 use App\Filament\Resources\SlideResource;
 use App\Filament\Resources\SousCategoryResource;
 use App\Filament\Resources\TicketResource;
@@ -184,6 +185,7 @@ class AdminPanelProvider extends PanelProvider
                 QuotationResource::class,
                 ReviewResource::class,
                 ServiceResource::class,
+                SiteNavigationItemResource::class,
                 SlideResource::class,
                 SousCategoryResource::class,
                 TicketResource::class,

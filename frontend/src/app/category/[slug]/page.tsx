@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { notFound, redirect } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { getCategories } from '@/services/api';
 import { fetchCategoryOrSubCategory } from '@/services/api';
 import { buildCanonicalUrl } from '@/util/canonical';
@@ -47,13 +47,13 @@ function resolveRelatedCategories(
   for (const s of slugs.slice(0, 6)) {
     const cat = categories.find((c) => c.slug === s);
     if (cat) {
-      out.push({ slug: cat.slug, name: cat.designation_fr, url: `/category/${cat.slug}` });
+      out.push({ slug: cat.slug, name: cat.designation_fr, url: `/${cat.slug}` });
       continue;
     }
     for (const c of categories) {
       const sub = (c.sous_categories || []).find((sc: SubCategory) => sc.slug === s);
       if (sub) {
-        out.push({ slug: sub.slug, name: sub.designation_fr, url: `/category/${sub.slug}` });
+        out.push({ slug: sub.slug, name: sub.designation_fr, url: `/${sub.slug}` });
         break;
       }
     }
@@ -73,7 +73,7 @@ function resolveBestProducts(
       // Use new SEO-friendly URL format if subcategory exists
       const subCategory = p.sous_categories?.[0] || p.sous_categorie;
       const url = subCategory?.slug ? `/${subCategory.slug}/${s}` : null;
-      acc.push({ slug: s, name: p.designation_fr ?? s, url: url || `/category/${s}` });
+      acc.push({ slug: s, name: p.designation_fr ?? s, url: url || `/${s}` });
     }
     return acc;
   }, []);
@@ -138,7 +138,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const canonicalUrl =
       merged.canonicalUrl && merged.canonicalUrl.length > 0
         ? merged.canonicalUrl
-        : buildCanonicalUrl(`/category/${encodeURIComponent(canonicalSlug)}`);
+        : buildCanonicalUrl(`/${encodeURIComponent(canonicalSlug)}`);
     const descTrimmed = description.slice(0, 160);
     const ogImage = merged.ogImage || undefined;
     const ogAlt = (apiSeo?.og?.image_alt as string | undefined)?.trim() || merged.h1 || apiTitle || 'Catégorie';
@@ -184,7 +184,7 @@ export default async function CategoryPage({ params }: PageProps) {
     if (process.env.NODE_ENV === 'development') {
       console.warn(`[category] Slug alias: "${cleanSlug}" → "${canonicalSlug}"`);
     }
-    redirect(`/category/${encodeURIComponent(canonicalSlug)}`);
+    permanentRedirect(`/${encodeURIComponent(canonicalSlug)}`);
   }
 
   let categories: Awaited<ReturnType<typeof getCategories>> = [];
@@ -224,10 +224,10 @@ export default async function CategoryPage({ params }: PageProps) {
         { name: 'Accueil', url: '/' },
         ...(parentCat?.slug
           ? [
-              { name: parentCat.designation_fr || parentCat.slug, url: `/category/${parentCat.slug}` },
-              { name: subCrumbName, url: `/category/${canonicalSlug}` },
+              { name: parentCat.designation_fr || parentCat.slug, url: `/${parentCat.slug}` },
+              { name: subCrumbName, url: `/${canonicalSlug}` },
             ]
-          : [{ name: subCrumbName, url: `/category/${canonicalSlug}` }]),
+          : [{ name: subCrumbName, url: `/${canonicalSlug}` }]),
       ];
       const breadcrumbSchema = buildBreadcrumbListSchema(breadcrumbItems, baseUrl);
       validateStructuredData(breadcrumbSchema, 'BreadcrumbList');
@@ -238,7 +238,7 @@ export default async function CategoryPage({ params }: PageProps) {
           '')
           .slice(0, 500)
           .trim() || undefined;
-      const collectionPageSchema = buildCollectionPageSchema(pageTitle, `/category/${canonicalSlug}`, baseUrl, {
+      const collectionPageSchema = buildCollectionPageSchema(pageTitle, `/${canonicalSlug}`, baseUrl, {
         description: collectionDesc,
       });
       validateStructuredData(collectionPageSchema, 'CollectionPage');
@@ -358,7 +358,7 @@ export default async function CategoryPage({ params }: PageProps) {
       const catCrumbName = mergedCat.breadcrumbLabel || mergedCat.h1?.trim() || cat.category?.designation_fr || canonicalSlug;
       const breadcrumbItems = [
         { name: 'Accueil', url: '/' },
-        { name: catCrumbName, url: `/category/${canonicalSlug}` },
+        { name: catCrumbName, url: `/${canonicalSlug}` },
       ];
       const breadcrumbSchema = buildBreadcrumbListSchema(breadcrumbItems, baseUrl);
       validateStructuredData(breadcrumbSchema, 'BreadcrumbList');
@@ -369,7 +369,7 @@ export default async function CategoryPage({ params }: PageProps) {
           '')
           .slice(0, 500)
           .trim() || undefined;
-      const collectionPageSchemaCat = buildCollectionPageSchema(pageTitleCat, `/category/${canonicalSlug}`, baseUrl, {
+      const collectionPageSchemaCat = buildCollectionPageSchema(pageTitleCat, `/${canonicalSlug}`, baseUrl, {
         description: collectionDescCat,
       });
       validateStructuredData(collectionPageSchemaCat, 'CollectionPage');

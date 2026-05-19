@@ -36,13 +36,23 @@ final class CategorySeoEnvelope
     {
         $publicBaseUrl = rtrim($publicBaseUrl, '/');
         $slug = (string) ($model->slug ?? '');
-        $defaultCanonical = $publicBaseUrl.'/category/'.rawurlencode($slug);
+        $defaultCanonical = $publicBaseUrl.'/'.rawurlencode($slug);
 
         $canonical = trim((string) ($model->canonical_url ?? ''));
         if ($canonical === '') {
             $canonical = $defaultCanonical;
+        } elseif (str_starts_with($canonical, '/category/')) {
+            $canonical = $publicBaseUrl.'/'.ltrim(substr($canonical, strlen('/category/')), '/');
         } elseif (! str_starts_with($canonical, 'http')) {
             $canonical = $publicBaseUrl.'/'.ltrim($canonical, '/');
+        } else {
+            $parts = parse_url($canonical);
+            $path = is_array($parts) ? (string) ($parts['path'] ?? '') : '';
+            if (str_starts_with($path, '/category/')) {
+                $query = isset($parts['query']) && $parts['query'] !== '' ? '?'.$parts['query'] : '';
+                $fragment = isset($parts['fragment']) && $parts['fragment'] !== '' ? '#'.$parts['fragment'] : '';
+                $canonical = $publicBaseUrl.'/'.ltrim(substr($path, strlen('/category/')), '/').$query.$fragment;
+            }
         }
 
         $designation = trim((string) ($model->designation_fr ?? ''));

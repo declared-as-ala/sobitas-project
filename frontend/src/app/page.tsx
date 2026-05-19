@@ -1,7 +1,6 @@
 import { Metadata } from 'next';
 import { unstable_noStore as noStore } from 'next/cache';
-import { getAccueil, getSlides } from '@/services/api';
-import { getStorageUrl } from '@/services/api';
+import { getAccueil } from '@/services/api';
 import { buildCanonicalUrl } from '@/util/canonical';
 import { HomePageClient } from './components/HomePageClient';
 import type { AccueilData } from '@/types';
@@ -50,21 +49,49 @@ const emptyAccueil: AccueilData = {
   best_sellers: [],
 };
 
-async function getHomeData(): Promise<{ accueil: AccueilData; slides: any[] }> {
+type LocalHomeSlide = {
+  id: string;
+  cover: string;
+  title: string;
+  link: string;
+  type: 'mobile' | 'web';
+  ordre: number;
+};
+
+const LOCAL_HOME_SLIDES: LocalHomeSlide[] = [
+  {
+    id: 'home-hero-mobile',
+    cover: '/slides/home-hero-mobile.webp',
+    title: 'Proteines Premium',
+    link: '/shop',
+    type: 'mobile',
+    ordre: 1,
+  },
+  {
+    id: 'home-hero-web',
+    cover: '/slides/home-hero-web.webp',
+    title: 'Proteines Premium',
+    link: '/shop',
+    type: 'web',
+    ordre: 1,
+  },
+];
+
+async function getHomeData(): Promise<{ accueil: AccueilData; slides: LocalHomeSlide[] }> {
   noStore();
   const delays = [0, 600, 1600];
   for (let i = 0; i < delays.length; i++) {
     if (delays[i]! > 0) await new Promise((r) => setTimeout(r, delays[i]!));
-    const [accueil, slides] = await Promise.all([getAccueil(), getSlides()]);
+    const accueil = await getAccueil();
     const hasProducts =
       (accueil.new_product?.length ?? 0) > 0 ||
       (accueil.best_sellers?.length ?? 0) > 0 ||
       (accueil.ventes_flash?.length ?? 0) > 0 ||
       (accueil.categories?.length ?? 0) > 0 ||
       (accueil.packs?.length ?? 0) > 0;
-    if (hasProducts || (slides?.length ?? 0) > 0 || i === delays.length - 1) return { accueil, slides };
+    if (hasProducts || i === delays.length - 1) return { accueil, slides: LOCAL_HOME_SLIDES };
   }
-  return { accueil: emptyAccueil, slides: [] };
+  return { accueil: emptyAccueil, slides: LOCAL_HOME_SLIDES };
 }
 
 function getSlideData(slide: any): { imageUrl: string; title: string } | null {
@@ -72,7 +99,7 @@ function getSlideData(slide: any): { imageUrl: string; title: string } | null {
   const p = slide.cover || slide.image || slide.image_path || slide.url;
   if (!p) return null;
   return {
-    imageUrl: getStorageUrl(p),
+    imageUrl: p,
     title: slide.titre || slide.title || slide.designation_fr || 'Protéines Premium',
   };
 }

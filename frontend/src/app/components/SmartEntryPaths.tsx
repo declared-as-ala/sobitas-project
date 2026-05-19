@@ -15,7 +15,7 @@ const entryPaths = [
     gradient: 'from-red-500 to-orange-500',
     bgGradient: 'from-red-50 to-orange-50 dark:from-red-950/20 dark:to-orange-950/20',
     image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=600&h=400&fit=crop&q=80',
-    link: '/category/prise-de-masse',
+    link: '/prise-de-masse',
     color: 'red',
   },
   {
@@ -26,7 +26,7 @@ const entryPaths = [
     gradient: 'from-orange-500 to-yellow-500',
     bgGradient: 'from-orange-50 to-yellow-50 dark:from-orange-950/20 dark:to-yellow-950/20',
     image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600&h=400&fit=crop&q=80',
-    link: '/category/bruleurs-de-graisse',
+    link: '/bruleurs-de-graisse',
     color: 'orange',
   },
   {
@@ -37,7 +37,7 @@ const entryPaths = [
     gradient: 'from-blue-500 to-purple-500',
     bgGradient: 'from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20',
     image: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=600&h=400&fit=crop&q=80',
-    link: '/category/pre-workout',
+    link: '/pre-workout',
     color: 'blue',
   },
 ];

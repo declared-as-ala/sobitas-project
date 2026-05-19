@@ -1,19 +1,27 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// Helper to generate slug from name
-function nameToSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Remove accents
-    .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric with hyphens
-    .replace(/^-+|-+$/g, '') // Remove leading/trailing hyphens
-    .trim();
+function redirectPreservingQuery(request: NextRequest, path: string): NextResponse {
+  const url = new URL(path, request.url);
+  request.nextUrl.searchParams.forEach((value, key) => {
+    url.searchParams.append(key, value);
+  });
+
+  return NextResponse.redirect(url, 301);
 }
 
 export function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
+
+  const legacyCategory = pathname.match(/^\/category\/([^/]+)\/?$/);
+  if (legacyCategory?.[1]) {
+    return redirectPreservingQuery(request, `/${legacyCategory[1]}`);
+  }
+
+  const legacyBrand = pathname.match(/^\/brand\/([^/]+)\/?$/);
+  if (legacyBrand?.[1]) {
+    return redirectPreservingQuery(request, `/${legacyBrand[1]}`);
+  }
 
   // Add no-cache headers for blog pages to ensure fresh content
   const response = NextResponse.next();
@@ -32,8 +40,8 @@ export function middleware(request: NextRequest) {
     const brand = searchParams.get('brand');
 
     if (category) {
-      // Redirect /shop?category=slug to /category/slug
-      const newUrl = new URL(`/category/${category}`, request.url);
+      // Redirect /shop?category=slug to /slug
+      const newUrl = new URL(`/${category}`, request.url);
       // Preserve other query params (like page)
       searchParams.forEach((value, key) => {
         if (key !== 'category') {
@@ -44,14 +52,7 @@ export function middleware(request: NextRequest) {
     }
 
     if (brand) {
-      // For brand, we need to fetch the brand name and convert to slug
-      // Since we can't do async operations in middleware easily, we'll redirect to a handler
-      // For now, redirect to /shop with brand query (we'll handle this in the page)
-      // Actually, let's keep brand as query param for now since we need the ID
-      // But we should create a mapping or use the brand ID directly
-      // For SEO, we'll redirect to /brand/{slug} but we need the brand name
-      // Since middleware can't fetch data, we'll handle this in the page component
-      // For now, keep the redirect logic simple
+      // Brand query values are numeric IDs in this app, so the shop page keeps resolving them.
     }
   }
 

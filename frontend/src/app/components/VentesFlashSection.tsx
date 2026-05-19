@@ -156,11 +156,11 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
                     VENTES FLASH
                   </h2>
                   <motion.div
-                    initial={{ opacity: 0, width: 0 }}
-                    whileInView={{ opacity: 1, width: '100%' }}
+                    initial={{ opacity: 0, scaleX: 0 }}
+                    whileInView={{ opacity: 1, scaleX: 1 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.8, delay: 0.3 }}
-                    className="h-1 bg-gradient-to-r from-red-600 to-orange-600 rounded-full mt-2"
+                    className="h-1 w-full origin-left bg-gradient-to-r from-red-600 to-orange-600 rounded-full mt-2 will-change-transform"
                   />
                 </div>
               </motion.div>

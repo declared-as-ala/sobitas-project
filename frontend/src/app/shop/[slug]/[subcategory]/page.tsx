@@ -15,5 +15,5 @@ export const revalidate = 0;
 export default async function LegacySubCategoryRedirect({ params }: LegacySubCategoryRouteProps) {
   const { subcategory } = await params;
   const slug = (subcategory || '').trim();
-  permanentRedirect(slug ? `/category/${encodeURIComponent(slug)}` : '/shop');
+  permanentRedirect(slug ? `/${encodeURIComponent(slug)}` : '/shop');
 }

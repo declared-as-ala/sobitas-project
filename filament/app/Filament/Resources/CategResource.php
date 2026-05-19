@@ -6,6 +6,7 @@ use App\Filament\Resources\CategResource\Pages;
 use App\Filament\Support\CategorySeoForm;
 use App\Filament\Support\ImagePath;
 use App\Models\Categ;
+use App\Support\PublicSlug;
 use Filament\Forms;
 use Filament\Forms\Components\FileUpload;
 use Filament\Resources\Resource;
@@ -78,6 +79,15 @@ class CategResource extends Resource
                                                 ->required()
                                                 ->maxLength(255)
                                                 ->unique(ignoreRecord: true)
+                                                ->rule(function (?Categ $record): \Closure {
+                                                    return function (string $attribute, mixed $value, \Closure $fail) use ($record): void {
+                                                        $conflicts = PublicSlug::conflictsForCategorySlug((string) $value, $record?->getKey());
+
+                                                        if ($conflicts !== []) {
+                                                            $fail('Ce slug public est deja utilise par: ' . implode(', ', $conflicts) . '. Choisissez un slug unique.');
+                                                        }
+                                                    };
+                                                })
                                                 ->helperText('Utilisé dans les URLs — lettres minuscules, chiffres et tirets uniquement.'),
                                         ]),
                                     ]),

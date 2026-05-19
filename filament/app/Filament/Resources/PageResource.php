@@ -4,13 +4,15 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\PageResource\Pages;
 use App\Models\Page;
+use App\Support\PublicSlug;
+use Filament\Actions;
 use Filament\Forms;
 use Filament\Forms\Components\FileUpload;
+use Filament\Resources\Resource;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
-use Filament\Resources\Resource;
 use Filament\Tables;
-use Filament\Actions;
 use Filament\Tables\Table;
 use Illuminate\Support\Str;
 
@@ -38,34 +40,48 @@ class PageResource extends Resource
                 ->required()
                 ->maxLength(255)
                 ->live(onBlur: true)
-                ->afterStateUpdated(function ($state, $set, $get) {
-                if (blank($get('slug'))) {
-                    $set('slug', Str::slug($state));
-                }
-            }),
+                ->afterStateUpdated(function ($state, $set, $get): void {
+                    if (blank($get('slug'))) {
+                        $set('slug', Str::slug($state));
+                    }
+                }),
+
             Forms\Components\TextInput::make('slug')
                 ->label('Slug (URL)')
                 ->required()
                 ->maxLength(255)
                 ->unique(ignoreRecord: true)
-                ->rules(['alpha_dash:ascii']),
-Forms\Components\Textarea::make('excerpt')
+                ->rules(['alpha_dash:ascii'])
+                ->rule(function (?Page $record): \Closure {
+                    return function (string $attribute, mixed $value, \Closure $fail) use ($record): void {
+                        $conflicts = PublicSlug::conflictsForPageSlug((string) $value, $record?->getKey());
+
+                        if ($conflicts !== []) {
+                            $fail('Ce slug est deja utilise par: ' . implode(', ', $conflicts) . '. Choisissez un slug unique pour eviter un conflit URL public.');
+                        }
+                    };
+                })
+                ->helperText('Les pages publiques peuvent aussi etre accessibles en /slug. Evitez les slugs de categories, marques et routes systeme.'),
+
+            Forms\Components\Textarea::make('excerpt')
                 ->label('Extrait')
                 ->rows(2)
                 ->columnSpanFull(),
+
             Forms\Components\Select::make('body_editor_type')
-                ->label('Type d\'éditeur')
+                ->label('Type d editeur')
                 ->options([
                     'html' => 'HTML (code brut)',
-                    'rich' => 'Éditeur visuel (Rich Editor)',
+                    'rich' => 'Editeur visuel (Rich Editor)',
                 ])
                 ->default('html')
                 ->live(),
+
             Section::make('Contenu')
-                ->description('Saisissez le corps de la page en HTML brut ou utilisez l\'éditeur visuel. L\'aperçu ci-dessous applique Bootstrap 5 au rendu (les balises <script> sont retirées dans l\'aperçu uniquement).')
-                ->schema(function ($get) {
+                ->description('Saisissez le corps de la page en HTML brut ou utilisez l editeur visuel. L apercu applique Bootstrap 5 au rendu.')
+                ->schema(function ($get): array {
                     $editorType = $get('body_editor_type') ?? 'html';
-                    
+
                     if ($editorType === 'html') {
                         return [
                             Forms\Components\Textarea::make('body')
@@ -73,20 +89,20 @@ Forms\Components\Textarea::make('excerpt')
                                 ->rows(18)
                                 ->columnSpanFull()
                                 ->live(debounce: 600)
-                                ->helperText('Exemples : <h2>Titre</h2>, <p>Paragraphe</p>, <ul><li>…</li></ul>, <a href="…">lien</a>, classes Bootstrap : <div class="alert alert-info">…</div>.')
+                                ->helperText('Exemples : <h2>Titre</h2>, <p>Paragraphe</p>, <ul><li>...</li></ul>, classes Bootstrap.')
                                 ->extraInputAttributes([
                                     'class' => 'font-monospace text-sm',
                                     'spellcheck' => 'false',
                                     'style' => 'min-height: 280px;',
                                 ]),
                             Forms\Components\ViewField::make('_body_html_preview')
-                                ->label('Aperçu')
+                                ->label('Apercu')
                                 ->view('filament.forms.components.page-body-html-preview')
                                 ->dehydrated(false)
                                 ->columnSpanFull(),
                         ];
                     }
-                    
+
                     return [
                         Forms\Components\RichEditor::make('body')
                             ->label('Contenu')
@@ -95,7 +111,8 @@ Forms\Components\Textarea::make('excerpt')
                             ->columnSpanFull(),
                     ];
                 })
-->columnSpanFull(),
+                ->columnSpanFull(),
+
             FileUpload::make('image')
                 ->label('Image')
                 ->disk('public')
@@ -105,23 +122,70 @@ Forms\Components\Textarea::make('excerpt')
                 ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
                     $path = $file->store('pages', 'public');
                     if (! $path) {
-                        $ext  = $file->getClientOriginalExtension() ?: 'jpg';
-                        $path = $file->storeAs('pages', \Illuminate\Support\Str::uuid() . '.' . $ext, 'public');
+                        $ext = $file->getClientOriginalExtension() ?: 'jpg';
+                        $path = $file->storeAs('pages', Str::uuid() . '.' . $ext, 'public');
                     }
+
                     return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp((string) $path) ?? (string) $path;
                 }),
+
             Forms\Components\Select::make('status')
                 ->label('Statut')
                 ->options(Page::getStatusOptions())
                 ->default(Page::STATUS_ACTIVE)
                 ->required(),
-            Forms\Components\Textarea::make('meta_description')
-                ->label('Meta description')
-                ->rows(2)
-                ->columnSpanFull(),
-            Forms\Components\TextInput::make('meta_keywords')
-                ->label('Meta mots-clés')
-                ->maxLength(500)
+
+            Section::make('SEO')
+                ->schema([
+                    Grid::make(2)->schema([
+                        Forms\Components\TextInput::make('meta_title')
+                            ->label('Meta title')
+                            ->maxLength(255),
+                        Forms\Components\TextInput::make('canonical_url')
+                            ->label('URL canonique')
+                            ->maxLength(1024)
+                            ->helperText('Laissez vide pour utiliser https://protein.tn/{slug}.'),
+                        Forms\Components\Textarea::make('meta_description')
+                            ->label('Meta description')
+                            ->rows(2)
+                            ->maxLength(500)
+                            ->columnSpanFull(),
+                        Forms\Components\TextInput::make('meta_keywords')
+                            ->label('Meta mots-cles')
+                            ->maxLength(500)
+                            ->columnSpanFull(),
+                        Forms\Components\Toggle::make('robots_index')
+                            ->label('Indexable')
+                            ->default(true)
+                            ->inline(false),
+                        Forms\Components\Toggle::make('robots_follow')
+                            ->label('Follow')
+                            ->default(true)
+                            ->inline(false),
+                        Forms\Components\TextInput::make('og_title')
+                            ->label('Open Graph title')
+                            ->maxLength(255),
+                        Forms\Components\Textarea::make('og_description')
+                            ->label('Open Graph description')
+                            ->rows(2),
+                        FileUpload::make('og_image')
+                            ->label('Open Graph image')
+                            ->disk('public')
+                            ->directory('pages/og')
+                            ->image()
+                            ->imageEditor()
+                            ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
+                                $path = $file->store('pages/og', 'public');
+                                if (! $path) {
+                                    $ext = $file->getClientOriginalExtension() ?: 'jpg';
+                                    $path = $file->storeAs('pages/og', Str::uuid() . '.' . $ext, 'public');
+                                }
+
+                                return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp((string) $path) ?? (string) $path;
+                            })
+                            ->columnSpanFull(),
+                    ]),
+                ])
                 ->columnSpanFull(),
         ]);
     }
@@ -138,8 +202,13 @@ Forms\Components\Textarea::make('excerpt')
                     ->label('Slug')
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('status')
+                    ->label('Statut')
+                    ->badge()
+                    ->color(fn (string $state): string => $state === Page::STATUS_ACTIVE ? 'success' : 'gray')
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('updated_at')
-                    ->label('Modifié le')
+                    ->label('Modifie le')
                     ->dateTime('d/m/Y H:i')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -147,6 +216,7 @@ Forms\Components\Textarea::make('excerpt')
             ->actions([
                 Actions\ViewAction::make()->slideOver(),
                 Actions\EditAction::make()->slideOver(),
+                Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Actions\DeleteBulkAction::make(),

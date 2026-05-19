@@ -200,7 +200,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
               {footerPages.length > 0 ? footerPages.map((p) => (
                 <li key={p.id}>
                   {p.slug ? (
-                    <Link href={`/page/${p.slug}`} className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">{p.title}</Link>
+                    <Link href={`/${p.slug}`} className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">{p.title}</Link>
                   ) : (
                     <span className="block py-2 text-sm text-gray-500">{p.title}</span>
                   )}
@@ -353,7 +353,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
               {footerPages.map((p) => (
                 <li key={p.id}>
                   {p.slug ? (
-                    <Link href={`/page/${p.slug}`} className="text-sm hover:text-red-500 transition-colors">
+                    <Link href={`/${p.slug}`} className="text-sm hover:text-red-500 transition-colors">
                       {p.title}
                     </Link>
                   ) : (

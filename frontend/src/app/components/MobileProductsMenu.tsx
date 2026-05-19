@@ -190,7 +190,7 @@ export function MobileProductsMenu({ open, onOpenChange }: MobileProductsMenuPro
                     {/* "Tout voir" for the parent category */}
                     <div className="px-3 pt-3 pb-2">
                       <LinkWithLoading
-                        href={`/category/${selectedCategory.slug}`}
+                        href={`/${selectedCategory.slug}`}
                         className="flex items-center justify-between py-3 px-4 bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/40 rounded-2xl text-red-600 dark:text-red-400 font-semibold text-sm"
                         loadingMessage="Chargement..."
                       >
@@ -204,7 +204,7 @@ export function MobileProductsMenu({ open, onOpenChange }: MobileProductsMenuPro
                       {subCategories.map((sub) => (
                         <LinkWithLoading
                           key={sub.id}
-                          href={`/category/${sub.slug}`}
+                          href={`/${sub.slug}`}
                           className="flex items-center gap-3 py-3.5 px-4 bg-white dark:bg-gray-900 active:bg-gray-50 dark:active:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm"
                           loadingMessage="Chargement..."
                         >

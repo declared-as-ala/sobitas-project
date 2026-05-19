@@ -21,11 +21,13 @@ use App\Models\Contact;
 use App\Models\Coordinate;
 use App\Models\Faq;
 use App\Models\Newsletter;
+use App\Models\Page;
 use App\Models\Product;
 use App\Models\Redirection;
 use App\Models\Review;
 use App\Models\SeoPage;
 use App\Models\Service;
+use App\Models\SiteNavigationItem;
 use App\Models\Slide;
 use App\Models\SousCategory;
 use App\Models\Tag;
@@ -125,6 +127,54 @@ class ApisController extends Controller
             $dataKey              => $paginator->items(),
             "{$dataKey}_meta"  => $this->paginationMeta($paginator),
             "{$dataKey}_links" => $this->paginationLinks($paginator),
+        ];
+    }
+
+    private function pagePayload(Page $page): array
+    {
+        $frontendBase = rtrim((string) config('app.frontend_url', config('app.url')), '/');
+        $slug = trim((string) $page->slug);
+        $canonical = trim((string) ($page->canonical_url ?? ''));
+
+        if ($canonical === '') {
+            $canonical = $slug !== ''
+                ? $frontendBase.'/'.rawurlencode($slug)
+                : $frontendBase.'/';
+        } elseif (str_starts_with($canonical, '/page/')) {
+            $canonical = $frontendBase.'/'.ltrim(substr($canonical, strlen('/page/')), '/');
+        } elseif (! str_starts_with($canonical, 'http')) {
+            $canonical = $frontendBase.'/'.ltrim($canonical, '/');
+        } else {
+            $parts = parse_url($canonical);
+            $path = is_array($parts) ? (string) ($parts['path'] ?? '') : '';
+            if (str_starts_with($path, '/page/')) {
+                $query = isset($parts['query']) && $parts['query'] !== '' ? '?'.$parts['query'] : '';
+                $fragment = isset($parts['fragment']) && $parts['fragment'] !== '' ? '#'.$parts['fragment'] : '';
+                $canonical = $frontendBase.'/'.ltrim(substr($path, strlen('/page/')), '/').$query.$fragment;
+            }
+        }
+
+        return [
+            'id' => $page->id,
+            'author_id' => $page->author_id,
+            'title' => $page->title,
+            'slug' => $page->slug,
+            'excerpt' => $page->excerpt,
+            'body' => $page->body,
+            'body_editor_type' => $page->body_editor_type,
+            'image' => $page->image,
+            'meta_title' => $page->meta_title,
+            'meta_description' => $page->meta_description,
+            'meta_keywords' => $page->meta_keywords,
+            'canonical_url' => $canonical,
+            'robots_index' => $page->robots_index ?? true,
+            'robots_follow' => $page->robots_follow ?? true,
+            'og_title' => $page->og_title,
+            'og_description' => $page->og_description,
+            'og_image' => $page->og_image,
+            'status' => $page->status,
+            'created_at' => $page->created_at,
+            'updated_at' => $page->updated_at,
         ];
     }
 
@@ -514,7 +564,7 @@ class ApisController extends Controller
                 'seo'             => CategorySeoEnvelope::forCateg($category, $frontendBase),
                 'breadcrumb'      => [
                     ['name' => 'Accueil', 'url' => $frontendBase.'/'],
-                    ['name' => $category->designation_fr, 'url' => $frontendBase.'/category/'.rawurlencode((string) $category->slug)],
+                    ['name' => $category->designation_fr, 'url' => $frontendBase.'/'.rawurlencode((string) $category->slug)],
                 ],
                 'sous_categories' => $sousCategoriesPaginator->items(),
                 'products'        => $productsPaginator->items(),
@@ -589,12 +639,12 @@ class ApisController extends Controller
         if ($cat) {
             $breadcrumb[] = [
                 'name' => $cat->designation_fr,
-                'url' => $frontendBase.'/category/'.rawurlencode((string) $cat->slug),
+                'url' => $frontendBase.'/'.rawurlencode((string) $cat->slug),
             ];
         }
         $breadcrumb[] = [
             'name' => ($seo['breadcrumb_label'] ?? '') !== '' ? (string) $seo['breadcrumb_label'] : $sous_category->designation_fr,
-            'url' => $frontendBase.'/category/'.rawurlencode((string) $sous_category->slug),
+            'url' => $frontendBase.'/'.rawurlencode((string) $sous_category->slug),
         ];
 
         // Get ALL products for this subcategory using many-to-many relationship
@@ -927,8 +977,9 @@ class ApisController extends Controller
         try {
             $perPage = $this->resolvePerPage($request);
 
-            $pages = \Illuminate\Support\Facades\DB::table('pages')
-                ->select('id', 'title', 'slug')
+            $pages = Page::query()
+                ->where('status', Page::STATUS_ACTIVE)
+                ->select('id', 'title', 'slug', 'meta_title', 'meta_description', 'updated_at')
                 ->orderBy('id')
                 ->paginate($perPage);
 
@@ -941,16 +992,45 @@ class ApisController extends Controller
     public function getPageBySlug(string $slug)
     {
         try {
-            $page = \Illuminate\Support\Facades\DB::table('pages')->where('slug', $slug)->first();
+            $page = Page::query()
+                ->where('slug', $slug)
+                ->where('status', Page::STATUS_ACTIVE)
+                ->first();
 
             if (! $page) {
                 return response()->json(['error' => 'Page introuvable'], 404);
             }
 
-            return $page;
+            return response()->json($this->pagePayload($page));
         } catch (\Exception $e) {
             return response()->json(['error' => 'Page introuvable'], 404);
         }
+    }
+
+    public function navigationItems(): JsonResponse
+    {
+        $items = SiteNavigationItem::query()
+            ->visible()
+            ->select('id', 'location', 'label', 'url', 'icon', 'is_visible', 'sort_order', 'opens_new_tab')
+            ->orderBy('location')
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get()
+            ->map(fn (SiteNavigationItem $item): array => [
+                'id' => $item->id,
+                'location' => $item->location,
+                'label' => $item->label,
+                'url' => $item->url,
+                'icon' => $item->icon,
+                'is_visible' => $item->is_visible,
+                'sort_order' => $item->sort_order,
+                'opens_new_tab' => $item->opens_new_tab,
+            ]);
+
+        return response()->json([
+            'navbar' => $items->where('location', SiteNavigationItem::LOCATION_NAVBAR)->values(),
+            'sidebar' => $items->where('location', SiteNavigationItem::LOCATION_SIDEBAR)->values(),
+        ]);
     }
 
     public function send_email(Request $request): JsonResponse

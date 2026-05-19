@@ -50,12 +50,12 @@ export async function generateMetadata({ params }: BrandPageProps): Promise<Meta
       title,
       description,
       alternates: {
-        canonical: `${baseUrl}/brand/${brandSlug}`,
+        canonical: `${baseUrl}/${brandSlug}`,
       },
       openGraph: {
         title,
         description,
-        url: `${baseUrl}/brand/${brandSlug}`,
+        url: `${baseUrl}/${brandSlug}`,
         type: 'website',
       },
     };
@@ -112,7 +112,7 @@ export default async function BrandPage({ params, searchParams }: BrandPageProps
           '@type': 'ListItem',
           position: 3,
           name: brand.designation_fr,
-          item: `${baseUrl}/brand/${brandSlug}`,
+          item: `${baseUrl}/${brandSlug}`,
         },
       ],
     };

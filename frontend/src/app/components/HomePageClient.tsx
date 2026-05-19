@@ -1,56 +1,16 @@
-'use client';
-
-import { useMemo, Suspense } from 'react';
-import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { HeroSlider } from '@/app/components/HeroSlider';
+import { Header } from '@/app/components/Header';
+import { FeaturesSection } from '@/app/components/FeaturesSection';
+import { CategoryGrid } from '@/app/components/CategoryGrid';
+import { VentesFlashSection } from '@/app/components/VentesFlashSection';
+import { ProductSection } from '@/app/components/ProductSection';
+import { Footer } from '@/app/components/Footer';
+import { HomeDeferredSections } from '@/app/components/HomeDeferredSections';
 
 import type { AccueilData, Product } from '@/types';
 import { getStorageUrl } from '@/services/api';
 import type { HeroFirstSlide } from '@/app/page';
-
-// Defer header and topbar - they're not critical for LCP but keep SSR for SEO
-const Header = dynamic(() => import('@/app/components/Header').then(mod => ({ default: mod.Header })), {
-  ssr: true,
-});
-
-// Below-the-fold: dynamic import to reduce main bundle and TBT on mobile (PageSpeed)
-const FeaturesSection = dynamic(
-  () => import('@/app/components/FeaturesSection').then(mod => ({ default: mod.FeaturesSection })),
-  { ssr: true, loading: () => <div className="min-h-[200px]" aria-hidden /> }
-);
-const CategoryGrid = dynamic(
-  () => import('@/app/components/CategoryGrid').then(mod => ({ default: mod.CategoryGrid })),
-  { ssr: true, loading: () => <div className="py-8 min-h-[240px]" aria-hidden /> }
-);
-const VentesFlashSection = dynamic(
-  () => import('@/app/components/VentesFlashSection').then(mod => ({ default: mod.VentesFlashSection })),
-  { ssr: true, loading: () => null }
-);
-const ProductSection = dynamic(
-  () => import('@/app/components/ProductSection').then(mod => ({ default: mod.ProductSection })),
-  { ssr: true, loading: () => null }
-);
-
-// Lazy load non-critical below-the-fold components
-const PromoBanner = dynamic(() => import('@/app/components/PromoBanner').then(mod => ({ default: mod.PromoBanner })), {
-  ssr: false,
-  loading: () => null, // Don't show loading for banner
-});
-const BlogSection = dynamic(() => import('@/app/components/BlogSection').then(mod => ({ default: mod.BlogSection })), {
-  ssr: false,
-  loading: () => null,
-});
-const BrandsSection = dynamic(() => import('@/app/components/BrandsSection').then(mod => ({ default: mod.BrandsSection })), {
-  ssr: false,
-  loading: () => null,
-});
-const Footer = dynamic(() => import('@/app/components/Footer').then(mod => ({ default: mod.Footer })), {
-  loading: () => <div className="h-64 bg-gray-50 dark:bg-gray-900" />, // Placeholder height
-});
-const ScrollToTop = dynamic(() => import('@/app/components/ScrollToTop').then(mod => ({ default: mod.ScrollToTop })), {
-  ssr: false,
-});
 
 interface HomePageClientProps {
   accueil: AccueilData | null | undefined;
@@ -61,13 +21,59 @@ interface HomePageClientProps {
 
 /** High-intent category URLs — reinforces internal linking for rankings (créatine, whey, etc.). */
 const PRIORITY_SHOP_CATEGORY_LINKS = [
-  { href: '/category/creatine', label: 'Créatine Tunisie' },
-  { href: '/category/proteine-whey', label: 'Whey protein Tunisie' },
-  { href: '/category/bcaa', label: 'BCAA Tunisie' },
-  { href: '/category/glutamine', label: 'Glutamine Tunisie' },
-  { href: '/category/pre-workout', label: 'Pre workout Tunisie' },
-  { href: '/category/acides-amines', label: 'Acides aminés Tunisie' },
+  { href: '/creatine', label: 'Créatine Tunisie' },
+  { href: '/proteine-whey', label: 'Whey protein Tunisie' },
+  { href: '/bcaa', label: 'BCAA Tunisie' },
+  { href: '/glutamine', label: 'Glutamine Tunisie' },
+  { href: '/pre-workout', label: 'Pre workout Tunisie' },
+  { href: '/acides-amines', label: 'Acides aminés Tunisie' },
 ] as const;
+
+function transformProduct(product: Product) {
+  const p = product as any;
+  const reviewsArray = p.reviews ?? p.avis ?? [];
+  const countFromArray = Array.isArray(reviewsArray)
+    ? reviewsArray.filter((r: any) => typeof r?.stars === 'number' && (r.publier === undefined || r.publier === 1)).length
+    : 0;
+  const countFromObj =
+    reviewsArray && typeof reviewsArray === 'object' && !Array.isArray(reviewsArray)
+      ? Math.max(0, Number((reviewsArray as any).count ?? (reviewsArray as any).total ?? 0) || 0)
+      : 0;
+  const reviewCount =
+    p.reviews_count ?? p.review_count ?? p.avis_count ?? p.nombre_avis ?? p.nb_avis ?? p.total_reviews ?? p.reviewsCount;
+  const normalizedCount =
+    reviewCount != null && reviewCount !== ''
+      ? Math.max(0, Number(reviewCount) || 0)
+      : countFromArray > 0
+        ? countFromArray
+        : countFromObj;
+
+  return {
+    id: product.id,
+    name: product.designation_fr,
+    price: product.promo && product.promo_expiration_date ? product.promo : product.prix,
+    priceText: `${product.prix} DT`,
+    image: product.cover ? getStorageUrl(product.cover) : undefined,
+    category: product.sous_categorie?.designation_fr || '',
+    slug: product.slug,
+    designation_fr: product.designation_fr,
+    prix: product.prix,
+    promo: product.promo,
+    promo_expiration_date: product.promo_expiration_date,
+    cover: product.cover,
+    new_product: product.new_product,
+    best_seller: product.best_seller,
+    note: product.note,
+    qte: product.qte,
+    rupture: product.rupture,
+    review_count: normalizedCount > 0 ? normalizedCount : null,
+    reviews_count: normalizedCount > 0 ? normalizedCount : null,
+    reviews: Array.isArray(reviewsArray) && reviewsArray.length > 0 ? reviewsArray : undefined,
+    aromes: p.aromes,
+    sous_categorie: product.sous_categorie,
+    sous_categories: product.sous_categories,
+  };
+}
 
 export function HomePageClient({ accueil, slides, heroMobileFirst, heroDesktopFirst }: HomePageClientProps) {
   // Provide default empty structure if accueil is undefined/null
@@ -80,75 +86,19 @@ export function HomePageClient({ accueil, slides, heroMobileFirst, heroDesktopFi
     best_sellers: [],
   };
 
-  // Memoize product transformations to prevent unnecessary recalculations
-  const transformProduct = useMemo(() => (product: Product) => {
-    const p = product as any;
-    const reviewsArray = p.reviews ?? p.avis ?? [];
-    const countFromArray = Array.isArray(reviewsArray)
-      ? reviewsArray.filter((r: any) => typeof r?.stars === 'number' && (r.publier === undefined || r.publier === 1)).length
-      : 0;
-    const countFromObj =
-      reviewsArray && typeof reviewsArray === 'object' && !Array.isArray(reviewsArray)
-        ? Math.max(0, Number((reviewsArray as any).count ?? (reviewsArray as any).total ?? 0) || 0)
-        : 0;
-    const reviewCount =
-      p.reviews_count ?? p.review_count ?? p.avis_count ?? p.nombre_avis ?? p.nb_avis ?? p.total_reviews ?? p.reviewsCount;
-    const normalizedCount =
-      reviewCount != null && reviewCount !== ''
-        ? Math.max(0, Number(reviewCount) || 0)
-        : countFromArray > 0
-          ? countFromArray
-          : countFromObj;
-    return {
-      id: product.id,
-      name: product.designation_fr,
-      price: product.promo && product.promo_expiration_date ? product.promo : product.prix,
-      priceText: `${product.prix} DT`,
-      image: product.cover ? getStorageUrl(product.cover) : undefined,
-      category: product.sous_categorie?.designation_fr || '',
-      slug: product.slug,
-      designation_fr: product.designation_fr,
-      prix: product.prix,
-      promo: product.promo,
-      promo_expiration_date: product.promo_expiration_date,
-      cover: product.cover,
-      new_product: product.new_product,
-      best_seller: product.best_seller,
-      note: product.note,
-      qte: product.qte,
-      rupture: product.rupture,
-      review_count: normalizedCount > 0 ? normalizedCount : null,
-      reviews_count: normalizedCount > 0 ? normalizedCount : null,
-      reviews: Array.isArray(reviewsArray) && reviewsArray.length > 0 ? reviewsArray : undefined,
-      aromes: p.aromes,
-      sous_categorie: product.sous_categorie,
-      sous_categories: product.sous_categories,
-    };
-  }, []);
-
-  const newProducts = useMemo(
-    () => (safeAccueil.new_product || []).slice(0, 8).map(transformProduct),
-    [safeAccueil.new_product, transformProduct]
-  );
-  const bestSellers = useMemo(
-    () => (safeAccueil.best_sellers || []).slice(0, 4).map(transformProduct),
-    [safeAccueil.best_sellers, transformProduct]
-  );
-  const packs = useMemo(
-    () => (safeAccueil.packs || []).slice(0, 4).map(transformProduct),
-    [safeAccueil.packs, transformProduct]
-  );
+  const newProducts = (safeAccueil.new_product || []).slice(0, 8).map(transformProduct);
+  const bestSellers = (safeAccueil.best_sellers || []).slice(0, 4).map(transformProduct);
+  const packs = (safeAccueil.packs || []).slice(0, 4).map(transformProduct);
   // Ventes flash: only products with promo + future promo_expiration_date (match backend logic)
-  const flashSales = useMemo(() => {
-    const now = new Date();
-    const valid = (safeAccueil.ventes_flash || []).filter((p) => {
+  const now = Date.now();
+  const flashSales = (safeAccueil.ventes_flash || [])
+    .filter((p) => {
       if (p.promo == null || p.promo === undefined) return false;
       if (!p.promo_expiration_date) return false;
-      const exp = new Date(p.promo_expiration_date);
-      return !isNaN(exp.getTime()) && exp.getTime() > now.getTime();
-    });
-    return valid.map(transformProduct);
-  }, [safeAccueil.ventes_flash, transformProduct]);
+      const exp = new Date(p.promo_expiration_date).getTime();
+      return !isNaN(exp) && exp > now;
+    })
+    .map(transformProduct);
 
   return (
     <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-white dark:bg-gray-950">
@@ -163,11 +113,11 @@ export function HomePageClient({ accueil, slides, heroMobileFirst, heroDesktopFi
             Protéine Tunisie
           </h1>
           <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-            <Link href="/category/proteine-whey" className="text-red-600 dark:text-red-400 hover:underline font-medium">
+            <Link href="/proteine-whey" className="text-red-600 dark:text-red-400 hover:underline font-medium">
               whey protein
             </Link>
             {' '}et{' '}
-            <Link href="/category/creatine" className="text-red-600 dark:text-red-400 hover:underline font-medium">
+            <Link href="/creatine" className="text-red-600 dark:text-red-400 hover:underline font-medium">
               créatine en Tunisie
             </Link>
             {' '}– compléments alimentaires – Livraison rapide à Sousse, Tunis, Sfax et dans toute la Tunisie
@@ -217,18 +167,8 @@ export function HomePageClient({ accueil, slides, heroMobileFirst, heroDesktopFi
           />
         )}
 
-        {/* Below the fold - Lazy loaded */}
-        <Suspense fallback={null}>
-          <PromoBanner />
-        </Suspense>
-
-        <Suspense fallback={null}>
-          <BlogSection articles={safeAccueil.last_articles || []} />
-        </Suspense>
-
-        <Suspense fallback={null}>
-          <BrandsSection />
-        </Suspense>
+        {/* Below the fold - idle-loaded client islands */}
+        <HomeDeferredSections articles={safeAccueil.last_articles || []} />
 
         {/* SEO text block – visible, crawlable content near bottom of homepage */}
         <section
@@ -293,10 +233,7 @@ export function HomePageClient({ accueil, slides, heroMobileFirst, heroDesktopFi
         </section>
       </main>
 
-      <Suspense fallback={<div className="h-64 bg-gray-50 dark:bg-gray-900" />}>
-        <Footer />
-      </Suspense>
-      <ScrollToTop />
+      <Footer />
     </div>
   );
 }

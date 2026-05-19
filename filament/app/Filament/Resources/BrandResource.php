@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\BrandResource\Pages;
 use App\Filament\Support\ImagePath;
 use App\Models\Brand;
+use App\Support\PublicSlug;
 use Filament\Forms;
 use Filament\Forms\Components\FileUpload;
 use Filament\Schemas\Schema;
@@ -14,6 +15,7 @@ use Filament\Actions;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\HtmlString;
+use Illuminate\Support\Str;
 
 class BrandResource extends Resource
 {
@@ -39,7 +41,17 @@ class BrandResource extends Resource
             Forms\Components\TextInput::make('designation_fr')
                 ->label('Nom')
                 ->required()
-                ->maxLength(255),
+                ->maxLength(255)
+                ->rule(function (?Brand $record): \Closure {
+                    return function (string $attribute, mixed $value, \Closure $fail) use ($record): void {
+                        $slug = Str::slug((string) $value);
+                        $conflicts = PublicSlug::conflictsForBrandSlug($slug, $record?->getKey());
+
+                        if ($conflicts !== []) {
+                            $fail('Le slug public /' . $slug . ' est deja utilise par: ' . implode(', ', $conflicts) . '. Modifiez le nom de la marque pour eviter un conflit URL.');
+                        }
+                    };
+                }),
 
             Forms\Components\Placeholder::make('logo_preview')
                 ->label('Logo actuel')

@@ -32,6 +32,7 @@ Route::middleware(['cache.api:300', 'cache.headers.api:300'])->group(function ()
     Route::get('/services', [ApisController::class, 'services']);
     Route::get('/faqs', [ApisController::class, 'faqs']);
     Route::get('/pages', [ApisController::class, 'pages']);
+    Route::get('/navigation-items', [ApisController::class, 'navigationItems']);
     Route::get('/redirections', [ApisController::class, 'redirections']);
     Route::get('/latest_articles', [ApisController::class, 'latestArticles']);
     Route::get('/blog_categories', [ApisController::class, 'blogCategories']);

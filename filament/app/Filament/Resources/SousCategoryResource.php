@@ -7,6 +7,7 @@ use App\Filament\Resources\ProductResource;
 use App\Filament\Support\CategorySeoForm;
 use App\Models\Categ;
 use App\Models\SousCategory;
+use App\Support\PublicSlug;
 use Filament\Actions;
 use Filament\Forms;
 use Filament\Notifications\Notification;
@@ -104,6 +105,15 @@ class SousCategoryResource extends Resource
                                                 ->required()
                                                 ->maxLength(255)
                                                 ->unique(ignoreRecord: true)
+                                                ->rule(function (?SousCategory $record): \Closure {
+                                                    return function (string $attribute, mixed $value, \Closure $fail) use ($record): void {
+                                                        $conflicts = PublicSlug::conflictsForSousCategorySlug((string) $value, $record?->getKey());
+
+                                                        if ($conflicts !== []) {
+                                                            $fail('Ce slug public est deja utilise par: ' . implode(', ', $conflicts) . '. Choisissez un slug unique.');
+                                                        }
+                                                    };
+                                                })
                                                 ->helperText('Généré automatiquement à partir de la désignation (modifiable).'),
                                         ]),
                                     ]),

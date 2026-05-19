@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useLayoutEffect, memo, useMemo } from 'react';
-import type { TouchEvent } from 'react';
+import React, { useState, useEffect, memo, useMemo } from 'react';
 import Image from 'next/image';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
@@ -32,6 +31,12 @@ function nextImgUrl(src: string, w: number, q = 75) {
 // Build srcset string: "url 640w, url 828w, ..."
 function buildSrcSet(src: string, widths: number[], q = 75) {
   return widths.map((w) => `${nextImgUrl(src, w, q)} ${w}w`).join(', ');
+}
+
+function resolveSlideImageUrl(path: string) {
+  if (!path) return '';
+  if (path.startsWith('/') || /^(https?:|data:|blob:)/i.test(path)) return path;
+  return getStorageUrl(path);
 }
 
 interface HeroSliderProps {
@@ -67,6 +72,8 @@ const HeroFirstPicture = memo(function HeroFirstPicture({
       <img
         src={nextImgUrl(desktopFirst.imageUrl, 1200)}
         alt={desktopFirst.title}
+        width={1200}
+        height={675}
         fetchPriority="high"
         decoding="async"
         loading="eager"
@@ -102,12 +109,10 @@ const SlideImage = memo(
 );
 SlideImage.displayName = 'SlideImage';
 
-// ─── useIsMobile — fires before first browser paint via useLayoutEffect ──────
-const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
-
+// Viewport hint used after hydration; the first LCP image is selected by <picture>.
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
-  useIsomorphicLayoutEffect(() => {
+  useEffect(() => {
     const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT_PX - 1}px)`);
     const update = () => setIsMobile(mql.matches);
     update();
@@ -148,8 +153,8 @@ export const HeroSlider = memo(function HeroSlider({ slides, mobileFirst, deskto
         id: stableId,
         titre: slide.titre || slide.title || slide.designation_fr || 'Protéines Premium',
         description: slide.description || slide.description_fr || 'Découvrez nos produits premium',
-        lien: slide.lien || slide.link || slide.btn_link || slide.url || '/shop',
-        image: imagePath ? getStorageUrl(imagePath) : '/hero/webp/hero1.webp',
+        lien: slide.lien || slide.link || slide.btn_link || '/shop',
+        image: imagePath ? resolveSlideImageUrl(imagePath) : '/hero/webp/hero1.webp',
       };
     });
   }, [slides, isMobile]);
@@ -183,6 +188,7 @@ export const HeroSlider = memo(function HeroSlider({ slides, mobileFirst, deskto
 
   const currentSlideData = finalSlidesToUse[currentSlide] || finalSlidesToUse[0];
   if (!currentSlideData?.image) return null;
+  const heroHref = currentSlideData.lien || '/shop';
 
   const minSwipeDistance = 50;
   const onTouchStart = (e: React.TouchEvent) => { setTouchEnd(null); setTouchStart(e.targetTouches[0].clientX); };
@@ -253,7 +259,7 @@ export const HeroSlider = memo(function HeroSlider({ slides, mobileFirst, deskto
                 className="min-h-[50px] min-w-[178px] rounded-xl bg-gradient-to-b from-red-500 to-red-600 px-7 text-base font-semibold text-white shadow-[0_12px_28px_rgba(239,68,68,0.34)] transition-all hover:from-red-500 hover:to-red-700 hover:shadow-[0_14px_30px_rgba(239,68,68,0.45)] sm:min-h-[52px] sm:min-w-[190px] sm:px-8 md:min-h-[60px] md:px-10 md:text-lg lg:px-12 lg:text-xl"
                 asChild
               >
-                <LinkWithLoading href="/shop" aria-label="Découvrir nos produits" loadingMessage="Chargement...">
+                <LinkWithLoading href={heroHref} aria-label="Découvrir nos produits" loadingMessage="Chargement...">
                   Découvrir nos produits
                 </LinkWithLoading>
               </Button>

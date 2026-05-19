@@ -643,7 +643,7 @@ function ShopContent({
                 if (parentCategory) {
                   const parentCat = categories.find(c => c.slug === parentCategory);
                   if (parentCat) {
-                    breadcrumbItems.push({ label: parentCat.designation_fr, href: `/category/${parentCategory}` });
+                    breadcrumbItems.push({ label: parentCat.designation_fr, href: `/${parentCategory}` });
                   }
                 }
                 breadcrumbItems.push({

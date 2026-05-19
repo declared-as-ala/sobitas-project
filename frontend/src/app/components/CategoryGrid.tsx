@@ -31,7 +31,7 @@ function CategoryCard({ category }: { category: Category }) {
   const [imageError, setImageError] = useState(false);
   const showImage = category.cover && !imageError;
   const imageUrl = category.cover ? getStorageUrl(category.cover) : '';
-  const href = `/category/${category.slug}`;
+  const href = `/${category.slug}`;
 
   return (
     <article

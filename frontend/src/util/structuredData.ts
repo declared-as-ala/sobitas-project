@@ -330,7 +330,7 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
     productID: sku,
     brand: {
       '@type': 'Brand',
-      '@id': `${PRODUCTION_ORIGIN}/brand/${encodeURIComponent(brandName.toLowerCase().replace(/\s+/g, '-'))}`,
+      '@id': `${PRODUCTION_ORIGIN}/${encodeURIComponent(brandName.toLowerCase().replace(/\s+/g, '-'))}`,
       name: brandName,
     },
     image: normalizedImages.length > 0 ? normalizedImages : undefined,

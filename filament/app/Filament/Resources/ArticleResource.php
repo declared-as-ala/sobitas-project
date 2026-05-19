@@ -417,7 +417,7 @@ class ArticleResource extends Resource
                                     ]),
 
                                 Section::make('Maillage boutique')
-                                    ->description('Liens vers les pages catégories du site (slugs /category/…).')
+                                    ->description('Liens vers les pages categories du site (format public /slug).')
                                     ->icon('heroicon-o-link')
                                     ->schema([
                                         Forms\Components\Repeater::make('related_shop_slugs_repeater')
