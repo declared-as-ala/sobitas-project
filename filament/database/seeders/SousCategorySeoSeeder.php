@@ -103,7 +103,8 @@ class SousCategorySeoSeeder extends Seeder
             }
 
             if (isset($data['faq']) && is_array($data['faq']) && count($data['faq']) > 0) {
-                $updateData['faq'] = json_encode($data['faq']);
+                // Store as array - model's 'array' cast will handle conversion
+                $updateData['faq'] = $data['faq'];
             }
 
             $sousCategory->update($updateData);
