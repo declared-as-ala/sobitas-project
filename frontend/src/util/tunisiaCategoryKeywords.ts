@@ -7,7 +7,7 @@ export interface TunisiaCategoryKeywords {
   primary: string;
   variations: string[];
   description: string;
-  faqQuestions: { question: string; answer: string }[];
+  faqQuestions?: { question: string; answer: string }[];
 }
 
 export const tunisiaCategoryKeywords: Record<string, TunisiaCategoryKeywords> = {
