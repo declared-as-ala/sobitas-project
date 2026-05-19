@@ -121,6 +121,8 @@ export function HomePageClient({ accueil, slides, heroMobileFirst, heroDesktopFi
       reviews_count: normalizedCount > 0 ? normalizedCount : null,
       reviews: Array.isArray(reviewsArray) && reviewsArray.length > 0 ? reviewsArray : undefined,
       aromes: p.aromes,
+      sous_categorie: product.sous_categorie,
+      sous_categories: product.sous_categories,
     };
   }, []);
 
