@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Storage;
@@ -47,9 +48,6 @@ class Categ extends Model
     protected function casts(): array
     {
         return [
-            'secondary_keywords' => 'array',
-            'related_category_slugs' => 'array',
-            'faq' => 'array',
             'extra_json_ld' => 'array',
             'robots_index' => 'boolean',
             'robots_follow' => 'boolean',
@@ -57,6 +55,91 @@ class Categ extends Model
             'sitemap_include' => 'boolean',
             'sitemap_priority' => 'float',
         ];
+    }
+
+    /**
+     * FAQ accessor — guarantees the Filament Repeater always receives an
+     * array of {q, a} rows, no matter how the legacy DB column is shaped
+     * (double-encoded JSON, comma-separated string, {question,answer} keys, etc.).
+     */
+    protected function faq(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value) => self::decodeFaqRows($value),
+            set: fn ($value) => is_array($value) ? json_encode(array_values($value), JSON_UNESCAPED_UNICODE) : $value,
+        );
+    }
+
+    protected function secondaryKeywords(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value) => self::decodeRepeaterRows($value, 'term'),
+            set: fn ($value) => is_array($value) ? json_encode(array_values($value), JSON_UNESCAPED_UNICODE) : $value,
+        );
+    }
+
+    protected function relatedCategorySlugs(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value) => self::decodeRepeaterRows($value, 'slug'),
+            set: fn ($value) => is_array($value) ? json_encode(array_values($value), JSON_UNESCAPED_UNICODE) : $value,
+        );
+    }
+
+    private static function decodeFaqRows(mixed $value): array
+    {
+        if ($value === null || $value === '') {
+            return [];
+        }
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            $value = is_array($decoded) ? $decoded : [];
+        }
+        if (! is_array($value)) {
+            return [];
+        }
+        $rows = [];
+        foreach ($value as $item) {
+            if (! is_array($item) && ! is_object($item)) {
+                continue;
+            }
+            $item = (array) $item;
+            $q = trim((string) ($item['q'] ?? $item['question'] ?? ''));
+            $a = trim((string) ($item['a'] ?? $item['answer'] ?? $item['reponse'] ?? ''));
+            if ($q !== '' || $a !== '') {
+                $rows[] = ['q' => $q, 'a' => $a];
+            }
+        }
+        return $rows;
+    }
+
+    private static function decodeRepeaterRows(mixed $value, string $rowKey): array
+    {
+        if ($value === null || $value === '') {
+            return [];
+        }
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            if (is_array($decoded)) {
+                $value = $decoded;
+            } else {
+                $value = array_values(array_filter(array_map('trim', preg_split('/[,;]/', $value) ?: [])));
+            }
+        }
+        if (! is_array($value)) {
+            return [];
+        }
+        $rows = [];
+        foreach ($value as $item) {
+            if (is_array($item) || is_object($item)) {
+                $rows[] = (array) $item;
+                continue;
+            }
+            if (is_scalar($item) && (string) $item !== '') {
+                $rows[] = [$rowKey => (string) $item];
+            }
+        }
+        return $rows;
     }
 
     public function sousCategories(): HasMany
