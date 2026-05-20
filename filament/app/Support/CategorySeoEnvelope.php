@@ -119,6 +119,14 @@ final class CategorySeoEnvelope
         $bannerDesktop = self::absoluteAssetUrl((string) ($model->seo_banner_desktop ?? ''), $publicBaseUrl);
         $bannerMobile = self::absoluteAssetUrl((string) ($model->seo_banner_mobile ?? ''), $publicBaseUrl);
 
+        $descriptionHtml = $model instanceof SousCategory
+            ? trim((string) ($model->description_fr ?? ''))
+            : '';
+        $shortIntroHtml = trim((string) ($model->short_intro ?? ''));
+        if ($descriptionHtml !== '') {
+            $shortIntroHtml = $descriptionHtml;
+        }
+
         $seoEnabled = $model->seo_enabled ?? true;
         if ($seoEnabled === null) {
             $seoEnabled = true;
@@ -152,7 +160,7 @@ final class CategorySeoEnvelope
                 'tags' => $seoTagsList,
             ],
             'breadcrumb_label' => trim((string) ($model->breadcrumb_label ?? '')),
-            'short_intro_html' => (string) ($model->short_intro ?? ''),
+            'short_intro_html' => $shortIntroHtml,
             'long_bottom_html' => (string) ($model->long_bottom_content ?? ''),
             'faq' => $faq,
             'banners' => [

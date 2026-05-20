@@ -137,6 +137,10 @@ class SousCategory extends Model
             $decoded = json_decode($value, true);
             if (is_array($decoded)) {
                 $value = $decoded;
+            } elseif (is_string($decoded) && trim($decoded, " \t\n\r\0\x0B\"'") === '[]') {
+                return [];
+            } elseif (trim($value, " \t\n\r\0\x0B\"'") === '[]') {
+                return [];
             } else {
                 $value = array_values(array_filter(array_map('trim', preg_split('/[,;]/', $value) ?: [])));
             }

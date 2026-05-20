@@ -104,10 +104,11 @@ export function withCategorySeoEntityFallbacks(
 
   const sourceMetaDescription = cleanString(source.meta_description);
   const entityMetaDescription = cleanString(entity?.meta_description);
+  const entityDescription = cleanString(entity?.description_fr);
   const intro =
+    entityDescription ||
     cleanString(source.short_intro_html) ||
     cleanString(entity?.short_intro) ||
-    cleanString(entity?.description_fr) ||
     sourceMetaDescription ||
     entityMetaDescription;
   const introPlain = intro ? plainTextFromHtml(intro) : '';

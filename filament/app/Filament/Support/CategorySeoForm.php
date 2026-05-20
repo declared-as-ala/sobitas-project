@@ -27,6 +27,10 @@ final class CategorySeoForm
             $decoded = json_decode($state, true);
             if (is_array($decoded)) {
                 $state = $decoded;
+            } elseif (is_string($decoded) && trim($decoded, " \t\n\r\0\x0B\"'") === '[]') {
+                return [];
+            } elseif (trim($state, " \t\n\r\0\x0B\"'") === '[]') {
+                return [];
             } else {
                 // Comma/semicolon separated legacy string
                 $state = array_values(array_filter(array_map('trim', preg_split('/[,;]/', $state) ?: [])));

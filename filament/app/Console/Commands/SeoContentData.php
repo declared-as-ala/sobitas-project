@@ -394,6 +394,45 @@ class SeoContentData
                 'primary_keyword' => 'hmb tunisie',
                 'short_intro' => '<p>Le <strong>HMB</strong> aide à prévenir la dégradation musculaire et soutient la récupération.</p>',
             ],
+            'l-arginine' => [
+                'name' => 'L-Arginine',
+                'meta_title' => 'L-Arginine Tunisie | Pompe & Performance',
+                'meta_description' => 'L-Arginine pour la pompe musculaire, la circulation et la performance en Tunisie. Livraison rapide.',
+                'h1_title' => 'L-Arginine en Tunisie',
+                'primary_keyword' => 'l arginine tunisie',
+                'secondary_keywords' => [
+                    'arginine musculation tunisie',
+                    'l-arginine prix tunisie',
+                    'acheter l-arginine tunisie',
+                ],
+                'short_intro' => '<p>La <strong>L-Arginine</strong> soutient la production d oxyde nitrique, la congestion musculaire et la circulation pendant l entrainement.</p>',
+            ],
+            'mineraux' => [
+                'name' => 'Mineraux',
+                'meta_title' => 'Mineraux Tunisie | Magnesium, Zinc & Sport',
+                'meta_description' => 'Mineraux essentiels pour sportifs en Tunisie : magnesium, zinc et formules de recuperation.',
+                'h1_title' => 'Mineraux en Tunisie',
+                'primary_keyword' => 'mineraux tunisie',
+                'secondary_keywords' => [
+                    'mineraux sport tunisie',
+                    'magnesium zinc tunisie',
+                    'mineraux musculation tunisie',
+                ],
+                'short_intro' => '<p>Les <strong>mineraux</strong> aident a soutenir la recuperation, l energie, l hydratation et l equilibre musculaire.</p>',
+            ],
+            'boosters-hormonaux' => [
+                'name' => 'Boosters Hormonaux',
+                'meta_title' => 'Boosters Hormonaux Tunisie | Vitalite & Musculation',
+                'meta_description' => 'Boosters hormonaux et formules naturelles pour vitalite, force et recuperation en Tunisie.',
+                'h1_title' => 'Boosters Hormonaux en Tunisie',
+                'primary_keyword' => 'boosters hormonaux tunisie',
+                'secondary_keywords' => [
+                    'booster testosterone tunisie',
+                    'tribulus tunisie',
+                    'zma tunisie',
+                ],
+                'short_intro' => '<p>Les <strong>boosters hormonaux</strong> regroupent des formules naturelles pour accompagner la vitalite, la recuperation et les objectifs de musculation.</p>',
+            ],
             // === Perte de Poids ===
             'cla' => [
                 'name' => 'CLA',
@@ -460,6 +499,19 @@ class SeoContentData
                 'h1_title' => 'Protéine de Boeuf',
                 'primary_keyword' => 'protéine boeuf tunisie',
                 'short_intro' => '<p>La <strong>protéine de boeuf</strong> est une alternative à la whey, riche en fer.</p>',
+            ],
+            'proteines-pour-cheveux' => [
+                'name' => 'Proteines pour cheveux',
+                'meta_title' => 'Proteines pour Cheveux Tunisie | Nutrition & Vitalite',
+                'meta_description' => 'Proteines, collagene et complements pour cheveux en Tunisie. Nutrition, vitalite et routine beaute.',
+                'h1_title' => 'Proteines pour cheveux en Tunisie',
+                'primary_keyword' => 'proteines cheveux tunisie',
+                'secondary_keywords' => [
+                    'complements cheveux tunisie',
+                    'collagene cheveux tunisie',
+                    'vitamines cheveux tunisie',
+                ],
+                'short_intro' => '<p>Les <strong>proteines pour cheveux</strong> et complements associes soutiennent la nutrition, la vitalite et la routine beaute.</p>',
             ],
             'whey-hydrolysee' => [
                 'name' => 'Whey Hydrolysée',
@@ -736,6 +788,168 @@ class SeoContentData
     public static function normalizeSlug(string $name): string
     {
         return Str::slug($name, '-', 'fr');
+    }
+
+    public static function buildCompleteSeoData(
+        string $slug,
+        string $name,
+        array $data = [],
+        string $type = 'subcategory',
+        ?string $parentName = null
+    ): array {
+        $name = trim($data['name'] ?? $name);
+        $primary = trim((string) ($data['primary_keyword'] ?? Str::lower($name).' tunisie'));
+        $secondary = array_values(array_filter(array_map('trim', $data['secondary_keywords'] ?? [
+            $primary,
+            'acheter '.Str::lower($name).' tunisie',
+            'prix '.Str::lower($name).' tunisie',
+        ])));
+        $metaTitle = trim((string) ($data['meta_title'] ?? $name.' Tunisie | Protein.tn'));
+        $h1 = trim((string) ($data['h1_title'] ?? $name.' en Tunisie'));
+        $metaDescription = trim((string) ($data['meta_description'] ?? self::genericMetaDescription($name, $type, $parentName)));
+        $shortIntro = trim((string) ($data['short_intro'] ?? self::genericShortIntro($name, $primary, $type, $parentName)));
+        $longBottom = trim((string) ($data['long_bottom_content'] ?? self::genericLongBottomContent($name, $type, $parentName)));
+        $faq = self::normalizeFaqRows($data['faq'] ?? self::genericFaq($name, $type));
+        $relatedSlugs = array_values(array_unique(array_filter(array_map('trim', $data['related_category_slugs'] ?? self::defaultRelatedSlugs($slug, $type)))));
+        $seoTags = array_values(array_unique(array_filter(array_map('trim', $data['seo_tags'] ?? [
+            $primary,
+            Str::lower($name),
+            'protein.tn',
+        ]))));
+        $metaKeywords = trim((string) ($data['meta_keywords'] ?? implode(', ', array_values(array_unique(array_filter([
+            $primary,
+            ...$secondary,
+            Str::lower($name),
+            'protein tunisie',
+        ]))))));
+
+        return array_merge($data, [
+            'name' => $name,
+            'meta_title' => $metaTitle,
+            'meta_description' => $metaDescription,
+            'meta_keywords' => $metaKeywords,
+            'h1_title' => $h1,
+            'breadcrumb_label' => trim((string) ($data['breadcrumb_label'] ?? $name)),
+            'primary_keyword' => $primary,
+            'secondary_keywords' => $secondary,
+            'seo_tags' => $seoTags,
+            'short_intro' => $shortIntro,
+            'long_bottom_content' => $longBottom,
+            'faq' => $faq,
+            'canonical_url' => trim((string) ($data['canonical_url'] ?? '/'.$slug)),
+            'og_title' => trim((string) ($data['og_title'] ?? $metaTitle)),
+            'og_description' => trim((string) ($data['og_description'] ?? $metaDescription)),
+            'og_image' => trim((string) ($data['og_image'] ?? '')),
+            'og_image_alt' => trim((string) ($data['og_image_alt'] ?? $h1)),
+            'twitter_title' => trim((string) ($data['twitter_title'] ?? $metaTitle)),
+            'twitter_description' => trim((string) ($data['twitter_description'] ?? $metaDescription)),
+            'twitter_image' => trim((string) ($data['twitter_image'] ?? '')),
+            'related_category_slugs' => $relatedSlugs,
+            'robots_index' => $data['robots_index'] ?? true,
+            'robots_follow' => $data['robots_follow'] ?? true,
+            'seo_enabled' => $data['seo_enabled'] ?? true,
+            'sitemap_include' => $data['sitemap_include'] ?? true,
+            'sitemap_priority' => $data['sitemap_priority'] ?? ($type === 'category' ? 0.85 : 0.80),
+            'sitemap_changefreq' => $data['sitemap_changefreq'] ?? 'weekly',
+            'extra_json_ld' => $data['extra_json_ld'] ?? null,
+            'alt_cover' => trim((string) ($data['alt_cover'] ?? $name.' Tunisie - prix, conseils et achat')),
+            'description_cover' => trim((string) ($data['description_cover'] ?? 'Acheter '.$name.' en Tunisie avec livraison rapide.')),
+        ]);
+    }
+
+    private static function genericMetaDescription(string $name, string $type, ?string $parentName): string
+    {
+        if ($type === 'category') {
+            return 'Decouvrez notre selection '.$name.' en Tunisie : produits originaux, conseils, prix clairs et livraison rapide partout en Tunisie.';
+        }
+
+        $context = $parentName ? ' dans la categorie '.$parentName : '';
+
+        return 'Achetez '.$name.$context.' en Tunisie : produits originaux, conseils, prix clairs et livraison rapide partout en Tunisie.';
+    }
+
+    private static function genericShortIntro(string $name, string $primary, string $type, ?string $parentName): string
+    {
+        $context = $parentName ? ' de la categorie <strong>'.e($parentName).'</strong>' : '';
+
+        return '<p><strong>'.e($name).'</strong>'.$context.' sur Protein.tn : selection de produits originaux, disponibles en Tunisie avec paiement a la livraison.</p><p>Comparez les prix, choisissez selon votre objectif et profitez dune livraison rapide partout en Tunisie.</p>';
+    }
+
+    private static function genericLongBottomContent(string $name, string $type, ?string $parentName): string
+    {
+        return '<h2>Comment choisir '.e($name).' ?</h2><p>Choisissez votre produit selon votre objectif, votre niveau dentrainement, votre budget et les informations indiquees sur chaque fiche produit.</p><h3>Nos conseils avant achat</h3><ul><li>Verifiez la composition et le dosage.</li><li>Comparez le prix, le format et la marque.</li><li>Respectez les recommandations dutilisation du fabricant.</li><li>Demandez conseil a un professionnel de sante en cas de doute.</li></ul><h2>Livraison en Tunisie</h2><p>Protein.tn propose des produits authentiques, une expedition rapide et le paiement a la livraison selon disponibilite.</p>';
+    }
+
+    private static function genericFaq(string $name, string $type): array
+    {
+        return [
+            [
+                'q' => 'Comment choisir '.$name.' en Tunisie ?',
+                'a' => 'Comparez la marque, le format, le dosage, le prix et les avis disponibles. Choisissez aussi selon votre objectif sportif et votre tolerance personnelle.',
+            ],
+            [
+                'q' => 'Les produits '.$name.' sont-ils originaux ?',
+                'a' => 'Protein.tn selectionne des produits authentiques et travaille avec des marques reconnues. Consultez toujours la fiche produit pour les details.',
+            ],
+            [
+                'q' => 'Quel est le prix de '.$name.' en Tunisie ?',
+                'a' => 'Le prix varie selon la marque, le format et les promotions. La page affiche les prix disponibles et les offres en cours.',
+            ],
+            [
+                'q' => 'La livraison est-elle disponible partout en Tunisie ?',
+                'a' => 'Oui, la livraison est proposee dans plusieurs villes de Tunisie avec paiement a la livraison selon disponibilite.',
+            ],
+        ];
+    }
+
+    private static function normalizeFaqRows(mixed $rows): array
+    {
+        if (is_string($rows)) {
+            $decoded = json_decode($rows, true);
+            $rows = is_array($decoded) ? $decoded : [];
+        }
+        if (! is_array($rows)) {
+            return [];
+        }
+
+        $out = [];
+        foreach ($rows as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            $question = trim((string) ($row['q'] ?? $row['question'] ?? ''));
+            $answer = trim((string) ($row['a'] ?? $row['answer'] ?? ''));
+            if ($question !== '' && $answer !== '') {
+                $out[] = ['q' => $question, 'a' => $answer];
+            }
+        }
+
+        return $out;
+    }
+
+    private static function defaultRelatedSlugs(string $slug, string $type): array
+    {
+        $groups = [
+            ['creatine', 'bcaa', 'acides-amines', 'citrulline', 'eaa', 'glutamine', 'hmb', 'beta-alanine', 'l-arginine'],
+            ['omega3', 'vitamines', 'zinc', 'magnesium', 'mineraux', 'zma', 'ashwagandha', 'tribulus', 'collagene', 'boosters-hormonaux'],
+            ['cla', 'fat-burner', 'l-carnitine', 'bruleurs-de-graisse'],
+            ['gainers', 'gainers-haute-energie', 'gainers-riches-en-proteines', 'carbohydrates'],
+            ['proteine-whey', 'isolate-whey', 'proteine-caseine', 'proteines-completes', 'proteine-de-boeuf', 'whey-hydrolysee', 'proteines-pour-cheveux'],
+            ['pre-workout', 'pre-entrainement', 'pendant-entrainement', 'recuperation-apres-entrainement'],
+            ['shakers-bouteilles-sportives', 'gants-de-musculation-et-fitness', 'ceinture-de-musculation', 'bandes-de-soutien-musculaire', 'materiel-de-musculation', 'equipement-cardio-fitness', 't-shirts-de-sport'],
+        ];
+
+        foreach ($groups as $group) {
+            if (in_array($slug, $group, true)) {
+                return array_values(array_filter($group, fn (string $item): bool => $item !== $slug));
+            }
+        }
+
+        $fallback = $type === 'category'
+            ? ['complements-alimentaires', 'proteine', 'prise-de-masse']
+            : ['creatine', 'proteine-whey', 'bcaa'];
+
+        return array_values(array_filter($fallback, fn (string $item): bool => $item !== $slug));
     }
 
     public static function findCategoryBySlug(array $categories, string $slug): ?array
