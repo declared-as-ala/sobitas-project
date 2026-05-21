@@ -1,0 +1,25 @@
+{
+  "h1": "Compléments Alimentaires Tunisie – Sport & Bien-être | Protein.tn",
+  "metaTitle": "Compléments Alimentaires Tunisie 🇹🇳 Achetez en Ligne | Protein.tn",
+  "metaDescription": "Achetez vos compléments alimentaires en Tunisie : protéines, créatine, vitamines, oméga-3. Prix compétitifs, livraison 24h Tunis, Sousse, Sfax.",
+  "ogImage": "https://protein.tn/favicon-512x512.png",
+  "intro": "<p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Bienvenue sur <strong>Protein.tn</strong>, votre distributeur de <strong>compléments alimentaires en Tunisie</strong> depuis plus de 15 ans. Nous proposons plus de 500 produits des plus grandes marques internationales : Optimum Nutrition, BioTech USA, Real Pharm, Scitec Nutrition, BPI Sports, MuscleTech. Protéines, créatine, BCAA, pré-workout, vitamines, oméga-3, brûleurs de graisse — tout pour la musculation, le fitness et le bien-être. Livraison 24–72h partout en Tunisie.</p>\n\n<h2 class=\"text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mt-6 mb-2\">Nos catégories de compléments alimentaires</h2>\n<ul class=\"list-disc list-inside mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 space-y-1\">\n  <li><strong>Protéines</strong> : whey concentrée, isolate, caséine, protéines végétales</li>\n  <li><strong>Créatine</strong> : monohydrate, HCL, Creapure®</li>\n  <li><strong>Acides aminés</strong> : BCAA, EAA, glutamine, arginine, citrulline</li>\n  <li><strong>Pré-workout</strong> : boosters d'énergie et de performance</li>\n  <li><strong>Vitamines et minéraux</strong> : oméga-3, zinc, magnésium, vitamine D</li>\n  <li><strong>Brûleurs de graisse</strong> : L-carnitine, CLA, fat burners</li>\n  <li><strong>Prise de masse</strong> : mass gainers, gainers protéinés</li>\n  <li><strong>Bien-être</strong> : collagène, ashwagandha, ZMA, oméga-3</li>\n</ul>\n\n<p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Tous nos produits sont 100% originaux, importés officiellement avec numéros de lot traçables. Magasin physique à Sousse et livraison dans toute la Tunisie. Paiement à la livraison disponible.</p>",
+  "howToChooseTitle": "Comment choisir ses compléments alimentaires en Tunisie ?",
+  "howToChooseBody": "• <strong>Objectif prise de masse</strong> : whey protéine + créatine + mass gainer.\n• <strong>Objectif sèche / définition</strong> : whey isolate + BCAA + brûleur de graisse.\n• <strong>Objectif force</strong> : créatine + bêta-alanine + pré-workout.\n• <strong>Objectif récupération</strong> : glutamine + ZMA + oméga-3.\n• <strong>Objectif santé</strong> : vitamines, oméga-3, zinc, magnésium.\n• <strong>Qualité</strong> : privilégiez les marques reconnues avec tests de pureté.\n• <strong>Livraison</strong> : 24-72h partout en Tunisie, paiement à la livraison.",
+  "faqs": [
+    {
+      "question": "Où acheter des compléments alimentaires en Tunisie ?",
+      "answer": "Sur Protein.tn, distributeur officiel depuis 15 ans. Magasin à Sousse et livraison dans toute la Tunisie. Paiement à la livraison."
+    },
+    {
+      "question": "Les produits Protein.tn sont-ils originaux ?",
+      "answer": "Oui — 100% originaux, importés officiellement, numéros de lot traçables. Aucune contrefaçon."
+    },
+    {
+      "question": "Quels sont les délais de livraison ?",
+      "answer": "24-48h pour Tunis et grandes villes, 48-72h pour le reste de la Tunisie."
+    }
+  ],
+  "relatedCategorySlugs": ["proteines-en-poudre", "perte-de-poids", "prise-de-masse", "complements-d-entrainement", "equipements-et-accessoires-sportifs"],
+  "bestProductSlugs": []
+}

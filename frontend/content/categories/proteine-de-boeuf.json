@@ -1,0 +1,17 @@
+{
+  "h1": "Protéine de Bœuf Tunisie – Alternative à la Whey | Protein.tn",
+  "metaTitle": "Protéine de Bœuf Tunisie 🇹🇳 Beef Protein | Protein.tn",
+  "metaDescription": "Achetez votre protéine de bœuf en Tunisie : alternative à la whey, riche en acides aminés. Livraison 24h Tunis, Sousse, Sfax.",
+  "ogImage": "https://protein.tn/favicon-512x512.png",
+  "intro": "<p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">La <strong>protéine de bœuf</strong> est une excellente alternative à la whey pour ceux qui cherchent une source de protéines différente. Naturellement riche en acides aminés, sans lactose, sans gluten. Sur <strong>Protein.tn</strong>, retrouvez la protéine de bœuf en Tunisie.</p>",
+  "howToChooseTitle": "Pourquoi choisir la protéine de bœuf ?",
+  "howToChooseBody": "• <strong>Sans lactose</strong> : idéal pour les intolérants.\n• <strong>Profil aminé</strong> : riche en acides aminés essentiels.\n• <strong>Digestion</strong> : bien tolérée par la plupart des gens.\n• <strong>Marques</strong> : BioTech USA, Real Pharm.\n• <strong>Livraison</strong> : 24-72h partout en Tunisie.",
+  "faqs": [
+    {
+      "question": "La protéine de bœuf est-elle aussi efficace que la whey ?",
+      "answer": "Oui, elle offre un profil d'acides aminés comparable. Elle est particulièrement appréciée des intolérants au lactose."
+    }
+  ],
+  "relatedCategorySlugs": ["whey-proteine", "proteines-completes", "proteines-vegetales", "bcaa"],
+  "bestProductSlugs": []
+}

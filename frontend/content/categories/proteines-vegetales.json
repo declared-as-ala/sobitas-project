@@ -1,0 +1,25 @@
+{
+  "h1": "Protéines Végétales Tunisie – Vegan & Sans Lactose | Protein.tn",
+  "metaTitle": "Protéines Végétales Tunisie 🇹🇳 Vegan dès 65 DT | Protein.tn",
+  "metaDescription": "Achetez vos protéines végétales en Tunisie dès 65 DT : pois, riz, chanvre, soja. Vegan, sans lactose. Livraison 24h Tunis, Sousse, Sfax.",
+  "ogImage": "https://protein.tn/favicon-512x512.png",
+  "intro": "<p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Les <strong>protéines végétales</strong> sont une excellente alternative aux protéines animales. Issus de pois, riz, chanvre, soja ou mélanges de plantes, ces compléments apportent tous les acides aminés essentiels sans lactose, sans produits animaux. Parfait pour les végétaliens, les intolérants et ceux qui cherchent une source de protéines plus durable. Sur <strong>Protein.tn</strong>, découvrez les meilleures protéines végétales en Tunisie.</p>\n\n<h2 class=\"text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mt-6 mb-2\">Protéines Végétales Tunisie : Prix et Livraison</h2>\n<p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Le <strong>prix des protéines végétales en Tunisie</strong> : à partir de 65 DT pour 500 g, entre 120 et 200 DT pour 1-2 kg. <strong>Protein.tn</strong> livre 24–72h partout en Tunisie. Paiement à la livraison.</p>",
+  "howToChooseTitle": "Comment choisir sa protéine végétale en Tunisie ?",
+  "howToChooseBody": "• <strong>Protéine de pois</strong> : riche en lysine, bonne digestibilité. Excellente option.\n• <strong>Protéine de riz</strong> : bien absorbée, goût neutre. Idéale en mélange avec le pois.\n• <strong>Mélange pois-riz</strong> : profil complet d'acides aminés comparable à la whey.\n• <strong>Protéine de chanvre</strong> : riche en oméga-3 et fibres.\n• <strong>Protéine de soja</strong> : complète, la plus étudiée. Bon marché.\n• <strong>Biodisponibilité</strong> : les mélanges (pois+riz) offrent le meilleur profil.\n• <strong>Livraison</strong> : 24-72h partout en Tunisie.",
+  "faqs": [
+    {
+      "question": "Où acheter des protéines végétales en Tunisie ?",
+      "answer": "Sur Protein.tn. Livraison rapide à Tunis, Sousse, Sfax. Paiement à la livraison."
+    },
+    {
+      "question": "Les protéines végétales sont-elles aussi efficaces que la whey ?",
+      "answer": "Oui, les mélanges pois-riz offrent un profil d'acides aminés comparable. La digestibilité est légèrement inférieure mais compense par d'autres bienfaits (fibres, sans lactose)."
+    },
+    {
+      "question": "Quelle protéine végétale pour la musculation ?",
+      "answer": "Le mélange protéine de pois + protéine de riz offre le meilleur profil d'acides aminés pour la prise de masse musculaire."
+    }
+  ],
+  "relatedCategorySlugs": ["proteines-completes", "whey-isolate", "caseine", "bcaa", "vitamines"],
+  "bestProductSlugs": []
+}

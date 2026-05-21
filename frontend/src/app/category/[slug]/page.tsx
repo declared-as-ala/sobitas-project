@@ -7,6 +7,7 @@ import {
   buildBreadcrumbListSchema,
   buildCollectionPageSchema,
   buildItemListSchema,
+  buildProductSchema,
   buildFAQPageSchemaFromQA,
   validateStructuredData,
 } from '@/util/structuredData';
@@ -252,6 +253,10 @@ export default async function CategoryPage({ params }: PageProps) {
         return { name: p.designation_fr || p.slug, url };
       }).filter((p: { name: string; url: string }) => p.url !== '/shop/');
       const itemListSchema = productList.length > 0 ? buildItemListSchema(productList, baseUrl, { name: pageTitle }) : null;
+      const productSchemas = (sub.products ?? [])
+        .slice(0, 6)
+        .map((p: any) => buildProductSchema(p, baseUrl))
+        .filter(Boolean) as object[];
 
       const title = merged.h1?.trim() || sub.sous_category?.designation_fr || canonicalSlug;
       const relatedCategories = resolveRelatedCategories(merged.relatedCategorySlugs ?? [], categories);
@@ -312,6 +317,13 @@ export default async function CategoryPage({ params }: PageProps) {
               key={`extra-ld-${canonicalSlug}-${i}`}
               type="application/ld+json"
               dangerouslySetInnerHTML={{ __html: JSON.stringify(obj) }}
+            />
+          ))}
+          {productSchemas.map((schema, i) => (
+            <script
+              key={`product-schema-${canonicalSlug}-${i}`}
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
             />
           ))}
           <Suspense
@@ -383,6 +395,10 @@ export default async function CategoryPage({ params }: PageProps) {
         return { name: p.designation_fr || p.slug, url };
       }).filter((p: { name: string; url: string }) => p.url !== '/shop/');
       const itemListSchemaCat = productListCat.length > 0 ? buildItemListSchema(productListCat, baseUrl, { name: pageTitleCat }) : null;
+      const productSchemasCat = (cat.products ?? [])
+        .slice(0, 6)
+        .map((p: any) => buildProductSchema(p, baseUrl))
+        .filter(Boolean) as object[];
 
       const title = mergedCat.h1?.trim() || cat.category?.designation_fr || canonicalSlug;
       const relatedSlugs = (mergedCat.relatedCategorySlugs?.length
@@ -445,6 +461,13 @@ export default async function CategoryPage({ params }: PageProps) {
               key={`extra-ld-cat-${canonicalSlug}-${i}`}
               type="application/ld+json"
               dangerouslySetInnerHTML={{ __html: JSON.stringify(obj) }}
+            />
+          ))}
+          {productSchemasCat.map((schema, i) => (
+            <script
+              key={`product-schema-cat-${canonicalSlug}-${i}`}
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
             />
           ))}
           <Suspense

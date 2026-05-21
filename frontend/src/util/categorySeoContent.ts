@@ -21,6 +21,7 @@ export const CONTENT_SLUG_ALIASES: Record<string, string> = {
   'pre-workout': 'pre-workout',
   'pre-workout-tunisie': 'pre-workout',
   // Whey – all common URL variants map to the same content file
+  'whey-proteine': 'whey-protein',
   'isolat-whey': 'whey-protein',
   'isolate-whey': 'whey-protein',
   'proteine-whey': 'whey-protein',
