@@ -349,7 +349,7 @@ export default function OrderConfirmationPage() {
 
           <div class="footer">
             <p>Merci pour votre confiance !</p>
-            <p>Pour toute question, contactez-nous à ${order?.email || 'contact@sobitas.tn'}</p>
+            <p>Pour toute question, contactez-nous à ${order?.email || 'contact@protein.tn'}</p>
           </div>
         </body>
       </html>

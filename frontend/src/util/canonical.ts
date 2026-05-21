@@ -46,3 +46,20 @@ export function buildCanonicalUrl(path: string, search?: string): string {
   const cleanSearch = search ? stripTrackingParams(search.startsWith('?') ? search : `?${search}`) : '';
   return `${base}${pathPart}${cleanSearch}`;
 }
+
+/**
+ * Ensures a canonical URL always uses the production domain (protein.tn).
+ * If the URL hostname contains sobitas.tn, it rewrites to the base domain.
+ */
+export function forceProteinDomain(url: string): string {
+  try {
+    const parsed = new URL(url);
+    if (/sobitas\.tn$/i.test(parsed.hostname)) {
+      const base = getBaseUrl();
+      return `${base}${parsed.pathname}${parsed.search}${parsed.hash}`;
+    }
+    return url;
+  } catch {
+    return url;
+  }
+}

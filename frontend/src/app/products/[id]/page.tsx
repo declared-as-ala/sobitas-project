@@ -1,11 +1,15 @@
 import { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
+import nextDynamic from 'next/dynamic';
 import { getSimilarProducts } from '@/services/api';
 import { getCachedProductDetails } from '@/services/getCachedProductDetails';
-import { ProductDetailClient } from './ProductDetailClient';
 import { ProductDetailFallbackClient } from '@/app/shop/ProductDetailFallbackClient';
 import { buildCanonicalUrl } from '@/util/canonical';
 import { buildProductUrlPath, getProductPrimarySubCategory, buildProductCanonicalUrl } from '@/util/productUrl';
+
+const ProductDetailClient = nextDynamic(() => import('./ProductDetailClient').then((m) => ({ default: m.ProductDetailClient })), {
+  loading: () => <div className="min-h-screen animate-pulse bg-gray-50" />,
+});
 
 interface ProductPageProps {
   params: Promise<{ id: string }>;

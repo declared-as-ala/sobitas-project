@@ -74,6 +74,7 @@ type HeaderNavLink = {
 
 const FALLBACK_NAV_LINKS: HeaderNavLink[] = [
   { href: '/', label: 'ACCUEIL', icon: 'home' },
+  { href: '/shop', label: 'NOS PRODUITS', icon: 'shopping-bag' },
   { href: '/packs', label: 'PACKS', icon: 'package' },
   { href: '/brands', label: 'MARQUES', icon: 'store' },
   { href: '/blog', label: 'BLOG', icon: 'newspaper' },
@@ -110,6 +111,10 @@ function normalizeNavigationItems(items: SiteNavigationItem[]): HeaderNavLink[] 
 
 function isExternalHref(href: string): boolean {
   return /^(https?:|mailto:|tel:)/i.test(href);
+}
+
+function isProductsNavLink(link: HeaderNavLink): boolean {
+  return link.href === '/shop' || link.label.toLocaleUpperCase('fr-FR').includes('PRODUIT');
 }
 
 function NavigationIcon({ name, className }: { name?: string | null; className: string }) {
@@ -295,10 +300,6 @@ export function HeaderClient() {
 
   const navLinks = dynamicNavigation.navbar.length > 0 ? dynamicNavigation.navbar : FALLBACK_NAV_LINKS;
   const sidebarLinks = dynamicNavigation.sidebar.length > 0 ? dynamicNavigation.sidebar : navLinks;
-  const homeNavLink = navLinks.find((link) => link.href === '/') ?? navLinks[0];
-  const navLinksAfterProducts = navLinks.filter((link) => link !== homeNavLink);
-  const sidebarHomeLink = sidebarLinks.find((link) => link.href === '/') ?? sidebarLinks[0];
-  const sidebarLinksAfterProducts = sidebarLinks.filter((link) => link !== sidebarHomeLink);
 
   const mobileNavHidden = isMobileViewport && !mobileNavVisible;
 
@@ -671,25 +672,24 @@ export function HeaderClient() {
         </div>
 
         <nav className="hidden md:flex items-center justify-center gap-5 xl:gap-8 py-3 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 flex-wrap" aria-label="Navigation principale">
-          {homeNavLink && (
-            <NavigationLink
-              item={homeNavLink}
-              className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-400 transition-colors whitespace-nowrap py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
-            >
-              <NavigationIcon name={homeNavLink.icon} className="h-4 w-4" />
-              <span>{homeNavLink.label}</span>
-            </NavigationLink>
-          )}
-          <ProductsDropdown />
-          {navLinksAfterProducts.map((link) => (
-            <NavigationLink
-              key={`${link.href}-${link.label}`}
-              item={link}
-              className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-400 transition-colors whitespace-nowrap py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
-            >
-              <NavigationIcon name={link.icon} className="h-4 w-4" />
-              <span>{link.label}</span>
-            </NavigationLink>
+          {navLinks.map((link) => (
+            isProductsNavLink(link) ? (
+              <ProductsDropdown
+                key={`${link.href}-${link.label}`}
+                label={link.label}
+                href={link.href}
+                opensNewTab={link.opensNewTab}
+              />
+            ) : (
+              <NavigationLink
+                key={`${link.href}-${link.label}`}
+                item={link}
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-400 transition-colors whitespace-nowrap py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                <NavigationIcon name={link.icon} className="h-4 w-4" />
+                <span>{link.label}</span>
+              </NavigationLink>
+            )
           ))}
         </nav>
       </header>
@@ -716,36 +716,30 @@ export function HeaderClient() {
             <div className="px-4 pb-4">
               <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 px-3 mb-2">Navigation</h3>
               <nav className="space-y-0.5">
-                {sidebarHomeLink && (
-                  <NavigationLink
-                    item={sidebarHomeLink}
-                    onClick={closeMobileMenu}
-                    className="flex items-center gap-3 py-3 px-3 text-base font-medium leading-snug text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-red-600 dark:hover:text-red-500 rounded-xl transition-colors -mx-1"
-                  >
-                    <NavigationIcon name={sidebarHomeLink.icon} className="h-5 w-5 shrink-0 text-red-500" />
-                    <span>{sidebarHomeLink.label}</span>
-                  </NavigationLink>
-                )}
-                <button
-                  onClick={() => {
-                    closeMobileMenu();
-                    setTimeout(() => setMobileProductsMenuOpen(true), 150);
-                  }}
-                  className="w-full text-left py-3 px-3 text-base font-medium leading-snug text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-red-600 dark:hover:text-red-500 rounded-xl transition-colors -mx-1 flex items-center justify-between"
-                >
-                  <span>NOS PRODUITS</span>
-                  <ChevronRight className="h-4 w-4 text-gray-400" />
-                </button>
-                {sidebarLinksAfterProducts.map((link) => (
-                  <NavigationLink
-                    key={`${link.href}-${link.label}`}
-                    item={link}
-                    onClick={closeMobileMenu}
-                    className="flex items-center gap-3 py-3 px-3 text-base font-medium leading-snug text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-red-600 dark:hover:text-red-500 rounded-xl transition-colors -mx-1"
-                  >
-                    <NavigationIcon name={link.icon} className="h-5 w-5 shrink-0 text-red-500" />
-                    <span>{link.label}</span>
-                  </NavigationLink>
+                {sidebarLinks.map((link) => (
+                  isProductsNavLink(link) ? (
+                    <button
+                      key={`${link.href}-${link.label}`}
+                      onClick={() => {
+                        closeMobileMenu();
+                        setTimeout(() => setMobileProductsMenuOpen(true), 150);
+                      }}
+                      className="w-full text-left py-3 px-3 text-base font-medium leading-snug text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-red-600 dark:hover:text-red-500 rounded-xl transition-colors -mx-1 flex items-center justify-between"
+                    >
+                      <span>{link.label}</span>
+                      <ChevronRight className="h-4 w-4 text-gray-400" />
+                    </button>
+                  ) : (
+                    <NavigationLink
+                      key={`${link.href}-${link.label}`}
+                      item={link}
+                      onClick={closeMobileMenu}
+                      className="flex items-center gap-3 py-3 px-3 text-base font-medium leading-snug text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-red-600 dark:hover:text-red-500 rounded-xl transition-colors -mx-1"
+                    >
+                      <NavigationIcon name={link.icon} className="h-5 w-5 shrink-0 text-red-500" />
+                      <span>{link.label}</span>
+                    </NavigationLink>
+                  )
                 ))}
               </nav>
             </div>

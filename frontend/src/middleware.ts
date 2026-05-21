@@ -23,6 +23,12 @@ export function middleware(request: NextRequest) {
     return redirectPreservingQuery(request, `/${legacyBrand[1]}`);
   }
 
+  // Legacy /products/ URLs → /product/ (which resolves and 301s to canonical)
+  const legacyProducts = pathname.match(/^\/products\/(.+)$/);
+  if (legacyProducts?.[1]) {
+    return redirectPreservingQuery(request, `/product/${legacyProducts[1]}`);
+  }
+
   // Add no-cache headers for blog pages to ensure fresh content
   const response = NextResponse.next();
   

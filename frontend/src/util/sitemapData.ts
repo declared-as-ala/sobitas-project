@@ -5,6 +5,18 @@ import { buildProductUrl, getProductPrimarySubCategory } from '@/util/productUrl
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
 
+const STATIC_PAGES_SET = new Set([
+  `${BASE_URL}/`,
+  `${BASE_URL}/shop`,
+  `${BASE_URL}/packs`,
+  `${BASE_URL}/offres`,
+  `${BASE_URL}/brands`,
+  `${BASE_URL}/blog`,
+  `${BASE_URL}/qui-sommes-nous`,
+  `${BASE_URL}/contact`,
+  `${BASE_URL}/faqs`,
+]);
+
 const staticPages: MetadataRoute.Sitemap = [
   { url: BASE_URL, lastModified: new Date(), changeFrequency: 'daily', priority: 0.95 },
   { url: `${BASE_URL}/shop`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.95 },
@@ -61,13 +73,48 @@ function clampPriority(n: number | null | undefined, fallback: number): number {
   return Math.min(1, Math.max(0, Number(n)));
 }
 
+function isValidUrl(url: string): boolean {
+  try {
+    new URL(url);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function encodeSitemapUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    parsed.pathname = parsed.pathname.split('/').map((segment) => {
+      if (!segment || segment === '') return segment;
+      try {
+        return encodeURIComponent(decodeURIComponent(segment));
+      } catch {
+        return encodeURIComponent(segment);
+      }
+    }).join('/');
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
+
 /** Returns sitemap entries for XML. Used by app/sitemap.ts (Next.js metadata file → /sitemap.xml as application/xml). */
 export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
-  const sitemapEntries: MetadataRoute.Sitemap = [...staticPages];
+  const seenUrls = new Set<string>();
+  const sitemapEntries: MetadataRoute.Sitemap = [];
 
-  // Fetch all data in parallel so the sitemap responds quickly when requested (e.g. by Google).
-  const [productsRes, categories, brands, pages, articles, blogCategories, blogTags] = await Promise.allSettled([
-    getAllProducts({ perPage: 5000, page: 1 }),
+  // Add static pages with dedup
+  for (const entry of staticPages) {
+    const encoded = encodeSitemapUrl(entry.url);
+    if (!seenUrls.has(encoded)) {
+      seenUrls.add(encoded);
+      sitemapEntries.push({ ...entry, url: encoded });
+    }
+  }
+
+  // Fetch all data with pagination to avoid API timeouts
+  const [categories, brands, pages, articles, blogCategories, blogTags] = await Promise.allSettled([
     getCategories(undefined, { perPage: 500 }),
     getAllBrands(),
     getAppPages(),
@@ -76,28 +123,44 @@ export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
     getBlogTags(),
   ]);
 
+  // Fetch products in smaller batches with pagination
   try {
-    if (productsRes.status === 'fulfilled' && productsRes.value?.products) {
-      const products = productsRes.value.products;
-      if (Array.isArray(products) && products.length > 0) {
-        const productUrls = products
-          .filter((p: Product) => p.slug && p.publier === 1)
-          .filter((p: Product) => {
-            // Only include products that have a subcategory (new SEO-friendly URL format)
-            const subCategory = getProductPrimarySubCategory(p);
-            return subCategory?.slug;
-          })
-          .map((p: Product) => {
-            // Only new SEO-friendly URL format: /{sousCategorySlug}/{productSlug}
-            const url = buildProductUrl(p, BASE_URL);
-            return {
-              url,
-              lastModified: getLastModified(p as ItemWithDates),
-              changeFrequency: 'weekly' as const,
-              priority: 0.7,
-            };
-          });
-        sitemapEntries.push(...productUrls);
+    const BATCH_SIZE = 1000;
+    let currentPage = 1;
+    let totalPages = 1;
+    const allProducts: Product[] = [];
+
+    while (currentPage <= totalPages) {
+      const res = await getAllProducts({ perPage: BATCH_SIZE, page: currentPage });
+      if (res?.products && Array.isArray(res.products)) {
+        allProducts.push(...res.products);
+        if (res.pagination?.last_page) {
+          totalPages = res.pagination.last_page;
+        }
+        currentPage++;
+      } else {
+        break;
+      }
+    }
+
+    if (allProducts.length > 0) {
+      const productUrls = allProducts
+        .filter((p: Product) => p.slug && p.publier === 1)
+        .map((p: Product) => {
+          const url = buildProductUrl(p, BASE_URL);
+          return {
+            url,
+            lastModified: getLastModified(p as ItemWithDates),
+            changeFrequency: 'weekly' as const,
+            priority: 0.7,
+          };
+        });
+      for (const entry of productUrls) {
+        const encoded = encodeSitemapUrl(entry.url);
+        if (!seenUrls.has(encoded)) {
+          seenUrls.add(encoded);
+          sitemapEntries.push({ ...entry, url: encoded });
+        }
       }
     }
   } catch (error) {
@@ -113,12 +176,16 @@ export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
           category.robots_index !== false &&
           category.seo_enabled !== false;
         if (catIdx) {
-          sitemapEntries.push({
-            url: `${BASE_URL}/${category.slug}`,
-            lastModified: new Date(),
-            changeFrequency: normalizeSitemapChangefreq(category.sitemap_changefreq ?? undefined),
-            priority: clampPriority(category.sitemap_priority ?? undefined, 0.85),
-          });
+          const url = `${BASE_URL}/${encodeURIComponent(category.slug)}`;
+          if (!seenUrls.has(url)) {
+            seenUrls.add(url);
+            sitemapEntries.push({
+              url,
+              lastModified: new Date(),
+              changeFrequency: normalizeSitemapChangefreq(category.sitemap_changefreq ?? undefined),
+              priority: clampPriority(category.sitemap_priority ?? undefined, 0.85),
+            });
+          }
         }
         if (category.sous_categories && Array.isArray(category.sous_categories)) {
           category.sous_categories.forEach((subCategory: SubCategory) => {
@@ -130,12 +197,16 @@ export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             ) {
               return;
             }
-            sitemapEntries.push({
-              url: `${BASE_URL}/${subCategory.slug}`,
-              lastModified: getLastModified(subCategory as ItemWithDates),
-              changeFrequency: normalizeSitemapChangefreq(subCategory.sitemap_changefreq ?? undefined),
-              priority: clampPriority(subCategory.sitemap_priority ?? undefined, 0.8),
-            });
+            const url = `${BASE_URL}/${encodeURIComponent(subCategory.slug)}`;
+            if (!seenUrls.has(url)) {
+              seenUrls.add(url);
+              sitemapEntries.push({
+                url,
+                lastModified: getLastModified(subCategory as ItemWithDates),
+                changeFrequency: normalizeSitemapChangefreq(subCategory.sitemap_changefreq ?? undefined),
+                priority: clampPriority(subCategory.sitemap_priority ?? undefined, 0.8),
+              });
+            }
           });
         }
       });
@@ -148,12 +219,16 @@ export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
     if (brands.status === 'fulfilled' && Array.isArray(brands.value) && brands.value.length > 0) {
       brands.value.forEach((brand: Brand) => {
         if (brand.id && brand.designation_fr) {
-          sitemapEntries.push({
-            url: `${BASE_URL}/${nameToSlug(brand.designation_fr)}`,
-            lastModified: new Date(),
-            changeFrequency: 'weekly' as const,
-            priority: 0.75,
-          });
+          const url = `${BASE_URL}/${nameToSlug(brand.designation_fr)}`;
+          if (!seenUrls.has(url)) {
+            seenUrls.add(url);
+            sitemapEntries.push({
+              url,
+              lastModified: new Date(),
+              changeFrequency: 'weekly' as const,
+              priority: 0.75,
+            });
+          }
         }
       });
     }
@@ -164,14 +239,18 @@ export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
   try {
     if (pages.status === 'fulfilled' && Array.isArray(pages.value) && pages.value.length > 0) {
       pages.value
-        .filter((page: Page) => page.slug)
+        .filter((page: Page) => page.slug && page.slug !== 'api')
         .forEach((page: Page) => {
-          sitemapEntries.push({
-            url: `${BASE_URL}/${page.slug}`,
-            lastModified: getLastModified(page as ItemWithDates),
-            changeFrequency: 'monthly' as const,
-            priority: 0.55,
-          });
+          const url = `${BASE_URL}/${encodeURIComponent(page.slug)}`;
+          if (!seenUrls.has(url)) {
+            seenUrls.add(url);
+            sitemapEntries.push({
+              url,
+              lastModified: getLastModified(page as ItemWithDates),
+              changeFrequency: 'monthly' as const,
+              priority: 0.55,
+            });
+          }
         });
     }
   } catch (error) {
@@ -182,13 +261,21 @@ export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
     if (articles.status === 'fulfilled' && Array.isArray(articles.value) && articles.value.length > 0) {
       const articleUrls = articles.value
         .filter((a: Article) => a.slug)
-        .map((a: Article) => ({
-          url: `${BASE_URL}/blog/${a.slug}`,
-          lastModified: getLastModified(a as ItemWithDates),
-          changeFrequency: 'monthly' as const,
-          priority: 0.6,
-        }));
-      sitemapEntries.push(...articleUrls);
+        .map((a: Article) => {
+          const url = `${BASE_URL}/blog/${encodeURIComponent(a.slug)}`;
+          return {
+            url,
+            lastModified: getLastModified(a as ItemWithDates),
+            changeFrequency: 'monthly' as const,
+            priority: 0.6,
+          };
+        });
+      for (const entry of articleUrls) {
+        if (!seenUrls.has(entry.url)) {
+          seenUrls.add(entry.url);
+          sitemapEntries.push(entry);
+        }
+      }
     }
   } catch (error) {
     console.error('Error processing articles for sitemap:', error);
@@ -198,12 +285,16 @@ export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
     if (blogCategories.status === 'fulfilled' && Array.isArray(blogCategories.value)) {
       blogCategories.value.forEach((cat) => {
         if (cat.slug) {
-          sitemapEntries.push({
-            url: `${BASE_URL}/blog/category/${cat.slug}`,
-            lastModified: new Date(),
-            changeFrequency: 'weekly' as const,
-            priority: 0.55,
-          });
+          const url = `${BASE_URL}/blog/category/${encodeURIComponent(cat.slug)}`;
+          if (!seenUrls.has(url)) {
+            seenUrls.add(url);
+            sitemapEntries.push({
+              url,
+              lastModified: new Date(),
+              changeFrequency: 'weekly' as const,
+              priority: 0.55,
+            });
+          }
         }
       });
     }
@@ -215,12 +306,16 @@ export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
     if (blogTags.status === 'fulfilled' && Array.isArray(blogTags.value)) {
       blogTags.value.forEach((tag) => {
         if (tag.slug) {
-          sitemapEntries.push({
-            url: `${BASE_URL}/blog/tag/${tag.slug}`,
-            lastModified: new Date(),
-            changeFrequency: 'weekly' as const,
-            priority: 0.5,
-          });
+          const url = `${BASE_URL}/blog/tag/${encodeURIComponent(tag.slug)}`;
+          if (!seenUrls.has(url)) {
+            seenUrls.add(url);
+            sitemapEntries.push({
+              url,
+              lastModified: new Date(),
+              changeFrequency: 'weekly' as const,
+              priority: 0.5,
+            });
+          }
         }
       });
     }
@@ -228,5 +323,5 @@ export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
     console.error('Error processing blog tags for sitemap:', error);
   }
 
-  return sitemapEntries;
+  return sitemapEntries.filter((entry) => isValidUrl(entry.url));
 }

@@ -1,19 +1,12 @@
 import { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { getSimilarProducts, getFAQs } from '@/services/api';
 import { getCachedProductDetails } from '@/services/getCachedProductDetails';
 import { ApiError } from '@/services/http';
 import { buildCanonicalUrl } from '@/util/canonical';
 import { buildShopProductSocialMetadata } from '@/util/productSeo';
 import { buildProductCanonicalUrl, buildProductUrlPath, getProductPrimarySubCategory } from '@/util/productUrl';
-
-/** Extract HTTP status from error. Only use for deciding redirect: redirect only when status === 404 (never on 5xx/timeout/network). */
-function getErrorStatus(e: unknown): number | null {
-  if (e instanceof ApiError) return e.status;
-  const ax = e as { response?: { status?: number } };
-  if (ax?.response && typeof ax.response.status === 'number') return ax.response.status;
-  return null;
-}
 import {
   buildProductJsonLd,
   buildBreadcrumbListSchema,
@@ -23,8 +16,19 @@ import {
   sanitizeBackendProductJsonLd,
   validateStructuredData,
 } from '@/util/structuredData';
-import { ProductDetailClient } from '@/app/products/[id]/ProductDetailClient';
 import type { Product } from '@/types';
+
+const ProductDetailClient = dynamic(() => import('@/app/products/[id]/ProductDetailClient').then((m) => ({ default: m.ProductDetailClient })), {
+  loading: () => <div className="min-h-screen animate-pulse bg-gray-50" />,
+});
+
+/** Extract HTTP status from error. Only use for deciding redirect: redirect only when status === 404 (never on 5xx/timeout/network). */
+function getErrorStatus(e: unknown): number | null {
+  if (e instanceof ApiError) return e.status;
+  const ax = e as { response?: { status?: number } };
+  if (ax?.response && typeof ax.response.status === 'number') return ax.response.status;
+  return null;
+}
 
 export type PageProps = {
   params: Promise<{ slug: string }>;
@@ -121,8 +125,8 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
         description,
         keywords: productKeywords(product),
         robots: {
-          index: product.seo?.robots?.index ?? true,
-          follow: product.seo?.robots?.follow ?? true,
+          index: product.publier === 1 || product.publier === undefined,
+          follow: product.publier === 1 || product.publier === undefined,
         },
         alternates: {
           canonical: canonicalUrl,

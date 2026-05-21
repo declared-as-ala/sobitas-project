@@ -15,14 +15,13 @@
 
 ## Catégories principales (sous-catégories ciblées par les recherches commerciales)
 
-- [Whey Protein](https://protein.tn/category/proteine-whey) : whey concentrée, isolate, hydrolysée — Optimum Nutrition Gold Standard, BioTech, Real Pharm, BPI, MuscleTech
-- [Créatine](https://protein.tn/category/creatine) : monohydrate, micronisée, Creapure®, capsules — référence force et puissance
-- [Mass Gainer](https://protein.tn/category/mass-gainer) : prise de masse, gainers haute énergie, lean gainers
-- [BCAA](https://protein.tn/category/bcaa) : acides aminés à chaîne ramifiée — ratios 2:1:1, 4:1:1, 8:1:1
-- [Pré-workout](https://protein.tn/category/pre-workout) : énergie, focus, congestion — avec ou sans caféine
-- [Brûleurs de graisse / L-Carnitine](https://protein.tn/category/bruleurs-de-graisse) : thermogéniques, L-carnitine, CLA
-- [Glutamine](https://protein.tn/category/glutamine) : récupération et système immunitaire
-- [Vitamines & minéraux](https://protein.tn/category/vitamines-mineraux)
+- [Whey Protein](https://protein.tn/proteine-whey) : whey concentrée, isolate, hydrolysée — Optimum Nutrition Gold Standard, BioTech, Real Pharm, BPI, MuscleTech
+- [Créatine](https://protein.tn/creatine) : monohydrate, micronisée, Creapure®, capsules — référence force et puissance
+- [Mass Gainer](https://protein.tn/gainers) : prise de masse, gainers haute énergie, lean gainers
+- [BCAA](https://protein.tn/bcaa) : acides aminés à chaîne ramifiée — ratios 2:1:1, 4:1:1, 8:1:1
+- [Pré-workout](https://protein.tn/pre-workout) : énergie, focus, congestion — avec ou sans caféine
+- [Brûleurs de graisse / L-Carnitine](https://protein.tn/bruleurs-de-graisse) : thermogéniques, L-carnitine, CLA
+- [Glutamine](https://protein.tn/glutamine) : récupération et système immunitaire
 - [Packs économiques](https://protein.tn/packs)
 
 ## Pages utiles

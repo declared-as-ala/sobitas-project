@@ -130,6 +130,10 @@ export default async function RootLayout({
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }} />
+        {/* Prerender important links for instant navigation */}
+        <link rel="prerender" href="/creatine" />
+        <link rel="prerender" href="/proteine-whey" />
+        <link rel="prerender" href="/shop" />
       </head>
       <body className={cn("min-h-screen font-sans antialiased")}>
         {/* Google tag (gtag.js) — deferred with afterInteractive to avoid blocking FCP */}

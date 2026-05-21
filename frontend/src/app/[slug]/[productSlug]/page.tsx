@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { getSimilarProducts, getFAQs } from '@/services/api';
 import { getCachedProductDetails } from '@/services/getCachedProductDetails';
 import { ApiError } from '@/services/http';
@@ -14,8 +15,11 @@ import {
 } from '@/util/structuredData';
 import { buildProductCanonicalUrl, buildProductUrlPath, getProductBreadcrumbs, isReservedRouteSlug, getProductPrimarySubCategory } from '@/util/productUrl';
 import { buildShopProductSocialMetadata } from '@/util/productSeo';
-import { ProductDetailClient } from '@/app/products/[id]/ProductDetailClient';
 import type { Product } from '@/types';
+
+const ProductDetailClient = dynamic(() => import('@/app/products/[id]/ProductDetailClient').then((m) => ({ default: m.ProductDetailClient })), {
+  loading: () => <div className="min-h-screen animate-pulse bg-gray-50" />,
+});
 
 export type PageProps = {
   params: Promise<{ slug: string; productSlug: string }>;
@@ -123,13 +127,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       product.seo?.canonical_url?.trim() || buildProductCanonicalUrl(product)
     );
 
+    const isPublished = product.publier === 1 || product.publier === undefined;
+
     return {
       title: { absolute: title },
       description,
       keywords: productKeywords(product),
       robots: {
-        index: product.seo?.robots?.index ?? true,
-        follow: product.seo?.robots?.follow ?? true,
+        index: isPublished,
+        follow: isPublished,
       },
       alternates: {
         canonical: canonicalUrl,

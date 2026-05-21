@@ -29,17 +29,19 @@ return new class extends Migration
             $now = now();
             $items = [
                 ['location' => 'navbar', 'label' => 'ACCUEIL', 'url' => '/', 'icon' => 'home', 'sort_order' => 1],
-                ['location' => 'navbar', 'label' => 'PACKS', 'url' => '/packs', 'icon' => 'package', 'sort_order' => 2],
-                ['location' => 'navbar', 'label' => 'MARQUES', 'url' => '/brands', 'icon' => 'store', 'sort_order' => 3],
-                ['location' => 'navbar', 'label' => 'BLOG', 'url' => '/blog', 'icon' => 'newspaper', 'sort_order' => 4],
-                ['location' => 'navbar', 'label' => 'CONTACT', 'url' => '/contact', 'icon' => 'mail', 'sort_order' => 5],
-                ['location' => 'navbar', 'label' => 'QUI SOMMES NOUS', 'url' => '/qui-sommes-nous', 'icon' => 'info', 'sort_order' => 6],
+                ['location' => 'navbar', 'label' => 'NOS PRODUITS', 'url' => '/shop', 'icon' => 'shopping-bag', 'sort_order' => 2],
+                ['location' => 'navbar', 'label' => 'PACKS', 'url' => '/packs', 'icon' => 'package', 'sort_order' => 3],
+                ['location' => 'navbar', 'label' => 'MARQUES', 'url' => '/brands', 'icon' => 'store', 'sort_order' => 4],
+                ['location' => 'navbar', 'label' => 'BLOG', 'url' => '/blog', 'icon' => 'newspaper', 'sort_order' => 5],
+                ['location' => 'navbar', 'label' => 'CONTACT', 'url' => '/contact', 'icon' => 'mail', 'sort_order' => 6],
+                ['location' => 'navbar', 'label' => 'QUI SOMMES NOUS', 'url' => '/qui-sommes-nous', 'icon' => 'info', 'sort_order' => 7],
                 ['location' => 'sidebar', 'label' => 'ACCUEIL', 'url' => '/', 'icon' => 'home', 'sort_order' => 1],
-                ['location' => 'sidebar', 'label' => 'PACKS', 'url' => '/packs', 'icon' => 'package', 'sort_order' => 2],
-                ['location' => 'sidebar', 'label' => 'MARQUES', 'url' => '/brands', 'icon' => 'store', 'sort_order' => 3],
-                ['location' => 'sidebar', 'label' => 'BLOG', 'url' => '/blog', 'icon' => 'newspaper', 'sort_order' => 4],
-                ['location' => 'sidebar', 'label' => 'CONTACT', 'url' => '/contact', 'icon' => 'mail', 'sort_order' => 5],
-                ['location' => 'sidebar', 'label' => 'QUI SOMMES NOUS', 'url' => '/qui-sommes-nous', 'icon' => 'info', 'sort_order' => 6],
+                ['location' => 'sidebar', 'label' => 'NOS PRODUITS', 'url' => '/shop', 'icon' => 'shopping-bag', 'sort_order' => 2],
+                ['location' => 'sidebar', 'label' => 'PACKS', 'url' => '/packs', 'icon' => 'package', 'sort_order' => 3],
+                ['location' => 'sidebar', 'label' => 'MARQUES', 'url' => '/brands', 'icon' => 'store', 'sort_order' => 4],
+                ['location' => 'sidebar', 'label' => 'BLOG', 'url' => '/blog', 'icon' => 'newspaper', 'sort_order' => 5],
+                ['location' => 'sidebar', 'label' => 'CONTACT', 'url' => '/contact', 'icon' => 'mail', 'sort_order' => 6],
+                ['location' => 'sidebar', 'label' => 'QUI SOMMES NOUS', 'url' => '/qui-sommes-nous', 'icon' => 'info', 'sort_order' => 7],
             ];
 
             DB::table('site_navigation_items')->insert(array_map(

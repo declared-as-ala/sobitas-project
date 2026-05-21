@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { getCategories } from '@/services/api';
 import { fetchCategoryOrSubCategory } from '@/services/api';
-import { buildCanonicalUrl } from '@/util/canonical';
+import { buildCanonicalUrl, forceProteinDomain } from '@/util/canonical';
 import {
   buildBreadcrumbListSchema,
   buildCollectionPageSchema,
@@ -137,16 +137,18 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
             generateTunisiaMetaDescription(apiTitle || canonicalSlug, tunisiaKeywords));
     const canonicalUrl =
       merged.canonicalUrl && merged.canonicalUrl.length > 0
-        ? merged.canonicalUrl
+        ? forceProteinDomain(merged.canonicalUrl)
         : buildCanonicalUrl(`/${encodeURIComponent(canonicalSlug)}`);
     const descTrimmed = description.slice(0, 160);
-    const ogImage = merged.ogImage || undefined;
+    const ogImageRaw = merged.ogImage || undefined;
+    const ogImage = ogImageRaw && /^https?:\/\//i.test(ogImageRaw) && !/\s/.test(ogImageRaw) ? ogImageRaw : undefined;
     const ogAlt = (apiSeo?.og?.image_alt as string | undefined)?.trim() || merged.h1 || apiTitle || 'Catégorie';
     const ogTitleMeta = (merged.ogTitle ?? '').trim() || metaTitle;
     const ogDescMeta = (merged.ogDescription ?? '').trim() || descTrimmed;
     const twitterTitleMeta = (merged.twitterTitle ?? '').trim() || ogTitleMeta;
     const twitterDescMeta = (merged.twitterDescription ?? '').trim() || ogDescMeta;
-    const twitterImg = (merged.twitterImage ?? '').trim() || ogImage;
+    const twitterImgRaw = (merged.twitterImage ?? '').trim() || ogImageRaw;
+    const twitterImg = twitterImgRaw && /^https?:\/\//i.test(twitterImgRaw) && !/\s/.test(twitterImgRaw) ? twitterImgRaw : undefined;
     const kw = metaKeywordsList(merged);
     const fallbackKeywords = tunisiaKeywords ? [tunisiaKeywords.primary, ...tunisiaKeywords.variations] : [];
     const allKeywords = kw ? [...kw, ...fallbackKeywords] : (fallbackKeywords.length > 0 ? fallbackKeywords : undefined);

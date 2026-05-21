@@ -8,7 +8,21 @@ import { ChevronDown, ArrowRight } from 'lucide-react';
 import { getCategories } from '@/services/api';
 import { Category } from '@/types';
 
-export function ProductsDropdown() {
+type ProductsDropdownProps = {
+  label?: string;
+  href?: string;
+  opensNewTab?: boolean;
+};
+
+function canPrefetch(href: string): boolean {
+  return href.startsWith('/') && !href.startsWith('//');
+}
+
+export function ProductsDropdown({
+  label = 'NOS PRODUITS',
+  href = '/shop',
+  opensNewTab = false,
+}: ProductsDropdownProps) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [dropdownTop, setDropdownTop] = useState(0);
@@ -72,6 +86,11 @@ export function ProductsDropdown() {
 
   useEffect(() => () => { if (closeTimer.current) clearTimeout(closeTimer.current); }, []);
 
+  const prefetchShop = () => {
+    if (canPrefetch(href)) router.prefetch(href);
+  };
+  const targetProps = opensNewTab ? { target: '_blank', rel: 'noopener noreferrer' } : {};
+
   const dropdownContent = isOpen && mounted ? (
     <div
       ref={dropdownRef}
@@ -124,11 +143,12 @@ export function ProductsDropdown() {
             Découvrez toute notre gamme de produits
           </p>
           <LinkWithLoading
-            href="/shop"
+            href={href}
             className="inline-flex items-center gap-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors px-4 py-2 rounded-lg"
             loadingMessage="Chargement de la boutique..."
-            onMouseEnter={() => router.prefetch('/shop')}
+            onMouseEnter={prefetchShop}
             onClick={close}
+            {...targetProps}
           >
             Voir tous les produits
             <ArrowRight className="h-4 w-4" />
@@ -146,12 +166,13 @@ export function ProductsDropdown() {
       onMouseLeave={() => { hoverTrigger.current = false; scheduleClose(); }}
     >
       <LinkWithLoading
-        href="/shop"
+        href={href}
         className="text-sm font-semibold text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-400 transition-colors flex items-center gap-1 whitespace-nowrap py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
         loadingMessage="Chargement de la boutique..."
-        onMouseEnter={() => router.prefetch('/shop')}
+        onMouseEnter={prefetchShop}
+        {...targetProps}
       >
-        NOS PRODUITS
+        {label}
         <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
       </LinkWithLoading>
 
