@@ -13,7 +13,10 @@ return [
     |
     */
 
-    'default' => env('FILESYSTEM_DRIVER', 'local'),
+    // Support both the modern FILESYSTEM_DISK key (Laravel 9+) and the legacy
+    // FILESYSTEM_DRIVER key. Default to 'public' so uploads work even if
+    // neither env var is explicitly set.
+    'default' => env('FILESYSTEM_DISK', env('FILESYSTEM_DRIVER', 'public')),
 
     /*
     |--------------------------------------------------------------------------

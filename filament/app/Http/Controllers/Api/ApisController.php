@@ -40,7 +40,6 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 
 class ApisController extends Controller
 {
@@ -176,6 +175,29 @@ class ApisController extends Controller
             'created_at' => $page->created_at,
             'updated_at' => $page->updated_at,
         ];
+    }
+
+    private function normalizeCollectionImages(
+        \Illuminate\Support\Collection $collection,
+        string ...$fields
+    ): void {
+        $collection->transform(function ($item) use ($fields) {
+            foreach ($fields as $field) {
+                $value = $item->{$field};
+                $item->{$field} = is_array($value)
+                    ? ImagePath::normalizeArray($value)
+                    : ImagePath::normalize($value);
+            }
+
+            return $item;
+        });
+    }
+
+    private function normalizePaginatorImages(
+        LengthAwarePaginator $paginator,
+        string ...$fields
+    ): void {
+        $this->normalizeCollectionImages($paginator->getCollection(), ...$fields);
     }
 
     private function productListQuery()
@@ -385,31 +407,21 @@ class ApisController extends Controller
         // Frontend expects: cover, title, link
         // Database may have: image, titre/title, lien/link, type
         $slides->getCollection()->transform(function ($slide) use ($libraryByPath) {
-            // Get title - handle both 'titre' and 'title' column names
             $title = $slide->titre ?? $slide->title ?? null;
+            $link  = $slide->lien  ?? $slide->link  ?? null;
 
-            // Get link - handle both 'lien' and 'link' column names
-            $link = $slide->lien ?? $slide->link ?? null;
-
-            // Generate image URL - handle both relative paths and full URLs
-            $imageUrl = null;
-            if ($slide->image) {
-                if (filter_var($slide->image, FILTER_VALIDATE_URL)) {
-                    $imageUrl = $slide->image;
-                } else {
-                    $imageUrl = Storage::disk('public')->url($slide->image);
-                }
-            }
-
+            // Normalize to a clean relative path (strips full URLs, legacy public/ prefix).
+            // The frontend's getStorageUrl() prepends NEXT_PUBLIC_STORAGE_URL so every
+            // consumer produces the same absolute URL regardless of where this runs.
             $norm = ImagePath::normalize($slide->image);
 
             return [
-                'id' => $slide->id,
-                'cover' => $imageUrl,
-                'title' => $title,
-                'link' => $link,
-                'type' => $slide->type ?? 'web',
-                'image_media' => $norm ? ($libraryByPath[$norm] ?? null) : null,
+                'id'           => $slide->id,
+                'cover'        => $norm,
+                'title'        => $title,
+                'link'         => $link,
+                'type'         => $slide->type ?? 'web',
+                'image_media'  => $norm ? ($libraryByPath[$norm] ?? null) : null,
             ];
         });
 
@@ -517,6 +529,10 @@ class ApisController extends Controller
         $brands = Brand::whereIn('id', $brandIds)->get();
         $categories = Categ::select('id', 'slug', 'designation_fr', 'cover')->get();
 
+        $this->normalizeCollectionImages($products, 'cover');
+        $this->normalizeCollectionImages($brands, 'logo');
+        $this->normalizeCollectionImages($categories, 'cover');
+
         return response()->json([
             'products'   => $products,
             'brands'     => $brands,
@@ -555,6 +571,10 @@ class ApisController extends Controller
             ->select('id', 'designation_fr', 'logo')
             ->orderBy('designation_fr')
             ->get();
+
+        $this->normalizePaginatorImages($productsPaginator, 'cover');
+        $this->normalizeCollectionImages($brands, 'logo');
+        $category->cover = ImagePath::normalize($category->cover);
 
         $frontendBase = (string) config('app.frontend_url', config('app.url'));
 
@@ -602,6 +622,10 @@ class ApisController extends Controller
         $brandsPaginator = Brand::select('id', 'designation_fr', 'logo')
             ->orderBy('designation_fr')
             ->paginate($perPage);
+
+        $this->normalizePaginatorImages($productsPaginator, 'cover');
+        $this->normalizePaginatorImages($brandsPaginator, 'logo');
+        $brand->logo = ImagePath::normalize($brand->logo);
 
         return response()->json(array_merge(
             [
@@ -673,6 +697,9 @@ class ApisController extends Controller
             ->orderBy('designation_fr')
             ->get();
 
+        $this->normalizeCollectionImages($products, 'cover');
+        $this->normalizeCollectionImages($brands, 'logo');
+
         return response()->json([
             'sous_category'   => $sous_category,
             'seo'             => $seo,
@@ -707,6 +734,9 @@ class ApisController extends Controller
             ->select('id', 'designation_fr', 'logo')
             ->get();
 
+        $this->normalizeCollectionImages($products, 'cover');
+        $this->normalizeCollectionImages($brands, 'logo');
+
         return compact('products', 'brands');
     }
 
@@ -734,6 +764,9 @@ class ApisController extends Controller
         $brands = Brand::whereIn('id', $products->pluck('brand_id')->unique()->filter())
             ->select('id', 'designation_fr', 'logo')
             ->get();
+
+        $this->normalizeCollectionImages($products, 'cover');
+        $this->normalizeCollectionImages($brands, 'logo');
 
         return compact('products', 'brands');
     }
@@ -853,6 +886,8 @@ class ApisController extends Controller
             ->orderBy('designation_fr')
             ->paginate($perPage);
 
+        $this->normalizePaginatorImages($brands, 'logo');
+
         return $this->paginatedResponse($brands);
     }
 
@@ -911,7 +946,13 @@ class ApisController extends Controller
 
     public function media()
     {
-        return Annonce::select('id', 'cover', 'title', 'link', 'publier')->first();
+        $annonce = Annonce::select('id', 'cover', 'title', 'link', 'publier')->first();
+
+        if ($annonce) {
+            $annonce->cover = ImagePath::normalize($annonce->cover);
+        }
+
+        return $annonce;
     }
 
     public function newsLetter(Request $request): JsonResponse
@@ -954,6 +995,8 @@ class ApisController extends Controller
         $services = Service::select('id', 'title', 'description', 'icon', 'cover')
             ->orderBy('id')
             ->paginate($perPage);
+
+        $this->normalizePaginatorImages($services, 'cover');
 
         return $this->paginatedResponse($services);
     }

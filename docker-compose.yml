@@ -1,9 +1,16 @@
 # ==============================================================
-# sobitas-project - Filament v2 + MySQL + Redis + Frontend
-# - no persistent volume for vendor / bootstrap / full storage
-# - uploaded images: bind-mount from host
-#   /root/sobitas-project/filament/storage/app/public
-#   (copy once from Voyager, then each system writes to its own copy)
+# sobitas-project — Filament (Laravel) + MySQL + Redis + Next.js
+#
+# Image persistence strategy:
+#   Uploaded files → host bind-mount at:
+#     /root/sobitas-project/filament/storage/app/public
+#   Both php-fpm (backend-v2) and nginx (backend-nginx-v2) mount
+#   this same host path so uploads are never lost on redeploy.
+#
+# Nginx public assets (CSS/JS) → named volume backend-v2-public
+#   Synced by backend-v2-public-init on every deploy (non-destructive).
+#
+# Storage URL:  https://admin.protein.tn/storage/<relative-path>
 # ==============================================================
 
 services:
@@ -94,10 +101,9 @@ services:
       redis:
         condition: service_healthy
     volumes:
-      # Bind-mount host storage so Filament and Voyager share the same image files
+      # Host bind-mount: uploaded files persist across container recreations.
+      # php-fpm writes here; nginx reads the same host directory via its own mount.
       - /root/sobitas-project/filament/storage/app/public:/var/www/html/storage/app/public
-      # Sync public/ to nginx volume on every container start (entrypoint handles this)
-      - backend-v2-public:/mnt/nginx-public
 
   backend-v2-queue:
     image: ghcr.io/declared-as-ala/sobitas-backend-v2:latest
@@ -163,14 +169,20 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command: |
       set -e
-      echo "=== Copying public assets and creating storage symlink ==="
-      find /public -mindepth 1 -delete 2>/dev/null || true
+      echo "=== Syncing public assets to nginx volume (non-destructive) ==="
+
+      # Copy compiled CSS/JS/assets from the image into the shared nginx volume.
+      # Non-destructive: cp -a overwrites changed files and adds new ones without
+      # deleting anything nginx might be actively reading from the old copy.
       cp -a /var/www/html/public/. /public/
-      rm -f /public/storage
-      ln -s /var/www/html/storage/app/public /public/storage
-      echo "✓ Public assets copied"
-      echo "✓ Storage symlink created: /public/storage -> /var/www/html/storage/app/public"
-      ls -la /public | grep storage || echo "⚠ Warning: symlink verification failed"
+
+      # Atomically replace the storage symlink so nginx can resolve /storage/* paths.
+      # ln -sfn replaces an existing symlink in a single syscall (no rm + ln race).
+      ln -sfn /var/www/html/storage/app/public /public/storage
+
+      echo "✓ Public assets synced to nginx volume"
+      echo "✓ Storage symlink: /public/storage -> /var/www/html/storage/app/public"
+      ls -la /public/storage 2>/dev/null || echo "⚠ Warning: storage symlink not visible"
 
   backend-nginx-v2:
     image: nginx:stable
@@ -193,8 +205,15 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      NEXT_PUBLIC_API_URL: https://admin.protein.tn/api
+      # NEXT_PUBLIC_* are baked into the client bundle at build time by CI.
+      # Setting them here only affects server-side process.env reads (Server Components).
+      # Both must match the CI build-args in deploy-frontend.yml to prevent
+      # React hydration mismatches (SSR URL ≠ client URL → images flash/disappear).
+      NEXT_PUBLIC_API_URL: https://protein.tn/api-proxy
       NEXT_PUBLIC_STORAGE_URL: https://admin.protein.tn/storage
+      # Server-side rewrite targets: use internal Docker DNS (avoids the public internet).
+      API_BACKEND_URL: http://backend-nginx-v2/api
+      STORAGE_BACKEND_URL: http://backend-nginx-v2/storage
     ports:
       - "3001:3000"
     networks:

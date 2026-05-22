@@ -54,8 +54,11 @@ jobs:
         run: npm run build
         working-directory: frontend
         env:
+          # NEXT_PUBLIC_STORAGE_URL must match the docker-compose runtime value so that
+          # SSR-rendered image src attributes are identical to client-rendered ones.
+          # Using the direct backend URL eliminates React hydration mismatches.
           NEXT_PUBLIC_API_URL: https://protein.tn/api-proxy
-          NEXT_PUBLIC_STORAGE_URL: https://protein.tn/storage-proxy
+          NEXT_PUBLIC_STORAGE_URL: https://admin.protein.tn/storage
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -75,9 +78,9 @@ jobs:
           push: true
           build-args: |
             NEXT_PUBLIC_API_URL=https://protein.tn/api-proxy
-            NEXT_PUBLIC_STORAGE_URL=https://protein.tn/storage-proxy
-            API_BACKEND_URL=https://admin.protein.tn/api
-            STORAGE_BACKEND_URL=https://admin.protein.tn/storage
+            NEXT_PUBLIC_STORAGE_URL=https://admin.protein.tn/storage
+            API_BACKEND_URL=http://backend-nginx-v2/api
+            STORAGE_BACKEND_URL=http://backend-nginx-v2/storage
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}

@@ -21,20 +21,24 @@ if [ -z "$APP_KEY" ] || ! grep -q 'APP_KEY=base64:' .env 2>/dev/null; then
   php artisan key:generate --force 2>/dev/null || true
 fi
 
-# Ensure runtime directories exist
-mkdir -p storage/framework/cache
-mkdir -p storage/framework/sessions
-mkdir -p storage/framework/testing
-mkdir -p storage/framework/views
-mkdir -p storage/logs
-mkdir -p bootstrap/cache
-mkdir -p storage/app/public
+# Ensure runtime directories exist (storage/app/public is bind-mounted from the
+# host, so mkdir only creates it if not already present via the mount).
+mkdir -p storage/framework/cache \
+         storage/framework/sessions \
+         storage/framework/testing \
+         storage/framework/views \
+         storage/logs \
+         bootstrap/cache \
+         storage/app/public
 
-# Permissions
+# Fix permissions so php-fpm (www-data) can write to storage and cache.
 chown -R www-data:www-data storage bootstrap/cache 2>/dev/null || true
 chmod -R 775 storage bootstrap/cache 2>/dev/null || true
 
-# Create storage symlink if missing
+# Create the public/storage → storage/app/public symlink that Laravel uses
+# for serving uploaded files through the web root.
+# This symlink lives inside the container's ephemeral filesystem layer, so it
+# must be (re)created on every container start.
 if [ ! -L public/storage ] || [ ! -e public/storage ]; then
   echo "Creating storage symlink..."
   php artisan storage:link 2>/dev/null || {
@@ -46,8 +50,7 @@ else
   echo "✓ Storage symlink already exists"
 fi
 
-# Wait for DB to accept connections BEFORE attempting migrations.
-# PDO with ATTR_TIMEOUT=2 prevents the migrate command from hanging indefinitely.
+# Wait for the database to accept connections before running migrations.
 echo "Waiting for database to be ready..."
 DB_HOST="${DB_HOST:-mysql}"
 DB_PORT="${DB_PORT:-3306}"
@@ -86,32 +89,20 @@ else
   fi
 fi
 
-# Publish Filament assets
+# Publish Filament panel assets (CSS, JS, icons).
 echo "Publishing Filament assets..."
 php artisan filament:assets >/dev/null 2>&1 || true
 
-# Sync public/ to the nginx volume so static files (CSS, JS, images) are always fresh.
-# This runs on EVERY container start so new deployments are reflected immediately.
-# The nginx container reads from /mnt/nginx-public (backend-v2-public volume).
-if [ -d /mnt/nginx-public ]; then
-  echo "Syncing public assets to nginx volume..."
-  cp -a /var/www/html/public/. /mnt/nginx-public/
-  rm -f /mnt/nginx-public/storage
-  ln -s /var/www/html/storage/app/public /mnt/nginx-public/storage 2>/dev/null || true
-  echo "✓ Public assets synced to nginx volume"
-fi
-
-# Rebuild caches BEFORE php-fpm starts
+# Rebuild all Laravel caches before php-fpm starts serving requests.
 echo "Rebuilding Laravel caches..."
 php artisan optimize:clear || true
-php artisan config:cache || true
-php artisan route:cache || true
-php artisan view:cache || true
-php artisan event:cache || true
-
+php artisan config:cache  || true
+php artisan route:cache   || true
+php artisan view:cache    || true
+php artisan event:cache   || true
 echo "✓ Laravel caches rebuilt"
 
-# Ready marker for deploy workflow
+# Ready marker consumed by the deploy workflow to know the container is up.
 date '+%Y-%m-%d %H:%M:%S' > /tmp/.entrypoint-ready
 echo "✓ Ready marker written to /tmp/.entrypoint-ready"
 

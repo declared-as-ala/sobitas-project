@@ -1,20 +1,29 @@
 /**
  * Custom Next.js image loader.
- * Next.js requires the loader to implement width - we must include width in the returned URL.
- * For storage URLs (admin.sobitas.tn, admin.protein.tn): append w= param (server may ignore it).
- * For other URLs: use default Next.js optimization (/_next/image?url=...).
+ *
+ * Images stored in the Laravel backend (admin.protein.tn/storage/*) bypass
+ * Next.js image optimisation and are fetched directly. This prevents a
+ * double-proxy hop and avoids re-encoding already-optimised WebP files.
+ *
+ * For every other source the built-in /_next/image optimiser is used.
+ *
+ * Next.js requires each loader to include the `width` parameter in the
+ * returned URL (even if the server ignores it) — we append ?w= as a no-op.
  */
 module.exports = function imageLoader({ src, width, quality }) {
-  const isStorageUrl =
-    typeof src === 'string' &&
-    (src.includes('/storage/') ||
-      src.startsWith('http://localhost/storage') ||
-      src.startsWith('https://localhost/storage') ||
-      (src.startsWith('http') && (src.includes('/storage/') || src.includes('admin.sobitas.tn') || src.includes('admin.protein.tn'))));
-  if (isStorageUrl) {
-    // Include width to satisfy Next.js requirement (append as query param)
-    const sep = src.includes('?') ? '&' : '?';
-    return `${src}${sep}w=${width}&q=${quality || 75}`;
+  if (typeof src !== 'string' || src === '') {
+    return src;
   }
+
+  const isStorageUrl =
+    src.includes('admin.protein.tn') ||
+    src.includes('admin.sobitas.tn') ||
+    src.includes('/storage/');
+
+  if (isStorageUrl) {
+    const separator = src.includes('?') ? '&' : '?';
+    return `${src}${separator}w=${width}&q=${quality || 75}`;
+  }
+
   return `/_next/image?url=${encodeURIComponent(src)}&w=${width}&q=${quality || 75}`;
 };
