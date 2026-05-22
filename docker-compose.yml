@@ -167,22 +167,15 @@ services:
       - backend-v2-public:/public
       - /root/sobitas-project/filament/storage/app/public:/var/www/html/storage/app/public
     entrypoint: ["/bin/sh", "-c"]
-    command: |
-      set -e
-      echo "=== Syncing public assets to nginx volume (non-destructive) ==="
-
-      # Copy compiled CSS/JS/assets from the image into the shared nginx volume.
-      # Non-destructive: cp -a overwrites changed files and adds new ones without
-      # deleting anything nginx might be actively reading from the old copy.
-      cp -a /var/www/html/public/. /public/
-
-      # Atomically replace the storage symlink so nginx can resolve /storage/* paths.
-      # ln -sfn replaces an existing symlink in a single syscall (no rm + ln race).
-      ln -sfn /var/www/html/storage/app/public /public/storage
-
-      echo "✓ Public assets synced to nginx volume"
-      echo "✓ Storage symlink: /public/storage -> /var/www/html/storage/app/public"
-      ls -la /public/storage 2>/dev/null || echo "⚠ Warning: storage symlink not visible"
+    command:
+      - |
+        set -e
+        echo "=== Syncing public assets to nginx volume (non-destructive) ==="
+        cp -a /var/www/html/public/. /public/
+        ln -sfn /var/www/html/storage/app/public /public/storage
+        echo "✓ Public assets synced"
+        echo "✓ Storage symlink: /public/storage -> /var/www/html/storage/app/public"
+        ls -la /public/storage 2>/dev/null || echo "⚠ Warning: storage symlink not visible"
 
   backend-nginx-v2:
     image: nginx:stable
