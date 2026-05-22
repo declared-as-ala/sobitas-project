@@ -3,7 +3,7 @@
 #
 # Image persistence strategy:
 #   Uploaded files → host bind-mount at:
-#     /root/sobitas-project/filament/storage/app/public
+#     /var/sobitas/uploads  (outside git — git can NEVER delete these files)
 #   Both php-fpm (backend-v2) and nginx (backend-nginx-v2) mount
 #   this same host path so uploads are never lost on redeploy.
 #
@@ -103,7 +103,7 @@ services:
     volumes:
       # Host bind-mount: uploaded files persist across container recreations.
       # php-fpm writes here; nginx reads the same host directory via its own mount.
-      - /root/sobitas-project/filament/storage/app/public:/var/www/html/storage/app/public
+      - /var/sobitas/uploads:/var/www/html/storage/app/public
 
   backend-v2-queue:
     image: ghcr.io/declared-as-ala/sobitas-backend-v2:latest
@@ -155,7 +155,7 @@ services:
       redis:
         condition: service_healthy
     volumes:
-      - /root/sobitas-project/filament/storage/app/public:/var/www/html/storage/app/public
+      - /var/sobitas/uploads:/var/www/html/storage/app/public
 
   backend-v2-public-init:
     image: ghcr.io/declared-as-ala/sobitas-backend-v2:latest
@@ -165,7 +165,7 @@ services:
       - sobitas-net
     volumes:
       - backend-v2-public:/public
-      - /root/sobitas-project/filament/storage/app/public:/var/www/html/storage/app/public
+      - /var/sobitas/uploads:/var/www/html/storage/app/public
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
@@ -189,7 +189,7 @@ services:
       - backend-v2
     volumes:
       - backend-v2-public:/var/www/html/public:ro
-      - /root/sobitas-project/filament/storage/app/public:/var/www/html/storage/app/public:ro
+      - /var/sobitas/uploads:/var/www/html/storage/app/public:ro
       - ./nginx/configuration.conf:/etc/nginx/conf.d/default.conf:ro
 
   frontend:
