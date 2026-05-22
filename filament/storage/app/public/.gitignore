@@ -1,0 +1,6 @@
+# Uploaded media files are NOT tracked in git.
+# Persistence is handled by the Docker host bind-mount:
+#   /root/sobitas-project/filament/storage/app/public  →  container:/var/www/html/storage/app/public
+# Never commit binary assets to version control.
+*
+!.gitignore
