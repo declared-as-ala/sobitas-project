@@ -2,6 +2,7 @@ import type { MetadataRoute } from 'next';
 import { getAllProducts, getAllArticles, getCategories, getAllBrands, getBlogCategories, getBlogTags, getAppPages } from '@/services/api';
 import type { Product, Article, Category, Brand, SubCategory, Page } from '@/types';
 import { buildProductUrl, getProductPrimarySubCategory } from '@/util/productUrl';
+import { listCategorySeoSlugs } from '@/util/categorySeoContent';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
 
@@ -173,8 +174,7 @@ export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
         if (!category.slug) return;
         const catIdx =
           category.sitemap_include !== false &&
-          category.robots_index !== false &&
-          category.seo_enabled !== false;
+          category.robots_index !== false;
         if (catIdx) {
           const url = `${BASE_URL}/${encodeURIComponent(category.slug)}`;
           if (!seenUrls.has(url)) {
@@ -192,8 +192,7 @@ export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             if (!subCategory.slug) return;
             if (
               subCategory.sitemap_include === false ||
-              subCategory.robots_index === false ||
-              subCategory.seo_enabled === false
+              subCategory.robots_index === false
             ) {
               return;
             }
@@ -213,6 +212,28 @@ export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
     }
   } catch (error) {
     console.error('Error processing categories for sitemap:', error);
+  }
+
+  // Double Insurance: Add every category/subcategory that has localized premium SEO JSON content
+  try {
+    const seoSlugs = await listCategorySeoSlugs();
+    if (Array.isArray(seoSlugs) && seoSlugs.length > 0) {
+      seoSlugs.forEach((slug) => {
+        if (!slug || slug.trim() === '') return;
+        const url = `${BASE_URL}/${encodeURIComponent(slug.trim())}`;
+        if (!seenUrls.has(url)) {
+          seenUrls.add(url);
+          sitemapEntries.push({
+            url,
+            lastModified: new Date(),
+            changeFrequency: 'weekly',
+            priority: 0.8,
+          });
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error processing SEO content slugs for sitemap:', error);
   }
 
   try {

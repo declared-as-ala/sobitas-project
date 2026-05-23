@@ -12,13 +12,20 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Slider } from '@/app/components/ui/slider';
 import { Checkbox } from '@/app/components/ui/checkbox';
-import { Filter, Search, X, CircleAlert } from 'lucide-react';
+import { Filter, Search, X, CircleAlert, Sparkles, TrendingUp, Heart } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/app/components/ui/sheet';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/app/components/ui/accordion';
 import { Badge } from '@/app/components/ui/badge';
 import { motion, AnimatePresence } from 'motion/react';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { Pagination } from '@/app/components/ui/pagination';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/app/components/ui/select';
 import type { Product, Category, Brand } from '@/types';
 import { searchProducts, getProductsByCategory, getProductsBySubCategory, getProductsByBrand } from '@/services/api';
 import { getStorageUrl } from '@/services/api';
@@ -69,6 +76,12 @@ function ShopContent({
   const [showFilters, setShowFilters] = useState(false);
   const [showFiltersDesktop, setShowFiltersDesktop] = useState(true);
   
+  // Sorting and sub-filters states
+  const [sortBy, setSortBy] = useState<string>('popularity');
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
+  const [selectedFlavors, setSelectedFlavors] = useState<string[]>([]);
+
   // Provide safe defaults if productsData is undefined
   const safeProductsData = productsData || {
     products: [],
@@ -78,7 +91,6 @@ function ShopContent({
   
   // Initialize products from props - if initialCategory is provided, products are already filtered from server
   const [products, setProducts] = useState<Product[]>(() => {
-    // If we have initialCategory, products are already filtered from server, use them directly
     if (initialCategory) {
       return safeProductsData.products || [];
     }
@@ -122,38 +134,30 @@ function ShopContent({
     const brand = searchParams.get('brand');
     const search = searchParams.get('search');
 
-    // Use initialCategory from props if available (new route structure), otherwise use query param
     const categoryToUse = initialCategory || category;
 
-    // Update categories - clear if not in URL, set if present
     if (categoryToUse) {
       const decodedCategory = decodeURIComponent(categoryToUse);
       setSelectedCategories(prev => {
-        // Only update if different to avoid unnecessary re-renders
         return prev.length === 1 && prev[0] === decodedCategory ? prev : [decodedCategory];
       });
     } else {
-      // Boutique globale (/shop): reset filters and products so we never show "Aucun produit trouvé"
       setSelectedCategories([]);
       setProducts(safeProductsData.products || []);
       setCurrentBrand(null);
     }
 
-    // Use initialBrand from props if available (new route structure), otherwise use query param
     const brandToUse = initialBrand ? initialBrand.toString() : brand;
 
-    // Update brands - clear if not in URL, set if present
     if (brandToUse) {
       const brandId = parseInt(brandToUse);
       setSelectedBrands(prev => {
-        // Only update if different to avoid unnecessary re-renders
         return prev.length === 1 && prev[0] === brandId ? prev : [brandId];
       });
     } else {
       setSelectedBrands([]);
     }
 
-    // Update search query
     if (search) {
       setSearchQuery(decodeURIComponent(search));
     } else {
@@ -186,41 +190,23 @@ function ShopContent({
     return str
       .toLowerCase()
       .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // Remove accents
-      .replace(/\s+/g, ' ') // Normalize whitespace
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, ' ')
       .trim();
   };
 
-  // Convert name to slug format (e.g., "Gainers Haute Énergie" -> "gainers-haute-energie")
+  // Convert name to slug format
   const nameToSlug = (name: string): string => {
     return name
       .toLowerCase()
       .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // Remove accents
-      .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric with hyphens
-      .replace(/^-+|-+$/g, '') // Remove leading/trailing hyphens
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
       .trim();
   };
 
-  // Find subcategory by name (case-insensitive, accent-insensitive, flexible matching)
-  const findSubCategoryByName = (name: string): { id: number; name: string; slug: string } | null => {
-    const normalizedName = normalizeString(name);
-
-    // First try exact match
-    let found = subCategories.find(sub => normalizeString(sub.name) === normalizedName);
-
-    // If no exact match, try partial match (contains)
-    if (!found) {
-      found = subCategories.find(sub =>
-        normalizeString(sub.name).includes(normalizedName) ||
-        normalizedName.includes(normalizeString(sub.name))
-      );
-    }
-
-    return found ? { id: found.id, name: found.name, slug: found.slug } : null;
-  };
-
-  // Get min and max prices (use effective price: promo if valid, else prix)
+  // Get min and max prices
   const priceBounds = useMemo(() => {
     const prices = products
       .map(p => getEffectivePrice(p))
@@ -255,12 +241,10 @@ function ShopContent({
     const brandCounts = new Map<number, number>();
 
     allProducts.forEach(product => {
-      // Count by category
       if (product.sous_categorie?.categorie) {
         const catSlug = product.sous_categorie.categorie.slug;
         categoryCounts.set(catSlug, (categoryCounts.get(catSlug) || 0) + 1);
       }
-      // Count by brand
       if (product.brand_id) {
         brandCounts.set(product.brand_id, (brandCounts.get(product.brand_id) || 0) + 1);
       }
@@ -269,9 +253,36 @@ function ShopContent({
     return { categoryCounts, brandCounts };
   }, [safeProductsData.products]);
 
-  // Get applied filters as chips
+  // Check if Creatine category is active
+  const isCreatineCategory = useMemo(() => {
+    return (
+      initialCategory === 'creatine' ||
+      initialCategory === 'creatine-tunisie' ||
+      selectedCategories.includes('creatine') ||
+      selectedCategories.includes('creatine-tunisie')
+    );
+  }, [initialCategory, selectedCategories]);
+
+  // Dynamic flavor extraction from products
+  const uniqueFlavors = useMemo(() => {
+    const flavors = new Set<string>();
+    const list = products.length > 0 ? products : (safeProductsData.products || []);
+    list.forEach(p => {
+      const aromes = (p as any).aromes || [];
+      if (Array.isArray(aromes)) {
+        aromes.forEach((a: any) => {
+          if (a?.designation_fr) {
+            flavors.add(a.designation_fr);
+          }
+        });
+      }
+    });
+    return Array.from(flavors);
+  }, [products, safeProductsData.products]);
+
+  // Dynamic category SEO Applied filters chips
   const appliedFilters = useMemo(() => {
-    const filters: Array<{ type: 'category' | 'brand' | 'price' | 'stock'; label: string; value: string | number }> = [];
+    const filters: Array<{ type: 'category' | 'brand' | 'price' | 'stock' | 'type' | 'goal' | 'flavor'; label: string; value: string | number }> = [];
     
     selectedCategories.forEach(slug => {
       const category = categories.find(c => c.slug === slug);
@@ -295,14 +306,23 @@ function ShopContent({
       });
     }
 
-    // Note: inStockOnly is not included in chips as it's a default filter
-    // Users can still see it in the filter panel
+    selectedTypes.forEach(type => {
+      filters.push({ type: 'type', label: type, value: type });
+    });
+
+    selectedGoals.forEach(goal => {
+      filters.push({ type: 'goal', label: goal, value: goal });
+    });
+
+    selectedFlavors.forEach(flavor => {
+      filters.push({ type: 'flavor', label: flavor, value: flavor });
+    });
 
     return filters;
-  }, [selectedCategories, selectedBrands, priceRange, priceBounds, categories, brands, safeProductsData.brands]);
+  }, [selectedCategories, selectedBrands, priceRange, priceBounds, categories, brands, safeProductsData.brands, selectedTypes, selectedGoals, selectedFlavors]);
 
-  // Remove a specific filter
-  const removeFilter = (type: 'category' | 'brand' | 'price' | 'stock', value: string | number) => {
+  // Remove specific filters
+  const removeFilter = (type: 'category' | 'brand' | 'price' | 'stock' | 'type' | 'goal' | 'flavor', value: string | number) => {
     if (type === 'category') {
       setSelectedCategories(prev => prev.filter(c => c !== value));
     } else if (type === 'brand') {
@@ -311,40 +331,56 @@ function ShopContent({
       setPriceRange([priceBounds.min, priceBounds.max]);
     } else if (type === 'stock') {
       setInStockOnly(false);
+    } else if (type === 'type') {
+      setSelectedTypes(prev => prev.filter(t => t !== value));
+    } else if (type === 'goal') {
+      setSelectedGoals(prev => prev.filter(g => g !== value));
+    } else if (type === 'flavor') {
+      setSelectedFlavors(prev => prev.filter(f => f !== value));
     }
   };
 
-  // Helper function to check if product matches search query (handles multiple words)
   const matchesSearch = (product: Product, query: string): boolean => {
     if (!query.trim()) return true;
-
     const searchTerms = query.toLowerCase().trim().split(/\s+/).filter(term => term.length > 0);
     if (searchTerms.length === 0) return true;
-
     const productText = [
       product.designation_fr || '',
       product.designation_ar || '',
       product.brand?.designation_fr || '',
       product.sous_categorie?.designation_fr || '',
     ].join(' ').toLowerCase();
-
-    // All search terms must be found in the product text
     return searchTerms.every(term => productText.includes(term));
   };
 
-  // Handle filtering (search, category, brand)
+  // Creatine Sub-filters matching helpers
+  const matchesType = (product: Product, type: string): boolean => {
+    const text = (product.designation_fr || '').toLowerCase();
+    if (type === 'Monohydrate') return text.includes('monohydrate') || text.includes('pure');
+    if (type === 'Micronisée') return text.includes('micronized') || text.includes('micronisee') || text.includes('micronisée');
+    if (type === 'Capsules') return text.includes('capsule') || text.includes('gelule') || text.includes('gélule') || text.includes('caps') || text.includes('gélules');
+    if (type === 'Creapure') return text.includes('creapure');
+    return true;
+  };
+
+  const matchesGoal = (product: Product, goal: string): boolean => {
+    const text = ((product.designation_fr || '') + ' ' + ((product as any).description_fr || '')).toLowerCase();
+    if (goal === 'Force') return true;
+    if (goal === 'Masse') return text.includes('masse') || text.includes('mass') || text.includes('volum');
+    if (goal === 'Performance') return text.includes('performance') || text.includes('endurance') || text.includes('energie') || text.includes('énergie');
+    if (goal === 'Récupération') return text.includes('recup') || text.includes('récup') || text.includes('recover');
+    return true;
+  };
+
+  // Handle filtering
   useEffect(() => {
-    // If initialCategory is provided and matches selected category, products are already filtered from server
-    // Only re-filter if user manually changes filters (not from initialCategory)
     const isInitialCategoryLoad = initialCategory && 
                                    selectedCategories.length > 0 && 
                                    selectedCategories[0] === initialCategory &&
                                    !searchQuery.trim() && 
                                    selectedBrands.length === 0;
 
-    // If this is the initial load with a category from server, use products from props
     if (isInitialCategoryLoad) {
-      // Products are already filtered from server, just ensure they're set
       if (safeProductsData.products) {
         setProducts(safeProductsData.products);
       }
@@ -353,17 +389,12 @@ function ShopContent({
       return;
     }
 
-    // If we have a simple brand/category filter, apply it immediately without debounce
-    // If we have a text search, use debounce
-
     const applyFilters = async () => {
       setFilterError(null);
-      // 1. Search Query (Priority, Async Debounced)
       if (searchQuery.trim()) {
         setCurrentBrand(null);
         setIsSearching(true);
         try {
-          // When searching, search within current filtered products or all products
           const baseProducts = products.length > 0 ? products : (safeProductsData.products || []);
           const foundProducts = baseProducts.filter(product => matchesSearch(product, searchQuery));
           setProducts(foundProducts);
@@ -376,7 +407,6 @@ function ShopContent({
         return;
       }
 
-      // 2. Category/Subcategory Filter (Always use API for accurate results)
       if (selectedCategories.length > 0) {
         setCurrentBrand(null);
         setIsSearching(true);
@@ -384,48 +414,36 @@ function ShopContent({
           const categoryParam = selectedCategories[0];
           let productsFound = false;
           
-          // IMPORTANT: Try category API first (since categories from home page are main categories)
-          // This is more efficient and matches the expected behavior
           try {
             const catResult = await getProductsByCategory(categoryParam);
             if (catResult.products !== undefined && catResult.category) {
-              // API returned a valid response with category data
               setProducts(catResult.products);
               productsFound = true;
-              console.log(`[ShopPageClient] Found ${catResult.products.length} products for category "${categoryParam}"`);
             }
           } catch (e: any) {
-            // Category API failed, try as subcategory
             if (e?.response?.status !== 404) {
               console.log(`Category API error for "${categoryParam}":`, e?.response?.status || e?.message);
             }
           }
 
-          // Try as subcategory slug (if category didn't work)
           if (!productsFound) {
             try {
               const subResult = await getProductsBySubCategory(categoryParam);
               if (subResult.products !== undefined && subResult.sous_category) {
-                // API returned a valid response with subcategory data
                 setProducts(subResult.products);
                 productsFound = true;
-                console.log(`[ShopPageClient] Found ${subResult.products.length} products for subcategory "${categoryParam}"`);
               }
             } catch (e: any) {
-              // Subcategory API also failed
               if (e?.response?.status !== 404) {
                 console.log(`Subcategory API error for "${categoryParam}":`, e?.response?.status || e?.message);
               }
             }
           }
 
-          // Final fallback: try client-side filtering only if API completely failed
           if (!productsFound) {
-            console.warn(`[ShopPageClient] API failed for "${categoryParam}", trying client-side fallback`);
             const allProducts = safeProductsData.products || [];
             const pParam = normalizeString(categoryParam);
 
-            // Try to match as category first (more common from home page)
             const filteredByCategory = allProducts.filter(p => {
               if (p.sous_categorie?.categorie) {
                 const cat = p.sous_categorie.categorie;
@@ -438,7 +456,6 @@ function ShopContent({
               return false;
             });
 
-            // Try to match as subcategory
             const filteredBySubCategory = allProducts.filter(p =>
               p.sous_categorie && (
                 normalizeString(p.sous_categorie.designation_fr) === pParam ||
@@ -447,9 +464,7 @@ function ShopContent({
               )
             );
 
-            // Use whichever has results
             const filtered = filteredByCategory.length > 0 ? filteredByCategory : filteredBySubCategory;
-            console.log(`[ShopPageClient] Client-side fallback found ${filtered.length} products`);
             setProducts(filtered);
           }
 
@@ -463,46 +478,35 @@ function ShopContent({
         return;
       }
 
-      // 3. Brand Filter (FAST PATH)
       if (selectedBrands.length > 0) {
         setIsSearching(true);
         const brandId = selectedBrands[0];
 
-        // Find brand info from props (temporary, will be replaced by API data)
         const brandInfo = brands.find(b => b.id === brandId) || safeProductsData.brands.find(b => b.id === brandId);
         setCurrentBrand(brandInfo || null);
 
-        // Filter client-side first for fast display
         const allProducts = safeProductsData.products || [];
         const filtered = allProducts.filter(p => p.brand_id === brandId);
 
-        // Always fetch brand data from API to get full info including description
-        // This runs in parallel with client-side filtering
         const fetchBrandData = async () => {
           try {
             const result = await getProductsByBrand(brandId);
-            // Update brand with full data from API (includes description_fr)
             if (result.brand) {
               setCurrentBrand(result.brand);
             }
-            // If no client-side products found, use API products
             if (filtered.length === 0) {
               setProducts(result.products || []);
             }
           } catch (error) {
             console.error('Error fetching brand data:', error);
-            // Keep the brand from props if API fails
           }
         };
 
-        // If we found products client-side, use them immediately
         if (filtered.length > 0) {
           setProducts(filtered);
           setIsSearching(false);
-          // Still fetch brand data in background for description
           fetchBrandData();
         } else {
-          // No client-side products, fetch everything from API
           try {
             const result = await getProductsByBrand(brandId);
             setProducts(result.products || []);
@@ -519,7 +523,6 @@ function ShopContent({
         return;
       }
 
-      // 4. No Filters - only reset if not coming from a category page
       if (!initialCategory) {
         setProducts(safeProductsData.products || []);
         setCurrentBrand(null);
@@ -527,46 +530,93 @@ function ShopContent({
     };
 
     if (searchQuery.trim()) {
-      // Debounce for search only
       const timeoutId = setTimeout(applyFilters, 500);
       return () => clearTimeout(timeoutId);
     } else {
-      // Immediate for others
       applyFilters();
     }
   }, [searchQuery, selectedCategories, selectedBrands, safeProductsData.products, brands, initialCategory, retryCount]);
 
-  // Reset description expanded state when brand changes
   useEffect(() => {
     setIsDescriptionExpanded(false);
   }, [currentBrand?.id]);
 
-  // Filter products locally (for price and additional filters)
+  // Compute filtered & sorted products
   const filteredProducts = useMemo(() => {
     let filtered = products;
 
-    // Price filter (effective price: promo if valid, else prix) - use debounced value
+    // Price Filter
     filtered = filtered.filter(product => {
       const price = getEffectivePrice(product);
       return price >= debouncedPriceRange[0] && price <= debouncedPriceRange[1];
     });
 
-    // Brand filter (if not already filtered by API)
+    // Brand Filter
     if (selectedBrands.length > 0 && !searchQuery && selectedCategories.length === 0) {
       filtered = filtered.filter(product =>
         product.brand_id && selectedBrands.includes(product.brand_id)
       );
     }
 
-    // In stock filter
+    // Availability (Stock) Filter
     if (inStockOnly) {
       filtered = filtered.filter(product => isInStock(product as any));
     }
 
-    return filtered;
-  }, [products, priceRange, selectedBrands, searchQuery, selectedCategories, inStockOnly]);
+    // Custom Type Filter
+    if (isCreatineCategory && selectedTypes.length > 0) {
+      filtered = filtered.filter(product =>
+        selectedTypes.some(type => matchesType(product, type))
+      );
+    }
 
-  // Calculate pagination
+    // Custom Goal Filter
+    if (isCreatineCategory && selectedGoals.length > 0) {
+      filtered = filtered.filter(product =>
+        selectedGoals.some(goal => matchesGoal(product, goal))
+      );
+    }
+
+    // Custom Flavor Filter
+    if (selectedFlavors.length > 0) {
+      filtered = filtered.filter(product => {
+        const aromes = (product as any).aromes || [];
+        return aromes.some((a: any) => selectedFlavors.includes(a.designation_fr));
+      });
+    }
+
+    // Sorting Engine
+    if (sortBy === 'price-asc') {
+      filtered = [...filtered].sort((a, b) => getEffectivePrice(a) - getEffectivePrice(b));
+    } else if (sortBy === 'price-desc') {
+      filtered = [...filtered].sort((a, b) => getEffectivePrice(b) - getEffectivePrice(a));
+    } else if (sortBy === 'newest') {
+      filtered = [...filtered].sort((a, b) => (b.new_product ?? 0) - (a.new_product ?? 0));
+    } else if (sortBy === 'best-sellers') {
+      filtered = [...filtered].sort((a, b) => (b.best_seller ?? 0) - (a.best_seller ?? 0));
+    } else if (sortBy === 'popularity') {
+      filtered = [...filtered].sort((a, b) => {
+        const scoreA = (a.best_seller ?? 0) * 2 + (a.new_product ?? 0);
+        const scoreB = (b.best_seller ?? 0) * 2 + (b.new_product ?? 0);
+        return scoreB - scoreA;
+      });
+    }
+
+    return filtered;
+  }, [
+    products, 
+    debouncedPriceRange, 
+    selectedBrands, 
+    searchQuery, 
+    selectedCategories, 
+    inStockOnly, 
+    isCreatineCategory, 
+    selectedTypes, 
+    selectedGoals, 
+    selectedFlavors, 
+    sortBy
+  ]);
+
   const totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
   const paginatedProducts = useMemo(() => {
     const startIndex = (currentPage - 1) * PRODUCTS_PER_PAGE;
@@ -574,24 +624,37 @@ function ShopContent({
     return filteredProducts.slice(startIndex, endIndex);
   }, [filteredProducts, currentPage]);
 
-  // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, selectedCategories, selectedBrands, debouncedPriceRange, inStockOnly]);
+  }, [searchQuery, selectedCategories, selectedBrands, debouncedPriceRange, inStockOnly, selectedTypes, selectedGoals, selectedFlavors]);
 
   const toggleCategory = (categorySlug: string) => {
     setSelectedCategories(prev =>
-      prev.includes(categorySlug)
-        ? prev.filter(c => c !== categorySlug)
-        : [categorySlug] // Only one category at a time for API filtering
+      prev.includes(categorySlug) ? prev.filter(c => c !== categorySlug) : [categorySlug]
     );
   };
 
   const toggleBrand = (brandId: number) => {
     setSelectedBrands(prev =>
-      prev.includes(brandId)
-        ? prev.filter(b => b !== brandId)
-        : [brandId] // Only one brand at a time for API filtering
+      prev.includes(brandId) ? prev.filter(b => b !== brandId) : [brandId]
+    );
+  };
+
+  const toggleType = (type: string) => {
+    setSelectedTypes(prev =>
+      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
+    );
+  };
+
+  const toggleGoal = (goal: string) => {
+    setSelectedGoals(prev =>
+      prev.includes(goal) ? prev.filter(g => g !== goal) : [...prev, goal]
+    );
+  };
+
+  const toggleFlavor = (flavor: string) => {
+    setSelectedFlavors(prev =>
+      prev.includes(flavor) ? prev.filter(f => f !== flavor) : [...prev, flavor]
     );
   };
 
@@ -601,6 +664,10 @@ function ShopContent({
     setSelectedBrands([]);
     setPriceRange([priceBounds.min, priceBounds.max]);
     setInStockOnly(false);
+    setSortBy('popularity');
+    setSelectedTypes([]);
+    setSelectedGoals([]);
+    setSelectedFlavors([]);
     setCurrentPage(1);
     setProducts(safeProductsData.products || []);
     router.push('/shop');
@@ -608,7 +675,6 @@ function ShopContent({
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    // Scroll to top of products section
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -616,7 +682,7 @@ function ShopContent({
     <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
       <Header />
 
-      <main className="w-full mx-auto px-2.5 sm:px-4 md:px-5 lg:px-6 max-w-[1024px] md:max-w-[1280px] lg:max-w-[1400px] xl:max-w-[1600px] py-4 sm:py-8 lg:py-12">
+      <main className="w-full mx-auto px-2.5 sm:px-4 md:px-5 lg:px-6 max-w-[1024px] md:max-w-[1280px] lg:max-w-[1400px] xl:max-w-[1600px] py-4 sm:py-8 lg:py-12 animate-fade-in">
         {/* Breadcrumbs */}
         {(() => {
           const breadcrumbItems = [];
@@ -628,14 +694,12 @@ function ShopContent({
               breadcrumbItems.push({ label: brand.designation_fr });
             }
           } else if (initialCategory) {
-            // Try to find category or subcategory
             const category = categories.find(c => c.slug === initialCategory);
             if (category) {
               breadcrumbItems.push({
                 label: categoryBreadcrumbLabel?.trim() || category.designation_fr,
               });
             } else {
-              // Try to find subcategory
               const subcategory = categories
                 .flatMap(c => c.sous_categories || [])
                 .find(s => s.slug === initialCategory);
@@ -655,61 +719,53 @@ function ShopContent({
             }
           }
           
-          return breadcrumbItems.length > 1 ? <ShopBreadcrumbs items={breadcrumbItems} /> : null;
+          return breadcrumbItems.length > 1 ? (
+            <div className="mb-4">
+              <ShopBreadcrumbs items={breadcrumbItems} />
+            </div>
+          ) : null;
         })()}
 
-        {/* Category SEO: header only above grid (H1 + trust); full content is below grid */}
-        {categorySeoLanding && <div className="mb-4 sm:mb-6">{categorySeoLanding}</div>}
+        {/* Category SEO Section */}
+        {categorySeoLanding && <div className="mb-6">{categorySeoLanding}</div>}
 
-        {/* Brand description – shown when filtering by brand (e.g. /shop?brand=1) */}
+        {/* Brand description panel */}
         {currentBrand && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: 'easeOut' }}
-            className="mb-6 sm:mb-8 lg:mb-10 rounded-2xl sm:rounded-3xl border border-gray-200 dark:border-gray-800 bg-gradient-to-br from-white via-white to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800/50 p-4 sm:p-6 md:p-8 lg:p-10 shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden relative"
+            className="mb-6 sm:mb-8 lg:mb-10 rounded-2xl border border-gray-200 dark:border-gray-800 bg-gradient-to-br from-white via-white to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800/50 p-4 sm:p-6 md:p-8 lg:p-10 shadow-sm relative overflow-hidden"
           >
-            {/* Decorative background element */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-red-50/30 to-transparent dark:from-red-900/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-red-50/20 to-transparent dark:from-red-900/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
             
             <div className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-6 lg:gap-8 relative z-10">
               {currentBrand.logo && (
-                <div className="relative w-20 h-20 sm:w-28 sm:h-28 md:w-32 md:h-32 lg:w-36 lg:h-36 flex-shrink-0 rounded-xl sm:rounded-2xl overflow-hidden bg-white dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-700 shadow-md p-2 sm:p-3 md:p-4">
+                <div className="relative w-20 h-20 sm:w-28 sm:h-28 flex-shrink-0 rounded-xl bg-white dark:bg-gray-800 border border-gray-150 dark:border-gray-700 shadow-sm p-2">
                   <Image
                     src={getStorageUrl(currentBrand.logo)}
                     alt={currentBrand.designation_fr}
                     fill
                     className="object-contain"
-                    sizes="(max-width: 640px) 80px, (max-width: 1024px) 112px, 144px"
+                    sizes="(max-width: 640px) 80px, 112px"
                     priority
                     unoptimized
                   />
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 leading-tight">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2 leading-tight">
                   {currentBrand.designation_fr}
                 </h2>
                 {currentBrand.description_fr && (
                   <div className="space-y-2">
                     <div
-                      className={`prose prose-sm sm:prose-base md:prose-lg dark:prose-invert max-w-none 
-                        text-gray-600 dark:text-gray-300 
-                        prose-headings:text-gray-900 dark:prose-headings:text-white 
-                        prose-p:leading-relaxed prose-p:mb-3 sm:prose-p:mb-4
-                        prose-a:text-red-600 dark:prose-a:text-red-500 prose-a:no-underline hover:prose-a:underline
-                        prose-strong:text-gray-900 dark:prose-strong:text-white
-                        prose-ul:list-disc prose-ul:ml-4 sm:prose-ul:ml-6
-                        prose-ol:list-decimal prose-ol:ml-4 sm:prose-ol:ml-6
-                        prose-li:mb-2
-                        prose-img:rounded-lg prose-img:shadow-md
-                        prose-blockquote:border-l-4 prose-blockquote:border-red-500 prose-blockquote:pl-4 prose-blockquote:italic
-                        ${!isDescriptionExpanded ? 'line-clamp-2' : ''}`}
+                      className={`prose prose-sm dark:prose-invert max-w-none text-gray-600 dark:text-gray-300 ${!isDescriptionExpanded ? 'line-clamp-2' : ''}`}
                       dangerouslySetInnerHTML={{ __html: currentBrand.description_fr }}
                     />
                     <button
                       onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
-                      className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium text-sm sm:text-base transition-colors"
+                      className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-semibold text-xs sm:text-sm transition-colors"
                     >
                       {isDescriptionExpanded ? 'Lire moins' : 'Lire plus'}
                     </button>
@@ -720,28 +776,30 @@ function ShopContent({
           </motion.div>
         )}
 
-        {/* Page Header: when category SEO landing is present, only one H1 (in landing); show count only here */}
+        {/* Page title and product counts */}
         <motion.div
-          initial={{ opacity: 0, y: -20 }}
+          initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-4 sm:mb-10"
+          className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
         >
-          {!categorySeoLanding && (
-            <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-2 sm:mb-3 bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-              {currentBrand ? `Produits ${currentBrand.designation_fr}` : 'Tous nos produits'}
-            </h1>
-          )}
-          <p className="text-sm sm:text-lg text-gray-600 dark:text-gray-400">
-            {!showSkeleton && (totalPages > 1 ? (
-              `Affichage ${(currentPage - 1) * PRODUCTS_PER_PAGE + 1}-${Math.min(currentPage * PRODUCTS_PER_PAGE, filteredProducts.length)} sur ${filteredProducts.length} produit${filteredProducts.length > 1 ? 's' : ''}`
-            ) : (
-              `${filteredProducts.length} produit${filteredProducts.length > 1 ? 's' : ''} trouvé${filteredProducts.length > 1 ? 's' : ''}`
-            ))}
-          </p>
+          <div>
+            {!categorySeoLanding && (
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white leading-tight">
+                {currentBrand ? `Produits ${currentBrand.designation_fr}` : 'Tous nos produits'}
+              </h1>
+            )}
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
+              {!showSkeleton && (totalPages > 1 ? (
+                `Affichage ${(currentPage - 1) * PRODUCTS_PER_PAGE + 1}-${Math.min(currentPage * PRODUCTS_PER_PAGE, filteredProducts.length)} sur ${filteredProducts.length} produits`
+              ) : (
+                `${filteredProducts.length} produit${filteredProducts.length > 1 ? 's' : ''} trouvé${filteredProducts.length > 1 ? 's' : ''}`
+              ))}
+            </p>
+          </div>
         </motion.div>
 
-        {/* Search + Filter Button */}
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6">
+        {/* Search, Filter & Sort Row */}
+        <div className="flex flex-col md:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6">
           <div className="flex-1 relative min-w-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400 pointer-events-none" aria-hidden="true" />
             <Input
@@ -749,49 +807,66 @@ function ShopContent({
               placeholder="Rechercher un produit..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 sm:pl-10 min-h-[44px] border-gray-200 dark:border-gray-700 focus:border-red-500 dark:focus:border-red-500"
+              className="w-full pl-9 sm:pl-10 min-h-[44px] border-gray-200 dark:border-gray-700 focus:border-red-500 dark:focus:border-red-500 rounded-xl"
             />
           </div>
-          {/* Filter Button - Desktop & Mobile */}
-          <div className="flex gap-2">
-            {/* Desktop Filter Button */}
+          
+          <div className="flex items-center gap-3 w-full md:w-auto">
+            {/* Dynamic Sorting Select dropdown (Radix Select) */}
+            <div className="flex-1 md:w-56 min-w-[155px]">
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="min-h-[44px] h-auto border-gray-200 dark:border-gray-700 focus:ring-red-500 rounded-xl">
+                  <SelectValue placeholder="Trier par" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="popularity">Popularité</SelectItem>
+                  <SelectItem value="price-asc">Prix : croissant</SelectItem>
+                  <SelectItem value="price-desc">Prix : décroissant</SelectItem>
+                  <SelectItem value="newest">Nouveautés</SelectItem>
+                  <SelectItem value="best-sellers">Meilleures ventes</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Desktop toggle filters view */}
             <Button
               variant="outline"
               onClick={() => setShowFiltersDesktop(!showFiltersDesktop)}
-              className="hidden lg:flex items-center gap-2 min-h-[44px] border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+              className="hidden lg:flex items-center gap-2 min-h-[44px] border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
             >
               <Filter className="h-4 w-4" />
               <span>Filtres</span>
               {appliedFilters.length > 0 && (
-                <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1.5 text-xs">
+                <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1.5 text-xs bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-400">
                   {appliedFilters.length}
                 </Badge>
               )}
             </Button>
-            {/* Mobile Filter Button */}
+
+            {/* Mobile filter drawer sheet */}
             <Sheet open={showFilters} onOpenChange={setShowFilters}>
               <SheetTrigger asChild>
                 <Button
                   variant="outline"
-                  className="lg:hidden min-h-[44px] min-w-[44px] flex-shrink-0 border-gray-200 dark:border-gray-700"
+                  className="lg:hidden w-full sm:w-auto min-h-[44px] border-gray-200 dark:border-gray-700 rounded-xl"
                   aria-label="Ouvrir les filtres"
                 >
-                  <Filter className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Filtres</span>
-                  {(appliedFilters.length > 0 || inStockOnly) && (
-                    <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1.5 text-xs">
-                      {appliedFilters.length + (inStockOnly ? 1 : 0)}
+                  <Filter className="h-4 w-4 mr-2" />
+                  <span>Filtres</span>
+                  {(appliedFilters.length > 0) && (
+                    <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1.5 text-xs bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-400">
+                      {appliedFilters.length}
                     </Badge>
                   )}
                 </Button>
               </SheetTrigger>
-              <SheetContent side="bottom" className="rounded-t-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
-                <SheetHeader className="sticky top-0 bg-white dark:bg-gray-900 z-10 pb-4 border-b border-gray-200 dark:border-gray-800 -mx-6 px-6 pt-6">
+              <SheetContent side="bottom" className="rounded-t-3xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
+                <SheetHeader className="sticky top-0 bg-white dark:bg-gray-900 z-10 pb-4 border-b border-gray-200 dark:border-gray-800 -mx-6 px-6 pt-4">
                   <div className="flex items-center justify-between">
-                    <SheetTitle className="text-xl font-semibold">Filtres</SheetTitle>
+                    <SheetTitle className="text-lg font-bold">Filtres</SheetTitle>
                     <div className="flex items-center gap-2">
                       {appliedFilters.length > 0 && (
-                        <Button variant="ghost" size="sm" onClick={clearFilters} className="text-sm text-red-600 hover:text-red-700">
+                        <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs text-red-600 hover:text-red-700 h-8">
                           Tout effacer
                         </Button>
                       )}
@@ -806,20 +881,21 @@ function ShopContent({
                     </div>
                   </div>
                 </SheetHeader>
-                <div className="pt-6 pb-8">
-                  <Accordion type="multiple" defaultValue={['availability', 'categories']} className="space-y-1">
+                <div className="pt-4 pb-8 space-y-4">
+                  <Accordion type="multiple" defaultValue={['availability', 'categories', 'types', 'goals', 'flavors']} className="space-y-2">
+                    
                     {/* Availability */}
-                    <AccordionItem value="availability" className="border border-gray-200 dark:border-gray-800 rounded-lg px-4">
-                      <AccordionTrigger className="py-4 text-sm font-medium hover:no-underline">
+                    <AccordionItem value="availability" className="border border-gray-250 dark:border-gray-800 rounded-xl px-4">
+                      <AccordionTrigger className="py-3 text-sm font-semibold hover:no-underline">
                         Disponibilité
                       </AccordionTrigger>
-                      <AccordionContent className="pb-4">
+                      <AccordionContent className="pb-3">
                         <div className="flex items-center space-x-3">
                           <Checkbox
                             id="mobile-in-stock"
                             checked={inStockOnly}
                             onCheckedChange={(checked) => setInStockOnly(checked === true)}
-                            className="h-4 w-4"
+                            className="h-4.5 w-4.5"
                           />
                           <label htmlFor="mobile-in-stock" className="text-sm cursor-pointer flex-1 font-normal">
                             En stock uniquement
@@ -828,14 +904,92 @@ function ShopContent({
                       </AccordionContent>
                     </AccordionItem>
 
+                    {/* Creatine Type */}
+                    {isCreatineCategory && (
+                      <AccordionItem value="types" className="border border-gray-250 dark:border-gray-800 rounded-xl px-4">
+                        <AccordionTrigger className="py-3 text-sm font-semibold hover:no-underline">
+                          Type de Créatine
+                        </AccordionTrigger>
+                        <AccordionContent className="pb-3">
+                          <div className="space-y-3">
+                            {['Monohydrate', 'Micronisée', 'Capsules', 'Creapure'].map(type => (
+                              <div key={type} className="flex items-center space-x-3">
+                                <Checkbox
+                                  id={`mobile-type-${type}`}
+                                  checked={selectedTypes.includes(type)}
+                                  onCheckedChange={() => toggleType(type)}
+                                  className="h-4.5 w-4.5"
+                                />
+                                <label htmlFor={`mobile-type-${type}`} className="text-sm cursor-pointer flex-1 font-normal">
+                                  {type}
+                                </label>
+                              </div>
+                            ))}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    )}
+
+                    {/* Creatine Goal */}
+                    {isCreatineCategory && (
+                      <AccordionItem value="goals" className="border border-gray-250 dark:border-gray-800 rounded-xl px-4">
+                        <AccordionTrigger className="py-3 text-sm font-semibold hover:no-underline">
+                          Objectif
+                        </AccordionTrigger>
+                        <AccordionContent className="pb-3">
+                          <div className="space-y-3">
+                            {['Force', 'Masse', 'Performance', 'Récupération'].map(goal => (
+                              <div key={goal} className="flex items-center space-x-3">
+                                <Checkbox
+                                  id={`mobile-goal-${goal}`}
+                                  checked={selectedGoals.includes(goal)}
+                                  onCheckedChange={() => toggleGoal(goal)}
+                                  className="h-4.5 w-4.5"
+                                />
+                                <label htmlFor={`mobile-goal-${goal}`} className="text-sm cursor-pointer flex-1 font-normal">
+                                  {goal}
+                                </label>
+                              </div>
+                            ))}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    )}
+
+                    {/* Dynamic Flavors */}
+                    {uniqueFlavors.length > 0 && (
+                      <AccordionItem value="flavors" className="border border-gray-250 dark:border-gray-800 rounded-xl px-4">
+                        <AccordionTrigger className="py-3 text-sm font-semibold hover:no-underline">
+                          Arômes
+                        </AccordionTrigger>
+                        <AccordionContent className="pb-3">
+                          <div className="space-y-3 max-h-60 overflow-y-auto">
+                            {uniqueFlavors.map(flavor => (
+                              <div key={flavor} className="flex items-center space-x-3">
+                                <Checkbox
+                                  id={`mobile-flavor-${flavor}`}
+                                  checked={selectedFlavors.includes(flavor)}
+                                  onCheckedChange={() => toggleFlavor(flavor)}
+                                  className="h-4.5 w-4.5"
+                                />
+                                <label htmlFor={`mobile-flavor-${flavor}`} className="text-sm cursor-pointer flex-1 font-normal">
+                                  {flavor}
+                                </label>
+                              </div>
+                            ))}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    )}
+
                     {/* Categories */}
                     {categories.length > 0 && (
-                      <AccordionItem value="categories" className="border border-gray-200 dark:border-gray-800 rounded-lg px-4">
-                        <AccordionTrigger className="py-4 text-sm font-medium hover:no-underline">
+                      <AccordionItem value="categories" className="border border-gray-250 dark:border-gray-800 rounded-xl px-4">
+                        <AccordionTrigger className="py-3 text-sm font-semibold hover:no-underline">
                           Catégories
                         </AccordionTrigger>
-                        <AccordionContent className="pb-4">
-                          <div className="space-y-3 max-h-64 overflow-y-auto">
+                        <AccordionContent className="pb-3">
+                          <div className="space-y-3 max-h-60 overflow-y-auto">
                             {categories.map(category => {
                               const count = filterCounts.categoryCounts.get(category.slug) || 0;
                               const isSelected = selectedCategories.includes(category.slug);
@@ -846,18 +1000,16 @@ function ShopContent({
                                       id={`mobile-cat-${category.id}`}
                                       checked={isSelected}
                                       onCheckedChange={() => toggleCategory(category.slug)}
-                                      className="h-4 w-4"
+                                      className="h-4.5 w-4.5"
                                     />
                                     <label
                                       htmlFor={`mobile-cat-${category.id}`}
-                                      className={`text-sm cursor-pointer flex-1 font-normal truncate ${isSelected ? 'font-medium text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}
+                                      className={`text-sm cursor-pointer flex-1 font-normal truncate ${isSelected ? 'font-semibold text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}
                                     >
                                       {category.designation_fr}
                                     </label>
                                   </div>
-                                  <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">
-                                    {count}
-                                  </span>
+                                  <span className="text-xs text-gray-400 tabular-nums">{count}</span>
                                 </div>
                               );
                             })}
@@ -868,12 +1020,12 @@ function ShopContent({
 
                     {/* Brands */}
                     {brands.length > 0 && (
-                      <AccordionItem value="brands" className="border border-gray-200 dark:border-gray-800 rounded-lg px-4">
-                        <AccordionTrigger className="py-4 text-sm font-medium hover:no-underline">
+                      <AccordionItem value="brands" className="border border-gray-250 dark:border-gray-800 rounded-xl px-4">
+                        <AccordionTrigger className="py-3 text-sm font-semibold hover:no-underline">
                           Marques
                         </AccordionTrigger>
-                        <AccordionContent className="pb-4">
-                          <div className="space-y-3 max-h-64 overflow-y-auto">
+                        <AccordionContent className="pb-3">
+                          <div className="space-y-3 max-h-60 overflow-y-auto">
                             {brands.map(brand => {
                               const count = filterCounts.brandCounts.get(brand.id) || 0;
                               const isSelected = selectedBrands.includes(brand.id);
@@ -884,18 +1036,16 @@ function ShopContent({
                                       id={`mobile-brand-${brand.id}`}
                                       checked={isSelected}
                                       onCheckedChange={() => toggleBrand(brand.id)}
-                                      className="h-4 w-4"
+                                      className="h-4.5 w-4.5"
                                     />
                                     <label
                                       htmlFor={`mobile-brand-${brand.id}`}
-                                      className={`text-sm cursor-pointer flex-1 font-normal truncate ${isSelected ? 'font-medium text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}
+                                      className={`text-sm cursor-pointer flex-1 font-normal truncate ${isSelected ? 'font-semibold text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}
                                     >
                                       {brand.designation_fr}
                                     </label>
                                   </div>
-                                  <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">
-                                    {count}
-                                  </span>
+                                  <span className="text-xs text-gray-400 tabular-nums">{count}</span>
                                 </div>
                               );
                             })}
@@ -905,14 +1055,14 @@ function ShopContent({
                     )}
 
                     {/* Price Range */}
-                    <AccordionItem value="price" className="border border-gray-200 dark:border-gray-800 rounded-lg px-4">
-                      <AccordionTrigger className="py-4 text-sm font-medium hover:no-underline">
+                    <AccordionItem value="price" className="border border-gray-250 dark:border-gray-800 rounded-xl px-4">
+                      <AccordionTrigger className="py-3 text-sm font-semibold hover:no-underline">
                         Prix
                       </AccordionTrigger>
-                      <AccordionContent className="pb-4">
+                      <AccordionContent className="pb-3">
                         <div className="space-y-4">
                           <div className="flex items-center justify-between text-sm">
-                            <span className="font-medium text-gray-900 dark:text-white">
+                            <span className="font-semibold text-gray-900 dark:text-white">
                               {priceRange[0]} DT - {priceRange[1]} DT
                             </span>
                           </div>
@@ -922,19 +1072,20 @@ function ShopContent({
                             min={priceBounds.min}
                             max={priceBounds.max}
                             step={10}
-                            className="w-full [&_[data-slot=slider-range]]:bg-orange-500 [&_[data-slot=slider-thumb]]:border-orange-500 [&_[data-slot=slider-thumb]]:ring-orange-500/30 [&_[data-slot=slider-thumb]]:focus-visible:ring-orange-500/40"
+                            className="w-full [&_[data-slot=slider-range]]:bg-orange-500 [&_[data-slot=slider-thumb]]:border-orange-500"
                           />
-                          <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
+                          <div className="flex justify-between text-xs text-gray-400">
                             <span>{priceBounds.min} DT</span>
                             <span>{priceBounds.max} DT</span>
                           </div>
                         </div>
                       </AccordionContent>
                     </AccordionItem>
+
                   </Accordion>
                 </div>
-                <div className="sticky bottom-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 -mx-6 px-6 py-4 mt-4">
-                  <Button className="w-full min-h-[44px]" onClick={() => setShowFilters(false)}>
+                <div className="sticky bottom-0 bg-white dark:bg-gray-900 border-t border-gray-150 dark:border-gray-800 -mx-6 px-6 py-4 mt-4">
+                  <Button className="w-full min-h-[46px] rounded-xl font-bold bg-red-600 hover:bg-red-700 text-white" onClick={() => setShowFilters(false)}>
                     Voir {filteredProducts.length} produit{filteredProducts.length > 1 ? 's' : ''}
                   </Button>
                 </div>
@@ -943,24 +1094,24 @@ function ShopContent({
           </div>
         </div>
 
-        {/* Applied Filters Chips */}
+        {/* Applied Filters Badges / Chips */}
         {appliedFilters.length > 0 && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
+            initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex flex-wrap items-center gap-2 mb-4 sm:mb-6"
+            className="flex flex-wrap items-center gap-2 mb-6"
           >
-            <span className="text-sm text-gray-600 dark:text-gray-400 mr-1">Filtres actifs:</span>
+            <span className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Filtres actifs :</span>
             {appliedFilters.map((filter, index) => (
               <Badge
                 key={`${filter.type}-${filter.value}-${index}`}
                 variant="outline"
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-800 rounded-xl"
               >
-                <span>{filter.label}</span>
+                <span className="text-gray-900 dark:text-gray-150 font-medium">{filter.label}</span>
                 <button
                   onClick={() => removeFilter(filter.type, filter.value)}
-                  className="ml-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full p-0.5 transition-colors"
+                  className="ml-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full p-0.5 transition-colors"
                   aria-label={`Retirer le filtre ${filter.label}`}
                 >
                   <X className="h-3 w-3" />
@@ -971,29 +1122,29 @@ function ShopContent({
               variant="ghost"
               size="sm"
               onClick={clearFilters}
-              className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+              className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 h-8 rounded-lg"
             >
               Tout effacer
             </Button>
           </motion.div>
         )}
 
-        {/* Main Content Area - Filters + Products */}
-        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
-          {/* Desktop Filter Panel - Collapsible */}
+        {/* Grid and Sidebar main split */}
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Collapsible Desktop Filter Panel */}
           <AnimatePresence>
             {showFiltersDesktop && (
               <motion.aside
-                initial={{ opacity: 0, x: -20, width: 0 }}
+                initial={{ opacity: 0, x: -15, width: 0 }}
                 animate={{ opacity: 1, x: 0, width: 'auto' }}
-                exit={{ opacity: 0, x: -20, width: 0 }}
-                transition={{ duration: 0.2 }}
+                exit={{ opacity: 0, x: -15, width: 0 }}
+                transition={{ duration: 0.25 }}
                 className="hidden lg:block w-72 flex-shrink-0"
               >
-                <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 px-6 pt-6 pb-8 space-y-1 sticky top-4 shadow-sm overflow-visible">
-                  <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200 dark:border-gray-800">
-                    <h2 className="font-semibold text-base">Filtres</h2>
-                    <div className="flex items-center gap-2">
+                <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 px-5 pt-5 pb-8 space-y-1 sticky top-4 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
+                  <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-150 dark:border-gray-800">
+                    <h2 className="font-bold text-sm tracking-wide uppercase text-gray-500 dark:text-gray-400">Filtres</h2>
+                    <div className="flex items-center gap-1.5">
                       {appliedFilters.length > 0 && (
                         <Button
                           variant="ghost"
@@ -1015,10 +1166,11 @@ function ShopContent({
                     </div>
                   </div>
 
-                  <Accordion type="multiple" defaultValue={['availability', 'categories']} className="space-y-1">
+                  <Accordion type="multiple" defaultValue={['availability', 'types', 'goals', 'flavors']} className="space-y-1">
+                    
                     {/* Availability */}
-                    <AccordionItem value="availability" className="border border-gray-200 dark:border-gray-800 rounded-lg px-4">
-                      <AccordionTrigger className="py-3 text-sm font-medium hover:no-underline">
+                    <AccordionItem value="availability" className="border border-gray-150 dark:border-gray-800 rounded-xl px-4">
+                      <AccordionTrigger className="py-2.5 text-xs sm:text-sm font-semibold hover:no-underline">
                         Disponibilité
                       </AccordionTrigger>
                       <AccordionContent className="pb-3">
@@ -1029,20 +1181,104 @@ function ShopContent({
                             onCheckedChange={(checked) => setInStockOnly(checked === true)}
                             className="h-4 w-4"
                           />
-                          <label
-                            htmlFor="desktop-in-stock"
-                            className="text-sm cursor-pointer flex-1 font-normal"
-                          >
+                          <label htmlFor="desktop-in-stock" className="text-xs sm:text-sm cursor-pointer flex-1 font-normal">
                             En stock uniquement
                           </label>
                         </div>
                       </AccordionContent>
                     </AccordionItem>
 
+                    {/* Creatine Type */}
+                    {isCreatineCategory && (
+                      <AccordionItem value="types" className="border border-gray-150 dark:border-gray-800 rounded-xl px-4">
+                        <AccordionTrigger className="py-2.5 text-xs sm:text-sm font-semibold hover:no-underline">
+                          Type de Créatine
+                        </AccordionTrigger>
+                        <AccordionContent className="pb-3">
+                          <div className="space-y-2">
+                            {['Monohydrate', 'Micronisée', 'Capsules', 'Creapure'].map(type => (
+                              <div key={type} className="flex items-center space-x-3">
+                                <Checkbox
+                                  id={`desktop-type-${type}`}
+                                  checked={selectedTypes.includes(type)}
+                                  onCheckedChange={() => toggleType(type)}
+                                  className="h-4 w-4"
+                                />
+                                <label
+                                  htmlFor={`desktop-type-${type}`}
+                                  className={`text-xs sm:text-sm cursor-pointer flex-1 font-normal ${selectedTypes.includes(type) ? 'font-medium text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}
+                                >
+                                  {type}
+                                </label>
+                              </div>
+                            ))}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    )}
+
+                    {/* Creatine Goal */}
+                    {isCreatineCategory && (
+                      <AccordionItem value="goals" className="border border-gray-150 dark:border-gray-800 rounded-xl px-4">
+                        <AccordionTrigger className="py-2.5 text-xs sm:text-sm font-semibold hover:no-underline">
+                          Objectif
+                        </AccordionTrigger>
+                        <AccordionContent className="pb-3">
+                          <div className="space-y-2">
+                            {['Force', 'Masse', 'Performance', 'Récupération'].map(goal => (
+                              <div key={goal} className="flex items-center space-x-3">
+                                <Checkbox
+                                  id={`desktop-goal-${goal}`}
+                                  checked={selectedGoals.includes(goal)}
+                                  onCheckedChange={() => toggleGoal(goal)}
+                                  className="h-4 w-4"
+                                />
+                                <label
+                                  htmlFor={`desktop-goal-${goal}`}
+                                  className={`text-xs sm:text-sm cursor-pointer flex-1 font-normal ${selectedGoals.includes(goal) ? 'font-medium text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}
+                                >
+                                  {goal}
+                                </label>
+                              </div>
+                            ))}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    )}
+
+                    {/* Dynamic Flavors */}
+                    {uniqueFlavors.length > 0 && (
+                      <AccordionItem value="flavors" className="border border-gray-150 dark:border-gray-800 rounded-xl px-4">
+                        <AccordionTrigger className="py-2.5 text-xs sm:text-sm font-semibold hover:no-underline">
+                          Arômes
+                        </AccordionTrigger>
+                        <AccordionContent className="pb-3">
+                          <div className="space-y-2 max-h-60 overflow-y-auto">
+                            {uniqueFlavors.map(flavor => (
+                              <div key={flavor} className="flex items-center space-x-3">
+                                <Checkbox
+                                  id={`desktop-flavor-${flavor}`}
+                                  checked={selectedFlavors.includes(flavor)}
+                                  onCheckedChange={() => toggleFlavor(flavor)}
+                                  className="h-4 w-4"
+                                />
+                                <label
+                                  htmlFor={`desktop-flavor-${flavor}`}
+                                  className={`text-xs sm:text-sm cursor-pointer flex-1 font-normal ${selectedFlavors.includes(flavor) ? 'font-medium text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}
+                                >
+                                  {flavor}
+                                </label>
+                              </div>
+                            ))}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    )}
+
                     {/* Categories */}
                     {categories.length > 0 && (
-                      <AccordionItem value="categories" className="border border-gray-200 dark:border-gray-800 rounded-lg px-4">
-                        <AccordionTrigger className="py-3 text-sm font-medium hover:no-underline">
+                      <AccordionItem value="categories" className="border border-gray-150 dark:border-gray-800 rounded-xl px-4">
+                        <AccordionTrigger className="py-2.5 text-xs sm:text-sm font-semibold hover:no-underline">
                           Catégories
                         </AccordionTrigger>
                         <AccordionContent className="pb-3">
@@ -1061,14 +1297,12 @@ function ShopContent({
                                     />
                                     <label
                                       htmlFor={`desktop-cat-${category.id}`}
-                                      className={`text-sm cursor-pointer flex-1 font-normal truncate ${isSelected ? 'font-medium text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}
+                                      className={`text-xs sm:text-sm cursor-pointer flex-1 font-normal truncate ${isSelected ? 'font-medium text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}
                                     >
                                       {category.designation_fr}
                                     </label>
                                   </div>
-                                  <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">
-                                    {count}
-                                  </span>
+                                  <span className="text-xs text-gray-400 dark:text-gray-500 tabular-nums">{count}</span>
                                 </div>
                               );
                             })}
@@ -1079,8 +1313,8 @@ function ShopContent({
 
                     {/* Brands */}
                     {brands.length > 0 && (
-                      <AccordionItem value="brands" className="border border-gray-200 dark:border-gray-800 rounded-lg px-4">
-                        <AccordionTrigger className="py-3 text-sm font-medium hover:no-underline">
+                      <AccordionItem value="brands" className="border border-gray-150 dark:border-gray-800 rounded-xl px-4">
+                        <AccordionTrigger className="py-2.5 text-xs sm:text-sm font-semibold hover:no-underline">
                           Marques
                         </AccordionTrigger>
                         <AccordionContent className="pb-3">
@@ -1099,14 +1333,12 @@ function ShopContent({
                                     />
                                     <label
                                       htmlFor={`desktop-brand-${brand.id}`}
-                                      className={`text-sm cursor-pointer flex-1 font-normal truncate ${isSelected ? 'font-medium text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}
+                                      className={`text-xs sm:text-sm cursor-pointer flex-1 font-normal truncate ${isSelected ? 'font-medium text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}
                                     >
                                       {brand.designation_fr}
                                     </label>
                                   </div>
-                                  <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">
-                                    {count}
-                                  </span>
+                                  <span className="text-xs text-gray-400 dark:text-gray-500 tabular-nums">{count}</span>
                                 </div>
                               );
                             })}
@@ -1116,14 +1348,14 @@ function ShopContent({
                     )}
 
                     {/* Price Range */}
-                    <AccordionItem value="price" className="border border-gray-200 dark:border-gray-800 rounded-lg px-4">
-                      <AccordionTrigger className="py-3 text-sm font-medium hover:no-underline">
+                    <AccordionItem value="price" className="border border-gray-150 dark:border-gray-800 rounded-xl px-4">
+                      <AccordionTrigger className="py-2.5 text-xs sm:text-sm font-semibold hover:no-underline">
                         Prix
                       </AccordionTrigger>
                       <AccordionContent className="pb-3">
                         <div className="space-y-4">
                           <div className="flex items-center justify-between text-sm">
-                            <span className="font-medium text-gray-900 dark:text-white">
+                            <span className="font-semibold text-gray-900 dark:text-white">
                               {priceRange[0]} DT - {priceRange[1]} DT
                             </span>
                           </div>
@@ -1133,9 +1365,9 @@ function ShopContent({
                             min={priceBounds.min}
                             max={priceBounds.max}
                             step={10}
-                            className="w-full [&_[data-slot=slider-range]]:bg-orange-500 [&_[data-slot=slider-thumb]]:border-orange-500 [&_[data-slot=slider-thumb]]:ring-orange-500/30 [&_[data-slot=slider-thumb]]:focus-visible:ring-orange-500/40"
+                            className="w-full [&_[data-slot=slider-range]]:bg-orange-500 [&_[data-slot=slider-thumb]]:border-orange-500"
                           />
-                          <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
+                          <div className="flex justify-between text-xs text-gray-400">
                             <span>{priceBounds.min} DT</span>
                             <span>{priceBounds.max} DT</span>
                           </div>
@@ -1148,11 +1380,11 @@ function ShopContent({
             )}
           </AnimatePresence>
 
-          {/* Products Grid - Takes full width when filters closed */}
+          {/* Products Grid */}
           <div className="flex-1 min-w-0">
             {filterError ? (
               <div className="flex flex-col items-center justify-center py-12 sm:py-16 px-4">
-                <div className="rounded-full bg-red-100 dark:bg-red-900/30 p-4 mb-4">
+                <div className="rounded-full bg-red-100 dark:bg-red-900/30 p-4 mb-4 animate-bounce">
                   <CircleAlert className="h-10 w-10 text-red-600 dark:text-red-400" aria-hidden />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
@@ -1163,8 +1395,7 @@ function ShopContent({
                 </p>
                 <Button
                   onClick={() => { setFilterError(null); setRetryCount(c => c + 1); }}
-                  variant="default"
-                  className="gap-2"
+                  className="gap-2 rounded-xl bg-red-600 hover:bg-red-700 text-white min-h-[44px]"
                 >
                   Réessayer
                 </Button>
@@ -1172,22 +1403,22 @@ function ShopContent({
             ) : showSkeleton ? (
               <ProductsSkeleton showBreadcrumb={false} showFilters={false} />
             ) : filteredProducts.length === 0 ? (
-              <div className="text-center py-12">
+              <div className="text-center py-16 bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-8 shadow-sm">
                 <p className="text-gray-500 dark:text-gray-400 text-lg">
-                  Aucun produit trouvé
+                  Aucun produit ne correspond à ces critères
                 </p>
                 <Button
                   variant="outline"
                   onClick={clearFilters}
-                  className="mt-4"
+                  className="mt-5 rounded-xl border-gray-250 dark:border-gray-700 min-h-[44px]"
                 >
                   Réinitialiser les filtres
                 </Button>
               </div>
             ) : (
-              <>
-                {/* Grid: 2 cols mobile; smaller gap on very small screens so cards stay readable. */}
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-2 max-[360px]:gap-1.5 sm:gap-3 md:gap-4 lg:gap-6 min-w-0 w-full">
+              <div className="space-y-8 sm:space-y-12">
+                {/* 2-column mobile, 3-column tablet, 3/4-column desktop responsive grid */}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 max-[360px]:gap-2 sm:gap-4 md:gap-5 lg:gap-6 min-w-0 w-full">
                   {paginatedProducts.map(product => (
                     <ProductCard
                       key={product.id}
@@ -1207,11 +1438,11 @@ function ShopContent({
                   </div>
                 )}
                 {categorySeoLandingBottom && (
-                  <div className="mt-10 sm:mt-12 lg:mt-16 pt-8 sm:pt-10 border-t border-gray-200 dark:border-gray-800">
+                  <div className="mt-12 sm:mt-16 pt-8 sm:pt-12 border-t border-gray-200 dark:border-gray-800">
                     {categorySeoLandingBottom}
                   </div>
                 )}
-              </>
+              </div>
             )}
           </div>
         </div>

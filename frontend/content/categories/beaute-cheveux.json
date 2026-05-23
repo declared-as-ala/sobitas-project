@@ -1,0 +1,25 @@
+{
+  "h1": "Beauté & Cheveux Tunisie : Biotine, Collagène & Acide Hyaluronique",
+  "metaTitle": "Compléments Beauté & Cheveux Tunisie 🇹🇳 Prix | Protein.tn",
+  "metaDescription": "Sublimez vos cheveux et votre peau en Tunisie : biotine, levure de bière, collagène et acide hyaluronique. Cheveux forts, ongles solides. Livraison rapide.",
+  "ogImage": "https://protein.tn/favicon-512x512.png",
+  "intro": "<p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Découvrez notre sélection de compléments **Beauté, Peau et Cheveux** en Tunisie sur **Protein.tn**. Nourrissez vos cheveux, votre peau et vos ongles de l'intérieur grâce à des nutriments ciblés : biotine (vitamine B7), collagène marin, levure de bière et acide hyaluronique pour préserver l'élasticité cutanée et stimuler la pousse des cheveux.</p>",
+  "howToChooseTitle": "Comment choisir ses compléments beauté en Tunisie ?",
+  "howToChooseBody": "• <strong>Pousse et force des cheveux</strong> : La <strong>Biotine</strong> à haute dose combinée au Zinc et à la Levure de Bière stoppe la chute et accélère la pousse des cheveux.\n• <strong>Élasticité et jeunesse de la peau</strong> : Le <strong>Collagène</strong> et l'<strong>Acide Hyaluronique</strong> hydratent en profondeur, réduisent les ridules et renforcent l'éclat de la peau.\n• <strong>Ongles cassants</strong> : Les complexes vitaminiques contenant du sélénium, du fer et des acides aminés soufrés (L-Cystine, L-Méthionine) solidifient les ongles.",
+  "faqs": [
+    {
+      "question": "La biotine est-elle efficace contre la chute des cheveux ?",
+      "answer": "Oui, la biotine (vitamine B7) joue un rôle crucial dans la synthèse de la kératine, la protéine majoritaire du cheveu. Une cure de 2 à 3 mois permet de redonner de la force, de la brillance et de stimuler une pousse saine."
+    },
+    {
+      "question": "Peut-on associer le collagène et l'acide hyaluronique ?",
+      "answer": "Absolument. Ces deux actifs agissent en synergie parfaite : le collagène apporte la structure et la fermeté à la peau et aux phanères, tandis que l'acide hyaluronique retient l'eau pour une hydratation cellulaire maximale."
+    }
+  ],
+  "relatedCategorySlugs": [
+    "collagene",
+    "vitamines",
+    "mineraux"
+  ],
+  "bestProductSlugs": []
+}

@@ -51,6 +51,15 @@ export const CONTENT_SLUG_ALIASES: Record<string, string> = {
   'l-carnitine': 'bruleurs-de-graisse',
   'cla': 'bruleurs-de-graisse',
   'minceur': 'bruleurs-de-graisse',
+  // Antioxydants & Articulations
+  'antioxydant': 'antioxydants',
+  'antioxydants': 'antioxydants',
+  'articulation': 'articulations',
+  'articulations': 'articulations',
+  // Beauty & Hair
+  'beaute-cheveux': 'beaute-cheveux',
+  'beaute-et-cheveux': 'beaute-cheveux',
+  'cheveux': 'beaute-cheveux',
 };
 
 function getContentPath(contentSlug: string): string {
