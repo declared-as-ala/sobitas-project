@@ -125,8 +125,8 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
         description,
         keywords: productKeywords(product),
         robots: {
-          index: product.publier === 1 || product.publier === undefined,
-          follow: product.publier === 1 || product.publier === undefined,
+          index: (product.publier as any) === 1 || (product.publier as any) === true || product.publier === undefined,
+          follow: (product.publier as any) === 1 || (product.publier as any) === true || product.publier === undefined,
         },
         alternates: {
           canonical: canonicalUrl,

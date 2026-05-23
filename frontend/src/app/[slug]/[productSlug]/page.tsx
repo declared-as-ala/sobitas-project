@@ -127,7 +127,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       product.seo?.canonical_url?.trim() || buildProductCanonicalUrl(product)
     );
 
-    const isPublished = product.publier === 1 || product.publier === undefined;
+    const isPublished = (product.publier as any) === 1 || (product.publier as any) === true || product.publier === undefined;
 
     return {
       title: { absolute: title },
