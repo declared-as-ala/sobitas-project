@@ -124,6 +124,24 @@ export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
     getBlogTags(),
   ]);
 
+  // Create a subcategory slug map to build beautiful hierarchical URLs: /{subCategorySlug}/{productSlug}
+  const subCategorySlugMap = new Map<number, string>();
+  try {
+    if (categories.status === 'fulfilled' && Array.isArray(categories.value)) {
+      categories.value.forEach((cat: Category) => {
+        if (cat.sous_categories && Array.isArray(cat.sous_categories)) {
+          cat.sous_categories.forEach((sub: SubCategory) => {
+            if (sub.id && sub.slug) {
+              subCategorySlugMap.set(sub.id, sub.slug);
+            }
+          });
+        }
+      });
+    }
+  } catch (err) {
+    console.error('Error building subcategory slug map for products:', err);
+  }
+
   // Fetch products in smaller batches with pagination
   try {
     const BATCH_SIZE = 150;
@@ -146,9 +164,13 @@ export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
 
     if (allProducts.length > 0) {
       const productUrls = allProducts
-        .filter((p: Product) => p.slug && p.publier == 1)
+        .filter((p: Product) => p.slug && (p.publier == 1 || p.publier === undefined))
         .map((p: Product) => {
-          const url = buildProductUrl(p, BASE_URL);
+          // Resolve subcategory slug using our map to form beautiful SEO URLs
+          const subCategorySlug = p.sous_categorie_id ? subCategorySlugMap.get(p.sous_categorie_id) : undefined;
+          const url = subCategorySlug 
+            ? `${BASE_URL}/${encodeURIComponent(subCategorySlug)}/${encodeURIComponent(p.slug)}`
+            : `${BASE_URL}/shop/${encodeURIComponent(p.slug)}`;
           return {
             url,
             lastModified: getLastModified(p as ItemWithDates),
