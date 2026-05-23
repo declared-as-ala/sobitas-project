@@ -126,7 +126,7 @@ export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
 
   // Fetch products in smaller batches with pagination
   try {
-    const BATCH_SIZE = 1000;
+    const BATCH_SIZE = 150;
     let currentPage = 1;
     let totalPages = 1;
     const allProducts: Product[] = [];
@@ -146,7 +146,7 @@ export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
 
     if (allProducts.length > 0) {
       const productUrls = allProducts
-        .filter((p: Product) => p.slug && p.publier === 1)
+        .filter((p: Product) => p.slug && p.publier == 1)
         .map((p: Product) => {
           const url = buildProductUrl(p, BASE_URL);
           return {
