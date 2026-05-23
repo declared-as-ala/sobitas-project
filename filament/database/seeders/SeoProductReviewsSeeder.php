@@ -14,9 +14,11 @@ class SeoProductReviewsSeeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Fetch active products
+        // 1. Fetch the last 30 published products (most recently created)
         $products = Product::query()
             ->where('publier', 1)
+            ->orderBy('created_at', 'desc')
+            ->limit(30)
             ->get();
 
         if ($products->isEmpty()) {
