@@ -127,13 +127,15 @@ export const getStorageUrl = (path?: string, cacheBust?: string | number): strin
   
   // Add cache busting for blog images
   if (cacheBust) {
-    const separator = finalUrl.includes('?') ? '&' : '?';
     const timestamp = typeof cacheBust === 'number' 
       ? cacheBust 
       : typeof cacheBust === 'string' 
         ? new Date(cacheBust).getTime() 
         : Date.now();
-    finalUrl = `${finalUrl}${separator}v=${timestamp}`;
+    if (!isNaN(timestamp)) {
+      const separator = finalUrl.includes('?') ? '&' : '?';
+      finalUrl = `${finalUrl}${separator}v=${timestamp}`;
+    }
   }
   
   return finalUrl;
