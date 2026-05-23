@@ -14,11 +14,10 @@ class SeoProductReviewsSeeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Fetch the last 30 published products (most recently created)
+        // 1. Fetch specific target products by ID
+        $targetIds = [550, 548, 546, 544, 543, 542, 541, 540];
         $products = Product::query()
-            ->where('publier', 1)
-            ->orderBy('created_at', 'desc')
-            ->limit(30)
+            ->whereIn('id', $targetIds)
             ->get();
 
         if ($products->isEmpty()) {
