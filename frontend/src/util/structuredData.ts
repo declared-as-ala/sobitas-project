@@ -175,6 +175,7 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
     return null;
   }
 
+  const shippingRateValue = price >= 300 ? 0 : 10;
   const offersPayload: Record<string, unknown> = {
     '@type': 'Offer',
     url: canonicalUrl,
@@ -185,7 +186,7 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
     seller: { '@type': 'Organization', name: SITE_BRAND_NAME },
     shippingDetails: {
       '@type': 'OfferShippingDetails',
-      shippingRate: { '@type': 'MonetaryAmount', value: 0, currency: 'TND' },
+      shippingRate: { '@type': 'MonetaryAmount', value: shippingRateValue, currency: 'TND' },
       deliveryTime: {
         '@type': 'ShippingDeliveryTime',
         handlingTime: { '@type': 'QuantitativeValue', minValue: 0, maxValue: 1, unitCode: 'DAY' },
@@ -216,7 +217,14 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
 
   // hasMerchantReturnPolicy: indicates if the product has a merchant return policy
   if (product.schema?.has_merchant_return_policy === true) {
-    schema.hasMerchantReturnPolicy = true;
+    schema.hasMerchantReturnPolicy = {
+      '@type': 'MerchantReturnPolicy',
+      'applicableCountry': 'TN',
+      'returnPolicyCategory': 'https://schema.org/MerchantReturnFiniteReturnPeriod',
+      'merchantReturnDays': 7,
+      'returnMethod': 'https://schema.org/ReturnByMail',
+      'returnFees': 'https://schema.org/ReturnFeesCustomerPaying',
+    };
   }
 
   if (dedupedImages.length > 0) {
@@ -300,6 +308,7 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
   const price = formatSchemaPrice(getSchemaPrice(product));
   const brandName = (product.schema?.brand || product.brand?.designation_fr || SITE_BRAND_NAME).toString();
 
+  const shippingRateValue = getSchemaPrice(product) >= 300 ? 0 : 10;
   const offersInput =
     (source.offers && typeof source.offers === 'object' ? source.offers : null) as Record<string, unknown> | null;
   const offers: Record<string, unknown> = {
@@ -315,6 +324,15 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
       '@id': `${PRODUCTION_ORIGIN}/#organization`,
       name: SITE_BRAND_NAME,
       url: PRODUCTION_ORIGIN,
+    },
+    shippingDetails: {
+      '@type': 'OfferShippingDetails',
+      shippingRate: { '@type': 'MonetaryAmount', value: shippingRateValue, currency: 'TND' },
+      deliveryTime: {
+        '@type': 'ShippingDeliveryTime',
+        handlingTime: { '@type': 'QuantitativeValue', minValue: 0, maxValue: 1, unitCode: 'DAY' },
+        transitTime: { '@type': 'QuantitativeValue', minValue: 1, maxValue: 3, unitCode: 'DAY' },
+      },
     },
   };
 
@@ -357,7 +375,14 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
   if (product.gtin?.trim()) sanitized.gtin = product.gtin.trim();
   if (product.mpn?.trim()) sanitized.mpn = product.mpn.trim();
   if (product.schema?.has_merchant_return_policy === true) {
-    sanitized.hasMerchantReturnPolicy = true;
+    sanitized.hasMerchantReturnPolicy = {
+      '@type': 'MerchantReturnPolicy',
+      'applicableCountry': 'TN',
+      'returnPolicyCategory': 'https://schema.org/MerchantReturnFiniteReturnPeriod',
+      'merchantReturnDays': 7,
+      'returnMethod': 'https://schema.org/ReturnByMail',
+      'returnFees': 'https://schema.org/ReturnFeesCustomerPaying',
+    };
   }
 
   return sanitized;
