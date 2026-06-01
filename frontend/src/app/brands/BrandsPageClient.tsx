@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { Header } from '@/app/components/Header';
 import { Footer } from '@/app/components/Footer';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
-import { Search, ArrowRight, Star, Zap } from 'lucide-react';
+import { Search, ArrowRight, Star, Zap, Building2, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { getAllBrands, getStorageUrl } from '@/services/api';
 import type { Brand } from '@/types';
@@ -79,86 +79,81 @@ export default function BrandsPageClient() {
   if (isLoading) return <LoadingSpinner fullScreen message="Chargement des marques..." />;
 
   return (
-    <div className="min-h-screen bg-[#080808] text-white">
-      {/* Navigation overlay */}
+    <div className="min-h-screen bg-gray-50">
+      {/* Loading overlay */}
       {navigatingToBrand && (
-        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/95 backdrop-blur-md">
+        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-white/90 backdrop-blur-sm">
           <LoadingSpinner fullScreen message="Chargement de la marque..." />
         </div>
       )}
 
       <Header />
 
-      {/* ── Hero Section ── */}
-      <section className="relative overflow-hidden bg-[#080808] pt-14 pb-16 border-b border-white/5">
-        {/* Ambient gold glows */}
-        <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-amber-500/8 rounded-full blur-3xl" />
-        <div className="pointer-events-none absolute bottom-0 left-0 w-80 h-80 bg-yellow-600/5 rounded-full blur-3xl" />
-        <div className="pointer-events-none absolute bottom-0 right-0 w-96 h-64 bg-amber-400/5 rounded-full blur-3xl" />
+      {/* ── Hero ── */}
+      <section className="relative overflow-hidden bg-white border-b border-gray-100">
+        {/* Decorative blobs */}
+        <div className="pointer-events-none absolute -top-20 -right-20 w-72 h-72 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 opacity-60 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-10 -left-10 w-56 h-56 rounded-full bg-gradient-to-tr from-yellow-100 to-amber-50 opacity-80 blur-2xl" />
+        {/* Gold accent top line */}
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-400 via-amber-400 to-yellow-400" />
 
-        {/* Gold top border line */}
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-500/40 to-transparent" />
-
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-12 sm:pt-16 sm:pb-16">
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, ease: 'easeOut' }}
+            transition={{ duration: 0.5 }}
             className="text-center"
           >
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/25 mb-7">
-              <Star className="h-3 w-3 text-amber-400 fill-amber-400" />
-              <span className="text-amber-400 text-[11px] font-bold uppercase tracking-[0.2em]">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-50 border border-amber-200 mb-5">
+              <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
+              <span className="text-amber-700 text-[11px] font-bold uppercase tracking-[0.18em]">
                 Distributeur Officiel
               </span>
-              <Star className="h-3 w-3 text-amber-400 fill-amber-400" />
+              <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
             </div>
 
             {/* Title */}
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black leading-[0.95] mb-5 tracking-tight">
-              <span className="bg-gradient-to-br from-amber-200 via-yellow-400 to-amber-600 bg-clip-text text-transparent">
+            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black leading-tight mb-3 tracking-tight">
+              <span className="bg-gradient-to-r from-gray-900 via-amber-800 to-orange-700 bg-clip-text text-transparent">
                 Nos Marques
               </span>
             </h1>
-
-            <p className="text-gray-400 text-base sm:text-lg max-w-lg mx-auto mb-10 leading-relaxed">
+            <p className="text-gray-500 text-sm sm:text-base max-w-md mx-auto mb-8 leading-relaxed">
               {brands.length} marques premium de nutrition sportive sélectionnées pour vous
             </p>
 
-            {/* Search Bar */}
-            <div className="relative w-full max-w-md mx-auto">
-              <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-amber-500/20 to-yellow-500/20 blur-md opacity-60" />
-              <div className="relative flex items-center bg-white/5 border border-white/10 hover:border-amber-500/30 focus-within:border-amber-400/50 rounded-2xl transition-all duration-300">
-                <Search className="ml-4 h-5 w-5 text-amber-400/60 flex-shrink-0" />
-                <input
-                  type="text"
-                  placeholder="Rechercher une marque..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="flex-1 bg-transparent px-4 py-4 text-white placeholder-gray-500 focus:outline-none text-sm"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="mr-4 text-gray-500 hover:text-white transition-colors text-xs"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
+            {/* Search */}
+            <div className="relative w-full max-w-sm sm:max-w-md mx-auto">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-amber-500 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Rechercher une marque..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="w-full pl-11 pr-10 py-3.5 rounded-2xl bg-white border border-amber-200 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100 text-gray-800 placeholder-gray-400 text-sm shadow-sm transition-all"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-gray-100 hover:bg-amber-100 flex items-center justify-center transition-colors"
+                  aria-label="Effacer"
+                >
+                  <X className="h-3 w-3 text-gray-500" />
+                </button>
+              )}
             </div>
 
-            {/* Stats row */}
-            <div className="mt-10 flex items-center justify-center gap-8 sm:gap-12">
+            {/* Stats */}
+            <div className="mt-8 flex items-center justify-center gap-6 sm:gap-10">
               {[
-                { value: brands.length + '+', label: 'Marques' },
+                { value: `${brands.length}+`, label: 'Marques' },
                 { value: '100%', label: 'Officielles' },
-                { value: 'Livraison', label: 'Rapide' },
+                { value: 'Rapide', label: 'Livraison' },
               ].map(({ value, label }) => (
                 <div key={label} className="text-center">
-                  <div className="text-xl sm:text-2xl font-black text-amber-400">{value}</div>
-                  <div className="text-gray-500 text-xs font-medium mt-0.5">{label}</div>
+                  <div className="text-lg sm:text-2xl font-black text-amber-600">{value}</div>
+                  <div className="text-gray-400 text-[11px] sm:text-xs font-medium mt-0.5">{label}</div>
                 </div>
               ))}
             </div>
@@ -166,17 +161,17 @@ export default function BrandsPageClient() {
         </div>
       </section>
 
-      {/* ── A–Z Sticky Navigation ── */}
+      {/* ── A–Z Sticky Nav ── */}
       <AnimatePresence>
         {!searchQuery && (
           <motion.div
-            initial={{ opacity: 0, y: -8 }}
+            initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            className="sticky top-0 z-40 bg-[#080808]/95 backdrop-blur-xl border-b border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.4)]"
+            exit={{ opacity: 0, y: -6 }}
+            className="sticky top-0 z-40 bg-white/95 backdrop-blur-lg border-b border-gray-100 shadow-sm"
           >
-            <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-2 sm:py-3">
-              <div className="flex items-center gap-0.5 sm:gap-1 overflow-x-auto scrollbar-none pb-0.5">
+            <div className="max-w-5xl mx-auto px-2 sm:px-6 lg:px-8 py-2 sm:py-2.5">
+              <div className="flex items-center gap-0.5 sm:gap-1 overflow-x-auto scrollbar-none">
                 {LETTERS.map(letter => {
                   const isActive = activeLetters.has(letter);
                   const isCurrent = activeLetter === letter;
@@ -186,12 +181,12 @@ export default function BrandsPageClient() {
                       onClick={() => isActive && scrollToLetter(letter)}
                       disabled={!isActive}
                       className={`
-                        flex-shrink-0 w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl text-[11px] sm:text-sm font-bold transition-all duration-200
+                        flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-[11px] sm:text-xs font-bold transition-all duration-150
                         ${isCurrent
-                          ? 'bg-amber-500 text-black shadow-[0_0_12px_rgba(245,158,11,0.5)]'
+                          ? 'bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-md shadow-amber-200'
                           : isActive
-                          ? 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 hover:text-amber-300 border border-amber-500/20 hover:border-amber-400/40'
-                          : 'text-gray-700 cursor-default'
+                          ? 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200'
+                          : 'text-gray-300 cursor-default'
                         }
                       `}
                     >
@@ -206,73 +201,71 @@ export default function BrandsPageClient() {
       </AnimatePresence>
 
       {/* ── Main Content ── */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
+      <main className="max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 py-8 sm:py-12">
 
-        {/* Search results count */}
+        {/* Search result count */}
         {searchQuery && (
-          <motion.div
+          <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="mb-8"
+            className="text-sm text-gray-500 mb-6"
           >
-            <p className="text-gray-400 text-sm">
-              <span className="text-amber-400 font-bold">{filteredBrands.length}</span> marque{filteredBrands.length > 1 ? 's' : ''} pour{' '}
-              <span className="text-white">"{searchQuery}"</span>
-            </p>
-          </motion.div>
+            <span className="font-bold text-amber-600">{filteredBrands.length}</span>{' '}
+            marque{filteredBrands.length !== 1 ? 's' : ''} pour{' '}
+            <span className="font-semibold text-gray-700">"{searchQuery}"</span>
+          </motion.p>
         )}
 
         {/* Empty state */}
         {filteredBrands.length === 0 ? (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-center py-28"
+            className="text-center py-24"
           >
-            <div className="w-20 h-20 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto mb-6">
-              <Search className="h-8 w-8 text-amber-400/50" />
+            <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center mx-auto mb-4">
+              <Search className="h-7 w-7 text-amber-400" />
             </div>
-            <p className="text-gray-400 text-lg mb-3">Aucune marque trouvée</p>
-            <p className="text-gray-600 text-sm mb-6">Essayez avec d'autres mots-clés</p>
+            <p className="text-gray-700 font-semibold mb-1">Aucune marque trouvée</p>
+            <p className="text-gray-400 text-sm mb-5">Essayez avec d'autres mots-clés</p>
             <button
               onClick={() => setSearchQuery('')}
-              className="px-6 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 hover:bg-amber-500/20 transition-all text-sm font-semibold"
+              className="px-5 py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-sm font-semibold hover:bg-amber-100 transition-colors"
             >
               Voir toutes les marques
             </button>
           </motion.div>
+
         ) : searchQuery ? (
-          /* Search grid */
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+          /* ── Search results grid ── */
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
             {filteredBrands.map((brand, i) => (
               <BrandCard key={brand.id} brand={brand} index={i} onBrandClick={handleBrandClick} />
             ))}
           </div>
+
         ) : (
-          /* A–Z Grouped sections */
-          <div className="space-y-16">
+          /* ── A–Z grouped sections ── */
+          <div className="space-y-12 sm:space-y-16">
             {sortedLetters.map(letter => (
               <div
                 key={letter}
                 ref={el => { sectionRefs.current[letter] = el; }}
-                className="scroll-mt-24"
+                className="scroll-mt-20"
               >
-                {/* Section header */}
-                <div className="flex items-center gap-5 mb-8">
-                  <div className="relative flex-shrink-0">
-                    <div className="absolute inset-0 rounded-2xl bg-amber-500/20 blur-sm" />
-                    <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500/25 to-amber-700/15 border border-amber-500/30 flex items-center justify-center">
-                      <span className="text-2xl font-black text-amber-400">{letter}</span>
-                    </div>
+                {/* Letter divider */}
+                <div className="flex items-center gap-3 sm:gap-4 mb-5 sm:mb-7">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-md shadow-amber-100 flex-shrink-0">
+                    <span className="text-lg sm:text-xl font-black text-white">{letter}</span>
                   </div>
-                  <div className="flex-1 h-px bg-gradient-to-r from-amber-500/30 via-amber-500/10 to-transparent" />
-                  <span className="text-gray-600 text-xs font-medium flex-shrink-0">
+                  <div className="flex-1 h-px bg-gradient-to-r from-amber-200 to-transparent" />
+                  <span className="text-xs text-gray-400 font-medium flex-shrink-0">
                     {groupedBrands[letter].length} marque{groupedBrands[letter].length > 1 ? 's' : ''}
                   </span>
                 </div>
 
-                {/* Cards grid */}
-                <div className="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-4">
+                {/* Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
                   {groupedBrands[letter].map((brand, i) => (
                     <BrandCard key={brand.id} brand={brand} index={i} onBrandClick={handleBrandClick} />
                   ))}
@@ -283,16 +276,18 @@ export default function BrandsPageClient() {
         )}
       </main>
 
-      {/* ── Bottom CTA strip ── */}
-      <div className="border-t border-white/5 bg-[#0c0c0c]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex flex-col sm:flex-row items-center justify-between gap-6">
+      {/* ── Bottom CTA ── */}
+      <div className="border-t border-gray-100 bg-white">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 flex flex-col sm:flex-row items-center justify-between gap-5">
           <div>
-            <p className="text-white font-bold text-lg mb-1">Vous ne trouvez pas votre marque ?</p>
-            <p className="text-gray-500 text-sm">Contactez-nous pour une demande spéciale</p>
+            <p className="text-gray-900 font-bold text-base sm:text-lg mb-0.5 text-center sm:text-left">
+              Vous ne trouvez pas votre marque ?
+            </p>
+            <p className="text-gray-400 text-sm text-center sm:text-left">Contactez-nous pour une demande spéciale</p>
           </div>
           <Link
             href="/contact"
-            className="flex-shrink-0 flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-bold text-sm hover:from-amber-400 hover:to-yellow-400 transition-all shadow-[0_0_24px_rgba(245,158,11,0.3)] hover:shadow-[0_0_32px_rgba(245,158,11,0.45)]"
+            className="flex-shrink-0 flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-sm hover:from-amber-600 hover:to-orange-600 transition-all shadow-md shadow-amber-100 hover:shadow-lg hover:shadow-amber-200"
           >
             <Zap className="h-4 w-4" />
             Nous contacter
@@ -306,6 +301,7 @@ export default function BrandsPageClient() {
   );
 }
 
+/* ── Brand Card ── */
 function BrandCard({
   brand,
   index,
@@ -321,53 +317,50 @@ function BrandCard({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: Math.min(index * 0.035, 0.4), ease: 'easeOut' }}
+      transition={{ delay: Math.min(index * 0.03, 0.35), ease: 'easeOut' }}
     >
       <Link
         href={href}
         onClick={e => onBrandClick(e, href)}
-        className="group block relative rounded-2xl overflow-hidden bg-white/[0.04] hover:bg-white/[0.07] border border-white/[0.07] hover:border-amber-500/40 transition-all duration-300 hover:shadow-[0_0_30px_rgba(245,158,11,0.12)] hover:-translate-y-0.5"
+        className="group flex flex-col bg-white rounded-2xl border border-gray-100 hover:border-amber-300 shadow-sm hover:shadow-md hover:shadow-amber-50 transition-all duration-250 overflow-hidden hover:-translate-y-0.5 active:scale-[0.98]"
       >
-        {/* Logo area */}
-        <div className="relative w-full aspect-square bg-white/5">
+        {/* Logo zone */}
+        <div className="relative w-full aspect-square bg-gray-50 flex items-center justify-center overflow-hidden">
           {logoUrl && !imageError ? (
             <Image
               src={logoUrl}
               alt={brand.designation_fr || brand.alt_cover || 'Brand logo'}
               fill
-              className="object-contain p-4 group-hover:scale-105 transition-transform duration-400"
-              sizes="(max-width: 640px) 45vw, (max-width: 1024px) 22vw, 15vw"
+              className="object-contain p-3 sm:p-4 group-hover:scale-105 transition-transform duration-300"
+              sizes="(max-width: 480px) 44vw, (max-width: 640px) 44vw, (max-width: 1024px) 22vw, 18vw"
               loading="lazy"
               unoptimized
               onError={() => setImageError(true)}
             />
           ) : (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-3xl font-black text-amber-400/30 select-none">
-                {brand.designation_fr?.[0]?.toUpperCase() || '?'}
+            <div className="flex flex-col items-center gap-1 p-3">
+              <Building2 className="h-7 w-7 sm:h-8 sm:h-8 text-gray-300" />
+              <span className="text-xs text-gray-400 font-medium text-center leading-tight line-clamp-2">
+                {brand.designation_fr}
               </span>
             </div>
           )}
-
-          {/* Gold shimmer on hover */}
-          <div className="absolute inset-0 bg-gradient-to-t from-amber-500/0 via-transparent to-amber-500/0 group-hover:from-amber-500/5 group-hover:to-amber-400/5 transition-all duration-500" />
+          {/* Amber bottom shimmer on hover */}
+          <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-amber-400 to-orange-400 scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
         </div>
 
         {/* Name + CTA */}
-        <div className="px-3 py-3 border-t border-white/5">
-          <p className="text-white/75 group-hover:text-white text-xs sm:text-sm font-semibold text-center leading-tight transition-colors line-clamp-2 mb-1.5 min-h-[2.5em] flex items-center justify-center">
+        <div className="px-2.5 sm:px-3 py-2.5 sm:py-3 border-t border-gray-50">
+          <p className="text-gray-800 group-hover:text-amber-700 text-[11px] sm:text-xs font-bold text-center leading-tight line-clamp-2 mb-1.5 min-h-[2.2em] flex items-center justify-center transition-colors">
             {brand.designation_fr}
           </p>
-          <div className="flex items-center justify-center gap-1 text-amber-500/40 group-hover:text-amber-400 transition-colors text-[10px] sm:text-xs font-medium">
-            <span>Voir les produits</span>
+          <div className="flex items-center justify-center gap-0.5 text-gray-400 group-hover:text-amber-500 transition-colors text-[10px] font-medium">
+            <span>Voir</span>
             <ArrowRight className="h-2.5 w-2.5 group-hover:translate-x-0.5 transition-transform" />
           </div>
         </div>
-
-        {/* Gold corner accent */}
-        <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-amber-400/0 group-hover:bg-amber-400/60 transition-all duration-300 shadow-[0_0_6px_rgba(251,191,36,0.8)]" />
       </Link>
     </motion.div>
   );
