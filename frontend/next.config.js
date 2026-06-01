@@ -131,6 +131,9 @@ const nextConfig = {
     ];
   },
   experimental: {
+    // Inline critical CSS and load non-critical CSS asynchronously to eliminate render-blocking.
+    // Requires `critters` devDependency.
+    optimizeCss: true,
     // Disable the client-side Router Cache for both dynamic and static pages.
     // This ensures navigating to /blog always fetches fresh RSC payloads from the server,
     // preventing stale articles from appearing after admin edits/deletes.
@@ -144,8 +147,15 @@ const nextConfig = {
       '@radix-ui/react-accordion',
       '@radix-ui/react-tabs',
       '@radix-ui/react-tooltip',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-select',
+      '@radix-ui/react-checkbox',
+      '@radix-ui/react-slider',
+      '@mui/material',
+      '@mui/icons-material',
       'motion',
       'sonner',
+      'date-fns',
     ],
   },
 }

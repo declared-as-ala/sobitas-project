@@ -56,24 +56,24 @@ const HeroFirstPicture = memo(function HeroFirstPicture({
   mobileFirst: HeroFirstSlide;
   desktopFirst: HeroFirstSlide;
 }) {
-  const mobileSrcSet = buildSrcSet(mobileFirst.imageUrl, [640, 750, 828, 1080]);
-  const desktopSrcSet = buildSrcSet(desktopFirst.imageUrl, [1080, 1200]);
+  // q=50 on mobile matches the preload hint in page.tsx — ensures preload cache hit.
+  const mobileSrcSet = buildSrcSet(mobileFirst.imageUrl, [640, 750, 828], 50);
+  const desktopSrcSet = buildSrcSet(desktopFirst.imageUrl, [1080, 1200], 75);
 
   return (
     <picture
       style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block' }}
     >
-      {/* Mobile: portrait / mobile-specific slide */}
+      {/* Mobile: q=50 keeps file size small on slow connections */}
       <source media="(max-width: 767px)" srcSet={mobileSrcSet} sizes="100vw" />
-      {/* Desktop: landscape slide */}
+      {/* Desktop: q=75 for high fidelity on large screens */}
       <source media="(min-width: 768px)" srcSet={desktopSrcSet} sizes="100vw" />
-      {/* Fallback img — fetchPriority="high" so browser treats this as LCP resource */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={nextImgUrl(desktopFirst.imageUrl, 1200)}
-        alt={desktopFirst.title}
-        width={1200}
-        height={675}
+        src={nextImgUrl(mobileFirst.imageUrl, 828, 50)}
+        alt={mobileFirst.title}
+        width={828}
+        height={466}
         fetchPriority="high"
         decoding="async"
         loading="eager"

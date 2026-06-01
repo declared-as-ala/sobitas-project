@@ -12,7 +12,7 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Slider } from '@/app/components/ui/slider';
 import { Checkbox } from '@/app/components/ui/checkbox';
-import { Filter, Search, X, CircleAlert, Sparkles, TrendingUp, Heart } from 'lucide-react';
+import { Filter, Search, X, CircleAlert, Sparkles, TrendingUp, Heart, Trophy, Zap } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/app/components/ui/sheet';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/app/components/ui/accordion';
 import { Badge } from '@/app/components/ui/badge';
@@ -679,7 +679,7 @@ function ShopContent({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50 dark:from-[#080808] dark:via-[#0a0a0a] dark:to-[#080808]">
       <Header />
 
       <main className="w-full mx-auto px-2.5 sm:px-4 md:px-5 lg:px-6 max-w-[1024px] md:max-w-[1280px] lg:max-w-[1400px] xl:max-w-[1600px] py-4 sm:py-8 lg:py-12 animate-fade-in">
@@ -726,6 +726,61 @@ function ShopContent({
           ) : null;
         })()}
 
+        {/* ── Subcategory Gold Hero Banner ── */}
+        {isSubcategory && !categorySeoLanding && (() => {
+          const subcat = categories
+            .flatMap(c => c.sous_categories || [])
+            .find(s => s.slug === initialCategory);
+          const catName = subcat?.designation_fr || initialCategory?.replace(/-/g, ' ') || '';
+          return (
+            <motion.div
+              initial={{ opacity: 0, y: -16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45, ease: 'easeOut' }}
+              className="relative mb-8 rounded-3xl overflow-hidden"
+            >
+              {/* Dark gold layered bg */}
+              <div className="absolute inset-0 bg-gradient-to-br from-[#100c00] via-[#1c1400] to-[#0d0900]" />
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_80%_at_70%_0%,rgba(212,175,55,0.18),transparent)]" />
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_40%_60%_at_20%_100%,rgba(212,175,55,0.08),transparent)]" />
+              {/* Gold border lines */}
+              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-500/50 to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-500/20 to-transparent" />
+
+              <div className="relative px-6 py-10 sm:px-12 sm:py-14 flex flex-col sm:flex-row sm:items-center gap-6">
+                <div className="flex-1 min-w-0">
+                  {/* Gold eyebrow */}
+                  <div className="flex items-center gap-2.5 mb-4">
+                    <div className="h-px w-8 bg-amber-400" />
+                    <span className="text-amber-400 text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em]">
+                      Collection Premium
+                    </span>
+                  </div>
+                  <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white mb-3 leading-[1.05] capitalize">
+                    {catName}
+                  </h1>
+                  <p className="text-amber-100/40 text-sm sm:text-base">
+                    {filteredProducts.length} produit{filteredProducts.length !== 1 ? 's' : ''} disponible{filteredProducts.length !== 1 ? 's' : ''}
+                  </p>
+                </div>
+
+                {/* Decorative right side */}
+                <div className="hidden sm:flex items-center gap-3 flex-shrink-0">
+                  {[
+                    { icon: Trophy, label: 'Qualité Premium' },
+                    { icon: Zap, label: 'Livraison Rapide' },
+                  ].map(({ icon: Icon, label }) => (
+                    <div key={label} className="flex flex-col items-center gap-2 px-5 py-4 rounded-2xl bg-white/5 border border-amber-500/15">
+                      <Icon className="h-5 w-5 text-amber-400" />
+                      <span className="text-white/60 text-xs font-medium text-center whitespace-nowrap">{label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          );
+        })()}
+
         {/* Category SEO Section */}
         {categorySeoLanding && <div className="mb-6">{categorySeoLanding}</div>}
 
@@ -737,7 +792,7 @@ function ShopContent({
             transition={{ duration: 0.4, ease: 'easeOut' }}
             className="mb-6 sm:mb-8 lg:mb-10 rounded-2xl border border-gray-200 dark:border-gray-800 bg-gradient-to-br from-white via-white to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800/50 p-4 sm:p-6 md:p-8 lg:p-10 shadow-sm relative overflow-hidden"
           >
-            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-red-50/20 to-transparent dark:from-red-900/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-amber-50/20 to-transparent dark:from-amber-900/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
             
             <div className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-6 lg:gap-8 relative z-10">
               {currentBrand.logo && (
@@ -765,7 +820,7 @@ function ShopContent({
                     />
                     <button
                       onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
-                      className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-semibold text-xs sm:text-sm transition-colors"
+                      className="text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 font-semibold text-xs sm:text-sm transition-colors"
                     >
                       {isDescriptionExpanded ? 'Lire moins' : 'Lire plus'}
                     </button>
@@ -783,7 +838,7 @@ function ShopContent({
           className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
         >
           <div>
-            {!categorySeoLanding && (
+            {!categorySeoLanding && !isSubcategory && (
               <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white leading-tight">
                 {currentBrand ? `Produits ${currentBrand.designation_fr}` : 'Tous nos produits'}
               </h1>
@@ -807,7 +862,7 @@ function ShopContent({
               placeholder="Rechercher un produit..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 sm:pl-10 min-h-[44px] border-gray-200 dark:border-gray-700 focus:border-red-500 dark:focus:border-red-500 rounded-xl"
+              className="w-full pl-9 sm:pl-10 min-h-[44px] border-gray-200 dark:border-gray-700 focus:border-amber-500 dark:focus:border-amber-500 rounded-xl"
             />
           </div>
           
@@ -815,7 +870,7 @@ function ShopContent({
             {/* Dynamic Sorting Select dropdown (Radix Select) */}
             <div className="flex-1 md:w-56 min-w-[155px]">
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="min-h-[44px] h-auto border-gray-200 dark:border-gray-700 focus:ring-red-500 rounded-xl">
+                <SelectTrigger className="min-h-[44px] h-auto border-gray-200 dark:border-gray-700 focus:ring-amber-500 rounded-xl">
                   <SelectValue placeholder="Trier par" />
                 </SelectTrigger>
                 <SelectContent>
@@ -837,7 +892,7 @@ function ShopContent({
               <Filter className="h-4 w-4" />
               <span>Filtres</span>
               {appliedFilters.length > 0 && (
-                <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1.5 text-xs bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-400">
+                <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1.5 text-xs bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-400">
                   {appliedFilters.length}
                 </Badge>
               )}
@@ -854,7 +909,7 @@ function ShopContent({
                   <Filter className="h-4 w-4 mr-2" />
                   <span>Filtres</span>
                   {(appliedFilters.length > 0) && (
-                    <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1.5 text-xs bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-400">
+                    <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1.5 text-xs bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-400">
                       {appliedFilters.length}
                     </Badge>
                   )}
@@ -866,7 +921,7 @@ function ShopContent({
                     <SheetTitle className="text-lg font-bold">Filtres</SheetTitle>
                     <div className="flex items-center gap-2">
                       {appliedFilters.length > 0 && (
-                        <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs text-red-600 hover:text-red-700 h-8">
+                        <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs text-amber-600 hover:text-amber-700 h-8">
                           Tout effacer
                         </Button>
                       )}
@@ -1072,7 +1127,7 @@ function ShopContent({
                             min={priceBounds.min}
                             max={priceBounds.max}
                             step={10}
-                            className="w-full [&_[data-slot=slider-range]]:bg-orange-500 [&_[data-slot=slider-thumb]]:border-orange-500"
+                            className="w-full [&_[data-slot=slider-range]]:bg-amber-500 [&_[data-slot=slider-thumb]]:border-amber-500"
                           />
                           <div className="flex justify-between text-xs text-gray-400">
                             <span>{priceBounds.min} DT</span>
@@ -1085,7 +1140,7 @@ function ShopContent({
                   </Accordion>
                 </div>
                 <div className="sticky bottom-0 bg-white dark:bg-gray-900 border-t border-gray-150 dark:border-gray-800 -mx-6 px-6 py-4 mt-4">
-                  <Button className="w-full min-h-[46px] rounded-xl font-bold bg-red-600 hover:bg-red-700 text-white" onClick={() => setShowFilters(false)}>
+                  <Button className="w-full min-h-[46px] rounded-xl font-bold bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black shadow-[0_0_20px_rgba(245,158,11,0.3)]" onClick={() => setShowFilters(false)}>
                     Voir {filteredProducts.length} produit{filteredProducts.length > 1 ? 's' : ''}
                   </Button>
                 </div>
@@ -1122,7 +1177,7 @@ function ShopContent({
               variant="ghost"
               size="sm"
               onClick={clearFilters}
-              className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 h-8 rounded-lg"
+              className="text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/20 h-8 rounded-lg"
             >
               Tout effacer
             </Button>
@@ -1141,7 +1196,7 @@ function ShopContent({
                 transition={{ duration: 0.25 }}
                 className="hidden lg:block w-72 flex-shrink-0"
               >
-                <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 px-5 pt-5 pb-8 space-y-1 sticky top-4 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
+                <div className="bg-white dark:bg-[#0f0f0f] rounded-2xl border border-gray-200 dark:border-amber-500/10 px-5 pt-5 pb-8 space-y-1 sticky top-4 shadow-[0_2px_12px_rgba(0,0,0,0.02)] dark:shadow-[0_0_30px_rgba(0,0,0,0.4),0_0_0_1px_rgba(245,158,11,0.05)]">
                   <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-150 dark:border-gray-800">
                     <h2 className="font-bold text-sm tracking-wide uppercase text-gray-500 dark:text-gray-400">Filtres</h2>
                     <div className="flex items-center gap-1.5">
@@ -1150,7 +1205,7 @@ function ShopContent({
                           variant="ghost"
                           size="sm"
                           onClick={clearFilters}
-                          className="text-xs text-red-600 hover:text-red-700 h-7 px-2"
+                          className="text-xs text-amber-600 hover:text-amber-700 h-7 px-2"
                         >
                           Tout effacer
                         </Button>
@@ -1365,7 +1420,7 @@ function ShopContent({
                             min={priceBounds.min}
                             max={priceBounds.max}
                             step={10}
-                            className="w-full [&_[data-slot=slider-range]]:bg-orange-500 [&_[data-slot=slider-thumb]]:border-orange-500"
+                            className="w-full [&_[data-slot=slider-range]]:bg-amber-500 [&_[data-slot=slider-thumb]]:border-amber-500"
                           />
                           <div className="flex justify-between text-xs text-gray-400">
                             <span>{priceBounds.min} DT</span>
@@ -1384,8 +1439,8 @@ function ShopContent({
           <div className="flex-1 min-w-0">
             {filterError ? (
               <div className="flex flex-col items-center justify-center py-12 sm:py-16 px-4">
-                <div className="rounded-full bg-red-100 dark:bg-red-900/30 p-4 mb-4 animate-bounce">
-                  <CircleAlert className="h-10 w-10 text-red-600 dark:text-red-400" aria-hidden />
+                <div className="rounded-full bg-amber-100 dark:bg-amber-900/30 p-4 mb-4 animate-bounce">
+                  <CircleAlert className="h-10 w-10 text-amber-600 dark:text-amber-400" aria-hidden />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
                   Une erreur s&apos;est produite
@@ -1395,7 +1450,7 @@ function ShopContent({
                 </p>
                 <Button
                   onClick={() => { setFilterError(null); setRetryCount(c => c + 1); }}
-                  className="gap-2 rounded-xl bg-red-600 hover:bg-red-700 text-white min-h-[44px]"
+                  className="gap-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black min-h-[44px]"
                 >
                   Réessayer
                 </Button>

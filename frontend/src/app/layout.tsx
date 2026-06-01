@@ -121,10 +121,14 @@ export default async function RootLayout({
         <link rel="icon" href="/favicon.ico" />
         {/* Manifest for PWA and Android support */}
         <link rel="manifest" href="/site.webmanifest" />
-        {/* Preconnect for image/storage origin – same default as api.ts to avoid hydration mismatch */}
+        {/* Preconnect to image/storage origin and Google Fonts CDN */}
         <link rel="preconnect" href={process.env.NEXT_PUBLIC_API_URL?.replace(/\/api\/?$/, '') || 'https://admin.protein.tn'} crossOrigin="anonymous" />
         <link rel="dns-prefetch" href={process.env.NEXT_PUBLIC_API_URL?.replace(/\/api\/?$/, '') || 'https://admin.protein.tn'} />
-        {/* Preload LCP hero image (Next/Image will request /_next/image?url=…; this warms cache) */}
+        {/* Preconnect GTM/GA so the lazyOnload scripts resolve faster when they fire */}
+        <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+        <link rel="dns-prefetch" href="https://www.google-analytics.com" />
+        {/* Hint for API proxy used on first navigation */}
+        <link rel="preconnect" href={baseUrl} crossOrigin="anonymous" />
 
         {/* Structured data: Organization + LocalBusiness + WebSite for SEO (Tunisia local & rich results) */}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }} />

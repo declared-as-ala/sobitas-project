@@ -1,12 +1,15 @@
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { HeroSlider } from '@/app/components/HeroSlider';
 import { Header } from '@/app/components/Header';
-import { FeaturesSection } from '@/app/components/FeaturesSection';
-import { CategoryGrid } from '@/app/components/CategoryGrid';
-import { VentesFlashSection } from '@/app/components/VentesFlashSection';
-import { ProductSection } from '@/app/components/ProductSection';
 import { Footer } from '@/app/components/Footer';
-import { HomeDeferredSections } from '@/app/components/HomeDeferredSections';
+
+// Below-fold sections: defer JS evaluation until after first paint
+const FeaturesSection = dynamic(() => import('@/app/components/FeaturesSection').then(m => ({ default: m.FeaturesSection })), { ssr: true });
+const CategoryGrid = dynamic(() => import('@/app/components/CategoryGrid').then(m => ({ default: m.CategoryGrid })), { ssr: true });
+const VentesFlashSection = dynamic(() => import('@/app/components/VentesFlashSection').then(m => ({ default: m.VentesFlashSection })), { ssr: true });
+const ProductSection = dynamic(() => import('@/app/components/ProductSection').then(m => ({ default: m.ProductSection })), { ssr: true });
+const HomeDeferredSections = dynamic(() => import('@/app/components/HomeDeferredSections').then(m => ({ default: m.HomeDeferredSections })), { ssr: false });
 
 import type { AccueilData, Product } from '@/types';
 import { getStorageUrl } from '@/services/api';

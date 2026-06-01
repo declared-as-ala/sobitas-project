@@ -33,11 +33,8 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
     getCmsPages().then(setPages);
   }, [pagesProp]);
 
-  // Exclude "Qui sommes nous ?" (and variants) from API pages — do not show in footer
-  const footerPages = pages.filter((p) => {
-    const title = (p.title || '').toLowerCase().trim();
-    return !title.includes('qui sommes');
-  });
+  // Show all API pages in footer
+  const footerPages = pages;
 
   // Lazy load Google Maps only when footer is visible (Intersection Observer)
   useEffect(() => {
@@ -106,9 +103,6 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
                 />
               </Link>
             </motion.div>
-            <p className="text-sm text-gray-400 leading-relaxed max-w-full">
-              PROTEINE TUNISIE votre distributeur officiel d&apos;articles de sport et de compléments alimentaires en Tunisie.
-            </p>
           </div>
 
           <div className="h-px bg-gray-800/60 w-full" aria-hidden="true" role="separator" />
@@ -239,9 +233,6 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
                 priority
               />
             </div>
-            <p className="text-sm text-gray-400 leading-relaxed">
-              PROTEINE TUNISIE votre distributeur officiel d&apos;articles de sport et de compléments alimentaires en Tunisie.
-            </p>
 
             {/* Contact Details */}
             <div className="space-y-3">

@@ -261,9 +261,10 @@ const CMS_PAGES_FALLBACK: CmsPage[] = [
 
 export const getCmsPages = async (): Promise<CmsPage[]> => {
   try {
-    const response = await api.get<CmsPage[]>('/pages', { timeout: 10000 });
-    const data = response.data;
-    const list = Array.isArray(data) ? data : [];
+    const response = await api.get<any>('/pages', { timeout: 10000 });
+    const raw = response.data;
+    // API returns either a flat array or a paginated { data: [...], meta, links } shape
+    const list: CmsPage[] = Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
     if (list.length === 0) return CMS_PAGES_FALLBACK;
     return list.map((p) => ({
       ...p,

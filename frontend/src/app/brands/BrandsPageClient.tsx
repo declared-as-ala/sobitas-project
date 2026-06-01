@@ -1,43 +1,74 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/app/components/Header';
 import { Footer } from '@/app/components/Footer';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
-import { Button } from '@/app/components/ui/button';
-import { Input } from '@/app/components/ui/input';
-import { Search, Grid, List, ArrowRight, Building2 } from 'lucide-react';
-import { motion } from 'motion/react';
+import { Search, ArrowRight, Star, Zap } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { getAllBrands, getStorageUrl } from '@/services/api';
 import type { Brand } from '@/types';
 import { LoadingSpinner } from '@/app/components/LoadingSpinner';
-import { Pagination } from '@/app/components/ui/pagination';
 
-const MOBILE_PAGE_SIZE = 10;
-
-// Helper to generate slug from name
 function nameToSlug(name: string): string {
   return name
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Remove accents
-    .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric with hyphens
-    .replace(/^-+|-+$/g, '') // Remove leading/trailing hyphens
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
     .trim();
 }
+
+const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
 export default function BrandsPageClient() {
   const router = useRouter();
   const [brands, setBrands] = useState<Brand[]>([]);
-  const [filteredBrands, setFilteredBrands] = useState<Brand[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [navigatingToBrand, setNavigatingToBrand] = useState(false);
-  const [mobilePage, setMobilePage] = useState(1);
+  const [activeLetter, setActiveLetter] = useState<string | null>(null);
+  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  useEffect(() => {
+    getAllBrands()
+      .then(data => setBrands(data))
+      .catch(err => console.error('Error fetching brands:', err))
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  const filteredBrands = useMemo(() => {
+    if (!searchQuery.trim()) return brands;
+    return brands.filter(b =>
+      b.designation_fr?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [brands, searchQuery]);
+
+  const groupedBrands = useMemo(() => {
+    const groups: Record<string, Brand[]> = {};
+    filteredBrands.forEach(brand => {
+      const firstChar = (brand.designation_fr || '#')[0].toUpperCase();
+      const key = LETTERS.includes(firstChar) ? firstChar : '#';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(brand);
+    });
+    Object.values(groups).forEach(arr =>
+      arr.sort((a, b) => a.designation_fr.localeCompare(b.designation_fr))
+    );
+    return groups;
+  }, [filteredBrands]);
+
+  const activeLetters = useMemo(() => new Set(Object.keys(groupedBrands)), [groupedBrands]);
+  const sortedLetters = useMemo(() => [...Object.keys(groupedBrands)].sort(), [groupedBrands]);
+
+  const scrollToLetter = (letter: string) => {
+    setActiveLetter(letter);
+    sectionRefs.current[letter]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   const handleBrandClick = (e: React.MouseEvent, href: string) => {
     e.preventDefault();
@@ -45,201 +76,229 @@ export default function BrandsPageClient() {
     router.push(href);
   };
 
-  useEffect(() => {
-    const fetchBrands = async () => {
-      try {
-        const brandsData = await getAllBrands();
-        setBrands(brandsData);
-        setFilteredBrands(brandsData);
-      } catch (error) {
-        console.error('Error fetching brands:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchBrands();
-  }, []);
-
-  useEffect(() => {
-    if (searchQuery.trim() === '') {
-      setFilteredBrands(brands);
-    } else {
-      const filtered = brands.filter((brand) =>
-        brand.designation_fr?.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      setFilteredBrands(filtered);
-    }
-  }, [searchQuery, brands]);
-
-  // Reset mobile page when search or results change
-  useEffect(() => {
-    setMobilePage(1);
-  }, [searchQuery, filteredBrands.length]);
-
-  const mobileTotalPages = Math.max(1, Math.ceil(filteredBrands.length / MOBILE_PAGE_SIZE));
-  const mobileBrandsSlice = filteredBrands.slice(
-    (mobilePage - 1) * MOBILE_PAGE_SIZE,
-    mobilePage * MOBILE_PAGE_SIZE
-  );
-
-  if (isLoading) {
-    return <LoadingSpinner fullScreen message="Chargement des marques..." />;
-  }
+  if (isLoading) return <LoadingSpinner fullScreen message="Chargement des marques..." />;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 relative">
-      {/* Full-screen loading overlay when navigating to a brand */}
+    <div className="min-h-screen bg-[#080808] text-white">
+      {/* Navigation overlay */}
       {navigatingToBrand && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/90 dark:bg-gray-950/90 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/95 backdrop-blur-md">
           <LoadingSpinner fullScreen message="Chargement de la marque..." />
         </div>
       )}
 
       <Header />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
-        {/* Page Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
-        >
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center">
-              <Building2 className="h-8 w-8 text-white" />
+      {/* ── Hero Section ── */}
+      <section className="relative overflow-hidden bg-[#080808] pt-14 pb-16 border-b border-white/5">
+        {/* Ambient gold glows */}
+        <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-amber-500/8 rounded-full blur-3xl" />
+        <div className="pointer-events-none absolute bottom-0 left-0 w-80 h-80 bg-yellow-600/5 rounded-full blur-3xl" />
+        <div className="pointer-events-none absolute bottom-0 right-0 w-96 h-64 bg-amber-400/5 rounded-full blur-3xl" />
+
+        {/* Gold top border line */}
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-500/40 to-transparent" />
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, ease: 'easeOut' }}
+            className="text-center"
+          >
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/25 mb-7">
+              <Star className="h-3 w-3 text-amber-400 fill-amber-400" />
+              <span className="text-amber-400 text-[11px] font-bold uppercase tracking-[0.2em]">
+                Distributeur Officiel
+              </span>
+              <Star className="h-3 w-3 text-amber-400 fill-amber-400" />
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-              Nos Marques Partenaires
+
+            {/* Title */}
+            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black leading-[0.95] mb-5 tracking-tight">
+              <span className="bg-gradient-to-br from-amber-200 via-yellow-400 to-amber-600 bg-clip-text text-transparent">
+                Nos Marques
+              </span>
             </h1>
-          </div>
-          <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-            Découvrez toutes nos marques officielles de compléments alimentaires et nutrition sportive
-          </p>
-        </motion.div>
 
-        {/* Search and View Controls */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="mb-8 flex flex-col sm:flex-row gap-4 items-center justify-between"
-        >
-          {/* Search Bar */}
-          <div className="relative w-full sm:w-96">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <Input
-              type="text"
-              placeholder="Rechercher une marque..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-12 rounded-xl border-gray-300 dark:border-gray-700"
-            />
-          </div>
+            <p className="text-gray-400 text-base sm:text-lg max-w-lg mx-auto mb-10 leading-relaxed">
+              {brands.length} marques premium de nutrition sportive sélectionnées pour vous
+            </p>
 
-          {/* View Mode Toggle - hidden on mobile (mobile always uses list) */}
-          <div className="hidden md:flex gap-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
-            <Button
-              variant={viewMode === 'grid' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('grid')}
-              className="rounded-lg"
-            >
-              <Grid className="h-4 w-4 mr-2" />
-              Grille
-            </Button>
-            <Button
-              variant={viewMode === 'list' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('list')}
-              className="rounded-lg"
-            >
-              <List className="h-4 w-4 mr-2" />
-              Liste
-            </Button>
-          </div>
-        </motion.div>
+            {/* Search Bar */}
+            <div className="relative max-w-sm sm:max-w-md mx-auto">
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-amber-500/20 to-yellow-500/20 blur-md opacity-60" />
+              <div className="relative flex items-center bg-white/5 border border-white/10 hover:border-amber-500/30 focus-within:border-amber-400/50 rounded-2xl transition-all duration-300">
+                <Search className="ml-4 h-5 w-5 text-amber-400/60 flex-shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Rechercher une marque..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="flex-1 bg-transparent px-4 py-4 text-white placeholder-gray-500 focus:outline-none text-sm"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="mr-4 text-gray-500 hover:text-white transition-colors text-xs"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            </div>
 
-        {/* Results Count */}
+            {/* Stats row */}
+            <div className="mt-10 flex items-center justify-center gap-8 sm:gap-12">
+              {[
+                { value: brands.length + '+', label: 'Marques' },
+                { value: '100%', label: 'Officielles' },
+                { value: 'Livraison', label: 'Rapide' },
+              ].map(({ value, label }) => (
+                <div key={label} className="text-center">
+                  <div className="text-xl sm:text-2xl font-black text-amber-400">{value}</div>
+                  <div className="text-gray-500 text-xs font-medium mt-0.5">{label}</div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ── A–Z Sticky Navigation ── */}
+      <AnimatePresence>
+        {!searchQuery && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="sticky top-0 z-40 bg-[#080808]/95 backdrop-blur-xl border-b border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.4)]"
+          >
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+              <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
+                {LETTERS.map(letter => {
+                  const isActive = activeLetters.has(letter);
+                  const isCurrent = activeLetter === letter;
+                  return (
+                    <button
+                      key={letter}
+                      onClick={() => isActive && scrollToLetter(letter)}
+                      disabled={!isActive}
+                      className={`
+                        flex-shrink-0 w-9 h-9 rounded-xl text-sm font-bold transition-all duration-200
+                        ${isCurrent
+                          ? 'bg-amber-500 text-black shadow-[0_0_16px_rgba(245,158,11,0.5)]'
+                          : isActive
+                          ? 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 hover:text-amber-300 border border-amber-500/20 hover:border-amber-400/40'
+                          : 'text-gray-700 cursor-default'
+                        }
+                      `}
+                    >
+                      {letter}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Main Content ── */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
+
+        {/* Search results count */}
         {searchQuery && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="mb-6"
+            className="mb-8"
           >
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              {filteredBrands.length} marque{filteredBrands.length > 1 ? 's' : ''} trouvée{filteredBrands.length > 1 ? 's' : ''}
+            <p className="text-gray-400 text-sm">
+              <span className="text-amber-400 font-bold">{filteredBrands.length}</span> marque{filteredBrands.length > 1 ? 's' : ''} pour{' '}
+              <span className="text-white">"{searchQuery}"</span>
             </p>
           </motion.div>
         )}
 
-        {/* Brands Display */}
+        {/* Empty state */}
         {filteredBrands.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-center py-16"
+            className="text-center py-28"
           >
-            <Building2 className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-              Aucune marque trouvée
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Essayez avec d'autres mots-clés
-            </p>
-            <Button
-              variant="outline"
+            <div className="w-20 h-20 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto mb-6">
+              <Search className="h-8 w-8 text-amber-400/50" />
+            </div>
+            <p className="text-gray-400 text-lg mb-3">Aucune marque trouvée</p>
+            <p className="text-gray-600 text-sm mb-6">Essayez avec d'autres mots-clés</p>
+            <button
               onClick={() => setSearchQuery('')}
+              className="px-6 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 hover:bg-amber-500/20 transition-all text-sm font-semibold"
             >
-              Réinitialiser la recherche
-            </Button>
+              Voir toutes les marques
+            </button>
           </motion.div>
+        ) : searchQuery ? (
+          /* Search grid */
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            {filteredBrands.map((brand, i) => (
+              <BrandCard key={brand.id} brand={brand} index={i} onBrandClick={handleBrandClick} />
+            ))}
+          </div>
         ) : (
-          <>
-            {/* Mobile: always use modern list with bigger logos + pagination */}
-            <div className="md:hidden">
-              <div className="space-y-3">
-                {mobileBrandsSlice.map((brand, index) => (
-                  <BrandMobileListItem
-                    key={brand.id}
-                    brand={brand}
-                    index={(mobilePage - 1) * MOBILE_PAGE_SIZE + index}
-                    onBrandClick={handleBrandClick}
-                  />
-                ))}
+          /* A–Z Grouped sections */
+          <div className="space-y-16">
+            {sortedLetters.map(letter => (
+              <div
+                key={letter}
+                ref={el => { sectionRefs.current[letter] = el; }}
+                className="scroll-mt-24"
+              >
+                {/* Section header */}
+                <div className="flex items-center gap-5 mb-8">
+                  <div className="relative flex-shrink-0">
+                    <div className="absolute inset-0 rounded-2xl bg-amber-500/20 blur-sm" />
+                    <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500/25 to-amber-700/15 border border-amber-500/30 flex items-center justify-center">
+                      <span className="text-2xl font-black text-amber-400">{letter}</span>
+                    </div>
+                  </div>
+                  <div className="flex-1 h-px bg-gradient-to-r from-amber-500/30 via-amber-500/10 to-transparent" />
+                  <span className="text-gray-600 text-xs font-medium flex-shrink-0">
+                    {groupedBrands[letter].length} marque{groupedBrands[letter].length > 1 ? 's' : ''}
+                  </span>
+                </div>
+
+                {/* Cards grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                  {groupedBrands[letter].map((brand, i) => (
+                    <BrandCard key={brand.id} brand={brand} index={i} onBrandClick={handleBrandClick} />
+                  ))}
+                </div>
               </div>
-              {mobileTotalPages > 1 && (
-                <div className="mt-6 flex flex-col items-center gap-2">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Page {mobilePage} sur {mobileTotalPages}
-                  </p>
-                  <Pagination
-                    currentPage={mobilePage}
-                    totalPages={mobileTotalPages}
-                    onPageChange={setMobilePage}
-                  />
-                </div>
-              )}
-            </div>
-            {/* Desktop: grid or list based on toggle */}
-            <div className="hidden md:block">
-              {viewMode === 'grid' ? (
-                <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                  {filteredBrands.map((brand, index) => (
-                    <BrandCard key={brand.id} brand={brand} index={index} onBrandClick={handleBrandClick} />
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {filteredBrands.map((brand, index) => (
-                    <BrandListItem key={brand.id} brand={brand} index={index} onBrandClick={handleBrandClick} />
-                  ))}
-                </div>
-              )}
-            </div>
-          </>
+            ))}
+          </div>
         )}
       </main>
+
+      {/* ── Bottom CTA strip ── */}
+      <div className="border-t border-white/5 bg-[#0c0c0c]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex flex-col sm:flex-row items-center justify-between gap-6">
+          <div>
+            <p className="text-white font-bold text-lg mb-1">Vous ne trouvez pas votre marque ?</p>
+            <p className="text-gray-500 text-sm">Contactez-nous pour une demande spéciale</p>
+          </div>
+          <Link
+            href="/contact"
+            className="flex-shrink-0 flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-bold text-sm hover:from-amber-400 hover:to-yellow-400 transition-all shadow-[0_0_24px_rgba(245,158,11,0.3)] hover:shadow-[0_0_32px_rgba(245,158,11,0.45)]"
+          >
+            <Zap className="h-4 w-4" />
+            Nous contacter
+          </Link>
+        </div>
+      </div>
 
       <Footer />
       <ScrollToTop />
@@ -247,162 +306,68 @@ export default function BrandsPageClient() {
   );
 }
 
-// Brand Card Component (Grid View - desktop only)
-function BrandCard({ brand, index, onBrandClick }: { brand: Brand; index: number; onBrandClick: (e: React.MouseEvent, href: string) => void }) {
+function BrandCard({
+  brand,
+  index,
+  onBrandClick,
+}: {
+  brand: Brand;
+  index: number;
+  onBrandClick: (e: React.MouseEvent, href: string) => void;
+}) {
   const [imageError, setImageError] = useState(false);
   const logoUrl = brand.logo ? getStorageUrl(brand.logo) : null;
   const href = `/${nameToSlug(brand.designation_fr)}`;
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay: index * 0.05 }}
-      className="group"
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: Math.min(index * 0.035, 0.4), ease: 'easeOut' }}
     >
       <Link
         href={href}
-        onClick={(e) => onBrandClick(e, href)}
-        className="block bg-white dark:bg-gray-800 rounded-2xl p-6 h-48 flex flex-col items-center justify-center border border-gray-200 dark:border-gray-700 hover:border-red-500 dark:hover:border-red-500 hover:shadow-xl transition-all duration-300"
+        onClick={e => onBrandClick(e, href)}
+        className="group block relative rounded-2xl overflow-hidden bg-white/[0.04] hover:bg-white/[0.07] border border-white/[0.07] hover:border-amber-500/40 transition-all duration-300 hover:shadow-[0_0_30px_rgba(245,158,11,0.12)] hover:-translate-y-0.5"
       >
-        {logoUrl && !imageError ? (
-          <div className="relative w-full h-full">
-            <Image
-              src={logoUrl}
-              alt={brand.designation_fr || brand.alt_cover || 'Brand logo'}
-              fill
-              className="object-contain p-3 group-hover:scale-110 transition-transform duration-300"
-              sizes="(max-width: 1024px) 33vw, 22vw"
-              loading="lazy"
-              unoptimized
-              onError={() => {
-                console.error('Image failed to load:', logoUrl);
-                setImageError(true);
-              }}
-            />
-          </div>
-        ) : (
-          <div className="text-center w-full">
-            <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center">
-              <Building2 className="h-8 w-8 text-white" />
-            </div>
-            <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors line-clamp-2">
-              {brand.designation_fr}
-            </p>
-          </div>
-        )}
-      </Link>
-    </motion.div>
-  );
-}
-
-// Mobile-only: list row with large logo and modern card
-function BrandMobileListItem({ brand, index, onBrandClick }: { brand: Brand; index: number; onBrandClick: (e: React.MouseEvent, href: string) => void }) {
-  const [imageError, setImageError] = useState(false);
-  const logoUrl = brand.logo ? getStorageUrl(brand.logo) : null;
-  const href = `/${nameToSlug(brand.designation_fr)}`;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: -16 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: Math.min(index * 0.04, 0.3) }}
-    >
-      <Link
-        href={href}
-        onClick={(e) => onBrandClick(e, href)}
-        className="flex items-center gap-4 w-full bg-white dark:bg-gray-800/90 rounded-2xl p-4 min-h-[120px] border border-gray-200/80 dark:border-gray-700/80 hover:border-red-400 dark:hover:border-red-500 hover:shadow-lg active:scale-[0.99] transition-all duration-200 touch-manipulation"
-      >
-        {/* Large logo container - prominent on mobile */}
-        <div className="relative w-28 h-28 flex-shrink-0 rounded-xl bg-gray-50 dark:bg-gray-900/80 overflow-hidden border border-gray-100 dark:border-gray-800">
+        {/* Logo area */}
+        <div className="relative w-full aspect-square bg-white/5">
           {logoUrl && !imageError ? (
             <Image
               src={logoUrl}
               alt={brand.designation_fr || brand.alt_cover || 'Brand logo'}
               fill
-              className="object-contain p-2.5"
-              sizes="112px"
+              className="object-contain p-4 group-hover:scale-105 transition-transform duration-400"
+              sizes="(max-width: 640px) 45vw, (max-width: 1024px) 22vw, 15vw"
               loading="lazy"
               unoptimized
               onError={() => setImageError(true)}
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <Building2 className="h-10 w-10 text-gray-400" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-3xl font-black text-amber-400/30 select-none">
+                {brand.designation_fr?.[0]?.toUpperCase() || '?'}
+              </span>
             </div>
           )}
+
+          {/* Gold shimmer on hover */}
+          <div className="absolute inset-0 bg-gradient-to-t from-amber-500/0 via-transparent to-amber-500/0 group-hover:from-amber-500/5 group-hover:to-amber-400/5 transition-all duration-500" />
         </div>
 
-        {/* Brand name + CTA */}
-        <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
-          <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white truncate pr-2">
+        {/* Name + CTA */}
+        <div className="px-3 py-3 border-t border-white/5">
+          <p className="text-white/75 group-hover:text-white text-xs sm:text-sm font-semibold text-center leading-tight transition-colors line-clamp-2 mb-1.5 min-h-[2.5em] flex items-center justify-center">
             {brand.designation_fr}
-          </h3>
-          <div className="flex items-center text-red-600 dark:text-red-400 font-semibold text-sm">
+          </p>
+          <div className="flex items-center justify-center gap-1 text-amber-500/40 group-hover:text-amber-400 transition-colors text-[10px] sm:text-xs font-medium">
             <span>Voir les produits</span>
-            <ArrowRight className="h-4 w-4 ml-1.5 flex-shrink-0" />
+            <ArrowRight className="h-2.5 w-2.5 group-hover:translate-x-0.5 transition-transform" />
           </div>
         </div>
-      </Link>
-    </motion.div>
-  );
-}
 
-// Brand List Item Component (List View)
-function BrandListItem({ brand, index, onBrandClick }: { brand: Brand; index: number; onBrandClick: (e: React.MouseEvent, href: string) => void }) {
-  const [imageError, setImageError] = useState(false);
-  const logoUrl = brand.logo ? getStorageUrl(brand.logo) : null;
-  const href = `/${nameToSlug(brand.designation_fr)}`;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.05 }}
-    >
-      <Link
-        href={href}
-        onClick={(e) => onBrandClick(e, href)}
-        className="block bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 hover:border-red-500 dark:hover:border-red-500 hover:shadow-lg transition-all duration-300 group"
-      >
-        <div className="flex items-center gap-6">
-          {/* Brand Logo */}
-          <div className="relative w-32 h-32 flex-shrink-0 bg-gray-50 dark:bg-gray-900 rounded-lg overflow-hidden">
-            {logoUrl && !imageError ? (
-              <Image
-                src={logoUrl}
-                alt={brand.designation_fr || brand.alt_cover || 'Brand logo'}
-                fill
-                className="object-contain p-3 group-hover:scale-110 transition-transform duration-300"
-                sizes="128px"
-                loading="lazy"
-                unoptimized
-                onError={() => {
-                  console.error('Image failed to load:', logoUrl);
-                  setImageError(true);
-                }}
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <Building2 className="h-10 w-10 text-gray-400" />
-              </div>
-            )}
-          </div>
-
-          {/* Brand Info */}
-          <div className="flex-1 min-w-0">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
-              {brand.designation_fr}
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-              Distributeur officiel
-            </p>
-            <div className="flex items-center text-red-600 dark:text-red-400 font-semibold text-sm">
-              <span>Voir les produits</span>
-              <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
-            </div>
-          </div>
-        </div>
+        {/* Gold corner accent */}
+        <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-amber-400/0 group-hover:bg-amber-400/60 transition-all duration-300 shadow-[0_0_6px_rgba(251,191,36,0.8)]" />
       </Link>
     </motion.div>
   );

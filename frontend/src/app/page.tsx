@@ -79,19 +79,12 @@ const LOCAL_HOME_SLIDES: LocalHomeSlide[] = [
 
 async function getHomeData(): Promise<{ accueil: AccueilData; slides: LocalHomeSlide[] }> {
   noStore();
-  const delays = [0, 600, 1600];
-  for (let i = 0; i < delays.length; i++) {
-    if (delays[i]! > 0) await new Promise((r) => setTimeout(r, delays[i]!));
+  try {
     const accueil = await getAccueil();
-    const hasProducts =
-      (accueil.new_product?.length ?? 0) > 0 ||
-      (accueil.best_sellers?.length ?? 0) > 0 ||
-      (accueil.ventes_flash?.length ?? 0) > 0 ||
-      (accueil.categories?.length ?? 0) > 0 ||
-      (accueil.packs?.length ?? 0) > 0;
-    if (hasProducts || i === delays.length - 1) return { accueil, slides: LOCAL_HOME_SLIDES };
+    return { accueil, slides: LOCAL_HOME_SLIDES };
+  } catch {
+    return { accueil: emptyAccueil, slides: LOCAL_HOME_SLIDES };
   }
-  return { accueil: emptyAccueil, slides: LOCAL_HOME_SLIDES };
 }
 
 function getSlideData(slide: any): { imageUrl: string; title: string } | null {
@@ -143,10 +136,11 @@ export default async function Home() {
   const mobileFirst = getFirstSlideByType(slides, 'mobile') ?? getFirstSlideAnyType(slides);
   const desktopFirst = getFirstSlideByType(slides, 'web') ?? getFirstSlideAnyType(slides);
 
-  // Correct preloads: use imagesrcset so the browser preloads the image at the
-  // right width for its DPR (Moto G Power needs w=1080, not w=828).
-  const mobileSrcSet = mobileFirst ? buildImgSrcSet(mobileFirst.imageUrl, [640, 750, 828, 1080]) : null;
-  const desktopSrcSet = desktopFirst ? buildImgSrcSet(desktopFirst.imageUrl, [1080, 1200]) : null;
+  // Mobile: quality=50 (hero background, fidelity matters less than speed on slow 4G).
+  // Max width 828 (covers @2x retina on 414px phone — 1080 is wasteful on mobile).
+  // Desktop: quality=75, covers HiDPI up to 1200px.
+  const mobileSrcSet = mobileFirst ? buildImgSrcSet(mobileFirst.imageUrl, [640, 750, 828], 50) : null;
+  const desktopSrcSet = desktopFirst ? buildImgSrcSet(desktopFirst.imageUrl, [1080, 1200], 75) : null;
 
   return (
     <>
@@ -155,7 +149,7 @@ export default async function Home() {
         <link
           rel="preload"
           as="image"
-          href={nextImgUrl(mobileFirst.imageUrl, 1080)}
+          href={nextImgUrl(mobileFirst.imageUrl, 828, 50)}
           imageSrcSet={mobileSrcSet}
           imageSizes="100vw"
           media="(max-width: 767px)"
@@ -166,7 +160,7 @@ export default async function Home() {
         <link
           rel="preload"
           as="image"
-          href={nextImgUrl(desktopFirst.imageUrl, 1200)}
+          href={nextImgUrl(desktopFirst.imageUrl, 1200, 75)}
           imageSrcSet={desktopSrcSet}
           imageSizes="100vw"
           media="(min-width: 768px)"

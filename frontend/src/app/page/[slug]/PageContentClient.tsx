@@ -1,12 +1,15 @@
 'use client';
 
 import Image from 'next/image';
+import Link from 'next/link';
 import { Header } from '@/app/components/Header';
 import { Footer } from '@/app/components/Footer';
+import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { getStorageUrl } from '@/services/api';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Calendar } from 'lucide-react';
+import { Calendar, ArrowLeft, Clock, ChevronRight } from 'lucide-react';
+import { motion } from 'motion/react';
 import type { Page } from '@/types';
 
 interface PageContentClientProps {
@@ -24,100 +27,200 @@ interface PageContentClientProps {
 
 export function PageContentClient({ page }: PageContentClientProps) {
   const hasContent = page.body || page.excerpt;
+  const imageUrl = page.image ? getStorageUrl(page.image) : null;
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-950">
+    <div className="min-h-screen bg-[#080808] text-white">
       <Header />
 
-      <main className="w-full mx-auto px-4 sm:px-6 max-w-[1024px] md:max-w-[1280px] lg:max-w-[1400px] xl:max-w-[1600px] py-8 sm:py-12 md:py-16 lg:py-20">
-        {/* Hero Section */}
-        <div className="mb-8 sm:mb-12 md:mb-16 lg:mb-20">
-          {page.image && (
-            <div className="relative w-full h-48 sm:h-64 md:h-80 lg:h-96 xl:h-[500px] mb-6 sm:mb-8 md:mb-10 lg:mb-12 rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 shadow-lg">
+      {/* ── Hero Section ── */}
+      <section className="relative overflow-hidden">
+        {/* Dark gold layered background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0d0900] via-[#0a0a0a] to-[#080808]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_50%_0%,rgba(212,175,55,0.12),transparent)]" />
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-500/40 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-500/10 to-transparent" />
+
+        {/* Background image with overlay if present */}
+        {imageUrl && (
+          <>
+            <div className="absolute inset-0">
               <Image
-                src={getStorageUrl(page.image)}
+                src={imageUrl}
                 alt={page.title}
                 fill
-                className="object-cover"
-                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, (max-width: 1400px) 85vw, 1600px"
+                className="object-cover opacity-15"
+                sizes="100vw"
                 priority
                 unoptimized
               />
             </div>
-          )}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#080808] via-[#080808]/80 to-[#080808]/50" />
+          </>
+        )}
 
-          {/* Title - More impactful on desktop */}
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6 md:mb-8 leading-tight">
-            {page.title}
-          </h1>
+        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-16 sm:pt-20 sm:pb-20">
+          {/* Breadcrumb */}
+          <motion.nav
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35 }}
+            className="flex items-center gap-1.5 text-xs text-gray-500 mb-8"
+            aria-label="Fil d'Ariane"
+          >
+            <Link href="/" className="hover:text-amber-400 transition-colors">Accueil</Link>
+            <ChevronRight className="h-3 w-3 flex-shrink-0" />
+            <span className="text-gray-400 truncate">{page.title}</span>
+          </motion.nav>
 
-          {/* Meta Information */}
-          {(page.created_at || page.updated_at) && (
-            <div className="flex items-center gap-4 text-sm sm:text-base text-gray-500 dark:text-gray-400 mb-6 md:mb-8">
-              {page.updated_at && (
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 sm:h-5 sm:w-5" />
-                  <span>
-                    Mis à jour le {format(new Date(page.updated_at), 'd MMMM yyyy', { locale: fr })}
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
+          {/* Gold label */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.05 }}
+            className="flex items-center gap-2 mb-5"
+          >
+            <div className="h-px w-8 bg-amber-500" />
+            <span className="text-amber-500 text-[11px] font-bold uppercase tracking-[0.2em]">Page</span>
+          </motion.div>
 
-          {/* Excerpt - Larger and more readable on desktop */}
+          {/* Title */}
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black leading-[1.05] mb-6 tracking-tight"
+          >
+            <span className="bg-gradient-to-br from-white via-gray-100 to-gray-300 bg-clip-text text-transparent">
+              {page.title}
+            </span>
+          </motion.h1>
+
+          {/* Excerpt */}
           {page.excerpt && (
-            <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-gray-600 dark:text-gray-300 leading-relaxed mb-6 sm:mb-8 md:mb-10 lg:mb-12 max-w-4xl">
-              {page.excerpt}
-            </p>
+            <motion.p
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45, delay: 0.15 }}
+              className="text-gray-400 text-base sm:text-lg leading-relaxed max-w-2xl mb-6"
+              dangerouslySetInnerHTML={{ __html: page.excerpt.replace(/<[^>]*>/g, '') }}
+            />
+          )}
+
+          {/* Meta row */}
+          {page.updated_at && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="flex flex-wrap items-center gap-4"
+            >
+              <div className="flex items-center gap-2 text-gray-500 text-xs">
+                <Calendar className="h-3.5 w-3.5 text-amber-500/70" />
+                <span>
+                  Mis à jour le{' '}
+                  <span className="text-gray-400 font-medium">
+                    {format(new Date(page.updated_at), 'd MMMM yyyy', { locale: fr })}
+                  </span>
+                </span>
+              </div>
+            </motion.div>
           )}
         </div>
+      </section>
 
-        {/* Content - Enhanced styling for legal/policy pages */}
-        {hasContent ? (
-          <article className="max-w-5xl mx-auto">
-            <div
-              className="prose prose-lg md:prose-xl dark:prose-invert max-w-none
-                prose-headings:font-bold prose-headings:text-gray-900 dark:prose-headings:text-white
-                prose-p:text-gray-700 dark:prose-p:text-gray-300 prose-p:leading-relaxed
-                prose-a:text-red-600 dark:prose-a:text-red-400 prose-a:font-medium prose-a:no-underline hover:prose-a:underline
-                prose-strong:text-gray-900 dark:prose-strong:text-white prose-strong:font-bold
-                prose-ul:text-gray-700 dark:prose-ul:text-gray-300 prose-ol:text-gray-700 dark:prose-ol:text-gray-300
-                prose-li:text-gray-700 dark:prose-li:text-gray-300
-                [&>h1:first-of-type]:hidden
-                [&>h1]:text-3xl md:[&>h1]:text-4xl lg:[&>h1]:text-5xl [&>h1]:font-bold [&>h1]:mt-12 md:[&>h1]:mt-16 [&>h1]:mb-6 md:[&>h1]:mb-8 [&>h1]:text-gray-900 dark:[&>h1]:text-white [&>h1]:border-b-2 [&>h1]:border-red-600 [&>h1]:pb-4
-                [&>h2]:text-2xl md:[&>h2]:text-3xl lg:[&>h2]:text-4xl [&>h2]:font-bold [&>h2]:mt-10 md:[&>h2]:mt-12 [&>h2]:mb-4 md:[&>h2]:mb-6 [&>h2]:text-gray-900 dark:[&>h2]:text-white [&>h2]:flex [&>h2]:items-center [&>h2]:gap-3
-                [&>h3]:text-xl md:[&>h3]:text-2xl lg:[&>h3]:text-3xl [&>h3]:font-semibold [&>h3]:mt-8 md:[&>h3]:mt-10 [&>h3]:mb-3 md:[&>h3]:mb-5 [&>h3]:text-gray-800 dark:[&>h3]:text-gray-200
-                [&>h4]:text-lg md:[&>h4]:text-xl [&>h4]:font-semibold [&>h4]:mt-6 md:[&>h4]:mt-8 [&>h4]:mb-3 [&>h4]:text-gray-800 dark:[&>h4]:text-gray-200
-                [&>p]:mb-5 md:[&>p]:mb-6 [&>p]:text-base md:[&>p]:text-lg [&>p]:leading-relaxed
-                [&>ul]:list-disc [&>ul]:ml-6 md:[&>ul]:ml-8 [&>ul]:mb-6 md:[&>ul]:mb-8 [&>ul]:space-y-2
-                [&>ol]:list-decimal [&>ol]:ml-6 md:[&>ol]:ml-8 [&>ol]:mb-6 md:[&>ol]:mb-8 [&>ol]:space-y-2
-                [&>li]:mb-2 md:[&>li]:mb-3 [&>li]:text-base md:[&>li]:text-lg [&>li]:leading-relaxed
-                [&>li>p]:mb-2
-                [&>img]:rounded-xl [&>img]:my-6 md:[&>img]:my-8 [&>img]:shadow-xl [&>img]:max-w-full [&>img]:h-auto [&>img]:w-full
-                [&>div]:my-4
-                [&>hr]:my-8 md:[&>hr]:my-12 [&>hr]:border-gray-300 dark:[&>hr]:border-gray-700
-                [&>blockquote]:border-l-4 [&>blockquote]:border-red-600 [&>blockquote]:pl-4 [&>blockquote]:italic [&>blockquote]:my-6
-                [&>code]:bg-gray-100 dark:[&>code]:bg-gray-800 [&>code]:px-2 [&>code]:py-1 [&>code]:rounded [&>code]:text-sm
-                [&>table]:w-full [&>table]:my-6 [&>table]:border-collapse
-                [&>table>thead]:bg-gray-100 dark:[&>table>thead]:bg-gray-800
-                [&>table>tbody>tr]:border-b [&>table>tbody>tr]:border-gray-200 dark:[&>table>tbody>tr]:border-gray-700
-                [&>table>tbody>tr:hover]:bg-gray-50 dark:[&>table>tbody>tr:hover]:bg-gray-900
-                [&>table>th]:p-3 [&>table>th]:text-left [&>table>th]:font-bold
-                [&>table>td]:p-3"
-              dangerouslySetInnerHTML={{ __html: page.body || page.excerpt || '' }}
-            />
-          </article>
-        ) : (
-          <div className="text-center py-16 sm:py-20 md:py-24 lg:py-32 bg-gray-50 dark:bg-gray-900 rounded-2xl md:rounded-3xl border border-gray-200 dark:border-gray-800 max-w-3xl mx-auto">
-            <p className="text-gray-500 dark:text-gray-400 text-lg sm:text-xl md:text-2xl px-4 sm:px-6 md:px-8">
-              Le contenu de cette page sera bientôt disponible.
-            </p>
-          </div>
-        )}
+      {/* ── Content Section ── */}
+      <main className="relative bg-[#080808]">
+        {/* Subtle top separator */}
+        <div className="h-px bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
+          {hasContent ? (
+            <motion.article
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.25 }}
+            >
+              {/* Featured image (large, inside content area) */}
+              {imageUrl && (
+                <div className="relative w-full aspect-[16/7] mb-12 rounded-2xl overflow-hidden border border-white/5">
+                  <Image
+                    src={imageUrl}
+                    alt={page.title}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 896px"
+                    priority
+                    unoptimized
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#080808]/30 to-transparent" />
+                </div>
+              )}
+
+              {/* Prose content — gold-accented typography on dark */}
+              <div
+                className="
+                  prose prose-invert max-w-none
+                  prose-headings:font-black prose-headings:tracking-tight
+                  prose-h1:text-4xl prose-h1:text-white prose-h1:mt-14 prose-h1:mb-6 prose-h1:pb-4 prose-h1:border-b prose-h1:border-amber-500/20 first:prose-h1:hidden
+                  prose-h2:text-2xl sm:prose-h2:text-3xl prose-h2:text-white prose-h2:mt-12 prose-h2:mb-5
+                  prose-h3:text-xl sm:prose-h3:text-2xl prose-h3:text-gray-100 prose-h3:mt-10 prose-h3:mb-4
+                  prose-h4:text-lg prose-h4:text-gray-200 prose-h4:mt-8 prose-h4:mb-3
+                  prose-p:text-gray-400 prose-p:leading-8 prose-p:text-base sm:prose-p:text-lg prose-p:mb-6
+                  prose-a:text-amber-400 prose-a:font-semibold prose-a:no-underline hover:prose-a:text-amber-300 hover:prose-a:underline prose-a:transition-colors
+                  prose-strong:text-white prose-strong:font-bold
+                  prose-em:text-gray-300 prose-em:italic
+                  prose-ul:text-gray-400 prose-ul:space-y-2 prose-ul:my-6
+                  prose-ol:text-gray-400 prose-ol:space-y-2 prose-ol:my-6
+                  prose-li:text-gray-400 prose-li:leading-7
+                  prose-blockquote:border-l-4 prose-blockquote:border-amber-500 prose-blockquote:pl-5 prose-blockquote:italic prose-blockquote:text-gray-400 prose-blockquote:bg-amber-500/5 prose-blockquote:py-3 prose-blockquote:pr-4 prose-blockquote:rounded-r-lg prose-blockquote:my-8
+                  prose-code:bg-white/5 prose-code:text-amber-400 prose-code:px-2 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-mono
+                  prose-pre:bg-white/5 prose-pre:border prose-pre:border-white/10 prose-pre:rounded-xl
+                  prose-img:rounded-2xl prose-img:shadow-2xl prose-img:my-10 prose-img:border prose-img:border-white/5
+                  prose-hr:border-white/10 prose-hr:my-12
+                  prose-table:text-gray-400 prose-table:border-collapse
+                  prose-thead:bg-white/5 prose-th:px-4 prose-th:py-3 prose-th:text-left prose-th:font-bold prose-th:text-white prose-th:border prose-th:border-white/10
+                  prose-td:px-4 prose-td:py-3 prose-td:border prose-td:border-white/5
+                  [&>h2]:flex [&>h2]:items-center [&>h2]:gap-3 [&>h2]:before:content-[''] [&>h2]:before:block [&>h2]:before:w-1 [&>h2]:before:h-6 [&>h2]:before:bg-amber-500 [&>h2]:before:rounded-full [&>h2]:before:flex-shrink-0
+                "
+                dangerouslySetInnerHTML={{ __html: page.body || page.excerpt || '' }}
+              />
+            </motion.article>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center py-20 rounded-3xl border border-white/5 bg-white/[0.02]"
+            >
+              <div className="w-20 h-20 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto mb-6">
+                <Clock className="h-8 w-8 text-amber-400/60" />
+              </div>
+              <p className="text-gray-500 text-lg">
+                Le contenu de cette page sera bientôt disponible.
+              </p>
+            </motion.div>
+          )}
+
+          {/* Back button */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="mt-14 pt-8 border-t border-white/5"
+          >
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-amber-400 transition-colors group"
+            >
+              <ArrowLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
+              Retour à l'accueil
+            </Link>
+          </motion.div>
+        </div>
       </main>
 
       <Footer />
+      <ScrollToTop />
     </div>
   );
 }
