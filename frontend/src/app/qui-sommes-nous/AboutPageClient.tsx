@@ -3,9 +3,9 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Header } from '@/app/components/Header';
 import { Footer } from '@/app/components/Footer';
-import { 
-  Check, MapPin, Truck, Shield, Award, Users, Star, 
-  Calendar, Package, TrendingUp, Heart, Sparkles 
+import {
+  Check, MapPin, Truck, Shield, Award, Users, Star,
+  Package, Heart, Sparkles, Zap, ChevronRight
 } from 'lucide-react';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { getCoordinates, getPageBySlug } from '@/services/api';
@@ -13,48 +13,34 @@ import { motion } from 'motion/react';
 import Link from 'next/link';
 import type { Page } from '@/types';
 
-// Icon mapping for list items
 const iconMap: Record<string, any> = {
-  'qualité': Check,
-  'qualite': Check,
-  'sécurité': Shield,
-  'securite': Shield,
-  'sécurite': Shield,
-  'livraison': Truck,
-  'rapide': Truck,
-  'expérience': Award,
-  'experience': Award,
+  'qualité': Check, 'qualite': Check,
+  'sécurité': Shield, 'securite': Shield, 'sécurite': Shield,
+  'livraison': Truck, 'rapide': Truck,
+  'expérience': Award, 'experience': Award,
   'client': Users,
   'satisfaction': Heart,
   'produit': Package,
   'service': Sparkles,
 };
 
-// Helper function to get icon for a list item
 const getIconForItem = (text: string) => {
   const lowerText = text.toLowerCase();
   for (const [key, Icon] of Object.entries(iconMap)) {
-    if (lowerText.includes(key)) {
-      return Icon;
-    }
+    if (lowerText.includes(key)) return Icon;
   }
-  return Check; // Default icon
+  return Check;
 };
 
-// Parse HTML and extract structured content
 const parseHTMLContent = (html: string) => {
   if (!html) return { sections: [], lists: [], paragraphs: [], keyNumbers: [] };
-
-  // Create a temporary DOM element to parse HTML
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
-  
   const sections: Array<{ title: string; content: string }> = [];
   const lists: Array<{ items: string[] }> = [];
   const paragraphs: string[] = [];
   const keyNumbers: Array<{ label: string; value: string }> = [];
 
-  // Extract key numbers patterns
   const keyNumberPatterns = [
     { pattern: /(\d+)\s*\+\s*ans?\s*d['\']expérience/i, label: 'ans d\'expérience' },
     { pattern: /depuis\s*(\d{4})/i, label: 'Depuis' },
@@ -62,7 +48,6 @@ const parseHTMLContent = (html: string) => {
     { pattern: /(\d+)\s*\+\s*clients?/i, label: 'clients satisfaits' },
   ];
 
-  // Process all elements
   const body = doc.body;
   let currentSection: { title: string; content: string } | null = null;
 
@@ -70,48 +55,25 @@ const parseHTMLContent = (html: string) => {
     if (node.nodeType === Node.ELEMENT_NODE) {
       const element = node as HTMLElement;
       const tagName = element.tagName.toLowerCase();
-
       if (tagName === 'h2') {
-        // Save previous section if exists
-        if (currentSection) {
-          sections.push(currentSection);
-        }
-        currentSection = {
-          title: element.textContent || '',
-          content: '',
-        };
+        if (currentSection) sections.push(currentSection);
+        currentSection = { title: element.textContent || '', content: '' };
       } else if (tagName === 'ul') {
         const items: string[] = [];
-        element.querySelectorAll('li').forEach((li) => {
-          const text = li.textContent?.trim() || '';
-          if (text) items.push(text);
-        });
-        if (items.length > 0) {
-          lists.push({ items });
-        }
-        if (currentSection) {
-          currentSection.content += element.outerHTML;
-        } else {
-          paragraphs.push(element.outerHTML);
-        }
+        element.querySelectorAll('li').forEach(li => { const t = li.textContent?.trim() || ''; if (t) items.push(t); });
+        if (items.length > 0) lists.push({ items });
+        if (currentSection) currentSection.content += element.outerHTML;
+        else paragraphs.push(element.outerHTML);
       } else if (tagName === 'p') {
         const text = element.textContent || '';
-        // Check for key numbers (avoid duplicates)
         keyNumberPatterns.forEach(({ pattern, label }) => {
           const match = text.match(pattern);
-          if (match) {
-            const value = match[1] || match[0];
-            // Only add if we don't already have this label
-            if (!keyNumbers.some(k => k.label === label)) {
-              keyNumbers.push({ label, value });
-            }
+          if (match && !keyNumbers.some(k => k.label === label)) {
+            keyNumbers.push({ label, value: match[1] || match[0] });
           }
         });
-        if (currentSection) {
-          currentSection.content += element.outerHTML;
-        } else {
-          paragraphs.push(element.outerHTML);
-        }
+        if (currentSection) currentSection.content += element.outerHTML;
+        else paragraphs.push(element.outerHTML);
       } else if (currentSection) {
         currentSection.content += element.outerHTML;
       } else {
@@ -119,37 +81,16 @@ const parseHTMLContent = (html: string) => {
       }
     }
   });
+  if (currentSection) sections.push(currentSection);
 
-  // Add last section
-  if (currentSection) {
-    sections.push(currentSection);
-  }
-
-  // Extract key numbers from text content (only if not already found)
   const fullText = body.textContent || '';
   const yearsMatch = fullText.match(/(\d+)\s*\+\s*ans?\s*d['\']expérience/i);
   const sinceMatch = fullText.match(/depuis\s*(\d{4})/i);
-  
-  // Check if we already have these key numbers to avoid duplicates
-  const hasExperience = keyNumbers.some(k => k.label.includes('expérience'));
-  const hasSince = keyNumbers.some(k => k.label === 'Depuis');
-  const hasLivraison = keyNumbers.some(k => k.label.includes('Livraison'));
-  
-  if (yearsMatch && !hasExperience) {
-    keyNumbers.push({ label: 'ans d\'expérience', value: yearsMatch[1] });
-  }
-  if (sinceMatch && !hasSince) {
-    keyNumbers.push({ label: 'Depuis', value: sinceMatch[1] });
-  }
-  if (fullText.toLowerCase().includes('livraison nationale') && !hasLivraison) {
-    keyNumbers.push({ label: 'Livraison nationale', value: 'Toute la Tunisie' });
-  }
+  if (yearsMatch && !keyNumbers.some(k => k.label.includes('expérience'))) keyNumbers.push({ label: 'ans d\'expérience', value: yearsMatch[1] });
+  if (sinceMatch && !keyNumbers.some(k => k.label === 'Depuis')) keyNumbers.push({ label: 'Depuis', value: sinceMatch[1] });
+  if (fullText.toLowerCase().includes('livraison nationale') && !keyNumbers.some(k => k.label.includes('Livraison'))) keyNumbers.push({ label: 'Livraison nationale', value: 'Toute la Tunisie' });
 
-  // Deduplicate key numbers by label
-  const uniqueKeyNumbers = Array.from(
-    new Map(keyNumbers.map(item => [item.label, item])).values()
-  );
-
+  const uniqueKeyNumbers = Array.from(new Map(keyNumbers.map(item => [item.label, item])).values());
   return { sections, lists, paragraphs, keyNumbers: uniqueKeyNumbers };
 };
 
@@ -159,185 +100,202 @@ export default function AboutPageClient() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [coordsData, pageData] = await Promise.all([
-          getCoordinates(),
-          getPageBySlug('qui-sommes-nous')
-        ]);
-        setCoordinates(coordsData);
-        setPage(pageData);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
+    Promise.all([getCoordinates(), getPageBySlug('qui-sommes-nous')])
+      .then(([coordsData, pageData]) => { setCoordinates(coordsData); setPage(pageData); })
+      .catch(err => console.error(err))
+      .finally(() => setLoading(false));
   }, []);
 
-  // Parse HTML content
   const parsedContent = useMemo(() => {
     if (!page?.body) return { sections: [], lists: [], paragraphs: [], keyNumbers: [] };
     return parseHTMLContent(page.body);
   }, [page?.body]);
 
-  // Always show all three key numbers - merge parsed with defaults
   const defaultKeyNumbers = [
     { label: 'ans d\'expérience', value: '16+' },
     { label: 'Depuis', value: '2010' },
     { label: 'Livraison nationale', value: 'Toute la Tunisie' },
   ];
 
-  // Merge parsed key numbers with defaults, prioritizing parsed values
   const keyNumbersMap = new Map<string, { label: string; value: string }>();
-  
-  // First add defaults
-  defaultKeyNumbers.forEach(item => {
-    keyNumbersMap.set(item.label, item);
-  });
-  
-  // Then override with parsed values if they exist
-  parsedContent.keyNumbers.forEach(item => {
-    keyNumbersMap.set(item.label, item);
-  });
-  
-  // Convert back to array, maintaining order: experience, depuis, livraison
+  defaultKeyNumbers.forEach(item => keyNumbersMap.set(item.label, item));
+  parsedContent.keyNumbers.forEach(item => keyNumbersMap.set(item.label, item));
   const keyNumbers = [
     keyNumbersMap.get('ans d\'expérience') || defaultKeyNumbers[0],
     keyNumbersMap.get('Depuis') || defaultKeyNumbers[1],
     keyNumbersMap.get('Livraison nationale') || defaultKeyNumbers[2],
   ].filter(Boolean) as Array<{ label: string; value: string }>;
 
+  const statIcons = [Award, Star, Truck];
+  const statColors = [
+    'from-amber-400 to-orange-500',
+    'from-yellow-400 to-amber-500',
+    'from-orange-400 to-amber-600',
+  ];
+
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-950">
+    <div className="min-h-screen bg-white">
       <Header />
 
       <main>
-        {/* Enhanced Hero Section - Mobile First */}
-        <section className="relative bg-gradient-to-br from-red-700 via-red-800 to-red-900 text-white pt-12 pb-8 sm:pt-16 sm:pb-12 md:py-20 lg:py-24 overflow-hidden">
-          <div className="absolute inset-0 bg-black/10"></div>
-          <div 
-            className="absolute inset-0 opacity-20"
-            style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-            }}
-          ></div>
-          <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        {/* ── Hero ── */}
+        <section className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-amber-950 to-orange-950 text-white pt-12 pb-12 sm:pt-20 sm:pb-16 md:py-24">
+          {/* Gold radial glow */}
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_60%_at_50%_0%,rgba(245,158,11,0.18),transparent)]" />
+          {/* Grid pattern */}
+          <div className="pointer-events-none absolute inset-0 opacity-10"
+            style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23fbbf24' fill-opacity='0.4'%3E%3Crect x='0' y='0' width='1' height='40'/%3E%3Crect x='0' y='0' width='40' height='1'/%3E%3C/g%3E%3C/svg%3E\")" }} />
+          {/* Gold top line */}
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-400 via-amber-400 to-yellow-400" />
+
+          <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            {/* Eyebrow */}
             <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/15 border border-amber-400/30 mb-6"
+            >
+              <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
+              <span className="text-amber-400 text-xs font-bold uppercase tracking-[0.18em]">Notre histoire</span>
+              <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
+            </motion.div>
+
+            <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
+              transition={{ duration: 0.5, delay: 0.05 }}
+              className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black mb-4 sm:mb-5 leading-[1.05] tracking-tight"
             >
-              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold mb-2 sm:mb-3 md:mb-4 lg:mb-6 leading-tight">
+              <span className="bg-gradient-to-br from-white via-amber-100 to-amber-300 bg-clip-text text-transparent">
                 {page?.title || 'Qui sommes nous ?'}
-              </h1>
-              <p className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl opacity-95 max-w-3xl mx-auto leading-relaxed px-2 mb-0">
-                SOBITAS, votre distributeur officiel d'articles de sport et de compléments alimentaires en Tunisie
-              </p>
+              </span>
+            </motion.h1>
+
+            <motion.p
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.12 }}
+              className="text-gray-300 text-sm sm:text-base md:text-lg max-w-2xl mx-auto leading-relaxed px-2"
+            >
+              SOBITAS — votre distributeur officiel d&apos;articles de sport et de compléments alimentaires en Tunisie depuis 2010.
+            </motion.p>
+
+            {/* Quick links */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="flex flex-wrap items-center justify-center gap-3 mt-7"
+            >
+              <Link href="/shop"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-black text-sm font-bold shadow-[0_0_20px_rgba(245,158,11,0.35)] hover:shadow-[0_0_28px_rgba(245,158,11,0.5)] transition-all"
+              >
+                <Package className="h-4 w-4" /> Nos produits
+              </Link>
+              <Link href="/contact"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-sm font-semibold hover:bg-white/20 transition-all"
+              >
+                <Users className="h-4 w-4" /> Nous contacter
+              </Link>
             </motion.div>
           </div>
         </section>
 
-        {/* Key Numbers Section - Mobile First, Enhanced Desktop */}
+        {/* ── Stats ── */}
         {keyNumbers.length > 0 && (
-          <section className="py-6 sm:py-12 md:py-16 lg:py-20 xl:py-24 bg-white dark:bg-gray-900">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6 }}
-                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8 lg:gap-10"
-              >
-                {keyNumbers.map((stat, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: index * 0.1 }}
-                    className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 lg:p-10 xl:p-12 text-center shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-300 border border-red-100 dark:border-red-900/30 flex flex-col items-center justify-center"
-                  >
-                    <div className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-red-600 dark:text-red-400 mb-2 sm:mb-3 md:mb-4 text-center w-full">
-                      {stat.value}
-                    </div>
-                    <div className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-700 dark:text-gray-300 font-medium text-center w-full">
-                      {stat.label}
-                    </div>
-                  </motion.div>
-                ))}
-              </motion.div>
+          <section className="py-10 sm:py-16 bg-gradient-to-b from-amber-50 to-white">
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+                {keyNumbers.map((stat, i) => {
+                  const Icon = statIcons[i] || Award;
+                  const gradient = statColors[i] || statColors[0];
+                  return (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.45, delay: i * 0.1 }}
+                      className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-white border border-amber-100 shadow-[0_4px_24px_rgba(245,158,11,0.08)] hover:shadow-[0_8px_32px_rgba(245,158,11,0.15)] transition-all p-6 sm:p-8 text-center group"
+                    >
+                      {/* Background glow */}
+                      <div className={`absolute -top-8 -right-8 w-32 h-32 rounded-full bg-gradient-to-br ${gradient} opacity-10 group-hover:opacity-20 transition-opacity blur-2xl`} />
+                      <div className={`w-12 h-12 sm:w-14 sm:h-14 mx-auto mb-4 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center shadow-lg`}>
+                        <Icon className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
+                      </div>
+                      <div className={`text-3xl sm:text-4xl lg:text-5xl font-black bg-gradient-to-br ${gradient} bg-clip-text text-transparent mb-2`}>
+                        {stat.value}
+                      </div>
+                      <div className="text-sm sm:text-base text-gray-600 font-semibold">{stat.label}</div>
+                    </motion.div>
+                  );
+                })}
+              </div>
             </div>
           </section>
         )}
 
-        {/* Dynamic Content - Enhanced - Mobile First */}
-        <section className="py-6 sm:py-12 md:py-16 lg:py-20 bg-gray-50 dark:bg-gray-800/50">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* ── Dynamic content ── */}
+        <section className="py-8 sm:py-14 bg-white">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             {loading ? (
-              <div className="flex justify-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+              <div className="flex items-center justify-center py-16 gap-3">
+                <div className="w-8 h-8 rounded-full border-2 border-amber-500 border-t-transparent animate-spin" />
+                <span className="text-gray-500 text-sm">Chargement...</span>
               </div>
             ) : page?.body ? (
-              <div className="space-y-6 sm:space-y-8 md:space-y-12">
-                {/* Render H2 Sections as Cards */}
-                {parsedContent.sections.map((section, index) => (
+              <div className="space-y-6 sm:space-y-8">
+                {/* H2 sections as cards */}
+                {parsedContent.sections.map((section, i) => (
                   <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 30 }}
+                    key={i}
+                    initial={{ opacity: 0, y: 24 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    transition={{ duration: 0.6, delay: index * 0.1 }}
-                    className={`bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6 md:p-8 lg:p-10 mb-6 sm:mb-8 ${
-                      index % 2 === 0 ? '' : 'bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800'
-                    }`}
+                    transition={{ duration: 0.5, delay: i * 0.08 }}
+                    className="rounded-2xl sm:rounded-3xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow p-5 sm:p-8"
                   >
-                    <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6 pb-3 sm:pb-4 border-b-2 border-red-600 dark:border-red-400 text-left">
-                      {section.title}
-                    </h2>
+                    <div className="flex items-center gap-3 mb-5 pb-4 border-b border-amber-100">
+                      <div className="w-1 h-6 rounded-full bg-gradient-to-b from-amber-400 to-orange-500 flex-shrink-0" />
+                      <h2 className="text-lg sm:text-xl md:text-2xl font-black text-gray-900">{section.title}</h2>
+                    </div>
                     <div
-                      className="prose prose-neutral prose-sm sm:prose-base md:prose-lg dark:prose-invert max-w-none text-left
-                        prose-headings:text-gray-900 dark:prose-headings:text-white
-                        prose-p:text-gray-700 dark:prose-p:text-gray-300 prose-p:leading-relaxed prose-p:text-sm sm:prose-p:text-base md:prose-p:text-lg prose-p:mb-4
-                        prose-a:text-red-600 dark:prose-a:text-red-400 hover:prose-a:text-red-700
-                        prose-strong:text-gray-900 dark:prose-strong:text-white
-                        prose-ul:text-left prose-ol:text-left"
+                      className="prose prose-sm sm:prose-base max-w-none
+                        prose-p:text-gray-600 prose-p:leading-7 prose-p:mb-4
+                        prose-a:text-amber-600 hover:prose-a:text-orange-600
+                        prose-strong:text-gray-900 prose-ul:text-gray-600 prose-li:mb-1"
                       dangerouslySetInnerHTML={{ __html: section.content }}
                     />
                   </motion.div>
                 ))}
 
-                {/* Render Lists as Stacked Cards on Mobile, Grid on Desktop */}
-                {parsedContent.lists.map((list, listIndex) => (
+                {/* Feature lists as icon cards */}
+                {parsedContent.lists.map((list, li) => (
                   <motion.div
-                    key={`list-${listIndex}`}
-                    initial={{ opacity: 0, y: 30 }}
+                    key={`list-${li}`}
+                    initial={{ opacity: 0, y: 24 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    transition={{ duration: 0.6 }}
-                    className="bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6 md:p-8 lg:p-10 mb-6 sm:mb-8"
+                    transition={{ duration: 0.5 }}
+                    className="rounded-2xl sm:rounded-3xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-100 p-5 sm:p-8"
                   >
-                    <div className="flex flex-col sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
-                      {list.items.map((item, itemIndex) => {
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                      {list.items.map((item, ii) => {
                         const Icon = getIconForItem(item);
                         return (
                           <motion.div
-                            key={itemIndex}
-                            initial={{ opacity: 0, scale: 0.9 }}
+                            key={ii}
+                            initial={{ opacity: 0, scale: 0.95 }}
                             whileInView={{ opacity: 1, scale: 1 }}
                             viewport={{ once: true }}
-                            transition={{ duration: 0.4, delay: itemIndex * 0.05 }}
-                            className="flex items-start gap-3 p-4 sm:p-5 rounded-xl bg-gradient-to-br from-red-50 to-white dark:from-red-900/10 dark:to-gray-800 border border-red-100 dark:border-red-900/20 hover:shadow-md transition-shadow duration-300 w-full"
+                            transition={{ duration: 0.35, delay: ii * 0.04 }}
+                            className="flex items-start gap-3 p-4 rounded-xl bg-white border border-amber-100 hover:border-amber-300 hover:shadow-sm transition-all"
                           >
-                            <div className="flex-shrink-0 mt-0.5 sm:mt-1">
-                              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-red-600 dark:bg-red-500 flex items-center justify-center">
-                                <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                              </div>
+                            <div className="flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-sm">
+                              <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                             </div>
-                            <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 font-medium leading-relaxed flex-1 text-left">
-                              {item}
-                            </p>
+                            <p className="text-sm sm:text-base text-gray-700 font-medium leading-relaxed flex-1">{item}</p>
                           </motion.div>
                         );
                       })}
@@ -345,105 +303,76 @@ export default function AboutPageClient() {
                   </motion.div>
                 ))}
 
-                {/* Render remaining paragraphs */}
+                {/* Remaining paragraphs */}
                 {parsedContent.paragraphs.length > 0 && (
                   <motion.div
-                    initial={{ opacity: 0, y: 30 }}
+                    initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    transition={{ duration: 0.6 }}
-                    className="bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6 md:p-8 lg:p-10 mb-6 sm:mb-8"
+                    className="rounded-2xl sm:rounded-3xl bg-white border border-gray-100 shadow-sm p-5 sm:p-8"
                   >
                     <div
-                      className="prose prose-neutral prose-sm sm:prose-base md:prose-lg dark:prose-invert max-w-none text-left
-                        prose-p:text-gray-700 dark:prose-p:text-gray-300 prose-p:leading-relaxed
-                        prose-p:text-sm sm:prose-p:text-base md:prose-p:text-lg prose-p:mb-4
-                        prose-a:text-red-600 dark:prose-a:text-red-400 hover:prose-a:text-red-700
-                        prose-strong:text-gray-900 dark:prose-strong:text-white"
+                      className="prose prose-sm sm:prose-base max-w-none prose-p:text-gray-600 prose-p:leading-7 prose-a:text-amber-600 prose-strong:text-gray-900"
                       dangerouslySetInnerHTML={{ __html: parsedContent.paragraphs.join('') }}
                     />
                   </motion.div>
                 )}
 
-                {/* Fallback: If no sections/lists found, render raw HTML with better styling */}
+                {/* Fallback raw HTML */}
                 {parsedContent.sections.length === 0 && parsedContent.lists.length === 0 && parsedContent.paragraphs.length === 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 30 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.6 }}
-                    className="bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6 md:p-8 lg:p-10 mb-6 sm:mb-8"
-                  >
+                  <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-5 sm:p-8">
                     <div
-                      className="prose prose-neutral prose-sm sm:prose-base md:prose-lg dark:prose-invert max-w-none text-left
-                        prose-headings:text-gray-900 dark:prose-headings:text-white
-                        prose-h2:text-lg sm:prose-h2:text-xl md:prose-h2:text-2xl lg:prose-h2:text-3xl prose-h2:font-bold prose-h2:mb-4 sm:prose-h2:mb-6 prose-h2:pb-3 sm:prose-h2:pb-4 prose-h2:border-b-2 prose-h2:border-red-600
-                        prose-p:text-gray-700 dark:prose-p:text-gray-300 prose-p:leading-relaxed
-                        prose-p:text-sm sm:prose-p:text-base md:prose-p:text-lg prose-p:mb-4
-                        prose-ul:text-gray-700 dark:prose-ul:text-gray-300 prose-ul:text-left
-                        prose-li:mb-3 prose-li:leading-relaxed prose-li:text-sm sm:prose-li:text-base
-                        prose-a:text-red-600 dark:prose-a:text-red-400 hover:prose-a:text-red-700
-                        prose-strong:text-gray-900 dark:prose-strong:text-white"
+                      className="prose prose-sm sm:prose-base max-w-none
+                        prose-headings:text-gray-900 prose-h2:pb-3 prose-h2:border-b-2 prose-h2:border-amber-300 prose-h2:font-black
+                        prose-p:text-gray-600 prose-p:leading-7
+                        prose-a:text-amber-600 prose-strong:text-gray-900"
                       dangerouslySetInnerHTML={{ __html: page.body }}
                     />
-                  </motion.div>
+                  </div>
                 )}
               </div>
             ) : (
-              <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-                Contenu non disponible pour le moment.
-              </div>
+              <div className="text-center py-12 text-gray-400">Contenu non disponible pour le moment.</div>
             )}
           </div>
         </section>
 
-        {/* Map Section - Enhanced - Mobile First */}
-        <section className="py-6 sm:py-12 md:py-16 lg:py-20 bg-white dark:bg-gray-900">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* ── Map ── */}
+        <section className="py-8 sm:py-14 bg-gradient-to-b from-white to-amber-50">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
+              transition={{ duration: 0.5 }}
             >
-              <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-6 sm:mb-8 md:mb-10 text-center">
-                Notre localisation
-              </h2>
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-3 mb-6 sm:mb-8 justify-center">
+                <div className="h-px flex-1 bg-gradient-to-r from-transparent to-amber-200" />
+                <h2 className="text-lg sm:text-xl md:text-2xl font-black text-gray-900 flex items-center gap-2 flex-shrink-0">
+                  <MapPin className="h-5 w-5 text-amber-500" /> Notre localisation
+                </h2>
+                <div className="h-px flex-1 bg-gradient-to-l from-transparent to-amber-200" />
+              </div>
+
+              <div className="rounded-2xl sm:rounded-3xl overflow-hidden shadow-xl border border-amber-100">
                 {coordinates?.gelocalisation ? (
-                  <div
-                    className="h-56 sm:h-72 lg:h-96 w-full min-h-[200px]"
-                    dangerouslySetInnerHTML={{ __html: coordinates.gelocalisation }}
-                  />
+                  <div className="h-52 sm:h-72 lg:h-96 w-full"
+                    dangerouslySetInnerHTML={{ __html: coordinates.gelocalisation }} />
                 ) : (
-                  <div className="h-56 sm:h-72 lg:h-96 w-full min-h-[200px] bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                    <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 px-4">Carte en cours de chargement...</p>
+                  <div className="h-52 sm:h-72 bg-amber-50 flex items-center justify-center">
+                    <p className="text-gray-400 text-sm">Carte en cours de chargement…</p>
                   </div>
                 )}
-                <div className="p-6 sm:p-8">
+                <div className="p-5 sm:p-7 bg-white">
                   <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-                    <div className="flex-shrink-0">
-                      <div className="w-12 h-12 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                        <MapPin className="h-6 w-6 text-red-600 dark:text-red-400" />
-                      </div>
+                    <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center flex-shrink-0 shadow-md">
+                      <MapPin className="h-5 w-5 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-2 break-words">
-                        SOBITAS - STE BITOUTA D'ARTICLE DE SPORT
-                      </h3>
-                      <p className="text-base text-gray-600 dark:text-gray-400 break-words mb-4">
-                        {coordinates?.adresse || 'Sousse, Tunisie'}
-                      </p>
-                      {coordinates?.phone && (
-                        <p className="text-base text-gray-600 dark:text-gray-400 mb-2 break-words">
-                          <strong className="text-gray-900 dark:text-white">Téléphone:</strong> {coordinates.phone}
-                        </p>
-                      )}
-                      {coordinates?.email && (
-                        <p className="text-base text-gray-600 dark:text-gray-400 break-all">
-                          <strong className="text-gray-900 dark:text-white">Email:</strong> {coordinates.email}
-                        </p>
-                      )}
+                      <h3 className="text-base sm:text-lg font-black text-gray-900 mb-1 break-words">SOBITAS — STE BITOUTA D&apos;ARTICLE DE SPORT</h3>
+                      <p className="text-sm text-gray-500 break-words mb-1">{coordinates?.adresse || 'Sousse, Tunisie'}</p>
+                      {coordinates?.phone && <p className="text-sm text-gray-500"><span className="font-semibold text-gray-700">Tél :</span> {coordinates.phone}</p>}
+                      {coordinates?.email && <p className="text-sm text-gray-500 break-all"><span className="font-semibold text-gray-700">Email :</span> {coordinates.email}</p>}
                     </div>
                   </div>
                 </div>
@@ -452,46 +381,44 @@ export default function AboutPageClient() {
           </div>
         </section>
 
-        {/* Enhanced CTA Section - Mobile First */}
-        <section className="py-12 sm:py-16 md:py-20 lg:py-24 bg-gradient-to-br from-red-700 via-red-800 to-red-900 text-white relative overflow-hidden">
-          <div className="absolute inset-0 bg-black/10"></div>
-          <div 
-            className="absolute inset-0 opacity-20"
-            style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-            }}
-          ></div>
-          <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        {/* ── CTA ── */}
+        <section className="py-12 sm:py-20 relative overflow-hidden bg-gradient-to-br from-gray-900 via-amber-950 to-orange-950 text-white">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_80%_at_50%_100%,rgba(245,158,11,0.12),transparent)]" />
+          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-500/40 to-transparent" />
+
+          <div className="relative max-w-3xl mx-auto px-4 sm:px-6 text-center">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
+              transition={{ duration: 0.5 }}
             >
-              <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold mb-4 sm:mb-6">
-                Rejoignez la communauté SOBITAS
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/15 border border-amber-400/30 mb-5">
+                <Zap className="h-3.5 w-3.5 text-amber-400" />
+                <span className="text-amber-400 text-xs font-bold uppercase tracking-[0.18em]">Rejoignez-nous</span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-black mb-4 leading-tight">
+                <span className="bg-gradient-to-br from-white via-amber-100 to-amber-300 bg-clip-text text-transparent">
+                  Rejoignez la communauté SOBITAS
+                </span>
               </h2>
-              <p className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl opacity-95 mb-6 sm:mb-8 md:mb-10 max-w-3xl mx-auto leading-relaxed px-2">
-                Que vous soyez un athlète professionnel, passionné de fitness ou débutant, SOBITAS est votre partenaire pour atteindre vos objectifs.
+              <p className="text-gray-300 text-sm sm:text-base md:text-lg mb-8 leading-relaxed max-w-2xl mx-auto">
+                Que vous soyez athlète professionnel, passionné de fitness ou débutant — SOBITAS est votre partenaire pour atteindre vos objectifs.
               </p>
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-stretch sm:items-center w-full sm:w-auto">
-                <Link
-                  href="/shop"
-                  className="w-full sm:w-auto inline-flex items-center justify-center px-6 sm:px-8 py-4 sm:py-4 bg-white text-red-700 font-bold text-base sm:text-lg rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 hover:bg-gray-50 min-h-[48px] touch-manipulation"
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Link href="/shop"
+                  className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-black text-sm sm:text-base font-bold shadow-[0_0_24px_rgba(245,158,11,0.35)] hover:shadow-[0_0_32px_rgba(245,158,11,0.5)] transition-all"
                 >
-                  <Package className="w-5 h-5 mr-2 flex-shrink-0" />
-                  <span>Découvrir nos produits</span>
+                  <Package className="h-4 w-4" /> Découvrir nos produits
                 </Link>
-                <Link
-                  href="/contact"
-                  className="w-full sm:w-auto inline-flex items-center justify-center px-6 sm:px-8 py-4 sm:py-4 bg-transparent border-2 border-white text-white font-bold text-base sm:text-lg rounded-xl hover:bg-white/10 transition-all duration-300 min-h-[48px] touch-manipulation"
+                <Link href="/contact"
+                  className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl border border-white/25 bg-white/8 text-white text-sm sm:text-base font-semibold hover:bg-white/15 transition-all"
                 >
-                  <Users className="w-5 h-5 mr-2 flex-shrink-0" />
-                  <span>Nous contacter</span>
+                  <Users className="h-4 w-4" /> Nous contacter
                 </Link>
               </div>
-              <p className="mt-6 sm:mt-8 text-xs sm:text-sm md:text-base lg:text-lg opacity-90 max-w-2xl mx-auto px-2">
-                <strong>Proteine Tunisie – SOBITAS :</strong> Votre expert en nutrition sportive depuis 2010. Basé à Sousse, livraison rapide et gratuite partout en Tunisie.
+              <p className="mt-7 text-xs sm:text-sm text-gray-400 max-w-xl mx-auto">
+                <strong className="text-gray-300">Proteine Tunisie – SOBITAS :</strong> Votre expert en nutrition sportive depuis 2010. Basé à Sousse, livraison rapide partout en Tunisie.
               </p>
             </motion.div>
           </div>

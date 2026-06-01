@@ -731,48 +731,61 @@ function ShopContent({
           const subcat = categories
             .flatMap(c => c.sous_categories || [])
             .find(s => s.slug === initialCategory);
+          const parentCat = categories.find(c =>
+            (c.sous_categories || []).some(s => s.slug === initialCategory)
+          );
           const catName = subcat?.designation_fr || initialCategory?.replace(/-/g, ' ') || '';
           return (
             <motion.div
-              initial={{ opacity: 0, y: -16 }}
+              initial={{ opacity: 0, y: -12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.45, ease: 'easeOut' }}
-              className="relative mb-8 rounded-3xl overflow-hidden"
+              transition={{ duration: 0.4, ease: 'easeOut' }}
+              className="relative mb-5 sm:mb-8 rounded-2xl sm:rounded-3xl overflow-hidden"
             >
               {/* Dark gold layered bg */}
-              <div className="absolute inset-0 bg-gradient-to-br from-[#100c00] via-[#1c1400] to-[#0d0900]" />
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_80%_at_70%_0%,rgba(212,175,55,0.18),transparent)]" />
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_40%_60%_at_20%_100%,rgba(212,175,55,0.08),transparent)]" />
+              <div className="absolute inset-0 bg-gradient-to-br from-[#100c00] via-[#1a1200] to-[#0d0900]" />
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_65%_0%,rgba(212,175,55,0.2),transparent)]" />
               {/* Gold border lines */}
-              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-500/50 to-transparent" />
+              <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-amber-400/60 to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-500/20 to-transparent" />
+              {/* Decorative circles */}
+              <div className="pointer-events-none absolute -right-16 -top-16 w-56 h-56 rounded-full bg-amber-500/5 blur-2xl" />
+              <div className="pointer-events-none absolute -left-8 bottom-0 w-40 h-40 rounded-full bg-orange-500/5 blur-2xl" />
 
-              <div className="relative px-6 py-10 sm:px-12 sm:py-14 flex flex-col sm:flex-row sm:items-center gap-6">
+              <div className="relative px-4 py-6 sm:px-10 sm:py-12 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
                 <div className="flex-1 min-w-0">
+                  {/* Breadcrumb inside banner */}
+                  {parentCat && (
+                    <div className="flex items-center gap-1.5 mb-3 text-amber-400/60 text-xs">
+                      <span>{parentCat.designation_fr}</span>
+                      <span>›</span>
+                      <span className="text-amber-400">{catName}</span>
+                    </div>
+                  )}
                   {/* Gold eyebrow */}
-                  <div className="flex items-center gap-2.5 mb-4">
-                    <div className="h-px w-8 bg-amber-400" />
-                    <span className="text-amber-400 text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em]">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="h-px w-6 bg-amber-400" />
+                    <span className="text-amber-400 text-[10px] font-bold uppercase tracking-[0.2em]">
                       Collection Premium
                     </span>
                   </div>
-                  <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white mb-3 leading-[1.05] capitalize">
+                  <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-black text-white mb-2 leading-tight capitalize">
                     {catName}
                   </h1>
-                  <p className="text-amber-100/40 text-sm sm:text-base">
+                  <p className="text-amber-100/40 text-xs sm:text-sm">
                     {filteredProducts.length} produit{filteredProducts.length !== 1 ? 's' : ''} disponible{filteredProducts.length !== 1 ? 's' : ''}
                   </p>
                 </div>
 
-                {/* Decorative right side */}
-                <div className="hidden sm:flex items-center gap-3 flex-shrink-0">
+                {/* Right badges — hidden on very small screens */}
+                <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
                   {[
                     { icon: Trophy, label: 'Qualité Premium' },
                     { icon: Zap, label: 'Livraison Rapide' },
                   ].map(({ icon: Icon, label }) => (
-                    <div key={label} className="flex flex-col items-center gap-2 px-5 py-4 rounded-2xl bg-white/5 border border-amber-500/15">
-                      <Icon className="h-5 w-5 text-amber-400" />
-                      <span className="text-white/60 text-xs font-medium text-center whitespace-nowrap">{label}</span>
+                    <div key={label} className="flex flex-col items-center gap-1.5 px-4 py-3 rounded-xl bg-white/5 border border-amber-500/15">
+                      <Icon className="h-4 w-4 text-amber-400" />
+                      <span className="text-white/50 text-[10px] font-medium text-center whitespace-nowrap">{label}</span>
                     </div>
                   ))}
                 </div>
@@ -854,15 +867,15 @@ function ShopContent({
         </motion.div>
 
         {/* Search, Filter & Sort Row */}
-        <div className="flex flex-col md:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6">
+        <div className="flex flex-col md:flex-row gap-2 sm:gap-3 mb-4 sm:mb-6">
           <div className="flex-1 relative min-w-0">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400 pointer-events-none" aria-hidden="true" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-amber-500 pointer-events-none" aria-hidden="true" />
             <Input
               type="search"
               placeholder="Rechercher un produit..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 sm:pl-10 min-h-[44px] border-gray-200 dark:border-gray-700 focus:border-amber-500 dark:focus:border-amber-500 rounded-xl"
+              className="w-full pl-9 min-h-[44px] bg-white dark:bg-gray-900 border-amber-200 dark:border-amber-900/30 focus:border-amber-500 dark:focus:border-amber-500 rounded-xl shadow-sm placeholder:text-gray-400 text-sm"
             />
           </div>
           
@@ -1196,9 +1209,11 @@ function ShopContent({
                 transition={{ duration: 0.25 }}
                 className="hidden lg:block w-72 flex-shrink-0"
               >
-                <div className="bg-white dark:bg-[#0f0f0f] rounded-2xl border border-gray-200 dark:border-amber-500/10 px-5 pt-5 pb-8 space-y-1 sticky top-4 shadow-[0_2px_12px_rgba(0,0,0,0.02)] dark:shadow-[0_0_30px_rgba(0,0,0,0.4),0_0_0_1px_rgba(245,158,11,0.05)]">
-                  <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-150 dark:border-gray-800">
-                    <h2 className="font-bold text-sm tracking-wide uppercase text-gray-500 dark:text-gray-400">Filtres</h2>
+                <div className="bg-white dark:bg-[#0f0f0f] rounded-2xl border border-amber-100 dark:border-amber-500/10 px-5 pt-5 pb-8 space-y-1 sticky top-4 shadow-[0_4px_20px_rgba(245,158,11,0.06)] dark:shadow-[0_0_30px_rgba(0,0,0,0.4)]">
+                  <div className="flex items-center justify-between mb-4 pb-4 border-b border-amber-100 dark:border-gray-800">
+                    <h2 className="font-black text-sm tracking-wide uppercase bg-gradient-to-r from-amber-600 to-orange-500 bg-clip-text text-transparent flex items-center gap-1.5">
+                      <Filter className="h-3.5 w-3.5 text-amber-500" /> Filtres
+                    </h2>
                     <div className="flex items-center gap-1.5">
                       {appliedFilters.length > 0 && (
                         <Button

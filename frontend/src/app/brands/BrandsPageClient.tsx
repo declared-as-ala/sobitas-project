@@ -127,7 +127,7 @@ export default function BrandsPageClient() {
             </p>
 
             {/* Search Bar */}
-            <div className="relative max-w-sm sm:max-w-md mx-auto">
+            <div className="relative w-full max-w-md mx-auto">
               <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-amber-500/20 to-yellow-500/20 blur-md opacity-60" />
               <div className="relative flex items-center bg-white/5 border border-white/10 hover:border-amber-500/30 focus-within:border-amber-400/50 rounded-2xl transition-all duration-300">
                 <Search className="ml-4 h-5 w-5 text-amber-400/60 flex-shrink-0" />
@@ -175,8 +175,8 @@ export default function BrandsPageClient() {
             exit={{ opacity: 0, y: -8 }}
             className="sticky top-0 z-40 bg-[#080808]/95 backdrop-blur-xl border-b border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.4)]"
           >
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-              <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
+            <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-2 sm:py-3">
+              <div className="flex items-center gap-0.5 sm:gap-1 overflow-x-auto scrollbar-none pb-0.5">
                 {LETTERS.map(letter => {
                   const isActive = activeLetters.has(letter);
                   const isCurrent = activeLetter === letter;
@@ -186,9 +186,9 @@ export default function BrandsPageClient() {
                       onClick={() => isActive && scrollToLetter(letter)}
                       disabled={!isActive}
                       className={`
-                        flex-shrink-0 w-9 h-9 rounded-xl text-sm font-bold transition-all duration-200
+                        flex-shrink-0 w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl text-[11px] sm:text-sm font-bold transition-all duration-200
                         ${isCurrent
-                          ? 'bg-amber-500 text-black shadow-[0_0_16px_rgba(245,158,11,0.5)]'
+                          ? 'bg-amber-500 text-black shadow-[0_0_12px_rgba(245,158,11,0.5)]'
                           : isActive
                           ? 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 hover:text-amber-300 border border-amber-500/20 hover:border-amber-400/40'
                           : 'text-gray-700 cursor-default'
@@ -272,7 +272,7 @@ export default function BrandsPageClient() {
                 </div>
 
                 {/* Cards grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                <div className="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-4">
                   {groupedBrands[letter].map((brand, i) => (
                     <BrandCard key={brand.id} brand={brand} index={i} onBrandClick={handleBrandClick} />
                   ))}
