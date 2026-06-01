@@ -9,7 +9,7 @@ const FeaturesSection = dynamic(() => import('@/app/components/FeaturesSection')
 const CategoryGrid = dynamic(() => import('@/app/components/CategoryGrid').then(m => ({ default: m.CategoryGrid })), { ssr: true });
 const VentesFlashSection = dynamic(() => import('@/app/components/VentesFlashSection').then(m => ({ default: m.VentesFlashSection })), { ssr: true });
 const ProductSection = dynamic(() => import('@/app/components/ProductSection').then(m => ({ default: m.ProductSection })), { ssr: true });
-const HomeDeferredSections = dynamic(() => import('@/app/components/HomeDeferredSections').then(m => ({ default: m.HomeDeferredSections })), { ssr: false });
+const HomeDeferredSections = dynamic(() => import('@/app/components/HomeDeferredSections').then(m => ({ default: m.HomeDeferredSections })), { ssr: true });
 
 import type { AccueilData, Product } from '@/types';
 import { getStorageUrl } from '@/services/api';
