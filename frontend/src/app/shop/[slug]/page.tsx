@@ -113,10 +113,9 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
       const title = productTitle(product);
       const description = productDescription(product, product.designation_fr ?? product.slug ?? 'Produit');
       
-      // New canonical URL uses the new SEO-friendly format
-      const newCanonicalUrl = buildProductCanonicalUrl(product);
+      // Always compute canonical from subcategory — never trust seo.canonical_url (C3 fix)
       const canonicalUrl = ensureProductionDomain(
-        product.seo?.canonical_url?.trim() || newCanonicalUrl,
+        buildProductCanonicalUrl(product),
         buildProductUrlPath(product)
       );
       

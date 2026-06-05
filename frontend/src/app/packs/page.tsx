@@ -3,10 +3,10 @@ import { getPacks } from '@/services/api';
 import { PacksPageClient } from './PacksPageClient';
 
 export const metadata: Metadata = {
-  title: 'Packs & Offres Compléments Alimentaires Tunisie | Proteine Tunisie',
+  title: { absolute: 'Packs & Offres Compléments Alimentaires Tunisie | Protéine Tunisie' },
   description: 'Packs protéines et compléments à prix réduits. Économisez sur whey, créatine et gainer en Tunisie.',
   openGraph: {
-    title: 'Packs & Offres Compléments Alimentaires Tunisie | Proteine Tunisie',
+    title: { absolute: 'Packs & Offres Compléments Alimentaires Tunisie | Protéine Tunisie' },
     description: 'Packs protéines et compléments à prix réduits. Économisez sur whey, créatine et gainer en Tunisie.',
     type: 'website',
   },

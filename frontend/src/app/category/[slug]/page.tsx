@@ -124,6 +124,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       merged.metaTitle && merged.metaTitle.length <= META_TITLE_MAX_LEN
         ? merged.metaTitle
         : toMetaTitle(merged.h1, apiTitle, canonicalSlug);
+    // Ensure brand suffix — API-sourced titles may omit it
+    const brand = ' | Protéine Tunisie';
+    if (!metaTitle.toLowerCase().includes('protéine') && !metaTitle.toLowerCase().includes('proteine')) {
+      metaTitle = (metaTitle + brand).slice(0, META_TITLE_MAX_LEN);
+    }
     if (metaTitle.length > META_TITLE_MAX_LEN) {
       const cut = metaTitle.slice(0, META_TITLE_MAX_LEN - 1);
       const lastSpace = cut.lastIndexOf(' ');
@@ -140,7 +145,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       merged.canonicalUrl && merged.canonicalUrl.length > 0
         ? forceProteinDomain(merged.canonicalUrl)
         : buildCanonicalUrl(`/${encodeURIComponent(canonicalSlug)}`);
-    const descTrimmed = description.slice(0, 160);
+    const descTrimmed = description.slice(0, 155);
     const ogImageRaw = merged.ogImage || undefined;
     const ogImage = ogImageRaw && /^https?:\/\//i.test(ogImageRaw) && !/\s/.test(ogImageRaw) ? ogImageRaw : undefined;
     const ogAlt = (apiSeo?.og?.image_alt as string | undefined)?.trim() || merged.h1 || apiTitle || 'Catégorie';
@@ -158,7 +163,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       description: descTrimmed,
       ...(allKeywords ? { keywords: allKeywords } : {}),
       alternates: { canonical: canonicalUrl },
-      robots: { index: merged.robotsIndex, follow: merged.robotsFollow },
+      // Always index resolved categories — never trust admin noindex for live categories
+      robots: { index: true, follow: true },
       openGraph: {
         title: ogTitleMeta,
         description: ogDescMeta.slice(0, 200),

@@ -6,13 +6,14 @@ use App\Enums\PartnerStatus;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Laravel\Sanctum\HasApiTokens;
 
-class User extends Authenticatable implements FilamentUser
+class User extends Authenticatable implements FilamentUser, MustVerifyEmail
 {
     use HasApiTokens;
     use HasFactory;
@@ -24,8 +25,10 @@ class User extends Authenticatable implements FilamentUser
         'password',
         'phone',
         'avatar',
-        'role_id',
     ];
+
+    // role_id must never be mass-assigned — always set explicitly server-side
+    protected $guarded = ['role_id'];
 
     /**
      * @var list<string>

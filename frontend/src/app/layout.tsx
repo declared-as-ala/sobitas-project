@@ -66,9 +66,9 @@ export const metadata: Metadata = {
     description: SITE_DESCRIPTION,
     images: [
       {
-        url: '/favicon-512x512.png',
-        width: 512,
-        height: 512,
+        url: '/og-banner.jpg',
+        width: 1200,
+        height: 630,
         alt: 'Protéine Tunisie — whey, créatine et compléments en Tunisie',
       },
     ],
@@ -77,7 +77,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: SITE_TITLE_DEFAULT,
     description: SITE_DESCRIPTION,
-    images: ['/favicon-512x512.png'],
+    images: ['/og-banner.jpg'],
   },
   robots: {
     index: true,

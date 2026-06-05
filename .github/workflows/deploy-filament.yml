@@ -1,236 +1,75 @@
-name: Deploy Filament Backend (Docker Image) - V2
+name: Deploy Filament Backend
 
 on:
   push:
     branches:
       - main
-      - master
-      - develop
     paths:
       - "filament/**"
       - "docker-compose.yml"
       - ".github/workflows/deploy-filament.yml"
   workflow_dispatch:
-    inputs:
-      enabled:
-        description: 'Force enable this workflow (set to "true" to run)'
-        required: false
-        default: 'false'
-
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: declared-as-ala/sobitas-backend-v2
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
-    if: |
-      github.event_name == 'push' ||
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.enabled == 'true')
-    permissions:
-      contents: read
-      packages: write
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Verify Dockerfile exists
-        run: |
-          set -e
-          test -f filament/Dockerfile || (echo "❌ filament/Dockerfile not found" && exit 1)
-          echo "✓ filament/Dockerfile found"
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and Push Docker Image
-        uses: docker/build-push-action@v6
-        with:
-          context: ./filament
-          file: ./filament/Dockerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Deploy to VPS (attempt 1)
-        id: deploy_attempt_1
-        continue-on-error: true
+      - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           password: ${{ secrets.VPS_PASSWORD }}
           port: ${{ secrets.VPS_PORT || 22 }}
-          timeout: 120s
           command_timeout: 1200s
           script_stop: true
           script: |
-            set -euo pipefail
-
+            set -e
             APP_DIR="/root/sobitas-project"
-            COMPOSE_FILE="$APP_DIR/docker-compose.yml"
-            IMAGE="ghcr.io/declared-as-ala/sobitas-backend-v2:latest"
-
             cd "$APP_DIR"
 
-            [ -f .env ] || { [ -f filament/.env.example ] && cp filament/.env.example .env || touch .env; }
-
-            echo "📥 Updating docker-compose and nginx files from repo..."
+            echo "📥 Pulling latest code..."
             git fetch origin main
-            git checkout origin/main -- docker-compose.yml nginx
+            git reset --hard origin/main
 
-            echo "🔐 Logging in to GHCR..."
-            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u declared-as-ala --password-stdin
+            echo "🔨 Building backend image..."
+            docker compose build --no-cache backend-v2
 
-            echo "🧹 Docker cleanup (old dangling images only)..."
-            docker image prune -f || true
+            echo "🔍 Starting dependencies..."
+            docker compose up -d mysql redis
 
-            echo "📦 Pull latest image..."
-            docker pull "$IMAGE"
+            echo "🔄 Restarting backend container..."
+            docker compose up -d --force-recreate --no-deps backend-v2
 
-            echo "🔍 Start dependencies..."
-            docker compose -f "$COMPOSE_FILE" up -d mysql redis
-
-            if ! grep -q 'APP_KEY=base64:' .env 2>/dev/null; then
-              echo "🔑 APP_KEY missing, generating..."
-              KEY=$(docker compose -f "$COMPOSE_FILE" run --rm backend-v2 php artisan key:generate --show 2>/dev/null || true)
-              [ -n "$KEY" ] && echo "APP_KEY=$KEY" >> .env && echo "✓ APP_KEY added to .env"
-            fi
-
-            echo "🔄 Recreating backend container with latest image..."
-            docker compose -f "$COMPOSE_FILE" up -d --force-recreate --no-deps backend-v2
-
-            echo "⏳ Waiting for backend readiness marker..."
+            echo "⏳ Waiting for backend to be ready..."
             READY=0
-            for i in $(seq 1 120); do
-              if docker compose -f "$COMPOSE_FILE" exec -T backend-v2 test -f /tmp/.entrypoint-ready; then
+            for i in $(seq 1 60); do
+              if docker compose exec -T backend-v2 test -f /tmp/.entrypoint-ready 2>/dev/null; then
                 READY=1
                 echo "✅ Backend is ready"
                 break
               fi
-              sleep 2
+              sleep 3
             done
 
             if [ "$READY" -ne 1 ]; then
               echo "❌ Backend did not become ready in time"
-              docker compose -f "$COMPOSE_FILE" logs --tail=200 backend-v2 || true
+              docker compose logs --tail=100 backend-v2 || true
               exit 1
             fi
 
-            echo "📋 Refreshing shared public volume..."
-            docker compose -f "$COMPOSE_FILE" run --rm backend-v2-public-init
+            echo "📋 Refreshing public volume..."
+            docker compose run --rm backend-v2-public-init || true
 
-            echo "🔄 Recreating nginx..."
-            docker compose -f "$COMPOSE_FILE" up -d --force-recreate --no-deps backend-nginx-v2
+            echo "🔄 Restarting nginx and queue worker..."
+            docker compose up -d --force-recreate --no-deps backend-nginx-v2
+            docker compose up -d --force-recreate --no-deps backend-v2-queue
 
-            echo "🔄 Recreating queue worker with latest image..."
-            docker compose -f "$COMPOSE_FILE" up -d --force-recreate --no-deps backend-v2-queue
-
-            echo "📋 Final status:"
-            docker compose -f "$COMPOSE_FILE" ps
-
-            echo "🩺 Last backend logs:"
-            docker compose -f "$COMPOSE_FILE" logs --tail=50 backend-v2 || true
-
-            echo ""
-            echo "🚀 Deploy complete!"
-
-      - name: Deploy to VPS (attempt 2 on transient SSH failure)
-        if: steps.deploy_attempt_1.outcome == 'failure'
-        id: deploy_attempt_2
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          password: ${{ secrets.VPS_PASSWORD }}
-          port: ${{ secrets.VPS_PORT || 22 }}
-          timeout: 120s
-          command_timeout: 1200s
-          script_stop: true
-          script: |
-            set -euo pipefail
-
-            APP_DIR="/root/sobitas-project"
-            COMPOSE_FILE="$APP_DIR/docker-compose.yml"
-            IMAGE="ghcr.io/declared-as-ala/sobitas-backend-v2:latest"
-
-            cd "$APP_DIR"
-
-            [ -f .env ] || { [ -f filament/.env.example ] && cp filament/.env.example .env || touch .env; }
-
-            echo "📥 Updating docker-compose and nginx files from repo..."
-            git fetch origin main
-            git checkout origin/main -- docker-compose.yml nginx
-
-            echo "🔐 Logging in to GHCR..."
-            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u declared-as-ala --password-stdin
-
-            echo "🧹 Docker cleanup (old dangling images only)..."
+            echo "🧹 Cleaning unused images..."
             docker image prune -f || true
 
-            echo "📦 Pull latest image..."
-            docker pull "$IMAGE"
+            echo "📋 Container status:"
+            docker compose ps
 
-            echo "🔍 Start dependencies..."
-            docker compose -f "$COMPOSE_FILE" up -d mysql redis
-
-            if ! grep -q 'APP_KEY=base64:' .env 2>/dev/null; then
-              echo "🔑 APP_KEY missing, generating..."
-              KEY=$(docker compose -f "$COMPOSE_FILE" run --rm backend-v2 php artisan key:generate --show 2>/dev/null || true)
-              [ -n "$KEY" ] && echo "APP_KEY=$KEY" >> .env && echo "✓ APP_KEY added to .env"
-            fi
-
-            echo "🔄 Recreating backend container with latest image..."
-            docker compose -f "$COMPOSE_FILE" up -d --force-recreate --no-deps backend-v2
-
-            echo "⏳ Waiting for backend readiness marker..."
-            READY=0
-            for i in $(seq 1 120); do
-              if docker compose -f "$COMPOSE_FILE" exec -T backend-v2 test -f /tmp/.entrypoint-ready; then
-                READY=1
-                echo "✅ Backend is ready"
-                break
-              fi
-              sleep 2
-            done
-
-            if [ "$READY" -ne 1 ]; then
-              echo "❌ Backend did not become ready in time"
-              docker compose -f "$COMPOSE_FILE" logs --tail=200 backend-v2 || true
-              exit 1
-            fi
-
-            echo "📋 Refreshing shared public volume..."
-            docker compose -f "$COMPOSE_FILE" run --rm backend-v2-public-init
-
-            echo "🔄 Recreating nginx..."
-            docker compose -f "$COMPOSE_FILE" up -d --force-recreate --no-deps backend-nginx-v2
-
-            echo "🔄 Recreating queue worker with latest image..."
-            docker compose -f "$COMPOSE_FILE" up -d --force-recreate --no-deps backend-v2-queue
-
-            echo "📋 Final status:"
-            docker compose -f "$COMPOSE_FILE" ps
-
-            echo "🩺 Last backend logs:"
-            docker compose -f "$COMPOSE_FILE" logs --tail=50 backend-v2 || true
-
-            echo ""
-            echo "🚀 Deploy complete!"
-
-      - name: Fail workflow when deploy did not succeed
-        if: steps.deploy_attempt_1.outcome == 'failure' && steps.deploy_attempt_2.outcome == 'failure'
-        run: |
-          echo "❌ Both SSH deploy attempts failed. Check VPS SSH reachability/firewall (port 22) and runner egress."
-          exit 1
+            echo "✅ Backend deploy done"

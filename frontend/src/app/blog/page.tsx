@@ -20,7 +20,7 @@ export async function generateMetadata(props: { searchParams?: BlogSearchParams 
   const { prev, next } = getBlogPrevNext(path, search, pageNum, totalPages);
 
   return {
-    title: 'Blog Nutrition Sportive & Compléments | Proteine Tunisie',
+    title: { absolute: 'Blog Nutrition Sportive & Compléments | Protéine Tunisie' },
     description: 'Guides, conseils prise de masse, choix whey et créatine. Tout pour la nutrition sportive en Tunisie.',
     alternates: {
       canonical,

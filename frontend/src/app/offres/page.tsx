@@ -6,7 +6,7 @@ import { OffresPageClient } from './OffresPageClient';
 import type { Product } from '@/types';
 
 export const metadata: Metadata = {
-  title: 'Toutes les offres & Promos | Proteine Tunisie',
+  title: { absolute: 'Toutes les offres & Promos | Protéine Tunisie' },
   description: 'Découvrez tous nos produits en promotion. Protéines, créatine, compléments à prix réduits. Livraison en Tunisie.',
 };
 

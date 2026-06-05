@@ -68,7 +68,7 @@ function metadataForPage(page: Page, slug: string): Metadata {
 
   return {
     title: { absolute: title },
-    description: description.slice(0, 160),
+    description: description.slice(0, 155),
     keywords: page.meta_keywords || undefined,
     alternates: { canonical },
     robots: {

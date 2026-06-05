@@ -123,9 +123,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
     const title = productTitle(product);
     const description = productDescription(product, product.designation_fr ?? product.slug ?? 'Produit');
-    const canonicalUrl = ensureProductionDomain(
-      product.seo?.canonical_url?.trim() || buildProductCanonicalUrl(product)
-    );
+    // Always compute canonical from subcategory — never trust API's seo.canonical_url
+    // which may still point to legacy /shop/ paths causing sitemap/canonical mismatch (C3)
+    const canonicalUrl = ensureProductionDomain(buildProductCanonicalUrl(product));
 
     const isPublished = (product.publier as any) === 1 || (product.publier as any) === true || product.publier === undefined;
 
@@ -208,6 +208,7 @@ export default async function NewProductPage({ params }: PageProps) {
   const [similarProducts, faqs] = await Promise.all([similarPromise, faqsPromise]);
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
+  // Always compute from subcategory — never trust legacy seo.canonical_url (C3 fix)
   const canonicalUrl = ensureProductionDomain(buildProductCanonicalUrl(product));
   
   const apiLd = product.json_ld_product;

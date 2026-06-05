@@ -37,6 +37,7 @@ class Kernel extends HttpKernel
     protected $middleware = [
         // \App\Http\Middleware\TrustHosts::class,
         TrustProxies::class,
+        \App\Http\Middleware\RemoveSecurityHeaders::class,
         PreventRequestsDuringMaintenance::class,
         ValidatePostSize::class,
         TrimStrings::class,

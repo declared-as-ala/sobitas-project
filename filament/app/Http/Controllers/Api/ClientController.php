@@ -88,7 +88,7 @@ class ClientController extends Controller
             'name'     => ['required', 'string', 'max:255'],
             'phone'    => ['required', 'string', 'max:20'],
             'email'    => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:6'],
+            'password' => ['required', 'string', 'min:8', 'regex:/[A-Za-z]/', 'regex:/[0-9]/'],
         ]);
 
         $user = User::create([
@@ -116,7 +116,7 @@ class ClientController extends Controller
             'name'     => ['sometimes', 'required', 'string', 'max:255'],
             'phone'    => ['sometimes', 'string', 'max:20'],
             'email'    => ['sometimes', 'required', 'email', 'max:255', 'unique:users,email,' . $user->id],
-            'password' => ['sometimes', 'nullable', 'string', 'min:6'],
+            'password' => ['sometimes', 'nullable', 'string', 'min:8', 'regex:/[A-Za-z]/', 'regex:/[0-9]/'],
         ]);
 
         if (isset($validated['name'])) {

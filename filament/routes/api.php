@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\ApisController;
 use App\Http\Controllers\Api\ClientController;
 use App\Http\Controllers\Api\CommandeController;
 use App\Http\Controllers\Api\CouponController;
+use App\Http\Controllers\Api\ProductFeedController;
 
 /*
 |--------------------------------------------------------------------------
@@ -94,9 +95,12 @@ Route::post('/contact', [ApisController::class, 'sendContact']);
 // HIGH-03: Protected — auth:sanctum + admin only
 Route::post('/send_mail', [ApisController::class, 'send_email'])->middleware(['auth:sanctum', 'can:accessFilament']);
 
-// Auth
+// Google Merchant Center & Meta Catalog feed (public, cached 30 min)
+Route::middleware(['cache.api:1800', 'cache.headers.api:1800'])->get('/merchant-feed', [ProductFeedController::class, 'feed']);
+
+// Auth — register is rate-limited strictly to prevent account spam
 Route::post('/login', [ClientController::class, 'login']);
-Route::post('/register', [ClientController::class, 'register']);
+Route::middleware('throttle:5,1')->post('/register', [ClientController::class, 'register']);
 
 // ── Authenticated Routes ──────────────────────────────
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
