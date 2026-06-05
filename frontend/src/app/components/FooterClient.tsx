@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Facebook, Instagram, Linkedin, Mail, Phone, MapPin, Sparkles, Loader2, MessageCircle } from 'lucide-react';
+import { Facebook, Instagram, Linkedin, Mail, Phone, MapPin, Sparkles, Loader2, MessageCircle, Youtube } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { motion } from 'motion/react';
@@ -130,6 +130,9 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
               </a>
               <a href="https://wa.me/21627612500" target="_blank" rel="noopener noreferrer" className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-gray-800 hover:bg-[#25D366] flex items-center justify-center transition-colors shrink-0" aria-label="WhatsApp">
                 <MessageCircle className="h-5 w-5" />
+              </a>
+              <a href="https://www.youtube.com/@proteine-tunisie" target="_blank" rel="noopener noreferrer" className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-gray-800 hover:bg-[#FF0000] flex items-center justify-center transition-colors shrink-0" aria-label="YouTube">
+                <Youtube className="h-5 w-5" />
               </a>
             </div>
           </div>
@@ -300,6 +303,15 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
                   aria-label="WhatsApp"
                 >
                   <MessageCircle className="h-5 w-5" />
+                </a>
+                <a
+                  href="https://www.youtube.com/@proteine-tunisie"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="h-10 w-10 rounded-full bg-gray-800 hover:bg-[#FF0000] flex items-center justify-center transition-colors"
+                  aria-label="YouTube"
+                >
+                  <Youtube className="h-5 w-5" />
                 </a>
               </div>
             </div>

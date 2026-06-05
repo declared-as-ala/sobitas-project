@@ -116,7 +116,7 @@ export default function BrandsPageClient() {
             {/* Title */}
             <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black leading-tight mb-3 tracking-tight">
               <span className="bg-gradient-to-r from-gray-900 via-amber-800 to-orange-700 bg-clip-text text-transparent">
-                Nos Marques
+                Brands
               </span>
             </h1>
             <p className="text-gray-500 text-sm sm:text-base max-w-md mx-auto mb-8 leading-relaxed">
