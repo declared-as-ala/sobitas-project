@@ -15,22 +15,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Copy code to VPS
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          password: ${{ secrets.VPS_PASSWORD }}
-          port: ${{ secrets.VPS_PORT }}
-          source: "frontend/,docker-compose.yml"
-          target: "/root/sobitas-project/"
-          strip_components: 0
-          overwrite: true
-
-      - name: Build and restart frontend on VPS
+      - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -39,9 +24,25 @@ jobs:
           port: ${{ secrets.VPS_PORT }}
           command_timeout: 900s
           script_stop: true
+          envs: GITHUB_TOKEN
           script: |
             set -e
-            cd /root/sobitas-project
+            APP_DIR="/root/sobitas-project"
+
+            # Inject token so git can pull private repo
+            git config --global credential.helper store
+            printf 'https://x-access-token:%s@github.com\n' "$GITHUB_TOKEN" > ~/.git-credentials
+
+            if [ ! -d "$APP_DIR/.git" ]; then
+              echo "📦 Cloning repo..."
+              git clone https://x-access-token:${GITHUB_TOKEN}@github.com/declared-as-ala/sobitas-project.git "$APP_DIR"
+            fi
+
+            cd "$APP_DIR"
+
+            echo "📥 Pulling latest code..."
+            git fetch origin main
+            git reset --hard origin/main
 
             echo "🔨 Building frontend image..."
             docker compose build --no-cache frontend
@@ -53,3 +54,5 @@ jobs:
             docker image prune -f || true
 
             echo "✅ Frontend deploy done"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
