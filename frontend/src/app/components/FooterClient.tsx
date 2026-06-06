@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Facebook, Instagram, Linkedin, Mail, Phone, MapPin, Sparkles, Loader2, MessageCircle, Youtube } from 'lucide-react';
+import { Facebook, Instagram, Linkedin, Mail, Phone, MapPin, Sparkles, Loader2, Youtube } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { motion } from 'motion/react';
@@ -91,12 +91,12 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
               transition={{ duration: 0.4, ease: 'easeOut' }}
               className="flex justify-start"
             >
-              <Link href="/" className="block max-w-[140px] opacity-90 hover:opacity-100 transition-opacity duration-300">
+              <Link href="/" className="block max-w-[180px] opacity-90 hover:opacity-100 transition-opacity duration-300">
                 <Image
                   src={footerLogoUrl}
                   alt="Proteine Tunisie"
-                  width={140}
-                  height={45}
+                  width={180}
+                  height={58}
                   className="w-full h-auto object-contain object-left"
                   sizes="(max-width: 480px) 100px, (max-width: 768px) 120px, 140px"
                   loading="lazy"
@@ -127,9 +127,6 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
                 <svg className="h-5 w-5 text-white group-hover:text-[#FF0050]" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
                 </svg>
-              </a>
-              <a href="https://wa.me/21627612500" target="_blank" rel="noopener noreferrer" className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-gray-800 hover:bg-[#25D366] flex items-center justify-center transition-colors shrink-0" aria-label="WhatsApp">
-                <MessageCircle className="h-5 w-5" />
               </a>
               <a href="https://www.youtube.com/@proteine-tunisie" target="_blank" rel="noopener noreferrer" className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-gray-800 hover:bg-[#FF0000] flex items-center justify-center transition-colors shrink-0" aria-label="YouTube">
                 <Youtube className="h-5 w-5" />
@@ -225,13 +222,13 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
         <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
           {/* Contact Info & Social */}
           <div className="space-y-6">
-            <div className="relative h-8 w-auto mb-6 shrink-0 flex items-center">
+            <div className="relative h-12 w-auto mb-6 shrink-0 flex items-center">
               <Image
                 src={footerLogoUrl}
                 alt="Proteine Tunisie"
-                width={150}
-                height={48}
-                className="h-8 w-auto object-contain"
+                width={190}
+                height={62}
+                className="h-12 w-auto object-contain"
                 style={{ width: 'auto', height: 'auto' }}
                 priority
               />
@@ -294,15 +291,6 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
                   <svg className="h-5 w-5 text-white group-hover:text-[#FF0050]" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
                   </svg>
-                </a>
-                <a
-                  href="https://wa.me/21627612500"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="h-10 w-10 rounded-full bg-gray-800 hover:bg-[#25D366] flex items-center justify-center transition-colors"
-                  aria-label="WhatsApp"
-                >
-                  <MessageCircle className="h-5 w-5" />
                 </a>
                 <a
                   href="https://www.youtube.com/@proteine-tunisie"
