@@ -21,12 +21,23 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           password: ${{ secrets.VPS_PASSWORD }}
-          port: ${{ secrets.VPS_PORT || 22 }}
+          port: ${{ secrets.VPS_PORT }}
           command_timeout: 1200s
           script_stop: true
+          envs: GH_TOKEN
           script: |
             set -e
             APP_DIR="/root/sobitas-project"
+
+            # Authenticate git over HTTPS using token
+            git config --global credential.helper store
+            echo "https://x-access-token:${GH_TOKEN}@github.com" > ~/.git-credentials
+
+            if [ ! -d "$APP_DIR/.git" ]; then
+              echo "📦 Cloning repo for the first time..."
+              git clone https://x-access-token:${GH_TOKEN}@github.com/declared-as-ala/sobitas-project.git "$APP_DIR"
+            fi
+
             cd "$APP_DIR"
 
             echo "📥 Pulling latest code..."
@@ -73,3 +84,5 @@ jobs:
             docker compose ps
 
             echo "✅ Backend deploy done"
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
