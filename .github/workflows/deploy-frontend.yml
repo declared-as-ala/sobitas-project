@@ -15,7 +15,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy to VPS via SSH
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Copy code to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: ${{ secrets.VPS_PORT }}
+          source: "frontend/,docker-compose.yml"
+          target: "/root/sobitas-project/"
+          strip_components: 0
+          overwrite: true
+
+      - name: Build and restart frontend on VPS
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -24,25 +39,9 @@ jobs:
           port: ${{ secrets.VPS_PORT }}
           command_timeout: 900s
           script_stop: true
-          envs: GH_TOKEN
           script: |
             set -e
-            APP_DIR="/root/sobitas-project"
-
-            # Authenticate git over HTTPS using token
-            git config --global credential.helper store
-            echo "https://x-access-token:${GH_TOKEN}@github.com" > ~/.git-credentials
-
-            if [ ! -d "$APP_DIR/.git" ]; then
-              echo "📦 Cloning repo for the first time..."
-              git clone https://x-access-token:${GH_TOKEN}@github.com/declared-as-ala/sobitas-project.git "$APP_DIR"
-            fi
-
-            cd "$APP_DIR"
-
-            echo "📥 Pulling latest code..."
-            git fetch origin main
-            git reset --hard origin/main
+            cd /root/sobitas-project
 
             echo "🔨 Building frontend image..."
             docker compose build --no-cache frontend
@@ -54,5 +53,3 @@ jobs:
             docker image prune -f || true
 
             echo "✅ Frontend deploy done"
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
