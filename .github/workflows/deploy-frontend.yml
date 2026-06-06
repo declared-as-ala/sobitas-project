@@ -1,21 +1,89 @@
-name: Deploy Frontend
+name: Deploy Frontend (Docker Image)
 
+# Single workflow for frontend: lint + Next build, then Docker image + VPS deploy.
 on:
   push:
     branches:
       - main
+      - master
+      - develop
     paths:
       - "frontend/**"
       - "docker-compose.yml"
       - ".github/workflows/deploy-frontend.yml"
   workflow_dispatch:
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: declared-as-ala/sobitas-frontend
+
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     steps:
-      - name: Deploy to VPS via SSH
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Verify Dockerfile exists
+        run: |
+          set -e
+          test -f frontend/Dockerfile || (echo "❌ frontend/Dockerfile not found" && exit 1)
+          echo "✓ frontend/Dockerfile found"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Lint
+        run: npm run lint
+        working-directory: frontend
+
+      - name: Build (Next.js)
+        run: npm run build
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_API_URL: https://protein.tn/api-proxy
+          NEXT_PUBLIC_STORAGE_URL: https://admin.protein.tn/storage
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          build-args: |
+            NEXT_PUBLIC_API_URL=https://protein.tn/api-proxy
+            NEXT_PUBLIC_STORAGE_URL=https://admin.protein.tn/storage
+            API_BACKEND_URL=http://backend-nginx-v2/api
+            STORAGE_BACKEND_URL=http://backend-nginx-v2/storage
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -24,35 +92,21 @@ jobs:
           port: ${{ secrets.VPS_PORT }}
           command_timeout: 900s
           script_stop: true
-          envs: GITHUB_TOKEN
           script: |
             set -e
             APP_DIR="/root/sobitas-project"
-
-            # Inject token so git can pull private repo
-            git config --global credential.helper store
-            printf 'https://x-access-token:%s@github.com\n' "$GITHUB_TOKEN" > ~/.git-credentials
-
-            if [ ! -d "$APP_DIR/.git" ]; then
-              echo "📦 Cloning repo..."
-              git clone https://x-access-token:${GITHUB_TOKEN}@github.com/declared-as-ala/sobitas-project.git "$APP_DIR"
-            fi
-
             cd "$APP_DIR"
 
-            echo "📥 Pulling latest code..."
-            git fetch origin main
-            git reset --hard origin/main
+            echo "🔐 Logging in to GHCR..."
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u declared-as-ala --password-stdin
 
-            echo "🔨 Building frontend image..."
-            docker compose build --no-cache frontend
+            echo "📦 Pull latest frontend image..."
+            docker pull ghcr.io/declared-as-ala/sobitas-frontend:latest
 
-            echo "🔄 Restarting frontend container..."
+            echo "🔄 Restart frontend..."
             docker compose up -d --force-recreate --no-deps frontend
 
             echo "🧹 Cleaning unused images..."
             docker image prune -f || true
 
             echo "✅ Frontend deploy done"
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
