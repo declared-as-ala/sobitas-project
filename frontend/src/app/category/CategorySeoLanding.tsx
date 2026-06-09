@@ -296,7 +296,7 @@ export function CategorySeoLanding({
                   </div>
 
                   <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-gray-900 dark:text-white leading-tight">
-                    {title}{' '}
+                    {title.replace(/\s+tunisie\s*$/i, '')}{' '}
                     <span className="bg-clip-text text-transparent bg-gradient-to-r from-red-500 via-rose-500 to-red-600 drop-shadow-[0_2px_10px_rgba(220,38,38,0.25)]">
                       Tunisie
                     </span>
