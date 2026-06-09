@@ -236,7 +236,6 @@ export const legacyArabic: Record<string, string> = {
   'Voir plus': 'عرض المزيد',
   'Voir moins': 'عرض أقل',
   'Tous les produits': 'كل المنتجات',
-  'Voir tous les résultats': 'عرض كل النتائج',
   'Prix croissant': 'السعر: من الأقل للأعلى',
   'Prix décroissant': 'السعر: من الأعلى للأقل',
   Popularité: 'الأكثر شيوعا',
