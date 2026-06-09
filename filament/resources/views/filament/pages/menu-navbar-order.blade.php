@@ -1,178 +1,189 @@
 <x-filament-panels::page>
-    <div class="space-y-5">
 
-        {{-- Info banner --}}
-        <div class="rounded-xl border border-blue-200 dark:border-blue-900/40 bg-blue-50 dark:bg-blue-950/20 px-5 py-4 flex items-start gap-3">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5 text-blue-500 shrink-0 mt-0.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>
-            <p class="text-sm text-blue-800 dark:text-blue-300">
-                Utilisez les flèches <strong>↑ ↓</strong> pour changer l'ordre des catégories.
-                Cliquez sur une catégorie pour afficher et réordonner ses sous-catégories.
-                Les changements sont appliqués immédiatement dans le menu du site.
-            </p>
+    {{-- Bootstrap 5 + Icons CDN (scoped to this page only) --}}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <style>
+        .mno-wrap * { box-sizing: border-box; }
+        .mno-wrap { font-family: 'Inter', system-ui, sans-serif; }
+        .mno-row-active { background-color: #fff5f5 !important; border-left: 3px solid #dc3545 !important; }
+        .mno-row { border-left: 3px solid transparent; transition: background .15s; cursor: pointer; }
+        .mno-row:hover { background-color: #f8f9fa; }
+        .mno-chevron { transition: transform .2s ease; display: inline-block; }
+        .mno-chevron.open { transform: rotate(90deg); }
+        .mno-sub-panel { background: #fff9f9; border-top: 1px solid #fecaca; }
+        .btn-reorder { width: 28px; height: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+        .btn-reorder:disabled { opacity: .35; cursor: not-allowed; }
+        .badge-pos { width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;
+                     border-radius: 8px; font-weight: 700; font-size: .75rem; }
+    </style>
+
+    @php
+        $categories     = $this->getCategories();
+        $sousCategories = $this->getSousCategories();
+        $totalCats      = $categories->count();
+    @endphp
+
+    <div class="mno-wrap">
+
+        {{-- Info alert --}}
+        <div class="alert alert-info d-flex align-items-start gap-2 mb-4" role="alert">
+            <i class="bi bi-info-circle-fill fs-5 flex-shrink-0 mt-1"></i>
+            <div class="mb-0" style="font-size:.875rem">
+                Utilisez les boutons <strong>↑ ↓</strong> pour réordonner les catégories.
+                Cliquez sur une ligne pour afficher et réordonner ses sous-catégories.
+                Les changements sont enregistrés immédiatement dans le menu du site.
+            </div>
         </div>
 
-        @php
-            $categories   = $this->getCategories();
-            $sousCategories = $this->getSousCategories();
-            $totalCats    = $categories->count();
-        @endphp
+        {{-- Main card --}}
+        <div class="card shadow-sm border-0">
 
-        {{-- Categories panel --}}
-        <div class="rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10 overflow-hidden">
-
-            {{-- Panel header --}}
-            <div class="flex items-center gap-3 px-6 py-4 border-b border-gray-200 dark:border-white/10">
-                <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-red-100 dark:bg-red-950/40 shrink-0">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5 text-red-600 dark:text-red-400" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" /></svg>
+            {{-- Card header --}}
+            <div class="card-header bg-white d-flex align-items-center gap-3 py-3 border-bottom">
+                <div class="rounded-3 d-flex align-items-center justify-content-center"
+                     style="width:40px;height:40px;background:#fef2f2;flex-shrink:0">
+                    <i class="bi bi-grid-3x3-gap-fill text-danger fs-5"></i>
                 </div>
-                <div class="flex-1 min-w-0">
-                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Catégories du menu navbar</h3>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                <div class="flex-grow-1">
+                    <h6 class="mb-0 fw-semibold text-dark">Catégories du menu navbar</h6>
+                    <small class="text-muted">
                         {{ $totalCats }} catégorie{{ $totalCats !== 1 ? 's' : '' }} —
-                        cliquez sur une rangée pour afficher ses sous-catégories
-                    </p>
+                        cliquez sur une ligne pour voir ses sous-catégories
+                    </small>
                 </div>
+                <span class="badge bg-danger rounded-pill">{{ $totalCats }}</span>
             </div>
 
-            {{-- Category list --}}
-            <div class="divide-y divide-gray-100 dark:divide-white/[0.05]">
+            {{-- Category rows --}}
+            <ul class="list-group list-group-flush">
                 @foreach($categories as $index => $categ)
                     @php $isSelected = $selectedCategId === $categ->id; @endphp
 
                     {{-- Category row --}}
-                    <div
+                    <li class="list-group-item px-4 py-3 mno-row {{ $isSelected ? 'mno-row-active' : '' }}"
                         wire:click="selectCategory({{ $categ->id }})"
-                        class="flex items-center gap-3 px-6 py-3.5 cursor-pointer select-none transition-colors
-                            {{ $isSelected
-                                ? 'bg-red-50 dark:bg-red-950/25'
-                                : 'hover:bg-gray-50 dark:hover:bg-white/[0.02]' }}"
-                    >
-                        {{-- Position badge --}}
-                        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold transition-colors
-                            {{ $isSelected
-                                ? 'bg-red-600 text-white'
-                                : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300' }}">
-                            {{ $index + 1 }}
-                        </span>
+                        style="user-select:none">
+                        <div class="d-flex align-items-center gap-3">
 
-                        {{-- Name --}}
-                        <span class="flex-1 text-sm font-semibold truncate
-                            {{ $isSelected ? 'text-red-700 dark:text-red-400' : 'text-gray-900 dark:text-white' }}">
-                            {{ $categ->designation_fr }}
-                        </span>
-                        <span class="hidden sm:block text-xs text-gray-400 dark:text-gray-500 font-mono shrink-0">
-                            /{{ $categ->slug }}
-                        </span>
+                            {{-- Position badge --}}
+                            <span class="badge-pos {{ $isSelected ? 'bg-danger text-white' : 'bg-light text-secondary' }}">
+                                {{ $index + 1 }}
+                            </span>
 
-                        {{-- Up / Down buttons --}}
-                        <div class="flex gap-1 shrink-0" wire:click.stop="">
-                            <button
-                                type="button"
-                                wire:click.stop="moveCategoryUp({{ $categ->id }})"
-                                @disabled($index === 0)
-                                class="h-7 w-7 flex items-center justify-center rounded-lg border
-                                    border-gray-200 dark:border-white/10 text-gray-400
-                                    hover:border-red-300 hover:bg-white hover:text-red-600
-                                    dark:hover:border-red-700 dark:hover:bg-white/10 dark:hover:text-red-400
-                                    disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                                title="Monter"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-3.5 w-3.5" aria-hidden="true"><path fill-rule="evenodd" d="M9.47 6.47a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 1 1-1.06 1.06L10 8.06l-3.72 3.72a.75.75 0 0 1-1.06-1.06l4.25-4.25Z" clip-rule="evenodd" /></svg>
-                            </button>
-                            <button
-                                type="button"
-                                wire:click.stop="moveCategoryDown({{ $categ->id }})"
-                                @disabled($loop->last)
-                                class="h-7 w-7 flex items-center justify-center rounded-lg border
-                                    border-gray-200 dark:border-white/10 text-gray-400
-                                    hover:border-red-300 hover:bg-white hover:text-red-600
-                                    dark:hover:border-red-700 dark:hover:bg-white/10 dark:hover:text-red-400
-                                    disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                                title="Descendre"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-3.5 w-3.5" aria-hidden="true"><path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" /></svg>
-                            </button>
+                            {{-- Name + slug --}}
+                            <div class="flex-grow-1 min-w-0">
+                                <span class="fw-semibold {{ $isSelected ? 'text-danger' : 'text-dark' }}"
+                                      style="font-size:.9rem">
+                                    {{ $categ->designation_fr }}
+                                </span>
+                                <code class="ms-2 text-muted d-none d-sm-inline"
+                                      style="font-size:.75rem">/{{ $categ->slug }}</code>
+                            </div>
+
+                            {{-- Up / Down --}}
+                            <div class="d-flex gap-1" wire:click.stop="">
+                                <button type="button"
+                                        wire:click.stop="moveCategoryUp({{ $categ->id }})"
+                                        @disabled($index === 0)
+                                        class="btn btn-outline-secondary btn-sm btn-reorder"
+                                        title="Monter">
+                                    <i class="bi bi-chevron-up" style="font-size:.75rem"></i>
+                                </button>
+                                <button type="button"
+                                        wire:click.stop="moveCategoryDown({{ $categ->id }})"
+                                        @disabled($loop->last)
+                                        class="btn btn-outline-secondary btn-sm btn-reorder"
+                                        title="Descendre">
+                                    <i class="bi bi-chevron-down" style="font-size:.75rem"></i>
+                                </button>
+                            </div>
+
+                            {{-- Expand chevron --}}
+                            <i class="bi bi-chevron-right text-muted mno-chevron {{ $isSelected ? 'open' : '' }}"
+                               style="font-size:.85rem;flex-shrink:0"></i>
                         </div>
+                    </li>
 
-                        {{-- Expand chevron --}}
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"
-                            class="h-4 w-4 shrink-0 text-gray-400 transition-transform duration-200 {{ $isSelected ? 'rotate-90 !text-red-500' : '' }}">
-                            <path fill-rule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
-                        </svg>
-                    </div>
-
-                    {{-- Subcategories (only when selected) --}}
+                    {{-- Subcategories panel --}}
                     @if($isSelected)
-                        <div class="border-t border-red-100 dark:border-red-900/20 bg-red-50/40 dark:bg-red-950/10 px-6 py-3">
+                        <li class="list-group-item px-4 py-3 mno-sub-panel">
+
                             @if($sousCategories->isEmpty())
-                                <p class="text-xs text-gray-400 dark:text-gray-500 italic py-1 pl-10">
-                                    Aucune sous-catégorie pour {{ $categ->designation_fr }}
+                                <p class="text-muted fst-italic small mb-0 ps-4">
+                                    <i class="bi bi-dash-circle me-1"></i>
+                                    Aucune sous-catégorie pour <strong>{{ $categ->designation_fr }}</strong>
                                 </p>
                             @else
-                                <p class="text-[11px] font-semibold uppercase tracking-wider text-red-400/70 dark:text-red-500/60 mb-2 pl-10">
-                                    Sous-catégories — {{ $categ->designation_fr }}
-                                    <span class="ml-1 font-normal normal-case text-gray-400">({{ $sousCategories->count() }})</span>
-                                </p>
-                                <div class="space-y-1.5">
+                                <div class="d-flex align-items-center gap-2 mb-3 ps-3">
+                                    <i class="bi bi-diagram-3 text-danger"></i>
+                                    <span class="text-uppercase fw-semibold text-danger"
+                                          style="font-size:.7rem;letter-spacing:.05em">
+                                        Sous-catégories — {{ $categ->designation_fr }}
+                                    </span>
+                                    <span class="badge bg-danger-subtle text-danger rounded-pill ms-1">
+                                        {{ $sousCategories->count() }}
+                                    </span>
+                                </div>
+
+                                <div class="d-flex flex-column gap-2 ps-4">
                                     @foreach($sousCategories as $si => $sub)
-                                        <div class="flex items-center gap-3 bg-white dark:bg-white/[0.03]
-                                            rounded-xl px-4 py-2.5 border border-gray-100 dark:border-white/[0.06]
-                                            ml-8 hover:border-red-200 dark:hover:border-red-900/40 transition-colors">
+                                        <div class="card border shadow-none"
+                                             style="border-color:#fecaca !important;border-radius:10px">
+                                            <div class="card-body d-flex align-items-center gap-3 px-3 py-2">
 
-                                            {{-- Sub position --}}
-                                            <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded
-                                                text-[10px] font-bold bg-red-100 dark:bg-red-950/50
-                                                text-red-600 dark:text-red-400">
-                                                {{ $si + 1 }}
-                                            </span>
+                                                {{-- Sub position --}}
+                                                <span class="badge bg-danger-subtle text-danger fw-bold rounded"
+                                                      style="min-width:24px;text-align:center">
+                                                    {{ $si + 1 }}
+                                                </span>
 
-                                            {{-- Name --}}
-                                            <span class="flex-1 text-sm text-gray-700 dark:text-gray-200 truncate">
-                                                {{ $sub->designation_fr }}
-                                            </span>
-                                            <span class="hidden sm:block text-xs text-gray-400 dark:text-gray-500 font-mono shrink-0">
-                                                /{{ $sub->slug }}
-                                            </span>
+                                                {{-- Name + slug --}}
+                                                <div class="flex-grow-1 min-w-0">
+                                                    <span class="text-dark" style="font-size:.875rem">
+                                                        {{ $sub->designation_fr }}
+                                                    </span>
+                                                    <code class="ms-2 text-muted d-none d-sm-inline"
+                                                          style="font-size:.72rem">/{{ $sub->slug }}</code>
+                                                </div>
 
-                                            {{-- Sub Up / Down --}}
-                                            <div class="flex gap-1 shrink-0">
-                                                <button
-                                                    type="button"
-                                                    wire:click="moveSubUp({{ $sub->id }})"
-                                                    @disabled($si === 0)
-                                                    class="h-6 w-6 flex items-center justify-center rounded border
-                                                        border-gray-200 dark:border-white/10 text-gray-400
-                                                        hover:border-red-300 hover:bg-gray-50 hover:text-red-600
-                                                        dark:hover:bg-white/10 dark:hover:text-red-400
-                                                        disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                                                    title="Monter"
-                                                >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-3 w-3" aria-hidden="true"><path fill-rule="evenodd" d="M9.47 6.47a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 1 1-1.06 1.06L10 8.06l-3.72 3.72a.75.75 0 0 1-1.06-1.06l4.25-4.25Z" clip-rule="evenodd" /></svg>
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    wire:click="moveSubDown({{ $sub->id }})"
-                                                    @disabled($loop->last)
-                                                    class="h-6 w-6 flex items-center justify-center rounded border
-                                                        border-gray-200 dark:border-white/10 text-gray-400
-                                                        hover:border-red-300 hover:bg-gray-50 hover:text-red-600
-                                                        dark:hover:bg-white/10 dark:hover:text-red-400
-                                                        disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                                                    title="Descendre"
-                                                >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-3 w-3" aria-hidden="true"><path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" /></svg>
-                                                </button>
+                                                {{-- Sub Up / Down --}}
+                                                <div class="d-flex gap-1">
+                                                    <button type="button"
+                                                            wire:click="moveSubUp({{ $sub->id }})"
+                                                            @disabled($si === 0)
+                                                            class="btn btn-outline-danger btn-sm btn-reorder"
+                                                            style="width:24px;height:24px"
+                                                            title="Monter">
+                                                        <i class="bi bi-chevron-up" style="font-size:.65rem"></i>
+                                                    </button>
+                                                    <button type="button"
+                                                            wire:click="moveSubDown({{ $sub->id }})"
+                                                            @disabled($loop->last)
+                                                            class="btn btn-outline-danger btn-sm btn-reorder"
+                                                            style="width:24px;height:24px"
+                                                            title="Descendre">
+                                                        <i class="bi bi-chevron-down" style="font-size:.65rem"></i>
+                                                    </button>
+                                                </div>
+
                                             </div>
                                         </div>
                                     @endforeach
                                 </div>
                             @endif
-                        </div>
+
+                        </li>
                     @endif
 
                 @endforeach
-            </div>
+            </ul>
+            {{-- /list-group --}}
+
         </div>
+        {{-- /card --}}
 
     </div>
+
 </x-filament-panels::page>
