@@ -57,20 +57,38 @@ const TRUST_BADGES = [
 ];
 
 const CREATINE_BENEFITS = [
-  { 
-    icon: Flame, 
-    title: "Force Explosive & ATP", 
-    desc: "Sature vos réserves musculaires en phosphocréatine pour resynthétiser l'ATP instantanément lors des séries intenses." 
+  {
+    icon: Flame,
+    title: "Force Explosive & ATP",
+    desc: "Sature vos réserves musculaires en phosphocréatine pour resynthétiser l'ATP instantanément lors des séries intenses."
   },
-  { 
-    icon: Activity, 
-    title: "Volume & Hydratation", 
-    desc: "Favorise la volumisation cellulaire par rétention d'eau intramusculaire pour un aspect plein et dense." 
+  {
+    icon: Activity,
+    title: "Volume & Hydratation",
+    desc: "Favorise la volumisation cellulaire par rétention d'eau intramusculaire pour un aspect plein et dense."
   },
-  { 
-    icon: Zap, 
-    title: "Récupération Accélérée", 
-    desc: "Diminue la fatigue musculaire entre les séries lourdes et favorise une régénération musculaire rapide." 
+  {
+    icon: Zap,
+    title: "Récupération Accélérée",
+    desc: "Diminue la fatigue musculaire entre les séries lourdes et favorise une régénération musculaire rapide."
+  },
+];
+
+const GENERIC_BENEFITS = [
+  {
+    icon: ShieldCheck,
+    title: "100% Authentique",
+    desc: "Produits importés officiellement, qualité certifiée et testée en laboratoire.",
+  },
+  {
+    icon: Truck,
+    title: "Livraison Express",
+    desc: "Expédition rapide, livraison 24-72h dans toute la Tunisie.",
+  },
+  {
+    icon: HeartHandshake,
+    title: "Conseils Experts",
+    desc: "Notre équipe de coachs sportifs vous guide dans vos choix.",
   },
 ];
 
@@ -259,21 +277,64 @@ export function CategorySeoLanding({
               </div>
             </div>
           ) : (
-            /* Premium Glassmorphism SEO Hero Header for other categories */
-            <header className="relative p-6 sm:p-8 rounded-2xl border border-gray-200 dark:border-gray-800/80 bg-gradient-to-br from-white via-white to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-900/60 overflow-hidden shadow-sm">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-red-50/20 to-transparent dark:from-red-900/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-              
-              <div className="relative z-10">
-                <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white leading-tight">
-                  {title}
-                </h1>
-                {headerIntro && (
-                  <p className="mt-3.5 max-w-4xl text-sm sm:text-base text-gray-600 dark:text-gray-300 leading-relaxed line-clamp-3-fallback font-light">
-                    {headerIntro}
-                  </p>
-                )}
+            /* Premium Red Hero Header — matches creatine layout, brand-red palette */
+            <div className="relative p-6 sm:p-8 md:p-10 rounded-2xl sm:rounded-3xl border border-red-200/60 dark:border-red-900/30 bg-gradient-to-br from-white via-red-50/20 to-gray-50/30 dark:from-gray-900 dark:via-red-950/10 dark:to-gray-950/15 overflow-hidden shadow-md">
+              {/* Glow blobs */}
+              <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-red-400/20 via-rose-400/10 to-transparent dark:from-red-500/10 dark:via-rose-500/5 rounded-full blur-3xl -translate-y-1/3 translate-x-1/3 pointer-events-none" />
+              <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-red-300/10 dark:bg-red-500/5 rounded-full blur-3xl pointer-events-none" />
+              {/* Dot grid */}
+              <div className="absolute inset-0 opacity-[0.15] dark:opacity-10 bg-[radial-gradient(circle_at_1px_1px,rgba(220,38,38,0.15)_1px,transparent_0)] dark:bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.1)_1px,transparent_0)] bg-[size:20px_20px] pointer-events-none" />
+
+              <div className="relative z-10 flex flex-col lg:flex-row items-center gap-8">
+                <div className="flex-1 min-w-0 text-center lg:text-left">
+                  {/* Badge */}
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/10 dark:bg-red-500/20 border border-red-500/25 mb-4 sm:mb-5">
+                    <Sparkles className="h-3.5 w-3.5 text-red-600 dark:text-red-400 animate-pulse" />
+                    <span className="text-[10px] sm:text-xs text-red-800 dark:text-red-300 font-bold uppercase tracking-wider">
+                      Qualité Premium
+                    </span>
+                  </div>
+
+                  <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-gray-900 dark:text-white leading-tight">
+                    {title}{' '}
+                    <span className="bg-clip-text text-transparent bg-gradient-to-r from-red-500 via-rose-500 to-red-600 drop-shadow-[0_2px_10px_rgba(220,38,38,0.25)]">
+                      Tunisie
+                    </span>
+                  </h1>
+
+                  {headerIntro && (
+                    <p className="mt-4 text-sm sm:text-base text-gray-600 dark:text-gray-300 leading-relaxed font-light max-w-2xl mx-auto lg:mx-0">
+                      {headerIntro.slice(0, 220)}
+                    </p>
+                  )}
+                </div>
+
+                {/* Benefit cards */}
+                <div className="w-full lg:w-[340px] shrink-0 space-y-3">
+                  {GENERIC_BENEFITS.map((benefit, i) => {
+                    const BIcon = benefit.icon;
+                    return (
+                      <div
+                        key={i}
+                        className="flex gap-3 p-3.5 rounded-xl border border-red-100 dark:border-white/[0.05] bg-white/95 dark:bg-white/[0.03] shadow-sm hover:border-red-300 dark:hover:border-red-500/30 transition-all duration-300 group"
+                      >
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 group-hover:bg-gradient-to-r group-hover:from-red-500 group-hover:to-rose-500 group-hover:text-white transition-all duration-300">
+                          <BIcon className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white leading-tight">
+                            {benefit.title}
+                          </h4>
+                          <p className="text-[10px] sm:text-xs text-gray-500 dark:text-neutral-400 mt-1 leading-snug">
+                            {benefit.desc}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </header>
+            </div>
           )}
         </motion.div>
       )}
