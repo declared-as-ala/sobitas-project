@@ -7,6 +7,7 @@
     "next-env.d.ts",
     "next.config.js",
     "scripts/**",
+    "scratch/**",
     "imageLoader.js",
     "*.config.*"
   ],
