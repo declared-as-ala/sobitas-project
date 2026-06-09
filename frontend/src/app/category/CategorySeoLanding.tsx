@@ -304,7 +304,7 @@ export function CategorySeoLanding({
 
                   {headerIntro && (
                     <p className="mt-4 text-sm sm:text-base text-gray-600 dark:text-gray-300 leading-relaxed font-light max-w-2xl mx-auto lg:mx-0">
-                      {headerIntro.slice(0, 220)}
+                      {headerIntro}
                     </p>
                   )}
                 </div>
