@@ -62,6 +62,12 @@ api.interceptors.request.use(
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
+      const locale = localStorage.getItem('sobitas-locale');
+      if (locale === 'fr' || locale === 'en' || locale === 'ar') {
+        config.headers['Accept-Language'] = locale;
+        config.headers['X-Locale'] = locale;
+        config.params = { ...config.params, locale };
+      }
     }
     return config;
   },

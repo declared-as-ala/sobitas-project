@@ -55,6 +55,9 @@ import { getPriceDisplay } from '@/util/productPrice';
 import { useDebounce } from '@/util/debounce';
 import { buildProductUrlPath } from '@/util/productUrl';
 import type { Product, SiteNavigationItem } from '@/types';
+import { LanguageSwitcher } from './LanguageSwitcher';
+import { useI18n } from '@/i18n/I18nProvider';
+import { localizedName } from '@/i18n/content';
 
 const SCROLL_THRESHOLD = 24;
 const MOBILE_NAV_SCROLL_THRESHOLD = 20;
@@ -152,6 +155,7 @@ function NavigationLink({
 }
 
 export function HeaderClient() {
+  const { locale, translateLegacy } = useI18n();
   const { headerLogoUrl } = useSiteLogos();
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -516,7 +520,7 @@ export function HeaderClient() {
                                 {product.cover ? (
                                   <Image
                                     src={getStorageUrl(product.cover)}
-                                    alt={product.designation_fr}
+                                    alt={localizedName(product, locale)}
                                     fill
                                     className="object-cover"
                                     sizes="48px"
@@ -527,7 +531,7 @@ export function HeaderClient() {
                               </div>
                               <div className="min-w-0 flex-1">
                                 <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
-                                  {product.designation_fr}
+                                  {localizedName(product, locale)}
                                 </p>
                                 <p className="text-xs text-gray-500 dark:text-gray-400">
                                   {(() => {
@@ -572,6 +576,7 @@ export function HeaderClient() {
               </div>
 
               <div className="flex items-center gap-3 flex-shrink-0">
+                <LanguageSwitcher />
                 {isAuthenticated ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -676,7 +681,7 @@ export function HeaderClient() {
             isProductsNavLink(link) ? (
               <ProductsDropdown
                 key={`${link.href}-${link.label}`}
-                label={link.label}
+                label={translateLegacy(link.label)}
                 href={link.href}
                 opensNewTab={link.opensNewTab}
               />
@@ -687,7 +692,7 @@ export function HeaderClient() {
                 className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-400 transition-colors whitespace-nowrap py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
               >
                 <NavigationIcon name={link.icon} className="h-4 w-4" />
-                <span>{link.label}</span>
+                <span>{translateLegacy(link.label)}</span>
               </NavigationLink>
             )
           ))}
@@ -726,7 +731,7 @@ export function HeaderClient() {
                       }}
                       className="w-full text-left py-3 px-3 text-base font-medium leading-snug text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-red-600 dark:hover:text-red-500 rounded-xl transition-colors -mx-1 flex items-center justify-between"
                     >
-                      <span>{link.label}</span>
+                      <span>{translateLegacy(link.label)}</span>
                       <ChevronRight className="h-4 w-4 text-gray-400" />
                     </button>
                   ) : (
@@ -737,7 +742,7 @@ export function HeaderClient() {
                       className="flex items-center gap-3 py-3 px-3 text-base font-medium leading-snug text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-red-600 dark:hover:text-red-500 rounded-xl transition-colors -mx-1"
                     >
                       <NavigationIcon name={link.icon} className="h-5 w-5 shrink-0 text-red-500" />
-                      <span>{link.label}</span>
+                      <span>{translateLegacy(link.label)}</span>
                     </NavigationLink>
                   )
                 ))}
@@ -745,6 +750,7 @@ export function HeaderClient() {
             </div>
 
             <div className="mt-auto pt-4 px-4 border-t border-gray-200 dark:border-gray-800 space-y-0.5">
+              <LanguageSwitcher mobile />
               <Button
                 variant="ghost"
                 className="w-full justify-start h-12 rounded-xl text-base font-medium leading-snug -mx-1"

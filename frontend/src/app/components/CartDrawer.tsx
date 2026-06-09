@@ -17,6 +17,8 @@ import Link from 'next/link';
 import { getStorageUrl } from '@/services/api';
 import { getStockDisponible } from '@/util/cartStock';
 import { toast } from 'sonner';
+import { useI18n } from '@/i18n/I18nProvider';
+import { localizedName } from '@/i18n/content';
 
 interface CartDrawerProps {
   open: boolean;
@@ -24,6 +26,7 @@ interface CartDrawerProps {
 }
 
 export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
+  const { locale, formatCurrency } = useI18n();
   const {
     items,
     removeFromCart,
@@ -89,7 +92,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                       {(item.product as any).image || (item.product as any).cover ? (
                         <Image
                           src={(item.product as any).image || ((item.product as any).cover ? getStorageUrl((item.product as any).cover) : '')}
-                          alt={(item.product as any).name || (item.product as any).designation_fr || 'Product'}
+                          alt={localizedName(item.product as any, locale, 'Product')}
                           fill
                           className="object-contain p-1.5"
                           sizes="64px"
@@ -105,10 +108,10 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
 
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-gray-900 dark:text-white text-sm line-clamp-2 mb-0.5 leading-tight">
-                        {(item.product as any).name || (item.product as any).designation_fr}
+                        {localizedName(item.product as any, locale)}
                       </h3>
                       <p className="text-red-600 dark:text-red-400 font-bold text-sm mb-2">
-                        {displayPrice} DT
+                        {formatCurrency(displayPrice)}
                       </p>
                       <div className="flex items-center gap-1.5">
                         <Button
@@ -147,7 +150,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
 
                     <div className="text-right flex-shrink-0">
                       <p className="font-bold text-gray-900 dark:text-white text-sm">
-                        {(displayPrice * item.quantity).toFixed(0)} DT
+                        {formatCurrency(displayPrice * item.quantity)}
                       </p>
                     </div>
                   </div>
@@ -162,7 +165,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
             <div className="flex justify-between items-center mb-4">
               <span className="text-base font-semibold text-gray-900 dark:text-white">Totale</span>
               <span className="text-xl font-bold text-red-600 dark:text-red-400 tabular-nums">
-                {totalPrice.toFixed(3)} DT
+                {formatCurrency(totalPrice)}
               </span>
             </div>
             <div className="flex flex-col gap-2.5">

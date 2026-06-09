@@ -11,6 +11,7 @@ export interface Product {
   slug: string;
   designation_fr: string;
   designation_ar?: string;
+  description_ar?: string;
   description_fr?: string;
   description_cover?: string;
   cover?: string;
@@ -107,6 +108,7 @@ export interface Category {
   id: number;
   slug: string;
   designation_fr: string;
+  designation_ar?: string;
   cover?: string;
   sous_categories?: SubCategory[];
   /** From Laravel — drives sitemap / indexing hints when present */
@@ -121,6 +123,7 @@ export interface SubCategory {
   id: number;
   slug: string;
   designation_fr: string;
+  designation_ar?: string;
   categorie_id?: number;
   categorie?: Category;
   sitemap_include?: boolean;
@@ -133,6 +136,7 @@ export interface SubCategory {
 export interface Brand {
   id: number;
   designation_fr: string;
+  designation_ar?: string;
   logo?: string;
   alt_cover?: string;
   description_fr?: string;
@@ -141,11 +145,13 @@ export interface Brand {
 export interface Aroma {
   id: number;
   designation_fr: string;
+  designation_ar?: string;
 }
 
 export interface Tag {
   id: number;
   designation_fr: string;
+  designation_ar?: string;
 }
 
 export interface Review {

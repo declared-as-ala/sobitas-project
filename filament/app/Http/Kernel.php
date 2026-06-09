@@ -52,6 +52,7 @@ class Kernel extends HttpKernel
      */
     protected $middlewareGroups = [
         'web' => [
+            \App\Http\Middleware\SetRequestLocale::class,
             EncryptCookies::class,
             AddQueuedCookiesToResponse::class,
             StartSession::class,
@@ -62,6 +63,7 @@ class Kernel extends HttpKernel
         ],
 
         'api' => [
+            \App\Http\Middleware\SetRequestLocale::class,
             // \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
             \App\Http\Middleware\DisableFileLoggingForApi::class, // CRITICAL: Switch to errorlog (avoid file I/O on Windows Docker)
             \App\Http\Middleware\DisableDebugbarForApi::class, // CRITICAL: Disable debugbar for API (performance)

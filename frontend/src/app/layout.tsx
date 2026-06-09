@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Noto_Sans_Arabic } from "next/font/google";
 import { Suspense } from "react";
 import Script from "next/script";
 import { cn } from "@/app/components/ui/utils";
@@ -19,6 +19,13 @@ const inter = Inter({
   variable: "--font-inter",
   adjustFontFallback: true,
   fallback: ["system-ui", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "sans-serif"],
+});
+
+const notoArabic = Noto_Sans_Arabic({
+  subsets: ["arabic"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+  variable: "--font-arabic",
 });
 
 const SITE_TITLE_DEFAULT =
@@ -107,8 +114,14 @@ export default async function RootLayout({
   const websiteSchema = buildWebSiteSchema(baseUrl);
 
   return (
-    <html lang="fr" suppressHydrationWarning data-scroll-behavior="smooth" className={inter.variable}>
+    <html lang="fr" suppressHydrationWarning data-scroll-behavior="smooth" className={`${inter.variable} ${notoArabic.variable}`}>
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{var l=localStorage.getItem('sobitas-locale');if(l==='fr'||l==='en'||l==='ar'){document.documentElement.lang=l;document.documentElement.dir=l==='ar'?'rtl':'ltr';document.documentElement.dataset.locale=l}}catch(e){}",
+          }}
+        />
         <meta name="theme-color" content="#dc2626" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />

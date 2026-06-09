@@ -15,6 +15,8 @@ import { getStockDisponible, isInStock } from '@/util/cartStock';
 import { getProductImagePresentation } from '@/util/productImagePresentation';
 import { buildProductUrlPath } from '@/util/productUrl';
 import { useState, useMemo, memo, useCallback } from 'react';
+import { useI18n } from '@/i18n/I18nProvider';
+import { localizedField, localizedName } from '@/i18n/content';
 type Product = ApiProduct | {
   id: number;
   name?: string;
@@ -64,6 +66,7 @@ export const ProductCard = memo(function ProductCard({
   hideCountdown = false,
   imageContext = 'default',
 }: ProductCardProps) {
+  const { locale } = useI18n();
   const { addToCart, getCartQty } = useCart();
   const { isFavorite, toggleFavorite } = useFavorites();
   const [isAdding, setIsAdding] = useState(false);
@@ -73,10 +76,11 @@ export const ProductCard = memo(function ProductCard({
   const canAddMore = stockDisponible > 0 && inCartQty < stockDisponible;
 
   const productData = useMemo(() => {
-    const name = (product as any).name || product.designation_fr || '';
+    const name = localizedName(product as any, locale);
     const slug = product.slug || '';
     const image = (product as any).image || (product.cover ? getStorageUrl(product.cover) : '');
-    const description = (product as any).description_cover || (product as any).description_fr || '';
+    const description =
+      localizedField(product as any, 'description', locale) || (product as any).description_cover || '';
     const priceDisplay = getPriceDisplay(product as any);
     const discount =
       priceDisplay.hasPromo && priceDisplay.oldPrice != null && priceDisplay.oldPrice > 0
@@ -103,7 +107,7 @@ export const ProductCard = memo(function ProductCard({
       isInStock: isInStock(product as any),
       imagePresentation,
     };
-  }, [product, imageContext]);
+  }, [product, imageContext, locale]);
 
   const doAddToCart = useCallback((prod: any, selectedAroma: { id: number; designation_fr: string } | null) => {
     const price = prod.prix != null ? getPriceDisplay(prod).finalPrice : productData.priceDisplay.finalPrice;
