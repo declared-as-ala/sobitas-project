@@ -241,7 +241,6 @@ export const legacyArabic: Record<string, string> = {
   Popularité: 'الأكثر شيوعا',
   'Plus récents': 'الأحدث',
   'En stock uniquement': 'المتوفر فقط',
-  'Toutes les marques': 'كل العلامات التجارية',
   'Tous les prix': 'كل الأسعار',
   'Appliquer les filtres': 'تطبيق الفلاتر',
   'Réinitialiser les filtres': 'إعادة تعيين الفلاتر',
