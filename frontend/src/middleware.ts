@@ -10,8 +10,47 @@ function redirectPreservingQuery(request: NextRequest, path: string): NextRespon
   return NextResponse.redirect(url, 301);
 }
 
-export function middleware(request: NextRequest) {
+/** Resolve /shop/:slug → /{subcat}/{slug} or /{slug} via backend API. Returns null on failure. */
+async function resolveShopSlug(slug: string): Promise<string | null> {
+  const apiBase =
+    process.env.API_BACKEND_URL ||
+    process.env.NEXT_PUBLIC_API_URL?.replace('/api-proxy', '') ||
+    'https://admin.protein.tn/api';
+  try {
+    const res = await fetch(`${apiBase}/product_details/${encodeURIComponent(slug)}`, {
+      next: { revalidate: 3600 },
+      headers: { Accept: 'application/json' },
+      signal: AbortSignal.timeout(1500),
+    });
+    if (!res.ok) {
+      // 404 → might be a category slug like /shop/omega-3
+      if (res.status === 404) return `/${slug}`;
+      return null;
+    }
+    const product = await res.json();
+    const subSlug: string | undefined =
+      product?.sous_categorie?.slug ||
+      product?.sousCategorie?.slug ||
+      product?.sous_categorie_slug;
+    if (subSlug) return `/${subSlug}/${slug}`;
+    // Product exists but no subcategory — redirect to /shop is wrong; keep on /shop
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
+
+  // /shop/:slug → resolve to /{subcat}/{slug} with real HTTP 301
+  // This fires before the page renders, eliminating the __next-page-redirect meta-refresh tag.
+  const shopSlug = pathname.match(/^\/shop\/([^/]+)\/?$/);
+  if (shopSlug?.[1]) {
+    const canonical = await resolveShopSlug(shopSlug[1]);
+    if (canonical) return redirectPreservingQuery(request, canonical);
+    // If API is unreachable, fall through to the page (it handles it too)
+  }
 
   const legacyCategory = pathname.match(/^\/category\/([^/]+)\/?$/);
   if (legacyCategory?.[1]) {
