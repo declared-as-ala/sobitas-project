@@ -12,6 +12,7 @@ class Categ extends Model
     protected $table = 'categs';
 
     protected $fillable = [
+        'sort_order',
         'designation_fr',
         'slug',
         'cover',

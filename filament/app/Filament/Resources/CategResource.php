@@ -129,7 +129,13 @@ class CategResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->defaultSort('sort_order')
+            ->reorderable('sort_order')
             ->columns([
+                Tables\Columns\TextColumn::make('sort_order')
+                    ->label('Ordre')
+                    ->sortable()
+                    ->width('60px'),
                 Tables\Columns\ImageColumn::make('cover')
                     ->label('Image')
                     ->getStateUsing(fn ($record) => ImagePath::normalizeExisting($record->cover))

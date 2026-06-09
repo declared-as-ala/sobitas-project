@@ -100,16 +100,6 @@ class SiteNavigationItemResource extends Resource
             ->defaultSort('sort_order')
             ->reorderable('sort_order')
             ->columns([
-                Tables\Columns\TextColumn::make('location')
-                    ->label('Emplacement')
-                    ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        SiteNavigationItem::LOCATION_NAVBAR => 'info',
-                        SiteNavigationItem::LOCATION_SIDEBAR => 'success',
-                        default => 'gray',
-                    })
-                    ->formatStateUsing(fn (string $state): string => SiteNavigationItem::locationOptions()[$state] ?? $state)
-                    ->sortable(),
                 Tables\Columns\TextColumn::make('label')
                     ->label('Libelle')
                     ->searchable()
@@ -134,10 +124,8 @@ class SiteNavigationItemResource extends Resource
                     ->label('Ordre')
                     ->sortable(),
             ])
+            ->modifyQueryUsing(fn ($query) => $query->where('location', SiteNavigationItem::LOCATION_NAVBAR))
             ->filters([
-                Tables\Filters\SelectFilter::make('location')
-                    ->label('Emplacement')
-                    ->options(SiteNavigationItem::locationOptions()),
                 Tables\Filters\TernaryFilter::make('is_visible')
                     ->label('Visible'),
             ])

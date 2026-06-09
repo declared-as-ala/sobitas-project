@@ -338,7 +338,7 @@ class ApisController extends Controller
 
         $categories = Categ::query()
             ->select([
-                'id', 'cover', 'slug', 'designation_fr',
+                'id', 'sort_order', 'cover', 'slug', 'designation_fr',
                 'sitemap_include', 'sitemap_priority', 'sitemap_changefreq', 'robots_index', 'seo_enabled',
             ])
             ->with(['sousCategories' => fn ($q) => $q->select(
@@ -366,13 +366,14 @@ class ApisController extends Controller
 
         $categories = Categ::query()
             ->select([
-                'id', 'cover', 'slug', 'designation_fr',
+                'id', 'sort_order', 'cover', 'slug', 'designation_fr',
                 'sitemap_include', 'sitemap_priority', 'sitemap_changefreq', 'robots_index', 'seo_enabled',
             ])
             ->with(['sousCategories' => fn ($q) => $q->select(
                 'id', 'slug', 'designation_fr', 'categorie_id',
                 'sitemap_include', 'sitemap_priority', 'sitemap_changefreq', 'robots_index', 'seo_enabled',
             )])
+            ->orderBy('sort_order')
             ->orderBy('id')
             ->paginate($perPage);
 
