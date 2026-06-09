@@ -79,7 +79,7 @@
     color: #1e293b;
     max-width: 210mm;
     margin: 0 auto;
-    padding: 12mm 10mm;
+    padding: 8mm 5mm;
     background: #fff;
 }
 
@@ -425,7 +425,7 @@ table.ftva-totals tr.row-grand td:last-child {
 
 /* ── Print overrides ────────────────────────────────────────── */
 @media print {
-    @page { size: A4 portrait; margin: 10mm 8mm; }
+    @page { size: A4 portrait; margin: 8mm 5mm; }
     body { background: #fff !important; }
     .ftva-page { padding: 0 !important; max-width: none !important; }
     .doc-a4-toolbar { display: none !important; }
