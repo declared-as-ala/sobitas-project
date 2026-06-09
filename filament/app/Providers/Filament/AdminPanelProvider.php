@@ -13,6 +13,7 @@ use App\Filament\Pages\SendEmail;
 use App\Filament\Pages\SendSms;
 use App\Filament\Pages\Stock\StockDashboard;
 use App\Filament\Pages\MediaPage;
+use App\Filament\Pages\MenuNavbarOrderPage;
 use App\Filament\Resources\AnnonceResource;
 use App\Filament\Resources\ArticleResource;
 use App\Filament\Resources\ArticleTypeResource;
@@ -195,6 +196,7 @@ class AdminPanelProvider extends PanelProvider
                 Dashboard::class,
                 HistoriqueClient::class,
                 MediaPage::class,
+                MenuNavbarOrderPage::class,
                 ScannerFidelitePage::class,
                 SendSms::class,
                 SendEmail::class,

@@ -37,3 +37,6 @@ next-env.d.ts
 # exclude old frontend and backend
 /old frontend/
 /backend/
+
+# scratch / dev test scripts
+/scratch/
