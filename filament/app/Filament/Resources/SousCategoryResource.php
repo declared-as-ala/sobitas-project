@@ -160,6 +160,8 @@ class SousCategoryResource extends Resource
                 ->with('categorie:id,designation_fr')
                 ->withCount('products')
             )
+            ->defaultSort(fn ($query) => $query->orderBy('categorie_id')->orderBy('sort_order')->orderBy('id'))
+            ->reorderable('sort_order')
 
             // ── Grouping: sous-catégories grouped under their catégorie ──────
             ->groups([
@@ -169,10 +171,15 @@ class SousCategoryResource extends Resource
                     ->titlePrefixedWithLabel(false),
             ])
             ->defaultGroup('categorie.designation_fr')
-            ->groupingSettingsHidden()   // hide the "Group by" settings dropdown — grouping is always on
+            ->groupingSettingsHidden()
 
             // ── Columns ──────────────────────────────────────────────────────
             ->columns([
+
+                Tables\Columns\TextColumn::make('sort_order')
+                    ->label('#')
+                    ->sortable()
+                    ->width('50px'),
 
                 // Désignation — primary identifier, always visible
                 Tables\Columns\TextColumn::make('designation_fr')
@@ -269,8 +276,6 @@ class SousCategoryResource extends Resource
             // ── Search ────────────────────────────────────────────────────────
             ->searchPlaceholder('Rechercher une sous-catégorie...')
 
-            // ── Sorting ───────────────────────────────────────────────────────
-            ->defaultSort('designation_fr', 'asc')
             ->striped()
             ->defaultPaginationPageOption(25)
             ->paginationPageOptions([10, 25, 50, 100])

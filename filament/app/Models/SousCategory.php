@@ -13,6 +13,7 @@ class SousCategory extends Model
     protected $table = 'sous_categories';
 
     protected $fillable = [
+        'sort_order',
         'designation_fr',
         'slug',
         'cover',
