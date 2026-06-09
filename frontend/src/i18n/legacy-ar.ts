@@ -181,6 +181,75 @@ export const legacyArabic: Record<string, string> = {
   Poids: 'الوزن',
   Taille: 'الطول',
   Calculer: 'احسب',
+
+  // ── Homepage section titles ────────────────────────────────────────
+  'Nouveaux Produits': 'منتجات جديدة',
+  'Découvrez nos dernières nouveautés': 'اكتشف أحدث منتجاتنا',
+  'Produits les plus vendus': 'المنتجات الأكثر مبيعا',
+  'Les produits les plus populaires': 'المنتجات الأكثر شعبية',
+  'Voir tous les packs': 'عرض كل الباقات',
+  'Économisez avec nos packs spéciaux': 'وفر مع باقاتنا المميزة',
+  'Protéine Tunisie': 'بروتين تونس',
+  'compléments alimentaires': 'المكملات الغذائية',
+  'Livraison rapide à Sousse, Tunis, Sfax et dans toute la Tunisie': 'توصيل سريع إلى سوسة، تونس، صفاقس وكامل تونس',
+
+  // ── Category grid ──────────────────────────────────────────────────
+  'Nos catégories populaires': 'تصنيفاتنا الشعبية',
+  Découvrir: 'اكتشف',
+  'Aucune catégorie disponible': 'لا توجد تصنيفات متاحة',
+
+  // ── Features section ───────────────────────────────────────────────
+  "100% originaux avec certificats d'authenticité": '100% أصلية مع شهادات المصداقية',
+  'Paiement Sécurisé': 'دفع آمن',
+  '100% originaux et certifiés': '100% أصلية ومعتمدة',
+  'Support 24/7': 'دعم 24/7',
+
+  // ── Ventes flash section ───────────────────────────────────────────
+  'VENTES FLASH': 'عروض فلاش',
+  'Offres du moment': 'عروض اللحظة',
+  'Offres limitées dans le temps': 'عروض محدودة في الوقت',
+  'Profitez de réductions exceptionnelles sur nos meilleurs produits.': 'استفد من تخفيضات استثنائية على أفضل منتجاتنا.',
+  'Ne manquez pas cette opportunité unique !': 'لا تفوت هذه الفرصة الفريدة!',
+
+  // ── Blog section ───────────────────────────────────────────────────
+  'Nos Derniers Articles': 'آخر المقالات',
+  'Voir tous les articles': 'عرض كل المقالات',
+  'Voir nos articles': 'عرض مقالاتنا',
+
+  // ── Brands section ─────────────────────────────────────────────────
+  'Nos Marques Partenaires': 'علاماتنا التجارية الشريكة',
+  'Nos marques partenaires': 'علاماتنا التجارية الشريكة',
+
+  // ── Promo banner ───────────────────────────────────────────────────
+  'Offre Limitée': 'عرض محدود',
+  'Transformez Votre Corps Maintenant': 'غير جسمك الآن',
+  'Voir les Offres': 'عرض العروض',
+  'En Savoir Plus': 'اعرف أكثر',
+  'sur une sélection de produits premium': 'على مجموعة مختارة من المنتجات المميزة',
+
+  // ── Footer ─────────────────────────────────────────────────────────
+  'Rejoignez nos abonnés et recevez les nouveautés et offres chaque semaine.': 'انضم إلى مشتركينا واستقبل المستجدات والعروض كل أسبوع.',
+
+  // ── Product/shop shared ────────────────────────────────────────────
+  'Voir tous les produits': 'عرض كل المنتجات',
+  'Découvrez toute notre gamme de produits': 'اكتشف مجموعتنا الكاملة من المنتجات',
+  'Voir plus': 'عرض المزيد',
+  'Voir moins': 'عرض أقل',
+  'Tous les produits': 'كل المنتجات',
+  'Voir tous les résultats': 'عرض كل النتائج',
+  'Prix croissant': 'السعر: من الأقل للأعلى',
+  'Prix décroissant': 'السعر: من الأعلى للأقل',
+  Popularité: 'الأكثر شيوعا',
+  'Plus récents': 'الأحدث',
+  'En stock uniquement': 'المتوفر فقط',
+  'Toutes les marques': 'كل العلامات التجارية',
+  'Tous les prix': 'كل الأسعار',
+  'Appliquer les filtres': 'تطبيق الفلاتر',
+  'Réinitialiser les filtres': 'إعادة تعيين الفلاتر',
+  'Aucun filtre actif': 'لا توجد فلاتر نشطة',
+  'produits trouvés': 'منتجات موجودة',
+  'produit trouvé': 'منتج موجود',
+  Résultats: 'النتائج',
 };
 
 export const legacyArabicPatterns: Array<[RegExp, string]> = [
