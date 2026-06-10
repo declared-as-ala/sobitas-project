@@ -423,11 +423,13 @@ table.ftva-totals tr.row-grand td:last-child {
     color: #0f172a;
 }
 
+/* ── @page at top level so all browsers honour it ───────────── */
+@page { size: A4 portrait; margin: 8mm 20mm; }
+
 /* ── Print overrides ────────────────────────────────────────── */
 @media print {
-    @page { size: A4 portrait; margin: 8mm 20mm; }
-    body { background: #fff !important; }
-    .ftva-page { padding: 0 !important; max-width: none !important; }
+    html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; }
+    .ftva-page { padding: 0 !important; margin: 0 !important; max-width: none !important; }
     .doc-a4-toolbar { display: none !important; }
     table.ftva-lines thead,
     table.ftva-lines thead th,
