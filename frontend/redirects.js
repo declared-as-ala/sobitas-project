@@ -111,7 +111,7 @@ function buildRedirects() {
     p('/brand/VICTOR-MARTINEZ', '/victor-martinez'),
     p('/brand/WILLIAM-BONAC', '/william-bonac'),
     p('/brand/YAVA-LABS', '/yava-labs'),
-    p('/brand/:path*', '/brands'),
+    { source: '/brand/:path+', destination: '/brands', permanent: true },
 
     // ── /brands/:slug  (specific first → catch-all to /brands) ───────────
     p('/brands/big-ramy-labs', '/big-ramy-labs'),
@@ -124,7 +124,7 @@ function buildRedirects() {
     p('/brands/real-pharm', '/real-pharm'),
     p('/brands/scenit-nutrition', '/scenit-nutrition'),
     p('/brands/scivation', '/scivation'),
-    p('/brands/:path*', '/brands'),
+    { source: '/brands/:path+', destination: '/brands', permanent: true },
 
     // ── /categorie/:path* ─────────────────────────────────────────────────
     p('/categorie/acides-amines', '/bcaa'),
