@@ -277,61 +277,103 @@ export function CategorySeoLanding({
               </div>
             </div>
           ) : (
-            /* Premium Red Hero Header — matches creatine layout, brand-red palette */
-            <div className="relative p-6 sm:p-8 md:p-10 rounded-2xl sm:rounded-3xl border border-red-200/60 dark:border-red-900/30 bg-gradient-to-br from-white via-red-50/20 to-gray-50/30 dark:from-gray-900 dark:via-red-950/10 dark:to-gray-950/15 overflow-hidden shadow-md">
-              {/* Glow blobs */}
-              <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-red-400/20 via-rose-400/10 to-transparent dark:from-red-500/10 dark:via-rose-500/5 rounded-full blur-3xl -translate-y-1/3 translate-x-1/3 pointer-events-none" />
-              <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-red-300/10 dark:bg-red-500/5 rounded-full blur-3xl pointer-events-none" />
-              {/* Dot grid */}
-              <div className="absolute inset-0 opacity-[0.15] dark:opacity-10 bg-[radial-gradient(circle_at_1px_1px,rgba(220,38,38,0.15)_1px,transparent_0)] dark:bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.1)_1px,transparent_0)] bg-[size:20px_20px] pointer-events-none" />
+            /* Gold / Champagne Premium Hero */
+            <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-lg border border-amber-200/70 dark:border-amber-800/30">
 
-              <div className="relative z-10 flex flex-col lg:flex-row items-center gap-8">
-                <div className="flex-1 min-w-0 text-center lg:text-left">
-                  {/* Badge */}
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/10 dark:bg-red-500/20 border border-red-500/25 mb-4 sm:mb-5">
-                    <Sparkles className="h-3.5 w-3.5 text-red-600 dark:text-red-400 animate-pulse" />
-                    <span className="text-[10px] sm:text-xs text-red-800 dark:text-red-300 font-bold uppercase tracking-wider">
-                      Qualité Premium
-                    </span>
+              {/* Gold gradient background */}
+              <div className="absolute inset-0 bg-gradient-to-br from-amber-50 via-yellow-50/80 to-orange-50/60 dark:from-gray-900 dark:via-amber-950/20 dark:to-yellow-950/10" />
+
+              {/* Shimmering diagonal stripe */}
+              <div className="absolute inset-0 opacity-[0.07] dark:opacity-[0.04] bg-[repeating-linear-gradient(45deg,#d97706_0px,#d97706_1px,transparent_1px,transparent_12px)] pointer-events-none" />
+
+              {/* Top-right gold glow */}
+              <div className="absolute -top-16 -right-16 w-72 h-72 bg-gradient-to-br from-amber-400/30 via-yellow-300/15 to-transparent rounded-full blur-3xl pointer-events-none" />
+              {/* Bottom-left warm glow */}
+              <div className="absolute -bottom-16 -left-16 w-56 h-56 bg-amber-300/20 dark:bg-amber-600/10 rounded-full blur-3xl pointer-events-none" />
+
+              {/* Thin gold top accent line */}
+              <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-transparent via-amber-400 to-transparent" />
+
+              <div className="relative z-10 p-6 sm:p-8 md:p-10">
+                <div className="flex flex-col lg:flex-row items-start gap-8 lg:gap-10">
+
+                  {/* ── Left column: badge + H1 + clamped intro ── */}
+                  <div className="flex-1 min-w-0">
+
+                    {/* Gold badge */}
+                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-amber-400/20 to-yellow-400/20 dark:from-amber-500/20 dark:to-yellow-500/15 border border-amber-400/40 dark:border-amber-500/30 mb-5">
+                      <Sparkles className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 animate-pulse" />
+                      <span className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-amber-800 dark:text-amber-300">
+                        Qualité Premium
+                      </span>
+                    </div>
+
+                    {/* H1 */}
+                    <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.25rem] font-extrabold tracking-tight text-gray-900 dark:text-white leading-[1.1] mb-4">
+                      {title.replace(/\s+tunisie\s*$/i, '')}{' '}
+                      <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-500 via-yellow-500 to-orange-500 drop-shadow-[0_2px_12px_rgba(217,119,6,0.35)]">
+                        Tunisie
+                      </span>
+                    </h1>
+
+                    {/* Intro — hard-clamped to 3 lines */}
+                    {headerIntro && (
+                      <div className="relative">
+                        <p className="text-sm sm:text-[0.9rem] text-gray-600 dark:text-gray-300 leading-relaxed font-normal line-clamp-3 max-w-xl">
+                          {headerIntro}
+                        </p>
+                        {/* fade-out bottom */}
+                        <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-amber-50/90 dark:from-gray-900/80 to-transparent pointer-events-none" />
+                      </div>
+                    )}
+
+                    {/* Decorative gold divider */}
+                    <div className="flex items-center gap-3 mt-5">
+                      <div className="h-px flex-1 bg-gradient-to-r from-amber-300/60 to-transparent" />
+                      <span className="text-amber-400 text-xs">✦</span>
+                      <div className="h-px flex-1 bg-gradient-to-l from-amber-300/60 to-transparent" />
+                    </div>
+
+                    {/* Mini stat row */}
+                    <div className="flex flex-wrap gap-4 mt-4">
+                      {[
+                        { label: 'Livraison', value: '24-72h' },
+                        { label: 'Produits', value: '100% Originaux' },
+                        { label: 'Paiement', value: 'Cash à la livraison' },
+                      ].map((stat) => (
+                        <div key={stat.label} className="flex flex-col">
+                          <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-600/70 dark:text-amber-500/60">{stat.label}</span>
+                          <span className="text-xs sm:text-sm font-bold text-gray-800 dark:text-gray-100">{stat.value}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
-                  <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-gray-900 dark:text-white leading-tight">
-                    {title.replace(/\s+tunisie\s*$/i, '')}{' '}
-                    <span className="bg-clip-text text-transparent bg-gradient-to-r from-red-500 via-rose-500 to-red-600 drop-shadow-[0_2px_10px_rgba(220,38,38,0.25)]">
-                      Tunisie
-                    </span>
-                  </h1>
-
-                  {headerIntro && (
-                    <p className="mt-4 text-sm sm:text-base text-gray-600 dark:text-gray-300 leading-relaxed font-light max-w-2xl mx-auto lg:mx-0">
-                      {headerIntro}
-                    </p>
-                  )}
-                </div>
-
-                {/* Benefit cards */}
-                <div className="w-full lg:w-[340px] shrink-0 space-y-3">
-                  {GENERIC_BENEFITS.map((benefit, i) => {
-                    const BIcon = benefit.icon;
-                    return (
-                      <div
-                        key={i}
-                        className="flex gap-3 p-3.5 rounded-xl border border-red-100 dark:border-white/[0.05] bg-white/95 dark:bg-white/[0.03] shadow-sm hover:border-red-300 dark:hover:border-red-500/30 transition-all duration-300 group"
-                      >
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 group-hover:bg-gradient-to-r group-hover:from-red-500 group-hover:to-rose-500 group-hover:text-white transition-all duration-300">
-                          <BIcon className="h-4 w-4" />
+                  {/* ── Right column: benefit cards ── */}
+                  <div className="w-full lg:w-[300px] xl:w-[320px] shrink-0 space-y-2.5">
+                    {GENERIC_BENEFITS.map((benefit, i) => {
+                      const BIcon = benefit.icon;
+                      return (
+                        <div
+                          key={i}
+                          className="group flex gap-3 p-3.5 rounded-xl border border-amber-200/60 dark:border-amber-800/20 bg-white/80 dark:bg-white/[0.03] backdrop-blur-sm shadow-sm hover:shadow-md hover:border-amber-400/60 dark:hover:border-amber-600/40 hover:-translate-y-0.5 transition-all duration-300"
+                        >
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-amber-400/20 to-yellow-400/10 dark:from-amber-500/20 dark:to-yellow-500/10 text-amber-600 dark:text-amber-400 group-hover:from-amber-500 group-hover:to-orange-500 group-hover:text-white transition-all duration-300 shadow-sm">
+                            <BIcon className="h-4 w-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white leading-tight">
+                              {benefit.title}
+                            </h4>
+                            <p className="text-[10px] sm:text-xs text-gray-500 dark:text-neutral-400 mt-0.5 leading-snug">
+                              {benefit.desc}
+                            </p>
+                          </div>
                         </div>
-                        <div className="min-w-0">
-                          <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white leading-tight">
-                            {benefit.title}
-                          </h4>
-                          <p className="text-[10px] sm:text-xs text-gray-500 dark:text-neutral-400 mt-1 leading-snug">
-                            {benefit.desc}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
+
                 </div>
               </div>
             </div>
