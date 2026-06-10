@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const path = require('path');
 const fs = require('fs');
+const buildRedirects = require('./redirects');
 // NEXT_PUBLIC_API_URL = what the client calls (e.g. https://protein.tn/api-proxy for production)
 // API_BACKEND_URL = where /api-proxy rewrites to (e.g. https://admin.protein.tn/api)
 // STORAGE_BACKEND_URL = where /storage-proxy rewrites to (e.g. https://admin.protein.tn/storage)
@@ -111,24 +112,7 @@ const nextConfig = {
     ];
   },
   async redirects() {
-    return [
-      {
-        source: '/about',
-        destination: '/qui-sommes-nous',
-        permanent: true,
-      },
-      {
-        source: '/:path*',
-        has: [
-          {
-            type: 'host',
-            value: 'www.protein.tn',
-          },
-        ],
-        destination: 'https://protein.tn/:path*',
-        permanent: true,
-      },
-    ];
+    return buildRedirects();
   },
   experimental: {
     // Inline critical CSS and load non-critical CSS asynchronously to eliminate render-blocking.
