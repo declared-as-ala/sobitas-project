@@ -711,7 +711,7 @@
 
     /* ═══════════════════════════════════════════════════════════════
        SIDEBAR — Bootstrap 5 Visual Design System
-       Dark slate sidebar, color-coded groups, per-item icons
+       Light sidebar (matches Filament default), color-coded groups, per-item icons
     ═══════════════════════════════════════════════════════════════ */
 
     /* ── Load Bootstrap Icons font (no CSS collision with Tailwind) ── */
@@ -719,17 +719,17 @@
 
     /* ── CSS Variables ──────────────────────────────────────────── */
     :root {
-        --sb-bg:            #0f172a;
-        --sb-bg-hover:      #1e293b;
-        --sb-bg-active:     #1e293b;
-        --sb-border:        #1e293b;
-        --sb-text:          #94a3b8;
-        --sb-text-active:   #f1f5f9;
+        --sb-bg:            transparent;
+        --sb-bg-hover:      rgba(59,130,246,0.07);
+        --sb-bg-active:     rgba(59,130,246,0.10);
+        --sb-border:        rgba(226,232,240,0.8);
+        --sb-text:          #475569;
+        --sb-text-active:   #0f172a;
         --sb-text-label:    #64748b;
         --sb-radius:        10px;
         --sb-item-radius:   8px;
         --sb-transition:    all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
-        --sb-shadow:        0 4px 24px -4px rgba(0,0,0,0.45);
+        --sb-shadow:        none;
         /* Group accent colors */
         --color-commandes:      #3b82f6;
         --color-facturation:    #10b981;
@@ -740,35 +740,23 @@
         --color-marketing:      #ec4899;
         --color-partenaires:    #14b8a6;
         --color-seo:            #84cc16;
-        --color-parametres:     #64748b;
-        --color-systeme:        #6366f1;
+        --color-parametres:     #6366f1;
+        --color-systeme:        #ef4444;
     }
 
     /* ── Sidebar Container ──────────────────────────────────────── */
-    .fi-sidebar {
-        background: var(--sb-bg) !important;
-        border-right: 1px solid var(--sb-border) !important;
-        box-shadow: var(--sb-shadow) !important;
-        padding: 0 !important;
-    }
+    /* No background override — let Filament's own light/dark theming control it */
 
     /* Sidebar inner scroll area */
     .fi-sidebar-nav {
         padding: 0.5rem 0.5rem 1.5rem !important;
         overflow-y: auto !important;
         scrollbar-width: thin;
-        scrollbar-color: #1e293b transparent;
+        scrollbar-color: rgba(148,163,184,0.3) transparent;
     }
     .fi-sidebar-nav::-webkit-scrollbar { width: 4px; }
     .fi-sidebar-nav::-webkit-scrollbar-track { background: transparent; }
-    .fi-sidebar-nav::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 2px; }
-
-    /* ── Sidebar Logo / Brand Header ───────────────────────────── */
-    .fi-sidebar-header {
-        background: var(--sb-bg) !important;
-        border-bottom: 1px solid #1e293b !important;
-        padding: 1rem 1.125rem !important;
-    }
+    .fi-sidebar-nav::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.3); border-radius: 2px; }
 
     /* ── Group Wrapper ──────────────────────────────────────────── */
     .fi-sidebar-group {
@@ -793,7 +781,7 @@
         transition: var(--sb-transition) !important;
     }
     .fi-sidebar-group-header:hover {
-        background: rgba(255,255,255,0.04) !important;
+        background: rgba(59,130,246,0.05) !important;
     }
 
     .fi-sidebar-group-label {
@@ -809,7 +797,7 @@
         margin-left: auto !important;
         width: 0.875rem !important;
         height: 0.875rem !important;
-        color: #475569 !important;
+        color: #94a3b8 !important;
         transition: transform 0.2s ease !important;
     }
 
@@ -849,24 +837,26 @@
 
     /* Hover state */
     .fi-sidebar-item-button:hover {
-        background: rgba(255,255,255,0.06) !important;
+        background: var(--sb-bg-hover) !important;
         color: var(--sb-text-active) !important;
         transform: translateX(3px) !important;
     }
     .fi-sidebar-item-button:hover::before {
-        background: rgba(255,255,255,0.15);
+        background: var(--sb-accent, #3b82f6);
+        opacity: 0.5;
     }
 
     /* Active state */
     .fi-sidebar-item-active .fi-sidebar-item-button,
     .fi-sidebar-item-button[aria-current="page"] {
-        background: rgba(255,255,255,0.09) !important;
-        color: #fff !important;
+        background: var(--sb-bg-active) !important;
+        color: var(--sb-text-active) !important;
         font-weight: 600 !important;
     }
     .fi-sidebar-item-active .fi-sidebar-item-button::before,
     .fi-sidebar-item-button[aria-current="page"]::before {
         background: var(--sb-accent, #3b82f6) !important;
+        opacity: 1;
     }
 
     /* ── Item Icons (Heroicons from Filament) ───────────────────── */
@@ -1118,15 +1108,7 @@
         color: var(--color-systeme) !important;
     }
 
-    /* ── Topbar: keep light for contrast ────────────────────────── */
-    .fi-topbar {
-        background: #fff !important;
-    }
-    .dark .fi-topbar {
-        background: #0f172a !important;
-    }
-
-    /* ── Main content: proper offset from dark sidebar ──────────── */
+    /* ── Main content: proper offset from sidebar ──────────────── */
     @media (min-width: 1024px) {
         .fi-main-ctn.fi-main-ctn-sidebar-open .fi-main {
             padding-left: 2rem !important;

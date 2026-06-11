@@ -247,19 +247,20 @@ class AdminPanelProvider extends PanelProvider
             })
             ->favicon(fn (): ?string => $this->resolveBrandLogoUrl())
             ->navigationGroups([
-                // ── Core Operational Groups: ALWAYS EXPANDED ────────────────────
-                NavigationGroup::make('Commandes')
-                    ->icon('heroicon-o-shopping-cart'),
+                // ── Always Expanded ─────────────────────────────────────────────
+                NavigationGroup::make('Paramètres du site')
+                    ->icon('heroicon-o-cog-6-tooth'),
                 NavigationGroup::make('Facturation & Tickets')
                     ->icon('heroicon-o-document-text'),
+                NavigationGroup::make('Catalogue')
+                    ->icon('heroicon-o-cube'),
+                NavigationGroup::make('Commandes')
+                    ->icon('heroicon-o-shopping-cart'),
                 NavigationGroup::make('Clients')
                     ->icon('heroicon-o-users'),
                 NavigationGroup::make('Vente')
                     ->icon('heroicon-o-tag'),
-                // ── Secondary Groups: COLLAPSED by default (reduce visual noise) ─
-                NavigationGroup::make('Catalogue')
-                    ->icon('heroicon-o-cube')
-                    ->collapsed(),
+                // ── Collapsed by default ─────────────────────────────────────────
                 NavigationGroup::make('Blog')
                     ->icon('heroicon-o-newspaper')
                     ->collapsed(),
@@ -271,9 +272,6 @@ class AdminPanelProvider extends PanelProvider
                     ->collapsed(),
                 NavigationGroup::make('SEO')
                     ->icon('heroicon-o-magnifying-glass-circle')
-                    ->collapsed(),
-                NavigationGroup::make('Paramètres du site')
-                    ->icon('heroicon-o-cog-6-tooth')
                     ->collapsed(),
                 NavigationGroup::make('Système')
                     ->icon('heroicon-o-wrench-screwdriver')
