@@ -707,5 +707,605 @@
     .dark .article-seo-metrics__excerpt-body {
         color: rgb(203 213 225);
     }
+
+
+    /* ═══════════════════════════════════════════════════════════════
+       SIDEBAR — Bootstrap 5 Visual Design System
+       Dark slate sidebar, color-coded groups, per-item icons
+    ═══════════════════════════════════════════════════════════════ */
+
+    /* ── Load Bootstrap Icons font (no CSS collision with Tailwind) ── */
+    @import url('https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css');
+
+    /* ── CSS Variables ──────────────────────────────────────────── */
+    :root {
+        --sb-bg:            #0f172a;
+        --sb-bg-hover:      #1e293b;
+        --sb-bg-active:     #1e293b;
+        --sb-border:        #1e293b;
+        --sb-text:          #94a3b8;
+        --sb-text-active:   #f1f5f9;
+        --sb-text-label:    #64748b;
+        --sb-radius:        10px;
+        --sb-item-radius:   8px;
+        --sb-transition:    all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+        --sb-shadow:        0 4px 24px -4px rgba(0,0,0,0.45);
+        /* Group accent colors */
+        --color-commandes:      #3b82f6;
+        --color-facturation:    #10b981;
+        --color-clients:        #f59e0b;
+        --color-vente:          #f97316;
+        --color-catalogue:      #8b5cf6;
+        --color-blog:           #06b6d4;
+        --color-marketing:      #ec4899;
+        --color-partenaires:    #14b8a6;
+        --color-seo:            #84cc16;
+        --color-parametres:     #64748b;
+        --color-systeme:        #6366f1;
+    }
+
+    /* ── Sidebar Container ──────────────────────────────────────── */
+    .fi-sidebar {
+        background: var(--sb-bg) !important;
+        border-right: 1px solid var(--sb-border) !important;
+        box-shadow: var(--sb-shadow) !important;
+        padding: 0 !important;
+    }
+
+    /* Sidebar inner scroll area */
+    .fi-sidebar-nav {
+        padding: 0.5rem 0.5rem 1.5rem !important;
+        overflow-y: auto !important;
+        scrollbar-width: thin;
+        scrollbar-color: #1e293b transparent;
+    }
+    .fi-sidebar-nav::-webkit-scrollbar { width: 4px; }
+    .fi-sidebar-nav::-webkit-scrollbar-track { background: transparent; }
+    .fi-sidebar-nav::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 2px; }
+
+    /* ── Sidebar Logo / Brand Header ───────────────────────────── */
+    .fi-sidebar-header {
+        background: var(--sb-bg) !important;
+        border-bottom: 1px solid #1e293b !important;
+        padding: 1rem 1.125rem !important;
+    }
+
+    /* ── Group Wrapper ──────────────────────────────────────────── */
+    .fi-sidebar-group {
+        margin: 0.3rem 0 !important;
+        border-radius: var(--sb-radius) !important;
+        overflow: visible !important;
+        border-left: none !important;
+        background: transparent !important;
+        transition: var(--sb-transition) !important;
+    }
+
+    /* ── Group Header / Label ───────────────────────────────────── */
+    .fi-sidebar-group-header {
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.5rem !important;
+        padding: 0.45rem 0.65rem !important;
+        margin-bottom: 0.1rem !important;
+        border-radius: 7px !important;
+        border-bottom: none !important;
+        cursor: pointer !important;
+        transition: var(--sb-transition) !important;
+    }
+    .fi-sidebar-group-header:hover {
+        background: rgba(255,255,255,0.04) !important;
+    }
+
+    .fi-sidebar-group-label {
+        font-size: 0.6875rem !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.08em !important;
+        color: var(--sb-text-label) !important;
+    }
+
+    /* Group chevron/toggle icon */
+    .fi-sidebar-group-header svg:last-child {
+        margin-left: auto !important;
+        width: 0.875rem !important;
+        height: 0.875rem !important;
+        color: #475569 !important;
+        transition: transform 0.2s ease !important;
+    }
+
+    /* ── Nav Items ──────────────────────────────────────────────── */
+    .fi-sidebar-item {
+        margin: 0.0625rem 0 !important;
+    }
+
+    .fi-sidebar-item-button {
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.6rem !important;
+        width: 100% !important;
+        padding: 0.525rem 0.75rem !important;
+        border-radius: var(--sb-item-radius) !important;
+        font-size: 0.835rem !important;
+        font-weight: 500 !important;
+        color: var(--sb-text) !important;
+        text-decoration: none !important;
+        background: transparent !important;
+        border: none !important;
+        transition: var(--sb-transition) !important;
+        position: relative !important;
+        overflow: hidden !important;
+        cursor: pointer !important;
+    }
+
+    .fi-sidebar-item-button::before {
+        content: '';
+        position: absolute;
+        left: 0; top: 0; bottom: 0;
+        width: 3px;
+        border-radius: 0 3px 3px 0;
+        background: transparent;
+        transition: var(--sb-transition);
+    }
+
+    /* Hover state */
+    .fi-sidebar-item-button:hover {
+        background: rgba(255,255,255,0.06) !important;
+        color: var(--sb-text-active) !important;
+        transform: translateX(3px) !important;
+    }
+    .fi-sidebar-item-button:hover::before {
+        background: rgba(255,255,255,0.15);
+    }
+
+    /* Active state */
+    .fi-sidebar-item-active .fi-sidebar-item-button,
+    .fi-sidebar-item-button[aria-current="page"] {
+        background: rgba(255,255,255,0.09) !important;
+        color: #fff !important;
+        font-weight: 600 !important;
+    }
+    .fi-sidebar-item-active .fi-sidebar-item-button::before,
+    .fi-sidebar-item-button[aria-current="page"]::before {
+        background: var(--sb-accent, #3b82f6) !important;
+    }
+
+    /* ── Item Icons (Heroicons from Filament) ───────────────────── */
+    .fi-sidebar-item-icon {
+        width: 1.2rem !important;
+        height: 1.2rem !important;
+        flex-shrink: 0 !important;
+        opacity: 0.7 !important;
+        transition: var(--sb-transition) !important;
+    }
+    .fi-sidebar-item-button:hover .fi-sidebar-item-icon,
+    .fi-sidebar-item-active .fi-sidebar-item-icon {
+        opacity: 1 !important;
+    }
+
+    /* ── Bootstrap Icon Prefix (injected by JS) ─────────────────── */
+    .sb-bi {
+        font-family: "bootstrap-icons" !important;
+        font-size: 1rem !important;
+        line-height: 1 !important;
+        flex-shrink: 0 !important;
+        width: 1.1rem !important;
+        text-align: center !important;
+        opacity: 0.75;
+        transition: var(--sb-transition) !important;
+    }
+    .fi-sidebar-item-button:hover .sb-bi,
+    .fi-sidebar-item-active .sb-bi {
+        opacity: 1 !important;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       COLOR-CODED GROUPS — Accent borders + colored icons/labels
+    ═══════════════════════════════════════════════════════════ */
+
+    /* Shared group accent pill */
+    .fi-sidebar-group[data-sb-group] .fi-sidebar-group-label {
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.4rem !important;
+    }
+    .fi-sidebar-group[data-sb-group] .fi-sidebar-group-header {
+        border-left: 3px solid !important;
+        padding-left: 0.6rem !important;
+        border-radius: 0 7px 7px 0 !important;
+    }
+
+    /* ── Commandes (Blue) ── */
+    .fi-sidebar-group[data-sb-group="commandes"] {
+        --sb-accent: var(--color-commandes);
+    }
+    .fi-sidebar-group[data-sb-group="commandes"] .fi-sidebar-group-header {
+        border-left-color: var(--color-commandes) !important;
+    }
+    .fi-sidebar-group[data-sb-group="commandes"] .fi-sidebar-group-label,
+    .fi-sidebar-group[data-sb-group="commandes"] .fi-sidebar-group-header svg:first-of-type {
+        color: var(--color-commandes) !important;
+    }
+    .fi-sidebar-group[data-sb-group="commandes"] .fi-sidebar-item-active .fi-sidebar-item-button::before,
+    .fi-sidebar-group[data-sb-group="commandes"] .fi-sidebar-item-button:hover::before {
+        background: var(--color-commandes) !important;
+    }
+    .fi-sidebar-group[data-sb-group="commandes"] .fi-sidebar-item-active .sb-bi,
+    .fi-sidebar-group[data-sb-group="commandes"] .fi-sidebar-item-active .fi-sidebar-item-icon {
+        color: var(--color-commandes) !important;
+    }
+
+    /* ── Facturation (Emerald) ── */
+    .fi-sidebar-group[data-sb-group="facturation"] {
+        --sb-accent: var(--color-facturation);
+    }
+    .fi-sidebar-group[data-sb-group="facturation"] .fi-sidebar-group-header {
+        border-left-color: var(--color-facturation) !important;
+    }
+    .fi-sidebar-group[data-sb-group="facturation"] .fi-sidebar-group-label,
+    .fi-sidebar-group[data-sb-group="facturation"] .fi-sidebar-group-header svg:first-of-type {
+        color: var(--color-facturation) !important;
+    }
+    .fi-sidebar-group[data-sb-group="facturation"] .fi-sidebar-item-active .fi-sidebar-item-button::before,
+    .fi-sidebar-group[data-sb-group="facturation"] .fi-sidebar-item-button:hover::before {
+        background: var(--color-facturation) !important;
+    }
+    .fi-sidebar-group[data-sb-group="facturation"] .fi-sidebar-item-active .sb-bi,
+    .fi-sidebar-group[data-sb-group="facturation"] .fi-sidebar-item-active .fi-sidebar-item-icon {
+        color: var(--color-facturation) !important;
+    }
+
+    /* ── Clients (Amber) ── */
+    .fi-sidebar-group[data-sb-group="clients"] {
+        --sb-accent: var(--color-clients);
+    }
+    .fi-sidebar-group[data-sb-group="clients"] .fi-sidebar-group-header {
+        border-left-color: var(--color-clients) !important;
+    }
+    .fi-sidebar-group[data-sb-group="clients"] .fi-sidebar-group-label,
+    .fi-sidebar-group[data-sb-group="clients"] .fi-sidebar-group-header svg:first-of-type {
+        color: var(--color-clients) !important;
+    }
+    .fi-sidebar-group[data-sb-group="clients"] .fi-sidebar-item-active .fi-sidebar-item-button::before,
+    .fi-sidebar-group[data-sb-group="clients"] .fi-sidebar-item-button:hover::before {
+        background: var(--color-clients) !important;
+    }
+    .fi-sidebar-group[data-sb-group="clients"] .fi-sidebar-item-active .sb-bi,
+    .fi-sidebar-group[data-sb-group="clients"] .fi-sidebar-item-active .fi-sidebar-item-icon {
+        color: var(--color-clients) !important;
+    }
+
+    /* ── Vente (Orange) ── */
+    .fi-sidebar-group[data-sb-group="vente"] {
+        --sb-accent: var(--color-vente);
+    }
+    .fi-sidebar-group[data-sb-group="vente"] .fi-sidebar-group-header {
+        border-left-color: var(--color-vente) !important;
+    }
+    .fi-sidebar-group[data-sb-group="vente"] .fi-sidebar-group-label,
+    .fi-sidebar-group[data-sb-group="vente"] .fi-sidebar-group-header svg:first-of-type {
+        color: var(--color-vente) !important;
+    }
+    .fi-sidebar-group[data-sb-group="vente"] .fi-sidebar-item-active .fi-sidebar-item-button::before,
+    .fi-sidebar-group[data-sb-group="vente"] .fi-sidebar-item-button:hover::before {
+        background: var(--color-vente) !important;
+    }
+    .fi-sidebar-group[data-sb-group="vente"] .fi-sidebar-item-active .sb-bi,
+    .fi-sidebar-group[data-sb-group="vente"] .fi-sidebar-item-active .fi-sidebar-item-icon {
+        color: var(--color-vente) !important;
+    }
+
+    /* ── Catalogue (Violet) ── */
+    .fi-sidebar-group[data-sb-group="catalogue"] {
+        --sb-accent: var(--color-catalogue);
+    }
+    .fi-sidebar-group[data-sb-group="catalogue"] .fi-sidebar-group-header {
+        border-left-color: var(--color-catalogue) !important;
+    }
+    .fi-sidebar-group[data-sb-group="catalogue"] .fi-sidebar-group-label,
+    .fi-sidebar-group[data-sb-group="catalogue"] .fi-sidebar-group-header svg:first-of-type {
+        color: var(--color-catalogue) !important;
+    }
+    .fi-sidebar-group[data-sb-group="catalogue"] .fi-sidebar-item-active .fi-sidebar-item-button::before,
+    .fi-sidebar-group[data-sb-group="catalogue"] .fi-sidebar-item-button:hover::before {
+        background: var(--color-catalogue) !important;
+    }
+    .fi-sidebar-group[data-sb-group="catalogue"] .fi-sidebar-item-active .sb-bi,
+    .fi-sidebar-group[data-sb-group="catalogue"] .fi-sidebar-item-active .fi-sidebar-item-icon {
+        color: var(--color-catalogue) !important;
+    }
+
+    /* ── Blog (Cyan) ── */
+    .fi-sidebar-group[data-sb-group="blog"] {
+        --sb-accent: var(--color-blog);
+    }
+    .fi-sidebar-group[data-sb-group="blog"] .fi-sidebar-group-header {
+        border-left-color: var(--color-blog) !important;
+    }
+    .fi-sidebar-group[data-sb-group="blog"] .fi-sidebar-group-label,
+    .fi-sidebar-group[data-sb-group="blog"] .fi-sidebar-group-header svg:first-of-type {
+        color: var(--color-blog) !important;
+    }
+    .fi-sidebar-group[data-sb-group="blog"] .fi-sidebar-item-active .fi-sidebar-item-button::before,
+    .fi-sidebar-group[data-sb-group="blog"] .fi-sidebar-item-button:hover::before {
+        background: var(--color-blog) !important;
+    }
+    .fi-sidebar-group[data-sb-group="blog"] .fi-sidebar-item-active .sb-bi,
+    .fi-sidebar-group[data-sb-group="blog"] .fi-sidebar-item-active .fi-sidebar-item-icon {
+        color: var(--color-blog) !important;
+    }
+
+    /* ── Marketing (Pink) ── */
+    .fi-sidebar-group[data-sb-group="marketing"] {
+        --sb-accent: var(--color-marketing);
+    }
+    .fi-sidebar-group[data-sb-group="marketing"] .fi-sidebar-group-header {
+        border-left-color: var(--color-marketing) !important;
+    }
+    .fi-sidebar-group[data-sb-group="marketing"] .fi-sidebar-group-label,
+    .fi-sidebar-group[data-sb-group="marketing"] .fi-sidebar-group-header svg:first-of-type {
+        color: var(--color-marketing) !important;
+    }
+    .fi-sidebar-group[data-sb-group="marketing"] .fi-sidebar-item-active .fi-sidebar-item-button::before,
+    .fi-sidebar-group[data-sb-group="marketing"] .fi-sidebar-item-button:hover::before {
+        background: var(--color-marketing) !important;
+    }
+    .fi-sidebar-group[data-sb-group="marketing"] .fi-sidebar-item-active .sb-bi,
+    .fi-sidebar-group[data-sb-group="marketing"] .fi-sidebar-item-active .fi-sidebar-item-icon {
+        color: var(--color-marketing) !important;
+    }
+
+    /* ── Partenaires (Teal) ── */
+    .fi-sidebar-group[data-sb-group="partenaires"] {
+        --sb-accent: var(--color-partenaires);
+    }
+    .fi-sidebar-group[data-sb-group="partenaires"] .fi-sidebar-group-header {
+        border-left-color: var(--color-partenaires) !important;
+    }
+    .fi-sidebar-group[data-sb-group="partenaires"] .fi-sidebar-group-label,
+    .fi-sidebar-group[data-sb-group="partenaires"] .fi-sidebar-group-header svg:first-of-type {
+        color: var(--color-partenaires) !important;
+    }
+    .fi-sidebar-group[data-sb-group="partenaires"] .fi-sidebar-item-active .fi-sidebar-item-button::before,
+    .fi-sidebar-group[data-sb-group="partenaires"] .fi-sidebar-item-button:hover::before {
+        background: var(--color-partenaires) !important;
+    }
+    .fi-sidebar-group[data-sb-group="partenaires"] .fi-sidebar-item-active .sb-bi,
+    .fi-sidebar-group[data-sb-group="partenaires"] .fi-sidebar-item-active .fi-sidebar-item-icon {
+        color: var(--color-partenaires) !important;
+    }
+
+    /* ── SEO (Lime) ── */
+    .fi-sidebar-group[data-sb-group="seo"] {
+        --sb-accent: var(--color-seo);
+    }
+    .fi-sidebar-group[data-sb-group="seo"] .fi-sidebar-group-header {
+        border-left-color: var(--color-seo) !important;
+    }
+    .fi-sidebar-group[data-sb-group="seo"] .fi-sidebar-group-label,
+    .fi-sidebar-group[data-sb-group="seo"] .fi-sidebar-group-header svg:first-of-type {
+        color: var(--color-seo) !important;
+    }
+    .fi-sidebar-group[data-sb-group="seo"] .fi-sidebar-item-active .fi-sidebar-item-button::before,
+    .fi-sidebar-group[data-sb-group="seo"] .fi-sidebar-item-button:hover::before {
+        background: var(--color-seo) !important;
+    }
+    .fi-sidebar-group[data-sb-group="seo"] .fi-sidebar-item-active .sb-bi,
+    .fi-sidebar-group[data-sb-group="seo"] .fi-sidebar-item-active .fi-sidebar-item-icon {
+        color: var(--color-seo) !important;
+    }
+
+    /* ── Paramètres (Slate) ── */
+    .fi-sidebar-group[data-sb-group="parametres"] {
+        --sb-accent: var(--color-parametres);
+    }
+    .fi-sidebar-group[data-sb-group="parametres"] .fi-sidebar-group-header {
+        border-left-color: var(--color-parametres) !important;
+    }
+    .fi-sidebar-group[data-sb-group="parametres"] .fi-sidebar-group-label,
+    .fi-sidebar-group[data-sb-group="parametres"] .fi-sidebar-group-header svg:first-of-type {
+        color: var(--color-parametres) !important;
+    }
+
+    /* ── Système (Indigo) ── */
+    .fi-sidebar-group[data-sb-group="systeme"] {
+        --sb-accent: var(--color-systeme);
+    }
+    .fi-sidebar-group[data-sb-group="systeme"] .fi-sidebar-group-header {
+        border-left-color: var(--color-systeme) !important;
+    }
+    .fi-sidebar-group[data-sb-group="systeme"] .fi-sidebar-group-label,
+    .fi-sidebar-group[data-sb-group="systeme"] .fi-sidebar-group-header svg:first-of-type {
+        color: var(--color-systeme) !important;
+    }
+
+    /* ── Topbar: keep light for contrast ────────────────────────── */
+    .fi-topbar {
+        background: #fff !important;
+    }
+    .dark .fi-topbar {
+        background: #0f172a !important;
+    }
+
+    /* ── Main content: proper offset from dark sidebar ──────────── */
+    @media (min-width: 1024px) {
+        .fi-main-ctn.fi-main-ctn-sidebar-open .fi-main {
+            padding-left: 2rem !important;
+        }
+    }
 </style>
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+<script>
+(function () {
+    'use strict';
+
+    /* ── Group → data attribute key mapping ── */
+    const GROUP_MAP = [
+        { match: 'commande',     key: 'commandes'   },
+        { match: 'factur',       key: 'facturation' },
+        { match: 'ticket',       key: 'facturation' },
+        { match: 'client',       key: 'clients'     },
+        { match: 'vente',        key: 'vente'       },
+        { match: 'coupon',       key: 'vente'       },
+        { match: 'catalogue',    key: 'catalogue'   },
+        { match: 'blog',         key: 'blog'        },
+        { match: 'marketing',    key: 'marketing'   },
+        { match: 'partenaire',   key: 'partenaires' },
+        { match: 'seo',          key: 'seo'         },
+        { match: 'param',        key: 'parametres'  },
+        { match: 'syst',         key: 'systeme'     },
+    ];
+
+    /* ── Per-item icon lookup (Bootstrap Icons codepoints via class) ── */
+    const ICON_MAP = [
+        /* Commandes */
+        { match: 'commande',               icon: 'bi-cart-check'                   },
+        /* Facturation */
+        { match: 'bon de livraison',        icon: 'bi-truck'                        },
+        { match: 'bons de livraison',       icon: 'bi-truck'                        },
+        { match: 'facture tva',             icon: 'bi-receipt'                      },
+        { match: 'factures tva',            icon: 'bi-receipt'                      },
+        { match: 'avoir',                   icon: 'bi-arrow-counterclockwise'       },
+        { match: 'note de cr',              icon: 'bi-arrow-counterclockwise'       },
+        { match: 'devis',                   icon: 'bi-file-earmark-check'           },
+        { match: 'liste de prix',           icon: 'bi-tags'                         },
+        { match: 'ticket',                  icon: 'bi-ticket-perforated'            },
+        /* Clients */
+        { match: 'client',                  icon: 'bi-people'                       },
+        { match: 'fidélit',                 icon: 'bi-award'                        },
+        { match: 'fidelit',                 icon: 'bi-award'                        },
+        { match: 'carte',                   icon: 'bi-credit-card'                  },
+        { match: 'cartes',                  icon: 'bi-credit-card'                  },
+        { match: 'batch',                   icon: 'bi-stack'                        },
+        { match: 'transaction',             icon: 'bi-arrow-left-right'             },
+        /* Vente */
+        { match: 'coupon',                  icon: 'bi-percent'                      },
+        /* Catalogue */
+        { match: 'produit',                 icon: 'bi-box-seam'                     },
+        { match: 'catégorie',               icon: 'bi-grid'                         },
+        { match: 'categorie',               icon: 'bi-grid'                         },
+        { match: 'sous-catégorie',          icon: 'bi-diagram-3'                    },
+        { match: 'sous-categorie',          icon: 'bi-diagram-3'                    },
+        { match: 'marque',                  icon: 'bi-shield-check'                 },
+        { match: 'arôme',                   icon: 'bi-droplet'                      },
+        { match: 'arome',                   icon: 'bi-droplet'                      },
+        { match: 'tag',                     icon: 'bi-tag'                          },
+        /* Blog */
+        { match: 'article',                 icon: 'bi-newspaper'                    },
+        { match: "type d'article",          icon: 'bi-journals'                     },
+        /* Partenaires */
+        { match: 'partenaire',              icon: 'bi-handshake'                    },
+        { match: 'code promo',              icon: 'bi-qr-code'                      },
+        { match: 'commission',              icon: 'bi-cash-stack'                   },
+        { match: 'coach',                   icon: 'bi-person-video3'                },
+        { match: 'gym',                     icon: 'bi-building'                     },
+        /* Marketing */
+        { match: 'contact',                 icon: 'bi-envelope'                     },
+        { match: 'newsletter',              icon: 'bi-at'                           },
+        { match: 'faq',                     icon: 'bi-question-circle'              },
+        { match: 'service',                 icon: 'bi-tools'                        },
+        { match: 'modèle',                  icon: 'bi-palette'                      },
+        { match: 'modele',                  icon: 'bi-palette'                      },
+        { match: 'message',                 icon: 'bi-chat-dots'                    },
+        /* SEO */
+        { match: 'redirection',             icon: 'bi-arrow-repeat'                 },
+        { match: 'avis',                    icon: 'bi-star'                         },
+        { match: 'page seo',                icon: 'bi-search'                       },
+        { match: 'pages seo',               icon: 'bi-search'                       },
+        /* Paramètres */
+        { match: 'page',                    icon: 'bi-file-text'                    },
+        { match: 'diapositive',             icon: 'bi-images'                       },
+        { match: 'slide',                   icon: 'bi-images'                       },
+        { match: 'annonce',                 icon: 'bi-megaphone'                    },
+        { match: 'navigation',              icon: 'bi-list-nested'                  },
+        { match: 'coordonn',                icon: 'bi-geo-alt'                      },
+        /* Système */
+        { match: 'utilisateur',             icon: 'bi-person-gear'                  },
+        { match: 'user',                    icon: 'bi-person-gear'                  },
+        /* Dashboard fallback */
+        { match: 'dashboard',               icon: 'bi-speedometer2'                 },
+        { match: 'tableau de bord',         icon: 'bi-speedometer2'                 },
+    ];
+
+    function getIcon(label) {
+        const lower = label.toLowerCase();
+        for (const entry of ICON_MAP) {
+            if (lower.includes(entry.match)) return entry.icon;
+        }
+        return null;
+    }
+
+    function getGroupKey(label) {
+        const lower = label.toLowerCase();
+        for (const entry of GROUP_MAP) {
+            if (lower.includes(entry.match)) return entry.key;
+        }
+        return null;
+    }
+
+    function enhanceSidebar() {
+        /* 1 — Apply color group keys */
+        document.querySelectorAll('.fi-sidebar-group-label').forEach(label => {
+            const group = label.closest('.fi-sidebar-group');
+            if (!group) return;
+            const key = getGroupKey(label.textContent.trim());
+            if (key) group.setAttribute('data-sb-group', key);
+        });
+
+        /* 2 — Inject Bootstrap Icons per nav item */
+        document.querySelectorAll('.fi-sidebar-item-button').forEach(btn => {
+            /* Skip if already processed */
+            if (btn.querySelector('.sb-bi')) return;
+
+            /* Find the label span (Filament renders it as a span after the icon svg) */
+            const labelEl = btn.querySelector('.fi-sidebar-item-label') ||
+                            [...btn.childNodes].find(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim()) ||
+                            btn.querySelector('span:not(.fi-sidebar-item-icon)');
+
+            if (!labelEl) return;
+
+            const labelText = (labelEl.textContent || labelEl.nodeValue || '').trim();
+            const iconClass = getIcon(labelText);
+            if (!iconClass) return;
+
+            const bi = document.createElement('i');
+            bi.className = `bi ${iconClass} sb-bi`;
+            bi.setAttribute('aria-hidden', 'true');
+
+            /* Insert before the label */
+            const parent = labelEl.parentNode;
+            parent.insertBefore(bi, labelEl);
+        });
+    }
+
+    /* Run immediately, on DOMContentLoaded, and on every Livewire SPA navigation */
+    function tryRun() {
+        if (document.querySelector('.fi-sidebar')) {
+            enhanceSidebar();
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', tryRun);
+    document.addEventListener('livewire:navigated', tryRun);
+    document.addEventListener('livewire:navigate', tryRun);
+
+    /* Alpine / Livewire init fallback */
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        tryRun();
+        /* Retry a bit later for Livewire hydration */
+        setTimeout(tryRun, 400);
+        setTimeout(tryRun, 1200);
+    }
+
+    /* MutationObserver for dynamic sidebar rendering */
+    const observer = new MutationObserver(() => {
+        if (document.querySelector('.fi-sidebar-item-button:not(:has(.sb-bi))')) {
+            enhanceSidebar();
+        }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+})();
+</script>
 

@@ -247,26 +247,34 @@ class AdminPanelProvider extends PanelProvider
             })
             ->favicon(fn (): ?string => $this->resolveBrandLogoUrl())
             ->navigationGroups([
-                NavigationGroup::make('Paramètres du site')
-                    ->icon('heroicon-o-cog-6-tooth')
-                    ->collapsed(),
+                // ── Core Operational Groups: ALWAYS EXPANDED ────────────────────
                 NavigationGroup::make('Commandes')
                     ->icon('heroicon-o-shopping-cart'),
-                NavigationGroup::make('Facturation')
+                NavigationGroup::make('Facturation & Tickets')
                     ->icon('heroicon-o-document-text'),
                 NavigationGroup::make('Clients')
                     ->icon('heroicon-o-users'),
-                NavigationGroup::make('Gestion de stock')
-                    ->icon('heroicon-o-archive-box'),
+                NavigationGroup::make('Vente')
+                    ->icon('heroicon-o-tag'),
+                // ── Secondary Groups: COLLAPSED by default (reduce visual noise) ─
                 NavigationGroup::make('Catalogue')
-                    ->icon('heroicon-o-cube'),
+                    ->icon('heroicon-o-cube')
+                    ->collapsed(),
                 NavigationGroup::make('Blog')
-                    ->icon('heroicon-o-newspaper'),
+                    ->icon('heroicon-o-newspaper')
+                    ->collapsed(),
                 NavigationGroup::make('Marketing')
                     ->icon('heroicon-o-megaphone')
                     ->collapsed(),
                 NavigationGroup::make('Partenaires')
-                    ->icon('heroicon-o-user-group'),
+                    ->icon('heroicon-o-user-group')
+                    ->collapsed(),
+                NavigationGroup::make('SEO')
+                    ->icon('heroicon-o-magnifying-glass-circle')
+                    ->collapsed(),
+                NavigationGroup::make('Paramètres du site')
+                    ->icon('heroicon-o-cog-6-tooth')
+                    ->collapsed(),
                 NavigationGroup::make('Système')
                     ->icon('heroicon-o-wrench-screwdriver')
                     ->collapsed(),
