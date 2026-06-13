@@ -26,6 +26,9 @@
             --card-radius: 3.4mm;
         }
         * { box-sizing: border-box; }
+        .orange {
+            color: var(--sobitas-orange) !important;
+        }
         body {
             background: #efefef;
             color: #1a1b1e;
@@ -81,15 +84,15 @@
         }
         .sobitas-front {
             background: #fff;
-            display: flex;
-            flex-direction: column;
+            position: relative;
+            overflow: hidden;
         }
         .front-top-corner {
             position: absolute;
             top: 0;
             left: 0;
-            width: 14mm;
-            height: 14mm;
+            width: 8mm;
+            height: 8mm;
             background: var(--sobitas-orange);
             border-bottom-right-radius: 100%;
             z-index: 4;
@@ -104,202 +107,170 @@
             pointer-events: none;
             overflow: hidden;
         }
-        /* Upper band: branding + titles (never overlaps dark footer) */
-        .front-upper {
-            position: relative;
-            z-index: 2;
-            flex: 1 1 0;
-            min-height: 0;
-            display: grid;
-            grid-template-columns: 1fr 31mm;
-            column-gap: 2.5mm;
-            align-items: start;
-            padding: 4mm 4mm 2mm 4.2mm;
-            /* Do not clip max-height/overflow — QR + “SCAN ME” pill sit here and were cut off in print/PDF */
-            overflow: visible;
-        }
-        .front-upper-left {
-            min-width: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 0;
+        .front-left-content {
+            position: absolute;
+            left: 4.2mm;
+            top: 4.2mm;
+            width: 43mm;
+            height: 41mm;
+            z-index: 10;
         }
         .logo-wrap {
-            line-height: 1;
+            height: 5.5mm;
+            margin-bottom: 0.6mm;
         }
         .logo-wrap img {
-            height: 6.5mm;
+            height: 5.5mm;
             width: auto;
             max-width: 38mm;
-            object-fit: contain;
             display: block;
-            margin-bottom: .6mm;
         }
         .logo-text-fallback {
-            font-size: 5.2mm;
+            font-size: 4.2mm;
             font-weight: 900;
             font-style: italic;
             color: var(--sobitas-orange);
             letter-spacing: -.02em;
-            margin: 0 0 .4mm 0;
+            margin: 0;
+            line-height: 1;
         }
         .tagline {
-            font-size: 2.35mm;
+            font-size: 2.2mm;
             font-weight: 700;
-            letter-spacing: .38mm;
+            letter-spacing: 0.3mm;
             color: #1a1b1e;
             text-transform: uppercase;
-            margin: 0 0 2.2mm 0;
-            line-height: 1.2;
+            margin: 0 0 1.2mm 0;
+            line-height: 1.1;
         }
         .title-stack {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
+            margin-bottom: 1.5mm;
         }
         .label-carte {
-            font-size: 4mm;
+            font-size: 3.2mm;
             line-height: 1;
             font-weight: 800;
             color: #1a1b1e;
             text-transform: uppercase;
-            margin: 0;
+            margin: 0 0 0.5mm 0;
         }
         .label-fidelite {
-            font-size: 6.8mm;
+            font-size: 5.8mm;
             line-height: 1;
             font-weight: 900;
             color: var(--sobitas-orange);
-            letter-spacing: .12mm;
+            letter-spacing: 0.1mm;
             text-transform: uppercase;
-            margin: .35mm 0 0 0;
-        }
-        .title-underline {
-            display: none;
+            margin: 0 0 0.5mm 0;
         }
         .front-program {
-            font-size: 2.3mm;
-            letter-spacing: .12mm;
+            font-size: 2mm;
+            letter-spacing: 0.1mm;
             font-weight: 700;
             color: #6c757d;
             text-transform: uppercase;
-            line-height: 1.2;
-            margin: 1.5mm 0 0 0;
-            max-width: 38mm;
+            line-height: 1.1;
+            margin: 0;
         }
-        .front-upper-right {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-            gap: 1mm;
-            padding-top: 0;
-            flex-shrink: 0;
-            width: 31mm;
-        }
-        .barcode-block {
-            width: 31mm;
-            height: 14mm;
-            border: .4mm solid var(--sobitas-orange);
-            border-radius: 1.5mm;
-            padding: 1.2mm;
-            background: #fff;
-            box-shadow: 0 .4mm 1.2mm rgba(0, 0, 0, .12);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            overflow: hidden;
-        }
-        .barcode-block svg { width: 100%; height: 100%; display: block; }
-        .scan-pill {
-            background: linear-gradient(180deg, #ff6d1a 0%, #ff4f00 100%);
-            color: #fff;
-            border-radius: 10mm;
-            font-weight: 800;
-            font-size: 2.65mm;
-            letter-spacing: .08mm;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: .75mm;
-            padding: .85mm 2mm .95mm;
-            line-height: 1.15;
-            white-space: nowrap;
-            flex-shrink: 0;
-            box-sizing: border-box;
-            min-height: 4.6mm;
-        }
-        .scan-pill .scan-glyph {
-            width: 3.6mm;
-            height: 3.6mm;
-            flex-shrink: 0;
-            display: block;
-        }
-        .scan-pill .scan-glyph path {
-            fill: #fff;
+        .client-details-stack {
+            margin-top: 1.5mm;
         }
         .votre-carte {
             background: var(--sobitas-orange);
             color: #ffffff;
-            font-size: 2.1mm;
+            font-size: 1.9mm;
             font-weight: 800;
             text-transform: uppercase;
-            padding: .65mm 1.5mm .75mm;
+            padding: 0.5mm 1.2mm 0.6mm;
             display: inline-block;
-            border-radius: .5mm;
-            margin: 0 0 1.2mm 0;
-            letter-spacing: .08mm;
+            border-radius: 0.4mm;
+            margin: 0 0 0.8mm 0;
+            letter-spacing: 0.05mm;
             line-height: 1;
         }
         .card-number {
-            font-size: 6.6mm;
+            font-size: 5.2mm;
             font-weight: 900;
-            line-height: 1.05;
-            letter-spacing: .2mm;
+            line-height: 1;
+            letter-spacing: 0.15mm;
             color: #1a1b1e;
-            margin: 0 0 .8mm 0;
+            margin: 0 0 0.8mm 0;
             font-family: "Arial Black", Arial, sans-serif;
             text-transform: uppercase;
-            white-space: nowrap;
         }
         .front-note {
-            font-size: 2.65mm;
+            font-size: 2.2mm;
             color: #495057;
             font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: .5mm;
-            line-height: 1.25;
+            line-height: 1.2;
             margin: 0;
-            max-width: 44mm;
         }
         .front-note .arrow {
             color: var(--sobitas-orange);
-            font-size: 3.8mm;
+            font-size: 3mm;
             font-weight: 900;
             line-height: 1;
-            flex-shrink: 0;
-            margin-right: .5mm;
+            margin-right: 0.3mm;
+            vertical-align: middle;
+        }
+        
+        .front-right-content {
+            position: absolute;
+            right: 4mm;
+            top: 4.2mm;
+            width: 31mm;
+            height: 41mm;
+            z-index: 10;
+            text-align: center;
+        }
+        .barcode-block {
+            width: 31mm;
+            height: 13.5mm;
+            border: 0.35mm solid var(--sobitas-orange);
+            border-radius: 1.2mm;
+            padding: 1mm;
+            background: #fff;
+            box-shadow: 0 0.4mm 1.2mm rgba(0, 0, 0, 0.08);
+            margin-bottom: 1.2mm;
+            overflow: hidden;
+        }
+        .barcode-block svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        .scan-pill {
+            background: linear-gradient(180deg, #ff6d1a 0%, #ff4f00 100%);
+            color: #fff;
+            border-radius: 8mm;
+            font-weight: 800;
+            font-size: 2.2mm;
+            letter-spacing: 0.05mm;
+            display: inline-block;
+            padding: 0.7mm 2mm 0.8mm;
+            line-height: 1;
+            white-space: nowrap;
+            box-shadow: 0 0.4mm 1mm rgba(255, 90, 10, 0.2);
+        }
+        .scan-pill svg {
+            width: 2.8mm;
+            height: 2.8mm;
+            fill: #fff;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 0.5mm;
+            margin-top: -0.4mm;
         }
         .front-website {
             position: absolute;
-            right: 3.8mm;
-            bottom: 10mm;
-            z-index: 5;
-            display: inline-flex;
-            align-items: center;
-            gap: .6mm;
+            right: 0;
+            bottom: 8.5mm;
             color: #6c757d;
-            font-size: 3.2mm;
+            font-size: 2.6mm;
             font-weight: 700;
+            line-height: 1;
         }
-        .front-website svg {
-            width: 3mm;
-            height: 3mm;
-            flex-shrink: 0;
-        }
-        /* Bottom advantages bar style matching second photo */
+        
         .front-footer-bar {
             position: absolute;
             left: 0;
@@ -308,22 +279,13 @@
             height: 7.5mm;
             background: #ffffff;
             border-top: .15mm solid #e5e7eb;
-            z-index: 6;
-            display: grid;
-            grid-template-columns: 1fr .15mm 1fr .15mm 1fr .15mm 1fr;
-            align-items: center;
-            padding: 0 1mm;
+            z-index: 12;
         }
         .footer-bar-item {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: .8mm;
-            font-size: 1.6mm;
-            font-weight: 900;
-            color: #212529;
-            text-transform: uppercase;
-            white-space: nowrap;
+            float: left;
+            width: 23%;
+            padding-top: 2mm;
+            text-align: center;
         }
         .footer-bar-icon-wrap {
             width: 3.5mm;
@@ -331,26 +293,39 @@
             background: var(--sobitas-orange);
             color: #ffffff;
             border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
+            display: inline-block;
+            vertical-align: middle;
+            text-align: center;
+            line-height: 3.5mm;
+            margin-right: 0.5mm;
         }
         .footer-bar-icon-wrap svg {
             width: 2.1mm;
             height: 2.1mm;
             fill: currentColor;
-            display: block;
+            display: inline-block;
+            vertical-align: middle;
+            margin-top: -0.4mm;
         }
         .footer-bar-divider {
+            float: left;
             background: #dee2e6;
             height: 3.5mm;
-            width: 100%;
+            width: 0.15mm;
+            margin-top: 2mm;
         }
         .footer-bar-text {
-            line-height: 1.15;
+            font-size: 1.4mm;
+            font-weight: 900;
+            color: #212529;
+            text-transform: uppercase;
+            line-height: 1;
             text-align: left;
-               /* === BACK CARD (matching Photo 2 white design) === */
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        /* === BACK CARD (matching Photo 2 white design) === */
         .sobitas-back {
             background: #ffffff;
             position: relative;
@@ -372,24 +347,21 @@
             top: 3.5mm;
             width: 42mm;
             height: 38mm;
-            z-index: 3;
-            display: flex;
-            flex-direction: column;
+            z-index: 10;
         }
         .back-logo-wrap {
-            line-height: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
+            height: 5mm;
             margin-bottom: 0.8mm;
         }
         .back-logo-text {
-            font-size: 4.8mm;
+            font-size: 4.5mm;
             font-weight: 900;
             font-style: italic;
             color: var(--sobitas-orange);
             letter-spacing: -.02em;
             margin: 0;
+            line-height: 1;
+            display: block;
         }
         .back-logo-underline {
             width: 13.5mm;
@@ -398,7 +370,7 @@
             margin-top: 0.4mm;
         }
         .back-title {
-            font-size: 3.8mm;
+            font-size: 3.6mm;
             font-weight: 900;
             text-transform: uppercase;
             color: #1a1b1e;
@@ -410,14 +382,10 @@
             color: var(--sobitas-orange);
         }
         .back-rules-list {
-            display: flex;
-            flex-direction: column;
-            gap: 0;
+            margin-top: 1mm;
         }
         .back-rule-item {
-            display: flex;
-            align-items: center;
-            gap: 1.8mm;
+            margin-bottom: 0.5mm;
         }
         .back-rule-badge {
             width: 4.5mm;
@@ -425,21 +393,26 @@
             background: var(--sobitas-orange);
             color: #ffffff;
             border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: inline-block;
+            vertical-align: middle;
+            text-align: center;
             font-size: 2.3mm;
             font-weight: 900;
-            flex-shrink: 0;
+            line-height: 4.5mm;
+            margin-right: 1.5mm;
         }
         .back-rule-badge svg {
             width: 2.4mm;
             height: 2.4mm;
             fill: currentColor;
-            display: block;
+            display: inline-block;
+            vertical-align: middle;
+            margin-top: -0.4mm;
         }
         .back-rule-text {
-            font-size: 2.5mm;
+            display: inline-block;
+            vertical-align: middle;
+            font-size: 2.4mm;
             line-height: 1.1;
             font-weight: 800;
             text-transform: uppercase;
@@ -452,6 +425,7 @@
             border-top: .15mm solid #dee2e6;
             margin: 1.2mm 0;
             width: 36mm;
+            height: 0;
         }
         .back-right-content {
             position: absolute;
@@ -459,33 +433,28 @@
             top: 7mm;
             width: 30mm;
             height: 33mm;
-            z-index: 3;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
+            z-index: 10;
+            text-align: center;
         }
         .back-watermark-row {
             width: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 1.5mm;
+            height: 6mm;
             margin-bottom: 0.5mm;
         }
         .back-watermark-line {
+            display: inline-block;
+            vertical-align: middle;
             height: 0.2mm;
             background: var(--sobitas-orange);
-            flex: 1;
+            width: 8mm;
         }
         .back-watermark-icon {
+            display: inline-block;
+            vertical-align: middle;
             width: 5.5mm;
             height: 5.5mm;
             color: var(--sobitas-orange);
-            flex-shrink: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            margin: 0 1mm;
         }
         .back-watermark-icon svg {
             width: 100%;
@@ -497,13 +466,14 @@
             text-align: center;
             color: #1a1b1e;
             width: 100%;
+            margin-top: 1mm;
         }
         .thanks-main-white {
-            font-size: 3.5mm;
+            font-size: 3.2mm;
             font-style: italic;
             font-weight: 900;
             line-height: 1.25;
-            margin: 1mm 0 1.5mm 0;
+            margin: 0 0 1.5mm 0;
         }
         .thanks-underline-white {
             width: 18mm;
@@ -511,6 +481,7 @@
             background: var(--sobitas-orange);
             margin: 0 auto;
         }
+        
         .back-footer-pill {
             position: absolute;
             left: 2.5mm;
@@ -520,27 +491,32 @@
             background: #ffffff;
             border: .2mm solid #e9ecef;
             border-radius: 3.6mm;
-            z-index: 5;
+            z-index: 12;
             box-shadow: 0 0.4mm 1.5mm rgba(0, 0, 0, 0.04);
-            display: grid;
-            grid-template-columns: 1.45fr 1fr 1.05fr;
-            align-items: center;
-            padding: 0 1.5mm;
         }
-        .back-pill-item {
-            display: flex;
-            align-items: center;
-            gap: 1mm;
-            white-space: nowrap;
+        .back-pill-item-1 {
+            float: left;
+            width: 44%;
+            padding-top: 1.8mm;
+            padding-left: 2mm;
         }
-        .back-pill-item:last-child {
-            justify-content: flex-end;
-        }
-        .back-pill-item:nth-child(2) {
-            justify-content: center;
+        .back-pill-item-2 {
+            float: left;
+            width: 26%;
+            padding-top: 1.8mm;
+            text-align: center;
             border-left: .2mm solid #e9ecef;
             border-right: .2mm solid #e9ecef;
             height: 4mm;
+            margin-top: 1.6mm;
+            line-height: 0.8;
+        }
+        .back-pill-item-3 {
+            float: right;
+            width: 28%;
+            padding-top: 1.8mm;
+            text-align: right;
+            padding-right: 2mm;
         }
         .back-pill-icon-wrap {
             width: 3.6mm;
@@ -548,22 +524,27 @@
             background: var(--sobitas-orange);
             color: #ffffff;
             border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
+            display: inline-block;
+            vertical-align: middle;
+            text-align: center;
+            line-height: 3.6mm;
+            margin-right: 0.8mm;
         }
         .back-pill-icon-wrap svg {
             width: 2.2mm;
             height: 2.2mm;
             fill: currentColor;
-            display: block;
+            display: inline-block;
+            vertical-align: middle;
+            margin-top: -0.4mm;
         }
         .back-pill-text {
             font-size: 1.45mm;
             font-weight: 800;
             color: #343a40;
             line-height: 1.1;
+            display: inline-block;
+            vertical-align: middle;
         }
 
         @media print {
@@ -589,18 +570,21 @@
             float: left !important;
             margin: 3mm !important;
         }
-        .front-upper {
-            display: block !important;
-            width: 100% !important;
-            height: 32mm !important;
-        }
-        .front-upper-left {
+        .front-left-content {
             float: left !important;
-            width: 42mm !important;
+            width: 43mm !important;
+            height: 41mm !important;
+            position: relative !important;
+            margin-left: 4.2mm !important;
+            margin-top: 4.2mm !important;
         }
-        .front-upper-right {
+        .front-right-content {
             float: right !important;
             width: 31mm !important;
+            height: 41mm !important;
+            position: relative !important;
+            margin-right: 4.0mm !important;
+            margin-top: 4.2mm !important;
             text-align: center !important;
         }
         .front-footer-bar {
@@ -718,42 +702,43 @@
 
                     <div class="front-top-corner" aria-hidden="true"></div>
 
-                    <div class="front-upper">
-                        <div class="front-upper-left">
-                            <div class="logo-wrap">
-                                @if($logoSrc)
-                                    <img src="{{ $logoSrc }}" alt="SOBITAS">
-                                @else
-                                    <p class="logo-text-fallback">SOBITAS</p>
-                                @endif
-                            </div>
-                            <p class="tagline">NUTRITION &amp; PERFORMANCE</p>
-                            <div class="title-stack">
-                                <p class="label-carte">CARTE</p>
-                                <p class="label-fidelite">FID&Eacute;LIT&Eacute;</p>
-                                <div class="title-underline" aria-hidden="true"></div>
-                                <p class="front-program">PROGRAMME AVANTAGES</p>
-                            </div>
+                    <!-- Left Column: Branding, Titles, and Client Details -->
+                    <div class="front-left-content">
+                        <div class="logo-wrap">
+                            @if($logoSrc)
+                                <img src="{{ $logoSrc }}" alt="SOBITAS">
+                            @else
+                                <p class="logo-text-fallback">SOBITAS</p>
+                            @endif
                         </div>
-                        <div class="front-upper-right">
-                            <div class="barcode-block">
-                                {!! $loyaltyService->generateBarcode39Svg($card->card_number) !!}
-                            </div>
-                            <div class="scan-pill">
-                                <svg class="scan-glyph" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 1H7c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-2-2-2zm0 18H7V5h10v14z"/></svg>
-                                SCAN ME
-                            </div>
+                        <p class="tagline">NUTRITION &amp; PERFORMANCE</p>
+                        <div class="title-stack">
+                            <p class="label-carte">CARTE</p>
+                            <p class="label-fidelite">FID&Eacute;LIT&Eacute;</p>
+                            <p class="front-program">PROGRAMME AVANTAGES</p>
+                        </div>
+                        <div class="client-details-stack">
+                            <span class="votre-carte">VOTRE CARTE</span>
+                            <div class="card-number">{{ $card->card_number }}</div>
+                            <p class="front-note">
+                                <span class="arrow" aria-hidden="true">&#8250;</span>
+                                <span>Pr&eacute;sentez cette carte en boutique</span>
+                            </p>
                         </div>
                     </div>
 
-                    <!-- Client details placed directly on white card background -->
-                    <div style="position: absolute; left: 4.2mm; bottom: 9.2mm; z-index: 5; line-height: 1;">
-                        <span class="votre-carte">VOTRE CARTE</span>
-                        <div class="card-number">{{ $card->card_number }}</div>
-                        <p class="front-note">
-                            <span class="arrow" aria-hidden="true">&#8250;</span>
-                            <span>Pr&eacute;sentez cette carte en boutique</span>
-                        </p>
+                    <!-- Right Column: Barcode, Scan Pill, and Website Link -->
+                    <div class="front-right-content">
+                        <div class="barcode-block">
+                            {!! $loyaltyService->generateBarcode39Svg($card->card_number) !!}
+                        </div>
+                        <div class="scan-pill">
+                            <svg class="scan-glyph" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 1H7c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-2-2-2zm0 18H7V5h10v14z"/></svg>
+                            SCAN ME
+                        </div>
+                        <div class="front-website">
+                            protein.tn
+                        </div>
                     </div>
 
                     <div class="front-website">
@@ -906,48 +891,25 @@
 
                         <!-- Bottom Pill Footer -->
                         <div class="back-footer-pill">
-                            @if(isset($isPdf) && $isPdf)
-                                <!-- DomPDF floated layout for footer pill -->
-                                <div style="float: left; width: 44%; padding-top: 1.8mm; padding-left: 2mm;">
-                                    <div class="back-pill-icon-wrap" style="display: inline-block; vertical-align: middle; margin-right: 0.5mm;">
-                                        <svg viewBox="0 0 24 24" style="width: 1.8mm; height: 1.8mm; fill: #ffffff;"><path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3zm-1.9 14.3L7 13.2l1.4-1.4 1.7 1.7 4.7-4.7 1.4 1.4-6.1 6.1z"/></svg>
-                                    </div>
-                                    <span class="back-pill-text" style="display: inline-block; vertical-align: middle; font-size: 1.2mm; line-height: 1;">En cas de perte, contactez la boutique</span>
+                            <div class="back-pill-item-1">
+                                <div class="back-pill-icon-wrap">
+                                    <svg viewBox="0 0 24 24"><path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3zm-1.9 14.3L7 13.2l1.4-1.4 1.7 1.7 4.7-4.7 1.4 1.4-6.1 6.1z"/></svg>
                                 </div>
-                                <div style="float: left; width: 26%; padding-top: 1.8mm; text-align: center; border-left: .2mm solid #e9ecef; border-right: .2mm solid #e9ecef;">
-                                    <div class="back-pill-icon-wrap" style="display: inline-block; vertical-align: middle; margin-right: 0.5mm;">
-                                        <svg viewBox="0 0 24 24" style="width: 1.8mm; height: 1.8mm; fill: #ffffff;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
-                                    </div>
-                                    <span class="back-pill-text" style="display: inline-block; vertical-align: middle; font-size: 1.35mm; line-height: 1; font-weight: 700;">Protein.tn</span>
+                                <span class="back-pill-text">En cas de perte, contactez la boutique</span>
+                            </div>
+                            <div class="back-pill-item-2">
+                                <div class="back-pill-icon-wrap">
+                                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
                                 </div>
-                                <div style="float: left; width: 28%; padding-top: 1.8mm; text-align: right; padding-right: 2mm;">
-                                    <div class="back-pill-icon-wrap" style="display: inline-block; vertical-align: middle; margin-right: 0.5mm;">
-                                        <svg viewBox="0 0 24 24" style="width: 1.8mm; height: 1.8mm; fill: #ffffff;"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 00-1.01.24l-2.2 2.2a15.045 15.045 0 01-6.59-6.59l2.2-2.2c.28-.28.36-.67.25-1.02A11.36 11.36 0 018.5 4c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.5c0-.55-.45-1-1-1z"/></svg>
-                                    </div>
-                                    <span class="back-pill-text" style="display: inline-block; vertical-align: middle; font-size: 1.45mm; line-height: 1; font-weight: 900;">{{ $company?->phone_1 ?: '27 612 500' }}</span>
+                                <span class="back-pill-text" style="font-weight: 700;">Protein.tn</span>
+                            </div>
+                            <div class="back-pill-item-3">
+                                <div class="back-pill-icon-wrap">
+                                    <svg viewBox="0 0 24 24"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 00-1.01.24l-2.2 2.2a15.045 15.045 0 01-6.59-6.59l2.2-2.2c.28-.28.36-.67.25-1.02A11.36 11.36 0 018.5 4c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.5c0-.55-.45-1-1-1z"/></svg>
                                 </div>
-                                <div style="clear: both;"></div>
-                            @else
-                                <!-- Standard browser CSS Grid layout for footer pill -->
-                                <div class="back-pill-item">
-                                    <div class="back-pill-icon-wrap">
-                                        <svg viewBox="0 0 24 24"><path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3zm-1.9 14.3L7 13.2l1.4-1.4 1.7 1.7 4.7-4.7 1.4 1.4-6.1 6.1z"/></svg>
-                                    </div>
-                                    <span class="back-pill-text">En cas de perte, contactez la boutique</span>
-                                </div>
-                                <div class="back-pill-item">
-                                    <div class="back-pill-icon-wrap">
-                                        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
-                                    </div>
-                                    <span class="back-pill-text">Protein.tn</span>
-                                </div>
-                                <div class="back-pill-item">
-                                    <div class="back-pill-icon-wrap">
-                                        <svg viewBox="0 0 24 24"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 00-1.01.24l-2.2 2.2a15.045 15.045 0 01-6.59-6.59l2.2-2.2c.28-.28.36-.67.25-1.02A11.36 11.36 0 018.5 4c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.5c0-.55-.45-1-1-1z"/></svg>
-                                    </div>
-                                    <span class="back-pill-text" style="font-weight: 900;">{{ $company?->phone_1 ?: '27 612 500' }}</span>
-                                </div>
-                            @endif
+                                <span class="back-pill-text" style="font-weight: 900;">{{ $company?->phone_1 ?: '27 612 500' }}</span>
+                            </div>
+                            <div style="clear: both;"></div>
                         </div>
                     </article>
                 @endforeach
