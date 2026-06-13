@@ -82,18 +82,17 @@ class ClientResource extends Resource
                         ->columnSpanFull(),
                     Forms\Components\Placeholder::make('active_card_info')
                         ->label('Carte fidélité active')
-                        ->content(fn (?Client $record): string => (string) ($record?->activeCard?->card_number ?: '—'))
-                        ->visible(fn (?Client $record): bool => (bool) $record?->activeCard),
+                        ->content(fn (?Client $record): string => (string) ($record?->activeCard?->card_number ?: 'Aucune carte active'))
+                        ->visible(fn (?Client $record): bool => $record !== null),
+                    Forms\Components\TextInput::make('scan_card_number')
+                        ->label('Scanner ou saisir une carte à attribuer')
+                        ->placeholder('Scanner le code-barres de la carte physique')
+                        ->helperText(fn (?Client $record): string => $record?->activeCard 
+                            ? "Scannez une nouvelle carte pour remplacer la carte active actuelle."
+                            : "Scannez une carte disponible pour l'attribuer à ce client."
+                        )
+                        ->dehydrated(false),
                 ])->columns(2)
-                ->visible(function (?Client $record): bool {
-                    if (! $record) {
-                        return false;
-                    }
-
-                    $record->loadMissing('activeCard');
-
-                    return (bool) $record->activeCard || ((int) ($record->loyalty_points_balance ?? 0) > 0);
-                })
                 ->collapsible(),
         ]);
     }

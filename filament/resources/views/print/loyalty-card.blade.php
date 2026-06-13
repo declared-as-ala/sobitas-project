@@ -73,10 +73,10 @@
             width: var(--card-width);
             height: var(--card-height);
             border-radius: var(--card-radius);
-            border: .28mm solid #c8c9cd;
+            border: .28mm solid #dee2e6;
             overflow: hidden;
             position: relative;
-            box-shadow: 0 1.2mm 2.8mm rgba(0, 0, 0, .14);
+            box-shadow: 0 1.2mm 2.8mm rgba(0, 0, 0, .08);
             background: #fff;
         }
         .sobitas-front {
@@ -88,11 +88,21 @@
             position: absolute;
             top: 0;
             left: 0;
-            width: 9mm;
-            height: 9mm;
+            width: 14mm;
+            height: 14mm;
             background: var(--sobitas-orange);
-            clip-path: polygon(0 0, 100% 0, 0 100%);
+            border-bottom-right-radius: 100%;
             z-index: 4;
+        }
+        .card-bg-waves {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1;
+            pointer-events: none;
+            overflow: hidden;
         }
         /* Upper band: branding + titles (never overlaps dark footer) */
         .front-upper {
@@ -159,26 +169,22 @@
             font-size: 6.8mm;
             line-height: 1;
             font-weight: 900;
-            color: #1a1b1e;
+            color: var(--sobitas-orange);
             letter-spacing: .12mm;
             text-transform: uppercase;
             margin: .35mm 0 0 0;
         }
         .title-underline {
-            width: 14mm;
-            height: .5mm;
-            background: var(--sobitas-orange);
-            border-radius: .2mm;
-            margin: 1mm 0 .9mm 0;
+            display: none;
         }
         .front-program {
-            font-size: 2.35mm;
+            font-size: 2.3mm;
             letter-spacing: .12mm;
             font-weight: 700;
-            color: #2c2f34;
+            color: #6c757d;
             text-transform: uppercase;
             line-height: 1.2;
-            margin: 0;
+            margin: 1.5mm 0 0 0;
             max-width: 38mm;
         }
         .front-upper-right {
@@ -233,68 +239,37 @@
         .scan-pill .scan-glyph path {
             fill: #fff;
         }
-        /* Dark diagonal footer — only card ID + instruction (no title overlap) */
-        .front-footer {
-            position: relative;
-            z-index: 1;
-            margin-top: auto;
-            min-height: 18.5mm;
-            flex-shrink: 0;
-        }
-        .front-footer-bg {
-            position: absolute;
-            left: 0;
-            bottom: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(105deg, #1a1b1f 0%, #121317 45%, #1e1f24 100%);
-            /* Diagonal top edge: leaves bottom-right corner whiter for URL + QR column */
-            clip-path: polygon(0 22%, 58% 0, 100% 0, 100% 100%, 0 100%);
-        }
-        .front-footer-accent {
-            position: absolute;
-            left: 0;
-            bottom: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            clip-path: polygon(0 22%, 58% 0, 100% 0, 100% 100%, 0 100%);
-            background: linear-gradient(90deg, transparent 0%, transparent 52%, rgba(255, 90, 10, .95) 56%, rgba(255, 90, 10, .85) 58%, transparent 60%);
-            opacity: .35;
-        }
-        .front-footer-inner {
-            position: relative;
-            z-index: 2;
-            padding: 5.5mm 4.2mm 2mm 4.2mm;
-            max-width: 52mm;
-        }
         .votre-carte {
-            color: var(--sobitas-orange);
-            font-size: 2.9mm;
+            background: var(--sobitas-orange);
+            color: #ffffff;
+            font-size: 2.1mm;
             font-weight: 800;
             text-transform: uppercase;
+            padding: .65mm 1.5mm .75mm;
+            display: inline-block;
+            border-radius: .5mm;
+            margin: 0 0 1.2mm 0;
+            letter-spacing: .08mm;
             line-height: 1;
-            margin: 0 0 .5mm 0;
-            letter-spacing: .06mm;
         }
         .card-number {
             font-size: 6.6mm;
             font-weight: 900;
             line-height: 1.05;
             letter-spacing: .2mm;
-            color: #fff;
-            margin: 0 0 .9mm 0;
+            color: #1a1b1e;
+            margin: 0 0 .8mm 0;
             font-family: "Arial Black", Arial, sans-serif;
             text-transform: uppercase;
             white-space: nowrap;
         }
         .front-note {
-            font-size: 2.85mm;
-            color: rgba(255, 255, 255, .95);
+            font-size: 2.65mm;
+            color: #495057;
             font-weight: 600;
             display: flex;
-            align-items: flex-start;
-            gap: 1mm;
+            align-items: center;
+            gap: .5mm;
             line-height: 1.25;
             margin: 0;
             max-width: 44mm;
@@ -305,16 +280,17 @@
             font-weight: 900;
             line-height: 1;
             flex-shrink: 0;
+            margin-right: .5mm;
         }
         .front-website {
             position: absolute;
             right: 3.8mm;
-            bottom: 2mm;
+            bottom: 10mm;
             z-index: 5;
             display: inline-flex;
             align-items: center;
             gap: .6mm;
-            color: #1a1b1e;
+            color: #6c757d;
             font-size: 3.2mm;
             font-weight: 700;
         }
@@ -323,168 +299,271 @@
             height: 3mm;
             flex-shrink: 0;
         }
-
-        /* === BACK CARD === */
-        .sobitas-back {
-            background: #f5f5f6;
-        }
-        .back-left-dark {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 46.5mm;
-            height: 45.5mm;
-            background: linear-gradient(115deg, #1a1b1f 0%, #121317 65%, #1b1c20 100%);
-            clip-path: polygon(0 0, 100% 0, 70% 100%, 0 100%);
-        }
-        .back-orange-divider {
-            position: absolute;
-            left: 42.3mm;
-            top: -1mm;
-            width: 2.2mm;
-            height: 48mm;
-            background: var(--sobitas-orange);
-            transform: skewX(-36deg);
-        }
-        .back-white-divider {
-            position: absolute;
-            left: 44.8mm;
-            top: -1mm;
-            width: 1.2mm;
-            height: 48mm;
-            background: #fff;
-            transform: skewX(-36deg);
-        }
-        .back-brand-icon {
-            position: absolute;
-            left: 3.4mm;
-            top: 2.8mm;
-            width: 6.8mm;
-            height: 6.8mm;
-            border-radius: 2.2mm;
-            background: linear-gradient(180deg, #ff6b1b, #ff4f00);
-            color: #fff;
-            font-size: 6.2mm;
-            font-weight: 900;
-            line-height: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 3;
-        }
-        .back-advantages-title {
-            position: absolute;
-            left: 12.3mm;
-            top: 4.2mm;
-            z-index: 3;
-            color: #fff;
-            font-size: 5.2mm;
-            font-weight: 900;
-            text-transform: uppercase;
-            display: inline-flex;
-            align-items: center;
-            gap: 2mm;
-        }
-        .back-advantages-title::after {
-            content: "";
-            width: 15.5mm;
-            height: .45mm;
-            background: var(--sobitas-orange);
-        }
-        .back-rules {
-            position: absolute;
-            left: 3.5mm;
-            top: 11.5mm;
-            z-index: 3;
-            width: 39.2mm;
-            color: #fff;
-        }
-        .rule-row {
-            display: grid;
-            grid-template-columns: 6.3mm 1fr;
-            gap: 1.3mm;
-            margin-bottom: 1.35mm;
-            align-items: start;
-        }
-        .rule-icon {
-            width: 5.6mm;
-            height: 5.6mm;
-            border-radius: 50%;
-            background: #ff5a0a;
-            color: #fff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2.85mm;
-            font-weight: 700;
-            box-shadow: inset 0 0 0 .35mm rgba(255, 255, 255, .22);
-            margin-top: .25mm;
-        }
-        .rule-text {
-            font-size: 4.65mm;
-            line-height: 1.04;
-            font-weight: 900;
-            text-transform: uppercase;
-        }
-        .rule-text .orange { color: var(--sobitas-orange); }
-        .thanks-area {
-            position: absolute;
-            right: 4.2mm;
-            top: 12.8mm;
-            width: 28.5mm;
-            text-align: center;
-            z-index: 3;
-            color: #1f2124;
-        }
-        .thanks-main {
-            font-size: 5.2mm;
-            font-style: italic;
-            font-weight: 700;
-            line-height: 1.18;
-            margin-bottom: 1.4mm;
-        }
-        .thanks-underline {
-            width: 17mm;
-            height: .55mm;
-            background: var(--sobitas-orange);
-            margin: 0 auto;
-            border-radius: 2mm;
-        }
-        .weightmark {
-            position: absolute;
-            right: 7mm;
-            top: 5.6mm;
-            font-size: 12mm;
-            opacity: .12;
-            z-index: 2;
-        }
-        .back-footer-bar {
+        /* Bottom advantages bar style matching second photo */
+        .front-footer-bar {
             position: absolute;
             left: 0;
             right: 0;
             bottom: 0;
-            height: 7.9mm;
-            background: linear-gradient(180deg, #ff6a18 0%, #ff4e00 100%);
-            color: #fff;
-            z-index: 4;
+            height: 7.5mm;
+            background: #ffffff;
+            border-top: .15mm solid #e5e7eb;
+            z-index: 6;
             display: grid;
-            grid-template-columns: 1.25fr 1fr 1.45fr;
+            grid-template-columns: 1fr .15mm 1fr .15mm 1fr .15mm 1fr;
             align-items: center;
-            padding: 0 2.8mm;
-            font-size: 2.95mm;
-            font-weight: 700;
-            column-gap: 1.3mm;
+            padding: 0 1mm;
         }
-        .back-footer-item {
-            display: inline-flex;
+        .footer-bar-item {
+            display: flex;
             align-items: center;
-            gap: 1.05mm;
+            justify-content: center;
+            gap: .8mm;
+            font-size: 1.6mm;
+            font-weight: 900;
+            color: #212529;
+            text-transform: uppercase;
             white-space: nowrap;
         }
-        .back-footer-sep {
-            border-left: .35mm solid rgba(255, 255, 255, .6);
+        .footer-bar-icon-wrap {
+            width: 3.5mm;
+            height: 3.5mm;
+            background: var(--sobitas-orange);
+            color: #ffffff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .footer-bar-icon-wrap svg {
+            width: 2.1mm;
+            height: 2.1mm;
+            fill: currentColor;
+            display: block;
+        }
+        .footer-bar-divider {
+            background: #dee2e6;
+            height: 3.5mm;
+            width: 100%;
+        }
+        .footer-bar-text {
+            line-height: 1.15;
+            text-align: left;
+               /* === BACK CARD (matching Photo 2 white design) === */
+        .sobitas-back {
+            background: #ffffff;
+            position: relative;
+            overflow: hidden;
+        }
+        .back-bg-decor {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1;
+            pointer-events: none;
+            overflow: hidden;
+        }
+        .back-left-content {
+            position: absolute;
+            left: 4.5mm;
+            top: 3.5mm;
+            width: 42mm;
+            height: 38mm;
+            z-index: 3;
+            display: flex;
+            flex-direction: column;
+        }
+        .back-logo-wrap {
+            line-height: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            margin-bottom: 0.8mm;
+        }
+        .back-logo-text {
+            font-size: 4.8mm;
+            font-weight: 900;
+            font-style: italic;
+            color: var(--sobitas-orange);
+            letter-spacing: -.02em;
+            margin: 0;
+        }
+        .back-logo-underline {
+            width: 13.5mm;
+            height: 0.35mm;
+            background: #dee2e6;
+            margin-top: 0.4mm;
+        }
+        .back-title {
+            font-size: 3.8mm;
+            font-weight: 900;
+            text-transform: uppercase;
+            color: #1a1b1e;
+            margin: 0.6mm 0 2.2mm 0;
+            letter-spacing: 0.05mm;
+            line-height: 1.1;
+        }
+        .back-title .orange {
+            color: var(--sobitas-orange);
+        }
+        .back-rules-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+        .back-rule-item {
+            display: flex;
+            align-items: center;
+            gap: 1.8mm;
+        }
+        .back-rule-badge {
+            width: 4.5mm;
             height: 4.5mm;
-            margin-left: .8mm;
+            background: var(--sobitas-orange);
+            color: #ffffff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.3mm;
+            font-weight: 900;
+            flex-shrink: 0;
+        }
+        .back-rule-badge svg {
+            width: 2.4mm;
+            height: 2.4mm;
+            fill: currentColor;
+            display: block;
+        }
+        .back-rule-text {
+            font-size: 2.5mm;
+            line-height: 1.1;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: #1a1b1e;
+        }
+        .back-rule-text .orange {
+            color: var(--sobitas-orange);
+        }
+        .back-rules-divider {
+            border-top: .15mm solid #dee2e6;
+            margin: 1.2mm 0;
+            width: 36mm;
+        }
+        .back-right-content {
+            position: absolute;
+            right: 4.5mm;
+            top: 7mm;
+            width: 30mm;
+            height: 33mm;
+            z-index: 3;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+        }
+        .back-watermark-row {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1.5mm;
+            margin-bottom: 0.5mm;
+        }
+        .back-watermark-line {
+            height: 0.2mm;
+            background: var(--sobitas-orange);
+            flex: 1;
+        }
+        .back-watermark-icon {
+            width: 5.5mm;
+            height: 5.5mm;
+            color: var(--sobitas-orange);
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .back-watermark-icon svg {
+            width: 100%;
+            height: 100%;
+            fill: currentColor;
+            display: block;
+        }
+        .thanks-area-white {
+            text-align: center;
+            color: #1a1b1e;
+            width: 100%;
+        }
+        .thanks-main-white {
+            font-size: 3.5mm;
+            font-style: italic;
+            font-weight: 900;
+            line-height: 1.25;
+            margin: 1mm 0 1.5mm 0;
+        }
+        .thanks-underline-white {
+            width: 18mm;
+            height: 0.45mm;
+            background: var(--sobitas-orange);
+            margin: 0 auto;
+        }
+        .back-footer-pill {
+            position: absolute;
+            left: 2.5mm;
+            right: 2.5mm;
+            bottom: 2mm;
+            height: 7.2mm;
+            background: #ffffff;
+            border: .2mm solid #e9ecef;
+            border-radius: 3.6mm;
+            z-index: 5;
+            box-shadow: 0 0.4mm 1.5mm rgba(0, 0, 0, 0.04);
+            display: grid;
+            grid-template-columns: 1.45fr 1fr 1.05fr;
+            align-items: center;
+            padding: 0 1.5mm;
+        }
+        .back-pill-item {
+            display: flex;
+            align-items: center;
+            gap: 1mm;
+            white-space: nowrap;
+        }
+        .back-pill-item:last-child {
+            justify-content: flex-end;
+        }
+        .back-pill-item:nth-child(2) {
+            justify-content: center;
+            border-left: .2mm solid #e9ecef;
+            border-right: .2mm solid #e9ecef;
+            height: 4mm;
+        }
+        .back-pill-icon-wrap {
+            width: 3.6mm;
+            height: 3.6mm;
+            background: var(--sobitas-orange);
+            color: #ffffff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .back-pill-icon-wrap svg {
+            width: 2.2mm;
+            height: 2.2mm;
+            fill: currentColor;
+            display: block;
+        }
+        .back-pill-text {
+            font-size: 1.45mm;
+            font-weight: 800;
+            color: #343a40;
+            line-height: 1.1;
         }
 
         @media print {
@@ -524,16 +603,79 @@
             width: 31mm !important;
             text-align: center !important;
         }
-        .front-footer {
-            clear: both !important;
-            display: block !important;
-            width: 100% !important;
+        .front-footer-bar {
             position: absolute !important;
             bottom: 0 !important;
             left: 0 !important;
+            right: 0 !important;
+            height: 7.5mm !important;
+            display: block !important;
+            background: #ffffff !important;
+            border-top: .15mm solid #dee2e6 !important;
         }
         .sheet {
             page-break-inside: avoid !important;
+        }
+        
+        /* Back Card PDF Specific Overrides */
+        .sobitas-back {
+            display: block !important;
+            background: #ffffff !important;
+        }
+        .back-left-content {
+            float: left !important;
+            width: 42mm !important;
+            height: 38mm !important;
+            position: relative !important;
+            margin-left: 4.5mm !important;
+            margin-top: 3.5mm !important;
+        }
+        .back-right-content {
+            float: right !important;
+            width: 30mm !important;
+            height: 33mm !important;
+            position: relative !important;
+            margin-right: 4.5mm !important;
+            margin-top: 7mm !important;
+            text-align: center !important;
+        }
+        .back-rule-item {
+            display: block !important;
+            width: 100% !important;
+            margin-bottom: 0.5mm !important;
+        }
+        .back-rule-badge {
+            display: inline-block !important;
+            vertical-align: middle !important;
+            margin-right: 1.5mm !important;
+        }
+        .back-rule-text {
+            display: inline-block !important;
+            vertical-align: middle !important;
+        }
+        .back-watermark-row {
+            display: block !important;
+            width: 100% !important;
+            text-align: center !important;
+        }
+        .back-watermark-line {
+            display: inline-block !important;
+            vertical-align: middle !important;
+            width: 9mm !important;
+        }
+        .back-watermark-icon {
+            display: inline-block !important;
+            vertical-align: middle !important;
+        }
+        .back-footer-pill {
+            position: absolute !important;
+            left: 2.5mm !important;
+            right: 2.5mm !important;
+            bottom: 2mm !important;
+            height: 7.2mm !important;
+            display: block !important;
+            background: #ffffff !important;
+            border: .2mm solid #e9ecef !important;
         }
         @endif
     </style>
@@ -559,6 +701,21 @@
         <div class="cards-grid">
             @foreach($chunk as $card)
                 <article class="sobitas-card sobitas-front">
+                    <!-- Background Wave and Mesh Pattern matching Photo 2 -->
+                    <div class="card-bg-waves" aria-hidden="true">
+                        <svg viewBox="0 0 85.6 54" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M-10,38 C15,28 35,42 60,32 C75,26 85,32 95,28" fill="none" stroke="rgba(255, 90, 10, 0.12)" stroke-width="0.2" />
+                            <path d="M-10,41 C18,33 38,47 62,35 C78,29 88,35 98,31" fill="none" stroke="rgba(255, 90, 10, 0.08)" stroke-width="0.2" />
+                            <path d="M-10,44 C21,38 41,52 64,38 C81,32 91,38 101,34" fill="none" stroke="rgba(255, 90, 10, 0.05)" stroke-width="0.2" />
+                            <defs>
+                                <pattern id="dotPattern" x="0" y="0" width="1.6" height="1.6" patternUnits="userSpaceOnUse">
+                                    <circle cx="0.8" cy="0.8" r="0.35" fill="var(--sobitas-orange)" opacity="0.85" />
+                                </pattern>
+                            </defs>
+                            <path d="M50,54 C60,46 72,42 85.6,35 L85.6,54 Z" fill="url(#dotPattern)" />
+                        </svg>
+                    </div>
+
                     <div class="front-top-corner" aria-hidden="true"></div>
 
                     <div class="front-upper">
@@ -575,7 +732,7 @@
                                 <p class="label-carte">CARTE</p>
                                 <p class="label-fidelite">FID&Eacute;LIT&Eacute;</p>
                                 <div class="title-underline" aria-hidden="true"></div>
-                                <p class="front-program">PROGRAMME AVANTAGES BOUTIQUE</p>
+                                <p class="front-program">PROGRAMME AVANTAGES</p>
                             </div>
                         </div>
                         <div class="front-upper-right">
@@ -589,22 +746,85 @@
                         </div>
                     </div>
 
-                    <div class="front-footer">
-                        <div class="front-footer-bg" aria-hidden="true"></div>
-                        <div class="front-footer-accent" aria-hidden="true"></div>
-                        <div class="front-footer-inner">
-                            <p class="votre-carte">VOTRE CARTE</p>
-                            <p class="card-number">{{ $card->card_number }}</p>
-                            <p class="front-note">
-                                <span class="arrow" aria-hidden="true">&#8250;</span>
-                                <span>Pr&eacute;sentez cette carte en boutique</span>
-                            </p>
-                        </div>
+                    <!-- Client details placed directly on white card background -->
+                    <div style="position: absolute; left: 4.2mm; bottom: 9.2mm; z-index: 5; line-height: 1;">
+                        <span class="votre-carte">VOTRE CARTE</span>
+                        <div class="card-number">{{ $card->card_number }}</div>
+                        <p class="front-note">
+                            <span class="arrow" aria-hidden="true">&#8250;</span>
+                            <span>Pr&eacute;sentez cette carte en boutique</span>
+                        </p>
                     </div>
 
                     <div class="front-website">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
                         protein.tn
+                    </div>
+
+                    <!-- Bottom advantages bar matching Photo 2 -->
+                    <div class="front-footer-bar">
+                        @if(isset($isPdf) && $isPdf)
+                            <!-- DomPDF floated layout -->
+                            <div style="float: left; width: 23%; padding-top: 1.5mm; text-align: center;">
+                                <div class="footer-bar-icon-wrap" style="display: inline-block; vertical-align: middle; margin-right: 0.5mm;">
+                                    <svg viewBox="0 0 24 24" style="width: 2.1mm; height: 2.1mm; fill: #ffffff;"><path d="M20 6h-2.18c.11-.31.18-.65.18-1 0-1.66-1.34-3-3-3-1.05 0-1.96.54-2.5 1.35-.54-.81-1.45-1.35-2.5-1.35-1.66 0-3 1.34-3 3 0 .35.07.69.18 1H5c-1.1 0-2 .9-2 2v3c0 .55.45 1 1 1h1v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V12h1c.55 0 1-.45 1-1V8c0-1.1-.9-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm-6 1c0-.55.45-1 1-1s1 .45 1 1-.45 1-1 1-1-.45-1-1zm11 15H7v-8h11v8z"/></svg>
+                                </div>
+                                <span class="footer-bar-text" style="display: inline-block; vertical-align: middle; font-size: 1.4mm; line-height: 1;">Offres<br>Exclusives</span>
+                            </div>
+                            <div style="float: left; width: 1%; height: 4mm; border-left: .15mm solid #dee2e6; margin-top: 1.5mm;"></div>
+                            
+                            <div style="float: left; width: 23%; padding-top: 1.5mm; text-align: center;">
+                                <div class="footer-bar-icon-wrap" style="display: inline-block; vertical-align: middle; margin-right: 0.5mm;">
+                                    <svg viewBox="0 0 24 24" style="width: 2.1mm; height: 2.1mm; fill: #ffffff;"><path d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 8c-.83 0-1.5-.67-1.5-1.5S4.67 5 5.5 5 7 5.67 7 6.5 6.33 8 5.5 8z"/></svg>
+                                </div>
+                                <span class="footer-bar-text" style="display: inline-block; vertical-align: middle; font-size: 1.4mm; line-height: 1;">Réductions<br>Perso.</span>
+                            </div>
+                            <div style="float: left; width: 1%; height: 4mm; border-left: .15mm solid #dee2e6; margin-top: 1.5mm;"></div>
+
+                            <div style="float: left; width: 23%; padding-top: 1.5mm; text-align: center;">
+                                <div class="footer-bar-icon-wrap" style="display: inline-block; vertical-align: middle; margin-right: 0.5mm;">
+                                    <svg viewBox="0 0 24 24" style="width: 2.1mm; height: 2.1mm; fill: #ffffff;"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                                </div>
+                                <span class="footer-bar-text" style="display: inline-block; vertical-align: middle; font-size: 1.4mm; line-height: 1;">Points<br>Fidélité</span>
+                            </div>
+                            <div style="float: left; width: 1%; height: 4mm; border-left: .15mm solid #dee2e6; margin-top: 1.5mm;"></div>
+
+                            <div style="float: left; width: 23%; padding-top: 1.5mm; text-align: center;">
+                                <div class="footer-bar-icon-wrap" style="display: inline-block; vertical-align: middle; margin-right: 0.5mm;">
+                                    <svg viewBox="0 0 24 24" style="width: 2.1mm; height: 2.1mm; fill: #ffffff;"><path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v3c0 2.42 1.72 4.44 4 4.9V18c0 1.1.9 2 2 2h1v2h4v-2h1c1.1 0 2-.9 2-2v-3.1c2.28-.46 4-2.48 4-4.9V7c0-1.1-.9-2-2-2zm-14 5V7h2v3c0 1.1-.9 2-2 2zm14 0c0 .55-.45 1-1 1s-2-.9-2-2V7h2v3z"/></svg>
+                                </div>
+                                <span class="footer-bar-text" style="display: inline-block; vertical-align: middle; font-size: 1.4mm; line-height: 1;">Avantages<br>Privilégiés</span>
+                            </div>
+                            <div style="clear: both;"></div>
+                        @else
+                            <!-- Standard browser CSS Grid layout -->
+                            <div class="footer-bar-item">
+                                <div class="footer-bar-icon-wrap">
+                                    <svg viewBox="0 0 24 24"><path d="M20 6h-2.18c.11-.31.18-.65.18-1 0-1.66-1.34-3-3-3-1.05 0-1.96.54-2.5 1.35-.54-.81-1.45-1.35-2.5-1.35-1.66 0-3 1.34-3 3 0 .35.07.69.18 1H5c-1.1 0-2 .9-2 2v3c0 .55.45 1 1 1h1v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V12h1c.55 0 1-.45 1-1V8c0-1.1-.9-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm-6 1c0-.55.45-1 1-1s1 .45 1 1-.45 1-1 1-1-.45-1-1zm11 15H7v-8h11v8z"/></svg>
+                                </div>
+                                <span class="footer-bar-text">Offres<br>Exclusives</span>
+                            </div>
+                            <div class="footer-bar-divider"></div>
+                            <div class="footer-bar-item">
+                                <div class="footer-bar-icon-wrap">
+                                    <svg viewBox="0 0 24 24"><path d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 8c-.83 0-1.5-.67-1.5-1.5S4.67 5 5.5 5 7 5.67 7 6.5 6.33 8 5.5 8z"/></svg>
+                                </div>
+                                <span class="footer-bar-text">Réductions<br>Perso.</span>
+                            </div>
+                            <div class="footer-bar-divider"></div>
+                            <div class="footer-bar-item">
+                                <div class="footer-bar-icon-wrap">
+                                    <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                                </div>
+                                <span class="footer-bar-text">Points<br>Fidélité</span>
+                            </div>
+                            <div class="footer-bar-divider"></div>
+                            <div class="footer-bar-item">
+                                <div class="footer-bar-icon-wrap">
+                                    <svg viewBox="0 0 24 24"><path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v3c0 2.42 1.72 4.44 4 4.9V18c0 1.1.9 2 2 2h1v2h4v-2h1c1.1 0 2-.9 2-2v-3.1c2.28-.46 4-2.48 4-4.9V7c0-1.1-.9-2-2-2zm-14 5V7h2v3c0 1.1-.9 2-2 2zm14 0c0 .55-.45 1-1 1s-2-.9-2-2V7h2v3z"/></svg>
+                                </div>
+                                <span class="footer-bar-text">Avantages<br>Privilégiés</span>
+                            </div>
+                        @endif
                     </div>
                 </article>
             @endforeach
@@ -621,44 +841,113 @@
             <div class="cards-grid">
                 @foreach($chunk as $card)
                     <article class="sobitas-card sobitas-back">
-                        <div class="back-left-dark"></div>
-                        <div class="back-orange-divider"></div>
-                        <div class="back-white-divider"></div>
-                        <div class="weightmark">&#x1F3CB;</div>
+                        <!-- Vector Background Decor -->
+                        <div class="back-bg-decor" aria-hidden="true">
+                            <svg viewBox="0 0 85.6 54" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                                <defs>
+                                    <pattern id="backDotPattern" x="0" y="0" width="1.6" height="1.6" patternUnits="userSpaceOnUse">
+                                        <circle cx="0.8" cy="0.8" r="0.3" fill="var(--sobitas-orange)" opacity="0.35" />
+                                    </pattern>
+                                </defs>
+                                <rect x="0" y="34" width="20" height="12" fill="url(#backDotPattern)" />
+                                <rect x="68" y="0" width="18" height="15" fill="url(#backDotPattern)" />
+                                <line x1="61.5" y1="0" x2="35.5" y2="54" stroke="var(--sobitas-orange)" stroke-width="1.1" />
+                                <line x1="64.5" y1="0" x2="38.5" y2="54" stroke="var(--sobitas-orange)" stroke-width="0.35" />
+                                <path d="M85.6,36 C80,42 76,48 68,54 L85.6,54 Z" fill="var(--sobitas-orange)" />
+                            </svg>
+                        </div>
 
-                        <div class="back-brand-icon">S</div>
-                        <div class="back-advantages-title">Vos avantages</div>
-
-                        <div class="back-rules">
-                            <div class="rule-row">
-                                <div class="rule-icon">1</div>
-                                <div class="rule-text">1 DT d&eacute;pens&eacute;<br><span class="orange">= 1 point gagn&eacute;</span></div>
+                        <!-- Left Column: Branding and Advantages rules -->
+                        <div class="back-left-content">
+                            <div class="back-logo-wrap">
+                                <span class="back-logo-text">SOBITAS</span>
+                                <div class="back-logo-underline"></div>
                             </div>
-                            <div class="rule-row">
-                                <div class="rule-icon">&#x1F381;</div>
-                                <div class="rule-text">10 points<br><span class="orange">= 1 DT de r&eacute;duction</span></div>
-                            </div>
-                            <div class="rule-row">
-                                <div class="rule-icon">&#x1F4CD;</div>
-                                <div class="rule-text">Utilisable uniquement<br><span class="orange">en boutique</span></div>
+                            <h2 class="back-title">VOS <span class="orange">AVANTAGES</span></h2>
+                            
+                            <div class="back-rules-list">
+                                <div class="back-rule-item">
+                                    <div class="back-rule-badge">1</div>
+                                    <div class="back-rule-text">1 DT d&eacute;pens&eacute;<br><span class="orange">= 1 point gagn&eacute;</span></div>
+                                </div>
+                                <div class="back-rules-divider"></div>
+                                <div class="back-rule-item">
+                                    <div class="back-rule-badge">
+                                        <svg viewBox="0 0 24 24"><path d="M20 6h-2.18c.11-.31.18-.65.18-1 0-1.66-1.34-3-3-3-1.05 0-1.96.54-2.5 1.35-.54-.81-1.45-1.35-2.5-1.35-1.66 0-3 1.34-3 3 0 .35.07.69.18 1H5c-1.1 0-2 .9-2 2v3c0 .55.45 1 1 1h1v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V12h1c.55 0 1-.45 1-1V8c0-1.1-.9-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm-6 1c0-.55.45-1 1-1s1 .45 1 1-.45 1-1 1-1-.45-1-1zm11 15H7v-8h11v8z"/></svg>
+                                    </div>
+                                    <div class="back-rule-text">10 points<br><span class="orange">= 1 DT de r&eacute;duction</span></div>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="thanks-area">
-                            <div class="thanks-main">Merci pour<br>votre confiance !</div>
-                            <div class="thanks-underline"></div>
+                        <!-- Right Column: Thank you and figure watermark -->
+                        <div class="back-right-content">
+                            <div class="back-watermark-row">
+                                <div class="back-watermark-line"></div>
+                                <div class="back-watermark-icon">
+                                    <svg viewBox="0 0 24 24">
+                                        <rect x="2" y="11" width="20" height="2" />
+                                        <rect x="4" y="8" width="2" height="8" rx="0.5" />
+                                        <rect x="1" y="9" width="3" height="6" rx="0.5" />
+                                        <rect x="18" y="8" width="2" height="8" rx="0.5" />
+                                        <rect x="20" y="9" width="3" height="6" rx="0.5" />
+                                        <circle cx="12" cy="7" r="2.5" />
+                                        <path d="M12,10 L12,16 M9,18 L12,15 L15,18 M8,10 C10,9 10,11 12,11 C14,11 14,9 16,10" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+                                    </svg>
+                                </div>
+                                <div class="back-watermark-line"></div>
+                            </div>
+                            
+                            <div class="thanks-area-white">
+                                <div class="thanks-main-white">Merci pour<br>votre<br>confiance !</div>
+                                <div class="thanks-underline-white"></div>
+                            </div>
                         </div>
 
-                        <div class="back-footer-bar">
-                            <div class="back-footer-item">&#x1F6E1; En cas de perte, contactez la boutique.</div>
-                            <div class="back-footer-item">
-                                <span class="back-footer-sep"></span>
-                                &#x260E; {{ $company?->phone_1 ?: '---' }}
-                            </div>
-                            <div class="back-footer-item">
-                                <span class="back-footer-sep"></span>
-                                &#x1F4CD; {{ $company?->adresse ?: 'Rue Ribat, 4000 Sousse, Tunisie' }}
-                            </div>
+                        <!-- Bottom Pill Footer -->
+                        <div class="back-footer-pill">
+                            @if(isset($isPdf) && $isPdf)
+                                <!-- DomPDF floated layout for footer pill -->
+                                <div style="float: left; width: 44%; padding-top: 1.8mm; padding-left: 2mm;">
+                                    <div class="back-pill-icon-wrap" style="display: inline-block; vertical-align: middle; margin-right: 0.5mm;">
+                                        <svg viewBox="0 0 24 24" style="width: 1.8mm; height: 1.8mm; fill: #ffffff;"><path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3zm-1.9 14.3L7 13.2l1.4-1.4 1.7 1.7 4.7-4.7 1.4 1.4-6.1 6.1z"/></svg>
+                                    </div>
+                                    <span class="back-pill-text" style="display: inline-block; vertical-align: middle; font-size: 1.2mm; line-height: 1;">En cas de perte, contactez la boutique</span>
+                                </div>
+                                <div style="float: left; width: 26%; padding-top: 1.8mm; text-align: center; border-left: .2mm solid #e9ecef; border-right: .2mm solid #e9ecef;">
+                                    <div class="back-pill-icon-wrap" style="display: inline-block; vertical-align: middle; margin-right: 0.5mm;">
+                                        <svg viewBox="0 0 24 24" style="width: 1.8mm; height: 1.8mm; fill: #ffffff;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                                    </div>
+                                    <span class="back-pill-text" style="display: inline-block; vertical-align: middle; font-size: 1.35mm; line-height: 1; font-weight: 700;">Protein.tn</span>
+                                </div>
+                                <div style="float: left; width: 28%; padding-top: 1.8mm; text-align: right; padding-right: 2mm;">
+                                    <div class="back-pill-icon-wrap" style="display: inline-block; vertical-align: middle; margin-right: 0.5mm;">
+                                        <svg viewBox="0 0 24 24" style="width: 1.8mm; height: 1.8mm; fill: #ffffff;"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 00-1.01.24l-2.2 2.2a15.045 15.045 0 01-6.59-6.59l2.2-2.2c.28-.28.36-.67.25-1.02A11.36 11.36 0 018.5 4c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.5c0-.55-.45-1-1-1z"/></svg>
+                                    </div>
+                                    <span class="back-pill-text" style="display: inline-block; vertical-align: middle; font-size: 1.45mm; line-height: 1; font-weight: 900;">{{ $company?->phone_1 ?: '27 612 500' }}</span>
+                                </div>
+                                <div style="clear: both;"></div>
+                            @else
+                                <!-- Standard browser CSS Grid layout for footer pill -->
+                                <div class="back-pill-item">
+                                    <div class="back-pill-icon-wrap">
+                                        <svg viewBox="0 0 24 24"><path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3zm-1.9 14.3L7 13.2l1.4-1.4 1.7 1.7 4.7-4.7 1.4 1.4-6.1 6.1z"/></svg>
+                                    </div>
+                                    <span class="back-pill-text">En cas de perte, contactez la boutique</span>
+                                </div>
+                                <div class="back-pill-item">
+                                    <div class="back-pill-icon-wrap">
+                                        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                                    </div>
+                                    <span class="back-pill-text">Protein.tn</span>
+                                </div>
+                                <div class="back-pill-item">
+                                    <div class="back-pill-icon-wrap">
+                                        <svg viewBox="0 0 24 24"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 00-1.01.24l-2.2 2.2a15.045 15.045 0 01-6.59-6.59l2.2-2.2c.28-.28.36-.67.25-1.02A11.36 11.36 0 018.5 4c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.5c0-.55-.45-1-1-1z"/></svg>
+                                    </div>
+                                    <span class="back-pill-text" style="font-weight: 900;">{{ $company?->phone_1 ?: '27 612 500' }}</span>
+                                </div>
+                            @endif
                         </div>
                     </article>
                 @endforeach

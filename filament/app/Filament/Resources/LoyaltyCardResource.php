@@ -72,12 +72,6 @@ class LoyaltyCardResource extends Resource
                     ->label('Statut')
                     ->default(fn (): string => LoyaltyCard::preferredAvailableStatusValue())
                     ->options(fn (): array => LoyaltyCard::getStatusSelectOptions()),
-                ...($hasPrintStatusColumn ? [
-                    Forms\Components\Select::make('print_status')
-                        ->label('Statut impression')
-                        ->options(LoyaltyCard::printStatusOptions())
-                        ->default('not_printed'),
-                ] : []),
                 ...($hasNotesColumn ? [
                     Forms\Components\Textarea::make('notes')
                         ->label('Notes')
@@ -116,17 +110,6 @@ class LoyaltyCardResource extends Resource
                     ->label('Statut')
                     ->formatStateUsing(fn (LoyaltyCardStatus $state) => $state->label())
                     ->color(fn (LoyaltyCardStatus $state) => $state->color()),
-                ...($hasPrintStatusColumn ? [
-                    Tables\Columns\BadgeColumn::make('print_status')
-                        ->label('Statut impression')
-                        ->formatStateUsing(fn (?string $state): string => LoyaltyCard::printStatusOptions()[$state ?? 'not_printed'] ?? 'Non imprimée')
-                        ->colors([
-                            'gray' => 'not_printed',
-                            'warning' => 'exported',
-                            'success' => 'printed',
-                            'info' => 'delivered_to_store',
-                        ]),
-                ] : []),
                 ...($hasBatchColumn ? [
                     Tables\Columns\TextColumn::make('batch.name')
                         ->label('Lot')
@@ -139,13 +122,6 @@ class LoyaltyCardResource extends Resource
                         ->date('d/m/Y')
                         ->placeholder('—')
                         ->sortable(),
-                ] : []),
-                ...($hasPrintedAtColumn ? [
-                    Tables\Columns\TextColumn::make('printed_at')
-                        ->label('Imprimée le')
-                        ->date('d/m/Y')
-                        ->placeholder('—')
-                        ->toggleable(isToggledHiddenByDefault: true),
                 ] : []),
             ])
             ->defaultSort('created_at', 'desc')
@@ -316,34 +292,7 @@ class LoyaltyCardResource extends Resource
                         'card' => $record,
                         'side' => (string) ($data['side'] ?? 'front'),
                     ]))),
-                Action::make('mark_printed')
-                    ->label('Marquer imprimée')
-                    ->icon('heroicon-o-check-badge')
-                    ->color('success')
-                    ->action(function (LoyaltyCard $record): void {
-                        $payload = LoyaltyCard::onlyExistingColumnUpdates([
-                            'print_status' => 'printed',
-                            'printed_at' => now(),
-                        ]);
-                        if ($payload !== []) {
-                            $record->update($payload);
-                        }
-                    }),
-                Action::make('mark_delivered')
-                    ->label('Livrée magasin')
-                    ->icon('heroicon-o-truck')
-                    ->color('primary')
-                    ->action(function (LoyaltyCard $record): void {
-                        $payload = LoyaltyCard::onlyExistingColumnUpdates([
-                            'print_status' => 'delivered_to_store',
-                            'delivered_to_store_at' => now(),
-                        ]);
-                        if ($payload !== []) {
-                            $record->update($payload);
-                        }
-                    }),
-
-                EditAction::make(),
+                 EditAction::make(),
             ])
             ->bulkActions([
                 BulkAction::make('print_selected')
@@ -429,21 +378,6 @@ class LoyaltyCardResource extends Resource
                             'per_page' => (int) ($data['per_page'] ?? 8),
                             'side' => (string) ($data['side'] ?? 'front'),
                         ]));
-                    }),
-                BulkAction::make('mark_selected_printed')
-                    ->label('Marquer imprimées')
-                    ->icon('heroicon-o-check-badge')
-                    ->color('success')
-                    ->action(function (Collection $records): void {
-                        $payload = LoyaltyCard::onlyExistingColumnUpdates([
-                            'print_status' => 'printed',
-                            'printed_at' => now(),
-                        ]);
-                        if ($payload !== []) {
-                            LoyaltyCard::query()
-                                ->whereIn('id', $records->pluck('id')->all())
-                                ->update($payload);
-                        }
                     }),
             ]);
     }

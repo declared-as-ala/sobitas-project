@@ -26,5 +26,29 @@ class CreateClient extends CreateRecord
                 ->success()
                 ->send();
         }
+
+        $cardNumber = trim((string) ($this->data['scan_card_number'] ?? ''));
+        if ($cardNumber !== '') {
+            try {
+                $service = app(\App\Services\LoyaltyService::class);
+                $card = $service->findCardByScanCode($cardNumber);
+                if (!$card) {
+                    throw new \RuntimeException("La carte '{$cardNumber}' est introuvable.");
+                }
+                
+                $service->assignCardToClient($card, $client, true);
+                
+                Notification::make()
+                    ->title("Carte {$card->card_number} attribuée avec succès.")
+                    ->success()
+                    ->send();
+            } catch (\Throwable $e) {
+                Notification::make()
+                    ->title("Erreur d'attribution de la carte")
+                    ->body($e->getMessage())
+                    ->danger()
+                    ->send();
+            }
+        }
     }
 }
