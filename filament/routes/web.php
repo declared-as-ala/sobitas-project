@@ -242,6 +242,8 @@ Route::middleware(['auth', 'no.cache.print'])->group(function () {
     Route::get('export/loyalty-card-selected/pdf', [\App\Http\Controllers\LoyaltyPrintController::class, 'selectedPdf'])->name('loyalty.export.selected.pdf');
     Route::get('export/loyalty-batch/{batch}/pdf', [\App\Http\Controllers\LoyaltyPrintController::class, 'batchPdf'])->name('loyalty.export.batch.pdf');
     Route::get('export/loyalty-batch/{batch}/csv', [\App\Http\Controllers\LoyaltyPrintController::class, 'exportCsv'])->name('loyalty.export.csv');
+    Route::get('print/loyalty-blank-pvc/{batch}', [\App\Http\Controllers\LoyaltyPrintController::class, 'blankPvc'])->name('loyalty.print.blank-pvc');
+
 
     // PDF download (attachment, no print preview)
     Route::get('factures/{facture}/download', [\App\Http\Controllers\DocumentPdfController::class, 'downloadFacture'])->name('factures.download');

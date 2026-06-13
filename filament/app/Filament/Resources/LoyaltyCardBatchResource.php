@@ -228,6 +228,58 @@ class LoyaltyCardBatchResource extends Resource
                         ]));
                     })
                     ->visible(fn (LoyaltyCardBatch $record) => $record->isGenerated()),
+                Action::make('print_blank_pvc')
+                    ->label('Imprimer vierges PVC')
+                    ->icon('heroicon-o-printer')
+                    ->color('success')
+                    ->visible(fn (LoyaltyCardBatch $record) => $record->isGenerated())
+                    ->form(function (LoyaltyCardBatch $record): array {
+                        $unprinted = $record->cards()->whereNull('client_id')->count();
+                        return [
+                            Forms\Components\Placeholder::make('info')
+                                ->label('')
+                                ->content(new \Illuminate\Support\HtmlString(
+                                    '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 16px;color:#166534;font-size:14px;">'
+                                    . '🖨️ <strong>' . $unprinted . '</strong> carte(s) non attribuée(s) disponibles à imprimer.'
+                                    . '</div>'
+                                )),
+                            Forms\Components\TextInput::make('quantity')
+                                ->label('Quantité à imprimer')
+                                ->numeric()
+                                ->default($unprinted)
+                                ->minValue(1)
+                                ->maxValue($unprinted > 0 ? $unprinted : 1)
+                                ->required()
+                                ->hint('Nombre de cartes vierges à inclure dans le PDF'),
+                            Forms\Components\Select::make('per_page')
+                                ->label('Cartes par planche A4')
+                                ->options([
+                                    4  => '4 cartes',
+                                    6  => '6 cartes',
+                                    8  => '8 cartes (recommandé)',
+                                    10 => '10 cartes',
+                                    12 => '12 cartes',
+                                ])
+                                ->default(8)
+                                ->required(),
+                            Forms\Components\Select::make('side')
+                                ->label('Faces à imprimer')
+                                ->options([
+                                    'front' => '🖼️ Recto seulement (code-barres)',
+                                    'both'  => '🖼️🖼️ Recto + Verso (PVC complet)',
+                                ])
+                                ->default('both')
+                                ->required(),
+                        ];
+                    })
+                    ->action(function (LoyaltyCardBatch $record, array $data) {
+                        return redirect()->away(route('loyalty.print.blank-pvc', [
+                            'batch'    => $record->id,
+                            'qty'      => (int) ($data['quantity'] ?? 50),
+                            'per_page' => (int) ($data['per_page'] ?? 8),
+                            'side'     => (string) ($data['side'] ?? 'both'),
+                        ]));
+                    }),
                 Action::make('export_csv')
                     ->label('Exporter lot CSV')
                     ->icon('heroicon-o-arrow-down-tray')

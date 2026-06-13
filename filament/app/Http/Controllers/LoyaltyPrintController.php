@@ -75,6 +75,38 @@ class LoyaltyPrintController extends Controller
         );
     }
 
+    /**
+     * Print unassigned (client_id IS NULL) cards from a batch as a PVC-ready PDF.
+     * The user chooses the quantity and recto/recto+verso in the Filament modal.
+     */
+    public function blankPvc(LoyaltyCardBatch $batch, Request $request): Response
+    {
+        $qty  = max(1, (int) $request->integer('qty', 9999));
+        $side = $this->sideMode($request);
+
+        $cards = $batch->cards()
+            ->whereNull('client_id')          // only unassigned cards
+            ->orderBy('card_number')
+            ->limit($qty)
+            ->get();
+
+        abort_if($cards->isEmpty(), 404, 'Aucune carte vierge disponible dans ce lot.');
+
+        // Mark as exported so we can track what was sent to the printer
+        $this->markCardsAsExported($cards);
+
+        $filenamePrefix = 'cartes-vierges-pvc-' . ($batch->name
+            ? \Illuminate\Support\Str::slug($batch->name)
+            : $batch->id);
+
+        return $this->downloadPdf(
+            cards: $cards,
+            batch: $batch,
+            filenamePrefix: $filenamePrefix,
+            request: $request,
+        );
+    }
+
     public function exportCsv(LoyaltyCardBatch $batch): StreamedResponse
     {
         $filename = 'loyalty-cards-' . ($batch->name ? Str::slug($batch->name) : $batch->id) . '.csv';
