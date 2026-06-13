@@ -292,93 +292,96 @@ class LoyaltyCardResource extends Resource
                         'card' => $record,
                         'side' => (string) ($data['side'] ?? 'front'),
                     ]))),
-                 EditAction::make(),
-            ])
+                 Tables\Actions\EditAction::make(),
+                 Tables\Actions\DeleteAction::make(),
             ->bulkActions([
-                BulkAction::make('print_selected')
-                    ->label('Imprimer la sélection')
-                    ->icon('heroicon-o-printer')
-                    ->color('info')
-                    ->requiresConfirmation()
-                    ->form([
-                        Forms\Components\Select::make('per_page')
-                            ->label('Cartes par planche A4')
-                            ->options([
-                                4 => '4 cartes',
-                                6 => '6 cartes',
-                                8 => '8 cartes',
-                                10 => '10 cartes',
-                                12 => '12 cartes',
-                            ])
-                            ->default(8)
-                            ->required(),
-                        Forms\Components\Select::make('side')
-                            ->label('Faces à imprimer')
-                            ->options([
-                                'both' => 'Recto + verso',
-                                'front' => 'Recto uniquement',
-                                'back' => 'Verso uniquement',
-                            ])
-                            ->default('both')
-                            ->required(),
-                    ])
-                    ->action(function (Collection $records, array $data) {
-                        $ids = $records->pluck('id')->implode(',');
+                Tables\Actions\BulkActionGroup::make([
+                    BulkAction::make('print_selected')
+                        ->label('Imprimer la sélection')
+                        ->icon('heroicon-o-printer')
+                        ->color('info')
+                        ->requiresConfirmation()
+                        ->form([
+                            Forms\Components\Select::make('per_page')
+                                ->label('Cartes par planche A4')
+                                ->options([
+                                    4 => '4 cartes',
+                                    6 => '6 cartes',
+                                    8 => '8 cartes',
+                                    10 => '10 cartes',
+                                    12 => '12 cartes',
+                                ])
+                                ->default(8)
+                                ->required(),
+                            Forms\Components\Select::make('side')
+                                ->label('Faces à imprimer')
+                                ->options([
+                                    'both' => 'Recto + verso',
+                                    'front' => 'Recto uniquement',
+                                    'back' => 'Verso uniquement',
+                                ])
+                                ->default('both')
+                                ->required(),
+                        ])
+                        ->action(function (Collection $records, array $data) {
+                            $ids = $records->pluck('id')->implode(',');
 
-                        if ($ids === '') {
-                            Notification::make()->title('Aucune carte sélectionnée.')->warning()->send();
+                            if ($ids === '') {
+                                Notification::make()->title('Aucune carte sélectionnée.')->warning()->send();
 
-                            return;
-                        }
+                                return;
+                            }
 
-                        return redirect()->away(route('loyalty.print.selected', [
-                            'ids' => $ids,
-                            'per_page' => (int) ($data['per_page'] ?? 8),
-                            'side' => (string) ($data['side'] ?? 'both'),
-                        ]));
-                    }),
-                BulkAction::make('export_selected_pdf')
-                    ->label('Exporter sélection PDF')
-                    ->icon('heroicon-o-document-arrow-down')
-                    ->color('warning')
-                    ->requiresConfirmation()
-                    ->form([
-                        Forms\Components\Select::make('per_page')
-                            ->label('Cartes par planche A4')
-                            ->options([
-                                4 => '4 cartes',
-                                6 => '6 cartes',
-                                8 => '8 cartes',
-                                10 => '10 cartes',
-                                12 => '12 cartes',
-                            ])
-                            ->default(8)
-                            ->required(),
-                        Forms\Components\Select::make('side')
-                            ->label('Faces dans le PDF')
-                            ->options([
-                                'both' => 'Recto + verso',
-                                'front' => 'Recto uniquement',
-                                'back' => 'Verso uniquement',
-                            ])
-                            ->default('front')
-                            ->required(),
-                    ])
-                    ->action(function (Collection $records, array $data) {
-                        $ids = $records->pluck('id')->implode(',');
+                            return redirect()->away(route('loyalty.print.selected', [
+                                'ids' => $ids,
+                                'per_page' => (int) ($data['per_page'] ?? 8),
+                                'side' => (string) ($data['side'] ?? 'both'),
+                            ]));
+                        }),
+                    BulkAction::make('export_selected_pdf')
+                        ->label('Exporter sélection PDF')
+                        ->icon('heroicon-o-document-arrow-down')
+                        ->color('warning')
+                        ->requiresConfirmation()
+                        ->form([
+                            Forms\Components\Select::make('per_page')
+                                ->label('Cartes par planche A4')
+                                ->options([
+                                    4 => '4 cartes',
+                                    6 => '6 cartes',
+                                    8 => '8 cartes',
+                                    10 => '10 cartes',
+                                    12 => '12 cartes',
+                                ])
+                                ->default(8)
+                                ->required(),
+                            Forms\Components\Select::make('side')
+                                ->label('Faces dans le PDF')
+                                ->options([
+                                    'both' => 'Recto + verso',
+                                    'front' => 'Recto uniquement',
+                                    'back' => 'Verso uniquement',
+                                ])
+                                ->default('front')
+                                ->required(),
+                        ])
+                        ->action(function (Collection $records, array $data) {
+                            $ids = $records->pluck('id')->implode(',');
 
-                        if ($ids === '') {
-                            Notification::make()->title('Aucune carte sélectionnée.')->warning()->send();
+                            if ($ids === '') {
+                                Notification::make()->title('Aucune carte sélectionnée.')->warning()->send();
 
-                            return;
-                        }
+                                return;
+                            }
 
-                        return redirect()->away(route('loyalty.export.selected.pdf', [
-                            'ids' => $ids,
-                            'per_page' => (int) ($data['per_page'] ?? 8),
-                            'side' => (string) ($data['side'] ?? 'front'),
-                        ]));
-                    }),
+                            return redirect()->away(route('loyalty.export.selected.pdf', [
+                                'ids' => $ids,
+                                'per_page' => (int) ($data['per_page'] ?? 8),
+                                'side' => (string) ($data['side'] ?? 'front'),
+                            ]));
+                        }),
+                    Tables\Actions\DeleteBulkAction::make(),
+                ]),
             ]);
     }
 
