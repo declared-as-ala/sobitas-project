@@ -9,6 +9,9 @@ use App\Models\LoyaltyCard;
 use App\Services\LoyaltyService;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms;
 use Filament\Notifications\Notification;
@@ -292,11 +295,11 @@ class LoyaltyCardResource extends Resource
                         'card' => $record,
                         'side' => (string) ($data['side'] ?? 'front'),
                     ]))),
-                 Tables\Actions\EditAction::make(),
-                 Tables\Actions\DeleteAction::make(),
+                 EditAction::make(),
+                 DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
+                BulkActionGroup::make([
                     BulkAction::make('print_selected')
                         ->label('Imprimer la sélection')
                         ->icon('heroicon-o-printer')
@@ -381,7 +384,7 @@ class LoyaltyCardResource extends Resource
                                 'side' => (string) ($data['side'] ?? 'front'),
                             ]));
                         }),
-                    Tables\Actions\DeleteBulkAction::make(),
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }
