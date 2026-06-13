@@ -111,7 +111,7 @@
             position: absolute;
             left: 4.2mm;
             top: 4.2mm;
-            width: 43mm;
+            width: 45mm;
             height: 41mm;
             z-index: 10;
         }
@@ -189,7 +189,7 @@
             line-height: 1;
         }
         .card-number {
-            font-size: 5.2mm;
+            font-size: 3.8mm;
             font-weight: 900;
             line-height: 1;
             letter-spacing: 0.15mm;
@@ -353,6 +353,12 @@
             height: 5mm;
             margin-bottom: 0.8mm;
         }
+        .back-logo-wrap img {
+            height: 5mm;
+            width: auto;
+            max-width: 38mm;
+            display: block;
+        }
         .back-logo-text {
             font-size: 4.5mm;
             font-weight: 900;
@@ -496,13 +502,13 @@
         }
         .back-pill-item-1 {
             float: left;
-            width: 44%;
+            width: 52%;
             padding-top: 1.8mm;
             padding-left: 2mm;
         }
         .back-pill-item-2 {
             float: left;
-            width: 26%;
+            width: 22%;
             padding-top: 1.8mm;
             text-align: center;
             border-left: .2mm solid #e9ecef;
@@ -513,7 +519,7 @@
         }
         .back-pill-item-3 {
             float: right;
-            width: 28%;
+            width: 26%;
             padding-top: 1.8mm;
             text-align: right;
             padding-right: 2mm;
@@ -546,6 +552,15 @@
             display: inline-block;
             vertical-align: middle;
         }
+        .back-pill-item-1 .back-pill-text {
+            font-size: 1.22mm;
+        }
+        .back-pill-item-2 .back-pill-text {
+            font-size: 1.35mm;
+        }
+        .back-pill-item-3 .back-pill-text {
+            font-size: 1.4mm;
+        }
 
         @media print {
             body { background: #fff; }
@@ -560,19 +575,58 @@
         }
 
         @if(isset($isPdf) && $isPdf)
-        /* PDF specific overrides since DomPDF doesn't support Grid/Flexbox */
+        /* PDF specific overrides since DomPDF doesn't support Grid/Flexbox and CSS Variables */
+        .sheet {
+            margin: 0 !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            background: transparent !important;
+            width: 100% !important;
+            height: 100% !important;
+            page-break-after: always !important;
+            page-break-inside: avoid !important;
+        }
         .cards-grid {
             display: block !important;
             width: 100% !important;
         }
         .sobitas-card {
+            width: 85.6mm !important;
+            height: 54.0mm !important;
+            border-radius: 3.4mm !important;
+            box-shadow: none !important;
             display: block !important;
             float: left !important;
             margin: 3mm !important;
         }
+        .sobitas-front {
+            background: #ffffff !important;
+        }
+        .front-top-corner {
+            background: #ff5a0a !important;
+        }
+        .label-fidelite {
+            color: #ff5a0a !important;
+        }
+        .votre-carte {
+            background: #ff5a0a !important;
+        }
+        .barcode-block {
+            border-color: #ff5a0a !important;
+        }
+        .scan-pill {
+            background: #ff5a0a !important;
+        }
+        .footer-bar-icon-wrap {
+            background: #ff5a0a !important;
+        }
+        .orange {
+            color: #ff5a0a !important;
+        }
         .front-left-content {
             float: left !important;
-            width: 43mm !important;
+            width: 45mm !important;
             height: 41mm !important;
             position: relative !important;
             margin-left: 4.2mm !important;
@@ -597,9 +651,6 @@
             background: #ffffff !important;
             border-top: .15mm solid #dee2e6 !important;
         }
-        .sheet {
-            page-break-inside: avoid !important;
-        }
         
         /* Back Card PDF Specific Overrides */
         .sobitas-back {
@@ -613,6 +664,30 @@
             position: relative !important;
             margin-left: 4.5mm !important;
             margin-top: 3.5mm !important;
+        }
+        .back-logo-text {
+            color: #ff5a0a !important;
+        }
+        .back-title .orange {
+            color: #ff5a0a !important;
+        }
+        .back-rule-badge {
+            background: #ff5a0a !important;
+        }
+        .back-rule-text .orange {
+            color: #ff5a0a !important;
+        }
+        .back-watermark-line {
+            background: #ff5a0a !important;
+        }
+        .back-watermark-icon {
+            color: #ff5a0a !important;
+        }
+        .thanks-underline-white {
+            background: #ff5a0a !important;
+        }
+        .back-pill-icon-wrap {
+            background: #ff5a0a !important;
         }
         .back-right-content {
             float: right !important;
@@ -741,10 +816,6 @@
                         </div>
                     </div>
 
-                    <div class="front-website">
-                        protein.tn
-                    </div>
-
                     <!-- Bottom advantages bar matching Photo 2 -->
                     <div class="front-footer-bar">
                         @if(isset($isPdf) && $isPdf)
@@ -845,7 +916,11 @@
                         <!-- Left Column: Branding and Advantages rules -->
                         <div class="back-left-content">
                             <div class="back-logo-wrap">
-                                <span class="back-logo-text">SOBITAS</span>
+                                @if($logoSrc)
+                                    <img src="{{ $logoSrc }}" alt="SOBITAS">
+                                @else
+                                    <span class="back-logo-text">SOBITAS</span>
+                                @endif
                                 <div class="back-logo-underline"></div>
                             </div>
                             <h2 class="back-title">VOS <span class="orange">AVANTAGES</span></h2>
