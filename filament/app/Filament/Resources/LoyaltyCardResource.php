@@ -294,6 +294,7 @@ class LoyaltyCardResource extends Resource
                     ]))),
                  Tables\Actions\EditAction::make(),
                  Tables\Actions\DeleteAction::make(),
+            ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     BulkAction::make('print_selected')
