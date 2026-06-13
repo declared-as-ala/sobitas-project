@@ -23,7 +23,7 @@ class LoyaltyCardBatchResource extends Resource
 {
     protected static ?string $model = LoyaltyCardBatch::class;
 
-    protected static bool $shouldRegisterNavigation = false;
+    protected static bool $shouldRegisterNavigation = true;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-rectangle-stack';
 
