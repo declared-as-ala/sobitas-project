@@ -13,6 +13,7 @@
         $sideMode = in_array(($sideMode ?? 'both'), ['both', 'front', 'back'], true) ? $sideMode : 'both';
         $showFront = in_array($sideMode, ['both', 'front'], true);
         $showBack = in_array($sideMode, ['both', 'back'], true);
+        $loyaltyService = app(\App\Services\LoyaltyService::class);
     @endphp
     <style>
         :root {
@@ -72,14 +73,14 @@
             width: var(--card-width);
             height: var(--card-height);
             border-radius: var(--card-radius);
-            border: .28mm solid #c8c9cd;
+            border: .28mm solid #3f3f46;
             overflow: hidden;
             position: relative;
-            box-shadow: 0 1.2mm 2.8mm rgba(0, 0, 0, .14);
-            background: #fff;
+            box-shadow: 0 1.2mm 2.8mm rgba(0, 0, 0, .3);
+            background: #0f1013;
         }
         .sobitas-front {
-            background: #fff;
+            background: linear-gradient(135deg, #111215 0%, #1e2025 100%);
             display: flex;
             flex-direction: column;
         }
@@ -89,7 +90,7 @@
             left: 0;
             width: 9mm;
             height: 9mm;
-            background: var(--sobitas-orange);
+            background: linear-gradient(135deg, #d4af37 0%, #aa7c11 100%);
             clip-path: polygon(0 0, 100% 0, 0 100%);
             z-index: 4;
         }
@@ -100,7 +101,7 @@
             flex: 1 1 0;
             min-height: 0;
             display: grid;
-            grid-template-columns: 1fr 22mm;
+            grid-template-columns: 1fr 31mm;
             column-gap: 2.5mm;
             align-items: start;
             padding: 4mm 4mm 2mm 4.2mm;
@@ -123,12 +124,13 @@
             object-fit: contain;
             display: block;
             margin-bottom: .6mm;
+            filter: brightness(0) invert(1); /* Forces logo text/graphics to render in crisp white on dark layout */
         }
         .logo-text-fallback {
             font-size: 5.2mm;
             font-weight: 900;
             font-style: italic;
-            color: var(--sobitas-orange);
+            color: #d4af37;
             letter-spacing: -.02em;
             margin: 0 0 .4mm 0;
         }
@@ -136,7 +138,7 @@
             font-size: 2.35mm;
             font-weight: 700;
             letter-spacing: .38mm;
-            color: #1a1b1e;
+            color: #ffffff;
             text-transform: uppercase;
             margin: 0 0 2.2mm 0;
             line-height: 1.2;
@@ -150,7 +152,7 @@
             font-size: 4mm;
             line-height: 1;
             font-weight: 800;
-            color: #1a1b1e;
+            color: #a1a1aa;
             text-transform: uppercase;
             margin: 0;
         }
@@ -158,7 +160,7 @@
             font-size: 6.8mm;
             line-height: 1;
             font-weight: 900;
-            color: #1a1b1e;
+            color: #d4af37;
             letter-spacing: .12mm;
             text-transform: uppercase;
             margin: .35mm 0 0 0;
@@ -166,7 +168,7 @@
         .title-underline {
             width: 14mm;
             height: .5mm;
-            background: var(--sobitas-orange);
+            background: linear-gradient(90deg, #d4af37 0%, #ff5a0a 100%);
             border-radius: .2mm;
             margin: 1mm 0 .9mm 0;
         }
@@ -174,7 +176,7 @@
             font-size: 2.35mm;
             letter-spacing: .12mm;
             font-weight: 700;
-            color: #2c2f34;
+            color: #d4d4d8;
             text-transform: uppercase;
             line-height: 1.2;
             margin: 0;
@@ -188,21 +190,23 @@
             gap: 1mm;
             padding-top: 0;
             flex-shrink: 0;
+            width: 31mm;
         }
-        .qr-block {
-            width: 20mm;
-            height: 20mm;
+        .barcode-block {
+            width: 31mm;
+            height: 14mm;
             border: .4mm solid var(--sobitas-orange);
-            border-radius: 2mm;
-            padding: 1mm;
+            border-radius: 1.5mm;
+            padding: 1.2mm;
             background: #fff;
             box-shadow: 0 .4mm 1.2mm rgba(0, 0, 0, .12);
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
+            overflow: hidden;
         }
-        .qr-block svg { width: 100%; height: 100%; display: block; }
+        .barcode-block svg { width: 100%; height: 100%; display: block; }
         .scan-pill {
             background: linear-gradient(180deg, #ff6d1a 0%, #ff4f00 100%);
             color: #fff;
@@ -244,7 +248,7 @@
             bottom: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(105deg, #1a1b1f 0%, #121317 45%, #1e1f24 100%);
+            background: linear-gradient(105deg, #18191d 0%, #0c0d0f 100%);
             /* Diagonal top edge: leaves bottom-right corner whiter for URL + QR column */
             clip-path: polygon(0 22%, 58% 0, 100% 0, 100% 100%, 0 100%);
         }
@@ -256,8 +260,8 @@
             height: 100%;
             pointer-events: none;
             clip-path: polygon(0 22%, 58% 0, 100% 0, 100% 100%, 0 100%);
-            background: linear-gradient(90deg, transparent 0%, transparent 52%, rgba(255, 90, 10, .95) 56%, rgba(255, 90, 10, .85) 58%, transparent 60%);
-            opacity: .35;
+            background: linear-gradient(90deg, transparent 0%, transparent 52%, #d4af37 56%, #aa7c11 58%, transparent 60%);
+            opacity: .85;
         }
         .front-footer-inner {
             position: relative;
@@ -266,7 +270,7 @@
             max-width: 52mm;
         }
         .votre-carte {
-            color: var(--sobitas-orange);
+            color: #d4af37;
             font-size: 2.9mm;
             font-weight: 800;
             text-transform: uppercase;
@@ -284,10 +288,11 @@
             font-family: "Arial Black", Arial, sans-serif;
             text-transform: uppercase;
             white-space: nowrap;
+            text-shadow: 0 0 1.5mm rgba(255, 90, 10, 0.45);
         }
         .front-note {
             font-size: 2.85mm;
-            color: rgba(255, 255, 255, .95);
+            color: rgba(255, 255, 255, .8);
             font-weight: 600;
             display: flex;
             align-items: flex-start;
@@ -297,7 +302,7 @@
             max-width: 44mm;
         }
         .front-note .arrow {
-            color: var(--sobitas-orange);
+            color: #d4af37;
             font-size: 3.8mm;
             font-weight: 900;
             line-height: 1;
@@ -311,7 +316,7 @@
             display: inline-flex;
             align-items: center;
             gap: .6mm;
-            color: #1a1b1e;
+            color: #d4af37;
             font-size: 3.2mm;
             font-weight: 700;
         }
@@ -323,7 +328,7 @@
 
         /* === BACK CARD === */
         .sobitas-back {
-            background: #f5f5f6;
+            background: linear-gradient(135deg, #111215 0%, #1e2025 100%);
         }
         .back-left-dark {
             position: absolute;
@@ -331,7 +336,7 @@
             top: 0;
             width: 46.5mm;
             height: 45.5mm;
-            background: linear-gradient(115deg, #1a1b1f 0%, #121317 65%, #1b1c20 100%);
+            background: linear-gradient(115deg, #141517 0%, #0d0e10 100%);
             clip-path: polygon(0 0, 100% 0, 70% 100%, 0 100%);
         }
         .back-orange-divider {
@@ -340,7 +345,7 @@
             top: -1mm;
             width: 2.2mm;
             height: 48mm;
-            background: var(--sobitas-orange);
+            background: #d4af37;
             transform: skewX(-36deg);
         }
         .back-white-divider {
@@ -349,7 +354,7 @@
             top: -1mm;
             width: 1.2mm;
             height: 48mm;
-            background: #fff;
+            background: var(--sobitas-orange);
             transform: skewX(-36deg);
         }
         .back-brand-icon {
@@ -359,7 +364,7 @@
             width: 6.8mm;
             height: 6.8mm;
             border-radius: 2.2mm;
-            background: linear-gradient(180deg, #ff6b1b, #ff4f00);
+            background: linear-gradient(180deg, #d4af37 0%, #aa7c11 100%);
             color: #fff;
             font-size: 6.2mm;
             font-weight: 900;
@@ -386,7 +391,7 @@
             content: "";
             width: 15.5mm;
             height: .45mm;
-            background: var(--sobitas-orange);
+            background: #d4af37;
         }
         .back-rules {
             position: absolute;
@@ -394,7 +399,7 @@
             top: 11.5mm;
             z-index: 3;
             width: 39.2mm;
-            color: #fff;
+            color: #ffffff;
         }
         .rule-row {
             display: grid;
@@ -407,8 +412,8 @@
             width: 5.6mm;
             height: 5.6mm;
             border-radius: 50%;
-            background: #ff5a0a;
-            color: #fff;
+            background: #d4af37;
+            color: #000;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -423,7 +428,7 @@
             font-weight: 900;
             text-transform: uppercase;
         }
-        .rule-text .orange { color: var(--sobitas-orange); }
+        .rule-text .orange { color: #d4af37; }
         .thanks-area {
             position: absolute;
             right: 4.2mm;
@@ -431,7 +436,7 @@
             width: 28.5mm;
             text-align: center;
             z-index: 3;
-            color: #1f2124;
+            color: #ffffff;
         }
         .thanks-main {
             font-size: 5.2mm;
@@ -443,7 +448,7 @@
         .thanks-underline {
             width: 17mm;
             height: .55mm;
-            background: var(--sobitas-orange);
+            background: #d4af37;
             margin: 0 auto;
             border-radius: 2mm;
         }
@@ -461,7 +466,8 @@
             right: 0;
             bottom: 0;
             height: 7.9mm;
-            background: linear-gradient(180deg, #ff6a18 0%, #ff4e00 100%);
+            background: linear-gradient(180deg, #1c1d22 0%, #0e0f11 100%);
+            border-top: .3mm solid #d4af37;
             color: #fff;
             z-index: 4;
             display: grid;
@@ -495,6 +501,44 @@
             }
             .sobitas-card { box-shadow: none; }
         }
+
+        @if(isset($isPdf) && $isPdf)
+        /* PDF specific overrides since DomPDF doesn't support Grid/Flexbox */
+        .cards-grid {
+            display: block !important;
+            width: 100% !important;
+        }
+        .sobitas-card {
+            display: block !important;
+            float: left !important;
+            margin: 3mm !important;
+        }
+        .front-upper {
+            display: block !important;
+            width: 100% !important;
+            height: 32mm !important;
+        }
+        .front-upper-left {
+            float: left !important;
+            width: 42mm !important;
+        }
+        .front-upper-right {
+            float: right !important;
+            width: 31mm !important;
+            text-align: center !important;
+        }
+        .front-footer {
+            clear: both !important;
+            display: block !important;
+            width: 100% !important;
+            position: absolute !important;
+            bottom: 0 !important;
+            left: 0 !important;
+        }
+        .sheet {
+            page-break-inside: avoid !important;
+        }
+        @endif
     </style>
 </head>
 <body>
@@ -538,8 +582,8 @@
                             </div>
                         </div>
                         <div class="front-upper-right">
-                            <div class="qr-block">
-                                {!! \SimpleSoftwareIO\QrCode\Facades\QrCode::size(110)->margin(0)->generate($card->qr_token) !!}
+                            <div class="barcode-block">
+                                {!! $loyaltyService->generateBarcode39Svg($card->card_number) !!}
                             </div>
                             <div class="scan-pill">
                                 <svg class="scan-glyph" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 1H7c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-2-2-2zm0 18H7V5h10v14z"/></svg>
@@ -567,6 +611,9 @@
                     </div>
                 </article>
             @endforeach
+            @if(isset($isPdf) && $isPdf)
+                <div style="clear: both;"></div>
+            @endif
         </div>
     </section>
     @endif
@@ -618,6 +665,9 @@
                         </div>
                     </article>
                 @endforeach
+                @if(isset($isPdf) && $isPdf)
+                    <div style="clear: both;"></div>
+                @endif
             </div>
         </section>
     @endif

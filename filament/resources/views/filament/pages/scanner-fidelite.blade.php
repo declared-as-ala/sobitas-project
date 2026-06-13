@@ -277,8 +277,8 @@
                 + Créer un nouveau client
             </button>
             @else
-            <div class="sf-new-form">
-                <input type="text" wire:model="newClientName"    class="sf-form-input" placeholder="Nom et Prénom *">
+            <div class="sf-new-form" x-data x-init="$nextTick(() => document.getElementById('new-client-name-input').focus())">
+                <input type="text" id="new-client-name-input" wire:model="newClientName"    class="sf-form-input" placeholder="Nom et Prénom *">
                 <input type="text" wire:model="newClientPhone"   class="sf-form-input" placeholder="Téléphone">
                 <input type="text" wire:model="newClientAdresse" class="sf-form-input" placeholder="Adresse">
                 <div class="sf-form-row">

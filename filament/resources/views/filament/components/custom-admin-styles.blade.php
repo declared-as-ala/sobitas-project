@@ -1236,29 +1236,38 @@
             if (key) group.setAttribute('data-sb-group', key);
         });
 
-        /* 2 — Inject Bootstrap Icons per nav item */
+        /* 2 — Inject Bootstrap Icons per nav item
+           Filament v3 renders: <a class="fi-sidebar-item-button">
+             <svg class="fi-sidebar-item-icon">...</svg>
+             <span class="truncate">Label Text</span>
+           </a>
+           We add a <i class="bi ..."> BEFORE the truncate span.
+        */
         document.querySelectorAll('.fi-sidebar-item-button').forEach(btn => {
-            /* Skip if already processed */
-            if (btn.querySelector('.sb-bi')) return;
+            if (btn.querySelector('.sb-bi')) return; // already processed
 
-            /* Find the label span (Filament renders it as a span after the icon svg) */
-            const labelEl = btn.querySelector('.fi-sidebar-item-label') ||
-                            [...btn.childNodes].find(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim()) ||
-                            btn.querySelector('span:not(.fi-sidebar-item-icon)');
+            /* Try all known Filament v3 label selectors */
+            const labelEl =
+                btn.querySelector('span.truncate') ||
+                btn.querySelector('.fi-sidebar-item-label') ||
+                btn.querySelector('span:not([class*="icon"])') ||
+                [...btn.childNodes].find(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim());
 
             if (!labelEl) return;
 
             const labelText = (labelEl.textContent || labelEl.nodeValue || '').trim();
+            if (!labelText) return;
+
             const iconClass = getIcon(labelText);
             if (!iconClass) return;
 
             const bi = document.createElement('i');
             bi.className = `bi ${iconClass} sb-bi`;
             bi.setAttribute('aria-hidden', 'true');
+            bi.title = labelText;
 
-            /* Insert before the label */
-            const parent = labelEl.parentNode;
-            parent.insertBefore(bi, labelEl);
+            /* Insert the Bootstrap Icon right before the label span */
+            labelEl.parentNode.insertBefore(bi, labelEl);
         });
     }
 

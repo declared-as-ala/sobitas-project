@@ -54,6 +54,20 @@ class LoyaltyCardResource extends Resource
                 Forms\Components\TextInput::make('card_number')
                     ->label('N° Carte')
                     ->disabled(),
+                Forms\Components\Placeholder::make('barcode_preview')
+                    ->label('Aperçu Code-barres')
+                    ->content(function (?LoyaltyCard $record) {
+                        if (! $record) {
+                            return '—';
+                        }
+                        $svg = app(\App\Services\LoyaltyService::class)->generateBarcode39Svg($record->card_number);
+                        return new \Illuminate\Support\HtmlString(
+                            '<div style="background: white; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; display: inline-block;">' .
+                            '<div style="width: 250px; height: 50px;">' . $svg . '</div>' .
+                            '<div style="text-align: center; font-family: monospace; font-size: 13px; margin-top: 4px; letter-spacing: 2px; color: #1e293b;">' . e($record->card_number) . '</div>' .
+                            '</div>'
+                        );
+                    }),
                 Forms\Components\Select::make('status')
                     ->label('Statut')
                     ->default(fn (): string => LoyaltyCard::preferredAvailableStatusValue())

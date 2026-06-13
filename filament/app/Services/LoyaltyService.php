@@ -539,4 +539,74 @@ class LoyaltyService
             ];
         }
     }
+
+    /**
+     * Generate Code 39 barcode SVG for a given text.
+     */
+    public function generateBarcode39Svg(string $text): string
+    {
+        $code39 = [
+            '0' => 'nnnwwnwnn', '1' => 'wnnwnnnnw', '2' => 'nnwwnnnnw', '3' => 'wnwwnnnnn',
+            '4' => 'nnnwwnnnw', '5' => 'wnnwwnnnn', '6' => 'nnwwwnnnn', '7' => 'nnnwnnwnw',
+            '8' => 'wnnwnnwnn', '9' => 'nnwwnnwnn', 'A' => 'wnnnnwnnw', 'B' => 'nnwnnwnnw',
+            'C' => 'wnwnnwnnn', 'D' => 'nnnnwwnnw', 'E' => 'wnnnwwnnn', 'F' => 'nnwnwwnnn',
+            'G' => 'nnnnnwwnw', 'H' => 'wnnnnwwnn', 'I' => 'nnwnnwwnn', 'J' => 'nnnnwwwnn',
+            'K' => 'wnnnnnnww', 'L' => 'nnwnnnnww', 'M' => 'wnwnnnnwn', 'N' => 'nnnnwnnww',
+            'O' => 'wnnnwnnwn', 'P' => 'nnwnwnnwn', 'Q' => 'nnnnnnwww', 'R' => 'wnnnnnwwn',
+            'S' => 'nnwnnnwwn', 'T' => 'nnnnwnwwn', 'U' => 'wwnnnnnnw', 'V' => 'nwwnnnnnw',
+            'W' => 'wwwnnnnnn', 'X' => 'nwnnwnnnw', 'Y' => 'wwnnwnnnn', 'Z' => 'nwwnwnnnn',
+            '-' => 'nwnnnnwnw', '.' => 'wwnnnnwnn', ' ' => 'nwwnnnwnn', '*' => 'nwnnwnwnn',
+            '$' => 'nwnwnwnnn', '/' => 'nwnwnnnwn', '+' => 'nwnnnwnwn', '%' => 'nnnwnwnwn',
+        ];
+
+        $text = '*' . strtoupper(trim($text)) . '*';
+
+        $narrowWidth = 1.0;
+        $wideWidth = 2.5;
+        $gapWidth = 1.0;
+
+        $totalWidth = 0.0;
+        for ($i = 0; $i < strlen($text); $i++) {
+            $char = $text[$i];
+            if (!isset($code39[$char])) {
+                continue;
+            }
+            $pattern = $code39[$char];
+            for ($j = 0; $j < 9; $j++) {
+                $isWide = $pattern[$j] === 'w';
+                $totalWidth += $isWide ? $wideWidth : $narrowWidth;
+            }
+            if ($i < strlen($text) - 1) {
+                $totalWidth += $gapWidth;
+            }
+        }
+
+        if ($totalWidth === 0.0) {
+            return '';
+        }
+
+        $svg = '<svg viewBox="0 0 ' . $totalWidth . ' 50" width="100%" height="100%" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="shape-rendering:crispEdges;">';
+        $x = 0.0;
+        for ($i = 0; $i < strlen($text); $i++) {
+            $char = $text[$i];
+            if (!isset($code39[$char])) {
+                continue;
+            }
+            $pattern = $code39[$char];
+            for ($j = 0; $j < 9; $j++) {
+                $isWide = $pattern[$j] === 'w';
+                $w = $isWide ? $wideWidth : $narrowWidth;
+                $isBar = ($j % 2 === 0);
+
+                if ($isBar) {
+                    $svg .= '<rect x="' . $x . '" y="0" width="' . $w . '" height="50" fill="#000000"/>';
+                }
+                $x += $w;
+            }
+            $x += $gapWidth;
+        }
+        $svg .= '</svg>';
+
+        return $svg;
+    }
 }
