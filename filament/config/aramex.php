@@ -13,7 +13,7 @@ return [
 
     // Credentials sent inside every API request body (ClientInfo)
     'username'       => 'bitoutawalid@gmail.com',
-    'password'       => 'Walid@bitouta@0000',
+    'password'       => 'Aspire123@',
     'account_number' => '60506486',
     'account_pin'    => '0000',   // TODO: replace with real PIN from Aramex (+216 71 160 800)
     'account_entity' => 'TUN',
