@@ -7,7 +7,8 @@ import { Facebook, Instagram, Linkedin, Mail, Phone, MapPin, Sparkles, Loader2, 
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { motion } from 'motion/react';
-import { subscribeNewsletter, getCmsPages } from '@/services/api';
+import { subscribeNewsletter, getCmsPages, getCoordinates } from '@/services/api';
+import type { Coordinate } from '@/types';
 import { useSiteLogos } from '@/hooks/useSiteLogos';
 import { toast } from 'sonner';
 import type { CmsPage } from '@/services/api';
@@ -22,7 +23,12 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [shouldLoadMap, setShouldLoadMap] = useState(false);
   const [pages, setPages] = useState<CmsPage[]>(pagesProp ?? []);
+  const [coord, setCoord] = useState<Coordinate | null>(null);
   const mapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    getCoordinates().then(setCoord).catch(() => {});
+  }, []);
 
   // Fetch CMS pages when not provided (e.g. when used inside Client Components)
   useEffect(() => {
@@ -170,17 +176,17 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
           <div className="space-y-3 w-full">
             <h3 className="font-bold text-white text-sm uppercase tracking-wide">Contact</h3>
             <div className="space-y-2 text-sm text-gray-400">
-              <a href="tel:+21627612500" className="flex items-center gap-3 py-1.5 hover:text-red-500 min-w-0" aria-label="Appeler">
+              <a href={`tel:${(coord?.phone ?? '+21627612500').replace(/\s/g, '')}`} className="flex items-center gap-3 py-1.5 hover:text-red-500 min-w-0" aria-label="Appeler">
                 <Phone className="h-5 w-5 text-red-500 shrink-0" />
-                <span className="break-words">+216 27 612 500 / +216 73 200 169</span>
+                <span className="break-words">{coord?.phone ?? '+216 27 612 500'}</span>
               </a>
-              <a href="mailto:contact@protein.tn" className="flex items-center gap-3 py-1.5 hover:text-red-500 min-w-0">
+              <a href={`mailto:${coord?.email ?? 'contact@protein.tn'}`} className="flex items-center gap-3 py-1.5 hover:text-red-500 min-w-0">
                 <Mail className="h-5 w-5 text-red-500 shrink-0" />
-                <span>contact@protein.tn</span>
+                <span>{coord?.email ?? 'contact@protein.tn'}</span>
               </a>
               <div className="flex items-start gap-3 py-1.5 min-w-0">
                 <MapPin className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
-                <span className="break-words">Rue Ribat, 4000 Sousse, Tunisie</span>
+                <span className="break-words">{coord?.adresse ?? 'Rue Ribat, 4000 Sousse, Tunisie'}</span>
               </div>
             </div>
           </div>
@@ -236,17 +242,17 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
 
             {/* Contact Details */}
             <div className="space-y-3">
-              <a href="tel:+21627612500" className="flex items-center gap-3 text-sm hover:text-red-500 transition-colors" aria-label="Appeler au +216 27 612 500">
+              <a href={`tel:${(coord?.phone ?? '+21627612500').replace(/\s/g, '')}`} className="flex items-center gap-3 text-sm hover:text-red-500 transition-colors" aria-label="Appeler">
                 <Phone className="h-5 w-5 text-red-500" aria-hidden="true" />
-                <span>+216 27 612 500 / +216 73 200 169</span>
+                <span>{coord?.phone ?? '+216 27 612 500'}</span>
               </a>
-              <a href="mailto:contact@protein.tn" className="flex items-center gap-3 text-sm hover:text-red-500 transition-colors">
+              <a href={`mailto:${coord?.email ?? 'contact@protein.tn'}`} className="flex items-center gap-3 text-sm hover:text-red-500 transition-colors">
                 <Mail className="h-5 w-5 text-red-500" />
-                <span>contact@protein.tn</span>
+                <span>{coord?.email ?? 'contact@protein.tn'}</span>
               </a>
               <div className="flex items-start gap-3 text-sm">
                 <MapPin className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-                <span>Rue Ribat, 4000 Sousse, Tunisie</span>
+                <span>{coord?.adresse ?? 'Rue Ribat, 4000 Sousse, Tunisie'}</span>
               </div>
             </div>
 
