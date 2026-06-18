@@ -18,7 +18,6 @@ use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\Schema;
 
 class FactureResource extends Resource
 {
@@ -175,13 +174,13 @@ class FactureResource extends Resource
                     ->label('Envoyer Aramex')
                     ->icon('heroicon-o-truck')
                     ->color('primary')
-                    ->visible(fn (Facture $record): bool => Schema::hasColumn('factures', 'aramex_hawb') && ! $record->aramex_hawb)
+                    ->visible(fn (Facture $record): bool => \Illuminate\Support\Facades\Schema::hasColumn('factures', 'aramex_hawb') && ! $record->aramex_hawb)
                     ->requiresConfirmation()
                     ->modalHeading('Envoyer vers Aramex ?')
                     ->modalDescription('Créer une expédition Aramex pour ce bon de livraison.')
                     ->action(function (Facture $record): void {
                         try {
-                            if (! Schema::hasColumn('factures', 'aramex_hawb')) {
+                            if (! \Illuminate\Support\Facades\Schema::hasColumn('factures', 'aramex_hawb')) {
                                 Notification::make()
                                     ->title('Migration requise')
                                     ->body('Exécutez php artisan migrate pour activer Aramex.')
