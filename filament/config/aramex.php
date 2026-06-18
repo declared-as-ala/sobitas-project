@@ -14,8 +14,8 @@ return [
     // Credentials sent inside every API request body (ClientInfo)
     'username'         => env('ARAMEX_USERNAME', 'bitoutawalid@gmail.com'),
     'password'         => env('ARAMEX_PASSWORD', 'Walid@bitouta@0000'),
-    'account_number'   => env('ARAMEX_ACCOUNT_NUMBER', '71942559'),
-    'account_pin'      => env('ARAMEX_ACCOUNT_PIN', '226421'),
+    'account_number'   => env('ARAMEX_ACCOUNT_NUMBER', '60506486'),
+    'account_pin'      => env('ARAMEX_ACCOUNT_PIN', ''),  // request from Aramex: +216 71 160 800
     'account_entity'   => env('ARAMEX_ACCOUNT_ENTITY', 'TUN'),
     'account_country'  => env('ARAMEX_ACCOUNT_COUNTRY', 'TN'),
     'version'          => '1.0',
