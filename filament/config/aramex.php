@@ -15,7 +15,7 @@ return [
     'username'       => 'bitoutawalid@gmail.com',
     'password'       => 'Aspire123',
     'account_number' => '60506486',
-    'account_pin'    => '0000',   // ← WRONG — causes login failure. Get real PIN from Aramex
+    'account_pin'    => '321321',
     'account_entity' => 'TUN',
     'account_country' => 'TN',
     'version'          => '1.0',
