@@ -31,9 +31,9 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
   }, []);
 
   // The /coordonnees API returns the raw Coordinate model, so use its real
-  // column names (adresse_fr, phone_1, phone_2, email). Fallbacks keep the
-  // footer populated if the API is unreachable.
-  const contactAddress = coord?.adresse_fr || 'Rue Ribat, 4000 Sousse, Tunisie';
+  // column names (adresse_fr/adresse, phone_1, phone_2, email).
+  const contactAddress = coord?.adresse_fr || coord?.adresse || '';
+  const mapEmbedHtml = coord?.gelocalisation || '';
   const contactEmail = coord?.email || 'contact@protein.tn';
   const contactPhones = [coord?.phone_1, coord?.phone_2].filter(Boolean).join(' / ') || '+216 27 612 500 / +216 73 200 169';
   const contactPhoneHref = `tel:${String(coord?.phone_1 || '+21627612500').replace(/\s/g, '')}`;
@@ -192,10 +192,12 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
                 <Mail className="h-5 w-5 text-red-500 shrink-0" />
                 <span>{contactEmail}</span>
               </a>
-              <div className="flex items-start gap-3 py-1.5 min-w-0">
-                <MapPin className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
-                <span className="break-words">{contactAddress}</span>
-              </div>
+              {contactAddress ? (
+                <div className="flex items-start gap-3 py-1.5 min-w-0">
+                  <MapPin className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+                  <span className="break-words">{contactAddress}</span>
+                </div>
+              ) : null}
             </div>
           </div>
 
@@ -258,10 +260,12 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
                 <Mail className="h-5 w-5 text-red-500" />
                 <span>{contactEmail}</span>
               </a>
-              <div className="flex items-start gap-3 text-sm">
-                <MapPin className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-                <span>{contactAddress}</span>
-              </div>
+              {contactAddress ? (
+                <div className="flex items-start gap-3 text-sm">
+                  <MapPin className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+                  <span>{contactAddress}</span>
+                </div>
+              ) : null}
             </div>
 
             {/* Social Media */}
@@ -411,40 +415,24 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
         </div>
 
         {/* Map Section - Deferred loading, reduced height on mobile */}
+        {mapEmbedHtml ? (
         <div className="mt-8 md:mt-12" ref={mapRef}>
           <h3 className="font-bold md:font-semibold text-white text-base md:text-inherit mb-3 md:mb-4">Géolocalisation</h3>
-          <a 
-            href="https://maps.app.goo.gl/w2ytnYAKSZDmjznh6" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="block rounded-2xl md:rounded-xl overflow-hidden h-48 md:h-64 bg-gray-800 hover:opacity-90 transition-opacity cursor-pointer group relative"
-            aria-label="Ouvrir la localisation sur Google Maps"
-          >
+          <div className="rounded-2xl md:rounded-xl overflow-hidden h-48 md:h-64 bg-gray-800 [&_iframe]:h-full [&_iframe]:w-full [&_iframe]:border-0">
             {shouldLoadMap ? (
-              <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3234.515082636619!2d10.630613400000001!3d35.8363715!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x1302131b30e891b1%3A0x51dae0f25849b20c!2sPROT%C3%89INE%20TUNISIE%20%E2%80%93%20SOBITAS%20%7C%20Whey%20%26%20Mat%C3%A9riel%20Musculation%20Sousse!5e0!3m2!1sen!2stn!4v1769445253876!5m2!1sen!2stn"
-                width="100%"
-                height="100%"
-                style={{ border: 0, pointerEvents: 'none' }}
-                allowFullScreen
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                title="PROTÉINE TUNISIE | Whey & Matériel Musculation Sousse"
-              ></iframe>
+              <div
+                className="h-full w-full"
+                dangerouslySetInnerHTML={{ __html: mapEmbedHtml }}
+              />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-400 group-hover:text-red-500 transition-colors">
+              <div className="w-full h-full flex items-center justify-center text-gray-400">
                 <MapPin className="h-12 w-12" aria-hidden="true" />
                 <span className="sr-only">Carte de localisation</span>
               </div>
             )}
-            {/* Overlay to indicate clickability */}
-            <div className="absolute inset-0 bg-transparent group-hover:bg-black/5 transition-colors flex items-center justify-center">
-              <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-black/70 text-white px-4 py-2 rounded-lg text-sm font-semibold">
-                Cliquez pour ouvrir sur Google Maps
-              </div>
             </div>
-          </a>
-        </div>
+          </div>
+        ) : null}
       </div>
 
       {/* Bottom Bar - Compact on mobile */}
