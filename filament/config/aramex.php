@@ -9,15 +9,15 @@ return [
     | ARAMEX_SANDBOX=false → ws.aramex.net      (live account from sales team)
     */
 
-    'sandbox' => (bool) env('ARAMEX_SANDBOX', true),
+    'sandbox' => false,
 
     // Credentials sent inside every API request body (ClientInfo)
-    'username'         => env('ARAMEX_USERNAME', 'bitoutawalid@gmail.com'),
-    'password'         => env('ARAMEX_PASSWORD', 'Walid@bitouta@0000'),
-    'account_number'   => env('ARAMEX_ACCOUNT_NUMBER', '60506486'),
-    'account_pin'      => env('ARAMEX_ACCOUNT_PIN', ''),  // request from Aramex: +216 71 160 800
-    'account_entity'   => env('ARAMEX_ACCOUNT_ENTITY', 'TUN'),
-    'account_country'  => env('ARAMEX_ACCOUNT_COUNTRY', 'TN'),
+    'username'       => 'bitoutawalid@gmail.com',
+    'password'       => 'Walid@bitouta@0000',
+    'account_number' => '60506486',
+    'account_pin'    => '0000',   // TODO: replace with real PIN from Aramex (+216 71 160 800)
+    'account_entity' => 'TUN',
+    'account_country' => 'TN',
     'version'          => '1.0',
 
     // Shipment defaults for domestic Tunisia
