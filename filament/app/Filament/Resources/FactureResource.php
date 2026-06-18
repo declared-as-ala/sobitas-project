@@ -102,16 +102,24 @@ class FactureResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $query) => $query
-                ->select([
+            ->modifyQueryUsing(function (Builder $query) {
+                $columns = [
                     'factures.id',
                     'factures.numero',
                     'factures.client_id',
                     'factures.net_a_payer',
                     'factures.created_at',
-                ])
-                ->with('client:id,name')
-            )
+                ];
+                if (\Illuminate\Support\Facades\Schema::hasColumn('factures', 'aramex_hawb')) {
+                    $columns = array_merge($columns, [
+                        'factures.aramex_hawb',
+                        'factures.aramex_label_url',
+                        'factures.aramex_status',
+                    ]);
+                }
+
+                return $query->select($columns)->with('client:id,name');
+            })
             ->columns([
                 Tables\Columns\TextColumn::make('numero')
                     ->label('Numéro B.L')
