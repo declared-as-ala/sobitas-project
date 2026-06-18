@@ -38,6 +38,58 @@ class AramexService
     }
 
     /**
+     * Aramex Tunisia only accepts governorate-level city names. The shop stores
+     * delegation-style values like "BIZERTE NORD (Bizerte)" which Aramex rejects.
+     * Map any raw value to one of the 24 canonical governorates.
+     */
+    private function normalizeCity(?string $raw): string
+    {
+        $default = 'Sousse';
+        if (! $raw) {
+            return $default;
+        }
+
+        $ascii = strtoupper($this->stripAccents($raw));
+
+        // Ordered: multi-word / more specific names first to avoid partial clashes.
+        $governorates = [
+            'Sidi Bouzid', 'Ben Arous', 'Ariana', 'Manouba', 'Nabeul', 'Zaghouan',
+            'Bizerte', 'Jendouba', 'Siliana', 'Sousse', 'Monastir', 'Mahdia',
+            'Kairouan', 'Kasserine', 'Tataouine', 'Medenine', 'Tozeur', 'Kebili',
+            'Gabes', 'Gafsa', 'Sfax', 'Beja', 'Tunis', 'Kef',
+        ];
+
+        foreach ($governorates as $gov) {
+            if (str_contains($ascii, strtoupper($this->stripAccents($gov)))) {
+                return $gov;
+            }
+        }
+
+        // Try the part inside parentheses, e.g. "... (Bizerte)".
+        if (preg_match('/\(([^)]+)\)/', $raw, $m)) {
+            $inner = trim($m[1]);
+            if ($inner !== '' && strcasecmp($inner, $raw) !== 0) {
+                return $this->normalizeCity($inner);
+            }
+        }
+
+        return $default;
+    }
+
+    private function stripAccents(string $s): string
+    {
+        return strtr($s, [
+            'à' => 'a', 'á' => 'a', 'â' => 'a', 'ä' => 'a', 'ã' => 'a',
+            'è' => 'e', 'é' => 'e', 'ê' => 'e', 'ë' => 'e',
+            'ì' => 'i', 'í' => 'i', 'î' => 'i', 'ï' => 'i',
+            'ò' => 'o', 'ó' => 'o', 'ô' => 'o', 'ö' => 'o', 'õ' => 'o',
+            'ù' => 'u', 'ú' => 'u', 'û' => 'u', 'ü' => 'u',
+            'ç' => 'c',
+            'À' => 'A', 'É' => 'E', 'È' => 'E', 'Ê' => 'E', 'Ç' => 'C',
+        ]);
+    }
+
+    /**
      * Push a BL to Aramex CreateShipments.
      * Returns ['hawb', 'label_url', 'error'] — error is null on success.
      *
@@ -85,7 +137,7 @@ class AramexService
         }
         $deliveryPhone = $bl->livraison_phone ?: $client?->phone_1 ?: $client?->phone_2 ?: '00000000';
         $deliveryPhone = preg_replace('/\s+/', '', $deliveryPhone);
-        $deliveryCity  = $bl->livraison_ville ?: $bl->ville ?: $client?->ville ?: 'Sousse';
+        $deliveryCity  = $this->normalizeCity($bl->livraison_ville ?: $bl->ville ?: $client?->ville);
 
         // Use the model's robust delivery-address accessor first (it already
         // combines livraison_*, billing and client address with fallbacks),
