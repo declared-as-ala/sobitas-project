@@ -184,7 +184,7 @@ class FactureResource extends Resource
                     ->requiresConfirmation()
                     ->modalHeading('Envoyer vers Aramex ?')
                     ->modalDescription('Créer une expédition Aramex pour ce bon de livraison.')
-                    ->action(function (Facture $record, \Livewire\Component $livewire): void {
+                    ->action(function (Facture $record): void {
                         try {
                             if (! \Illuminate\Support\Facades\Schema::hasColumn('factures', 'aramex_hawb')) {
                                 Notification::make()
@@ -205,7 +205,7 @@ class FactureResource extends Resource
                                     ->title('Expédition créée — HAWB : ' . $result['hawb'])
                                     ->success()
                                     ->send();
-                                $livewire->dispatch('$refresh');
+                                redirect(request()->url());
                             } else {
                                 Notification::make()
                                     ->title('Erreur Aramex')
@@ -265,7 +265,7 @@ class FactureResource extends Resource
                             ->required(),
                     ])
                     ->modalHeading('Programmer une collecte Aramex')
-                    ->action(function (Facture $record, array $data, \Livewire\Component $livewire): void {
+                    ->action(function (Facture $record, array $data): void {
                         try {
                             $result = app(AramexService::class)->schedulePickup([
                                 'date'       => $data['date'],
@@ -279,7 +279,7 @@ class FactureResource extends Resource
                                     ->title('Collecte programmée — ID : ' . ($result['guid'] ?? 'OK'))
                                     ->success()
                                     ->send();
-                                $livewire->dispatch('$refresh');
+                                redirect(request()->url());
                             } else {
                                 Notification::make()
                                     ->title('Erreur collecte')
@@ -299,14 +299,14 @@ class FactureResource extends Resource
                     ->requiresConfirmation()
                     ->modalHeading('Annuler l\'expédition Aramex ?')
                     ->modalDescription('Cette action annulera l\'expédition chez Aramex. Le HAWB sera conservé pour référence.')
-                    ->action(function (Facture $record, \Livewire\Component $livewire): void {
+                    ->action(function (Facture $record): void {
                         try {
                             $result = app(AramexService::class)->cancelShipment($record->aramex_hawb);
                             if ($result['success']) {
                                 $record->aramex_status = 'annulé';
                                 $record->save();
                                 Notification::make()->title('Expédition annulée')->success()->send();
-                                $livewire->dispatch('$refresh');
+                                redirect(request()->url());
                             } else {
                                 Notification::make()
                                     ->title('Erreur annulation')
