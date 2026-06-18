@@ -205,7 +205,7 @@ class FactureResource extends Resource
                                     ->title('Expédition créée — HAWB : ' . $result['hawb'])
                                     ->success()
                                     ->send();
-                                $livewire->js('setTimeout(() => window.location.reload(), 1200)');
+                                $livewire->redirect(static::getUrl('index'), navigate: false);
                             } else {
                                 Notification::make()
                                     ->title('Erreur Aramex')
@@ -240,7 +240,7 @@ class FactureResource extends Resource
                                 ->body($result['description'] ?? '')
                                 ->success()
                                 ->send();
-                            $livewire->js('setTimeout(() => window.location.reload(), 1200)');
+                            $livewire->redirect(static::getUrl('index'), navigate: false);
                         } else {
                             Notification::make()->title('Aucun statut disponible')->warning()->send();
                         }
@@ -280,7 +280,7 @@ class FactureResource extends Resource
                                     ->title('Collecte programmée — ID : ' . ($result['guid'] ?? 'OK'))
                                     ->success()
                                     ->send();
-                                $livewire->js('setTimeout(() => window.location.reload(), 1200)');
+                                $livewire->redirect(static::getUrl('index'), navigate: false);
                             } else {
                                 Notification::make()
                                     ->title('Erreur collecte')
@@ -307,7 +307,7 @@ class FactureResource extends Resource
                                 $record->aramex_status = 'annulé';
                                 $record->save();
                                 Notification::make()->title('Expédition annulée')->success()->send();
-                                $livewire->js('setTimeout(() => window.location.reload(), 1200)');
+                                $livewire->redirect(static::getUrl('index'), navigate: false);
                             } else {
                                 Notification::make()
                                     ->title('Erreur annulation')
