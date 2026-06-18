@@ -7,7 +7,7 @@ const https = require('https');
 
 const credentials = {
   UserName:           'bitoutawalid@gmail.com',
-  Password:           'Aspire123@',
+  Password:           'Aspire123',
   Version:            '1.0',
   AccountNumber:      '60506486',
   AccountPin:         '321321',
