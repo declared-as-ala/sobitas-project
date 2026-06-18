@@ -499,6 +499,11 @@ table.ftva-totals tr.row-grand td:last-child {
             <h1 style="font-size: 16pt;">BON DE LIVRAISON</h1>
             <div class="ftva-doc-meta-line"><b>N° :</b> {{ $facture->numero ?? '' }}</div>
             <div class="ftva-doc-meta-line"><b>Date :</b> {{ $dateStr }}</div>
+            @if(!empty($facture->aramex_hawb))
+            <div class="ftva-doc-meta-line" style="margin-top:4px;padding-top:4px;border-top:1px dashed #ff4000;">
+                <b>N° Suivi Aramex :</b> {{ $facture->aramex_hawb }}
+            </div>
+            @endif
         </div>
 
         {{-- Client block --}}

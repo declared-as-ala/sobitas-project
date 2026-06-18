@@ -8,6 +8,7 @@ use App\Models\Client;
 use App\Models\Commande;
 use App\Models\DetailsFacture;
 use App\Models\Facture;
+use App\Services\AramexService;
 use App\Services\InvoiceCalculator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -229,6 +230,22 @@ class OrderToBlService
             }
 
             $bl->save();
+
+            // ── Push to Aramex (non-blocking) ────────────────────────────
+            if (Schema::hasColumn('factures', 'aramex_hawb')) {
+                try {
+                    $aramex = app(AramexService::class)->createShipment($bl);
+                    $bl->aramex_hawb       = $aramex['hawb'];
+                    $bl->aramex_label_url  = $aramex['label_url'];
+                    $bl->aramex_error      = $aramex['error'];
+                    $bl->aramex_pushed_at  = now();
+                    $bl->save();
+                } catch (\Throwable $e) {
+                    $bl->aramex_error     = $e->getMessage();
+                    $bl->aramex_pushed_at = now();
+                    $bl->save();
+                }
+            }
 
             foreach ($order->details as $line) {
                 $produitId = $line->produit_id ?? ($line->getAttributes()['product_id'] ?? null);

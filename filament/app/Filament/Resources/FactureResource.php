@@ -6,9 +6,11 @@ use App\Filament\Resources\FactureResource\Pages;
 use App\Models\Client;
 use App\Models\Coordinate;
 use App\Models\Facture;
+use App\Services\AramexService;
 use Filament\Actions;
 use Filament\Forms;
 use Filament\Forms\Components\Repeater;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
@@ -131,6 +133,23 @@ class FactureResource extends Resource
                     ->alignEnd()
                     ->weight(\Filament\Support\Enums\FontWeight::Bold)
                     ->color('primary'),
+                Tables\Columns\TextColumn::make('aramex_hawb')
+                    ->label('HAWB Aramex')
+                    ->placeholder('—')
+                    ->copyable()
+                    ->copyMessage('HAWB copié')
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('aramex_status')
+                    ->label('Statut Aramex')
+                    ->placeholder('—')
+                    ->badge()
+                    ->color(fn (?string $state): string => match ($state) {
+                        'SH005', 'SH006' => 'success',
+                        'SH003', 'SH004' => 'info',
+                        'SH069'          => 'warning',
+                        null             => 'gray',
+                        default          => 'primary',
+                    }),
             ])
             ->defaultSort('created_at', 'desc')
             ->defaultPaginationPageOption(25)
@@ -144,6 +163,65 @@ class FactureResource extends Resource
                     ->color('gray')
                     ->url(fn (Facture $record) => route('factures.print', ['facture' => $record->id]))
                     ->openUrlInNewTab(),
+                Actions\Action::make('aramex_label')
+                    ->label('Étiquette')
+                    ->icon('heroicon-o-tag')
+                    ->color('warning')
+                    ->url(fn (Facture $record): string => $record->aramex_label_url ?? '#')
+                    ->openUrlInNewTab()
+                    ->visible(fn (Facture $record): bool => (bool) $record->aramex_label_url),
+                Actions\Action::make('push_aramex')
+                    ->label('Envoyer Aramex')
+                    ->icon('heroicon-o-truck')
+                    ->color('primary')
+                    ->visible(fn (Facture $record): bool => ! $record->aramex_hawb)
+                    ->requiresConfirmation()
+                    ->modalHeading('Envoyer vers Aramex ?')
+                    ->modalDescription('Créer une expédition Aramex pour ce bon de livraison.')
+                    ->action(function (Facture $record): void {
+                        $result = app(AramexService::class)->createShipment($record);
+                        $record->update([
+                            'aramex_hawb'      => $result['hawb'],
+                            'aramex_label_url' => $result['label_url'],
+                            'aramex_error'     => $result['error'],
+                            'aramex_pushed_at' => now(),
+                        ]);
+                        if ($result['hawb']) {
+                            Notification::make()
+                                ->title('Expédition créée — HAWB : ' . $result['hawb'])
+                                ->success()
+                                ->send();
+                        } else {
+                            Notification::make()
+                                ->title('Erreur Aramex')
+                                ->body($result['error'] ?? 'Erreur inconnue')
+                                ->danger()
+                                ->send();
+                        }
+                    }),
+                Actions\Action::make('track_aramex')
+                    ->label('Suivre')
+                    ->icon('heroicon-o-map-pin')
+                    ->color('info')
+                    ->visible(fn (Facture $record): bool => (bool) $record->aramex_hawb)
+                    ->action(function (Facture $record): void {
+                        $result = app(AramexService::class)->trackShipment($record->aramex_hawb);
+                        if ($result['error']) {
+                            Notification::make()->title('Erreur tracking')->body($result['error'])->danger()->send();
+
+                            return;
+                        }
+                        if ($result['update_code']) {
+                            $record->update(['aramex_status' => $result['update_code']]);
+                            Notification::make()
+                                ->title('Statut mis à jour : ' . $result['update_code'])
+                                ->body($result['description'] ?? '')
+                                ->success()
+                                ->send();
+                        } else {
+                            Notification::make()->title('Aucun statut disponible')->warning()->send();
+                        }
+                    }),
                 Actions\DeleteAction::make(),
             ])
             ->bulkActions([

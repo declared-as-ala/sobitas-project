@@ -19,6 +19,8 @@ class Facture extends Model
         'nom', 'prenom', 'email', 'phone', 'adresse1', 'adresse2', 'ville', 'region', 'code_postale',
         'livraison_nom', 'livraison_prenom', 'livraison_email', 'livraison_phone',
         'livraison_adresse1', 'livraison_adresse2', 'livraison_ville', 'livraison_region', 'livraison_code_postale',
+        // Aramex shipping
+        'aramex_hawb', 'aramex_label_url', 'aramex_status', 'aramex_pushed_at', 'aramex_error',
     ];
 
     protected $casts = [
