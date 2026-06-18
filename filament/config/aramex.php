@@ -13,9 +13,9 @@ return [
 
     // Credentials sent inside every API request body (ClientInfo)
     'username'       => 'bitoutawalid@gmail.com',
-    'password'       => 'Aspire123@',
+    'password'       => 'Aspire123',
     'account_number' => '60506486',
-    'account_pin'    => '0000',   // TODO: replace with real PIN from Aramex (+216 71 160 800)
+    'account_pin'    => '0000',   // ← WRONG — causes login failure. Get real PIN from Aramex
     'account_entity' => 'TUN',
     'account_country' => 'TN',
     'version'          => '1.0',
