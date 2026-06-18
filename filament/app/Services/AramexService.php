@@ -298,4 +298,173 @@ class AramexService
             return ['update_code' => null, 'problem_code' => null, 'description' => null, 'error' => $e->getMessage()];
         }
     }
+
+    /**
+     * Cancel a shipment by HAWB.
+     * Returns ['success', 'error'].
+     *
+     * @return array{success: bool, error: string|null}
+     */
+    public function cancelShipment(string $hawb): array
+    {
+        $payload = [
+            'ClientInfo' => $this->clientInfo(),
+            'Shipments'  => [$hawb],
+            'Transaction' => [
+                'Reference1' => '',
+                'Reference2' => '',
+                'Reference3' => '',
+                'Reference4' => '',
+                'Reference5' => '',
+            ],
+        ];
+
+        try {
+            $response = Http::timeout(20)
+                ->withHeaders(['Content-Type' => 'application/json', 'Accept' => 'application/json'])
+                ->post(
+                    $this->baseUrl() . '/ShippingAPI.V2/Shipping/Service_1_0.svc/json/CancelShipments',
+                    $payload
+                );
+
+            $body = $response->json();
+
+            Log::channel('daily')->info('Aramex CancelShipments', ['hawb' => $hawb, 'response' => $body]);
+
+            $notifications = $body['Notifications'] ?? [];
+            if (! empty($notifications)) {
+                $errors = collect($notifications)->pluck('Message')->filter()->implode(' | ');
+                if ($errors) {
+                    return ['success' => false, 'error' => $errors];
+                }
+            }
+
+            $nonCancelled = $body['NonCancelledShipments'] ?? [];
+            if (! empty($nonCancelled)) {
+                return ['success' => false, 'error' => 'Non annulé: ' . implode(', ', $nonCancelled)];
+            }
+
+            return ['success' => true, 'error' => null];
+
+        } catch (\Throwable $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Schedule a pickup from the shipper address.
+     * $data keys: date (Y-m-d), ready_time (H:i), last_time (H:i), hawbs (string[]), weight (float), pieces (int)
+     *
+     * @return array{success: bool, guid: string|null, error: string|null}
+     */
+    public function schedulePickup(array $data): array
+    {
+        $company = Coordinate::getCached();
+
+        $hawbs = $data['hawbs'] ?? [];
+        $weight = (float) ($data['weight'] ?? max(1.0, count($hawbs) * 0.5));
+
+        $pickupItems = array_map(fn ($hawb) => [
+            'Reference1'         => $hawb,
+            'Reference2'         => '',
+            'Reference3'         => '',
+            'Comments'           => '',
+            'Weight'             => ['Unit' => 'KG', 'Value' => 0.5],
+            'PackageType'        => 'Box',
+            'Volume'             => ['Unit' => 'CC', 'Value' => 0.0],
+            'NumberOfPieces'     => 1,
+            'ShipmentDimensions' => null,
+            'Barcode'            => $hawb,
+        ], $hawbs);
+
+        $payload = [
+            'ClientInfo' => $this->clientInfo(),
+            'Pickup' => [
+                'PickupAddress' => [
+                    'Line1'               => $company?->adresse ?? 'Rue Ribat',
+                    'Line2'               => '',
+                    'Line3'               => '',
+                    'City'                => 'Sousse',
+                    'StateOrProvinceCode' => '',
+                    'PostCode'            => '',
+                    'CountryCode'         => 'TN',
+                ],
+                'PickupContact' => [
+                    'Department'      => '',
+                    'PersonName'      => $company?->name ?? 'Proteine Tunisie',
+                    'Title'           => '',
+                    'CompanyName'     => $company?->name ?? 'Proteine Tunisie',
+                    'PhoneNumber1'    => preg_replace('/\s+/', '', $company?->phone ?? '0000000'),
+                    'PhoneNumber1Ext' => '',
+                    'PhoneNumber2'    => '',
+                    'PhoneNumber2Ext' => '',
+                    'FaxNumber'       => '',
+                    'CellPhone'       => preg_replace('/\s+/', '', $company?->phone ?? '0000000'),
+                    'EmailAddress'    => $company?->email ?? 'contact@protein.tn',
+                    'Type'            => '',
+                ],
+                'PickupLocation'     => 'Reception',
+                'PickupDate'         => $this->msDate($data['date'] ?? now()->format('Y-m-d')),
+                'ReadyTime'          => $data['ready_time'] ?? '09:00',
+                'LastPickupTime'     => $data['last_time'] ?? '18:00',
+                'ClosingTime'        => $data['last_time'] ?? '18:00',
+                'Status'             => 'Ready',
+                'Weight'             => ['Unit' => 'KG', 'Value' => $weight],
+                'Volume'             => ['Unit' => 'CC', 'Value' => 0.0],
+                'NumberOfShipments'  => count($hawbs) ?: 1,
+                'NumberOfPieces'     => (int) ($data['pieces'] ?? count($hawbs) ?: 1),
+                'CargoType'          => 'Parcel',
+                'PickupItems'        => $pickupItems,
+            ],
+            'Transaction' => [
+                'Reference1' => '',
+                'Reference2' => '',
+                'Reference3' => '',
+                'Reference4' => '',
+                'Reference5' => '',
+            ],
+        ];
+
+        try {
+            $response = Http::timeout(30)
+                ->withHeaders(['Content-Type' => 'application/json', 'Accept' => 'application/json'])
+                ->post(
+                    $this->baseUrl() . '/ShippingAPI.V2/Pickup/Service_1_0.svc/json/SchedulePickup',
+                    $payload
+                );
+
+            $body = $response->json();
+
+            Log::channel('daily')->info('Aramex SchedulePickup', ['response' => $body]);
+
+            $notifications = $body['Notifications'] ?? [];
+            if (! empty($notifications)) {
+                $errors = collect($notifications)->pluck('Message')->filter()->implode(' | ');
+                if ($errors) {
+                    return ['success' => false, 'guid' => null, 'error' => $errors];
+                }
+            }
+
+            $guid = $body['ProcessedPickup']['ID'] ?? null;
+
+            return ['success' => (bool) $guid, 'guid' => $guid, 'error' => null];
+
+        } catch (\Throwable $e) {
+            return ['success' => false, 'guid' => null, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Fetch the label PDF bytes for a BL and return them for streaming.
+     */
+    public function fetchLabelPdf(string $labelUrl): ?string
+    {
+        try {
+            $response = Http::timeout(15)->get($labelUrl);
+
+            return $response->successful() ? $response->body() : null;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
 }

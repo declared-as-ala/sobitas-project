@@ -80,6 +80,21 @@ Route::middleware(['auth', 'no.cache.print'])->group(function () {
         ]);
     })->name('factures.print');
 
+    Route::get('factures/{facture}/aramex-label', function (\App\Models\Facture $facture) {
+        $url = $facture->aramex_label_url;
+        if (! $url) {
+            abort(404, 'Étiquette Aramex non disponible');
+        }
+        $pdf = app(\App\Services\AramexService::class)->fetchLabelPdf($url);
+        if (! $pdf) {
+            abort(502, 'Impossible de récupérer l\'étiquette depuis Aramex');
+        }
+        return response($pdf, 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="etiquette-' . ($facture->numero ?? $facture->id) . '.pdf"',
+        ]);
+    })->name('factures.aramex-label');
+
     Route::get('tickets/{ticket}/print', function (\App\Models\Ticket $ticket) {
         $ticket->load(['client', 'loyaltyCard']);
         $details_ticket = \App\Models\DetailsTicket::where('ticket_id', $ticket->id)

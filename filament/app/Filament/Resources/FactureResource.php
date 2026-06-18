@@ -167,9 +167,15 @@ class FactureResource extends Resource
                     ->label('Étiquette')
                     ->icon('heroicon-o-tag')
                     ->color('warning')
-                    ->url(fn (Facture $record): string => $record->aramex_label_url ?? '#')
-                    ->openUrlInNewTab()
-                    ->visible(fn (Facture $record): bool => (bool) $record->aramex_label_url),
+                    ->visible(fn (Facture $record): bool => (bool) $record->aramex_label_url)
+                    ->modalContent(fn (Facture $record) => view('filament.modals.aramex-label', [
+                        'url'  => route('factures.aramex-label', $record->id),
+                        'hawb' => $record->aramex_hawb,
+                    ]))
+                    ->modalHeading(fn (Facture $record) => 'Étiquette Aramex — HAWB ' . $record->aramex_hawb)
+                    ->modalWidth(\Filament\Support\Enums\MaxWidth::ThreeExtraLarge)
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Fermer'),
                 Actions\Action::make('push_aramex')
                     ->label('Envoyer Aramex')
                     ->icon('heroicon-o-truck')
@@ -235,6 +241,78 @@ class FactureResource extends Resource
                                 ->send();
                         } else {
                             Notification::make()->title('Aucun statut disponible')->warning()->send();
+                        }
+                    }),
+                Actions\Action::make('schedule_pickup')
+                    ->label('Collecte')
+                    ->icon('heroicon-o-calendar-days')
+                    ->color('success')
+                    ->visible(fn (Facture $record): bool => (bool) $record->aramex_hawb && $record->aramex_status !== 'annulé')
+                    ->form([
+                        \Filament\Forms\Components\DatePicker::make('date')
+                            ->label('Date de collecte')
+                            ->default(now()->addDay()->format('Y-m-d'))
+                            ->minDate(now()->format('Y-m-d'))
+                            ->required(),
+                        \Filament\Forms\Components\TimePicker::make('ready_time')
+                            ->label('Heure prête')
+                            ->default('09:00')
+                            ->required(),
+                        \Filament\Forms\Components\TimePicker::make('last_time')
+                            ->label('Dernière heure')
+                            ->default('18:00')
+                            ->required(),
+                    ])
+                    ->modalHeading('Programmer une collecte Aramex')
+                    ->action(function (Facture $record, array $data): void {
+                        try {
+                            $result = app(AramexService::class)->schedulePickup([
+                                'date'       => $data['date'],
+                                'ready_time' => substr($data['ready_time'], 0, 5),
+                                'last_time'  => substr($data['last_time'], 0, 5),
+                                'hawbs'      => [$record->aramex_hawb],
+                                'pieces'     => 1,
+                            ]);
+                            if ($result['success']) {
+                                Notification::make()
+                                    ->title('Collecte programmée — ID : ' . ($result['guid'] ?? 'OK'))
+                                    ->success()
+                                    ->send();
+                            } else {
+                                Notification::make()
+                                    ->title('Erreur collecte')
+                                    ->body($result['error'] ?? 'Erreur inconnue')
+                                    ->danger()
+                                    ->send();
+                            }
+                        } catch (\Throwable $e) {
+                            Notification::make()->title('Erreur système')->body($e->getMessage())->danger()->send();
+                        }
+                    }),
+                Actions\Action::make('cancel_aramex')
+                    ->label('Annuler')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->visible(fn (Facture $record): bool => (bool) $record->aramex_hawb && $record->aramex_status !== 'annulé')
+                    ->requiresConfirmation()
+                    ->modalHeading('Annuler l\'expédition Aramex ?')
+                    ->modalDescription('Cette action annulera l\'expédition chez Aramex. Le HAWB sera conservé pour référence.')
+                    ->action(function (Facture $record): void {
+                        try {
+                            $result = app(AramexService::class)->cancelShipment($record->aramex_hawb);
+                            if ($result['success']) {
+                                $record->aramex_status = 'annulé';
+                                $record->save();
+                                Notification::make()->title('Expédition annulée')->success()->send();
+                            } else {
+                                Notification::make()
+                                    ->title('Erreur annulation')
+                                    ->body($result['error'] ?? 'Erreur inconnue')
+                                    ->danger()
+                                    ->send();
+                            }
+                        } catch (\Throwable $e) {
+                            Notification::make()->title('Erreur système')->body($e->getMessage())->danger()->send();
                         }
                     }),
                 Actions\DeleteAction::make(),
