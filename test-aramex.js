@@ -7,7 +7,7 @@ const https = require('https');
 
 const credentials = {
   UserName:           'bitoutawalid@gmail.com',
-  Password:           'Aspire123',
+  Password:           'Walid@bitouta@0000',
   Version:            '1.0',
   AccountNumber:      '60506486',
   AccountPin:         '321321',
@@ -93,10 +93,13 @@ const options = {
 };
 
 console.log('Testing Aramex credentials...');
-console.log('URL    :', 'https://' + options.hostname + options.path);
-console.log('Account:', credentials.AccountNumber);
-console.log('PIN    :', credentials.AccountPin);
-console.log('User   :', credentials.UserName);
+console.log('URL      :', 'https://' + options.hostname + options.path);
+console.log('Account  :', credentials.AccountNumber);
+console.log('PIN      :', credentials.AccountPin);
+console.log('Entity   :', credentials.AccountEntity);
+console.log('Country  :', credentials.AccountCountryCode);
+console.log('User     :', credentials.UserName);
+console.log('Password :', credentials.Password);
 console.log('');
 
 const req = https.request(options, (res) => {
