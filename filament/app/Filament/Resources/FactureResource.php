@@ -205,7 +205,7 @@ class FactureResource extends Resource
                                     ->title('Expédition créée — HAWB : ' . $result['hawb'])
                                     ->success()
                                     ->send();
-                                redirect(request()->url());
+                                redirect()->route('filament.admin.resources.factures.index');
                             } else {
                                 Notification::make()
                                     ->title('Erreur Aramex')
@@ -279,7 +279,7 @@ class FactureResource extends Resource
                                     ->title('Collecte programmée — ID : ' . ($result['guid'] ?? 'OK'))
                                     ->success()
                                     ->send();
-                                redirect(request()->url());
+                                redirect()->route('filament.admin.resources.factures.index');
                             } else {
                                 Notification::make()
                                     ->title('Erreur collecte')
@@ -306,7 +306,7 @@ class FactureResource extends Resource
                                 $record->aramex_status = 'annulé';
                                 $record->save();
                                 Notification::make()->title('Expédition annulée')->success()->send();
-                                redirect(request()->url());
+                                redirect()->route('filament.admin.resources.factures.index');
                             } else {
                                 Notification::make()
                                     ->title('Erreur annulation')
