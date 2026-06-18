@@ -426,7 +426,7 @@ export function buildOrganizationSchema(baseUrl: string): object {
       'Whey protein, créatine, vitamines et compléments alimentaires en Tunisie — livraison rapide et produits authentiques. Boutique à Sousse, livraison dans tout le pays.',
     address: {
       '@type': 'PostalAddress',
-      streetAddress: 'Rue Rihab',
+      streetAddress: 'Rue Ribat',
       addressLocality: 'Sousse',
       postalCode: '4000',
       addressCountry: 'TN',
@@ -465,7 +465,7 @@ export function buildLocalBusinessSchema(baseUrl: string): object {
     email: 'contact@protein.tn',
     address: {
       '@type': 'PostalAddress',
-      streetAddress: 'Rue Rihab',
+      streetAddress: 'Rue Ribat',
       addressLocality: 'Sousse',
       postalCode: '4000',
       addressCountry: 'TN',

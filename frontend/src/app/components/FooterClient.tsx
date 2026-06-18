@@ -180,7 +180,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
               </a>
               <div className="flex items-start gap-3 py-1.5 min-w-0">
                 <MapPin className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
-                <span className="break-words">Rue Rihab, 4000 Sousse, Tunisie</span>
+                <span className="break-words">Rue Ribat, 4000 Sousse, Tunisie</span>
               </div>
             </div>
           </div>
@@ -246,7 +246,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
               </a>
               <div className="flex items-start gap-3 text-sm">
                 <MapPin className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-                <span>Rue Rihab, 4000 Sousse, Tunisie</span>
+                <span>Rue Ribat, 4000 Sousse, Tunisie</span>
               </div>
             </div>
 
