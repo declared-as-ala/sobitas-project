@@ -30,6 +30,14 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
     getCoordinates().then(setCoord).catch(() => {});
   }, []);
 
+  // The /coordonnees API returns the raw Coordinate model, so use its real
+  // column names (adresse_fr, phone_1, phone_2, email). Fallbacks keep the
+  // footer populated if the API is unreachable.
+  const contactAddress = coord?.adresse_fr || 'Rue Ribat, 4000 Sousse, Tunisie';
+  const contactEmail = coord?.email || 'contact@protein.tn';
+  const contactPhones = [coord?.phone_1, coord?.phone_2].filter(Boolean).join(' / ') || '+216 27 612 500 / +216 73 200 169';
+  const contactPhoneHref = `tel:${String(coord?.phone_1 || '+21627612500').replace(/\s/g, '')}`;
+
   // Fetch CMS pages when not provided (e.g. when used inside Client Components)
   useEffect(() => {
     if (pagesProp && pagesProp.length > 0) {
@@ -176,17 +184,17 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
           <div className="space-y-3 w-full">
             <h3 className="font-bold text-white text-sm uppercase tracking-wide">Contact</h3>
             <div className="space-y-2 text-sm text-gray-400">
-              <a href={`tel:${(coord?.phone ?? '+21627612500').replace(/\s/g, '')}`} className="flex items-center gap-3 py-1.5 hover:text-red-500 min-w-0" aria-label="Appeler">
+              <a href={contactPhoneHref} className="flex items-center gap-3 py-1.5 hover:text-red-500 min-w-0" aria-label="Appeler">
                 <Phone className="h-5 w-5 text-red-500 shrink-0" />
-                <span className="break-words">{coord?.phone ?? '+216 27 612 500'}</span>
+                <span className="break-words">{contactPhones}</span>
               </a>
-              <a href={`mailto:${coord?.email ?? 'contact@protein.tn'}`} className="flex items-center gap-3 py-1.5 hover:text-red-500 min-w-0">
+              <a href={`mailto:${contactEmail}`} className="flex items-center gap-3 py-1.5 hover:text-red-500 min-w-0">
                 <Mail className="h-5 w-5 text-red-500 shrink-0" />
-                <span>{coord?.email ?? 'contact@protein.tn'}</span>
+                <span>{contactEmail}</span>
               </a>
               <div className="flex items-start gap-3 py-1.5 min-w-0">
                 <MapPin className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
-                <span className="break-words">{coord?.adresse ?? 'Rue Ribat, 4000 Sousse, Tunisie'}</span>
+                <span className="break-words">{contactAddress}</span>
               </div>
             </div>
           </div>
@@ -242,17 +250,17 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
 
             {/* Contact Details */}
             <div className="space-y-3">
-              <a href={`tel:${(coord?.phone ?? '+21627612500').replace(/\s/g, '')}`} className="flex items-center gap-3 text-sm hover:text-red-500 transition-colors" aria-label="Appeler">
+              <a href={contactPhoneHref} className="flex items-center gap-3 text-sm hover:text-red-500 transition-colors" aria-label="Appeler">
                 <Phone className="h-5 w-5 text-red-500" aria-hidden="true" />
-                <span>{coord?.phone ?? '+216 27 612 500'}</span>
+                <span>{contactPhones}</span>
               </a>
-              <a href={`mailto:${coord?.email ?? 'contact@protein.tn'}`} className="flex items-center gap-3 text-sm hover:text-red-500 transition-colors">
+              <a href={`mailto:${contactEmail}`} className="flex items-center gap-3 text-sm hover:text-red-500 transition-colors">
                 <Mail className="h-5 w-5 text-red-500" />
-                <span>{coord?.email ?? 'contact@protein.tn'}</span>
+                <span>{contactEmail}</span>
               </a>
               <div className="flex items-start gap-3 text-sm">
                 <MapPin className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-                <span>{coord?.adresse ?? 'Rue Ribat, 4000 Sousse, Tunisie'}</span>
+                <span>{contactAddress}</span>
               </div>
             </div>
 

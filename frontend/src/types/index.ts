@@ -433,7 +433,10 @@ export interface Coordinate {
   id: number;
   gelocalisation?: string;
   adresse?: string;
+  adresse_fr?: string;
   phone?: string;
+  phone_1?: string;
+  phone_2?: string;
   email?: string;
   logo?: string | null;
   logo_footer?: string | null;
