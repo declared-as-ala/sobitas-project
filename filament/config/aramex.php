@@ -13,7 +13,7 @@ return [
 
     // Credentials sent inside every API request body (ClientInfo)
     'username'       => 'bitoutawalid@gmail.com',
-    'password'       => 'Aspire123',
+    'password'       => 'Aspire123@',
     'account_number' => '60506486',
     'account_pin'    => '321321',
     'account_entity' => 'TUN',

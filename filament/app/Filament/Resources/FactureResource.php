@@ -18,6 +18,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Schema;
 
 class FactureResource extends Resource
 {
@@ -174,27 +175,42 @@ class FactureResource extends Resource
                     ->label('Envoyer Aramex')
                     ->icon('heroicon-o-truck')
                     ->color('primary')
-                    ->visible(fn (Facture $record): bool => ! $record->aramex_hawb)
+                    ->visible(fn (Facture $record): bool => Schema::hasColumn('factures', 'aramex_hawb') && ! $record->aramex_hawb)
                     ->requiresConfirmation()
                     ->modalHeading('Envoyer vers Aramex ?')
                     ->modalDescription('Créer une expédition Aramex pour ce bon de livraison.')
                     ->action(function (Facture $record): void {
-                        $result = app(AramexService::class)->createShipment($record);
-                        $record->update([
-                            'aramex_hawb'      => $result['hawb'],
-                            'aramex_label_url' => $result['label_url'],
-                            'aramex_error'     => $result['error'],
-                            'aramex_pushed_at' => now(),
-                        ]);
-                        if ($result['hawb']) {
+                        try {
+                            if (! Schema::hasColumn('factures', 'aramex_hawb')) {
+                                Notification::make()
+                                    ->title('Migration requise')
+                                    ->body('Exécutez php artisan migrate pour activer Aramex.')
+                                    ->warning()
+                                    ->send();
+                                return;
+                            }
+                            $result = app(AramexService::class)->createShipment($record);
+                            $record->aramex_hawb      = $result['hawb'];
+                            $record->aramex_label_url = $result['label_url'];
+                            $record->aramex_error     = $result['error'];
+                            $record->aramex_pushed_at = now();
+                            $record->save();
+                            if ($result['hawb']) {
+                                Notification::make()
+                                    ->title('Expédition créée — HAWB : ' . $result['hawb'])
+                                    ->success()
+                                    ->send();
+                            } else {
+                                Notification::make()
+                                    ->title('Erreur Aramex')
+                                    ->body($result['error'] ?? 'Erreur inconnue')
+                                    ->danger()
+                                    ->send();
+                            }
+                        } catch (\Throwable $e) {
                             Notification::make()
-                                ->title('Expédition créée — HAWB : ' . $result['hawb'])
-                                ->success()
-                                ->send();
-                        } else {
-                            Notification::make()
-                                ->title('Erreur Aramex')
-                                ->body($result['error'] ?? 'Erreur inconnue')
+                                ->title('Erreur système')
+                                ->body($e->getMessage())
                                 ->danger()
                                 ->send();
                         }
