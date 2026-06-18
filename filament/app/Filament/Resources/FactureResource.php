@@ -173,7 +173,7 @@ class FactureResource extends Resource
                         'hawb' => $record->aramex_hawb,
                     ]))
                     ->modalHeading(fn (Facture $record) => 'Étiquette Aramex — HAWB ' . $record->aramex_hawb)
-                    ->modalWidth(\Filament\Support\Enums\MaxWidth::ThreeExtraLarge)
+                    ->modalWidth('3xl')
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Fermer'),
                 Actions\Action::make('push_aramex')
