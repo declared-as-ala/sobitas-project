@@ -83,26 +83,37 @@ class AramexService
         if ($deliveryName === '') {
             $deliveryName = $client?->name ?? 'Client';
         }
-        $deliveryPhone = $bl->livraison_phone ?? $client?->phone_1 ?? '00000000';
+        $deliveryPhone = $bl->livraison_phone ?: $client?->phone_1 ?: $client?->phone_2 ?: '00000000';
         $deliveryPhone = preg_replace('/\s+/', '', $deliveryPhone);
-        $deliveryCity  = $bl->livraison_ville ?? $bl->ville ?? $client?->ville ?? 'Tunis';
-        $deliveryAddr  = trim(
-            ($bl->livraison_adresse1 ?? $bl->adresse1 ?? $client?->adresse ?? 'Adresse inconnue')
-            . ' ' .
-            ($bl->livraison_adresse2 ?? $bl->adresse2 ?? '')
-        );
+        $deliveryCity  = $bl->livraison_ville ?: $bl->ville ?: $client?->ville ?: 'Sousse';
+
+        // Use the model's robust delivery-address accessor first (it already
+        // combines livraison_*, billing and client address with fallbacks),
+        // then fall back to raw fields so the label never shows "inconnue".
+        $deliveryAddr = trim((string) ($bl->formatted_delivery_address ?? ''));
+        if ($deliveryAddr === '') {
+            $deliveryAddr = trim(
+                (string) ($bl->livraison_adresse1 ?: $bl->adresse1 ?: $client?->adresse ?: '')
+                . ' ' .
+                (string) ($bl->livraison_adresse2 ?: $bl->adresse2 ?: '')
+            );
+        }
+        if ($deliveryAddr === '') {
+            // Last resort: at least give the city so Aramex can route it.
+            $deliveryAddr = $deliveryCity;
+        }
 
         $consignee = [
             'Reference1'    => '',
             'Reference2'    => '',
             'AccountNumber' => '',
             'PartyAddress'  => [
-                'Line1'               => $deliveryAddr ?: 'Adresse inconnue',
+                'Line1'               => $deliveryAddr,
                 'Line2'               => '',
                 'Line3'               => '',
                 'City'                => $deliveryCity,
                 'StateOrProvinceCode' => '',
-                'PostCode'            => $bl->livraison_code_postale ?? $bl->code_postale ?? '',
+                'PostCode'            => $bl->livraison_code_postale ?: $bl->code_postale ?: '',
                 'CountryCode'         => 'TN',
             ],
             'Contact' => [

@@ -164,170 +164,107 @@ class FactureResource extends Resource
             ->paginationPageOptions([10, 25, 50])
             ->striped()
             ->actions([
-                Actions\EditAction::make(),
-                Actions\Action::make('print')
-                    ->label('Imprimer')
-                    ->icon('heroicon-o-printer')
-                    ->color('gray')
-                    ->url(fn (Facture $record) => route('factures.print', ['facture' => $record->id]))
-                    ->openUrlInNewTab(),
-                Actions\Action::make('aramex_label')
-                    ->label('Étiquette')
-                    ->icon('heroicon-o-tag')
-                    ->color('warning')
-                    ->visible(fn (Facture $record): bool => (bool) $record->aramex_label_url)
-                    ->modalContent(fn (Facture $record) => view('filament.modals.aramex-label', [
-                        'url'  => route('factures.aramex-label', $record->id),
-                        'hawb' => $record->aramex_hawb,
-                    ]))
-                    ->modalHeading(fn (Facture $record) => 'Étiquette Aramex — HAWB ' . $record->aramex_hawb)
-                    ->modalWidth('3xl')
-                    ->modalSubmitAction(false)
-                    ->modalCancelActionLabel('Fermer'),
-                Actions\Action::make('push_aramex')
-                    ->label('Envoyer Aramex')
-                    ->icon('heroicon-o-truck')
-                    ->color('primary')
-                    ->visible(fn (Facture $record): bool => \Illuminate\Support\Facades\Schema::hasColumn('factures', 'aramex_hawb') && ! $record->aramex_hawb)
-                    ->requiresConfirmation()
-                    ->modalHeading('Envoyer vers Aramex ?')
-                    ->modalDescription('Créer une expédition Aramex pour ce bon de livraison.')
-                    ->action(function (Facture $record, $livewire): void {
-                        try {
-                            if (! \Illuminate\Support\Facades\Schema::hasColumn('factures', 'aramex_hawb')) {
+                Actions\ActionGroup::make([
+                    Actions\EditAction::make(),
+                    Actions\Action::make('print')
+                        ->label('Imprimer')
+                        ->icon('heroicon-o-printer')
+                        ->color('gray')
+                        ->url(fn (Facture $record) => route('factures.print', ['facture' => $record->id]))
+                        ->openUrlInNewTab(),
+                    Actions\Action::make('aramex_label')
+                        ->label('Bordereau')
+                        ->icon('heroicon-o-document-text')
+                        ->color('warning')
+                        ->visible(fn (Facture $record): bool => (bool) $record->aramex_label_url)
+                        ->modalContent(fn (Facture $record) => view('filament.modals.aramex-label', [
+                            'url'  => route('factures.aramex-label', $record->id),
+                            'hawb' => $record->aramex_hawb,
+                        ]))
+                        ->modalHeading(fn (Facture $record) => 'Bordereau Aramex — HAWB ' . $record->aramex_hawb)
+                        ->modalWidth('4xl')
+                        ->modalSubmitAction(false)
+                        ->modalCancelActionLabel('Fermer'),
+                    Actions\Action::make('push_aramex')
+                        ->label('Envoyer Aramex')
+                        ->icon('heroicon-o-truck')
+                        ->color('primary')
+                        ->visible(fn (Facture $record): bool => \Illuminate\Support\Facades\Schema::hasColumn('factures', 'aramex_hawb') && ! $record->aramex_hawb)
+                        ->requiresConfirmation()
+                        ->modalHeading('Envoyer vers Aramex ?')
+                        ->modalDescription('Créer une expédition Aramex pour ce bon de livraison.')
+                        ->action(function (Facture $record, $livewire): void {
+                            try {
+                                if (! \Illuminate\Support\Facades\Schema::hasColumn('factures', 'aramex_hawb')) {
+                                    Notification::make()
+                                        ->title('Migration requise')
+                                        ->body('Exécutez php artisan migrate pour activer Aramex.')
+                                        ->warning()
+                                        ->send();
+                                    return;
+                                }
+                                // Reload the FULL record (the table query only selects a few
+                                // columns, so livraison_* / adresse fields would be null here).
+                                $bl = \App\Models\Facture::with('client')->findOrFail($record->getKey());
+                                $result = app(AramexService::class)->createShipment($bl);
+                                $bl->aramex_hawb      = $result['hawb'];
+                                $bl->aramex_label_url = $result['label_url'];
+                                $bl->aramex_error     = $result['error'];
+                                $bl->aramex_pushed_at = now();
+                                $bl->save();
+                                if ($result['hawb']) {
+                                    Notification::make()
+                                        ->title('Expédition créée — HAWB : ' . $result['hawb'])
+                                        ->success()
+                                        ->send();
+                                    $livewire->redirect(static::getUrl('index'), navigate: false);
+                                } else {
+                                    Notification::make()
+                                        ->title('Erreur Aramex')
+                                        ->body($result['error'] ?? 'Erreur inconnue')
+                                        ->danger()
+                                        ->send();
+                                }
+                            } catch (\Throwable $e) {
                                 Notification::make()
-                                    ->title('Migration requise')
-                                    ->body('Exécutez php artisan migrate pour activer Aramex.')
-                                    ->warning()
-                                    ->send();
-                                return;
-                            }
-                            $result = app(AramexService::class)->createShipment($record);
-                            $record->aramex_hawb      = $result['hawb'];
-                            $record->aramex_label_url = $result['label_url'];
-                            $record->aramex_error     = $result['error'];
-                            $record->aramex_pushed_at = now();
-                            $record->save();
-                            if ($result['hawb']) {
-                                Notification::make()
-                                    ->title('Expédition créée — HAWB : ' . $result['hawb'])
-                                    ->success()
-                                    ->send();
-                                $livewire->redirect(static::getUrl('index'), navigate: false);
-                            } else {
-                                Notification::make()
-                                    ->title('Erreur Aramex')
-                                    ->body($result['error'] ?? 'Erreur inconnue')
+                                    ->title('Erreur système')
+                                    ->body($e->getMessage())
                                     ->danger()
                                     ->send();
                             }
-                        } catch (\Throwable $e) {
-                            Notification::make()
-                                ->title('Erreur système')
-                                ->body($e->getMessage())
-                                ->danger()
-                                ->send();
-                        }
-                    }),
-                Actions\Action::make('track_aramex')
-                    ->label('Suivre')
-                    ->icon('heroicon-o-map-pin')
-                    ->color('info')
-                    ->visible(fn (Facture $record): bool => (bool) $record->aramex_hawb)
-                    ->action(function (Facture $record, $livewire): void {
-                        $result = app(AramexService::class)->trackShipment($record->aramex_hawb);
-                        if ($result['error']) {
-                            Notification::make()->title('Erreur tracking')->body($result['error'])->danger()->send();
-
-                            return;
-                        }
-                        if ($result['update_code']) {
-                            $record->update(['aramex_status' => $result['update_code']]);
-                            Notification::make()
-                                ->title('Statut mis à jour : ' . $result['update_code'])
-                                ->body($result['description'] ?? '')
-                                ->success()
-                                ->send();
-                            $livewire->redirect(static::getUrl('index'), navigate: false);
-                        } else {
-                            Notification::make()->title('Aucun statut disponible')->warning()->send();
-                        }
-                    }),
-                Actions\Action::make('schedule_pickup')
-                    ->label('Collecte')
-                    ->icon('heroicon-o-calendar-days')
-                    ->color('success')
-                    ->visible(fn (Facture $record): bool => (bool) $record->aramex_hawb && $record->aramex_status !== 'annulé')
-                    ->form([
-                        \Filament\Forms\Components\DatePicker::make('date')
-                            ->label('Date de collecte')
-                            ->default(now()->addDay()->format('Y-m-d'))
-                            ->minDate(now()->format('Y-m-d'))
-                            ->required(),
-                        \Filament\Forms\Components\TimePicker::make('ready_time')
-                            ->label('Heure prête')
-                            ->default('09:00')
-                            ->required(),
-                        \Filament\Forms\Components\TimePicker::make('last_time')
-                            ->label('Dernière heure')
-                            ->default('18:00')
-                            ->required(),
-                    ])
-                    ->modalHeading('Programmer une collecte Aramex')
-                    ->action(function (Facture $record, array $data, $livewire): void {
-                        try {
-                            $result = app(AramexService::class)->schedulePickup([
-                                'date'       => $data['date'],
-                                'ready_time' => substr($data['ready_time'], 0, 5),
-                                'last_time'  => substr($data['last_time'], 0, 5),
-                                'hawbs'      => [$record->aramex_hawb],
-                                'pieces'     => 1,
-                            ]);
-                            if ($result['success']) {
-                                Notification::make()
-                                    ->title('Collecte programmée — ID : ' . ($result['guid'] ?? 'OK'))
-                                    ->success()
-                                    ->send();
-                                $livewire->redirect(static::getUrl('index'), navigate: false);
-                            } else {
-                                Notification::make()
-                                    ->title('Erreur collecte')
-                                    ->body($result['error'] ?? 'Erreur inconnue')
-                                    ->danger()
-                                    ->send();
+                        }),
+                    Actions\Action::make('cancel_aramex')
+                        ->label('Annuler Aramex')
+                        ->icon('heroicon-o-x-circle')
+                        ->color('danger')
+                        ->visible(fn (Facture $record): bool => (bool) $record->aramex_hawb && $record->aramex_status !== 'annulé')
+                        ->requiresConfirmation()
+                        ->modalHeading('Annuler l\'expédition Aramex ?')
+                        ->modalDescription('Cette action annulera l\'expédition chez Aramex. Le HAWB sera conservé pour référence.')
+                        ->action(function (Facture $record, $livewire): void {
+                            try {
+                                $result = app(AramexService::class)->cancelShipment($record->aramex_hawb);
+                                if ($result['success']) {
+                                    $record->aramex_status = 'annulé';
+                                    $record->save();
+                                    Notification::make()->title('Expédition annulée')->success()->send();
+                                    $livewire->redirect(static::getUrl('index'), navigate: false);
+                                } else {
+                                    Notification::make()
+                                        ->title('Erreur annulation')
+                                        ->body($result['error'] ?? 'Erreur inconnue')
+                                        ->danger()
+                                        ->send();
+                                }
+                            } catch (\Throwable $e) {
+                                Notification::make()->title('Erreur système')->body($e->getMessage())->danger()->send();
                             }
-                        } catch (\Throwable $e) {
-                            Notification::make()->title('Erreur système')->body($e->getMessage())->danger()->send();
-                        }
-                    }),
-                Actions\Action::make('cancel_aramex')
-                    ->label('Annuler')
-                    ->icon('heroicon-o-x-circle')
-                    ->color('danger')
-                    ->visible(fn (Facture $record): bool => (bool) $record->aramex_hawb && $record->aramex_status !== 'annulé')
-                    ->requiresConfirmation()
-                    ->modalHeading('Annuler l\'expédition Aramex ?')
-                    ->modalDescription('Cette action annulera l\'expédition chez Aramex. Le HAWB sera conservé pour référence.')
-                    ->action(function (Facture $record, $livewire): void {
-                        try {
-                            $result = app(AramexService::class)->cancelShipment($record->aramex_hawb);
-                            if ($result['success']) {
-                                $record->aramex_status = 'annulé';
-                                $record->save();
-                                Notification::make()->title('Expédition annulée')->success()->send();
-                                $livewire->redirect(static::getUrl('index'), navigate: false);
-                            } else {
-                                Notification::make()
-                                    ->title('Erreur annulation')
-                                    ->body($result['error'] ?? 'Erreur inconnue')
-                                    ->danger()
-                                    ->send();
-                            }
-                        } catch (\Throwable $e) {
-                            Notification::make()->title('Erreur système')->body($e->getMessage())->danger()->send();
-                        }
-                    }),
-                Actions\DeleteAction::make(),
+                        }),
+                    Actions\DeleteAction::make(),
+                ])
+                    ->label('Actions')
+                    ->icon('heroicon-m-ellipsis-vertical')
+                    ->button(),
             ])
             ->bulkActions([
                 Actions\DeleteBulkAction::make(),
