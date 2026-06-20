@@ -23,6 +23,7 @@ import { Card, CardContent } from '@/app/components/ui/card';
 import type { Product, Review } from '@/types';
 import { getStorageUrl, addReview, getProductDetails } from '@/services/api';
 import { hasValidPromo } from '@/util/productPrice';
+import { generateProductFallbackDescription } from '@/util/productDescriptionFallback';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import {
@@ -1099,7 +1100,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     </h2>
                     <div
                       className={`text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-neutral prose-base max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-p:text-gray-600 prose-p:dark:text-gray-400 prose-p:leading-relaxed prose-strong:text-gray-900 prose-strong:dark:text-white prose-img:rounded-lg prose-img:shadow-md overflow-hidden transition-[max-height] duration-300 ${descExpanded ? 'max-h-[5000px]' : 'max-h-60'}`}
-                      dangerouslySetInnerHTML={{ __html: product.description_fr || product.description_cover || 'Aucune description disponible.' }}
+                      dangerouslySetInnerHTML={{ __html: product.description_fr || product.description_cover || generateProductFallbackDescription(product) }}
                     />
                     <button
                       type="button"
