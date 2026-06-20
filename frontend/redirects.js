@@ -21,7 +21,9 @@ function buildRedirects() {
 
     // ── Blog ──────────────────────────────────────────────────────────────
     p('/blogs', '/blog'),
-    p('/blogs/:path*', '/blog'),
+    // Preserve the slug so each old /blogs/{slug} lands on its real article
+    // /blog/{slug} instead of dumping everything on the blog index.
+    p('/blogs/:slug*', '/blog/:slug*'),
     p('/blog/qu-est-ce-que-la-proteine-whey', '/blog'),
     p('/nutrition-guide', '/blog'),
     p('/programme-dentrainement-musculation', '/blog'),
@@ -36,7 +38,13 @@ function buildRedirects() {
 
     // ── Products / shop (generic) ─────────────────────────────────────────
     p('/products', '/shop'),
+    p('/products/:path*', '/shop'),
     p('/produit', '/shop'),
+    p('/produit/:path*', '/shop'),
+    p('/product', '/shop'),
+    p('/product/:path*', '/shop'),
+    p('/product-tag/:path*', '/shop'),
+    p('/produits-search/:path*', '/shop'),
     p('/musculation-products', '/shop'),
     p('/musculation-products/:path*', '/shop'),
     p('/produits/:path*', '/shop'),
