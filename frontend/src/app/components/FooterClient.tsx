@@ -33,7 +33,11 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
   // The /coordonnees API returns the raw Coordinate model, so use its real
   // column names (adresse_fr/adresse, phone_1, phone_2, email).
   const contactAddress = coord?.adresse_fr || coord?.adresse || '';
-  const mapEmbedHtml = coord?.gelocalisation || '';
+  // Default Google Maps embed for PROTEIN.TN (Sousse). Used as a fallback when
+  // the /coordonnees API doesn't return a gelocalisation embed.
+  const DEFAULT_MAP_EMBED =
+    '<iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3234.515082636619!2d10.630613400000001!3d35.8363715!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x1302131b30e891b1%3A0x51dae0f25849b20c!2sPROTEIN.TN%20-%20PROTEINE%20TUNISIE!5e0!3m2!1sen!2stn!4v1782430269530!5m2!1sen!2stn" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>';
+  const mapEmbedHtml = coord?.gelocalisation || DEFAULT_MAP_EMBED;
   const contactEmail = coord?.email || 'contact@protein.tn';
   const contactPhones = [coord?.phone_1, coord?.phone_2].filter(Boolean).join(' / ') || '+216 27 612 500 / +216 73 200 169';
   const contactPhoneHref = `tel:${String(coord?.phone_1 || '+21627612500').replace(/\s/g, '')}`;
@@ -50,9 +54,11 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
   // Show all API pages in footer
   const footerPages = pages;
 
-  // Lazy load Google Maps only when footer is visible (Intersection Observer)
+  // Lazy load Google Maps only when footer is visible (Intersection Observer).
+  // Depend on mapEmbedHtml so the observer attaches once the map element is
+  // actually rendered — coord loads async, so on first mount the ref is null.
   useEffect(() => {
-    if (!mapRef.current) return;
+    if (!mapEmbedHtml || shouldLoadMap || !mapRef.current) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -66,7 +72,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
 
     observer.observe(mapRef.current);
     return () => observer.disconnect();
-  }, []);
+  }, [mapEmbedHtml, shouldLoadMap]);
 
   const handleNewsletterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
