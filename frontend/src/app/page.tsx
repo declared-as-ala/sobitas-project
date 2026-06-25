@@ -61,7 +61,7 @@ type LocalHomeSlide = {
 const LOCAL_HOME_SLIDES: LocalHomeSlide[] = [
   {
     id: 'home-hero-mobile',
-    cover: '/slides/home-hero-mobile.webp',
+    cover: '/slides/mobile.png',
     title: 'Proteines Premium',
     link: '/shop',
     type: 'mobile',
@@ -69,7 +69,7 @@ const LOCAL_HOME_SLIDES: LocalHomeSlide[] = [
   },
   {
     id: 'home-hero-web',
-    cover: '/slides/home-hero-web.webp',
+    cover: '/slides/web.png',
     title: 'Proteines Premium',
     link: '/shop',
     type: 'web',
