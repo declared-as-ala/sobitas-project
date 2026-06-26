@@ -245,9 +245,9 @@ export const HeroSlider = memo(function HeroSlider({ slides, mobileFirst, deskto
         />
 
         {/* Content */}
-        <div className="relative mx-auto flex h-full w-full max-w-7xl flex-col px-5 pb-48 pt-[calc(env(safe-area-inset-top)+1.25rem)] sm:px-6 sm:pb-44 md:pb-16 md:pt-16 lg:flex-row lg:items-center lg:px-8 lg:pb-10 lg:pt-0">
-          {/* Mobile: anchor text to the lower third so it never covers the model's
-              head (which sits in the upper area of the banner). Desktop stays centered. */}
+        <div className="relative mx-auto flex h-full w-full max-w-7xl flex-col px-5 pb-28 pt-[calc(env(safe-area-inset-top)+1.25rem)] sm:px-6 sm:pb-28 md:pb-16 md:pt-16 lg:flex-row lg:items-center lg:px-8 lg:pb-10 lg:pt-0">
+          {/* Mobile: drop the text/button to the bottom floor strip so it sits
+              under the products in the banner. Desktop stays centered/right. */}
           <div className="flex min-h-0 min-w-0 flex-1 flex-col items-start justify-end text-left lg:ml-auto lg:max-w-2xl lg:flex-none lg:items-end lg:justify-center lg:text-right xl:max-w-3xl">
             <h2 className="max-w-[13ch] text-[2.05rem] font-extrabold leading-[1.04] tracking-tight text-white drop-shadow-[0_3px_12px_rgba(0,0,0,0.65)] sm:max-w-[14ch] sm:text-4xl md:text-4xl lg:text-5xl xl:text-6xl">
               {currentSlideData.titre}
@@ -275,7 +275,7 @@ export const HeroSlider = memo(function HeroSlider({ slides, mobileFirst, deskto
         </div>
 
         {/* Mobile trust card: visible on phones with safe spacing */}
-        <div className="absolute inset-x-0 bottom-[2rem] z-[2] mx-auto w-[86%] max-w-sm scale-[0.96] sm:bottom-[2rem] sm:w-[82%] sm:scale-100 lg:hidden">
+        <div className="absolute inset-x-0 bottom-[0.75rem] z-[2] mx-auto w-[86%] max-w-sm scale-[0.9] sm:bottom-[1rem] sm:w-[82%] sm:scale-95 lg:hidden">
           <HeroTrustGuarantee layout="docked" />
         </div>
       </div>
