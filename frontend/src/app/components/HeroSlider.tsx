@@ -152,7 +152,7 @@ export const HeroSlider = memo(function HeroSlider({ slides, mobileFirst, deskto
       return {
         id: stableId,
         titre: slide.titre || slide.title || slide.designation_fr || 'Protéines Premium',
-        description: slide.description || slide.description_fr || 'Découvrez nos produits premium',
+        description: slide.description || slide.description_fr || '',
         lien: slide.lien || slide.link || slide.btn_link || '/shop',
         image: imagePath ? resolveSlideImageUrl(imagePath) : '/hero/webp/hero1.webp',
       };
@@ -252,9 +252,11 @@ export const HeroSlider = memo(function HeroSlider({ slides, mobileFirst, deskto
             <h2 className="max-w-[13ch] text-[2.05rem] font-extrabold leading-[1.04] tracking-tight text-white drop-shadow-[0_3px_12px_rgba(0,0,0,0.65)] sm:max-w-[14ch] sm:text-4xl md:text-4xl lg:text-5xl xl:text-6xl">
               {currentSlideData.titre}
             </h2>
-            <p className="mt-3 max-w-[28ch] text-sm leading-relaxed text-white/92 drop-shadow-[0_2px_10px_rgba(0,0,0,0.58)] sm:mt-4 sm:max-w-[32ch] sm:text-base md:text-lg lg:text-xl">
-              {currentSlideData.description}
-            </p>
+            {currentSlideData.description ? (
+              <p className="mt-3 max-w-[28ch] text-sm leading-relaxed text-white/92 drop-shadow-[0_2px_10px_rgba(0,0,0,0.58)] sm:mt-4 sm:max-w-[32ch] sm:text-base md:text-lg lg:text-xl">
+                {currentSlideData.description}
+              </p>
+            ) : null}
             <div className="mt-5 flex flex-wrap gap-3 sm:mt-6 md:mt-7 md:gap-4">
               <Button
                 size="lg"
