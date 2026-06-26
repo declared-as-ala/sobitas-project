@@ -245,8 +245,10 @@ export const HeroSlider = memo(function HeroSlider({ slides, mobileFirst, deskto
         />
 
         {/* Content */}
-        <div className="relative mx-auto flex h-full w-full max-w-7xl flex-col px-5 pb-24 pt-[calc(env(safe-area-inset-top)+1.25rem)] sm:px-6 sm:pb-20 md:pb-16 md:pt-16 lg:flex-row lg:items-center lg:px-8 lg:pb-10 lg:pt-0">
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col items-start justify-start text-left lg:max-w-2xl lg:flex-none lg:justify-center xl:max-w-3xl">
+        <div className="relative mx-auto flex h-full w-full max-w-7xl flex-col px-5 pb-48 pt-[calc(env(safe-area-inset-top)+1.25rem)] sm:px-6 sm:pb-44 md:pb-16 md:pt-16 lg:flex-row lg:items-center lg:px-8 lg:pb-10 lg:pt-0">
+          {/* Mobile: anchor text to the lower third so it never covers the model's
+              head (which sits in the upper area of the banner). Desktop stays centered. */}
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col items-start justify-end text-left lg:max-w-2xl lg:flex-none lg:justify-center xl:max-w-3xl">
             <h2 className="max-w-[13ch] text-[2.05rem] font-extrabold leading-[1.04] tracking-tight text-white drop-shadow-[0_3px_12px_rgba(0,0,0,0.65)] sm:max-w-[14ch] sm:text-4xl md:text-4xl lg:text-5xl xl:text-6xl">
               {currentSlideData.titre}
             </h2>
