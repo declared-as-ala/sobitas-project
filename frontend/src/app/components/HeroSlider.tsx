@@ -77,9 +77,7 @@ const HeroFirstPicture = memo(function HeroFirstPicture({
         fetchPriority="high"
         decoding="async"
         loading="eager"
-        // Mobile fills the box (image matches the portrait hero); desktop uses
-        // contain so the wide banner shows in full — head + products, no crop.
-        className="object-cover object-center md:object-contain"
+        className="object-cover object-center"
         style={{ width: '100%', height: '100%' }}
       />
     </picture>
@@ -224,7 +222,7 @@ export const HeroSlider = memo(function HeroSlider({ slides, mobileFirst, deskto
             src={currentSlideData.image}
             alt={currentSlideData.titre}
             isFirst={currentSlide === 0}
-            className="object-cover object-[68%_52%] sm:object-[62%_46%] md:object-contain md:object-center brightness-[0.84] contrast-[1.08] saturate-[0.92] md:brightness-100 md:contrast-100 md:saturate-100"
+            className="object-cover object-[68%_52%] sm:object-[62%_46%] md:object-center brightness-[0.84] contrast-[1.08] saturate-[0.92] md:brightness-100 md:contrast-100 md:saturate-100"
           />
         )}
 
