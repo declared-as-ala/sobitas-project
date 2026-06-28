@@ -142,7 +142,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     metaTitle = metaTitle.slice(0, META_TITLE_MAX_LEN);
     const tunisiaKeywords = getTunisiaKeywordsForCategory(canonicalSlug);
     const description =
-      merged.metaDescription && merged.metaDescription.length <= 160
+      merged.metaDescription && merged.metaDescription.length <= 500
         ? merged.metaDescription
         : (merged.intro?.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160) ||
             generateTunisiaMetaDescription(apiTitle || canonicalSlug, tunisiaKeywords));
