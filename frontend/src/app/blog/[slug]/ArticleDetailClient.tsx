@@ -338,11 +338,12 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
             </div>
           </article>
 
-          {/* Internal linking: creatine category for creatine-related articles */}
+          {/* Internal linking: creatine category CTA for creatine-related articles */}
           {/\bcréatine\b|\bcreatine\b/i.test(`${article.designation_fr ?? ''} ${article.description_fr ?? ''}`) && (
-            <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30">
-              <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
-                Acheter de la <Link href="/creatine" className="text-red-600 dark:text-red-400 font-medium hover:underline">créatine en Tunisie</Link> au meilleur prix : livraison rapide, paiement à la livraison. Découvrez aussi notre <Link href="/creatine" className="text-red-600 dark:text-red-400 hover:underline">créatine monohydrate</Link> et toute la gamme sur Proteine Tunisie.
+            <div className="mt-6 p-4 sm:p-5 rounded-xl border border-amber-200/60 dark:border-amber-900/30 bg-amber-50/40 dark:bg-amber-950/10">
+              <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Prêt à passer à l'action ?</p>
+              <p className="text-sm text-gray-700 dark:text-gray-300">
+                <Link href="/creatine" className="text-red-600 dark:text-red-400 font-medium hover:underline">Voir toutes nos créatines disponibles en Tunisie</Link> : monohydrate, micronisée, Creapure®, capsules — livraison rapide et paiement à la livraison partout en Tunisie.
               </p>
             </div>
           )}

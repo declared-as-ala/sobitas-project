@@ -80,8 +80,8 @@ function resolveBestProducts(
   }, []);
 }
 
-/** CTR-optimized meta title: 55–60 chars, keyword + Tunisia + brand. */
-const META_TITLE_MAX_LEN = 60;
+/** CTR-optimized meta title: 55–65 chars, keyword + Tunisia + brand. */
+const META_TITLE_MAX_LEN = 65;
 
 function toMetaTitle(seoH1: string | undefined, fallbackName: string | undefined, slug?: string): string {
   if (seoH1?.trim()) {
@@ -125,8 +125,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         ? merged.metaTitle
         : toMetaTitle(merged.h1, apiTitle, canonicalSlug);
     // Ensure brand suffix — API-sourced titles may omit it
+    // Skip when title already includes the domain brand (Protein.tn) to avoid double suffix
     const brand = ' | Protéine Tunisie';
-    if (!metaTitle.toLowerCase().includes('protéine') && !metaTitle.toLowerCase().includes('proteine')) {
+    if (
+      !metaTitle.toLowerCase().includes('protéine') &&
+      !metaTitle.toLowerCase().includes('proteine') &&
+      !metaTitle.toLowerCase().includes('protein.tn')
+    ) {
       metaTitle = (metaTitle + brand).slice(0, META_TITLE_MAX_LEN);
     }
     if (metaTitle.length > META_TITLE_MAX_LEN) {
