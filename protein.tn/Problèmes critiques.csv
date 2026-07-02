@@ -1,0 +1,14 @@
+Raison,Source,Validation,Pages
+Introuvable (404),Site Web,Échec,964
+Page avec redirection,Site Web,Échec,658
+"Exclue par la balise ""noindex""",Site Web,Échec,179
+Page en double sans URL canonique sélectionnée par l'utilisateur,Site Web,Échec,78
+Bloquée par le fichier robots.txt,Site Web,Échec,21
+Autre page avec balise canonique correcte,Site Web,Échec,16
+Soft 404,Site Web,Échec,11
+"Explorée, actuellement non indexée",Systèmes Google,Échec,1239
+Page en double : Google n'a pas choisi la même URL canonique que l'utilisateur,Systèmes Google,Échec,14
+Erreur liée à des redirections,Site Web,Non commencé,2
+Erreur serveur (5xx),Site Web,Commencé,4
+Bloquée en raison d'un autre problème de type 4xx,Site Web,Commencé,2
+"Détectée, actuellement non indexée",Systèmes Google,Réussi,43
