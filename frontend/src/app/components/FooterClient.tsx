@@ -111,14 +111,14 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
               transition={{ duration: 0.4, ease: 'easeOut' }}
               className="flex justify-start"
             >
-              <Link href="/" className="block max-w-[180px] opacity-90 hover:opacity-100 transition-opacity duration-300">
+              <Link href="/" className="block max-w-[220px] opacity-90 hover:opacity-100 transition-opacity duration-300">
                 <Image
                   src={footerLogoUrl}
                   alt="Proteine Tunisie"
-                  width={180}
-                  height={58}
+                  width={220}
+                  height={71}
                   className="w-full h-auto object-contain object-left"
-                  sizes="(max-width: 480px) 100px, (max-width: 768px) 120px, 140px"
+                  sizes="(max-width: 480px) 130px, (max-width: 768px) 150px, 170px"
                   loading="lazy"
                 />
               </Link>
@@ -244,13 +244,13 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
         <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
           {/* Contact Info & Social */}
           <div className="space-y-6">
-            <div className="relative h-12 w-auto mb-6 shrink-0 flex items-center">
+            <div className="relative h-16 w-auto mb-6 shrink-0 flex items-center">
               <Image
                 src={footerLogoUrl}
                 alt="Proteine Tunisie"
-                width={190}
-                height={62}
-                className="h-12 w-auto object-contain"
+                width={230}
+                height={75}
+                className="h-16 w-auto object-contain"
                 style={{ width: 'auto', height: 'auto' }}
                 priority
               />
