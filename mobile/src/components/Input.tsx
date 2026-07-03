@@ -26,7 +26,7 @@ export const Input: React.FC<InputProps> = ({
   return (
     <View style={[styles.container, containerStyle]}>
       {label && <Text style={styles.label}>{label}</Text>}
-      <View style={[styles.inputWrapper, error && styles.inputWrapperError]}>
+      <View style={[styles.inputWrapper, error ? styles.inputWrapperError : null]}>
         <TextInput
           style={[styles.input, style]}
           placeholderTextColor={placeholderTextColor || theme.colors.textMuted}

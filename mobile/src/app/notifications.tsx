@@ -77,10 +77,9 @@ export default function NotificationsScreen() {
             body: 'C\'est l\'heure de boire un verre d\'eau pour maintenir vos performances.',
           },
           trigger: {
-            type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
             seconds: 60 * 120, // 2 hours
             repeats: true,
-          },
+          } as any,
         });
       }
 
