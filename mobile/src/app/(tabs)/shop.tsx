@@ -16,7 +16,60 @@ import { shopApi } from '../../services/api';
 import { theme } from '../../constants/theme';
 import ProductCard from '../../components/ProductCard';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Search, SlidersHorizontal, X } from 'lucide-react-native';
+import {
+  Search,
+  SlidersHorizontal,
+  X,
+  Dumbbell,
+  Zap,
+  TrendingUp,
+  Pill,
+  Flame,
+  FlaskConical,
+  Cookie,
+  Activity,
+  Shield,
+  Droplets,
+  Target,
+  Moon,
+  Brain,
+  Heart,
+  Leaf,
+  Apple,
+  Beef,
+  Coffee,
+  ShoppingBag,
+  Package,
+  LucideIcon,
+} from 'lucide-react-native';
+
+// Same icon map as home screen — matched by category slug/name keywords
+const CATEGORY_ICON_MAP: { keywords: string[]; icon: LucideIcon; color: string }[] = [
+  { keywords: ['whey', 'proteine', 'protein', 'isolat', 'caséine', 'casein', 'iso'], icon: Dumbbell, color: '#FF6B00' },
+  { keywords: ['creatine', 'créatine', 'kre-alkalyn'], icon: Zap, color: '#F59E0B' },
+  { keywords: ['gainer', 'masse', 'weight-gain', 'prise-de-masse', 'hypercaloriq'], icon: TrendingUp, color: '#10B981' },
+  { keywords: ['vitamine', 'mineraux', 'vitamin', 'mineral', 'zinc', 'magnesium', 'omega', 'collagene'], icon: Pill, color: '#8B5CF6' },
+  { keywords: ['bruleur', 'graisse', 'fat-burner', 'thermogenic', 'minceur', 'diete', 'diète', 'perte'], icon: Flame, color: '#EF4444' },
+  { keywords: ['acide', 'amine', 'bcaa', 'eaa', 'glutamine', 'arginine', 'amino'], icon: FlaskConical, color: '#0EA5E9' },
+  { keywords: ['barre', 'snack', 'collation', 'cookie', 'brownie', 'gateau'], icon: Cookie, color: '#D97706' },
+  { keywords: ['pre-workout', 'preworkout', 'energie', 'energy', 'booster', 'pump', 'nitric'], icon: Activity, color: '#FF4500' },
+  { keywords: ['post-workout', 'recovery', 'recuperation', 'récupération'], icon: Shield, color: '#06B6D4' },
+  { keywords: ['hydration', 'hydratation', 'electrolyte', 'eau', 'isotonique', 'boisson'], icon: Droplets, color: '#22D3EE' },
+  { keywords: ['testosterone', 'testostérone', 'hormone', 'tribulus', 'zma', 'virilite'], icon: Target, color: '#DC2626' },
+  { keywords: ['sommeil', 'sleep', 'melatonin', 'mélatonin', 'nuit', 'night', 'relax'], icon: Moon, color: '#6366F1' },
+  { keywords: ['nootropic', 'focus', 'concentration', 'cerveau', 'cognit', 'brain'], icon: Brain, color: '#A855F7' },
+  { keywords: ['sante', 'santé', 'wellness', 'bien-etre', 'bien-être', 'probiotique'], icon: Heart, color: '#EC4899' },
+  { keywords: ['vegan', 'vegetal', 'végétal', 'plant', 'plante', 'bio', 'organic'], icon: Leaf, color: '#16A34A' },
+  { keywords: ['alimentaire', 'nourriture', 'food', 'repas', 'meal', 'riz', 'avoine', 'oat'], icon: Apple, color: '#84CC16' },
+  { keywords: ['boeuf', 'beef', 'animal', 'colostrum'], icon: Beef, color: '#B45309' },
+  { keywords: ['cafe', 'café', 'coffee', 'caffeine', 'caféine'], icon: Coffee, color: '#78350F' },
+  { keywords: ['accessoire', 'equipement', 'shaker', 'sport', 'materiel'], icon: ShoppingBag, color: '#64748B' },
+];
+
+const getCategoryIcon = (cat: any): { icon: LucideIcon; color: string } => {
+  const haystack = `${cat?.slug || ''} ${cat?.designation_fr || ''}`.toLowerCase();
+  return CATEGORY_ICON_MAP.find((e) => e.keywords.some((kw) => haystack.includes(kw))) || { icon: Package, color: '#9CA3AF' };
+};
 
 const SORT_OPTIONS = [
   { id: 'popular', label: 'Populaire' },
@@ -196,16 +249,21 @@ export default function ShopScreen() {
               {/* Category selector */}
               <Text style={styles.filterSectionLabel}>Catégories</Text>
               <View style={styles.optionsGrid}>
-                {filterOptions?.categories.map((cat: any) => (
-                  <TouchableOpacity
-                    key={cat.id.toString()}
-                    style={[styles.optionBadge, selectedCategory === cat.id && styles.optionBadgeActive]}
-                    onPress={() => setSelectedCategory(selectedCategory === cat.id ? null : cat.id)}>
-                    <Text style={[styles.optionBadgeText, selectedCategory === cat.id && styles.optionBadgeTextActive]}>
-                      {cat.designation_fr}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                {filterOptions?.categories.map((cat: any) => {
+                  const { icon: CatIcon, color } = getCategoryIcon(cat);
+                  const isActive = selectedCategory === cat.id;
+                  return (
+                    <TouchableOpacity
+                      key={cat.id.toString()}
+                      style={[styles.optionBadge, isActive && styles.optionBadgeActive]}
+                      onPress={() => setSelectedCategory(isActive ? null : cat.id)}>
+                      <CatIcon size={13} color={isActive ? color : '#9CA3AF'} style={{ marginRight: 4 }} />
+                      <Text style={[styles.optionBadgeText, isActive && { color }]}>
+                        {cat.designation_fr}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
 
               {/* Brand selector */}
@@ -406,6 +464,8 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   optionBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: theme.spacing.md,
     paddingVertical: 8,
     borderRadius: theme.borderRadius.sm,

@@ -7,6 +7,7 @@ import { WorkoutsModule } from './modules/workouts/workouts.module';
 import { SupplementsModule } from './modules/supplements/supplements.module';
 import { LoyaltyModule } from './modules/loyalty/loyalty.module';
 import { AiCoachModule } from './modules/ai-coach/ai-coach.module';
+import { MealScanModule } from './modules/meal-scan/meal-scan.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { PrismaService } from './prisma.service';
 import { RedisService } from './redis.service';
@@ -23,6 +24,7 @@ import { RedisService } from './redis.service';
     SupplementsModule,
     LoyaltyModule,
     AiCoachModule,
+    MealScanModule,
     AdminModule,
   ],
   providers: [PrismaService, RedisService],

@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { json } from 'express';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -9,6 +10,9 @@ async function bootstrap() {
 
   // Enable CORS for mobile clients
   app.enableCors();
+
+  // Raise the JSON body limit above Express's 100kb default so meal-scan photo uploads (base64) fit
+  app.use(json({ limit: '10mb' }));
 
   // Global pipes for DTO validation
   app.useGlobalPipes(

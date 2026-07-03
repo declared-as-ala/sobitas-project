@@ -207,6 +207,7 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_VISION_MODEL: ${GROQ_VISION_MODEL:-llama-3.2-11b-vision-preview}
       NODE_ENV: production
     ports:
       - "4000:4000"

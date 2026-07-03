@@ -35,7 +35,14 @@
         }
       ],
       "expo-secure-store",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Protein.tn a besoin d'accéder à vos photos pour analyser un repas.",
+          "cameraPermission": "Protein.tn a besoin d'accéder à votre caméra pour scanner un repas."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

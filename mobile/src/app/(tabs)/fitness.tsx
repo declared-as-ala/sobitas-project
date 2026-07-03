@@ -19,7 +19,7 @@ import CircularProgress from '../../components/CircularProgress';
 import { useAuthStore } from '../../store/auth';
 import { useFitnessStore } from '../../store/fitness';
 import { router } from 'expo-router';
-import { GlassWater, Plus, Info, WifiOff, Dumbbell, ChevronRight } from 'lucide-react-native';
+import { GlassWater, Plus, Info, WifiOff, Dumbbell, ChevronRight, ScanLine } from 'lucide-react-native';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
 
@@ -220,7 +220,22 @@ export default function FitnessScreen() {
         </View>
       </View>
 
-      {/* 3. Link to Body progress weight history */}
+      {/* 3. Meal scan shortcut */}
+      <TouchableOpacity
+        style={styles.mealScanCard}
+        activeOpacity={0.9}
+        onPress={() => router.push('/meal-scan')}>
+        <View style={styles.mealScanIconChip}>
+          <ScanLine size={22} color={theme.colors.primary} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.progressLinkTitle}>Scanner un repas</Text>
+          <Text style={styles.progressLinkSubtitle}>Estimez calories et protéines par photo</Text>
+        </View>
+        <ChevronRight size={20} color={theme.colors.textMuted} />
+      </TouchableOpacity>
+
+      {/* Link to Body progress weight history */}
       <TouchableOpacity
         style={styles.progressLinkCard}
         onPress={() => router.push('/progress')}>

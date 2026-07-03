@@ -32,20 +32,66 @@ import {
   FlaskConical,
   Cookie,
   Package,
+  Droplets,
+  Coffee,
+  Apple,
+  ShoppingBag,
+  Heart,
+  Brain,
+  Moon,
+  Shield,
+  Activity,
+  Target,
+  Beef,
+  Leaf,
+  Blend,
   LucideIcon,
 } from 'lucide-react-native';
 
 const LOGO = require('../../../assets/images/branding/logo.png');
 
-// Icon + accent color per category, matched against slug/name keywords (no cover images used).
+// Icon + accent color per category — keywords matched against slug + French designation.
 const CATEGORY_ICON_MAP: { keywords: string[]; icon: LucideIcon; color: string }[] = [
-  { keywords: ['whey', 'proteine', 'protein'], icon: Dumbbell, color: theme.colors.primary },
-  { keywords: ['creatine', 'créatine'], icon: Zap, color: '#F59E0B' },
-  { keywords: ['gainer', 'masse', 'weight-gain'], icon: TrendingUp, color: '#10B981' },
-  { keywords: ['vitamine', 'mineraux', 'vitamin'], icon: Pill, color: '#8B5CF6' },
-  { keywords: ['bruleur', 'graisse', 'fat-burner'], icon: Flame, color: '#EF4444' },
-  { keywords: ['acide', 'amine', 'bcaa', 'eaa'], icon: FlaskConical, color: '#0EA5E9' },
-  { keywords: ['barre', 'snack', 'collation'], icon: Cookie, color: '#D97706' },
+  // Protein
+  { keywords: ['whey', 'proteine', 'protein', 'isolat', 'caséine', 'casein', 'iso'], icon: Dumbbell, color: theme.colors.primary },
+  // Creatine
+  { keywords: ['creatine', 'créatine', 'kre-alkalyn'], icon: Zap, color: '#F59E0B' },
+  // Mass / weight gainer
+  { keywords: ['gainer', 'masse', 'weight-gain', 'prise-de-masse', 'hypercaloriq'], icon: TrendingUp, color: '#10B981' },
+  // Vitamins & minerals
+  { keywords: ['vitamine', 'mineraux', 'vitamin', 'mineral', 'zinc', 'magnesium', 'omega', 'collagene', 'collagen'], icon: Pill, color: '#8B5CF6' },
+  // Fat burners & thermogenics
+  { keywords: ['bruleur', 'graisse', 'fat-burner', 'thermogenic', 'minceur', 'diete', 'diète', 'perte'], icon: Flame, color: '#EF4444' },
+  // Amino acids, BCAA, EAA
+  { keywords: ['acide', 'amine', 'bcaa', 'eaa', 'glutamine', 'arginine', 'amino'], icon: FlaskConical, color: '#0EA5E9' },
+  // Bars & snacks
+  { keywords: ['barre', 'snack', 'collation', 'cookie', 'brownie', 'gateau'], icon: Cookie, color: '#D97706' },
+  // Pre-workout & energy
+  { keywords: ['pre-workout', 'preworkout', 'pre workout', 'energie', 'energy', 'booster', 'pump', 'nitric'], icon: Activity, color: '#FF4500' },
+  // Post-workout & recovery
+  { keywords: ['post-workout', 'recovery', 'recuperation', 'récupération', 'repair'], icon: Shield, color: '#06B6D4' },
+  // Hydration & electrolytes
+  { keywords: ['hydration', 'hydratation', 'electrolyte', 'eau', 'isotonique', 'boisson'], icon: Droplets, color: '#22D3EE' },
+  // Testosterone & hormone support
+  { keywords: ['testosterone', 'testostérone', 'hormone', 'tribulus', 'zma', 'booster-t', 'virilite'], icon: Target, color: '#DC2626' },
+  // Sleep & recovery
+  { keywords: ['sommeil', 'sleep', 'melatonin', 'mélatonin', 'nuit', 'night', 'relax'], icon: Moon, color: '#6366F1' },
+  // Nootropics / focus / brain
+  { keywords: ['nootropic', 'focus', 'concentration', 'cerveau', 'cognit', 'brain'], icon: Brain, color: '#A855F7' },
+  // Health & wellness
+  { keywords: ['sante', 'santé', 'wellness', 'bien-etre', 'bien-être', 'probiotique', 'probiot'], icon: Heart, color: '#EC4899' },
+  // Vegan / plant-based
+  { keywords: ['vegan', 'vegetal', 'végétal', 'plant', 'plante', 'bio', 'organic'], icon: Leaf, color: '#16A34A' },
+  // Protein food / high-protein food
+  { keywords: ['alimentaire', 'nourriture', 'food', 'repas', 'meal', 'riz', 'avoine', 'oat'], icon: Apple, color: '#84CC16' },
+  // Beef protein / animal
+  { keywords: ['boeuf', 'beef', 'animal', 'colostrum'], icon: Beef, color: '#B45309' },
+  // Coffee / caffeine
+  { keywords: ['cafe', 'café', 'coffee', 'caffeine', 'caféine'], icon: Coffee, color: '#78350F' },
+  // Blends / all-in-one
+  { keywords: ['blend', 'melange', 'mélange', 'all-in-one', 'stack', 'complex', 'complexe'], icon: Blend, color: '#7C3AED' },
+  // Accessories / equipment
+  { keywords: ['accessoire', 'equipement', 'shaker', 'sport', 'materiel'], icon: ShoppingBag, color: '#64748B' },
 ];
 
 const getCategoryIcon = (category: any) => {
