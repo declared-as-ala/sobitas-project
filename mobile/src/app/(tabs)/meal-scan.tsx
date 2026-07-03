@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ScrollView,
   View,
@@ -11,6 +11,15 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { useMutation } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
+import Animated, {
+  FadeIn,
+  FadeInUp,
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import { fitnessApi } from '../../services/api';
 import { theme } from '../../constants/theme';
 import { useAuthStore } from '../../store/auth';
@@ -18,7 +27,15 @@ import { useFitnessStore } from '../../store/fitness';
 import Button from '../../components/Button';
 import GlassCard from '../../components/GlassCard';
 import CircularProgress from '../../components/CircularProgress';
-import { Camera, ImageIcon, Sparkles, ScanLine, RotateCcw, AlertCircle } from 'lucide-react-native';
+import {
+  Camera,
+  ImageIcon,
+  Sparkles,
+  ScanLine,
+  RotateCcw,
+  AlertCircle,
+  Lightbulb,
+} from 'lucide-react-native';
 
 interface ScannedImage {
   uri: string;
@@ -46,6 +63,45 @@ const CONFIDENCE_COLOR: Record<string, string> = {
   low: theme.colors.warning,
   medium: '#0EA5E9',
   high: theme.colors.success,
+};
+
+const PREVIEW_HEIGHT = 260;
+
+/** Animated horizontal line that sweeps top-to-bottom over the photo while analyzing. */
+const ScanningOverlay = () => {
+  const translateY = useSharedValue(0);
+
+  useEffect(() => {
+    translateY.value = withRepeat(
+      withSequence(
+        withTiming(PREVIEW_HEIGHT - 3, { duration: 1400 }),
+        withTiming(0, { duration: 0 }),
+      ),
+      -1,
+    );
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
+
+  return (
+    <View style={styles.scanningOverlay} pointerEvents="none">
+      <View style={styles.scanningDim} />
+      <Animated.View style={[styles.scanningLineWrapper, animatedStyle]}>
+        <LinearGradient
+          colors={['transparent', theme.colors.primary, 'transparent']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.scanningLine}
+        />
+      </Animated.View>
+      <View style={styles.scanningLabel}>
+        <Sparkles size={14} color={theme.colors.white} />
+        <Text style={styles.scanningLabelText}>Analyse en cours...</Text>
+      </View>
+    </View>
+  );
 };
 
 export default function MealScanScreen() {
@@ -113,6 +169,14 @@ export default function MealScanScreen() {
     setResult(null);
   };
 
+  // Relative share of each macro within this meal (real ratio, not a fabricated target).
+  const macroShare = (grams: number) => {
+    if (!result) return 0;
+    const total = result.protein + result.carbs + result.fat;
+    if (!total) return 0;
+    return Math.max(6, Math.round((grams / total) * 100));
+  };
+
   const handleSaveToTracker = () => {
     if (!result) return;
     const today = new Date().toISOString().split('T')[0];
@@ -130,51 +194,63 @@ export default function MealScanScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       <View style={styles.introRow}>
-        <View style={styles.introIconChip}>
-          <ScanLine size={20} color={theme.colors.primary} />
-        </View>
+        <LinearGradient colors={theme.gradients.primary} style={styles.introIconChip}>
+          <ScanLine size={20} color={theme.colors.white} />
+        </LinearGradient>
         <Text style={styles.introText}>
           Prenez en photo votre repas pour estimer instantanément ses calories et ses protéines.
         </Text>
       </View>
 
       {!image ? (
-        <GlassCard light style={styles.pickerCard}>
-          <View style={styles.pickerIconWrapper}>
-            <Camera size={36} color={theme.colors.primary} />
-          </View>
-          <Text style={styles.pickerTitle}>Scanner un repas</Text>
-          <Text style={styles.pickerSubtitle}>Prenez une photo nette, de préférence vue du dessus.</Text>
+        <Animated.View entering={FadeIn.duration(300)}>
+          <GlassCard light style={styles.pickerCard}>
+            <LinearGradient colors={theme.gradients.primary} style={styles.pickerIconWrapper}>
+              <Camera size={32} color={theme.colors.white} />
+            </LinearGradient>
+            <Text style={styles.pickerTitle}>Scanner un repas</Text>
+            <Text style={styles.pickerSubtitle}>Prenez une photo nette, de préférence vue du dessus.</Text>
 
-          <View style={styles.pickerButtonsRow}>
-            <TouchableOpacity style={styles.pickerBtn} activeOpacity={0.85} onPress={() => pickFromSource('camera')}>
-              <LinearGradient
-                colors={theme.gradients.primary}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.pickerBtnGradient}>
-                <Camera size={18} color={theme.colors.white} />
-                <Text style={styles.pickerBtnText}>Prendre une photo</Text>
-              </LinearGradient>
-            </TouchableOpacity>
+            <View style={styles.pickerButtonsRow}>
+              <TouchableOpacity style={styles.pickerBtn} activeOpacity={0.85} onPress={() => pickFromSource('camera')}>
+                <LinearGradient
+                  colors={theme.gradients.primary}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.pickerBtnGradient}>
+                  <Camera size={18} color={theme.colors.white} />
+                  <Text style={styles.pickerBtnText}>Prendre une photo</Text>
+                </LinearGradient>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.pickerBtnOutline}
-              activeOpacity={0.85}
-              onPress={() => pickFromSource('library')}>
-              <ImageIcon size={18} color={theme.colors.text} />
-              <Text style={styles.pickerBtnOutlineText}>Choisir depuis la galerie</Text>
-            </TouchableOpacity>
-          </View>
-        </GlassCard>
+              <TouchableOpacity
+                style={styles.pickerBtnOutline}
+                activeOpacity={0.85}
+                onPress={() => pickFromSource('library')}>
+                <ImageIcon size={18} color={theme.colors.text} />
+                <Text style={styles.pickerBtnOutlineText}>Choisir depuis la galerie</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.tipRow}>
+              <Lightbulb size={14} color={theme.colors.primary} style={{ marginTop: 1 }} />
+              <Text style={styles.tipText}>
+                Astuce : un bon éclairage et une photo cadrée sur l'assiette améliorent la précision.
+              </Text>
+            </View>
+          </GlassCard>
+        </Animated.View>
       ) : (
-        <>
+        <Animated.View entering={FadeInUp.duration(280)}>
           <View style={styles.previewWrapper}>
             <Image source={{ uri: image.uri }} style={styles.previewImage} resizeMode="cover" />
-            <TouchableOpacity style={styles.changePhotoBtn} onPress={handleReset}>
-              <RotateCcw size={14} color={theme.colors.white} />
-              <Text style={styles.changePhotoText}>Changer</Text>
-            </TouchableOpacity>
+            {scanMutation.isPending && <ScanningOverlay />}
+            {!scanMutation.isPending && (
+              <TouchableOpacity style={styles.changePhotoBtn} onPress={handleReset}>
+                <RotateCcw size={14} color={theme.colors.white} />
+                <Text style={styles.changePhotoText}>Changer</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {!result && (
@@ -185,68 +261,110 @@ export default function MealScanScreen() {
               onPress={() => scanMutation.mutate()}
             />
           )}
-        </>
+        </Animated.View>
       )}
 
       {result && (
-        <LinearGradient
-          colors={theme.gradients.dark}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.resultCard, theme.shadows.heavy]}>
-          <View style={styles.resultHeader}>
-            <View style={styles.resultHeaderIconChip}>
-              <Sparkles size={18} color={theme.colors.primary} />
-            </View>
-            <Text style={styles.resultMealName} numberOfLines={2}>
-              {result.mealName}
-            </Text>
-          </View>
+        <Animated.View entering={FadeInUp.duration(320)}>
+          <LinearGradient
+            colors={theme.gradients.dark}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[styles.resultCard, theme.shadows.heavy]}>
+            <LinearGradient
+              colors={theme.gradients.glassLight}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.cardShine}
+              pointerEvents="none"
+            />
 
-          <View style={styles.calorieRingRow}>
-            <CircularProgress progress={100} size={110} strokeWidth={10} color={theme.colors.primary}>
-              <Text style={styles.ringCalories}>{result.calories}</Text>
-              <Text style={styles.ringCaloriesUnit}>kcal</Text>
-            </CircularProgress>
-            <View style={styles.macroSideStats}>
-              <View style={styles.macroSideRow}>
-                <Text style={[styles.macroSideLabel, { color: theme.colors.primary }]}>Protéines</Text>
-                <Text style={styles.macroSideVal}>{result.protein} g</Text>
+            <View style={styles.resultHeader}>
+              <View style={styles.resultHeaderIconChip}>
+                <Sparkles size={18} color={theme.colors.primary} />
               </View>
-              <View style={styles.macroSideRow}>
-                <Text style={[styles.macroSideLabel, { color: '#F59E0B' }]}>Glucides</Text>
-                <Text style={styles.macroSideVal}>{result.carbs} g</Text>
-              </View>
-              <View style={styles.macroSideRow}>
-                <Text style={[styles.macroSideLabel, { color: '#10B981' }]}>Lipides</Text>
-                <Text style={styles.macroSideVal}>{result.fat} g</Text>
+              <Text style={styles.resultMealName} numberOfLines={2}>
+                {result.mealName}
+              </Text>
+            </View>
+
+            <View style={[styles.confidenceBadge, { borderColor: CONFIDENCE_COLOR[result.confidence] }]}>
+              <View style={[styles.confidenceDot, { backgroundColor: CONFIDENCE_COLOR[result.confidence] }]} />
+              <Text style={[styles.confidenceText, { color: CONFIDENCE_COLOR[result.confidence] }]}>
+                {CONFIDENCE_LABEL[result.confidence]}
+              </Text>
+            </View>
+
+            <View style={styles.calorieRingRow}>
+              <CircularProgress progress={100} size={110} strokeWidth={10} color={theme.colors.primary}>
+                <Text style={styles.ringCalories}>{result.calories}</Text>
+                <Text style={styles.ringCaloriesUnit}>kcal</Text>
+              </CircularProgress>
+              <View style={styles.macroSideStats}>
+                <View style={styles.macroSideItem}>
+                  <View style={styles.macroSideHeader}>
+                    <Text style={[styles.macroSideLabel, { color: theme.colors.primary }]}>Protéines</Text>
+                    <Text style={styles.macroSideVal}>{result.protein} g</Text>
+                  </View>
+                  <View style={styles.macroBarBg}>
+                    <View
+                      style={[
+                        styles.macroBarFill,
+                        { width: `${macroShare(result.protein)}%`, backgroundColor: theme.colors.primary },
+                      ]}
+                    />
+                  </View>
+                </View>
+                <View style={styles.macroSideItem}>
+                  <View style={styles.macroSideHeader}>
+                    <Text style={[styles.macroSideLabel, { color: '#F59E0B' }]}>Glucides</Text>
+                    <Text style={styles.macroSideVal}>{result.carbs} g</Text>
+                  </View>
+                  <View style={styles.macroBarBg}>
+                    <View
+                      style={[
+                        styles.macroBarFill,
+                        { width: `${macroShare(result.carbs)}%`, backgroundColor: '#F59E0B' },
+                      ]}
+                    />
+                  </View>
+                </View>
+                <View style={styles.macroSideItem}>
+                  <View style={styles.macroSideHeader}>
+                    <Text style={[styles.macroSideLabel, { color: '#10B981' }]}>Lipides</Text>
+                    <Text style={styles.macroSideVal}>{result.fat} g</Text>
+                  </View>
+                  <View style={styles.macroBarBg}>
+                    <View
+                      style={[
+                        styles.macroBarFill,
+                        { width: `${macroShare(result.fat)}%`, backgroundColor: '#10B981' },
+                      ]}
+                    />
+                  </View>
+                </View>
               </View>
             </View>
-          </View>
 
-          <View style={styles.confidenceRow}>
-            <View style={[styles.confidenceDot, { backgroundColor: CONFIDENCE_COLOR[result.confidence] }]} />
-            <Text style={styles.confidenceText}>{CONFIDENCE_LABEL[result.confidence]}</Text>
-          </View>
+            {!!result.notes && (
+              <View style={styles.notesRow}>
+                <AlertCircle size={14} color="rgba(255,255,255,0.6)" style={{ marginRight: 6, marginTop: 1 }} />
+                <Text style={styles.notesText}>{result.notes}</Text>
+              </View>
+            )}
 
-          {!!result.notes && (
-            <View style={styles.notesRow}>
-              <AlertCircle size={14} color="rgba(255,255,255,0.6)" style={{ marginRight: 6, marginTop: 1 }} />
-              <Text style={styles.notesText}>{result.notes}</Text>
-            </View>
-          )}
+            {isAuthenticated ? (
+              <Button title="Ajouter à mon suivi protéines" style={styles.saveBtn} onPress={handleSaveToTracker} />
+            ) : (
+              <Text style={styles.loginHint}>Connectez-vous pour enregistrer ce repas dans votre suivi.</Text>
+            )}
 
-          {isAuthenticated ? (
-            <Button title="Ajouter à mon suivi protéines" style={styles.saveBtn} onPress={handleSaveToTracker} />
-          ) : (
-            <Text style={styles.loginHint}>Connectez-vous pour enregistrer ce repas dans votre suivi.</Text>
-          )}
-
-          <TouchableOpacity style={styles.restartLink} onPress={handleReset}>
-            <RotateCcw size={14} color={theme.colors.primary} />
-            <Text style={styles.restartLinkText}>Scanner un autre repas</Text>
-          </TouchableOpacity>
-        </LinearGradient>
+            <TouchableOpacity style={styles.restartLink} onPress={handleReset}>
+              <RotateCcw size={14} color={theme.colors.primary} />
+              <Text style={styles.restartLinkText}>Scanner un autre repas</Text>
+            </TouchableOpacity>
+          </LinearGradient>
+        </Animated.View>
       )}
     </ScrollView>
   );
@@ -270,7 +388,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: theme.borderRadius.round,
-    backgroundColor: theme.colors.orangeLight,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: theme.spacing.sm,
@@ -290,10 +407,10 @@ const styles = StyleSheet.create({
     width: 76,
     height: 76,
     borderRadius: theme.borderRadius.round,
-    backgroundColor: theme.colors.orangeLight,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: theme.spacing.md,
+    ...theme.shadows.medium,
   },
   pickerTitle: {
     fontSize: theme.typography.sizes.lg,
@@ -342,6 +459,22 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.sizes.sm,
     marginLeft: 8,
   },
+  tipRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: theme.colors.orangeLight,
+    borderRadius: theme.borderRadius.sm,
+    padding: theme.spacing.sm,
+    marginTop: theme.spacing.md,
+    width: '100%',
+  },
+  tipText: {
+    flex: 1,
+    fontSize: 11,
+    color: theme.colors.text,
+    lineHeight: 15,
+    marginLeft: 6,
+  },
   previewWrapper: {
     borderRadius: theme.borderRadius.lg,
     overflow: 'hidden',
@@ -350,8 +483,41 @@ const styles = StyleSheet.create({
   },
   previewImage: {
     width: '100%',
-    height: 260,
+    height: PREVIEW_HEIGHT,
     backgroundColor: theme.colors.border,
+  },
+  scanningOverlay: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  scanningDim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(10,10,11,0.35)',
+  },
+  scanningLineWrapper: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 3,
+  },
+  scanningLine: {
+    flex: 1,
+  },
+  scanningLabel: {
+    position: 'absolute',
+    bottom: theme.spacing.sm,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderRadius: theme.borderRadius.round,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 6,
+  },
+  scanningLabelText: {
+    color: theme.colors.white,
+    fontSize: 11,
+    fontWeight: theme.typography.weights.bold,
+    marginLeft: 6,
   },
   changePhotoBtn: {
     position: 'absolute',
@@ -377,6 +543,17 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.lg,
     padding: theme.spacing.md,
     marginTop: theme.spacing.sm,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  cardShine: {
+    position: 'absolute',
+    top: -40,
+    right: -60,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    transform: [{ rotate: '20deg' }],
   },
   resultHeader: {
     flexDirection: 'row',
@@ -384,7 +561,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.15)',
     paddingBottom: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
   },
   resultHeaderIconChip: {
     width: 32,
@@ -400,6 +577,16 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.sizes.md,
     fontWeight: theme.typography.weights.bold,
     color: theme.colors.white,
+  },
+  confidenceBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderRadius: theme.borderRadius.round,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 4,
+    marginBottom: theme.spacing.md,
   },
   calorieRingRow: {
     flexDirection: 'row',
@@ -419,24 +606,32 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: theme.spacing.lg,
   },
-  macroSideRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  macroSideItem: {
     marginBottom: theme.spacing.sm,
   },
+  macroSideHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
   macroSideLabel: {
-    fontSize: theme.typography.sizes.sm,
+    fontSize: 12,
     fontWeight: theme.typography.weights.bold,
   },
   macroSideVal: {
     color: theme.colors.white,
     fontWeight: theme.typography.weights.bold,
-    fontSize: theme.typography.sizes.sm,
+    fontSize: 12,
   },
-  confidenceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: theme.spacing.sm,
+  macroBarBg: {
+    height: 5,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: theme.borderRadius.round,
+    overflow: 'hidden',
+  },
+  macroBarFill: {
+    height: '100%',
+    borderRadius: theme.borderRadius.round,
   },
   confidenceDot: {
     width: 8,
@@ -445,9 +640,8 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   confidenceText: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.75)',
-    fontWeight: theme.typography.weights.medium,
+    fontSize: 11,
+    fontWeight: theme.typography.weights.bold,
   },
   notesRow: {
     flexDirection: 'row',

@@ -28,8 +28,8 @@ export default function ProgressScreen() {
   const [isLogging, setIsLogging] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  // 1. Fetch weight progress history
-  const { data: progressHistory, isLoading, refetch } = useQuery({
+  // 1. Fetch weight progress history — backend returns { history, weeklyChange, monthlyChange }
+  const { data: progressData, isLoading, refetch } = useQuery({
     queryKey: ['body-progress'],
     queryFn: async () => {
       const res = await fitnessApi.get('/body-progress');
@@ -37,6 +37,8 @@ export default function ProgressScreen() {
     },
     enabled: isAuthenticated && isOnline,
   });
+
+  const progressHistory: any[] = progressData?.history || [];
 
   const handleLogProgress = () => {
     if (!weight || isNaN(Number(weight))) return;

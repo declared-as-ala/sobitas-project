@@ -139,7 +139,12 @@ export default function HomeScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+      nestedScrollEnabled
+      scrollEventThrottle={16}>
       {/* 1. Editorial hero — no photo, just logo + bold split-color typography */}
       <View style={styles.heroSection}>
         <View style={styles.heroTopRow}>
@@ -290,6 +295,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   loadingContainer: {
     flex: 1,
