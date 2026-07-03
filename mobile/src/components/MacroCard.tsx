@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { theme } from '../constants/theme';
+import CircularProgress from './CircularProgress';
 
 interface MacroCardProps {
   calories: { consumed: number; target: number };
@@ -22,20 +23,17 @@ export const MacroCard: React.FC<MacroCardProps> = ({
 
   return (
     <View style={[styles.card, theme.shadows.light]}>
-      {/* Calories Circle/Linear Summary */}
+      {/* Calories Circular Summary */}
       <View style={styles.calorieSection}>
+        <CircularProgress progress={calPercent} size={88} strokeWidth={9} color={theme.colors.primary}>
+          <Text style={styles.ringPercent}>{calPercent}%</Text>
+        </CircularProgress>
         <View style={styles.calorieTextWrapper}>
           <Text style={styles.calorieValue}>
             {calories.consumed} <Text style={styles.calorieMuted}>/ {calories.target} kcal</Text>
           </Text>
           <Text style={styles.label}>Calories journalières</Text>
         </View>
-        <Text style={styles.calPercentText}>{calPercent}%</Text>
-      </View>
-      
-      {/* Calorie Progress Bar */}
-      <View style={styles.progressBarBg}>
-        <View style={[styles.progressBarFill, { width: `${calPercent}%` }]} />
       </View>
 
       {/* Macros Split Row */}
@@ -88,12 +86,17 @@ const styles = StyleSheet.create({
   },
   calorieSection: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.sm,
+    marginBottom: theme.spacing.lg,
+  },
+  ringPercent: {
+    fontSize: theme.typography.sizes.md,
+    fontWeight: theme.typography.weights.heavy,
+    color: theme.colors.primary,
   },
   calorieTextWrapper: {
     flexDirection: 'column',
+    marginLeft: theme.spacing.md,
   },
   calorieValue: {
     fontSize: theme.typography.sizes.xl,
@@ -109,23 +112,6 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.sizes.xs,
     color: theme.colors.textMuted,
     marginTop: 2,
-  },
-  calPercentText: {
-    fontSize: theme.typography.sizes.lg,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.primary,
-  },
-  progressBarBg: {
-    height: 10,
-    backgroundColor: theme.colors.border,
-    borderRadius: theme.borderRadius.round,
-    overflow: 'hidden',
-    marginBottom: theme.spacing.lg,
-  },
-  progressBarFill: {
-    height: '100%',
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.borderRadius.round,
   },
   macrosRow: {
     flexDirection: 'row',

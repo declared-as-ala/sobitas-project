@@ -7,10 +7,18 @@ import {
   TouchableOpacity,
   Dimensions,
 } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+} from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { getProductImageUrl } from '../services/api';
 import { theme } from '../constants/theme';
 import { useCartStore } from '../store/cart';
 import { ShoppingBag } from 'lucide-react-native';
+
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
 const { width } = Dimensions.get('window');
 const cardWidth = (width - 48) / 2; // Two columns grid with padding
@@ -36,10 +44,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress }) =>
   const promoPrice = product.promo ? Number(product.promo) : null;
   const discountPercent = promoPrice ? Math.round(((price - promoPrice) / price) * 100) : 0;
 
+  const scale = useSharedValue(1);
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
   const handleAddToCart = (e: any) => {
     e.stopPropagation(); // Avoid triggering onPress of card
     if (isOutOfStock) return;
-    
+
     addItem({
       id: product.id,
       name: product.designation_fr,
@@ -51,9 +64,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress }) =>
   };
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.9}
-      style={[styles.card, theme.shadows.light]}
+    <AnimatedTouchable
+      activeOpacity={0.92}
+      style={[styles.card, theme.shadows.light, animatedStyle]}
+      onPressIn={() => { scale.value = withTiming(0.97, { duration: 100 }); }}
+      onPressOut={() => { scale.value = withTiming(1, { duration: 120 }); }}
       onPress={onPress}>
       {/* Product Image & Badges */}
       <View style={styles.imageContainer}>
@@ -63,9 +78,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress }) =>
           resizeMode="cover"
         />
         {promoPrice && (
-          <View style={styles.discountBadge}>
+          <LinearGradient
+            colors={theme.gradients.primary}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.discountBadge}>
             <Text style={styles.discountText}>-{discountPercent}%</Text>
-          </View>
+          </LinearGradient>
         )}
         {isOutOfStock && (
           <View style={styles.outOfStockBadge}>
@@ -79,7 +98,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress }) =>
         <Text style={styles.name} numberOfLines={2}>
           {product.designation_fr}
         </Text>
-        
+
         <View style={styles.priceRow}>
           <View style={styles.priceWrapper}>
             {promoPrice ? (
@@ -91,7 +110,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress }) =>
               <Text style={styles.price}>{price.toFixed(3)} TND</Text>
             )}
           </View>
-          
+
           <TouchableOpacity
             style={[styles.cartButton, isOutOfStock && styles.cartButtonDisabled]}
             disabled={isOutOfStock}
@@ -100,7 +119,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress }) =>
           </TouchableOpacity>
         </View>
       </View>
-    </TouchableOpacity>
+    </AnimatedTouchable>
   );
 };
 
@@ -108,7 +127,7 @@ const styles = StyleSheet.create({
   card: {
     width: cardWidth,
     backgroundColor: theme.colors.card,
-    borderRadius: theme.borderRadius.md,
+    borderRadius: theme.borderRadius.lg,
     overflow: 'hidden',
     marginBottom: theme.spacing.md,
     borderWidth: 1,
@@ -128,10 +147,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: theme.spacing.sm,
     left: theme.spacing.sm,
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: theme.borderRadius.sm,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: theme.borderRadius.round,
   },
   discountText: {
     color: theme.colors.white,

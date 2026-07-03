@@ -9,11 +9,51 @@ import {
   Alert,
 } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+} from 'react-native-reanimated';
 import { fitnessApi } from '../../services/api';
 import { theme } from '../../constants/theme';
 import { useLocalSearchParams, router } from 'expo-router';
-import { CheckCircle, Play, Square, Timer, ChevronLeft } from 'lucide-react-native';
+import { Play, Pause, RotateCcw, Timer, Check } from 'lucide-react-native';
 import Button from '../../components/Button';
+
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
+
+const SetCheckButton = ({
+  checked,
+  label,
+  onPress,
+}: {
+  checked: boolean;
+  label: string;
+  onPress: () => void;
+}) => {
+  const scale = useSharedValue(1);
+  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  const handlePress = () => {
+    scale.value = withTiming(1.15, { duration: 90 }, () => {
+      scale.value = withTiming(1, { duration: 140 });
+    });
+    onPress();
+  };
+
+  return (
+    <AnimatedTouchable
+      style={[styles.setCheckBtn, checked && styles.setCheckBtnActive, animatedStyle]}
+      onPress={handlePress}>
+      {checked ? (
+        <Check size={16} color={theme.colors.white} />
+      ) : (
+        <Text style={styles.setCheckText}>{label}</Text>
+      )}
+    </AnimatedTouchable>
+  );
+};
 
 export default function ActiveWorkoutScreen() {
   const { id } = useLocalSearchParams();
@@ -116,20 +156,33 @@ export default function ActiveWorkoutScreen() {
   return (
     <View style={styles.container}>
       {/* Timer Bar */}
-      <View style={[styles.timerBar, theme.shadows.medium]}>
+      <LinearGradient
+        colors={theme.gradients.dark}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={[styles.timerBar, theme.shadows.heavy]}>
         <View style={styles.timerLeft}>
-          <Timer size={22} color={theme.colors.primary} style={{ marginRight: theme.spacing.sm }} />
+          <View style={styles.timerLabelRow}>
+            <Timer size={13} color={theme.colors.primary} style={{ marginRight: 4 }} />
+            <Text style={styles.timerLabel}>SÉANCE EN COURS</Text>
+          </View>
           <Text style={styles.timerValue}>{formatTimerTime(timerSeconds)}</Text>
         </View>
         <View style={styles.timerRight}>
-          <TouchableOpacity style={styles.timerBtn} onPress={handleStartStopTimer}>
-            <Text style={styles.timerBtnText}>{isTimerRunning ? 'Pause' : 'Démarrer'}</Text>
+          <TouchableOpacity
+            style={[styles.timerIconBtn, isTimerRunning && styles.timerIconBtnActive]}
+            onPress={handleStartStopTimer}>
+            {isTimerRunning ? (
+              <Pause size={20} color={theme.colors.white} fill={theme.colors.white} />
+            ) : (
+              <Play size={20} color={theme.colors.white} fill={theme.colors.white} />
+            )}
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.timerBtn, styles.resetBtn]} onPress={handleResetTimer}>
-            <Text style={styles.timerBtnText}>Reset</Text>
+          <TouchableOpacity style={[styles.timerIconBtn, styles.resetBtn]} onPress={handleResetTimer}>
+            <RotateCcw size={18} color={theme.colors.white} />
           </TouchableOpacity>
         </View>
-      </View>
+      </LinearGradient>
 
       <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Text style={styles.programTitle}>{program?.name}</Text>
@@ -153,14 +206,12 @@ export default function ActiveWorkoutScreen() {
               {/* Set checkers checkboxes row */}
               <View style={styles.setsCheckersRow}>
                 {Array.from({ length: totalSets }).map((_, setIdx) => (
-                  <TouchableOpacity
+                  <SetCheckButton
                     key={setIdx}
-                    style={[styles.setCheckBtn, userSets[setIdx] && styles.setCheckBtnActive]}
-                    onPress={() => toggleSetCheck(ex.id, setIdx, totalSets)}>
-                    <Text style={[styles.setCheckText, userSets[setIdx] && styles.setCheckTextActive]}>
-                      S{setIdx + 1}
-                    </Text>
-                  </TouchableOpacity>
+                    checked={!!userSets[setIdx]}
+                    label={`S${setIdx + 1}`}
+                    onPress={() => toggleSetCheck(ex.id, setIdx, totalSets)}
+                  />
                 ))}
               </View>
             </View>
@@ -189,41 +240,58 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   timerBar: {
-    backgroundColor: theme.colors.card,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: theme.spacing.md,
+    paddingVertical: theme.spacing.lg,
     paddingHorizontal: theme.spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
   },
   timerLeft: {
+    flexDirection: 'column',
+  },
+  timerLabelRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 2,
+  },
+  timerLabel: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 10,
+    fontWeight: theme.typography.weights.bold,
+    letterSpacing: 1,
   },
   timerValue: {
-    fontSize: theme.typography.sizes.lg,
+    fontSize: 34,
     fontWeight: theme.typography.weights.heavy,
-    color: theme.colors.text,
+    color: theme.colors.white,
+    letterSpacing: 1,
+    fontVariant: ['tabular-nums'],
   },
   timerRight: {
     flexDirection: 'row',
   },
-  timerBtn: {
-    backgroundColor: theme.colors.secondary,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: 6,
-    borderRadius: theme.borderRadius.sm,
-    marginLeft: theme.spacing.xs,
+  timerIconBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: theme.borderRadius.round,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: theme.colors.glassBorderDark,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: theme.spacing.sm,
+  },
+  timerIconBtnActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 12,
+    elevation: 6,
   },
   resetBtn: {
-    backgroundColor: theme.colors.border,
-  },
-  timerBtnText: {
-    color: theme.colors.white,
-    fontWeight: theme.typography.weights.bold,
-    fontSize: 12,
+    backgroundColor: 'rgba(255,255,255,0.06)',
   },
   scrollContent: {
     flex: 1,
@@ -299,10 +367,8 @@ const styles = StyleSheet.create({
     fontWeight: theme.typography.weights.bold,
     color: theme.colors.text,
   },
-  setCheckTextActive: {
-    color: theme.colors.white,
-  },
   completeBtn: {
-    marginVertical: theme.spacing.xl,
+    marginTop: theme.spacing.lg,
+    marginBottom: theme.spacing.xl + 40,
   },
 });

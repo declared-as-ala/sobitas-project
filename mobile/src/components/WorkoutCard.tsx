@@ -1,7 +1,15 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+} from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '../constants/theme';
 import { Dumbbell, ChevronRight } from 'lucide-react-native';
+
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
 interface WorkoutCardProps {
   program: {
@@ -44,20 +52,32 @@ export const WorkoutCard: React.FC<WorkoutCardProps> = ({ program, onPress }) =>
     }
   };
 
+  const scale = useSharedValue(1);
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
   return (
-    <TouchableOpacity
-      activeOpacity={0.9}
-      style={[styles.card, theme.shadows.light]}
+    <AnimatedTouchable
+      activeOpacity={0.92}
+      style={[styles.card, theme.shadows.light, animatedStyle]}
+      onPressIn={() => { scale.value = withTiming(0.98, { duration: 100 }); }}
+      onPressOut={() => { scale.value = withTiming(1, { duration: 120 }); }}
       onPress={onPress}>
       {/* Program Image (fallback to a nice solid color gradient with dumbbell icon if not provided) */}
       <View style={styles.imageWrapper}>
         {program.imageUrl ? (
           <Image source={{ uri: program.imageUrl }} style={styles.image} />
         ) : (
-          <View style={styles.imagePlaceholder}>
-            <Dumbbell size={32} color={theme.colors.white} />
-          </View>
+          <LinearGradient colors={theme.gradients.dark} style={styles.imagePlaceholder}>
+            <Dumbbell size={32} color={theme.colors.primary} />
+          </LinearGradient>
         )}
+        <LinearGradient
+          colors={theme.gradients.heroScrim}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
         <View style={styles.badgeRow}>
           <View style={styles.categoryBadge}>
             <Text style={styles.categoryText}>{getCategoryLabel()}</Text>
@@ -80,14 +100,14 @@ export const WorkoutCard: React.FC<WorkoutCardProps> = ({ program, onPress }) =>
           {program.description}
         </Text>
       </View>
-    </TouchableOpacity>
+    </AnimatedTouchable>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
     backgroundColor: theme.colors.card,
-    borderRadius: theme.borderRadius.md,
+    borderRadius: theme.borderRadius.lg,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: theme.colors.border,

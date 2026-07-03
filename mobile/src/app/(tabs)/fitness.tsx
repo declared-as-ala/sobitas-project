@@ -15,6 +15,7 @@ import { fitnessApi } from '../../services/api';
 import { theme } from '../../constants/theme';
 import MacroCard from '../../components/MacroCard';
 import WorkoutCard from '../../components/WorkoutCard';
+import CircularProgress from '../../components/CircularProgress';
 import { useAuthStore } from '../../store/auth';
 import { useFitnessStore } from '../../store/fitness';
 import { router } from 'expo-router';
@@ -177,10 +178,18 @@ export default function FitnessScreen() {
         {/* Water tracker card */}
         <View style={styles.trackerCard}>
           <View style={styles.trackerHeader}>
-            <GlassWater size={24} color="#0284C7" />
+            <GlassWater size={18} color="#0284C7" />
             <Text style={styles.trackerTitle}>Eau</Text>
           </View>
-          <Text style={styles.trackerValue}>{currentWater} / {waterTarget} ml</Text>
+          <CircularProgress
+            progress={(currentWater / waterTarget) * 100}
+            size={92}
+            strokeWidth={9}
+            color="#0284C7"
+            style={styles.ringSpacing}>
+            <Text style={styles.ringValue}>{currentWater}</Text>
+            <Text style={styles.ringUnit}>/ {waterTarget}ml</Text>
+          </CircularProgress>
           <TouchableOpacity
             style={[styles.plusButton, { backgroundColor: '#E0F2FE' }]}
             onPress={() => setIsWaterModalVisible(true)}>
@@ -191,10 +200,18 @@ export default function FitnessScreen() {
         {/* Protein tracker card */}
         <View style={styles.trackerCard}>
           <View style={styles.trackerHeader}>
-            <Dumbbell size={24} color={theme.colors.primary} />
+            <Dumbbell size={18} color={theme.colors.primary} />
             <Text style={styles.trackerTitle}>Protéines</Text>
           </View>
-          <Text style={styles.trackerValue}>{currentProtein} / {proteinTarget} g</Text>
+          <CircularProgress
+            progress={(currentProtein / proteinTarget) * 100}
+            size={92}
+            strokeWidth={9}
+            color={theme.colors.primary}
+            style={styles.ringSpacing}>
+            <Text style={styles.ringValue}>{currentProtein}</Text>
+            <Text style={styles.ringUnit}>/ {proteinTarget}g</Text>
+          </CircularProgress>
           <TouchableOpacity
             style={[styles.plusButton, { backgroundColor: theme.colors.orangeLight }]}
             onPress={() => setIsProteinModalVisible(true)}>
@@ -215,7 +232,7 @@ export default function FitnessScreen() {
       </TouchableOpacity>
 
       {/* 4. Workout Program List */}
-      <View style={[styles.section, { marginBottom: theme.spacing.xl }]}>
+      <View style={[styles.section, { marginBottom: theme.spacing.xl + 80 }]}>
         <Text style={styles.sectionTitle}>Programmes Suggérés</Text>
         {isProgramsLoading ? (
           <ActivityIndicator color={theme.colors.primary} />
@@ -389,11 +406,18 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     marginLeft: 6,
   },
-  trackerValue: {
-    fontSize: theme.typography.sizes.sm,
-    fontWeight: theme.typography.weights.medium,
+  ringValue: {
+    fontSize: theme.typography.sizes.md,
+    fontWeight: theme.typography.weights.heavy,
+    color: theme.colors.text,
+  },
+  ringUnit: {
+    fontSize: 10,
     color: theme.colors.textMuted,
-    marginVertical: theme.spacing.xs,
+    marginTop: 1,
+  },
+  ringSpacing: {
+    marginVertical: theme.spacing.sm,
   },
   plusButton: {
     width: 44,

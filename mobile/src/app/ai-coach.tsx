@@ -11,6 +11,15 @@ import {
   Platform,
 } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withSequence,
+  withTiming,
+  withDelay,
+} from 'react-native-reanimated';
 import { fitnessApi } from '../services/api';
 import { theme } from '../constants/theme';
 import { useAuthStore } from '../store/auth';
@@ -24,6 +33,37 @@ interface Message {
   text: string;
   createdAt: number;
 }
+
+const TypingDot = ({ delay }: { delay: number }) => {
+  const translateY = useSharedValue(0);
+
+  useEffect(() => {
+    translateY.value = withDelay(
+      delay,
+      withRepeat(
+        withSequence(
+          withTiming(-4, { duration: 300 }),
+          withTiming(0, { duration: 300 }),
+        ),
+        -1,
+      ),
+    );
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
+
+  return <Animated.View style={[styles.typingDot, animatedStyle]} />;
+};
+
+const TypingIndicator = () => (
+  <View style={styles.typingBubble}>
+    <TypingDot delay={0} />
+    <TypingDot delay={120} />
+    <TypingDot delay={240} />
+  </View>
+);
 
 export default function AiCoachScreen() {
   const queryClient = useQueryClient();
@@ -113,19 +153,27 @@ export default function AiCoachScreen() {
     return (
       <View style={[styles.messageRow, isUser ? styles.messageRowUser : styles.messageRowCoach]}>
         {!isUser && (
-          <View style={styles.coachAvatar}>
-            <MessageSquare size={16} color={theme.colors.white} />
+          <LinearGradient colors={theme.gradients.dark} style={styles.coachAvatar}>
+            <MessageSquare size={16} color={theme.colors.primary} />
+          </LinearGradient>
+        )}
+        {isUser ? (
+          <LinearGradient
+            colors={theme.gradients.primary}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[styles.bubble, styles.bubbleUser]}>
+            <Text style={[styles.messageText, styles.messageTextUser]}>{item.text}</Text>
+          </LinearGradient>
+        ) : (
+          <View style={[styles.bubble, styles.bubbleCoach]}>
+            <Text style={[styles.messageText, styles.messageTextCoach]}>{item.text}</Text>
           </View>
         )}
-        <View style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleCoach]}>
-          <Text style={[styles.messageText, isUser ? styles.messageTextUser : styles.messageTextCoach]}>
-            {item.text}
-          </Text>
-        </View>
         {isUser && (
-          <View style={styles.userAvatar}>
+          <LinearGradient colors={theme.gradients.primary} style={styles.userAvatar}>
             <User size={16} color={theme.colors.white} />
-          </View>
+          </LinearGradient>
         )}
       </View>
     );
@@ -166,9 +214,9 @@ export default function AiCoachScreen() {
           contentContainerStyle={styles.listPadding}
           ListEmptyComponent={
             <View style={styles.emptyList}>
-              <View style={styles.coachAvatarLarge}>
+              <LinearGradient colors={theme.gradients.primary} style={styles.coachAvatarLarge}>
                 <MessageSquare size={32} color={theme.colors.white} />
-              </View>
+              </LinearGradient>
               <Text style={styles.emptyTitle}>Posez vos questions au Coach !</Text>
               <Text style={styles.emptySubtitle}>
                 Vous pouvez lui parler en Français, Anglais ou Darija Tunisienne. Ex: "شنوة نجم ناخذ بعد التمرين؟"
@@ -178,10 +226,10 @@ export default function AiCoachScreen() {
         />
       )}
 
-      {/* Loading indicator for AI reply */}
+      {/* Typing indicator for AI reply */}
       {sendMutation.isPending && (
         <View style={styles.loadingReplyWrapper}>
-          <ActivityIndicator size="small" color={theme.colors.primary} />
+          <TypingIndicator />
           <Text style={styles.loadingReplyText}>Le coach réfléchit...</Text>
         </View>
       )}
@@ -333,6 +381,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.sm,
+  },
+  typingBubble: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.card,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.borderRadius.round,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 8,
+    marginRight: theme.spacing.sm,
+  },
+  typingDot: {
+    width: 6,
+    height: 6,
+    borderRadius: theme.borderRadius.round,
+    backgroundColor: theme.colors.primary,
+    marginHorizontal: 2,
   },
   loadingReplyText: {
     fontSize: 12,

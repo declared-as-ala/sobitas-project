@@ -6,10 +6,11 @@ import {
   StyleSheet,
   TouchableOpacity,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '../../store/auth';
 import { theme } from '../../constants/theme';
 import { router } from 'expo-router';
-import { User, ClipboardList, Heart, Calendar, Settings, LogOut, ChevronRight, Edit3 } from 'lucide-react-native';
+import { User, ClipboardList, Heart, Calendar, Settings, LogOut, ChevronRight } from 'lucide-react-native';
 
 export default function ProfileScreen() {
   const { isAuthenticated, user, logout } = useAuthStore();
@@ -36,18 +37,24 @@ export default function ProfileScreen() {
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* 1. Profile Header info */}
-      <View style={styles.headerCard}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
-          </Text>
+      <LinearGradient
+        colors={theme.gradients.dark}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.headerCard, theme.shadows.medium]}>
+        <View style={styles.avatarRing}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>
+              {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+            </Text>
+          </View>
         </View>
         <View style={styles.headerInfo}>
           <Text style={styles.name}>{user?.name}</Text>
           <Text style={styles.email}>{user?.email}</Text>
           <Text style={styles.phone}>{user?.phone || 'Pas de téléphone renseigné'}</Text>
         </View>
-      </View>
+      </LinearGradient>
 
       {/* 2. Menu options links */}
       <View style={styles.menuSection}>
@@ -57,7 +64,9 @@ export default function ProfileScreen() {
             style={styles.menuRow}
             onPress={() => router.push('/orders')}>
             <View style={styles.menuTitleRow}>
-              <ClipboardList size={20} color={theme.colors.text} style={styles.menuIcon} />
+              <View style={[styles.menuIconChip, { backgroundColor: '#E0F2FE' }]}>
+                <ClipboardList size={18} color="#0284C7" />
+              </View>
               <Text style={styles.menuTitle}>Historique des commandes</Text>
             </View>
             <ChevronRight size={18} color={theme.colors.textMuted} />
@@ -67,7 +76,9 @@ export default function ProfileScreen() {
             style={styles.menuRow}
             onPress={() => router.push('/wishlist')}>
             <View style={styles.menuTitleRow}>
-              <Heart size={20} color={theme.colors.text} style={styles.menuIcon} />
+              <View style={[styles.menuIconChip, { backgroundColor: '#FEE2E2' }]}>
+                <Heart size={18} color={theme.colors.error} />
+              </View>
               <Text style={styles.menuTitle}>Mes Favoris</Text>
             </View>
             <ChevronRight size={18} color={theme.colors.textMuted} />
@@ -80,7 +91,9 @@ export default function ProfileScreen() {
             style={styles.menuRow}
             onPress={() => router.push('/supplement-stack')}>
             <View style={styles.menuTitleRow}>
-              <Calendar size={20} color={theme.colors.text} style={styles.menuIcon} />
+              <View style={[styles.menuIconChip, { backgroundColor: theme.colors.orangeLight }]}>
+                <Calendar size={18} color={theme.colors.primary} />
+              </View>
               <Text style={styles.menuTitle}>Mon Planning de Compléments</Text>
             </View>
             <ChevronRight size={18} color={theme.colors.textMuted} />
@@ -93,7 +106,9 @@ export default function ProfileScreen() {
             style={styles.menuRow}
             onPress={() => router.push('/notifications')}>
             <View style={styles.menuTitleRow}>
-              <Settings size={20} color={theme.colors.text} style={styles.menuIcon} />
+              <View style={[styles.menuIconChip, { backgroundColor: '#F1F3F5' }]}>
+                <Settings size={18} color={theme.colors.text} />
+              </View>
               <Text style={styles.menuTitle}>Alertes & Notifications</Text>
             </View>
             <ChevronRight size={18} color={theme.colors.textMuted} />
@@ -143,27 +158,33 @@ const styles = StyleSheet.create({
     fontWeight: theme.typography.weights.bold,
   },
   headerCard: {
-    backgroundColor: theme.colors.card,
-    borderRadius: theme.borderRadius.md,
+    borderRadius: theme.borderRadius.lg,
     padding: theme.spacing.lg,
     marginHorizontal: theme.spacing.md,
     marginTop: theme.spacing.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
     flexDirection: 'row',
     alignItems: 'center',
   },
-  avatar: {
-    width: 60,
-    height: 60,
+  avatarRing: {
+    width: 68,
+    height: 68,
     borderRadius: theme.borderRadius.round,
-    backgroundColor: theme.colors.orangeLight,
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: theme.spacing.md,
   },
+  avatar: {
+    width: 56,
+    height: 56,
+    borderRadius: theme.borderRadius.round,
+    backgroundColor: theme.colors.orangeLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   avatarText: {
-    fontSize: theme.typography.sizes.xxl,
+    fontSize: theme.typography.sizes.xl,
     fontWeight: theme.typography.weights.heavy,
     color: theme.colors.primary,
   },
@@ -173,16 +194,16 @@ const styles = StyleSheet.create({
   name: {
     fontSize: theme.typography.sizes.md + 1,
     fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text,
+    color: theme.colors.white,
   },
   email: {
     fontSize: theme.typography.sizes.sm,
-    color: theme.colors.textMuted,
+    color: 'rgba(255,255,255,0.7)',
     marginTop: 2,
   },
   phone: {
     fontSize: theme.typography.sizes.sm,
-    color: theme.colors.textMuted,
+    color: 'rgba(255,255,255,0.7)',
     marginTop: 2,
   },
   menuSection: {
@@ -217,7 +238,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  menuIcon: {
+  menuIconChip: {
+    width: 34,
+    height: 34,
+    borderRadius: theme.borderRadius.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: theme.spacing.sm,
   },
   menuTitle: {
@@ -235,7 +261,7 @@ const styles = StyleSheet.create({
     height: 52,
     marginHorizontal: theme.spacing.md,
     marginTop: theme.spacing.lg,
-    marginBottom: theme.spacing.xl,
+    marginBottom: theme.spacing.xl + 80,
   },
   logoutText: {
     color: theme.colors.error,

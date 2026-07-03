@@ -10,11 +10,12 @@ import {
   FlatList,
 } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { LinearGradient } from 'expo-linear-gradient';
 import { fitnessApi } from '../../services/api';
 import { theme } from '../../constants/theme';
 import { useAuthStore } from '../../store/auth';
 import { router } from 'expo-router';
-import { Award, Share2, Ticket, Check, RefreshCw, UserCheck } from 'lucide-react-native';
+import { Award, Share2, Sparkles } from 'lucide-react-native';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
 
@@ -115,18 +116,36 @@ export default function RewardsScreen() {
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* 1. Loyalty Balance Card */}
-      <View style={[styles.loyaltyCard, theme.shadows.medium]}>
-        <View style={styles.badgeColumn}>
-          <Award size={48} color={theme.colors.primary} />
-          <Text style={styles.tierName}>Statut {loyalty?.tier || 'Bronze'}</Text>
-          <Text style={styles.tierDiscount}>{loyalty?.discountPercent || 0}% Réduction Boutique</Text>
+      {/* 1. Loyalty Balance "Membership Card" */}
+      <LinearGradient
+        colors={theme.gradients.dark}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.loyaltyCard, theme.shadows.heavy]}>
+        <LinearGradient
+          colors={theme.gradients.glassLight}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.cardShine}
+          pointerEvents="none"
+        />
+        <View style={styles.cardTopRow}>
+          <View style={styles.brandRow}>
+            <Sparkles size={16} color={theme.colors.primary} />
+            <Text style={styles.brandLabel}>PROTEIN.TN CLUB</Text>
+          </View>
+          <View style={styles.tierBadge}>
+            <Award size={14} color={theme.colors.primary} />
+            <Text style={styles.tierBadgeText}>{loyalty?.tier || 'Bronze'}</Text>
+          </View>
         </View>
 
+        <Text style={styles.pointsDisplay}>
+          {loyalty?.points || 0} <Text style={styles.pointsSub}>Points</Text>
+        </Text>
+        <Text style={styles.tierDiscount}>{loyalty?.discountPercent || 0}% Réduction Boutique</Text>
+
         <View style={styles.progressSection}>
-          <Text style={styles.pointsDisplay}>
-            {loyalty?.points || 0} <Text style={styles.pointsSub}>Points</Text>
-          </Text>
           {loyalty?.nextTier !== 'Max' ? (
             <>
               <View style={styles.progressBarBg}>
@@ -140,7 +159,7 @@ export default function RewardsScreen() {
             <Text style={styles.progressText}>Félicitations, vous avez atteint le niveau maximum ! 🚀</Text>
           )}
         </View>
-      </View>
+      </LinearGradient>
 
       {/* 2. Referral program */}
       <View style={styles.section}>
@@ -192,15 +211,20 @@ export default function RewardsScreen() {
       </View>
 
       {/* 4. Points History Transactions list */}
-      <View style={[styles.section, { marginBottom: theme.spacing.xl }]}>
+      <View style={[styles.section, { marginBottom: theme.spacing.xl + 80 }]}>
         <Text style={styles.sectionTitle}>Historique des gains</Text>
         <View style={styles.card}>
           {loyalty?.history && loyalty.history.length > 0 ? (
             loyalty.history.map((tx: any) => (
               <View key={tx.id.toString()} style={styles.txRow}>
-                <View>
-                  <Text style={styles.txSource}>{getSourceLabel(tx.source)}</Text>
-                  <Text style={styles.txDate}>{new Date(tx.createdAt).toLocaleDateString()}</Text>
+                <View style={styles.txLeft}>
+                  <View style={styles.txIconChip}>
+                    <Award size={14} color={theme.colors.primary} />
+                  </View>
+                  <View>
+                    <Text style={styles.txSource}>{getSourceLabel(tx.source)}</Text>
+                    <Text style={styles.txDate}>{new Date(tx.createdAt).toLocaleDateString()}</Text>
+                  </View>
                 </View>
                 <Text style={styles.txPoints}>+{tx.points} pts</Text>
               </View>
@@ -243,22 +267,55 @@ const styles = StyleSheet.create({
     width: '80%',
   },
   loyaltyCard: {
-    backgroundColor: theme.colors.secondary,
     marginHorizontal: theme.spacing.md,
     marginTop: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
+    borderRadius: theme.borderRadius.lg,
     padding: theme.spacing.lg,
-    alignItems: 'center',
+    minHeight: 190,
+    overflow: 'hidden',
+    position: 'relative',
   },
-  badgeColumn: {
+  cardShine: {
+    position: 'absolute',
+    top: -40,
+    right: -60,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    transform: [{ rotate: '20deg' }],
+  },
+  cardTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: theme.spacing.md,
   },
-  tierName: {
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  brandLabel: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 11,
+    fontWeight: theme.typography.weights.bold,
+    letterSpacing: 1,
+    marginLeft: 6,
+  },
+  tierBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: theme.colors.glassBorderDark,
+    borderRadius: theme.borderRadius.round,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 4,
+  },
+  tierBadgeText: {
     color: theme.colors.white,
-    fontSize: theme.typography.sizes.lg,
-    fontWeight: theme.typography.weights.heavy,
-    marginTop: theme.spacing.sm,
+    fontSize: 11,
+    fontWeight: theme.typography.weights.bold,
+    marginLeft: 4,
   },
   tierDiscount: {
     color: theme.colors.primary,
@@ -268,7 +325,7 @@ const styles = StyleSheet.create({
   },
   progressSection: {
     width: '100%',
-    alignItems: 'center',
+    marginTop: theme.spacing.lg,
   },
   pointsDisplay: {
     color: theme.colors.white,
@@ -393,6 +450,19 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
     paddingVertical: theme.spacing.sm,
+  },
+  txLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  txIconChip: {
+    width: 32,
+    height: 32,
+    borderRadius: theme.borderRadius.round,
+    backgroundColor: theme.colors.orangeLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: theme.spacing.sm,
   },
   txSource: {
     fontSize: theme.typography.sizes.sm,

@@ -8,6 +8,12 @@ import {
   ViewStyle,
   TextStyle,
 } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+} from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '../constants/theme';
 
 interface ButtonProps extends TouchableOpacityProps {
@@ -18,6 +24,8 @@ interface ButtonProps extends TouchableOpacityProps {
   textStyle?: TextStyle;
 }
 
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
+
 export const Button: React.FC<ButtonProps> = ({
   title,
   variant = 'primary',
@@ -25,8 +33,26 @@ export const Button: React.FC<ButtonProps> = ({
   style,
   textStyle,
   disabled,
+  onPressIn,
+  onPressOut,
   ...props
 }) => {
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const handlePressIn = (e: any) => {
+    scale.value = withTiming(0.96, { duration: 100 });
+    onPressIn?.(e);
+  };
+
+  const handlePressOut = (e: any) => {
+    scale.value = withTiming(1, { duration: 120 });
+    onPressOut?.(e);
+  };
+
   const getButtonStyles = () => {
     switch (variant) {
       case 'secondary':
@@ -40,6 +66,17 @@ export const Button: React.FC<ButtonProps> = ({
     }
   };
 
+  const getGradientColors = () => {
+    switch (variant) {
+      case 'secondary':
+        return theme.gradients.dark;
+      case 'danger':
+        return ['#F87171', theme.colors.error];
+      default:
+        return theme.gradients.primary;
+    }
+  };
+
   const getLabelStyles = () => {
     switch (variant) {
       case 'outline':
@@ -48,6 +85,8 @@ export const Button: React.FC<ButtonProps> = ({
         return styles.text;
     }
   };
+
+  const showGradient = variant !== 'outline' && !disabled;
 
   const buttonStyle = [
     styles.base,
@@ -64,11 +103,21 @@ export const Button: React.FC<ButtonProps> = ({
   ];
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.8}
+    <AnimatedTouchable
+      activeOpacity={0.85}
       disabled={disabled || isLoading}
-      style={buttonStyle}
+      style={[buttonStyle, animatedStyle]}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
       {...props}>
+      {showGradient && (
+        <LinearGradient
+          colors={getGradientColors() as any}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+      )}
       {isLoading ? (
         <ActivityIndicator
           color={variant === 'outline' ? theme.colors.primary : theme.colors.white}
@@ -77,7 +126,7 @@ export const Button: React.FC<ButtonProps> = ({
       ) : (
         <Text style={labelStyle}>{title}</Text>
       )}
-    </TouchableOpacity>
+    </AnimatedTouchable>
   );
 };
 
@@ -89,6 +138,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     paddingHorizontal: theme.spacing.lg,
+    overflow: 'hidden',
   },
   primary: {
     backgroundColor: theme.colors.primary,

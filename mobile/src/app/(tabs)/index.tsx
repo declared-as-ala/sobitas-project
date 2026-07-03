@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import {
   ScrollView,
   View,
@@ -7,23 +7,61 @@ import {
   TouchableOpacity,
   FlatList,
   Image,
-  Dimensions,
   ActivityIndicator,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery } from '@tanstack/react-query';
 import { shopApi } from '../../services/api';
 import { theme } from '../../constants/theme';
 import ProductCard from '../../components/ProductCard';
 import { useAuthStore } from '../../store/auth';
 import { router } from 'expo-router';
-import { MessageSquare, Calculator, Flame, ChevronRight, Award } from 'lucide-react-native';
+import {
+  MessageSquare,
+  Calculator,
+  Flame,
+  ChevronRight,
+  ChevronLeft,
+  Bell,
+  Dumbbell,
+  Zap,
+  TrendingUp,
+  Pill,
+  FlaskConical,
+  Cookie,
+  Package,
+  LucideIcon,
+} from 'lucide-react-native';
 
-const { width } = Dimensions.get('window');
+const LOGO = require('../../../assets/images/branding/logo.png');
+
+// Icon + accent color per category, matched against slug/name keywords (no cover images used).
+const CATEGORY_ICON_MAP: { keywords: string[]; icon: LucideIcon; color: string }[] = [
+  { keywords: ['whey', 'proteine', 'protein'], icon: Dumbbell, color: theme.colors.primary },
+  { keywords: ['creatine', 'créatine'], icon: Zap, color: '#F59E0B' },
+  { keywords: ['gainer', 'masse', 'weight-gain'], icon: TrendingUp, color: '#10B981' },
+  { keywords: ['vitamine', 'mineraux', 'vitamin'], icon: Pill, color: '#8B5CF6' },
+  { keywords: ['bruleur', 'graisse', 'fat-burner'], icon: Flame, color: '#EF4444' },
+  { keywords: ['acide', 'amine', 'bcaa', 'eaa'], icon: FlaskConical, color: '#0EA5E9' },
+  { keywords: ['barre', 'snack', 'collation'], icon: Cookie, color: '#D97706' },
+];
+
+const getCategoryIcon = (category: any) => {
+  const haystack = `${category?.slug || ''} ${category?.designation_fr || ''}`.toLowerCase();
+  const match = CATEGORY_ICON_MAP.find((entry) => entry.keywords.some((kw) => haystack.includes(kw)));
+  return match || { icon: Package, color: theme.colors.textMuted };
+};
+
+const CATEGORY_ITEM_WIDTH = 132;
 
 export default function HomeScreen() {
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated } = useAuthStore();
+  const categoriesRef = useRef<FlatList>(null);
+  const [categoryPage, setCategoryPage] = useState(0);
 
-  // 1. Fetch Home shop data (banners, flash sales, categories)
+  // 1. Fetch Home shop data (categories, flash sales, best sellers)
   const { data: homeData, isLoading } = useQuery({
     queryKey: ['accueil'],
     queryFn: async () => {
@@ -32,19 +70,19 @@ export default function HomeScreen() {
     },
   });
 
-  // 2. Fetch loyalty points if logged in
-  const { data: loyaltyData } = useQuery({
-    queryKey: ['loyalty-summary', user?.id],
-    queryFn: async () => {
-      const res = await shopApi.get('/profil');
-      return res.data;
-    },
-    enabled: isAuthenticated,
-  });
-
   const categories = homeData?.categories || [];
   const flashSales = homeData?.ventes_flash || [];
   const bestSellers = homeData?.best_sellers || [];
+
+  const scrollCategories = (direction: 'prev' | 'next') => {
+    const nextPage = direction === 'next' ? categoryPage + 1 : Math.max(0, categoryPage - 1);
+    setCategoryPage(nextPage);
+    categoriesRef.current?.scrollToOffset({ offset: nextPage * CATEGORY_ITEM_WIDTH, animated: true });
+  };
+
+  const handleCategoriesScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    setCategoryPage(Math.round(e.nativeEvent.contentOffset.x / CATEGORY_ITEM_WIDTH));
+  };
 
   if (isLoading) {
     return (
@@ -56,107 +94,103 @@ export default function HomeScreen() {
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* 1. Header Banner/Promotion */}
-      <View style={styles.heroBanner}>
-        <Image
-          source={{ uri: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?q=80&w=600' }}
-          style={styles.heroImage}
-        />
-        <View style={styles.heroOverlay}>
-          <Text style={styles.heroSubtitle}>PROTEIN.TN ELITE</Text>
-          <Text style={styles.heroTitle}>BUILD YOUR LEGACY</Text>
+      {/* 1. Editorial hero — no photo, just logo + bold split-color typography */}
+      <View style={styles.heroSection}>
+        <View style={styles.heroTopRow}>
+          <Image source={LOGO} style={styles.heroLogo} resizeMode="contain" />
           <TouchableOpacity
-            style={styles.heroButton}
-            onPress={() => router.push('/(tabs)/shop')}>
-            <Text style={styles.heroButtonText}>Acheter maintenant</Text>
+            style={styles.heroBellBtn}
+            activeOpacity={0.85}
+            onPress={() => router.push('/notifications')}>
+            <Bell size={18} color={theme.colors.text} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.heroHeadlineBlock}>
+          <Text style={styles.heroHeadline}>
+            FUEL YOUR{'\n'}
+            <Text style={styles.heroHeadlineAccent}>PROGRESS.</Text>
+          </Text>
+          <LinearGradient
+            colors={theme.gradients.primary}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.heroAccentBar}
+          />
+          <Text style={styles.heroSubtitle}>Compléments alimentaires premium 🇹🇳</Text>
+        </View>
+
+        <TouchableOpacity style={styles.heroButton} activeOpacity={0.85} onPress={() => router.push('/(tabs)/shop')}>
+          <LinearGradient
+            colors={theme.gradients.primary}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.heroButtonGradient}>
+            <Text style={styles.heroButtonText}>Découvrir la boutique</Text>
+            <ChevronRight size={16} color={theme.colors.white} />
+          </LinearGradient>
+        </TouchableOpacity>
+
+        {/* Quick entry widgets */}
+        <View style={styles.shortcutsRow}>
+          <TouchableOpacity style={styles.shortcutPill} activeOpacity={0.85} onPress={() => router.push('/ai-coach')}>
+            <MessageSquare size={18} color={theme.colors.primary} />
+            <Text style={styles.shortcutPillText}>AI Coach</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.shortcutPill} activeOpacity={0.85} onPress={() => router.push('/calculator')}>
+            <Calculator size={18} color={theme.colors.primary} />
+            <Text style={styles.shortcutPillText}>Calculateur</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* 2. Loyalty Point summary card */}
-      {isAuthenticated ? (
-        <View style={[styles.loyaltyCard, theme.shadows.medium]}>
-          <View style={styles.loyaltyHeader}>
-            <View style={styles.loyaltyPointsWrapper}>
-              <Award size={24} color={theme.colors.primary} />
-              <Text style={styles.loyaltyLabel}>Points Fidélité</Text>
-            </View>
-            <Text style={styles.pointsValue}>
-              {loyaltyData?.loyalty_points_balance || 0} pts
-            </Text>
-          </View>
-          <TouchableOpacity
-            style={styles.rewardsButton}
-            onPress={() => router.push('/(tabs)/rewards')}>
-            <Text style={styles.rewardsButtonText}>Voir mes avantages</Text>
-            <ChevronRight size={16} color={theme.colors.primary} />
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <TouchableOpacity
-          style={[styles.loginPromoCard, theme.shadows.medium]}
-          onPress={() => router.push('/login')}>
-          <View style={styles.loginPromoText}>
-            <Text style={styles.loginPromoTitle}>Rejoignez le Club Protein.tn</Text>
-            <Text style={styles.loginPromoSubtitle}>Cumulez des points, débloquez des réductions.</Text>
-          </View>
-          <View style={styles.loginPromoBtn}>
-            <Text style={styles.loginPromoBtnText}>Connexion</Text>
-          </View>
-        </TouchableOpacity>
-      )}
-
-      {/* 3. Quick entry widgets */}
-      <View style={styles.shortcutsRow}>
-        <TouchableOpacity
-          style={styles.shortcutCard}
-          onPress={() => router.push('/ai-coach')}>
-          <View style={[styles.shortcutIconWrapper, { backgroundColor: '#E0F2FE' }]}>
-            <MessageSquare size={24} color="#0284C7" />
-          </View>
-          <Text style={styles.shortcutTitle}>AI Coach</Text>
-          <Text style={styles.shortcutDesc}>Conseils fitness</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.shortcutCard}
-          onPress={() => router.push('/calculator')}>
-          <View style={[styles.shortcutIconWrapper, { backgroundColor: '#FEE2E2' }]}>
-            <Calculator size={24} color={theme.colors.error} />
-          </View>
-          <Text style={styles.shortcutTitle}>Calculateur</Text>
-          <Text style={styles.shortcutDesc}>BMR & Calories</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* 4. Categories Scroll */}
+      {/* 2. Categories carousel — icon cards, no cover images */}
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Catégories</Text>
+        <View style={styles.carouselArrows}>
+          <TouchableOpacity
+            style={[styles.carouselArrowBtn, categoryPage === 0 && styles.carouselArrowBtnDisabled]}
+            disabled={categoryPage === 0}
+            onPress={() => scrollCategories('prev')}>
+            <ChevronLeft size={16} color={categoryPage === 0 ? theme.colors.border : theme.colors.text} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.carouselArrowBtn, categoryPage >= categories.length - 1 && styles.carouselArrowBtnDisabled]}
+            disabled={categoryPage >= categories.length - 1}
+            onPress={() => scrollCategories('next')}>
+            <ChevronRight size={16} color={categoryPage >= categories.length - 1 ? theme.colors.border : theme.colors.text} />
+          </TouchableOpacity>
+        </View>
       </View>
       <FlatList
+        ref={categoriesRef}
         data={categories}
         horizontal
         showsHorizontalScrollIndicator={false}
+        snapToInterval={CATEGORY_ITEM_WIDTH}
+        decelerationRate="fast"
+        onMomentumScrollEnd={handleCategoriesScroll}
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={styles.categoriesList}
-        renderItem={({ item }: { item: any }) => (
-          <TouchableOpacity
-            style={styles.categoryItem}
-            onPress={() => router.push({ pathname: '/(tabs)/shop', params: { categorySlug: item.slug } })}>
-            <View style={styles.categoryCircle}>
-              <Image
-                source={{ uri: item.cover ? `http://localhost/storage/${item.cover}` : 'https://via.placeholder.com/60' }}
-                style={styles.categoryImg}
-              />
-            </View>
-            <Text style={styles.categoryLabel} numberOfLines={1}>
-              {item.designation_fr}
-            </Text>
-          </TouchableOpacity>
-        )}
+        renderItem={({ item }: { item: any }) => {
+          const { icon: Icon, color } = getCategoryIcon(item);
+          return (
+            <TouchableOpacity
+              style={styles.categoryCard}
+              activeOpacity={0.85}
+              onPress={() => router.push({ pathname: '/(tabs)/shop', params: { categorySlug: item.slug } })}>
+              <View style={[styles.categoryIconChip, { backgroundColor: `${color}1A` }]}>
+                <Icon size={22} color={color} />
+              </View>
+              <Text style={styles.categoryLabel} numberOfLines={2}>
+                {item.designation_fr}
+              </Text>
+            </TouchableOpacity>
+          );
+        }}
       />
 
-      {/* 5. Ventes Flash (Flash sales) */}
+      {/* 3. Ventes Flash (Flash sales) */}
       {flashSales.length > 0 && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -183,10 +217,14 @@ export default function HomeScreen() {
         </View>
       )}
 
-      {/* 6. Best Sellers Grid */}
-      <View style={[styles.section, { marginBottom: theme.spacing.xl }]}>
+      {/* 4. Best Sellers Grid */}
+      <View style={[styles.section, { marginBottom: theme.spacing.xl + 80 }]}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Meilleures Ventes</Text>
+          <TouchableOpacity style={styles.seeAllRow} onPress={() => router.push('/(tabs)/shop')}>
+            <Text style={styles.seeAllText}>Voir tout</Text>
+            <ChevronRight size={14} color={theme.colors.primary} />
+          </TouchableOpacity>
         </View>
         <View style={styles.productsGrid}>
           {bestSellers.slice(0, 6).map((item: any) => (
@@ -212,161 +250,93 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  heroBanner: {
-    height: 200,
-    position: 'relative',
-    overflow: 'hidden',
+  heroSection: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.lg,
   },
-  heroImage: {
-    width: '100%',
-    height: '100%',
+  heroTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  heroOverlay: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    padding: theme.spacing.lg,
+  heroLogo: {
+    width: 110,
+    height: 34,
+  },
+  heroBellBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: theme.borderRadius.round,
+    backgroundColor: theme.colors.card,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
     justifyContent: 'center',
+    alignItems: 'center',
+  },
+  heroHeadlineBlock: {
+    marginTop: theme.spacing.xl,
+  },
+  heroHeadline: {
+    color: theme.colors.text,
+    fontSize: 42,
+    lineHeight: 44,
+    fontWeight: theme.typography.weights.heavy,
+    letterSpacing: -0.5,
+  },
+  heroHeadlineAccent: {
+    color: theme.colors.primary,
+  },
+  heroAccentBar: {
+    width: 64,
+    height: 6,
+    borderRadius: theme.borderRadius.round,
+    marginTop: theme.spacing.sm,
   },
   heroSubtitle: {
-    color: theme.colors.primary,
-    fontSize: theme.typography.sizes.xs,
-    fontWeight: theme.typography.weights.heavy,
-    letterSpacing: 2,
-  },
-  heroTitle: {
-    color: theme.colors.white,
-    fontSize: theme.typography.sizes.xxl,
-    fontWeight: theme.typography.weights.heavy,
-    marginVertical: theme.spacing.xs,
+    fontSize: theme.typography.sizes.sm + 1,
+    color: theme.colors.textMuted,
+    marginTop: theme.spacing.sm,
+    fontWeight: theme.typography.weights.medium,
   },
   heroButton: {
     alignSelf: 'flex-start',
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: 8,
-    borderRadius: theme.borderRadius.sm,
-    marginTop: theme.spacing.xs,
+    borderRadius: theme.borderRadius.round,
+    overflow: 'hidden',
+    marginTop: theme.spacing.lg,
+  },
+  heroButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: 14,
   },
   heroButtonText: {
     color: theme.colors.white,
     fontWeight: theme.typography.weights.bold,
-    fontSize: theme.typography.sizes.xs,
-  },
-  loyaltyCard: {
-    backgroundColor: theme.colors.card,
-    marginHorizontal: theme.spacing.md,
-    marginTop: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  loyaltyHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    paddingBottom: theme.spacing.sm,
-  },
-  loyaltyPointsWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  loyaltyLabel: {
-    fontSize: theme.typography.sizes.sm,
-    fontWeight: theme.typography.weights.medium,
-    marginLeft: theme.spacing.xs,
-    color: theme.colors.text,
-  },
-  pointsValue: {
-    fontSize: theme.typography.sizes.lg,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text,
-  },
-  rewardsButton: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingTop: theme.spacing.sm,
-  },
-  rewardsButtonText: {
-    color: theme.colors.primary,
-    fontWeight: theme.typography.weights.bold,
     fontSize: theme.typography.sizes.sm,
     marginRight: 4,
   },
-  loginPromoCard: {
-    backgroundColor: theme.colors.secondary,
-    marginHorizontal: theme.spacing.md,
-    marginTop: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  loginPromoText: {
-    flex: 1,
-    marginRight: theme.spacing.sm,
-  },
-  loginPromoTitle: {
-    color: theme.colors.white,
-    fontWeight: theme.typography.weights.bold,
-    fontSize: theme.typography.sizes.md,
-  },
-  loginPromoSubtitle: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 11,
-    marginTop: 2,
-  },
-  loginPromoBtn: {
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 8,
-    borderRadius: theme.borderRadius.sm,
-  },
-  loginPromoBtnText: {
-    color: theme.colors.white,
-    fontWeight: theme.typography.weights.bold,
-    fontSize: theme.typography.sizes.xs,
-  },
   shortcutsRow: {
     flexDirection: 'row',
-    paddingHorizontal: theme.spacing.md,
-    justifyContent: 'space-between',
-    marginTop: theme.spacing.md,
+    marginTop: theme.spacing.xl,
   },
-  shortcutCard: {
-    width: (width - 48) / 2,
-    backgroundColor: theme.colors.card,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
+  shortcutPill: {
+    flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: theme.colors.card,
     borderWidth: 1,
     borderColor: theme.colors.border,
+    borderRadius: theme.borderRadius.round,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: 10,
+    marginRight: theme.spacing.sm,
   },
-  shortcutIconWrapper: {
-    width: 46,
-    height: 46,
-    borderRadius: theme.borderRadius.sm,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: theme.spacing.xs,
-  },
-  shortcutTitle: {
-    fontSize: theme.typography.sizes.sm,
+  shortcutPillText: {
+    fontSize: theme.typography.sizes.xs,
     fontWeight: theme.typography.weights.bold,
     color: theme.colors.text,
-  },
-  shortcutDesc: {
-    fontSize: 10,
-    color: theme.colors.textMuted,
-    marginTop: 2,
+    marginLeft: 6,
   },
   section: {
     marginTop: theme.spacing.md,
@@ -388,38 +358,59 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     textTransform: 'uppercase',
   },
-  categoriesList: {
-    paddingHorizontal: theme.spacing.md,
-    paddingBottom: theme.spacing.sm,
-  },
-  categoryItem: {
+  seeAllRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginRight: theme.spacing.lg,
-    width: 70,
   },
-  categoryCircle: {
-    width: 60,
-    height: 60,
+  seeAllText: {
+    fontSize: theme.typography.sizes.xs,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.primary,
+    marginRight: 2,
+  },
+  carouselArrows: {
+    flexDirection: 'row',
+  },
+  carouselArrowBtn: {
+    width: 28,
+    height: 28,
     borderRadius: theme.borderRadius.round,
     backgroundColor: theme.colors.card,
     borderWidth: 1,
     borderColor: theme.colors.border,
     justifyContent: 'center',
     alignItems: 'center',
-    overflow: 'hidden',
+    marginLeft: theme.spacing.xs,
   },
-  categoryImg: {
-    width: '80%',
-    height: '80%',
-    borderRadius: theme.borderRadius.round,
+  carouselArrowBtnDisabled: {
+    opacity: 0.4,
+  },
+  categoriesList: {
+    paddingHorizontal: theme.spacing.md,
+    paddingBottom: theme.spacing.sm,
+  },
+  categoryCard: {
+    width: CATEGORY_ITEM_WIDTH - 12,
+    marginRight: 12,
+    backgroundColor: theme.colors.card,
+    borderRadius: theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: theme.spacing.md,
+  },
+  categoryIconChip: {
+    width: 44,
+    height: 44,
+    borderRadius: theme.borderRadius.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: theme.spacing.sm,
   },
   categoryLabel: {
-    fontSize: 11,
-    fontWeight: theme.typography.weights.medium,
+    fontSize: 12,
+    fontWeight: theme.typography.weights.bold,
     color: theme.colors.text,
-    marginTop: theme.spacing.xs,
-    textAlign: 'center',
-    width: '100%',
+    lineHeight: 16,
   },
   flashList: {
     paddingLeft: theme.spacing.md,

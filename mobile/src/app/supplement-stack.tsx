@@ -10,13 +10,21 @@ import {
   Alert,
 } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { LinearGradient } from 'expo-linear-gradient';
 import { fitnessApi, shopApi } from '../services/api';
 import { theme } from '../constants/theme';
 import { useAuthStore } from '../store/auth';
 import { router } from 'expo-router';
-import { Calendar, Plus, AlertTriangle, ShieldAlert, Sparkles, X, ChevronRight } from 'lucide-react-native';
+import { Calendar, Plus, AlertTriangle, Sparkles, X, ChevronRight, Package } from 'lucide-react-native';
 import Button from '../components/Button';
 import Input from '../components/Input';
+
+/** Visual "days of supply remaining" fill, capped at a month for a full bar. */
+const getStockFillPercent = (currentStockServings: number, dailyServing: number) => {
+  if (!dailyServing) return 0;
+  const daysRemaining = currentStockServings / dailyServing;
+  return Math.max(0, Math.min(100, Math.round((daysRemaining / 30) * 100)));
+};
 
 export default function SupplementStackScreen() {
   const queryClient = useQueryClient();
@@ -105,10 +113,14 @@ export default function SupplementStackScreen() {
       {/* 1. Refill Alerts warnings banner */}
       {warnings && warnings.length > 0 && (
         <View style={styles.warningsContainer}>
-          <Text style={styles.warningsTitle}>⚠️ Alertes Stock Compléments</Text>
+          <View style={styles.warningsTitleRow}>
+            <View style={styles.warningIconChip}>
+              <AlertTriangle size={16} color={theme.colors.error} />
+            </View>
+            <Text style={styles.warningsTitle}>Alertes Stock Compléments</Text>
+          </View>
           {warnings.map((warn: any, idx: number) => (
             <View key={idx} style={styles.warningRow}>
-              <AlertTriangle size={16} color={theme.colors.error} style={{ marginRight: 6 }} />
               <Text style={styles.warningText}>
                 {warn.message} ({warn.daysRemaining} jours restants).
               </Text>
@@ -129,17 +141,31 @@ export default function SupplementStackScreen() {
 
         <View style={styles.card}>
           {stack && stack.length > 0 ? (
-            stack.map((item: any) => (
-              <View key={item.id.toString()} style={styles.stackRow}>
-                <View>
-                  <Text style={styles.stackName}>{item.productName}</Text>
-                  <Text style={styles.stackMeta}>
-                    Dosage : {item.dailyServing} portion/jour • Stock : {item.currentStockServings} restants
-                  </Text>
+            stack.map((item: any) => {
+              const fillPercent = getStockFillPercent(item.currentStockServings, item.dailyServing);
+              return (
+                <View key={item.id.toString()} style={styles.stackRow}>
+                  <View style={styles.stackIconChip}>
+                    <Package size={18} color={theme.colors.primary} />
+                  </View>
+                  <View style={styles.stackInfo}>
+                    <Text style={styles.stackName}>{item.productName}</Text>
+                    <Text style={styles.stackMeta}>
+                      Dosage : {item.dailyServing} portion/jour • Stock : {item.currentStockServings} restants
+                    </Text>
+                    <View style={styles.stockBarBg}>
+                      <View
+                        style={[
+                          styles.stockBarFill,
+                          { width: `${fillPercent}%` },
+                          fillPercent < 20 && styles.stockBarFillLow,
+                        ]}
+                      />
+                    </View>
+                  </View>
                 </View>
-                <Calendar size={20} color={theme.colors.primary} />
-              </View>
-            ))
+              );
+            })
           ) : (
             <Text style={styles.emptyText}>Aucun complément planifié.</Text>
           )}
@@ -158,6 +184,14 @@ export default function SupplementStackScreen() {
             <View key={idx} style={styles.recCard}>
               <View style={styles.recHeader}>
                 <Text style={styles.recGoal}>Cible : {rec.goal}</Text>
+                <LinearGradient
+                  colors={theme.gradients.primary}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.aiBadge}>
+                  <Sparkles size={10} color={theme.colors.white} />
+                  <Text style={styles.aiBadgeText}>IA</Text>
+                </LinearGradient>
               </View>
               <Text style={styles.recLabel}>Produits suggérés sur Protein.tn :</Text>
               {rec.products.slice(0, 2).map((prod: any) => (
@@ -243,16 +277,29 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEE2E2',
     marginHorizontal: theme.spacing.md,
     marginTop: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
+    borderRadius: theme.borderRadius.lg,
     padding: theme.spacing.md,
     borderWidth: 1,
-    borderColor: theme.colors.error,
+    borderColor: '#FCA5A5',
+  },
+  warningsTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.xs,
+  },
+  warningIconChip: {
+    width: 28,
+    height: 28,
+    borderRadius: theme.borderRadius.round,
+    backgroundColor: theme.colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: theme.spacing.sm,
   },
   warningsTitle: {
     fontSize: theme.typography.sizes.sm,
     fontWeight: theme.typography.weights.bold,
     color: theme.colors.error,
-    marginBottom: theme.spacing.xs,
   },
   warningRow: {
     flexDirection: 'row',
@@ -303,11 +350,22 @@ const styles = StyleSheet.create({
   },
   stackRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
     paddingVertical: theme.spacing.sm,
+  },
+  stackIconChip: {
+    width: 36,
+    height: 36,
+    borderRadius: theme.borderRadius.sm,
+    backgroundColor: theme.colors.orangeLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: theme.spacing.sm,
+  },
+  stackInfo: {
+    flex: 1,
   },
   stackName: {
     fontSize: theme.typography.sizes.sm + 1,
@@ -318,6 +376,21 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: theme.colors.textMuted,
     marginTop: 2,
+  },
+  stockBarBg: {
+    height: 5,
+    backgroundColor: theme.colors.border,
+    borderRadius: theme.borderRadius.round,
+    overflow: 'hidden',
+    marginTop: theme.spacing.xs,
+  },
+  stockBarFill: {
+    height: '100%',
+    backgroundColor: theme.colors.success,
+    borderRadius: theme.borderRadius.round,
+  },
+  stockBarFillLow: {
+    backgroundColor: theme.colors.error,
   },
   emptyText: {
     color: theme.colors.textMuted,
@@ -335,10 +408,26 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.sm,
   },
   recHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
     paddingBottom: 6,
     marginBottom: 6,
+  },
+  aiBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: theme.borderRadius.round,
+  },
+  aiBadgeText: {
+    color: theme.colors.white,
+    fontSize: 10,
+    fontWeight: theme.typography.weights.bold,
+    marginLeft: 3,
   },
   recGoal: {
     fontSize: theme.typography.sizes.sm,

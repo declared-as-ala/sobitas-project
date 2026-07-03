@@ -11,11 +11,18 @@ import {
   ScrollView,
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
+import { LinearGradient } from 'expo-linear-gradient';
 import { shopApi } from '../../services/api';
 import { theme } from '../../constants/theme';
 import ProductCard from '../../components/ProductCard';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Search, SlidersHorizontal, ArrowUpDown, X } from 'lucide-react-native';
+import { Search, SlidersHorizontal, X } from 'lucide-react-native';
+
+const SORT_OPTIONS = [
+  { id: 'popular', label: 'Populaire' },
+  { id: 'price_asc', label: 'Prix ↑' },
+  { id: 'price_desc', label: 'Prix ↓' },
+];
 
 export default function ShopScreen() {
   const params = useLocalSearchParams();
@@ -109,10 +116,14 @@ export default function ShopScreen() {
             }}
           />
         </View>
-        <TouchableOpacity
-          style={styles.filterButton}
-          onPress={() => setIsFilterModalVisible(true)}>
-          <SlidersHorizontal size={20} color={theme.colors.white} />
+        <TouchableOpacity onPress={() => setIsFilterModalVisible(true)}>
+          <LinearGradient
+            colors={theme.gradients.primary}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.filterButton}>
+            <SlidersHorizontal size={20} color={theme.colors.white} />
+          </LinearGradient>
         </TouchableOpacity>
       </View>
 
@@ -121,20 +132,20 @@ export default function ShopScreen() {
         <Text style={styles.resultsCount}>
           {productsList.length} Produits trouvés
         </Text>
-        <View style={styles.sortDropdown}>
-          <ArrowUpDown size={14} color={theme.colors.textMuted} />
-          <TouchableOpacity
-            style={styles.sortBtn}
-            onPress={() => {
-              // Toggle sorting
-              const nextSort = sortOption === 'popular' ? 'price_asc' : sortOption === 'price_asc' ? 'price_desc' : 'popular';
-              setSortOption(nextSort);
-              setPage(1);
-            }}>
-            <Text style={styles.sortText}>
-              {sortOption === 'popular' ? 'Tri: Populaire' : sortOption === 'price_asc' ? 'Tri: Prix bas-haut' : 'Tri: Prix haut-bas'}
-            </Text>
-          </TouchableOpacity>
+        <View style={styles.segmentedControl}>
+          {SORT_OPTIONS.map((opt) => (
+            <TouchableOpacity
+              key={opt.id}
+              style={[styles.segment, sortOption === opt.id && styles.segmentActive]}
+              onPress={() => {
+                setSortOption(opt.id);
+                setPage(1);
+              }}>
+              <Text style={[styles.segmentText, sortOption === opt.id && styles.segmentTextActive]}>
+                {opt.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
       </View>
 
@@ -173,6 +184,7 @@ export default function ShopScreen() {
         onRequestClose={() => setIsFilterModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
+            <View style={styles.dragHandle} />
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Filtres de recherche</Text>
               <TouchableOpacity onPress={() => setIsFilterModalVisible(false)}>
@@ -289,7 +301,6 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: theme.borderRadius.md,
-    backgroundColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -305,17 +316,30 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.sizes.xs,
     color: theme.colors.textMuted,
   },
-  sortDropdown: {
+  segmentedControl: {
     flexDirection: 'row',
-    alignItems: 'center',
+    backgroundColor: theme.colors.card,
+    borderRadius: theme.borderRadius.round,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 3,
   },
-  sortBtn: {
-    marginLeft: theme.spacing.xs,
+  segment: {
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 5,
+    borderRadius: theme.borderRadius.round,
   },
-  sortText: {
-    fontSize: theme.typography.sizes.xs,
+  segmentActive: {
+    backgroundColor: theme.colors.primary,
+  },
+  segmentText: {
+    fontSize: 11,
     fontWeight: theme.typography.weights.medium,
-    color: theme.colors.text,
+    color: theme.colors.textMuted,
+  },
+  segmentTextActive: {
+    color: theme.colors.white,
+    fontWeight: theme.typography.weights.bold,
   },
   centerContainer: {
     flex: 1,
@@ -331,7 +355,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
   },
   listPadding: {
-    paddingBottom: theme.spacing.xl,
+    paddingBottom: theme.spacing.xl + 80,
   },
   modalOverlay: {
     flex: 1,
@@ -344,6 +368,14 @@ const styles = StyleSheet.create({
     borderTopRightRadius: theme.borderRadius.lg,
     height: '75%',
     padding: theme.spacing.md,
+  },
+  dragHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: theme.borderRadius.round,
+    backgroundColor: theme.colors.border,
+    alignSelf: 'center',
+    marginBottom: theme.spacing.sm,
   },
   modalHeader: {
     flexDirection: 'row',

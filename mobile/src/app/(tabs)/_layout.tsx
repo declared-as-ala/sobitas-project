@@ -1,7 +1,25 @@
 import React from 'react';
+import { View, StyleSheet, Platform } from 'react-native';
 import { Tabs } from 'expo-router';
+import { BlurView } from 'expo-blur';
 import { theme } from '../../constants/theme';
-import { Home, ShoppingBag, Dumbbell, Award, User } from 'lucide-react-native';
+import { Home, ShoppingBag, Dumbbell, Award, User, LucideIcon } from 'lucide-react-native';
+
+const TabIcon = ({
+  color,
+  size,
+  focused,
+  Icon,
+}: {
+  color: string;
+  size: number;
+  focused: boolean;
+  Icon: LucideIcon;
+}) => (
+  <View style={[styles.iconPill, focused && styles.iconPillActive]}>
+    <Icon size={size} color={focused ? theme.colors.white : color} />
+  </View>
+);
 
 export default function TabLayout() {
   return (
@@ -9,17 +27,18 @@ export default function TabLayout() {
       screenOptions={{
         tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: theme.colors.textMuted,
-        tabBarStyle: {
-          backgroundColor: theme.colors.card,
-          borderTopWidth: 1,
-          borderTopColor: theme.colors.border,
-          height: 60,
-          paddingBottom: 8,
-          paddingTop: 8,
-        },
+        tabBarShowLabel: true,
+        tabBarStyle: styles.tabBar,
+        tabBarBackground: () => (
+          <BlurView intensity={70} tint="light" style={StyleSheet.absoluteFill} />
+        ),
         tabBarLabelStyle: {
           fontSize: 10,
-          fontWeight: theme.typography.weights.medium,
+          fontWeight: theme.typography.weights.bold,
+          marginTop: 2,
+        },
+        tabBarItemStyle: {
+          paddingTop: 6,
         },
         headerStyle: {
           backgroundColor: theme.colors.card,
@@ -39,7 +58,9 @@ export default function TabLayout() {
           title: 'Accueil',
           tabBarLabel: 'Accueil',
           headerTitle: 'Protein.tn',
-          tabBarIcon: ({ color, size }) => <Home size={size} color={color} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <TabIcon color={color} size={size} focused={focused} Icon={Home} />
+          ),
         }}
       />
       <Tabs.Screen
@@ -48,7 +69,9 @@ export default function TabLayout() {
           title: 'Boutique',
           tabBarLabel: 'Boutique',
           headerTitle: 'Boutique Proteine',
-          tabBarIcon: ({ color, size }) => <ShoppingBag size={size} color={color} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <TabIcon color={color} size={size} focused={focused} Icon={ShoppingBag} />
+          ),
         }}
       />
       <Tabs.Screen
@@ -57,7 +80,9 @@ export default function TabLayout() {
           title: 'Fitness',
           tabBarLabel: 'Fitness',
           headerTitle: 'Fitness & Nutrition',
-          tabBarIcon: ({ color, size }) => <Dumbbell size={size} color={color} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <TabIcon color={color} size={size} focused={focused} Icon={Dumbbell} />
+          ),
         }}
       />
       <Tabs.Screen
@@ -66,7 +91,9 @@ export default function TabLayout() {
           title: 'Rewards',
           tabBarLabel: 'Rewards',
           headerTitle: 'Fidélité & Parrainage',
-          tabBarIcon: ({ color, size }) => <Award size={size} color={color} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <TabIcon color={color} size={size} focused={focused} Icon={Award} />
+          ),
         }}
       />
       <Tabs.Screen
@@ -75,9 +102,38 @@ export default function TabLayout() {
           title: 'Profil',
           tabBarLabel: 'Profil',
           headerTitle: 'Mon Compte',
-          tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <TabIcon color={color} size={size} focused={focused} Icon={User} />
+          ),
         }}
       />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  tabBar: {
+    position: 'absolute',
+    left: theme.spacing.md,
+    right: theme.spacing.md,
+    bottom: Platform.OS === 'ios' ? 28 : 16,
+    height: 68,
+    borderRadius: theme.borderRadius.lg,
+    borderTopWidth: 0,
+    paddingBottom: 0,
+    paddingTop: 0,
+    overflow: 'hidden',
+    backgroundColor: 'transparent',
+    ...theme.shadows.heavy,
+  },
+  iconPill: {
+    width: 40,
+    height: 32,
+    borderRadius: theme.borderRadius.round,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  iconPillActive: {
+    backgroundColor: theme.colors.primary,
+  },
+});

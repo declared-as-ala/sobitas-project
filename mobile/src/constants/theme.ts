@@ -14,6 +14,16 @@ export const theme = {
     white: '#FFFFFF',
     black: '#000000',
     orangeLight: '#FFF0E6',  // Accent background
+    secondaryDark: '#0A0A0B',       // Deepest charcoal, for gradient bottoms
+    glassBorder: 'rgba(255,255,255,0.14)',
+    glassBorderDark: 'rgba(255,255,255,0.10)',
+    overlayDark: 'rgba(0,0,0,0.55)',
+  },
+  gradients: {
+    primary: ['#FF7A1A', '#FF6B00', '#E05100'] as const,
+    dark: ['#232326', '#141416', '#0A0A0B'] as const,
+    glassLight: ['rgba(255,255,255,0.22)', 'rgba(255,255,255,0.04)'] as const,
+    heroScrim: ['rgba(10,10,11,0.05)', 'rgba(10,10,11,0.85)'] as const,
   },
   spacing: {
     xs: 4,

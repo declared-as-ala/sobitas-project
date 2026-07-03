@@ -5,22 +5,40 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ActivityIndicator,
   Alert,
 } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { LinearGradient } from 'expo-linear-gradient';
 import { fitnessApi } from '../services/api';
 import { theme } from '../constants/theme';
 import { useAuthStore } from '../store/auth';
 import Input from '../components/Input';
 import Button from '../components/Button';
-import { Calculator, Sparkles } from 'lucide-react-native';
+import GlassCard from '../components/GlassCard';
+import CircularProgress from '../components/CircularProgress';
+import { Sparkles, ChevronLeft } from 'lucide-react-native';
 import { router } from 'expo-router';
+
+const ACTIVITY_OPTIONS = [
+  { id: 'sedentary', label: 'Sédentaire (Pas de sport)' },
+  { id: 'light', label: 'Léger (1-3 séances/semaine)' },
+  { id: 'moderate', label: 'Modéré (3-5 séances/semaine)' },
+  { id: 'active', label: 'Très actif (Entraînement quotidien)' },
+];
+
+const GOAL_OPTIONS = [
+  { id: 'muscle_gain', label: 'Prise de masse (Surplus)' },
+  { id: 'weight_loss', label: 'Perte de poids (Déficit)' },
+  { id: 'maintain', label: 'Maintien de forme' },
+];
+
+const STEP_TITLES = ['Profil', 'Mensurations', 'Activité', 'Objectif'];
 
 export default function CalculatorScreen() {
   const queryClient = useQueryClient();
   const { isAuthenticated } = useAuthStore();
 
+  const [step, setStep] = useState(0);
   const [weight, setWeight] = useState('');
   const [height, setHeight] = useState('');
   const [age, setAge] = useState('');
@@ -55,6 +73,7 @@ export default function CalculatorScreen() {
   const handleCalculate = () => {
     if (!weight || !height || !age) {
       Alert.alert('Erreur', 'Veuillez remplir le poids, la taille et l\'âge.');
+      setStep(1);
       return;
     }
 
@@ -101,6 +120,7 @@ export default function CalculatorScreen() {
       carbs: carbsTarget,
       fat: fatTarget,
     });
+    setStep(4);
   };
 
   const saveMutation = useMutation({
@@ -129,115 +149,157 @@ export default function CalculatorScreen() {
     },
   });
 
+  const handleRestart = () => {
+    setCalculated(null);
+    setStep(0);
+  };
+
+  const isResultStep = step === 4;
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Entrez vos données de calcul</Text>
-        
-        <View style={styles.genderRow}>
-          <TouchableOpacity
-            style={[styles.genderBtn, gender === 'male' && styles.genderBtnActive]}
-            onPress={() => setGender('male')}>
-            <Text style={[styles.genderText, gender === 'male' && styles.genderTextActive]}>Homme</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.genderBtn, gender === 'female' && styles.genderBtnActive]}
-            onPress={() => setGender('female')}>
-            <Text style={[styles.genderText, gender === 'female' && styles.genderTextActive]}>Femme</Text>
-          </TouchableOpacity>
-        </View>
-
-        <Input
-          label="Poids (kg)"
-          placeholder="Ex: 80"
-          keyboardType="numeric"
-          value={weight}
-          onChangeText={setWeight}
-        />
-
-        <Input
-          label="Taille (cm)"
-          placeholder="Ex: 180"
-          keyboardType="numeric"
-          value={height}
-          onChangeText={setHeight}
-        />
-
-        <Input
-          label="Âge"
-          placeholder="Ex: 26"
-          keyboardType="numeric"
-          value={age}
-          onChangeText={setAge}
-        />
-
-        {/* Activity multiplier selection dropdown style */}
-        <Text style={styles.label}>Niveau d'activité</Text>
-        <View style={styles.optionsCol}>
-          {[
-            { id: 'sedentary', label: 'Sédentaire (Pas de sport)' },
-            { id: 'light', label: 'Léger (1-3 séances/semaine)' },
-            { id: 'moderate', label: 'Modéré (3-5 séances/semaine)' },
-            { id: 'active', label: 'Très actif (Entraînement quotidien)' },
-          ].map((item) => (
-            <TouchableOpacity
-              key={item.id}
-              style={[styles.optionBadge, activity === item.id && styles.optionBadgeActive]}
-              onPress={() => setActivity(item.id)}>
-              <Text style={[styles.optionText, activity === item.id && styles.optionTextActive]}>
-                {item.label}
-              </Text>
-            </TouchableOpacity>
+      {/* Step progress dots */}
+      {!isResultStep && (
+        <View style={styles.progressRow}>
+          {STEP_TITLES.map((title, i) => (
+            <View key={title} style={styles.progressStepWrapper}>
+              <View style={[styles.progressDot, i <= step && styles.progressDotActive]} />
+              <Text style={[styles.progressLabel, i === step && styles.progressLabelActive]}>{title}</Text>
+            </View>
           ))}
         </View>
+      )}
 
-        {/* Goal selection */}
-        <Text style={[styles.label, { marginTop: theme.spacing.sm }]}>Objectif</Text>
-        <View style={styles.optionsCol}>
-          {[
-            { id: 'muscle_gain', label: 'Prise de masse (Surplus)' },
-            { id: 'weight_loss', label: 'Perte de poids (Déficit)' },
-            { id: 'maintain', label: 'Maintien de forme' },
-          ].map((item) => (
+      {/* Step 0: Gender */}
+      {step === 0 && (
+        <GlassCard light style={styles.stepCard}>
+          <Text style={styles.cardTitle}>Vous êtes...</Text>
+          <View style={styles.genderRow}>
             <TouchableOpacity
-              key={item.id}
-              style={[styles.optionBadge, goal === item.id && styles.optionBadgeActive]}
-              onPress={() => setGoal(item.id)}>
-              <Text style={[styles.optionText, goal === item.id && styles.optionTextActive]}>
-                {item.label}
-              </Text>
+              style={[styles.genderBtn, gender === 'male' && styles.genderBtnActive]}
+              onPress={() => setGender('male')}>
+              <Text style={[styles.genderText, gender === 'male' && styles.genderTextActive]}>Homme</Text>
             </TouchableOpacity>
-          ))}
-        </View>
+            <TouchableOpacity
+              style={[styles.genderBtn, gender === 'female' && styles.genderBtnActive]}
+              onPress={() => setGender('female')}>
+              <Text style={[styles.genderText, gender === 'female' && styles.genderTextActive]}>Femme</Text>
+            </TouchableOpacity>
+          </View>
+          <Button title="Suivant" onPress={() => setStep(1)} />
+        </GlassCard>
+      )}
 
-        <Button
-          title="Calculer mes objectifs"
-          style={{ marginTop: theme.spacing.md }}
-          onPress={handleCalculate}
-        />
-      </View>
+      {/* Step 1: Body stats */}
+      {step === 1 && (
+        <GlassCard light style={styles.stepCard}>
+          <Text style={styles.cardTitle}>Vos mensurations</Text>
+          <Input
+            label="Poids (kg)"
+            placeholder="Ex: 80"
+            keyboardType="numeric"
+            value={weight}
+            onChangeText={setWeight}
+          />
+          <Input
+            label="Taille (cm)"
+            placeholder="Ex: 180"
+            keyboardType="numeric"
+            value={height}
+            onChangeText={setHeight}
+          />
+          <Input
+            label="Âge"
+            placeholder="Ex: 26"
+            keyboardType="numeric"
+            value={age}
+            onChangeText={setAge}
+          />
+          <View style={styles.stepButtonsRow}>
+            <Button title="Retour" variant="outline" style={styles.backBtn} onPress={() => setStep(0)} />
+            <Button title="Suivant" style={styles.nextBtn} onPress={() => setStep(2)} />
+          </View>
+        </GlassCard>
+      )}
 
-      {/* Display calculation result details */}
-      {calculated && (
-        <View style={[styles.resultCard, theme.shadows.medium]}>
+      {/* Step 2: Activity level */}
+      {step === 2 && (
+        <GlassCard light style={styles.stepCard}>
+          <Text style={styles.cardTitle}>Niveau d'activité</Text>
+          <View style={styles.optionsCol}>
+            {ACTIVITY_OPTIONS.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={[styles.optionBadge, activity === item.id && styles.optionBadgeActive]}
+                onPress={() => setActivity(item.id)}>
+                <Text style={[styles.optionText, activity === item.id && styles.optionTextActive]}>
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <View style={styles.stepButtonsRow}>
+            <Button title="Retour" variant="outline" style={styles.backBtn} onPress={() => setStep(1)} />
+            <Button title="Suivant" style={styles.nextBtn} onPress={() => setStep(3)} />
+          </View>
+        </GlassCard>
+      )}
+
+      {/* Step 3: Goal */}
+      {step === 3 && (
+        <GlassCard light style={styles.stepCard}>
+          <Text style={styles.cardTitle}>Votre objectif</Text>
+          <View style={styles.optionsCol}>
+            {GOAL_OPTIONS.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={[styles.optionBadge, goal === item.id && styles.optionBadgeActive]}
+                onPress={() => setGoal(item.id)}>
+                <Text style={[styles.optionText, goal === item.id && styles.optionTextActive]}>
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <View style={styles.stepButtonsRow}>
+            <Button title="Retour" variant="outline" style={styles.backBtn} onPress={() => setStep(2)} />
+            <Button title="Calculer mes objectifs" style={styles.nextBtn} onPress={handleCalculate} />
+          </View>
+        </GlassCard>
+      )}
+
+      {/* Step 4: Result */}
+      {isResultStep && calculated && (
+        <LinearGradient
+          colors={theme.gradients.dark}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.resultCard, theme.shadows.heavy]}>
+          <TouchableOpacity style={styles.restartLink} onPress={handleRestart}>
+            <ChevronLeft size={16} color={theme.colors.primary} />
+            <Text style={styles.restartLinkText}>Recommencer</Text>
+          </TouchableOpacity>
+
           <View style={styles.resultHeader}>
             <Sparkles size={20} color={theme.colors.primary} />
             <Text style={styles.resultTitle}>Vos Objectifs Conseillés</Text>
           </View>
 
-          <View style={styles.resultRow}>
-            <Text style={styles.resultLabel}>BMR (Métabolisme de base)</Text>
-            <Text style={styles.resultVal}>{calculated.bmr} kcal</Text>
-          </View>
-
-          <View style={styles.resultRow}>
-            <Text style={styles.resultLabel}>TDEE (Calories de maintien)</Text>
-            <Text style={styles.resultVal}>{calculated.tdee} kcal</Text>
-          </View>
-
-          <View style={[styles.resultRow, styles.mainResultRow]}>
-            <Text style={styles.mainResultLabel}>Calories Cibles</Text>
-            <Text style={styles.mainResultVal}>{calculated.calories} kcal/jour</Text>
+          <View style={styles.calorieRingRow}>
+            <CircularProgress progress={100} size={110} strokeWidth={10} color={theme.colors.primary}>
+              <Text style={styles.ringCalories}>{calculated.calories}</Text>
+              <Text style={styles.ringCaloriesUnit}>kcal/j</Text>
+            </CircularProgress>
+            <View style={styles.calorieSideStats}>
+              <View style={styles.resultRow}>
+                <Text style={styles.resultLabel}>BMR</Text>
+                <Text style={styles.resultVal}>{calculated.bmr} kcal</Text>
+              </View>
+              <View style={styles.resultRow}>
+                <Text style={styles.resultLabel}>TDEE</Text>
+                <Text style={styles.resultVal}>{calculated.tdee} kcal</Text>
+              </View>
+            </View>
           </View>
 
           <Text style={styles.macrosSubTitle}>Répartition des Macros :</Text>
@@ -265,7 +327,7 @@ export default function CalculatorScreen() {
               onPress={() => saveMutation.mutate()}
             />
           )}
-        </View>
+        </LinearGradient>
       )}
     </ScrollView>
   );
@@ -278,19 +340,54 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: theme.spacing.md,
+    paddingBottom: theme.spacing.xl + 40,
   },
-  card: {
-    backgroundColor: theme.colors.card,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+  progressRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: theme.spacing.lg,
+  },
+  progressStepWrapper: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  progressDot: {
+    width: 10,
+    height: 10,
+    borderRadius: theme.borderRadius.round,
+    backgroundColor: theme.colors.border,
+    marginBottom: 4,
+  },
+  progressDotActive: {
+    backgroundColor: theme.colors.primary,
+  },
+  progressLabel: {
+    fontSize: 10,
+    color: theme.colors.textMuted,
+  },
+  progressLabelActive: {
+    color: theme.colors.primary,
+    fontWeight: theme.typography.weights.bold,
+  },
+  stepCard: {
+    marginBottom: theme.spacing.md,
   },
   cardTitle: {
-    fontSize: theme.typography.sizes.sm + 1,
+    fontSize: theme.typography.sizes.md,
     fontWeight: theme.typography.weights.bold,
     color: theme.colors.text,
     marginBottom: theme.spacing.md,
+  },
+  stepButtonsRow: {
+    flexDirection: 'row',
+    marginTop: theme.spacing.sm,
+  },
+  backBtn: {
+    flex: 1,
+    marginRight: theme.spacing.sm,
+  },
+  nextBtn: {
+    flex: 2,
   },
   genderRow: {
     flexDirection: 'row',
@@ -298,8 +395,8 @@ const styles = StyleSheet.create({
   },
   genderBtn: {
     flex: 1,
-    height: 44,
-    backgroundColor: '#F1F3F5',
+    height: 52,
+    backgroundColor: 'rgba(0,0,0,0.03)',
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: theme.borderRadius.sm,
@@ -319,21 +416,15 @@ const styles = StyleSheet.create({
   genderTextActive: {
     color: theme.colors.primary,
   },
-  label: {
-    fontSize: theme.typography.sizes.sm,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.xs,
-  },
   optionsCol: {
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
   },
   optionBadge: {
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: theme.spacing.md,
-    backgroundColor: '#F1F3F5',
+    backgroundColor: 'rgba(0,0,0,0.03)',
     borderRadius: theme.borderRadius.sm,
-    marginBottom: 6,
+    marginBottom: 8,
     borderWidth: 1,
     borderColor: 'transparent',
   },
@@ -350,11 +441,20 @@ const styles = StyleSheet.create({
     fontWeight: theme.typography.weights.bold,
   },
   resultCard: {
-    backgroundColor: theme.colors.secondary,
-    borderRadius: theme.borderRadius.md,
+    borderRadius: theme.borderRadius.lg,
     padding: theme.spacing.md,
-    marginTop: theme.spacing.md,
-    marginBottom: theme.spacing.xl,
+    marginTop: theme.spacing.sm,
+  },
+  restartLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.sm,
+  },
+  restartLinkText: {
+    color: theme.colors.primary,
+    fontSize: 12,
+    fontWeight: theme.typography.weights.bold,
+    marginLeft: 2,
   },
   resultHeader: {
     flexDirection: 'row',
@@ -370,6 +470,24 @@ const styles = StyleSheet.create({
     color: theme.colors.white,
     marginLeft: 6,
   },
+  calorieRingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
+  },
+  ringCalories: {
+    fontSize: theme.typography.sizes.lg,
+    fontWeight: theme.typography.weights.heavy,
+    color: theme.colors.white,
+  },
+  ringCaloriesUnit: {
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.6)',
+  },
+  calorieSideStats: {
+    flex: 1,
+    marginLeft: theme.spacing.lg,
+  },
   resultRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -383,22 +501,6 @@ const styles = StyleSheet.create({
     color: theme.colors.white,
     fontWeight: theme.typography.weights.bold,
     fontSize: theme.typography.sizes.sm,
-  },
-  mainResultRow: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.sm,
-    marginVertical: theme.spacing.sm,
-  },
-  mainResultLabel: {
-    color: theme.colors.white,
-    fontWeight: theme.typography.weights.bold,
-    fontSize: theme.typography.sizes.sm + 1,
-  },
-  mainResultVal: {
-    color: theme.colors.primary,
-    fontWeight: theme.typography.weights.heavy,
-    fontSize: theme.typography.sizes.md + 1,
   },
   macrosSubTitle: {
     color: theme.colors.white,
