@@ -6,20 +6,18 @@ import {
   StyleSheet,
   TouchableOpacity,
   Image,
-  ActivityIndicator,
   Alert,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useMutation } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
-import { fitnessApi } from '../services/api';
-import { theme } from '../constants/theme';
-import { useAuthStore } from '../store/auth';
-import { useFitnessStore } from '../store/fitness';
-import { router } from 'expo-router';
-import Button from '../components/Button';
-import GlassCard from '../components/GlassCard';
-import CircularProgress from '../components/CircularProgress';
+import { fitnessApi } from '../../services/api';
+import { theme } from '../../constants/theme';
+import { useAuthStore } from '../../store/auth';
+import { useFitnessStore } from '../../store/fitness';
+import Button from '../../components/Button';
+import GlassCard from '../../components/GlassCard';
+import CircularProgress from '../../components/CircularProgress';
 import { Camera, ImageIcon, Sparkles, ScanLine, RotateCcw, AlertCircle } from 'lucide-react-native';
 
 interface ScannedImage {
@@ -125,7 +123,7 @@ export default function MealScanScreen() {
       date: today,
     });
     Alert.alert('Enregistré', `${result.protein}g de protéines ajoutées à votre suivi du jour.`, [
-      { text: 'OK', onPress: () => router.back() },
+      { text: 'OK', onPress: handleReset },
     ]);
   };
 
@@ -261,7 +259,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: theme.spacing.md,
-    paddingBottom: theme.spacing.xl + 40,
+    paddingBottom: theme.spacing.xl + 80,
   },
   introRow: {
     flexDirection: 'row',

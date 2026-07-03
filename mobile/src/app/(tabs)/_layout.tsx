@@ -3,7 +3,7 @@ import { View, StyleSheet, Platform } from 'react-native';
 import { Tabs } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { theme } from '../../constants/theme';
-import { Home, ShoppingBag, Dumbbell, Award, User, LucideIcon } from 'lucide-react-native';
+import { Home, ShoppingBag, Dumbbell, Award, User, ScanLine, LucideIcon } from 'lucide-react-native';
 
 const TabIcon = ({
   color,
