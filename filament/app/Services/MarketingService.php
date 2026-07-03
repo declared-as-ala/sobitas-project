@@ -13,7 +13,7 @@ class MarketingService
     public const SMS_STOP_DEFAULT = 'STOP';
 
     /**
-     * Absolute URL for the orange SOBITAS wordmark used in email templates (public/logo.png).
+     * Absolute URL for the orange Protein.tn wordmark used in email templates (public/logo.png).
      */
     public static function logoUrl(): string
     {

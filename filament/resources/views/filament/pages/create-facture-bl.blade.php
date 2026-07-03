@@ -178,7 +178,7 @@ body:has(.bl-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !importa
         <div class="bl-top">
             <div class="bl-company">
                 @if($logoSrc)
-                    <img src="{{ $logoSrc }}" alt="Sobitas" style="height:80px;object-fit:contain;margin-bottom:8px;display:block">
+                    <img src="{{ $logoSrc }}" alt="Protein.tn" style="height:80px;object-fit:contain;margin-bottom:8px;display:block">
                 @endif
                 @if($coordinate)
                     <h4>{{ $coordinate->abbreviation ?? $coordinate->name_fr ?? '' }}</h4>

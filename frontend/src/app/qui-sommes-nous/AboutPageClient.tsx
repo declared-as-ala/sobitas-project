@@ -178,7 +178,7 @@ export default function AboutPageClient() {
               transition={{ duration: 0.5, delay: 0.12 }}
               className="text-gray-300 text-sm sm:text-base md:text-lg max-w-2xl mx-auto leading-relaxed px-2"
             >
-              SOBITAS — votre distributeur officiel d&apos;articles de sport et de compléments alimentaires en Tunisie depuis 2010.
+              Protein.tn — votre distributeur officiel d&apos;articles de sport et de compléments alimentaires en Tunisie depuis 2010.
             </motion.p>
 
             {/* Quick links */}
@@ -369,7 +369,7 @@ export default function AboutPageClient() {
                       <MapPin className="h-5 w-5 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-base sm:text-lg font-black text-gray-900 mb-1 break-words">SOBITAS — STE BITOUTA D&apos;ARTICLE DE SPORT</h3>
+                      <h3 className="text-base sm:text-lg font-black text-gray-900 mb-1 break-words">Protein.tn — STE BITOUTA D&apos;ARTICLE DE SPORT</h3>
                       <p className="text-sm text-gray-500 break-words mb-1">{coordinates?.adresse || 'Sousse, Tunisie'}</p>
                       {coordinates?.phone && <p className="text-sm text-gray-500"><span className="font-semibold text-gray-700">Tél :</span> {coordinates.phone}</p>}
                       {coordinates?.email && <p className="text-sm text-gray-500 break-all"><span className="font-semibold text-gray-700">Email :</span> {coordinates.email}</p>}
@@ -399,11 +399,11 @@ export default function AboutPageClient() {
               </div>
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-black mb-4 leading-tight">
                 <span className="bg-gradient-to-br from-white via-amber-100 to-amber-300 bg-clip-text text-transparent">
-                  Rejoignez la communauté SOBITAS
+                  Rejoignez la communauté Protein.tn
                 </span>
               </h2>
               <p className="text-gray-300 text-sm sm:text-base md:text-lg mb-8 leading-relaxed max-w-2xl mx-auto">
-                Que vous soyez athlète professionnel, passionné de fitness ou débutant — SOBITAS est votre partenaire pour atteindre vos objectifs.
+                Que vous soyez athlète professionnel, passionné de fitness ou débutant — Protein.tn est votre partenaire pour atteindre vos objectifs.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <Link href="/shop"
@@ -418,7 +418,7 @@ export default function AboutPageClient() {
                 </Link>
               </div>
               <p className="mt-7 text-xs sm:text-sm text-gray-400 max-w-xl mx-auto">
-                <strong className="text-gray-300">Proteine Tunisie – SOBITAS :</strong> Votre expert en nutrition sportive depuis 2010. Basé à Sousse, livraison rapide partout en Tunisie.
+                <strong className="text-gray-300">Proteine Tunisie – Protein.tn :</strong> Votre expert en nutrition sportive depuis 2010. Basé à Sousse, livraison rapide partout en Tunisie.
               </p>
             </motion.div>
           </div>

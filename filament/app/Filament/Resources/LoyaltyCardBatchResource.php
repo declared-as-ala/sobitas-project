@@ -48,10 +48,10 @@ class LoyaltyCardBatchResource extends Resource
                         ->maxLength(100),
                     Forms\Components\TextInput::make('prefix')
                         ->label('Préfixe')
-                        ->default('SOBITAS')
+                        ->default('PROTEIN')
                         ->required()
                         ->maxLength(10)
-                        ->hint('Ex: SOBITAS → SOBITAS-000001'),
+                        ->hint('Ex: PROTEIN → PROTEIN-000001'),
                     Forms\Components\TextInput::make('start_number')
                         ->label('Numéro de début')
                         ->numeric()

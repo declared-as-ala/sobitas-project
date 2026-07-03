@@ -59,7 +59,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Sobitas</h1>
+            <h1>Protein.tn</h1>
         </div>
         
         <div class="content">
@@ -75,7 +75,7 @@
             
             <p>Si vous n'avez pas demandé la réinitialisation de votre mot de passe, vous pouvez ignorer cet e-mail. Votre compte est en sécurité.</p>
             
-            <p>Salutations,<br>L'équipe Sobitas</p>
+            <p>Salutations,<br>L'équipe Protein.tn</p>
             
             <hr style="border: 0; border-top: 1px solid #eeeeee; margin: 20px 0;">
             <p style="font-size: 12px; color: #888888; word-break: break-all;">
@@ -85,7 +85,7 @@
         </div>
         
         <div class="footer">
-            &copy; {{ date('Y') }} Sobitas. Tous droits réservés.
+            &copy; {{ date('Y') }} Protein.tn. Tous droits réservés.
         </div>
     </div>
 </body>

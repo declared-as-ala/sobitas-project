@@ -49,7 +49,7 @@
                 <a href="{{ $orderUrl }}" style="display:inline-block;background:#dc2626;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;">متابعة الطلب</a>
             </p>
         </td></tr>
-        <tr><td style="background:#0f172a;color:#cbd5e1;padding:20px;text-align:center;">شكرا لثقتك في SOBITAS</td></tr>
+        <tr><td style="background:#0f172a;color:#cbd5e1;padding:20px;text-align:center;">شكرا لثقتك في Protein.tn</td></tr>
     </table>
 </td></tr>
 </table>

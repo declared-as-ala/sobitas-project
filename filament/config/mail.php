@@ -84,7 +84,7 @@ return [
 
     'from' => [
         'address' => env('MAIL_FROM_ADDRESS', 'bitoutawalid@gmail.com'),
-        'name'    => env('MAIL_FROM_NAME', 'Sobitas'),
+        'name'    => env('MAIL_FROM_NAME', 'Protein.tn'),
     ],
 
     /*
@@ -122,7 +122,7 @@ return [
     |--------------------------------------------------------------------------
     |
     | Comma-separated list of emails that receive new order notifications.
-    | Set ADMIN_EMAILS in .env, e.g. admin@sobitas.tn,other@sobitas.tn
+    | Set ADMIN_EMAILS in .env, e.g. admin@protein.tn,other@protein.tn
     |
     */
 

@@ -187,9 +187,9 @@ body:has(.lp-page) .fi-topbar-end {
         <div class="lp-header-row">
             <div class="lp-company">
                 @if($logoUrl)
-                    <img src="{{ $logoUrl }}" alt="{{ $coordinate->abbreviation ?? 'Sobitas' }}">
+                    <img src="{{ $logoUrl }}" alt="{{ $coordinate->abbreviation ?? 'Protein.tn' }}">
                 @elseif($logoSrc)
-                    <img src="{{ $logoSrc }}" alt="Sobitas">
+                    <img src="{{ $logoSrc }}" alt="Protein.tn">
                 @endif
                 @if($coordinate)
                     <h4>{{ $coordinate->abbreviation ?? $coordinate->name_fr ?? '' }}</h4>

@@ -147,11 +147,11 @@ def main():
     
     # Find source image
     source_images = [
+        public_dir / 'icon.png',
         public_dir / 'new-logo.webp',
         public_dir / 'new-logo.png',
         public_dir / 'logo.png',
         public_dir / 'logo-sobitas.png',
-        public_dir / 'icon.png',
     ]
     
     source_image = None

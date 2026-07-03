@@ -177,7 +177,7 @@
         <div class="container">
 
             <div class="receipt_header">
-                <img src="{{ asset('logo.png') }}" alt="SOBITAS PROTEIN.TN" data-holder-rendered="true"
+                <img src="{{ asset('logo.png') }}" alt="Protein.tn" data-holder-rendered="true"
                     style="width : 220px ; margin: auto; display: block; float: none;" />
                 <h1> {{ $coordonnee->short_description_ticket ?? '' }}</h1>
                 <h2>Adresse: {{ $coordonnee->adresse_fr ?? '' }} <span>Tel: {{ $coordonnee->phone_1 ?? '' }} @if ($coordonnee && $coordonnee->phone_2)

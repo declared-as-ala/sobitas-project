@@ -276,7 +276,7 @@ class CommandeController extends Controller
 
         // ── Send emails ───────────────────────────────────────────────────────────
         try {
-            $adminEmailsRaw = config('mail.admin_emails', config('mail.username', 'admin@sobitas.tn'));
+            $adminEmailsRaw = config('mail.admin_emails', config('mail.username', 'admin@protein.tn'));
             $adminEmails = is_array($adminEmailsRaw)
                 ? array_filter(array_map('trim', $adminEmailsRaw))
                 : array_filter(array_map('trim', explode(',', (string) $adminEmailsRaw)));

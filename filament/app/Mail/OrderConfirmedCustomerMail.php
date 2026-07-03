@@ -23,12 +23,12 @@ class OrderConfirmedCustomerMail extends Mailable
         $this->commande->loadMissing('details.product');
         if ($this->mailLocale === 'ar') {
             return $this
-                ->subject('تم تأكيد طلبك رقم #' . $this->commande->numero . ' - SOBITAS')
+                ->subject('تم تأكيد طلبك رقم #' . $this->commande->numero . ' - Protein.tn')
                 ->view('emails.orders.confirmed-customer-ar');
         }
 
         return $this
-            ->subject('✅ Votre commande #' . $this->commande->numero . ' est confirmée — SOBITAS')
+            ->subject('✅ Votre commande #' . $this->commande->numero . ' est confirmée — Protein.tn')
             ->view('emails.orders.confirmed-customer');
     }
 }

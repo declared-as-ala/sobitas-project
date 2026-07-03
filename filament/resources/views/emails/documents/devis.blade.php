@@ -42,7 +42,7 @@
                 <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                     <tr>
                         <td style="vertical-align:middle;">
-                            <img src="{{ $logoUrl }}" alt="SOBITAS" style="max-height:60px;max-width:200px;height:auto;display:block;">
+                            <img src="{{ $logoUrl }}" alt="Protein.tn" style="max-height:60px;max-width:200px;height:auto;display:block;">
                         </td>
                         <td align="right" style="vertical-align:middle;padding-left:16px;">
                             <p style="margin:0;font-size:26px;font-weight:800;color:#ffffff;text-transform:uppercase;letter-spacing:.06em;">{{ mb_strtoupper($documentTitle ?? 'DEVIS') }}</p>
@@ -91,7 +91,7 @@
                                     <p style="margin:2px 0;font-size:11px;color:#94a3b8;">RC : {{ $co->registre_commerce }}</p>
                                 @endif
                             @else
-                                <p style="margin:0;font-size:13px;font-weight:600;color:#0f172a;">SOBITAS</p>
+                                <p style="margin:0;font-size:13px;font-weight:600;color:#0f172a;">Protein.tn</p>
                             @endif
                         </td>
                         {{-- Client --}}
@@ -215,9 +215,9 @@
                     <p style="margin:0 0 4px;font-size:12px;color:#64748b;">{{ $co->rib }}</p>
                 @endif
                 @if($co && !empty($co->adresse_fr))
-                    <p style="margin:0;font-size:11px;color:#94a3b8;">SOBITAS — {{ $co->adresse_fr }}</p>
+                    <p style="margin:0;font-size:11px;color:#94a3b8;">Protein.tn — {{ $co->adresse_fr }}</p>
                 @else
-                    <p style="margin:0;font-size:11px;color:#94a3b8;">SOBITAS</p>
+                    <p style="margin:0;font-size:11px;color:#94a3b8;">Protein.tn</p>
                 @endif
             </td>
         </tr>

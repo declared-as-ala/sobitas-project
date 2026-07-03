@@ -13,7 +13,7 @@ use Illuminate\Support\Str;
  */
 final class ProductSchemaBuilder
 {
-    private const SELLER_NAME = 'SOBITAS';
+    private const SELLER_NAME = 'Protein.tn';
 
     /**
      * @return array<string, mixed>|null null when price is invalid for rich results

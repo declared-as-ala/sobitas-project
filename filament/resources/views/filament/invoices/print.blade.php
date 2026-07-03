@@ -81,8 +81,8 @@
         {{-- A) Header: company left, FACTURE + meta right --}}
         <header class="invoice-header">
             <div class="invoice-company">
-                <img src="{{ asset('logo.png') }}" alt="SOBITAS PROTEIN.TN" class="invoice-logo">
-                <div class="invoice-company-name">{{ $coordonnee->abbreviation ?? 'SOBITAS' }}</div>
+                <img src="{{ asset('logo.png') }}" alt="Protein.tn" class="invoice-logo">
+                <div class="invoice-company-name">{{ $coordonnee->abbreviation ?? 'PROTEIN.TN' }}</div>
                 @if ($coordonnee)
                     <div class="invoice-meta">
                         @if ($coordonnee->email) {{ $coordonnee->email }}<br> @endif

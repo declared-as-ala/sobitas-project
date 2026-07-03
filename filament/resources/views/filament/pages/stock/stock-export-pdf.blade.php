@@ -111,7 +111,7 @@
 </table>
 
 <div class="footer">
-    Sobitas &mdash; Gestion de stock &mdash; {{ $generated_at }}
+    Protein.tn &mdash; Gestion de stock &mdash; {{ $generated_at }}
 </div>
 
 </body>

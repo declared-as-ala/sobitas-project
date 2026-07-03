@@ -78,7 +78,7 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
 
         $user     = $this;
         $fromAddr = config('mail.from.address', 'bitoutawalid@gmail.com');
-        $fromName = config('mail.from.name', 'Sobitas');
+        $fromName = config('mail.from.name', 'Protein.tn');
 
         Log::info('PartnerInviteReset: attempting send', [
             'to' => $user->email,
@@ -89,7 +89,7 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
             $message
                 ->to($user->email, $user->name)
                 ->from($fromAddr, $fromName)
-                ->subject('Invitation espace partenaire — Sobitas')
+                ->subject('Invitation espace partenaire — Protein.tn')
                 ->html(
                     view('mail.password-reset', [
                         'resetUrl' => $resetUrl,
@@ -116,7 +116,7 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
 
         $user     = $this;
         $fromAddr = config('mail.from.address', 'bitoutawalid@gmail.com');
-        $fromName = config('mail.from.name', 'Sobitas');
+        $fromName = config('mail.from.name', 'Protein.tn');
 
         Log::info('PasswordReset: attempting to send reset email', [
             'to'         => $user->email,
@@ -131,7 +131,7 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
                 $message
                     ->to($user->email, $user->name)
                     ->from($fromAddr, $fromName)
-                    ->subject('Réinitialisation de votre mot de passe — Sobitas')
+                    ->subject('Réinitialisation de votre mot de passe — Protein.tn')
                     ->html(
                         view('mail.password-reset', [
                             'resetUrl' => $resetUrl,

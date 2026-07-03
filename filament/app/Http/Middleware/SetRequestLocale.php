@@ -14,7 +14,7 @@ class SetRequestLocale
         $requested = $request->header('X-Locale')
             ?? $request->header('Accept-Language')
             ?? $request->query('locale')
-            ?? $request->cookie('sobitas_locale');
+            ?? $request->cookie('protein_locale');
 
         $requested = strtolower((string) $requested);
         $locale = str_starts_with($requested, 'ar')

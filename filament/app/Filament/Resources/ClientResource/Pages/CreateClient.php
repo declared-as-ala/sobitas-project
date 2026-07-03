@@ -16,7 +16,7 @@ class CreateClient extends CreateRecord
         $client = $this->record;
 
         if ($client->sms && $client->phone_1) {
-            $message = 'Bienvenue chez Sobitas ! Merci de nous faire confiance. Découvrez nos produits sur protein.tn';
+            $message = 'Bienvenue chez Protein.tn ! Merci de nous faire confiance. Découvrez nos produits sur protein.tn';
 
             SendSmsJob::dispatch($client->phone_1, $message);
 

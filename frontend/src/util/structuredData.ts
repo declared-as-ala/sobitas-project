@@ -421,7 +421,7 @@ export function buildOrganizationSchema(baseUrl: string): object {
     '@id': `${base}/#organization`,
     name: SITE_BRAND_NAME,
     url: base,
-    logo: `${base}/sobitas-logo.png`,
+    logo: `${base}/logo.png`,
     description:
       'Whey protein, créatine, vitamines et compléments alimentaires en Tunisie — livraison rapide et produits authentiques. Boutique à Sousse, livraison dans tout le pays.',
     address: {
@@ -459,7 +459,7 @@ export function buildLocalBusinessSchema(baseUrl: string): object {
     '@id': `${base}/#localbusiness`,
     name: `${SITE_BRAND_NAME} – Protéines & Compléments Alimentaires Tunisie`,
     image: `${base}/icon.png`,
-    logo: `${base}/sobitas-logo.png`,
+    logo: `${base}/logo.png`,
     url: base,
     telephone: '+21627612500',
     email: 'contact@protein.tn',
@@ -502,7 +502,7 @@ export function buildWebSiteSchema(baseUrl: string): object {
     '@type': 'WebSite',
     '@id': `${base}/#website`,
     name: 'Protéine Tunisie',
-    alternateName: ['Protein Tunisie', 'Proteine Tunisie', 'protein.tn', 'SOBITAS'],
+    alternateName: ['Protein Tunisie', 'Proteine Tunisie', 'protein.tn'],
     url: base,
     inLanguage: 'fr-TN',
     potentialAction: {

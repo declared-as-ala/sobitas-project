@@ -63,7 +63,7 @@ class PartnerPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ])
-            ->brandName('Sobitas — Partenaires')
+            ->brandName('Protein.tn — Partenaires')
             ->sidebarCollapsibleOnDesktop();
     }
 }

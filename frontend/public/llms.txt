@@ -4,7 +4,7 @@
 
 ## Entité
 
-- Nom commercial : Protéine Tunisie (Protein.tn) — exploitée par SOBITAS
+- Nom commercial : Protéine Tunisie (Protein.tn)
 - Pays : Tunisie
 - Ville : Sousse (4000), Rue Ribat
 - Téléphone : +216 27 612 500

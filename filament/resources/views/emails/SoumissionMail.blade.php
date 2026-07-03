@@ -359,7 +359,7 @@
         <!-- Header -->
         <div class="email-header">
             <div class="logo-wrapper">
-                <img src="{{ $logoUrl }}" alt="SOBITAS PROTEIN.TN" class="logo" />
+                <img src="{{ $logoUrl }}" alt="Protein.tn" class="logo" />
             </div>
             <h1>Bon de Livraison</h1>
             <div class="order-info">
@@ -377,7 +377,7 @@
         <!-- Company Information -->
         @if($coordonnee)
         <div class="company-info">
-            <h3>{{ $coordonnee->abbreviation ?? 'SOBITAS' }}</h3>
+            <h3>{{ $coordonnee->abbreviation ?? 'PROTEIN.TN' }}</h3>
             <div class="company-info-grid">
                 @if($coordonnee->email)
                 <div class="company-info-item">

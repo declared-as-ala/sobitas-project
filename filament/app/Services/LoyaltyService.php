@@ -377,7 +377,7 @@ class LoyaltyService
     {
         $barcode = trim($barcode);
 
-        // Card number: SOBITAS-000001 style (prefix of 2–12 uppercase letters, hyphen, 4–10 digits)
+        // Card number: PROTEIN-000001 style (prefix of 2–12 uppercase letters, hyphen, 4–10 digits)
         if (preg_match('/^[A-Z]{2,12}-\d{4,10}$/', $barcode)) {
             return true;
         }

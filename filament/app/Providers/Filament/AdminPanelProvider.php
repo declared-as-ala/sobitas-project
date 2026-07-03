@@ -243,7 +243,7 @@ class AdminPanelProvider extends PanelProvider
                 // brandLogoHeight() only applies when Filament itself wraps the URL.
                 return new \Illuminate\Support\HtmlString(
                     '<img src="' . e($url) . '"'
-                    . ' alt="' . e(config('app.name', 'Sobitas')) . '"'
+                    . ' alt="' . e(config('app.name', 'Protein.tn')) . '"'
                     . ' style="max-height:8rem;height:auto;width:auto;">'
                 );
             })

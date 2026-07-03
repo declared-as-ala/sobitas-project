@@ -1,4 +1,4 @@
-# SEO Deliverables Index – protein.tn / SOBITAS
+# SEO Deliverables Index – protein.tn
 
 Quick reference to what was produced and where it lives.
 
@@ -15,8 +15,8 @@ Quick reference to what was produced and where it lives.
 ## 2) On-Page SEO (Meta Titles & Descriptions)
 
 - **Implemented in:**  
-  - `src/app/layout.tsx` – default title/description + template `"%s | SOBITAS Tunisie"`  
-  - `src/app/page.tsx` – accueil (Protéine Tunisie | Whey, Créatine & Compléments – SOBITAS Sousse)  
+  - `src/app/layout.tsx` – default title/description + template `"%s | Protein.tn"`  
+  - `src/app/page.tsx` – accueil (Protéine Tunisie | Whey, Créatine & Compléments – Protein.tn Sousse)  
   - `src/app/shop/page.tsx` – boutique  
   - `src/app/packs/page.tsx` – packs  
   - `src/app/blog/page.tsx` – blog  

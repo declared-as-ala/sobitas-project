@@ -78,7 +78,7 @@ function LoginContent() {
                 <Link href="/" className="flex items-center justify-center">
                   <Image
                     src="/logo.png"
-                    alt="Sobitas Logo"
+                    alt="Protein.tn Logo"
                     width={140}
                     height={45}
                     className="h-10 w-auto object-contain"

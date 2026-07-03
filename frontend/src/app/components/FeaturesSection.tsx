@@ -399,7 +399,7 @@ export function FeaturesSection() {
         <motion.div
           ref={scrollRef}
           role="region"
-          aria-label="Avantages Sobitas"
+          aria-label="Avantages Protein.tn"
           className="flex md:grid overflow-x-auto md:overflow-visible gap-4 sm:gap-6 lg:gap-8 md:grid-cols-2 lg:grid-cols-4 snap-x md:snap-none pb-10 md:pb-0 scrollbar-hide"
           style={{ WebkitOverflowScrolling: 'touch' }}
           variants={containerVariants}

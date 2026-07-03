@@ -19,7 +19,7 @@ class ListLoyaltyCards extends ListRecords
                 ->form([
                     \Filament\Forms\Components\TextInput::make('prefix')
                         ->label('Préfixe')
-                        ->default('SOBITAS')
+                        ->default('PROTEIN')
                         ->required()
                         ->maxLength(10),
                     \Filament\Forms\Components\TextInput::make('quantity')
@@ -33,7 +33,7 @@ class ListLoyaltyCards extends ListRecords
                 ->action(function (array $data): void {
                     try {
                         $quantity = (int) $data['quantity'];
-                        $prefix = trim((string) ($data['prefix'] ?? 'SOBITAS'));
+                        $prefix = trim((string) ($data['prefix'] ?? 'PROTEIN'));
                         
                         $maxStart = 1;
                         $lastBatch = \App\Models\LoyaltyCardBatch::query()

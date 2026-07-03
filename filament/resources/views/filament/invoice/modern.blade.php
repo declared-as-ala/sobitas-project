@@ -73,8 +73,8 @@
     <div id="invoice-print" class="invoice-print">
         <header class="m-head">
             <div class="m-head-left">
-                <img src="{{ asset('logo.png') }}" alt="SOBITAS PROTEIN.TN" class="m-logo">
-                <div class="m-company-name">{{ $coordonnee->abbreviation ?? 'SOBITAS' }}</div>
+                <img src="{{ asset('logo.png') }}" alt="Protein.tn" class="m-logo">
+                <div class="m-company-name">{{ $coordonnee->abbreviation ?? 'PROTEIN.TN' }}</div>
                 @if ($coordonnee)
                     <div class="m-company-meta">
                         @if ($coordonnee->email) {{ $coordonnee->email }}<br> @endif

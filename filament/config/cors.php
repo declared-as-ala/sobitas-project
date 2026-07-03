@@ -22,7 +22,6 @@ return [
     'allowed_origins' => array_filter([
         'https://protein.tn',
         'https://www.protein.tn',
-        'https://admin.sobitas.tn',
         'https://admin.protein.tn',
         config('app.env') === 'local' ? 'http://localhost:3000' : null,
         config('app.env') === 'local' ? 'http://127.0.0.1:3000' : null,

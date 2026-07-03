@@ -28,7 +28,7 @@ class Slide extends Model
 
         // If it's already a full URL, extract the relative path
         if (filter_var($this->image, FILTER_VALIDATE_URL)) {
-            // Extract path from URL (e.g., https://admin.sobitas.tn/storage/slides/image.webp -> slides/image.webp)
+            // Extract path from URL (e.g., https://admin.protein.tn/storage/slides/image.webp -> slides/image.webp)
             $path = parse_url($this->image, PHP_URL_PATH);
             $path = ltrim($path, '/');
             if (str_starts_with($path, 'storage/')) {

@@ -71,7 +71,7 @@ class ArticleDetailResource extends JsonResource
                     'description' => $this->twitter_description ?: $this->og_description ?: $seoDescription,
                     'image' => $this->publicUrl($this->twitter_image ?: $this->og_image ?: $seoImagePath),
                 ],
-                'author' => $this->seo_author_name ?: 'Sobitas',
+                'author' => $this->seo_author_name ?: 'Protein.tn',
                 'image' => $this->publicUrl($seoImagePath),
             ],
             'schema' => [
@@ -79,7 +79,7 @@ class ArticleDetailResource extends JsonResource
                 'headline' => $seoTitle,
                 'description' => $seoDescription,
                 'image' => $this->publicUrl($seoImagePath),
-                'author' => $this->seo_author_name ?: 'Sobitas',
+                'author' => $this->seo_author_name ?: 'Protein.tn',
                 'date_published' => optional($this->created_at)?->toIso8601String(),
                 'date_modified' => optional($this->updated_at ?: $this->created_at)?->toIso8601String(),
                 'section' => $this->categories->pluck('name')->first() ?: (string) ($this->blog_type?->value ?? $this->blog_type ?? ''),

@@ -127,7 +127,7 @@ return [
     | Frontend / Storefront URL (for order tracking links in emails)
     |--------------------------------------------------------------------------
     */
-    'frontend_url' => rtrim(env('FRONTEND_URL', env('FRONTEND_DOMAIN', env('APP_URL', 'https://sobitas.tn'))), '/'),
+    'frontend_url' => rtrim(env('FRONTEND_URL', env('FRONTEND_DOMAIN', env('APP_URL', 'https://protein.tn'))), '/'),
 
     /*
     |--------------------------------------------------------------------------

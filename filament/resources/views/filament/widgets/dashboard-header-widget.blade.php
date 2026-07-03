@@ -188,7 +188,7 @@
                     </svg>
                 </div>
                 <div>
-                    <p class="dh-brand-name">Sobitas — Admin</p>
+                    <p class="dh-brand-name">Protein.tn — Admin</p>
                     <p class="dh-brand-tagline">Tableau de bord marketplace</p>
                 </div>
             </div>

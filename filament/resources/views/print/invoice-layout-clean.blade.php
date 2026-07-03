@@ -50,8 +50,8 @@
                 @endphp
 
                 <div class="invoice-company">
-                    <img src="{{ $logoUrl }}" alt="{{ $company->abbreviation ?? 'SOBITAS' }}" class="invoice-logo" onerror="this.style.display='none'; var f=document.getElementById('invoice-logo-fallback'); if(f) f.style.display='block';">
-                    <span id="invoice-logo-fallback" class="invoice-company-name" style="display:none">{{ $company->abbreviation ?? 'STE SOBITAS' }}</span>
+                    <img src="{{ $logoUrl }}" alt="{{ $company->abbreviation ?? 'Protein.tn' }}" class="invoice-logo" onerror="this.style.display='none'; var f=document.getElementById('invoice-logo-fallback'); if(f) f.style.display='block';">
+                    <span id="invoice-logo-fallback" class="invoice-company-name" style="display:none">{{ $company->abbreviation ?? 'STE PROTEIN.TN' }}</span>
 
                     <div class="invoice-company-meta">
                         @if(!empty($company->adresse_fr))

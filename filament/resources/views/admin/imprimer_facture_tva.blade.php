@@ -281,11 +281,11 @@
                         <div class="row">
                             <div class="col">
 
-                                <img src="{{ asset('logo.png') }}" alt="SOBITAS PROTEIN.TN" data-holder-rendered="true"
+                                <img src="{{ asset('logo.png') }}" alt="Protein.tn" data-holder-rendered="true"
                                         style="width : 220px" />
                                 <h4 class="name">
 
-                                    {{ $coordonnee->abbreviation ?? 'SOBITAS' }}
+                                    {{ $coordonnee->abbreviation ?? 'PROTEIN.TN' }}
 
                                 </h4>
                                 @if ($coordonnee)

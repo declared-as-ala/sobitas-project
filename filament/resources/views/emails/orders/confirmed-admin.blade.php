@@ -59,7 +59,7 @@
                 <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                     <tr>
                         <td style="vertical-align:middle;">
-                            <img src="{{ $logoUrl }}" alt="SOBITAS" width="150" height="auto"
+                            <img src="{{ $logoUrl }}" alt="Protein.tn" width="150" height="auto"
                                  style="display:block;max-width:150px;background:rgba(255,255,255,.95);padding:10px 14px;border-radius:12px;margin-bottom:16px;">
                             <p style="margin:0 0 3px;font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;">Notification back-office</p>
                             <p style="margin:0;font-size:22px;font-weight:700;color:#ffffff;">🛍 Nouvelle commande reçue</p>
@@ -205,7 +205,7 @@
         {{-- ── FOOTER ───────────────────────────────────────────────────────── --}}
         <tr>
             <td style="padding:18px 0;text-align:center;">
-                <p style="margin:0;font-size:12px;color:#94a3b8;">Notification interne — SOBITAS Back-office</p>
+                <p style="margin:0;font-size:12px;color:#94a3b8;">Notification interne — Protein.tn Back-office</p>
             </td>
         </tr>
 

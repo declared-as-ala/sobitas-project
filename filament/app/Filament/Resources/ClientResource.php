@@ -171,7 +171,7 @@ class ClientResource extends Resource
                             ->schema([
                                 Forms\Components\TextInput::make('scan_code')
                                     ->label('Scanner ou saisir le numéro de carte')
-                                    ->placeholder('Ex: SOBITAS-000100 / qr_token / barcode_value')
+                                    ->placeholder('Ex: PROTEIN-000100 / qr_token / barcode_value')
                                     ->autofocus()
                                     ->live(debounce: 250)
                                     ->required()

@@ -11,14 +11,14 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // Create admin user if it doesn't exist
-        if (! User::where('email', 'admin@sobitas.tn')->exists()) {
+        if (! User::where('email', 'admin@protein.tn')->exists()) {
             User::create([
-                'name' => 'Admin Sobitas',
-                'email' => 'admin@sobitas.tn',
+                'name' => 'Admin Protein.tn',
+                'email' => 'admin@protein.tn',
                 'password' => Hash::make('password'),
             ]);
 
-            $this->command->info('Admin user created: admin@sobitas.tn');
+            $this->command->info('Admin user created: admin@protein.tn');
         } else {
             $this->command->info('Admin user already exists.');
         }

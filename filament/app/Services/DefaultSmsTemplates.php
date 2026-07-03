@@ -36,7 +36,7 @@ class DefaultSmsTemplates
             ],
             self::KEY_PROMO => [
                 'name' => 'Code promo – % remise',
-                'body' => 'SOBITAS: -{{discount_percent}}% avec le code {{promo_code}} jusqu\'au {{end_date}}. Commandez sur protein.tn {{stop_text}}',
+                'body' => 'Protein.tn: -{{discount_percent}}% avec le code {{promo_code}} jusqu\'au {{end_date}}. Commandez sur protein.tn {{stop_text}}',
                 'variables_schema' => [
                     ['name' => 'promo_code', 'label' => 'Code promo', 'default' => ''],
                     ['name' => 'discount_percent', 'label' => '% remise', 'default' => '10'],
@@ -46,7 +46,7 @@ class DefaultSmsTemplates
             ],
             self::KEY_NEW_PRODUCTS => [
                 'name' => 'Nouveaux produits / Nouvel arrivage',
-                'body' => 'SOBITAS: Nouvel arrivage. {{product_name}} en ligne: {{product_url}} + nouveautés sur protein.tn {{stop_text}}',
+                'body' => 'Protein.tn: Nouvel arrivage. {{product_name}} en ligne: {{product_url}} + nouveautés sur protein.tn {{stop_text}}',
                 'variables_schema' => [
                     ['name' => 'product_name', 'label' => 'Nom produit', 'default' => ''],
                     ['name' => 'product_url', 'label' => 'URL produit', 'default' => 'https://protein.tn'],

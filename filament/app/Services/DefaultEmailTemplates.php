@@ -204,7 +204,7 @@ class DefaultEmailTemplates
         <tr>
           <td class="email-header" align="center" style="padding:32px 40px 24px;border-bottom:1px solid #f3f4f6;">
             <a href="https://protein.tn" style="text-decoration:none;display:inline-block;">
-              <img src="{{logo_url}}" alt="SOBITAS – Protein.tn" width="240" style="max-width:240px;width:100%;height:auto;display:inline-block;border:0;" />
+              <img src="{{logo_url}}" alt="Protein.tn" width="240" style="max-width:240px;width:100%;height:auto;display:inline-block;border:0;" />
             </a>
             <p style="margin:10px 0 0;font-size:13px;color:#9ca3af;letter-spacing:0.5px;text-transform:uppercase;font-weight:500;">Votre partenaire nutrition &amp; bien-être</p>
           </td>
@@ -323,10 +323,10 @@ class DefaultEmailTemplates
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
               <tr>
                 <td align="center">
-                  <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#374151;">SOBITAS &mdash; Protein.tn</p>
+                  <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#374151;">Protein.tn</p>
                   <p style="margin:0 0 12px;font-size:12px;color:#9ca3af;line-height:1.5;">
                     Vous recevez cet email car vous êtes inscrit à notre newsletter.<br>
-                    &copy; 2025 SOBITAS. Tous droits réservés.
+                    &copy; 2025 Protein.tn. Tous droits réservés.
                   </p>
                   <p style="margin:0;font-size:12px;">
                     <a href="{{unsubscribe_url}}" style="color:#9ca3af;text-decoration:underline;">Se désabonner</a>
@@ -393,7 +393,7 @@ HTML;
         <tr>
           <td class="email-header" align="center" style="padding:32px 40px 24px;border-bottom:1px solid #f3f4f6;">
             <a href="https://protein.tn" style="text-decoration:none;display:inline-block;">
-              <img src="{{logo_url}}" alt="SOBITAS – Protein.tn" width="240" style="max-width:240px;width:100%;height:auto;display:inline-block;border:0;" />
+              <img src="{{logo_url}}" alt="Protein.tn" width="240" style="max-width:240px;width:100%;height:auto;display:inline-block;border:0;" />
             </a>
             <p style="margin:10px 0 0;font-size:13px;color:#9ca3af;letter-spacing:0.5px;text-transform:uppercase;font-weight:500;">Votre partenaire nutrition &amp; bien-être</p>
           </td>
@@ -524,10 +524,10 @@ HTML;
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
               <tr>
                 <td align="center">
-                  <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#374151;">SOBITAS &mdash; Protein.tn</p>
+                  <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#374151;">Protein.tn</p>
                   <p style="margin:0 0 12px;font-size:12px;color:#9ca3af;line-height:1.5;">
                     Vous recevez cet email car vous êtes inscrit à notre newsletter.<br>
-                    &copy; 2025 SOBITAS. Tous droits réservés.
+                    &copy; 2025 Protein.tn. Tous droits réservés.
                   </p>
                   <p style="margin:0;font-size:12px;">
                     <a href="{{unsubscribe_url}}" style="color:#9ca3af;text-decoration:underline;">Se désabonner</a>
@@ -594,7 +594,7 @@ HTML;
         <tr>
           <td class="email-header" align="center" style="padding:32px 40px 24px;border-bottom:1px solid #f3f4f6;">
             <a href="https://protein.tn" style="text-decoration:none;display:inline-block;">
-              <img src="{{logo_url}}" alt="SOBITAS – Protein.tn" width="240" style="max-width:240px;width:100%;height:auto;display:inline-block;border:0;" />
+              <img src="{{logo_url}}" alt="Protein.tn" width="240" style="max-width:240px;width:100%;height:auto;display:inline-block;border:0;" />
             </a>
             <p style="margin:10px 0 0;font-size:13px;color:#9ca3af;letter-spacing:0.5px;text-transform:uppercase;font-weight:500;">Votre partenaire nutrition &amp; bien-être</p>
           </td>
@@ -682,10 +682,10 @@ HTML;
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
               <tr>
                 <td align="center">
-                  <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#374151;">SOBITAS &mdash; Protein.tn</p>
+                  <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#374151;">Protein.tn</p>
                   <p style="margin:0 0 12px;font-size:12px;color:#9ca3af;line-height:1.5;">
                     Vous recevez cet email car vous êtes inscrit à notre newsletter.<br>
-                    &copy; 2025 SOBITAS. Tous droits réservés.
+                    &copy; 2025 Protein.tn. Tous droits réservés.
                   </p>
                   <p style="margin:0;font-size:12px;">
                     <a href="{{unsubscribe_url}}" style="color:#9ca3af;text-decoration:underline;">Se désabonner</a>

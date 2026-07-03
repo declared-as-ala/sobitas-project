@@ -9,7 +9,7 @@ class Login extends \Filament\Auth\Pages\Login
         parent::mount();
 
         $this->form->fill([
-            'email' => 'contact@sobitas.tn',
+            'email' => 'contact@protein.tn',
             'password' => '',
             'remember' => true,
         ]);

@@ -23,9 +23,8 @@
         'cod'  => 'Paiement à la livraison (espèces)',
         'card' => 'Carte bancaire (en ligne)',
         default => $commande->payment_method ?? 'Non précisé',
-    };
-    $coordonnee   = \App\Models\Coordinate::getCached();
-    $contactEmail = ($coordonnee && !empty($coordonnee->email)) ? $coordonnee->email : 'contact@sobitas.tn';
+     $coordonnee   = \App\Models\Coordinate::getCached();
+    $contactEmail = ($coordonnee && !empty($coordonnee->email)) ? $coordonnee->email : 'contact@protein.tn';
 @endphp
 <!DOCTYPE html>
 <html lang="fr">
@@ -60,7 +59,7 @@
         {{-- ── HERO HEADER ─────────────────────────────────────────────────── --}}
         <tr>
             <td style="background:linear-gradient(150deg,#b91c1c 0%,#dc2626 45%,#c2410c 100%);border-radius:16px 16px 0 0;padding:36px 32px 32px;text-align:center;">
-                <img src="{{ $logoUrl }}" alt="SOBITAS" width="180" height="auto"
+                <img src="{{ $logoUrl }}" alt="Protein.tn" width="180" height="auto"
                      style="display:block;max-width:180px;background:rgba(255,255,255,.95);padding:12px 16px;border-radius:14px;margin:0 auto 22px;">
                 <p style="margin:0 0 6px;font-size:28px;font-weight:800;color:#ffffff;letter-spacing:-.02em;" class="h-hero">
                     Merci, {{ $prenom ?: 'cher client' }} ! 🎉
@@ -70,7 +69,7 @@
                 </p>
             </td>
         </tr>
-
+ 
         {{-- ── ORDER BADGE ──────────────────────────────────────────────────── --}}
         <tr>
             <td style="background:#ffffff;padding:0 32px;" class="pad">
@@ -96,7 +95,7 @@
                 </table>
             </td>
         </tr>
-
+ 
         {{-- ── NEXT STEPS ───────────────────────────────────────────────────── --}}
         <tr>
             <td style="background:#ffffff;padding:20px 32px 4px;" class="pad">
@@ -125,7 +124,7 @@
                 </table>
             </td>
         </tr>
-
+ 
         {{-- ── PRODUCTS TABLE ───────────────────────────────────────────────── --}}
         <tr>
             <td style="background:#ffffff;padding:20px 32px;" class="pad">
@@ -151,7 +150,7 @@
                 </table>
             </td>
         </tr>
-
+ 
         {{-- ── TOTALS ────────────────────────────────────────────────────────── --}}
         <tr>
             <td style="background:#ffffff;padding:0 32px 24px;" class="pad">
@@ -188,7 +187,7 @@
                 </table>
             </td>
         </tr>
-
+ 
         {{-- ── DELIVERY INFO ─────────────────────────────────────────────────── --}}
         @if($adresse || $phone)
         <tr>
@@ -207,7 +206,7 @@
             </td>
         </tr>
         @endif
-
+ 
         {{-- ── CONTACT ──────────────────────────────────────────────────────── --}}
         <tr>
             <td style="background:#ffffff;padding:0 32px 32px;text-align:center;" class="pad">
@@ -216,13 +215,12 @@
                 </p>
             </td>
         </tr>
-
         {{-- ── FOOTER ───────────────────────────────────────────────────────── --}}
         <tr>
             <td style="background:#0f172a;border-radius:0 0 16px 16px;padding:24px 32px;text-align:center;">
                 <p style="margin:0 0 6px;font-size:14px;font-weight:600;color:#f8fafc;">Merci pour votre confiance 🙏</p>
                 <p style="margin:0 0 14px;font-size:13px;color:#94a3b8;">
-                    L'équipe SOBITAS — <a href="mailto:{{ $contactEmail }}" style="color:#fb923c;text-decoration:none;">{{ $contactEmail }}</a>
+                    L'équipe Protein.tn — <a href="mailto:{{ $contactEmail }}" style="color:#fb923c;text-decoration:none;">{{ $contactEmail }}</a>
                 </p>
                 <p style="margin:0;font-size:11px;color:#475569;">
                     Cet email a été envoyé automatiquement suite à votre commande. Merci de ne pas répondre directement.

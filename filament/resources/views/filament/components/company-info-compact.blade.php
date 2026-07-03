@@ -1,6 +1,6 @@
 {{-- Compact company block for document edit pages: small logo + name + one-line contact, collapsible details --}}
 @php
-    $name = $coordinate->abbreviation ?? 'STE SOBITAS';
+    $name = $coordinate->abbreviation ?? 'STE PROTEIN.TN';
     $phone = trim(($coordinate->phone_1 ?? '') . (!empty($coordinate->phone_2) ? ' / ' . $coordinate->phone_2 : ''));
     $adresse = $coordinate->adresse_fr ?? '';
 @endphp
