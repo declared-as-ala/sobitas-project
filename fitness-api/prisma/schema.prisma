@@ -1,0 +1,273 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Laravel Existing Database Models ──────────────────────────────
+
+model User {
+  id                BigInt    @id @default(autoincrement())
+  name              String
+  email             String    @unique
+  phone             String?
+  password          String
+  roleId            BigInt?   @map("role_id")
+  createdAt         DateTime? @map("created_at")
+  updatedAt         DateTime? @map("updated_at")
+
+  // Relationships to Fitness features
+  fitnessProfile      FitnessProfile?
+  waterLogs           WaterLog[]
+  proteinLogs         ProteinLog[]
+  bodyProgress        BodyProgress[]
+  workoutLogs         WorkoutLog[]
+  supplementStacks    SupplementStack[]
+  loyaltyTransactions LoyaltyPointTransaction[]
+  chatHistories       ChatHistory[]
+  notificationLogs    NotificationLog[]
+  
+  // Self relationships for referral system
+  referralsAsReferrer Referral[] @relation("Referrer")
+  referralsAsReferee  Referral?  @relation("Referee")
+
+  @@map("users")
+}
+
+model PersonalAccessToken {
+  id            BigInt    @id @default(autoincrement())
+  tokenableType String    @map("tokenable_type")
+  tokenableId   BigInt    @map("tokenable_id")
+  name          String
+  token         String    @unique @db.VarChar(64)
+  abilities     String?   @db.Text
+  lastUsedAt    DateTime? @map("last_used_at")
+  createdAt     DateTime? @map("created_at")
+  updatedAt     DateTime? @map("updated_at")
+
+  @@map("personal_access_tokens")
+}
+
+model Product {
+  id             BigInt    @id @default(autoincrement())
+  sousCategorieId BigInt?   @map("sous_categorie_id")
+  designationFr  String    @map("designation_fr")
+  cover          String?
+  qte            Int
+  prix           Decimal   @db.Decimal(10, 2)
+  promo          Decimal?  @db.Decimal(10, 2)
+  descriptionFr  String?   @map("description_fr") @db.Text
+  publier        Int
+  slug           String    @unique
+  brandId        BigInt?   @map("brand_id")
+  createdAt      DateTime? @map("created_at")
+  updatedAt      DateTime? @map("updated_at")
+
+  @@map("products")
+}
+
+// ── NestJS New Fitness Database Models ────────────────────────────
+
+model FitnessProfile {
+  id                  Int      @id @default(autoincrement())
+  userId              BigInt   @unique @map("user_id")
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gender              String
+  age                 Int
+  height              Float
+  weight              Float
+  activityLevel       String   @map("activity_level") // sedentary, light, moderate, active, very_active
+  goal                String   // muscle_gain, weight_loss, strength, maintain
+  trainingLocation    String   @map("training_location") // gym, home
+  experienceLevel     String   @map("experience_level") // beginner, intermediate, advanced
+  dietaryPreference   String   @map("dietary_preference") // standard, vegetarian, vegan, keto, etc.
+  trainingDaysPerWeek Int      @map("training_days_per_week")
+  dailyCalorieTarget  Int      @map("daily_calorie_target")
+  dailyProteinTarget  Int      @map("daily_protein_target")
+  dailyCarbsTarget    Int      @map("daily_carbs_target")
+  dailyFatTarget      Int      @map("daily_fat_target")
+  dailyWaterTarget    Int      @map("daily_water_target")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@map("fitness_profiles")
+}
+
+model WaterLog {
+  id        Int      @id @default(autoincrement())
+  userId    BigInt   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount    Int      // in ml
+  date      String   // YYYY-MM-DD
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("fitness_water_logs")
+}
+
+model ProteinLog {
+  id            Int      @id @default(autoincrement())
+  userId        BigInt   @map("user_id")
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mealType      String   @map("meal_type") // breakfast, lunch, dinner, snack, shake
+  proteinAmount Int      @map("protein_amount") // in grams
+  description   String?
+  date          String   // YYYY-MM-DD
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("fitness_protein_logs")
+}
+
+model BodyProgress {
+  id                Int      @id @default(autoincrement())
+  userId            BigInt   @map("user_id")
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weight            Float
+  chest             Float?
+  waist             Float?
+  arms              Float?
+  legs              Float?
+  bodyFatPercentage Float?   @map("body_fat_percentage")
+  progressPhotoUrl  String?  @map("progress_photo_url")
+  date              String   // YYYY-MM-DD
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@map("fitness_body_progress")
+}
+
+model WorkoutProgram {
+  id          Int        @id @default(autoincrement())
+  name        String
+  description String     @db.Text
+  category    String     // muscle_gain, fat_loss, gym, home, strength, women
+  difficulty  String     // beginner, intermediate, advanced
+  imageUrl    String?    @map("image_url")
+  exercises   Exercise[]
+  createdAt   DateTime   @default(now()) @map("created_at")
+
+  @@map("fitness_workout_programs")
+}
+
+model Exercise {
+  id          Int            @id @default(autoincrement())
+  programId   Int            @map("program_id")
+  program     WorkoutProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  name        String
+  sets        Int
+  reps        String         // e.g. "8-12" or "10"
+  restTime    Int            @map("rest_time") // in seconds
+  notes       String?        @db.Text
+  videoUrl    String?        @map("video_url")
+  orderIndex  Int            @map("order_index")
+  logs        WorkoutLog[]
+
+  @@map("fitness_exercises")
+}
+
+model WorkoutLog {
+  id            Int      @id @default(autoincrement())
+  userId        BigInt   @map("user_id")
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exerciseId    Int      @map("exercise_id")
+  exercise      Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  weightUsed    Float    @map("weight_used")
+  repsCompleted Int      @map("reps_completed")
+  setsCompleted Int      @map("sets_completed")
+  notes         String?  @db.Text
+  date          String   // YYYY-MM-DD
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("fitness_workout_logs")
+}
+
+model SupplementRecommendationRule {
+  id                    Int     @id @default(autoincrement())
+  goal                  String  // muscle_gain, weight_loss, recovery, strength, beginner, health
+  recommendedCategories String  @map("recommended_categories") // comma-separated categories (e.g. "Whey,Creatine")
+  recommendedTags       String? @map("recommended_tags")
+  priority              Int     @default(0)
+
+  @@map("fitness_supplement_recommendations")
+}
+
+model SupplementStack {
+  id                    Int      @id @default(autoincrement())
+  userId                BigInt   @map("user_id")
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  timing                String   // morning, pre_workout, post_workout, bed_time, etc.
+  productName           String   @map("product_name")
+  servingSize           String   @map("serving_size") // e.g. "5g" or "1 scoop"
+  dailyServing          Float    @map("daily_serving")
+  totalServings         Int      @map("total_servings")
+  servingsRemaining     Float    @map("servings_remaining")
+  notes                 String?  @db.Text
+  refillReminderEnabled Boolean  @default(true) @map("refill_reminder_enabled")
+  purchaseDate          String   @map("purchase_date") // YYYY-MM-DD
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  @@map("fitness_supplement_stacks")
+}
+
+model LoyaltyPointTransaction {
+  id        Int      @id @default(autoincrement())
+  userId    BigInt   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  points    Int
+  source    String   // check_in, workout, referral, purchase
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("fitness_loyalty_point_transactions")
+}
+
+model Referral {
+  id           Int      @id @default(autoincrement())
+  referrerId   BigInt   @map("referrer_id")
+  referrer     User     @relation("Referrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  refereeId    BigInt?  @unique @map("referee_id")
+  referee      User?    @relation("Referee", fields: [refereeId], references: [id], onDelete: Cascade)
+  referralCode String   @map("referral_code")
+  status       String   @default("pending") // pending, completed
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("fitness_referrals")
+}
+
+model ChatHistory {
+  id        Int      @id @default(autoincrement())
+  userId    BigInt   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message   String   @db.Text
+  response  String   @db.Text
+  lang      String   // fr, ar, en
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("fitness_chat_histories")
+}
+
+model NotificationTemplate {
+  id        Int      @id @default(autoincrement())
+  type      String   @unique // refill, workout, water, protein, loyalty
+  title     String
+  body      String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("fitness_notification_templates")
+}
+
+model NotificationLog {
+  id        Int      @id @default(autoincrement())
+  userId    BigInt   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  body      String   @db.Text
+  type      String
+  sentAt    DateTime @default(now()) @map("sent_at")
+
+  @@map("fitness_notification_logs")
+}
