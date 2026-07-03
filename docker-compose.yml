@@ -193,6 +193,7 @@ services:
       - ./nginx/configuration.conf:/etc/nginx/conf.d/default.conf:ro
 
   fitness-api:
+    image: ghcr.io/declared-as-ala/sobitas-fitness-api:latest
     build:
       context: ./fitness-api
       dockerfile: Dockerfile
