@@ -235,7 +235,11 @@ class LoyaltyPrintController extends Controller
 
     private function logoDataUri(): ?string
     {
-        $logoPath = public_path('logo.png');
+        // logo1.png = new loyalty-card brand logo; logo.png kept as fallback
+        $logoPath = public_path('logo1.png');
+        if (!is_file($logoPath)) {
+            $logoPath = public_path('logo.png');
+        }
         if (!is_file($logoPath)) {
             return null;
         }
