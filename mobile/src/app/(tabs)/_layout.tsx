@@ -3,7 +3,7 @@ import { View, StyleSheet, Platform } from 'react-native';
 import { Tabs } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { theme } from '../../constants/theme';
-import { Home, ShoppingBag, Dumbbell, Award, User, ScanLine, LucideIcon } from 'lucide-react-native';
+import { Home, ShoppingBag, Dumbbell, User, ScanLine, LucideIcon } from 'lucide-react-native';
 
 const TabIcon = ({
   color,
@@ -86,13 +86,13 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="rewards"
+        name="meal-scan"
         options={{
-          title: 'Rewards',
-          tabBarLabel: 'Rewards',
-          headerTitle: 'Fidélité & Parrainage',
+          title: 'Scanner',
+          tabBarLabel: 'Scanner',
+          headerTitle: 'Scanner un repas',
           tabBarIcon: ({ color, size, focused }) => (
-            <TabIcon color={color} size={size} focused={focused} Icon={Award} />
+            <TabIcon color={color} size={size} focused={focused} Icon={ScanLine} />
           ),
         }}
       />

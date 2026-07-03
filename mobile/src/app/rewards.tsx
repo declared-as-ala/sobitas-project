@@ -11,13 +11,13 @@ import {
 } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
-import { fitnessApi } from '../../services/api';
-import { theme } from '../../constants/theme';
-import { useAuthStore } from '../../store/auth';
+import { fitnessApi } from '../services/api';
+import { theme } from '../constants/theme';
+import { useAuthStore } from '../store/auth';
 import { router } from 'expo-router';
 import { Award, Share2, Sparkles } from 'lucide-react-native';
-import Button from '../../components/Button';
-import Input from '../../components/Input';
+import Button from '../components/Button';
+import Input from '../components/Input';
 
 export default function RewardsScreen() {
   const queryClient = useQueryClient();

@@ -10,7 +10,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '../../store/auth';
 import { theme } from '../../constants/theme';
 import { router } from 'expo-router';
-import { User, ClipboardList, Heart, Calendar, Settings, LogOut, ChevronRight } from 'lucide-react-native';
+import { User, ClipboardList, Heart, Calendar, Settings, LogOut, ChevronRight, Award } from 'lucide-react-native';
 
 export default function ProfileScreen() {
   const { isAuthenticated, user, logout } = useAuthStore();
@@ -80,6 +80,18 @@ export default function ProfileScreen() {
                 <Heart size={18} color={theme.colors.error} />
               </View>
               <Text style={styles.menuTitle}>Mes Favoris</Text>
+            </View>
+            <ChevronRight size={18} color={theme.colors.textMuted} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.menuRow, styles.menuRowLast]}
+            onPress={() => router.push('/rewards')}>
+            <View style={styles.menuTitleRow}>
+              <View style={[styles.menuIconChip, { backgroundColor: theme.colors.orangeLight }]}>
+                <Award size={18} color={theme.colors.primary} />
+              </View>
+              <Text style={styles.menuTitle}>Fidélité & Parrainage</Text>
             </View>
             <ChevronRight size={18} color={theme.colors.textMuted} />
           </TouchableOpacity>
@@ -233,6 +245,9 @@ const styles = StyleSheet.create({
     padding: theme.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
+  },
+  menuRowLast: {
+    borderBottomWidth: 0,
   },
   menuTitleRow: {
     flexDirection: 'row',

@@ -224,7 +224,7 @@ export default function FitnessScreen() {
       <TouchableOpacity
         style={styles.mealScanCard}
         activeOpacity={0.9}
-        onPress={() => router.push('/meal-scan')}>
+        onPress={() => router.push('/(tabs)/meal-scan')}>
         <View style={styles.mealScanIconChip}>
           <ScanLine size={22} color={theme.colors.primary} />
         </View>
