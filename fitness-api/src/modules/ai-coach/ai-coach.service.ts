@@ -1,13 +1,17 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import axios from 'axios';
 import { PrismaService } from '../../prisma.service';
 import { RedisService } from '../../redis.service';
 import { ConfigService } from '@nestjs/config';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
+const GROQ_MODEL = 'llama-3.3-70b-versatile';
+
 @Injectable()
 export class AiCoachService {
   private readonly logger = new Logger(AiCoachService.name);
   private genAI: GoogleGenerativeAI | null = null;
+  private groqApiKey = '';
   private readonly disclaimer = '\n\n*Avertissement: Les informations fournies sont à titre éducatif et ne remplacent pas un avis médical.*';
 
   constructor(
@@ -15,11 +19,15 @@ export class AiCoachService {
     private redis: RedisService,
     private configService: ConfigService,
   ) {
+    this.groqApiKey = this.configService.get<string>('GROQ_API_KEY', '');
+
     const apiKey = this.configService.get<string>('GEMINI_API_KEY', '');
     if (apiKey) {
       this.genAI = new GoogleGenerativeAI(apiKey);
-    } else {
-      this.logger.warn('GEMINI_API_KEY is not defined. AI Coach will operate in fallback mock mode.');
+    }
+
+    if (!this.groqApiKey && !this.genAI) {
+      this.logger.warn('Neither GROQ_API_KEY nor GEMINI_API_KEY is defined. AI Coach will operate in fallback mock mode.');
     }
   }
 
@@ -104,27 +112,17 @@ Instructions:
 
     let aiResponse = '';
 
-    // 5. Call Gemini API or fallback
-    if (this.genAI) {
-      try {
-        const model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-        
-        // Format history for Gemini chat format
-        const chatSession = model.startChat({
-          history: history.reverse().flatMap(h => [
-            { role: 'user', parts: [{ text: h.message }] },
-            { role: 'model', parts: [{ text: h.response }] }
-          ]),
-          systemInstruction: systemPrompt,
-        });
-
-        const result = await chatSession.sendMessage(userMessage);
-        aiResponse = result.response.text();
-      } catch (err) {
-        this.logger.error('Gemini API call failed, using fallback coach response.', err);
+    // 5. Call Groq (primary), Gemini (fallback), or mock response
+    try {
+      if (this.groqApiKey) {
+        aiResponse = await this.callGroq(systemPrompt, history, userMessage);
+      } else if (this.genAI) {
+        aiResponse = await this.callGemini(systemPrompt, history, userMessage);
+      } else {
         aiResponse = this.generateFallbackResponse(userMessage, profile, detectedLang);
       }
-    } else {
+    } catch (err) {
+      this.logger.error('AI provider call failed, using fallback coach response.', err);
       aiResponse = this.generateFallbackResponse(userMessage, profile, detectedLang);
     }
 
@@ -146,6 +144,52 @@ Instructions:
       response: aiResponse,
       lang: detectedLang,
     };
+  }
+
+  private async callGroq(systemPrompt: string, history: any[], userMessage: string): Promise<string> {
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      ...history.reverse().flatMap((h) => [
+        { role: 'user', content: h.message },
+        { role: 'assistant', content: h.response },
+      ]),
+      { role: 'user', content: userMessage },
+    ];
+
+    const response = await axios.post(
+      'https://api.groq.com/openai/v1/chat/completions',
+      {
+        model: GROQ_MODEL,
+        messages,
+        temperature: 0.7,
+        max_tokens: 1024,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${this.groqApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: 20000,
+      },
+    );
+
+    return response.data.choices[0].message.content;
+  }
+
+  private async callGemini(systemPrompt: string, history: any[], userMessage: string): Promise<string> {
+    const model = this.genAI!.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+    // Format history for Gemini chat format
+    const chatSession = model.startChat({
+      history: history.reverse().flatMap((h) => [
+        { role: 'user', parts: [{ text: h.message }] },
+        { role: 'model', parts: [{ text: h.response }] },
+      ]),
+      systemInstruction: systemPrompt,
+    });
+
+    const result = await chatSession.sendMessage(userMessage);
+    return result.response.text();
   }
 
   private generateFallbackResponse(message: string, profile: any, lang: string): string {
