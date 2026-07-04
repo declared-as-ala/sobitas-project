@@ -119,6 +119,13 @@ class AramexService
         $company = Coordinate::getCached();
         $client  = $bl->client;
 
+        // Aramex's COD validation requires a non-blank Company field on the
+        // shipment (its API surfaces the failure as generic ERR48, worded
+        // either "Consignee name is required" or the COD-combination error —
+        // see createShipment() notes below). Only fill CompanyName for COD
+        // shipments so non-COD labels stay free of the duplicated name/company line.
+        $codAmount = (float) ($bl->net_a_payer ?? 0);
+
         // ── Shipper (us) ────────────────────────────────────────────────
         $shipper = [
             'Reference1'    => '',
@@ -137,7 +144,7 @@ class AramexService
                 'Department'     => '',
                 'PersonName'     => $company?->name ?? 'Proteine Tunisie',
                 'Title'          => '',
-                'CompanyName'    => '',
+                'CompanyName'    => $codAmount > 0 ? ($company?->name ?? 'Proteine Tunisie') : '',
                 'PhoneNumber1'   => preg_replace('/\s+/', '', $company?->phone ?? '0000000'),
                 'PhoneNumber1Ext' => '',
                 'PhoneNumber2'   => '',
@@ -199,7 +206,7 @@ class AramexService
                 'Department'     => '',
                 'PersonName'     => $deliveryName,
                 'Title'          => '',
-                'CompanyName'    => '',
+                'CompanyName'    => $codAmount > 0 ? $deliveryName : '',
                 'PhoneNumber1'   => $deliveryPhone,
                 'PhoneNumber1Ext' => '',
                 'PhoneNumber2'   => $client?->phone_2 ? preg_replace('/\s+/', '', $client->phone_2) : '',
@@ -210,9 +217,6 @@ class AramexService
                 'Type'           => '',
             ],
         ];
-
-        // ── COD amount ───────────────────────────────────────────────────
-        $codAmount = (float) ($bl->net_a_payer ?? 0);
 
         $payload = [
             'ClientInfo' => $this->clientInfo(),
