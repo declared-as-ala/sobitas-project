@@ -7,8 +7,10 @@ import {
   TouchableOpacity,
   Image,
   Alert,
+  FlatList,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMutation } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
@@ -35,6 +37,7 @@ import {
   RotateCcw,
   AlertCircle,
   Lightbulb,
+  History,
 } from 'lucide-react-native';
 
 interface ScannedImage {
@@ -52,6 +55,15 @@ interface MealScanResult {
   confidence: 'low' | 'medium' | 'high';
   notes: string;
 }
+
+interface HistoryEntry {
+  uri: string;
+  result: MealScanResult;
+  scannedAt: number;
+}
+
+const HISTORY_STORAGE_KEY = 'recent_meal_scans';
+const HISTORY_MAX_ITEMS = 5;
 
 const CONFIDENCE_LABEL: Record<string, string> = {
   low: 'Estimation approximative',
@@ -109,6 +121,21 @@ export default function MealScanScreen() {
   const { queueLog } = useFitnessStore();
   const [image, setImage] = useState<ScannedImage | null>(null);
   const [result, setResult] = useState<MealScanResult | null>(null);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+
+  useEffect(() => {
+    AsyncStorage.getItem(HISTORY_STORAGE_KEY)
+      .then((raw) => {
+        if (raw) setHistory(JSON.parse(raw));
+      })
+      .catch(() => {});
+  }, []);
+
+  const saveToHistory = (entry: HistoryEntry) => {
+    const updated = [entry, ...history].slice(0, HISTORY_MAX_ITEMS);
+    setHistory(updated);
+    AsyncStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updated)).catch(() => {});
+  };
 
   const scanMutation = useMutation({
     mutationFn: async () => {
@@ -121,6 +148,7 @@ export default function MealScanScreen() {
     },
     onSuccess: (data) => {
       setResult(data);
+      if (image) saveToHistory({ uri: image.uri, result: data, scannedAt: Date.now() });
     },
     onError: (err: any) => {
       Alert.alert(
@@ -129,6 +157,11 @@ export default function MealScanScreen() {
       );
     },
   });
+
+  const handleViewHistoryEntry = (entry: HistoryEntry) => {
+    setImage({ uri: entry.uri, base64: '', mimeType: 'image/jpeg' });
+    setResult(entry.result);
+  };
 
   const pickFromSource = async (source: 'camera' | 'library') => {
     const permission =
@@ -201,6 +234,33 @@ export default function MealScanScreen() {
           Prenez en photo votre repas pour estimer instantanément ses calories et ses protéines.
         </Text>
       </View>
+
+      {!image && history.length > 0 && (
+        <View style={styles.historySection}>
+          <View style={styles.historyHeaderRow}>
+            <History size={14} color={theme.colors.textMuted} />
+            <Text style={styles.historyHeaderText}>Scans récents</Text>
+          </View>
+          <FlatList
+            data={history}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(_, i) => `history-${i}`}
+            contentContainerStyle={styles.historyList}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.historyItem}
+                activeOpacity={0.85}
+                onPress={() => handleViewHistoryEntry(item)}>
+                <Image source={{ uri: item.uri }} style={styles.historyThumb} />
+                <View style={styles.historyCalorieBadge}>
+                  <Text style={styles.historyCalorieText}>{item.result.calories} kcal</Text>
+                </View>
+              </TouchableOpacity>
+            )}
+          />
+        </View>
+      )}
 
       {!image ? (
         <Animated.View entering={FadeIn.duration(300)}>
@@ -398,6 +458,52 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
     lineHeight: 20,
     marginTop: 8,
+  },
+  historySection: {
+    marginBottom: theme.spacing.lg,
+  },
+  historyHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.sm,
+  },
+  historyHeaderText: {
+    fontSize: 11,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginLeft: 6,
+  },
+  historyList: {
+    paddingRight: theme.spacing.md,
+  },
+  historyItem: {
+    width: 84,
+    height: 84,
+    borderRadius: theme.borderRadius.md,
+    overflow: 'hidden',
+    marginRight: theme.spacing.sm,
+    position: 'relative',
+    backgroundColor: theme.colors.border,
+  },
+  historyThumb: {
+    width: '100%',
+    height: '100%',
+  },
+  historyCalorieBadge: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingVertical: 3,
+    alignItems: 'center',
+  },
+  historyCalorieText: {
+    color: theme.colors.white,
+    fontSize: 10,
+    fontWeight: theme.typography.weights.bold,
   },
   pickerCard: {
     alignItems: 'center',

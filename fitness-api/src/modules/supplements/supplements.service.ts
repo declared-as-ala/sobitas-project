@@ -50,7 +50,7 @@ export class SupplementsService {
       let filteredProducts = productsList;
       if (tags.length > 0) {
         filteredProducts = productsList.filter(prod => {
-          const lowerName = prod.designationFr.toLowerCase();
+          const lowerName = (prod.designationFr || '').toLowerCase();
           return tags.some(tag => lowerName.includes(tag.toLowerCase()));
         });
       }

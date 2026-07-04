@@ -75,7 +75,9 @@ export default function RootLayout() {
         <Stack.Screen name="ai-coach" options={{ title: 'AI Coach Fitness' }} />
         <Stack.Screen name="progress" options={{ title: 'Body Progress' }} />
         <Stack.Screen name="workouts/[id]" options={{ title: 'Séance' }} />
+        <Stack.Screen name="workout-plan" options={{ title: 'Mon Programme' }} />
         <Stack.Screen name="supplement-stack" options={{ title: 'Supplement Stack' }} />
+        <Stack.Screen name="rewards" options={{ title: 'Fidélité & Parrainage' }} />
         <Stack.Screen name="wishlist" options={{ title: 'Favoris' }} />
         <Stack.Screen name="notifications" options={{ title: 'Notifications' }} />
       </Stack>

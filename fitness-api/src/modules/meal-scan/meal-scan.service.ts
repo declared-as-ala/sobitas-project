@@ -39,7 +39,11 @@ export class MealScanService {
     private configService: ConfigService,
   ) {
     this.groqApiKey = this.configService.get<string>('GROQ_API_KEY', '');
-    this.visionModel = this.configService.get<string>('GROQ_VISION_MODEL', 'llama-3.2-11b-vision-preview');
+    // "llama-3.2-*-vision-preview" models were retired by Groq; llama-4-scout is natively multimodal and current as of writing.
+    this.visionModel = this.configService.get<string>(
+      'GROQ_VISION_MODEL',
+      'meta-llama/llama-4-scout-17b-16e-instruct',
+    );
 
     if (!this.groqApiKey) {
       this.logger.warn('GROQ_API_KEY is not defined. Meal scanning is unavailable until it is configured.');
@@ -100,7 +104,11 @@ export class MealScanService {
       return this.parseResult(rawContent);
     } catch (err: any) {
       if (err instanceof BadRequestException) throw err;
-      this.logger.error('Groq vision call failed for meal scan.', err?.response?.data || err.message);
+      const status = err?.response?.status;
+      const groqMessage = err?.response?.data?.error?.message || err.message;
+      this.logger.error(
+        `Groq vision call failed for meal scan (model=${this.visionModel}, status=${status}): ${groqMessage}`,
+      );
       throw new ServiceUnavailableException(
         "Impossible d'analyser cette photo pour le moment. Réessayez avec une autre photo.",
       );

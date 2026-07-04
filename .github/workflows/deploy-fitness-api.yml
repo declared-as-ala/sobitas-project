@@ -82,11 +82,13 @@ jobs:
             echo "🔄 Restart fitness-api..."
             docker compose up -d --force-recreate --no-deps fitness-api
 
-            echo "🗄️ Syncing Prisma database schema..."
-            docker compose exec -T fitness-api npx prisma db push --accept-data-loss || true
-
-            echo "🌱 Seeding initial data..."
-            docker compose exec -T fitness-api npm run seed || true
+            echo "🗄️ Syncing Prisma database schema (additive only)..."
+            # Deliberately NOT using --accept-data-loss: this database is shared with the Laravel
+            # e-commerce app (users, products, etc.), which Prisma only introspects/reads for some
+            # models. Without --accept-data-loss, Prisma applies safe/additive changes (e.g. new
+            # fitness_* tables) but refuses and exits non-zero if it would drop/alter a column —
+            # forcing a human to review and run it manually if a destructive change is ever intended.
+            docker compose exec -T fitness-api npx prisma db push || echo "⚠️ Prisma db push needs manual review (see above) — not auto-applying destructive changes."
 
             echo "🧹 Cleaning unused images..."
             docker image prune -f || true

@@ -235,6 +235,21 @@ export default function FitnessScreen() {
         <ChevronRight size={20} color={theme.colors.textMuted} />
       </TouchableOpacity>
 
+      {/* AI-generated workout plan shortcut */}
+      <TouchableOpacity
+        style={styles.mealScanCard}
+        activeOpacity={0.9}
+        onPress={() => router.push('/workout-plan')}>
+        <View style={[styles.mealScanIconChip, { backgroundColor: '#EDE9FE' }]}>
+          <Dumbbell size={22} color="#7C3AED" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.progressLinkTitle}>Générer mon programme</Text>
+          <Text style={styles.progressLinkSubtitle}>Plan sur 5 semaines selon votre disponibilité</Text>
+        </View>
+        <ChevronRight size={20} color={theme.colors.textMuted} />
+      </TouchableOpacity>
+
       {/* Link to Body progress weight history */}
       <TouchableOpacity
         style={styles.progressLinkCard}

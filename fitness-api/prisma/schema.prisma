@@ -14,12 +14,16 @@ datasource db {
 // ── Laravel Existing Database Models ──────────────────────────────
 
 model User {
-  id                BigInt    @id @default(autoincrement())
+  id                BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
   name              String
-  email             String    @unique
+  email             String    @unique(map: "users_email_unique")
+  avatar            String?   @default("users/default.png")
+  emailVerifiedAt   DateTime? @map("email_verified_at")
   phone             String?
   password          String
-  roleId            BigInt?   @map("role_id")
+  rememberToken     String?   @map("remember_token")
+  settings          String?   @db.Text
+  roleId            BigInt?   @map("role_id") @db.UnsignedBigInt
   createdAt         DateTime? @map("created_at")
   updatedAt         DateTime? @map("updated_at")
 
@@ -42,9 +46,9 @@ model User {
 }
 
 model PersonalAccessToken {
-  id            BigInt    @id @default(autoincrement())
+  id            BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
   tokenableType String    @map("tokenable_type")
-  tokenableId   BigInt    @map("tokenable_id")
+  tokenableId   BigInt    @map("tokenable_id") @db.UnsignedBigInt
   name          String
   token         String    @unique @db.VarChar(64)
   abilities     String?   @db.Text
@@ -55,20 +59,48 @@ model PersonalAccessToken {
   @@map("personal_access_tokens")
 }
 
+// Mirrors the real `products` table exactly (transcribed from protein_db_backup.sql) so that
+// `prisma db push` never sees "extra" columns to drop or type drift to "fix" on this shared,
+// Laravel-owned, live e-commerce table. Only add fields here if they also exist in the real table.
 model Product {
-  id             BigInt    @id @default(autoincrement())
-  sousCategorieId BigInt?   @map("sous_categorie_id")
-  designationFr  String    @map("designation_fr")
-  cover          String?
-  qte            Int
-  prix           Decimal   @db.Decimal(10, 2)
-  promo          Decimal?  @db.Decimal(10, 2)
-  descriptionFr  String?   @map("description_fr") @db.Text
-  publier        Int
-  slug           String    @unique
-  brandId        BigInt?   @map("brand_id")
-  createdAt      DateTime? @map("created_at")
-  updatedAt      DateTime? @map("updated_at")
+  id                 Int       @id @default(autoincrement()) @db.UnsignedInt
+  sousCategorieId    Int?      @map("sous_categorie_id")
+  designationFr      String?   @map("designation_fr")
+  cover              String?
+  qte                Int?
+  prixHt             Float?    @map("prix_ht")
+  prix               Float?
+  promoHt            Float?    @map("promo_ht")
+  promo              Float?
+  descriptionFr      String?   @map("description_fr") @db.Text
+  publier            Int?
+  createdBy          String?   @map("created_by")
+  updatedBy          String?   @map("updated_by")
+  createdAt          DateTime? @map("created_at")
+  updatedAt          DateTime? @map("updated_at")
+  codeProduct        String?   @map("code_product")
+  slug               String?
+  pack               String?
+  brandId            Int?      @map("brand_id")
+  newProduct         String?   @map("new_product")
+  bestSeller         String?   @map("best_seller")
+  gallery            String?   @db.Text
+  note               Int?
+  metaDescriptionFr  String?   @map("meta_description_fr") @db.Text
+  promoExpirationDate DateTime? @map("promo_expiration_date")
+  rupture            Int?      @default(1)
+  altCover           String?   @map("alt_cover")
+  descriptionCover   String?   @map("description_cover") @db.Text
+  meta               String?   @db.Text
+  contentSeo         String?   @map("content_seo") @db.Text
+  review             String?   @db.Text
+  aggregateRating    String?   @db.Text
+  nutritionValues    String?   @map("nutrition_values") @db.Text
+  questions          String?   @db.Text
+  zone1              String?   @default("Description")
+  zone2              String?   @default("Avis client")
+  zone3              String?   @default("Valeurs nutritionnelles")
+  zone4              String?   @default("Questions")
 
   @@map("products")
 }
