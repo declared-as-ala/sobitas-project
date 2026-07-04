@@ -9,6 +9,8 @@ import {
   Alert,
   FlatList,
 } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMutation } from '@tanstack/react-query';
@@ -27,16 +29,13 @@ import { theme } from '../../constants/theme';
 import { useAuthStore } from '../../store/auth';
 import { useFitnessStore } from '../../store/fitness';
 import Button from '../../components/Button';
-import GlassCard from '../../components/GlassCard';
 import CircularProgress from '../../components/CircularProgress';
 import {
   Camera,
   ImageIcon,
   Sparkles,
-  ScanLine,
   RotateCcw,
   AlertCircle,
-  Lightbulb,
   History,
 } from 'lucide-react-native';
 
@@ -64,6 +63,7 @@ interface HistoryEntry {
 
 const HISTORY_STORAGE_KEY = 'recent_meal_scans';
 const HISTORY_MAX_ITEMS = 5;
+const PREVIEW_HEIGHT = 320;
 
 const CONFIDENCE_LABEL: Record<string, string> = {
   low: 'Estimation approximative',
@@ -77,18 +77,16 @@ const CONFIDENCE_COLOR: Record<string, string> = {
   high: theme.colors.success,
 };
 
-const PREVIEW_HEIGHT = 260;
+/** L-shaped corner bracket, rotated per corner, used to build the viewfinder frame. */
+const Corner = ({ style }: { style: any }) => <View style={[styles.corner, style]} />;
 
-/** Animated horizontal line that sweeps top-to-bottom over the photo while analyzing. */
+/** Animated horizontal line that sweeps down the frame while analyzing. */
 const ScanningOverlay = () => {
   const translateY = useSharedValue(0);
 
   useEffect(() => {
     translateY.value = withRepeat(
-      withSequence(
-        withTiming(PREVIEW_HEIGHT - 3, { duration: 1400 }),
-        withTiming(0, { duration: 0 }),
-      ),
+      withSequence(withTiming(PREVIEW_HEIGHT - 3, { duration: 1400 }), withTiming(0, { duration: 0 })),
       -1,
     );
   }, []);
@@ -99,7 +97,6 @@ const ScanningOverlay = () => {
 
   return (
     <View style={styles.scanningOverlay} pointerEvents="none">
-      <View style={styles.scanningDim} />
       <Animated.View style={[styles.scanningLineWrapper, animatedStyle]}>
         <LinearGradient
           colors={['transparent', theme.colors.primary, 'transparent']}
@@ -110,13 +107,14 @@ const ScanningOverlay = () => {
       </Animated.View>
       <View style={styles.scanningLabel}>
         <Sparkles size={14} color={theme.colors.white} />
-        <Text style={styles.scanningLabelText}>Analyse en cours...</Text>
+        <Text style={styles.scanningLabelText}>Analyse IA en cours...</Text>
       </View>
     </View>
   );
 };
 
 export default function MealScanScreen() {
+  const insets = useSafeAreaInsets();
   const { isAuthenticated } = useAuthStore();
   const { queueLog } = useFitnessStore();
   const [image, setImage] = useState<ScannedImage | null>(null);
@@ -151,10 +149,7 @@ export default function MealScanScreen() {
       if (image) saveToHistory({ uri: image.uri, result: data, scannedAt: Date.now() });
     },
     onError: (err: any) => {
-      Alert.alert(
-        'Erreur',
-        err.response?.data?.message || "Impossible d'analyser cette photo pour le moment.",
-      );
+      Alert.alert('Erreur', err.response?.data?.message || "Impossible d'analyser cette photo pour le moment.");
     },
   });
 
@@ -210,13 +205,23 @@ export default function MealScanScreen() {
     return Math.max(6, Math.round((grams / total) * 100));
   };
 
+  // Backend only accepts these exact meal type values — infer the closest one from time of day
+  // rather than a made-up category, and keep the "it was scanned" context in the description.
+  const getMealTypeFromTime = (): string => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 11) return 'Breakfast';
+    if (hour >= 11 && hour < 16) return 'Lunch';
+    if (hour >= 16 && hour < 21) return 'Dinner';
+    return 'Snack';
+  };
+
   const handleSaveToTracker = () => {
     if (!result) return;
     const today = new Date().toISOString().split('T')[0];
     queueLog('protein', {
-      mealType: 'Scan repas',
+      mealType: getMealTypeFromTime(),
       proteinAmount: result.protein,
-      description: result.mealName,
+      description: `Scan photo : ${result.mealName}`,
       date: today,
     });
     Alert.alert('Enregistré', `${result.protein}g de protéines ajoutées à votre suivi du jour.`, [
@@ -225,239 +230,239 @@ export default function MealScanScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-      <View style={styles.introRow}>
-        <LinearGradient colors={theme.gradients.primary} style={styles.introIconChip}>
-          <ScanLine size={20} color={theme.colors.white} />
-        </LinearGradient>
-        <Text style={styles.introText}>
-          Prenez en photo votre repas pour estimer instantanément ses calories et ses protéines.
+    <View style={styles.root}>
+      <StatusBar style="dark" />
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + theme.spacing.md }]}>
+        <Text style={styles.pageTitle}>
+          Scanner<Text style={styles.pageTitleAccent}> IA</Text>
         </Text>
-      </View>
+        <Text style={styles.pageSubtitle}>Pointez, capturez, obtenez calories et protéines instantanément.</Text>
 
-      {!image && history.length > 0 && (
-        <View style={styles.historySection}>
-          <View style={styles.historyHeaderRow}>
-            <History size={14} color={theme.colors.textMuted} />
-            <Text style={styles.historyHeaderText}>Scans récents</Text>
+        {!image && history.length > 0 && (
+          <View style={styles.historySection}>
+            <View style={styles.historyHeaderRow}>
+              <History size={13} color={theme.colors.textMuted} />
+              <Text style={styles.historyHeaderText}>Scans récents</Text>
+            </View>
+            <FlatList
+              data={history}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(_, i) => `history-${i}`}
+              contentContainerStyle={styles.historyList}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.historyItem}
+                  activeOpacity={0.85}
+                  onPress={() => handleViewHistoryEntry(item)}>
+                  <Image source={{ uri: item.uri }} style={styles.historyThumb} />
+                  <View style={styles.historyCalorieBadge}>
+                    <Text style={styles.historyCalorieText}>{item.result.calories} kcal</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+            />
           </View>
-          <FlatList
-            data={history}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(_, i) => `history-${i}`}
-            contentContainerStyle={styles.historyList}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.historyItem}
-                activeOpacity={0.85}
-                onPress={() => handleViewHistoryEntry(item)}>
-                <Image source={{ uri: item.uri }} style={styles.historyThumb} />
-                <View style={styles.historyCalorieBadge}>
-                  <Text style={styles.historyCalorieText}>{item.result.calories} kcal</Text>
+        )}
+
+        {/* Viewfinder frame */}
+        <Animated.View entering={FadeIn.duration(300)} style={styles.viewfinderWrapper}>
+          <View style={styles.viewfinder}>
+            {image ? (
+              <Image source={{ uri: image.uri }} style={styles.viewfinderImage} resizeMode="cover" />
+            ) : (
+              <LinearGradient colors={['#1A1A1D', '#0A0A0B']} style={styles.viewfinderEmpty}>
+                <View style={styles.viewfinderIconRing}>
+                  <Camera size={30} color={theme.colors.primary} />
                 </View>
-              </TouchableOpacity>
+                <Text style={styles.viewfinderHint}>Cadrez votre assiette dans le repère</Text>
+              </LinearGradient>
             )}
-          />
-        </View>
-      )}
 
-      {!image ? (
-        <Animated.View entering={FadeIn.duration(300)}>
-          <GlassCard light style={styles.pickerCard}>
-            <LinearGradient colors={theme.gradients.primary} style={styles.pickerIconWrapper}>
-              <Camera size={32} color={theme.colors.white} />
-            </LinearGradient>
-            <Text style={styles.pickerTitle}>Scanner un repas</Text>
-            <Text style={styles.pickerSubtitle}>Prenez une photo nette, de préférence vue du dessus.</Text>
+            <Corner style={styles.cornerTL} />
+            <Corner style={styles.cornerTR} />
+            <Corner style={styles.cornerBL} />
+            <Corner style={styles.cornerBR} />
 
-            <View style={styles.pickerButtonsRow}>
-              <TouchableOpacity style={styles.pickerBtn} activeOpacity={0.85} onPress={() => pickFromSource('camera')}>
-                <LinearGradient
-                  colors={theme.gradients.primary}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.pickerBtnGradient}>
-                  <Camera size={18} color={theme.colors.white} />
-                  <Text style={styles.pickerBtnText}>Prendre une photo</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.pickerBtnOutline}
-                activeOpacity={0.85}
-                onPress={() => pickFromSource('library')}>
-                <ImageIcon size={18} color={theme.colors.text} />
-                <Text style={styles.pickerBtnOutlineText}>Choisir depuis la galerie</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.tipRow}>
-              <Lightbulb size={14} color={theme.colors.primary} style={{ marginTop: 1 }} />
-              <Text style={styles.tipText}>
-                Astuce : un bon éclairage et une photo cadrée sur l'assiette améliorent la précision.
-              </Text>
-            </View>
-          </GlassCard>
-        </Animated.View>
-      ) : (
-        <Animated.View entering={FadeInUp.duration(280)}>
-          <View style={styles.previewWrapper}>
-            <Image source={{ uri: image.uri }} style={styles.previewImage} resizeMode="cover" />
             {scanMutation.isPending && <ScanningOverlay />}
-            {!scanMutation.isPending && (
+
+            {image && !scanMutation.isPending && (
               <TouchableOpacity style={styles.changePhotoBtn} onPress={handleReset}>
-                <RotateCcw size={14} color={theme.colors.white} />
+                <RotateCcw size={13} color={theme.colors.white} />
                 <Text style={styles.changePhotoText}>Changer</Text>
               </TouchableOpacity>
             )}
           </View>
+        </Animated.View>
 
-          {!result && (
+        {/* Capture controls */}
+        {!image ? (
+          <View style={styles.captureRow}>
+            <TouchableOpacity style={styles.galleryBtn} activeOpacity={0.85} onPress={() => pickFromSource('library')}>
+              <ImageIcon size={20} color={theme.colors.text} />
+            </TouchableOpacity>
+
+            <TouchableOpacity activeOpacity={0.85} onPress={() => pickFromSource('camera')}>
+              <LinearGradient colors={theme.gradients.primary} style={styles.captureBtn}>
+                <View style={styles.captureBtnInner} />
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <View style={styles.galleryBtnSpacer} />
+          </View>
+        ) : (
+          !result && (
             <Button
               title={scanMutation.isPending ? 'Analyse en cours...' : 'Analyser ce repas'}
               style={styles.analyzeBtn}
               isLoading={scanMutation.isPending}
               onPress={() => scanMutation.mutate()}
             />
-          )}
-        </Animated.View>
-      )}
+          )
+        )}
 
-      {result && (
-        <Animated.View entering={FadeInUp.duration(320)}>
-          <LinearGradient
-            colors={theme.gradients.dark}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={[styles.resultCard, theme.shadows.heavy]}>
+        {result && (
+          <Animated.View entering={FadeInUp.duration(320)}>
             <LinearGradient
-              colors={theme.gradients.glassLight}
+              colors={theme.gradients.dark}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={styles.cardShine}
-              pointerEvents="none"
-            />
+              style={[styles.resultCard, theme.shadows.heavy]}>
+              <LinearGradient
+                colors={theme.gradients.glassLight}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.cardShine}
+                pointerEvents="none"
+              />
 
-            <View style={styles.resultHeader}>
-              <View style={styles.resultHeaderIconChip}>
-                <Sparkles size={18} color={theme.colors.primary} />
+              <View style={styles.resultHeader}>
+                <View style={styles.resultHeaderIconChip}>
+                  <Sparkles size={18} color={theme.colors.primary} />
+                </View>
+                <Text style={styles.resultMealName} numberOfLines={2}>
+                  {result.mealName}
+                </Text>
               </View>
-              <Text style={styles.resultMealName} numberOfLines={2}>
-                {result.mealName}
-              </Text>
-            </View>
 
-            <View style={[styles.confidenceBadge, { borderColor: CONFIDENCE_COLOR[result.confidence] }]}>
-              <View style={[styles.confidenceDot, { backgroundColor: CONFIDENCE_COLOR[result.confidence] }]} />
-              <Text style={[styles.confidenceText, { color: CONFIDENCE_COLOR[result.confidence] }]}>
-                {CONFIDENCE_LABEL[result.confidence]}
-              </Text>
-            </View>
+              <View style={[styles.confidenceBadge, { borderColor: CONFIDENCE_COLOR[result.confidence] }]}>
+                <View style={[styles.confidenceDot, { backgroundColor: CONFIDENCE_COLOR[result.confidence] }]} />
+                <Text style={[styles.confidenceText, { color: CONFIDENCE_COLOR[result.confidence] }]}>
+                  {CONFIDENCE_LABEL[result.confidence]}
+                </Text>
+              </View>
 
-            <View style={styles.calorieRingRow}>
-              <CircularProgress progress={100} size={110} strokeWidth={10} color={theme.colors.primary}>
-                <Text style={styles.ringCalories}>{result.calories}</Text>
-                <Text style={styles.ringCaloriesUnit}>kcal</Text>
-              </CircularProgress>
-              <View style={styles.macroSideStats}>
-                <View style={styles.macroSideItem}>
-                  <View style={styles.macroSideHeader}>
-                    <Text style={[styles.macroSideLabel, { color: theme.colors.primary }]}>Protéines</Text>
-                    <Text style={styles.macroSideVal}>{result.protein} g</Text>
+              <View style={styles.calorieRingRow}>
+                <CircularProgress progress={100} size={110} strokeWidth={10} color={theme.colors.primary}>
+                  <Text style={styles.ringCalories}>{result.calories}</Text>
+                  <Text style={styles.ringCaloriesUnit}>kcal</Text>
+                </CircularProgress>
+                <View style={styles.macroSideStats}>
+                  <View style={styles.macroSideItem}>
+                    <View style={styles.macroSideHeader}>
+                      <Text style={[styles.macroSideLabel, { color: theme.colors.primary }]}>Protéines</Text>
+                      <Text style={styles.macroSideVal}>{result.protein} g</Text>
+                    </View>
+                    <View style={styles.macroBarBg}>
+                      <View
+                        style={[
+                          styles.macroBarFill,
+                          { width: `${macroShare(result.protein)}%`, backgroundColor: theme.colors.primary },
+                        ]}
+                      />
+                    </View>
                   </View>
-                  <View style={styles.macroBarBg}>
-                    <View
-                      style={[
-                        styles.macroBarFill,
-                        { width: `${macroShare(result.protein)}%`, backgroundColor: theme.colors.primary },
-                      ]}
-                    />
+                  <View style={styles.macroSideItem}>
+                    <View style={styles.macroSideHeader}>
+                      <Text style={[styles.macroSideLabel, { color: '#F59E0B' }]}>Glucides</Text>
+                      <Text style={styles.macroSideVal}>{result.carbs} g</Text>
+                    </View>
+                    <View style={styles.macroBarBg}>
+                      <View
+                        style={[
+                          styles.macroBarFill,
+                          { width: `${macroShare(result.carbs)}%`, backgroundColor: '#F59E0B' },
+                        ]}
+                      />
+                    </View>
+                  </View>
+                  <View style={styles.macroSideItem}>
+                    <View style={styles.macroSideHeader}>
+                      <Text style={[styles.macroSideLabel, { color: '#10B981' }]}>Lipides</Text>
+                      <Text style={styles.macroSideVal}>{result.fat} g</Text>
+                    </View>
+                    <View style={styles.macroBarBg}>
+                      <View
+                        style={[
+                          styles.macroBarFill,
+                          { width: `${macroShare(result.fat)}%`, backgroundColor: '#10B981' },
+                        ]}
+                      />
+                    </View>
                   </View>
                 </View>
-                <View style={styles.macroSideItem}>
-                  <View style={styles.macroSideHeader}>
-                    <Text style={[styles.macroSideLabel, { color: '#F59E0B' }]}>Glucides</Text>
-                    <Text style={styles.macroSideVal}>{result.carbs} g</Text>
-                  </View>
-                  <View style={styles.macroBarBg}>
-                    <View
-                      style={[
-                        styles.macroBarFill,
-                        { width: `${macroShare(result.carbs)}%`, backgroundColor: '#F59E0B' },
-                      ]}
-                    />
-                  </View>
-                </View>
-                <View style={styles.macroSideItem}>
-                  <View style={styles.macroSideHeader}>
-                    <Text style={[styles.macroSideLabel, { color: '#10B981' }]}>Lipides</Text>
-                    <Text style={styles.macroSideVal}>{result.fat} g</Text>
-                  </View>
-                  <View style={styles.macroBarBg}>
-                    <View
-                      style={[
-                        styles.macroBarFill,
-                        { width: `${macroShare(result.fat)}%`, backgroundColor: '#10B981' },
-                      ]}
-                    />
-                  </View>
-                </View>
               </View>
-            </View>
 
-            {!!result.notes && (
-              <View style={styles.notesRow}>
-                <AlertCircle size={14} color="rgba(255,255,255,0.6)" style={{ marginRight: 6, marginTop: 1 }} />
-                <Text style={styles.notesText}>{result.notes}</Text>
-              </View>
-            )}
+              {!!result.notes && (
+                <View style={styles.notesRow}>
+                  <AlertCircle size={14} color="rgba(255,255,255,0.6)" style={{ marginRight: 6, marginTop: 1 }} />
+                  <Text style={styles.notesText}>{result.notes}</Text>
+                </View>
+              )}
 
-            {isAuthenticated ? (
-              <Button title="Ajouter à mon suivi protéines" style={styles.saveBtn} onPress={handleSaveToTracker} />
-            ) : (
-              <Text style={styles.loginHint}>Connectez-vous pour enregistrer ce repas dans votre suivi.</Text>
-            )}
+              {isAuthenticated ? (
+                result.protein > 0 ? (
+                  <Button title="Ajouter à mon suivi protéines" style={styles.saveBtn} onPress={handleSaveToTracker} />
+                ) : (
+                  <Text style={styles.loginHint}>Aucune protéine détectée pour ce repas — rien à ajouter au suivi.</Text>
+                )
+              ) : (
+                <Text style={styles.loginHint}>Connectez-vous pour enregistrer ce repas dans votre suivi.</Text>
+              )}
 
-            <TouchableOpacity style={styles.restartLink} onPress={handleReset}>
-              <RotateCcw size={14} color={theme.colors.primary} />
-              <Text style={styles.restartLinkText}>Scanner un autre repas</Text>
-            </TouchableOpacity>
-          </LinearGradient>
-        </Animated.View>
-      )}
-    </ScrollView>
+              <TouchableOpacity style={styles.restartLink} onPress={handleReset}>
+                <RotateCcw size={14} color={theme.colors.primary} />
+                <Text style={styles.restartLinkText}>Scanner un autre repas</Text>
+              </TouchableOpacity>
+            </LinearGradient>
+          </Animated.View>
+        )}
+      </ScrollView>
+    </View>
   );
 }
 
+const CORNER_SIZE = 28;
+const CORNER_THICKNESS = 3;
+
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  container: {
+    flex: 1,
   },
   scrollContent: {
     padding: theme.spacing.md,
     paddingBottom: theme.spacing.xl + 80,
   },
-  introRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: theme.spacing.lg,
+  pageTitle: {
+    fontSize: 30,
+    fontWeight: theme.typography.weights.heavy,
+    color: theme.colors.text,
+    letterSpacing: -0.5,
   },
-  introIconChip: {
-    width: 40,
-    height: 40,
-    borderRadius: theme.borderRadius.round,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: theme.spacing.sm,
+  pageTitleAccent: {
+    color: theme.colors.primary,
   },
-  introText: {
-    flex: 1,
+  pageSubtitle: {
     fontSize: theme.typography.sizes.sm,
     color: theme.colors.textMuted,
-    lineHeight: 20,
-    marginTop: 8,
+    marginTop: 4,
+    marginBottom: theme.spacing.lg,
   },
   historySection: {
     marginBottom: theme.spacing.lg,
@@ -479,13 +484,15 @@ const styles = StyleSheet.create({
     paddingRight: theme.spacing.md,
   },
   historyItem: {
-    width: 84,
-    height: 84,
+    width: 76,
+    height: 76,
     borderRadius: theme.borderRadius.md,
     overflow: 'hidden',
     marginRight: theme.spacing.sm,
     position: 'relative',
-    backgroundColor: theme.colors.border,
+    backgroundColor: theme.colors.card,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   historyThumb: {
     width: '100%',
@@ -496,7 +503,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(0,0,0,0.65)',
     paddingVertical: 3,
     alignItems: 'center',
   },
@@ -505,99 +512,76 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: theme.typography.weights.bold,
   },
-  pickerCard: {
-    alignItems: 'center',
-    paddingVertical: theme.spacing.xl,
-  },
-  pickerIconWrapper: {
-    width: 76,
-    height: 76,
-    borderRadius: theme.borderRadius.round,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: theme.spacing.md,
-    ...theme.shadows.medium,
-  },
-  pickerTitle: {
-    fontSize: theme.typography.sizes.lg,
-    fontWeight: theme.typography.weights.heavy,
-    color: theme.colors.text,
-  },
-  pickerSubtitle: {
-    fontSize: theme.typography.sizes.sm,
-    color: theme.colors.textMuted,
-    textAlign: 'center',
-    marginTop: 4,
+  viewfinderWrapper: {
     marginBottom: theme.spacing.lg,
   },
-  pickerButtonsRow: {
-    width: '100%',
-  },
-  pickerBtn: {
-    borderRadius: theme.borderRadius.md,
-    overflow: 'hidden',
-    marginBottom: theme.spacing.sm,
-  },
-  pickerBtnGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 52,
-  },
-  pickerBtnText: {
-    color: theme.colors.white,
-    fontWeight: theme.typography.weights.bold,
-    fontSize: theme.typography.sizes.sm,
-    marginLeft: 8,
-  },
-  pickerBtnOutline: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 52,
-    borderRadius: theme.borderRadius.md,
-    borderWidth: 1.5,
-    borderColor: theme.colors.border,
-  },
-  pickerBtnOutlineText: {
-    color: theme.colors.text,
-    fontWeight: theme.typography.weights.bold,
-    fontSize: theme.typography.sizes.sm,
-    marginLeft: 8,
-  },
-  tipRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: theme.colors.orangeLight,
-    borderRadius: theme.borderRadius.sm,
-    padding: theme.spacing.sm,
-    marginTop: theme.spacing.md,
-    width: '100%',
-  },
-  tipText: {
-    flex: 1,
-    fontSize: 11,
-    color: theme.colors.text,
-    lineHeight: 15,
-    marginLeft: 6,
-  },
-  previewWrapper: {
+  viewfinder: {
+    height: PREVIEW_HEIGHT,
     borderRadius: theme.borderRadius.lg,
     overflow: 'hidden',
     position: 'relative',
+    backgroundColor: '#0A0A0B',
+  },
+  viewfinderImage: {
+    width: '100%',
+    height: '100%',
+  },
+  viewfinderEmpty: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  viewfinderIconRing: {
+    width: 72,
+    height: 72,
+    borderRadius: theme.borderRadius.round,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,107,0,0.4)',
+    backgroundColor: 'rgba(255,107,0,0.08)',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: theme.spacing.md,
   },
-  previewImage: {
-    width: '100%',
-    height: PREVIEW_HEIGHT,
-    backgroundColor: theme.colors.border,
+  viewfinderHint: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 12,
+  },
+  corner: {
+    position: 'absolute',
+    width: CORNER_SIZE,
+    height: CORNER_SIZE,
+    borderColor: theme.colors.primary,
+  },
+  cornerTL: {
+    top: theme.spacing.md,
+    left: theme.spacing.md,
+    borderTopWidth: CORNER_THICKNESS,
+    borderLeftWidth: CORNER_THICKNESS,
+    borderTopLeftRadius: theme.borderRadius.sm,
+  },
+  cornerTR: {
+    top: theme.spacing.md,
+    right: theme.spacing.md,
+    borderTopWidth: CORNER_THICKNESS,
+    borderRightWidth: CORNER_THICKNESS,
+    borderTopRightRadius: theme.borderRadius.sm,
+  },
+  cornerBL: {
+    bottom: theme.spacing.md,
+    left: theme.spacing.md,
+    borderBottomWidth: CORNER_THICKNESS,
+    borderLeftWidth: CORNER_THICKNESS,
+    borderBottomLeftRadius: theme.borderRadius.sm,
+  },
+  cornerBR: {
+    bottom: theme.spacing.md,
+    right: theme.spacing.md,
+    borderBottomWidth: CORNER_THICKNESS,
+    borderRightWidth: CORNER_THICKNESS,
+    borderBottomRightRadius: theme.borderRadius.sm,
   },
   scanningOverlay: {
     ...StyleSheet.absoluteFillObject,
-  },
-  scanningDim: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(10,10,11,0.35)',
   },
   scanningLineWrapper: {
     position: 'absolute',
@@ -610,11 +594,11 @@ const styles = StyleSheet.create({
   },
   scanningLabel: {
     position: 'absolute',
-    bottom: theme.spacing.sm,
+    bottom: theme.spacing.md,
     alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     borderRadius: theme.borderRadius.round,
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 6,
@@ -631,7 +615,7 @@ const styles = StyleSheet.create({
     right: theme.spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     borderRadius: theme.borderRadius.round,
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 6,
@@ -642,8 +626,44 @@ const styles = StyleSheet.create({
     fontWeight: theme.typography.weights.bold,
     marginLeft: 4,
   },
+  captureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing.xl,
+    marginBottom: theme.spacing.lg,
+  },
+  galleryBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: theme.borderRadius.round,
+    backgroundColor: theme.colors.card,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...theme.shadows.light,
+  },
+  galleryBtnSpacer: {
+    width: 48,
+  },
+  captureBtn: {
+    width: 72,
+    height: 72,
+    borderRadius: theme.borderRadius.round,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...theme.shadows.heavy,
+  },
+  captureBtnInner: {
+    width: 60,
+    height: 60,
+    borderRadius: theme.borderRadius.round,
+    borderWidth: 2.5,
+    borderColor: 'rgba(255,255,255,0.85)',
+  },
   analyzeBtn: {
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.lg,
   },
   resultCard: {
     borderRadius: theme.borderRadius.lg,

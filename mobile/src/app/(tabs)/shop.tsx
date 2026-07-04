@@ -249,7 +249,7 @@ export default function ShopScreen() {
               {/* Category selector */}
               <Text style={styles.filterSectionLabel}>Catégories</Text>
               <View style={styles.optionsGrid}>
-                {filterOptions?.categories.map((cat: any) => {
+                {(filterOptions?.categories || []).map((cat: any) => {
                   const { icon: CatIcon, color } = getCategoryIcon(cat);
                   const isActive = selectedCategory === cat.id;
                   return (
@@ -269,13 +269,13 @@ export default function ShopScreen() {
               {/* Brand selector */}
               <Text style={styles.filterSectionLabel}>Marques</Text>
               <View style={styles.optionsGrid}>
-                {filterOptions?.brands.map((brand: any) => (
+                {(filterOptions?.brands || []).map((brand: any) => (
                   <TouchableOpacity
                     key={brand.id.toString()}
                     style={[styles.optionBadge, selectedBrand === brand.id && styles.optionBadgeActive]}
                     onPress={() => setSelectedBrand(selectedBrand === brand.id ? null : brand.id)}>
                     <Text style={[styles.optionBadgeText, selectedBrand === brand.id && styles.optionBadgeTextActive]}>
-                      {brand.name}
+                      {brand.designation_fr}
                     </Text>
                   </TouchableOpacity>
                 ))}

@@ -90,7 +90,7 @@ export default function TabLayout() {
         options={{
           title: 'Scanner',
           tabBarLabel: 'Scanner',
-          headerTitle: 'Scanner un repas',
+          headerShown: false,
           tabBarIcon: ({ color, size, focused }) => (
             <TabIcon color={color} size={size} focused={focused} Icon={ScanLine} />
           ),

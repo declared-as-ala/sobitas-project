@@ -26,6 +26,10 @@ import {
   Clock,
   RotateCcw,
   Sparkles,
+  Zap,
+  TrendingUp,
+  BatteryLow,
+  ListChecks,
 } from 'lucide-react-native';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -61,7 +65,24 @@ interface GeneratedWorkoutPlan {
 }
 
 const PLAN_STORAGE_KEY = 'generated_workout_plan';
-const DAY_OPTIONS = [3, 4, 5];
+const DAY_OPTIONS: { value: number; hint: string }[] = [
+  { value: 3, hint: 'Débutant' },
+  { value: 4, hint: 'Équilibré' },
+  { value: 5, hint: 'Intensif' },
+];
+
+/** Visual phase per week: first = kickoff, middle = progressive overload, last = deload/recovery. */
+const getWeekPhaseIcon = (week: number, totalWeeks: number) => {
+  if (week === 1) return { Icon: Zap, color: '#F59E0B' };
+  if (week === totalWeeks) return { Icon: BatteryLow, color: '#0EA5E9' };
+  return { Icon: TrendingUp, color: theme.colors.primary };
+};
+
+/** Rough session duration estimate from real set/rest data (not fabricated): work time ~40s/set + rest time. */
+const estimateSessionMinutes = (exercises: WorkoutPlanExercise[]) => {
+  const totalSeconds = exercises.reduce((sum, ex) => sum + ex.sets * (40 + ex.restSeconds), 0);
+  return Math.max(15, Math.round(totalSeconds / 60));
+};
 
 export default function WorkoutPlanScreen() {
   const [daysPerWeek, setDaysPerWeek] = useState(4);
@@ -123,7 +144,7 @@ export default function WorkoutPlanScreen() {
 
             <Text style={styles.setupQuestion}>Combien de jours par semaine pouvez-vous vous entraîner ?</Text>
             <View style={styles.daysRow}>
-              {DAY_OPTIONS.map((d) => (
+              {DAY_OPTIONS.map(({ value: d, hint }) => (
                 <TouchableOpacity
                   key={d}
                   style={[styles.dayOption, daysPerWeek === d && styles.dayOptionActive]}
@@ -132,6 +153,11 @@ export default function WorkoutPlanScreen() {
                   <Text style={[styles.dayOptionLabel, daysPerWeek === d && styles.dayOptionLabelActive]}>
                     jours / sem.
                   </Text>
+                  <View style={[styles.dayOptionHintPill, daysPerWeek === d && styles.dayOptionHintPillActive]}>
+                    <Text style={[styles.dayOptionHintText, daysPerWeek === d && styles.dayOptionHintTextActive]}>
+                      {hint}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               ))}
             </View>
@@ -152,6 +178,13 @@ export default function WorkoutPlanScreen() {
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={[styles.headerCard, theme.shadows.heavy]}>
+            <LinearGradient
+              colors={theme.gradients.glassLight}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.headerCardShine}
+              pointerEvents="none"
+            />
             <View style={styles.headerTopRow}>
               <View style={styles.headerIconChip}>
                 <Sparkles size={18} color={theme.colors.primary} />
@@ -176,25 +209,32 @@ export default function WorkoutPlanScreen() {
             <Calendar size={18} color={theme.colors.primary} />
             <Text style={styles.sectionTitle}>Calendrier - 5 semaines</Text>
           </View>
-          {plan.weeklyProgression.map((week) => (
-            <View key={week.week} style={styles.weekCard}>
-              <View style={styles.weekHeaderRow}>
-                <View style={styles.weekBadge}>
-                  <Text style={styles.weekBadgeText}>S{week.week}</Text>
-                </View>
-                <Text style={styles.weekFocusText} numberOfLines={2}>
-                  {week.focus}
-                </Text>
-              </View>
-              <View style={styles.weekDaysRow}>
-                {plan.days.map((day) => (
-                  <View key={day.dayNumber} style={styles.weekDayPill}>
-                    <Text style={styles.weekDayPillText}>J{day.dayNumber}</Text>
+          {plan.weeklyProgression.map((week) => {
+            const { Icon: PhaseIcon, color: phaseColor } = getWeekPhaseIcon(
+              week.week,
+              plan.weeklyProgression.length,
+            );
+            return (
+              <View key={week.week} style={styles.weekCard}>
+                <View style={styles.weekHeaderRow}>
+                  <View style={[styles.weekBadge, { backgroundColor: `${phaseColor}1A` }]}>
+                    <PhaseIcon size={14} color={phaseColor} />
+                    <Text style={[styles.weekBadgeText, { color: phaseColor }]}>S{week.week}</Text>
                   </View>
-                ))}
+                  <Text style={styles.weekFocusText} numberOfLines={2}>
+                    {week.focus}
+                  </Text>
+                </View>
+                <View style={styles.weekDaysRow}>
+                  {plan.days.map((day) => (
+                    <View key={day.dayNumber} style={styles.weekDayPill}>
+                      <Text style={styles.weekDayPillText}>J{day.dayNumber}</Text>
+                    </View>
+                  ))}
+                </View>
               </View>
-            </View>
-          ))}
+            );
+          })}
 
           {/* Workout list */}
           <View style={[styles.sectionHeader, { marginTop: theme.spacing.lg }]}>
@@ -203,15 +243,29 @@ export default function WorkoutPlanScreen() {
           </View>
           {plan.days.map((day) => {
             const isExpanded = expandedDay === day.dayNumber;
+            const estimatedMinutes = estimateSessionMinutes(day.exercises);
             return (
               <View key={day.dayNumber} style={styles.dayCard}>
                 <TouchableOpacity
                   style={styles.dayCardHeader}
                   activeOpacity={0.85}
                   onPress={() => toggleDay(day.dayNumber)}>
+                  <View style={styles.dayCardNumberChip}>
+                    <Text style={styles.dayCardNumberText}>{day.dayNumber}</Text>
+                  </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.dayCardLabel}>{day.label}</Text>
                     <Text style={styles.dayCardFocus}>{day.muscleFocus}</Text>
+                    <View style={styles.dayCardStatsRow}>
+                      <View style={styles.dayCardStatItem}>
+                        <ListChecks size={11} color={theme.colors.textMuted} />
+                        <Text style={styles.dayCardStatText}>{day.exercises.length} exercices</Text>
+                      </View>
+                      <View style={styles.dayCardStatItem}>
+                        <Clock size={11} color={theme.colors.textMuted} />
+                        <Text style={styles.dayCardStatText}>~{estimatedMinutes} min</Text>
+                      </View>
+                    </View>
                   </View>
                   {isExpanded ? (
                     <ChevronUp size={20} color={theme.colors.textMuted} />
@@ -331,6 +385,24 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
     fontWeight: theme.typography.weights.bold,
   },
+  dayOptionHintPill: {
+    marginTop: theme.spacing.xs,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: theme.borderRadius.round,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+  },
+  dayOptionHintPillActive: {
+    backgroundColor: theme.colors.primary,
+  },
+  dayOptionHintText: {
+    fontSize: 9,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.textMuted,
+  },
+  dayOptionHintTextActive: {
+    color: theme.colors.white,
+  },
   generateBtn: {
     width: '100%',
   },
@@ -338,6 +410,17 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.lg,
     padding: theme.spacing.md,
     marginBottom: theme.spacing.lg,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  headerCardShine: {
+    position: 'absolute',
+    top: -40,
+    right: -60,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    transform: [{ rotate: '20deg' }],
   },
   headerTopRow: {
     flexDirection: 'row',
@@ -400,18 +483,17 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.sm,
   },
   weekBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: theme.borderRadius.round,
-    backgroundColor: theme.colors.orangeLight,
-    justifyContent: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
+    height: 32,
+    paddingHorizontal: 10,
+    borderRadius: theme.borderRadius.round,
     marginRight: theme.spacing.sm,
   },
   weekBadgeText: {
-    color: theme.colors.primary,
     fontSize: 12,
     fontWeight: theme.typography.weights.heavy,
+    marginLeft: 4,
   },
   weekFocusText: {
     flex: 1,
@@ -449,6 +531,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: theme.spacing.md,
   },
+  dayCardNumberChip: {
+    width: 32,
+    height: 32,
+    borderRadius: theme.borderRadius.sm,
+    backgroundColor: theme.colors.orangeLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: theme.spacing.sm,
+  },
+  dayCardNumberText: {
+    fontSize: 14,
+    fontWeight: theme.typography.weights.heavy,
+    color: theme.colors.primary,
+  },
   dayCardLabel: {
     fontSize: theme.typography.sizes.sm + 1,
     fontWeight: theme.typography.weights.bold,
@@ -458,6 +554,20 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: theme.colors.textMuted,
     marginTop: 2,
+  },
+  dayCardStatsRow: {
+    flexDirection: 'row',
+    marginTop: 6,
+  },
+  dayCardStatItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: theme.spacing.md,
+  },
+  dayCardStatText: {
+    fontSize: 10,
+    color: theme.colors.textMuted,
+    marginLeft: 3,
   },
   exerciseList: {
     borderTopWidth: 1,

@@ -76,6 +76,25 @@ class AramexService
         return $default;
     }
 
+    /**
+     * Normalize a name/text field before sending to Aramex. PHP's trim() only
+     * strips ASCII whitespace + NUL, so a field containing a non-breaking space
+     * or other unicode whitespace/control char (common with copy-pasted form
+     * input) looks "non-empty" to `=== ''` checks but reads as blank to Aramex,
+     * which then rejects the shipment with "Consignee name is required" even
+     * though our fallback logic thought a name was present.
+     */
+    private function cleanText(?string $raw): string
+    {
+        if (! $raw) {
+            return '';
+        }
+
+        $clean = preg_replace('/[\p{Z}\p{Cc}]+/u', ' ', $raw) ?? $raw;
+
+        return trim($clean);
+    }
+
     private function stripAccents(string $s): string
     {
         return strtr($s, [
@@ -131,9 +150,12 @@ class AramexService
         ];
 
         // ── Consignee (client) ───────────────────────────────────────────
-        $deliveryName  = trim(($bl->livraison_nom ?? '') . ' ' . ($bl->livraison_prenom ?? ''));
+        $deliveryName = trim($this->cleanText($bl->livraison_nom) . ' ' . $this->cleanText($bl->livraison_prenom));
         if ($deliveryName === '') {
-            $deliveryName = $client?->name ?? 'Client';
+            $deliveryName = $this->cleanText($client?->name);
+        }
+        if ($deliveryName === '') {
+            $deliveryName = 'Client';
         }
         $deliveryPhone = $bl->livraison_phone ?: $client?->phone_1 ?: $client?->phone_2 ?: '00000000';
         $deliveryPhone = preg_replace('/\s+/', '', $deliveryPhone);
@@ -245,6 +267,11 @@ class AramexService
                 'Reference5' => '',
             ],
         ];
+
+        Log::channel('daily')->info('Aramex CreateShipments request', [
+            'bl_id'    => $bl->id,
+            'consignee_contact' => $consignee['Contact'],
+        ]);
 
         try {
             $response = Http::timeout(30)

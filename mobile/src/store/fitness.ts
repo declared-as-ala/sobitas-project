@@ -86,9 +86,16 @@ export const useFitnessStore = create<FitnessState>()(
             } else if (item.type === 'progress') {
               await fitnessApi.post('/body-progress', item.payload);
             }
-          } catch (e) {
-            console.warn(`Sync failed for item ${item.id}, re-queuing`, e);
-            failedItems.push(item);
+          } catch (e: any) {
+            const status = e?.response?.status;
+            // 4xx means the payload itself was rejected (validation, auth, etc) — retrying the
+            // exact same payload will just fail again forever. Only re-queue on network/5xx errors.
+            if (status >= 400 && status < 500) {
+              console.warn(`Sync permanently failed for item ${item.id} (status ${status}), dropping.`, e?.response?.data);
+            } else {
+              console.warn(`Sync failed for item ${item.id}, re-queuing`, e);
+              failedItems.push(item);
+            }
           }
         }
 

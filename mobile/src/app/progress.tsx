@@ -48,7 +48,7 @@ export default function ProgressScreen() {
     const today = new Date().toISOString().split('T')[0];
     const payload = {
       weight: parseFloat(weight),
-      bodyFat: bodyFat ? parseFloat(bodyFat) : undefined,
+      bodyFatPercentage: bodyFat ? parseFloat(bodyFat) : undefined,
       date: today,
     };
 
