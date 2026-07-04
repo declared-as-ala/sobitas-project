@@ -160,6 +160,11 @@ class AramexService
         $deliveryPhone = $bl->livraison_phone ?: $client?->phone_1 ?: $client?->phone_2 ?: '00000000';
         $deliveryPhone = preg_replace('/\s+/', '', $deliveryPhone);
         $deliveryCity  = $this->normalizeCity($bl->livraison_ville ?: $bl->ville ?: $client?->ville);
+        // Aramex's Contact schema marks EmailAddress as mandatory alongside
+        // PersonName/PhoneNumber1/CellPhone; when it's blank (common — many
+        // clients only give a phone number) Aramex rejects the whole Contact
+        // block with the misleading "Consignee name is required" (ERR48).
+        $deliveryEmail = $bl->livraison_email ?: $bl->email ?: $client?->email ?: 'client@protein.tn';
 
         // Use the model's robust delivery-address accessor first (it already
         // combines livraison_*, billing and client address with fallbacks),
@@ -201,7 +206,7 @@ class AramexService
                 'PhoneNumber2Ext' => '',
                 'FaxNumber'      => '',
                 'CellPhone'      => $deliveryPhone,
-                'EmailAddress'   => $bl->livraison_email ?? $bl->email ?? $client?->email ?? '',
+                'EmailAddress'   => $deliveryEmail,
                 'Type'           => '',
             ],
         ];
@@ -269,8 +274,8 @@ class AramexService
         ];
 
         Log::channel('daily')->info('Aramex CreateShipments request', [
-            'bl_id'    => $bl->id,
-            'consignee_contact' => $consignee['Contact'],
+            'bl_id'     => $bl->id,
+            'consignee' => $consignee,
         ]);
 
         try {
