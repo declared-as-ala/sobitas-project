@@ -27,8 +27,8 @@ export type PageProps = {
   params: Promise<{ slug: string }>;
 };
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+// ISR (see app/[slug]/page.tsx): cacheable category HTML for better Core Web Vitals.
+export const revalidate = 600;
 
 /** Legacy/wrong slugs → canonical slug (from API). Ensures correct API response and SEO. */
 const slugAliases: Record<string, string> = {

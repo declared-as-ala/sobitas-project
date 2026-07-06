@@ -4,6 +4,7 @@ import { getArticleDetails, getLatestArticles } from '@/services/api';
 import { getStorageUrl } from '@/services/api';
 import { buildCanonicalUrl } from '@/util/canonical';
 import { buildArticleSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
+import { blogHref } from '@/util/blogSlug';
 import { BlogSeoBlock } from '@/app/blog/BlogSeoBlock';
 import { ArticleDetailClient } from './ArticleDetailClient';
 
@@ -101,7 +102,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
       [
         { name: 'Accueil', url: '/' },
         { name: 'Blog', url: '/blog' },
-        { name: article.designation_fr || article.slug || 'Article', url: `/blog/${article.slug || slug}` },
+        { name: article.designation_fr || article.slug || 'Article', url: blogHref(article.slug || slug) },
       ],
       baseUrl
     );

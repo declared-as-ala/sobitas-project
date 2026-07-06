@@ -11,6 +11,7 @@ import { ArrowLeft, Calendar, Clock, ArrowRight, Share2, Sparkles } from 'lucide
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { motion } from 'motion/react';
 import type { Article } from '@/types';
+import { blogHref } from '@/util/blogSlug';
 import { getStorageUrl } from '@/services/api';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -364,7 +365,7 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {relatedArticles.map((related) => (
-                  <Link key={related.id} href={`/blog/${related.slug}`}>
+                  <Link key={related.id} href={blogHref(related.slug)}>
                     <motion.article
                       initial={{ opacity: 0, y: 20 }}
                       whileInView={{ opacity: 1, y: 0 }}

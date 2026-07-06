@@ -23,12 +23,14 @@ export default function robots(): MetadataRoute.Robots {
     '/admin',
     '/admin/',
     '/order-confirmation/',
-    // Query-parameter URLs that produce duplicate content. Leave /product/ and /products/
-    // crawlable so Googlebot can honor the 301 and forget those URLs.
-    '/*?search=',
-    '/*?category=',
-    '/*?brand=',
-    '/*?page=',
+    // NOTE: We intentionally do NOT Disallow the faceted query-param URLs
+    // (?search=, ?brand=, ?category=, ?page=) any more.
+    // Those variants are now served with `<meta robots="noindex,follow">` and a
+    // clean rel=canonical (see app/shop/page.tsx). Blocking them in robots.txt
+    // would PREVENT Googlebot from recrawling to SEE the noindex — which is exactly
+    // why the previously-indexed `/shop?search=…` / `/shop?brand=…` URLs got stuck
+    // in the index ("blocked by robots.txt" + duplicate buckets in Search Console).
+    // Let them be crawled once so the noindex can drop them, then they fall out.
   ];
 
   // Liste exhaustive des robots d'IA majeurs à autoriser explicitement

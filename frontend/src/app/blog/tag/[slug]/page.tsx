@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { getArticlesByBlogTag, getStorageUrl } from '@/services/api';
 import { buildCanonicalUrl } from '@/util/canonical';
 import { buildBreadcrumbListSchema, buildItemListSchema } from '@/util/structuredData';
+import { blogHref } from '@/util/blogSlug';
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -51,7 +52,7 @@ export default async function BlogTagPage({ params, searchParams }: Props) {
     baseUrl
   );
   const itemListSchema = buildItemListSchema(
-    data.articles.map((a) => ({ name: a.designation_fr, url: `/blog/${a.slug}` })),
+    data.articles.map((a) => ({ name: a.designation_fr, url: blogHref(a.slug) })),
     baseUrl,
     { name: `Articles tag ${data.tag.name}` }
   );
@@ -63,7 +64,7 @@ export default async function BlogTagPage({ params, searchParams }: Props) {
       <h1 className="text-3xl font-bold mb-8">Tag: {data.tag.name}</h1>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {data.articles.map((article) => (
-          <Link key={article.id} href={`/blog/${article.slug}`} className="border rounded-xl p-4 hover:shadow-md transition">
+          <Link key={article.id} href={blogHref(article.slug)} className="border rounded-xl p-4 hover:shadow-md transition">
             {article.cover && (
               <img
                 src={getStorageUrl(article.cover, article.updated_at || article.created_at)}

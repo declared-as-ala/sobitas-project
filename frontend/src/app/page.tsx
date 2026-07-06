@@ -61,7 +61,10 @@ type LocalHomeSlide = {
 const LOCAL_HOME_SLIDES: LocalHomeSlide[] = [
   {
     id: 'home-hero-mobile',
-    cover: '/slides/mobile.png',
+    // Was '/slides/mobile.png' (2.26 MB). Use the optimized WebP that already exists in the
+    // same folder (~116 KB) — this is the mobile LCP image, so the ~20× size cut is a
+    // direct Largest-Contentful-Paint win on the device that drives 81% of clicks.
+    cover: '/slides/home-hero-mobile.webp',
     title: 'Proteines Premium',
     link: '/shop',
     type: 'mobile',
@@ -69,7 +72,8 @@ const LOCAL_HOME_SLIDES: LocalHomeSlide[] = [
   },
   {
     id: 'home-hero-web',
-    cover: '/slides/web.png',
+    // Was '/slides/web.png' (2.26 MB) → optimized WebP (~135 KB).
+    cover: '/slides/home-hero-web.webp',
     title: 'Proteines Premium',
     link: '/shop',
     type: 'web',

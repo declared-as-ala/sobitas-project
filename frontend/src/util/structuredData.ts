@@ -13,6 +13,26 @@ const RICH_RESULTS_TEST = 'https://search.google.com/test/rich-results';
 const PRODUCTION_ORIGIN = 'https://protein.tn';
 const SITE_BRAND_NAME = 'Protéine Tunisie';
 
+/**
+ * Store-wide return policy, emitted on every product Offer.
+ * Google Merchant / Search "return policy" enhancement requires this; gating it behind a
+ * per-product backend flag (which is set on 0 products) is what produced the Search Console
+ * warning "Your products are missing a return policy". These terms must match the human-readable
+ * policy page at /page/politique-de-remboursement.
+ */
+const DEFAULT_RETURN_POLICY = {
+  '@type': 'MerchantReturnPolicy',
+  applicableCountry: 'TN',
+  returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnPeriod',
+  merchantReturnDays: 7,
+  returnMethod: 'https://schema.org/ReturnByMail',
+  returnFees: 'https://schema.org/ReturnFeesCustomerPaying',
+} as const;
+
+/** Shipping destination is required by Google alongside shippingRate/deliveryTime. */
+const SHIPPING_DESTINATION = { '@type': 'DefinedRegion', addressCountry: 'TN' } as const;
+
+
 export type BreadcrumbItem = { name: string; url: string };
 
 /** Strip HTML tags for plain-text description (max length). */
@@ -187,12 +207,14 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
     shippingDetails: {
       '@type': 'OfferShippingDetails',
       shippingRate: { '@type': 'MonetaryAmount', value: shippingRateValue, currency: 'TND' },
+      shippingDestination: SHIPPING_DESTINATION,
       deliveryTime: {
         '@type': 'ShippingDeliveryTime',
         handlingTime: { '@type': 'QuantitativeValue', minValue: 0, maxValue: 1, unitCode: 'DAY' },
         transitTime: { '@type': 'QuantitativeValue', minValue: 1, maxValue: 3, unitCode: 'DAY' },
       },
     },
+    hasMerchantReturnPolicy: DEFAULT_RETURN_POLICY,
   };
 
   const untilRaw = product.schema?.price_valid_until ?? product.price_valid_until;
@@ -215,17 +237,8 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
     offers: offersPayload,
   };
 
-  // hasMerchantReturnPolicy: indicates if the product has a merchant return policy
-  if (product.schema?.has_merchant_return_policy === true) {
-    schema.hasMerchantReturnPolicy = {
-      '@type': 'MerchantReturnPolicy',
-      'applicableCountry': 'TN',
-      'returnPolicyCategory': 'https://schema.org/MerchantReturnFiniteReturnPeriod',
-      'merchantReturnDays': 7,
-      'returnMethod': 'https://schema.org/ReturnByMail',
-      'returnFees': 'https://schema.org/ReturnFeesCustomerPaying',
-    };
-  }
+  // Return policy is now emitted unconditionally on the Offer (offersPayload above),
+  // so no per-product gating here.
 
   if (dedupedImages.length > 0) {
     schema.image = dedupedImages;
@@ -328,12 +341,14 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
     shippingDetails: {
       '@type': 'OfferShippingDetails',
       shippingRate: { '@type': 'MonetaryAmount', value: shippingRateValue, currency: 'TND' },
+      shippingDestination: SHIPPING_DESTINATION,
       deliveryTime: {
         '@type': 'ShippingDeliveryTime',
         handlingTime: { '@type': 'QuantitativeValue', minValue: 0, maxValue: 1, unitCode: 'DAY' },
         transitTime: { '@type': 'QuantitativeValue', minValue: 1, maxValue: 3, unitCode: 'DAY' },
       },
     },
+    hasMerchantReturnPolicy: DEFAULT_RETURN_POLICY,
   };
 
   const sanitized: Record<string, unknown> = {
@@ -374,16 +389,7 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
 
   if (product.gtin?.trim()) sanitized.gtin = product.gtin.trim();
   if (product.mpn?.trim()) sanitized.mpn = product.mpn.trim();
-  if (product.schema?.has_merchant_return_policy === true) {
-    sanitized.hasMerchantReturnPolicy = {
-      '@type': 'MerchantReturnPolicy',
-      'applicableCountry': 'TN',
-      'returnPolicyCategory': 'https://schema.org/MerchantReturnFiniteReturnPeriod',
-      'merchantReturnDays': 7,
-      'returnMethod': 'https://schema.org/ReturnByMail',
-      'returnFees': 'https://schema.org/ReturnFeesCustomerPaying',
-    };
-  }
+  // Return policy emitted unconditionally on the Offer (offers.hasMerchantReturnPolicy above).
 
   return sanitized;
 }
@@ -493,7 +499,15 @@ export function buildLocalBusinessSchema(baseUrl: string): object {
 }
 
 /**
- * WebSite schema (sitewide) with SearchAction for sitelinks search box.
+ * WebSite schema (sitewide).
+ *
+ * NOTE: The SearchAction / sitelinks-searchbox block was intentionally REMOVED.
+ * (1) Google stopped supporting the sitelinks search box feature in late 2024, so
+ *     the markup no longer earns any rich result.
+ * (2) Its `urlTemplate` (`/shop?search={search_term_string}`) leaked into Google's
+ *     index verbatim as `/shop?search=%7Bsearch_term_string%7D` (visible in Search
+ *     Console), plus it legitimised `/shop?search=WHEY%20PROTEIN`-style parameter
+ *     URLs as crawlable duplicates. Removing it eliminates the source of that junk.
  */
 export function buildWebSiteSchema(baseUrl: string): object {
   const base = baseUrl.replace(/\/$/, '');
@@ -505,14 +519,6 @@ export function buildWebSiteSchema(baseUrl: string): object {
     alternateName: ['Protein Tunisie', 'Proteine Tunisie', 'protein.tn', 'SOBITAS'],
     url: base,
     inLanguage: 'fr-TN',
-    potentialAction: {
-      '@type': 'SearchAction',
-      target: {
-        '@type': 'EntryPoint',
-        urlTemplate: `${base}/shop?search={search_term_string}`,
-      },
-      'query-input': 'required name=search_term_string',
-    },
     publisher: { '@id': `${base}/#organization` },
   };
 }
@@ -616,7 +622,12 @@ export function buildArticleSchema(article: {
   tags?: Array<{ name?: string } | string>;
 }, baseUrl: string, imageUrl?: string): object {
   const base = baseUrl.replace(/\/$/, '');
-  const url = article.slug ? `${base}/blog/${article.slug}` : `${base}/blog`;
+  // Encode the slug as a single path segment: some article slugs contain Arabic text/spaces,
+  // which must not appear raw in the JSON-LD url/mainEntityOfPage (would be an invalid URL).
+  const encodedSlug = article.slug
+    ? (() => { try { return encodeURIComponent(decodeURIComponent(article.slug.trim())); } catch { return encodeURIComponent(article.slug.trim()); } })()
+    : '';
+  const url = encodedSlug ? `${base}/blog/${encodedSlug}` : `${base}/blog`;
   const plainDesc = (article.description_fr || article.description || '')
     .replace(/<[^>]*>/g, ' ')
     .replace(/\s+/g, ' ')
