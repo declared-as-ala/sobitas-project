@@ -23,9 +23,13 @@ const inter = Inter({
 
 const notoArabic = Noto_Sans_Arabic({
   subsets: ["arabic"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "600", "700"],
   display: "swap",
   variable: "--font-arabic",
+  // The site default is French; the Arabic subset must NOT be preloaded on every page
+  // (it added ~4 render-blocking font requests to a French-default site). It is still
+  // applied via the CSS variable when the user switches to Arabic (dir=rtl).
+  preload: false,
 });
 
 const SITE_TITLE_DEFAULT =
@@ -73,7 +77,9 @@ export const metadata: Metadata = {
     description: SITE_DESCRIPTION,
     images: [
       {
-        url: '/og-banner.jpg',
+        // Was '/og-banner.jpg', which does not exist in /public → every share/preview 404'd.
+        // Point at the real optimized hero until a purpose-built 1200×630 banner is designed.
+        url: '/slides/home-hero-web.webp',
         width: 1200,
         height: 630,
         alt: 'Protéine Tunisie — whey, créatine et compléments en Tunisie',
@@ -84,7 +90,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: SITE_TITLE_DEFAULT,
     description: SITE_DESCRIPTION,
-    images: ['/og-banner.jpg'],
+    images: ['/slides/home-hero-web.webp'],
   },
   robots: {
     index: true,
@@ -147,10 +153,9 @@ export default async function RootLayout({
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }} />
-        {/* Prerender important links for instant navigation */}
-        <link rel="prerender" href="/creatine" />
-        <link rel="prerender" href="/proteine-whey" />
-        <link rel="prerender" href="/shop" />
+        {/* NOTE: Removed <link rel="prerender"> hints. The legacy `prerender` hint is deprecated
+            (superseded by the Speculation Rules API) and it eagerly downloaded three full pages
+            on every single page load — wasted bandwidth that hurt Core Web Vitals for no gain. */}
       </head>
       <body className={cn("min-h-screen font-sans antialiased")}>
         {/* Google tag (gtag.js) — deferred with afterInteractive to avoid blocking FCP */}

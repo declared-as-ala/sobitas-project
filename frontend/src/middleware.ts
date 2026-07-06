@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { isCrawlerUA, CRAWLER_PREVIEW_PARAM } from '@/util/isCrawler';
+import { isReservedRouteSlug } from '@/util/productUrl';
 
 function redirectPreservingQuery(request: NextRequest, path: string): NextResponse {
   const url = new URL(path, request.url);
@@ -66,6 +68,26 @@ export async function middleware(request: NextRequest) {
   const legacyProducts = pathname.match(/^\/products\/(.+)$/);
   if (legacyProducts?.[1]) {
     return redirectPreservingQuery(request, `/product/${legacyProducts[1]}`);
+  }
+
+  // ── Feed the Crawler First ──────────────────────────────────────────────
+  // For crawlers only, REWRITE (not redirect) a canonical product URL
+  // /{subcategory}/{productSlug} to the zero-JS, fully-SSR crawler view.
+  // The bot keeps requesting/indexing the canonical URL (rewrite is invisible);
+  // it just receives complete server-rendered HTML + full structured data instead
+  // of a hydration-dependent client page. Runs AFTER the 301 blocks above so bots
+  // still follow legacy→canonical redirects first. Content stays at parity with the
+  // human page — this is dynamic rendering, not cloaking. See util/isCrawler.ts.
+  const wantsCrawlerView =
+    isCrawlerUA(request.headers.get('user-agent')) ||
+    searchParams.get(CRAWLER_PREVIEW_PARAM) === '1';
+  if (wantsCrawlerView) {
+    const productPath = pathname.match(/^\/([^/]+)\/([^/]+)\/?$/);
+    if (productPath && !isReservedRouteSlug(productPath[1])) {
+      return NextResponse.rewrite(
+        new URL(`/x-crawler/product/${encodeURIComponent(productPath[2])}`, request.url)
+      );
+    }
   }
 
   // Add no-cache headers for blog pages to ensure fresh content

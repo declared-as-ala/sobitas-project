@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     siteName: 'Protéine Tunisie',
     images: [
       {
-        url: 'https://protein.tn/og-banner.jpg',
+        url: 'https://protein.tn/slides/home-hero-web.webp',
         width: 1200,
         height: 630,
         alt: 'Protéine Tunisie — marques compléments',
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Brands — Compléments Alimentaires | Protéine Tunisie',
     description: 'Optimum Nutrition, Biotech USA et plus. Marques de protéines et compléments en Tunisie.',
-    images: ['https://protein.tn/og-banner.jpg'],
+    images: ['https://protein.tn/slides/home-hero-web.webp'],
   },
   alternates: {
     canonical: 'https://protein.tn/brands',

@@ -37,12 +37,18 @@ function buildRedirects() {
     p('/contact-us/', '/contact'),
 
     // ── Products / shop (generic) ─────────────────────────────────────────
+    // IMPORTANT: Do NOT add catch-alls for `/product/:path*` or `/products/:path*`
+    // here. next.config redirects run BEFORE middleware and the filesystem routes,
+    // so a catch-all would shadow the single-hop resolver pages
+    // (app/product/[slug]/page.tsx and app/products/[id]/page.tsx) that 301 each
+    // legacy product URL straight to its canonical /{sousCategorySlug}/{slug}.
+    // A blanket redirect to /shop destroys every legacy product URL's link equity
+    // and is the primary source of GSC's "page with redirect" + soft-404 buckets.
+    // The bare `/product` and `/products` index paths (no slug) are safe to fold to /shop.
     p('/products', '/shop'),
-    p('/products/:path*', '/shop'),
     p('/produit', '/shop'),
     p('/produit/:path*', '/shop'),
     p('/product', '/shop'),
-    p('/product/:path*', '/shop'),
     p('/product-tag/:path*', '/shop'),
     p('/produits-search/:path*', '/shop'),
     p('/musculation-products', '/shop'),

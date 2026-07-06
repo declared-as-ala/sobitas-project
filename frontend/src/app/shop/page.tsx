@@ -8,32 +8,32 @@ type ShopSearchParams = Promise<Record<string, string | string[] | undefined>>;
 export async function generateMetadata(props: { searchParams?: ShopSearchParams }): Promise<Metadata> {
   const searchParams = props.searchParams ? await props.searchParams : {};
   const pageNum = Math.max(1, parseInt(String(Array.isArray(searchParams.page) ? searchParams.page[0] : searchParams.page || '1'), 10) || 1);
-  const search = stripTrackingFromSearch(searchParams);
   const path = '/shop';
-  const canonical = buildCanonicalUrl(path, search ? `?${search}` : undefined);
+
+  // A "filtered" view = any faceting param (search/brand/category/orderby/sort…) beyond pure pagination.
+  // These must NOT self-canonicalize with their query string — that is what let
+  // /shop?search=WHEY%20PROTEIN, /shop?brand=9 and /shop?search={search_term_string}
+  // get indexed as duplicates. Filtered views are noindex,follow and canonicalise to
+  // the clean paginated URL so Google consolidates on the real listing.
+  const FACET_KEYS = new Set(['search', 'brand', 'category', 'orderby', 'sort', 'min_price', 'max_price', 'filter']);
+  const isFiltered = Object.keys(searchParams).some((k) => FACET_KEYS.has(k.toLowerCase()));
+
+  // Canonical carries ONLY pagination (page>1), never facets.
+  const canonicalQuery = pageNum > 1 ? `?page=${pageNum}` : undefined;
+  const canonical = buildCanonicalUrl(path, canonicalQuery);
   const totalPages = await getShopTotalPages();
-  const { prev, next } = getPrevNext(path, search, pageNum, totalPages);
+  const { prev, next } = getPrevNext(path, '', pageNum, totalPages);
 
   return {
     title: { absolute: 'Boutique Protéines & Compléments en Tunisie | Protéine Tunisie' },
     description: 'Découvrez nos protéines, créatine, gainer et BCAA en Tunisie. Large choix, livraison rapide. Filtrez par marque et catégorie.',
+    ...(isFiltered ? { robots: { index: false, follow: true } } : {}),
     alternates: {
       canonical,
       ...(prev && { prev }),
       ...(next && { next }),
     },
   };
-}
-
-function stripTrackingFromSearch(searchParams: Record<string, string | string[] | undefined>): string {
-  const p = new URLSearchParams();
-  const skip = /^(utm_[a-z_]*|fbclid|gclid|srsltid|msclkid|mc_[a-z_]*|ref|source)$/i;
-  Object.entries(searchParams).forEach(([key, value]) => {
-    if (skip.test(key)) return;
-    const v = Array.isArray(value) ? value[0] : value;
-    if (v != null && v !== '') p.set(key, v);
-  });
-  return p.toString();
 }
 
 async function getShopTotalPages(): Promise<number> {

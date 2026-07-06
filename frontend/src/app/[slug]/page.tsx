@@ -14,8 +14,12 @@ export type RootSlugPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+// ISR instead of force-dynamic: category/brand/CMS pages are the primary ranking
+// targets, so their HTML must be cacheable. force-dynamic + revalidate:0 forced a
+// live multi-call Laravel render on EVERY crawl — a direct cause of the fleet-wide
+// "needs improvement" Core Web Vitals (slow TTFB, 0 "good" URLs). 10-min ISR keeps
+// content fresh enough for a catalog while serving cached HTML to bots and users.
+export const revalidate = 600;
 
 function isNotFoundError(error: unknown): boolean {
   if (error instanceof ApiError) return error.status === 404;

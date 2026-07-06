@@ -14,6 +14,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { SafeImage } from '@/app/components/SafeImage';
 import { BlogCardSkeleton } from '@/app/components/BlogCardSkeleton';
+import { blogHref } from '@/util/blogSlug';
 
 interface BlogPageClientProps {
   articles: Article[];
@@ -362,7 +363,7 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
                       transition={{ delay: index * 0.05 }}
                       className="group"
                     >
-                      <Link href={`/blog/${article.slug}`} className="block h-full">
+                      <Link href={blogHref(article.slug)} className="block h-full">
                         <div className="bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm hover:shadow-2xl hover:border-red-500/40 dark:hover:border-red-500/40 transition-all duration-300 h-full flex flex-col group-hover:-translate-y-1">
                           <div className="relative aspect-[4/3] overflow-hidden bg-gray-100 dark:bg-gray-800 min-h-[200px] sm:min-h-[240px] md:min-h-[280px] lg:min-h-[320px]">
                             {article.cover ? (

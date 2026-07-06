@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { getAllProducts, getAllArticles, getCategories, getAllBrands, getBlogCategories, getBlogTags, getAppPages } from '@/services/api';
 import type { Product, Article, Category, Brand, SubCategory, Page } from '@/types';
-import { buildProductUrl, getProductPrimarySubCategory } from '@/util/productUrl';
+import { getProductPrimarySubCategory } from '@/util/productUrl';
 import { listCategorySeoSlugs } from '@/util/categorySeoContent';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
@@ -104,6 +104,10 @@ function encodeSitemapUrl(url: string): string {
 export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
   const seenUrls = new Set<string>();
   const sitemapEntries: MetadataRoute.Sitemap = [];
+  // Lowercased slugs of categories/subcategories that actually exist in the backend.
+  // Used to gate the "double insurance" content-file block below so we never emit a
+  // root URL for a slug that 404s (e.g. /whey-protein) or 301s (e.g. /mass-gainer).
+  const liveCategorySlugs = new Set<string>();
 
   // Add static pages with dedup
   for (const entry of staticPages) {
@@ -124,23 +128,8 @@ export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
     getBlogTags(),
   ]);
 
-  // Create a subcategory slug map to build beautiful hierarchical URLs: /{subCategorySlug}/{productSlug}
-  const subCategorySlugMap = new Map<number, string>();
-  try {
-    if (categories.status === 'fulfilled' && Array.isArray(categories.value)) {
-      categories.value.forEach((cat: Category) => {
-        if (cat.sous_categories && Array.isArray(cat.sous_categories)) {
-          cat.sous_categories.forEach((sub: SubCategory) => {
-            if (sub.id && sub.slug) {
-              subCategorySlugMap.set(sub.id, sub.slug);
-            }
-          });
-        }
-      });
-    }
-  } catch (err) {
-    console.error('Error building subcategory slug map for products:', err);
-  }
+  // Product URLs derive their subcategory via getProductPrimarySubCategory (same source
+  // as canonical), so no separate id→slug map is needed here.
 
   // Fetch products in smaller batches with pagination
   try {
@@ -166,18 +155,24 @@ export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
       const productUrls = allProducts
         .filter((p: Product) => p.slug && (p.publier == 1 || p.publier === undefined))
         .map((p: Product) => {
-          // Resolve subcategory slug using our map to form beautiful SEO URLs
-          const subCategorySlug = p.sous_categorie_id ? subCategorySlugMap.get(p.sous_categorie_id) : undefined;
-          const url = subCategorySlug 
-            ? `${BASE_URL}/${encodeURIComponent(subCategorySlug)}/${encodeURIComponent(p.slug)}`
-            : `${BASE_URL}/shop/${encodeURIComponent(p.slug)}`;
+          // Derive the subcategory the SAME way the canonical/link builder does
+          // (getProductPrimarySubCategory → sous_categories[0] then sous_categorie),
+          // NOT via a separate sous_categorie_id map. When the two disagree, the sitemap
+          // lists /A/slug while the page's rel=canonical says /B/slug → Google reports
+          // "Google chose a different canonical". Using one source keeps them identical.
+          const subCategorySlug = getProductPrimarySubCategory(p)?.slug;
+          // Skip products with no resolvable subcategory instead of emitting
+          // /shop/{slug}, which middleware immediately 301s → a self-redirecting
+          // sitemap URL (a "page with redirect" in Search Console).
+          if (!subCategorySlug) return null;
           return {
-            url,
+            url: `${BASE_URL}/${encodeURIComponent(subCategorySlug)}/${encodeURIComponent(p.slug)}`,
             lastModified: getLastModified(p as ItemWithDates),
             changeFrequency: 'weekly' as const,
             priority: 0.7,
           };
-        });
+        })
+        .filter((e): e is NonNullable<typeof e> => e !== null);
       for (const entry of productUrls) {
         const encoded = encodeSitemapUrl(entry.url);
         if (!seenUrls.has(encoded)) {
@@ -194,6 +189,10 @@ export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
     if (categories.status === 'fulfilled' && Array.isArray(categories.value) && categories.value.length > 0) {
       categories.value.forEach((category: Category) => {
         if (!category.slug) return;
+        liveCategorySlugs.add(category.slug.toLowerCase());
+        (category.sous_categories ?? []).forEach((sc: SubCategory) => {
+          if (sc.slug) liveCategorySlugs.add(sc.slug.toLowerCase());
+        });
         const catIdx =
           category.sitemap_include !== false &&
           category.robots_index !== false;
@@ -236,13 +235,20 @@ export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
     console.error('Error processing categories for sitemap:', error);
   }
 
-  // Double Insurance: Add every category/subcategory that has localized premium SEO JSON content
+  // Double Insurance: add category/subcategory slugs that have localized premium SEO JSON content,
+  // but ONLY when the slug corresponds to a category/subcategory that actually exists in the backend.
+  // Emitting content-file names blindly previously pushed 404 URLs (/whey-protein), redirecting URLs
+  // (/mass-gainer → /gainers-proteines) and mixed-case duplicates (/Intra-Workout) into the sitemap.
   try {
     const seoSlugs = await listCategorySeoSlugs();
     if (Array.isArray(seoSlugs) && seoSlugs.length > 0) {
       seoSlugs.forEach((slug) => {
-        if (!slug || slug.trim() === '') return;
-        const url = `${BASE_URL}/${encodeURIComponent(slug.trim())}`;
+        const clean = (slug ?? '').trim();
+        if (!clean) return;
+        // Gate against live backend slugs (case-insensitive). If the category API failed to load,
+        // liveCategorySlugs is empty and we skip these rather than risk emitting broken URLs.
+        if (!liveCategorySlugs.has(clean.toLowerCase())) return;
+        const url = `${BASE_URL}/${encodeURIComponent(clean)}`;
         if (!seenUrls.has(url)) {
           seenUrls.add(url);
           sitemapEntries.push({
