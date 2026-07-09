@@ -389,7 +389,11 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
 
   if (product.gtin?.trim()) sanitized.gtin = product.gtin.trim();
   if (product.mpn?.trim()) sanitized.mpn = product.mpn.trim();
-  // Return policy emitted unconditionally on the Offer (offers.hasMerchantReturnPolicy above).
+  // The return policy is emitted (validly) on the Offer above. Remove any PRODUCT-level
+  // hasMerchantReturnPolicy that leaked in via `...source` — the backend's copy can carry a
+  // stale/invalid returnPolicyCategory, which is what triggers Google's "Invalid enum value
+  // in field returnPolicyCategory" warning even though our Offer-level policy is valid.
+  delete sanitized.hasMerchantReturnPolicy;
 
   return sanitized;
 }
