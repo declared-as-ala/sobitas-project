@@ -110,6 +110,26 @@ function buildRedirects() {
     // Old blog slug with encoded accent (é = %C3%A9)
     p('/quand-prendre-de-la-cr%C3%A9atine-le-guide-complet-pour-optimiser-vos-resultats-2025', '/blog'),
 
+    // ── Legacy category roots (from the GSC "Not found (404)" export) ─────
+    // Old WooCommerce category slugs that changed name → current category. Destinations
+    // verified against the live taxonomy. (Genuinely-removed products are left to 404.)
+    p('/whey-protein', '/whey-isolate'),
+    p('/proteines-en-poudre', '/proteines'),
+    p('/proteine-en-poudre', '/proteines'),
+    p('/proteines-completes', '/proteines'),
+    p('/proteines-pour-cheveux', '/beaute-cheveux'),
+    p('/barre-de-proteinees', '/proteines'),
+    p('/gainers-riches-en-proteines', '/gainers-proteines'),
+    p('/gainers-haute-energie', '/gainers-proteines'),
+    p('/carbohydrates', '/glucides'),
+    p('/materiel-de-musculation', '/musculation'),
+    p('/ceinture-de-musculation', '/musculation'),
+    p('/gants-de-musculation-et-fitness', '/musculation'),
+    p('/bandes-de-soutien-musculaire', '/musculation'),
+    p('/shakers-et-bouteilles-sportives', '/accessoires'),
+    p('/equipement-cardio-fitness', '/cardio-fitness'),
+    p('/t-shirts-de-sport', '/vetements'),
+
     // ── /brand/:slug  (specific first → catch-all to /brands) ────────────
     p('/brand/BIOTECH-USA', '/biotech-usa'),
     p('/brand/BPI-SPORTS', '/bpi-sports'),
