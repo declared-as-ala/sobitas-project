@@ -2,12 +2,14 @@ import { Metadata } from 'next';
 import { getAllProducts } from '@/services/api';
 import { hasValidPromo } from '@/util/productPrice';
 import { isInStock } from '@/util/cartStock';
+import { buildCanonicalUrl } from '@/util/canonical';
 import { OffresPageClient } from './OffresPageClient';
 import type { Product } from '@/types';
 
 export const metadata: Metadata = {
-  title: { absolute: 'Toutes les offres & Promos | Protéine Tunisie' },
-  description: 'Découvrez tous nos produits en promotion. Protéines, créatine, compléments à prix réduits. Livraison en Tunisie.',
+  title: { absolute: 'Toutes les Offres & Promos Compléments | Protéine Tunisie' },
+  description: 'Découvrez tous nos produits en promotion : whey, créatine, gainer et compléments à prix réduits. Livraison rapide partout en Tunisie.',
+  alternates: { canonical: buildCanonicalUrl('/offres') },
 };
 
 // Force dynamic rendering to ensure fresh data on every request
