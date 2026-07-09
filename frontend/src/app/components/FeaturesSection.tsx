@@ -268,15 +268,15 @@ function FeatureCard({
           <motion.div
             className="mb-5 sm:mb-6 flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-red-100 to-red-200/80 dark:from-red-950/80 dark:to-red-900/60 shadow-lg shadow-red-900/10 dark:shadow-red-950/30 border border-red-200/50 dark:border-red-800/40"
             animate={{
-              y: hovered ? -4 : [0, -3, 0],
+              // Removed the permanent idle float (y: [0,-3,0] with repeat: Infinity): it ran a
+              // forever-loop on every card for all visitors — continuous main-thread work / battery
+              // drain on the 81%-mobile audience. Hover lift is kept.
+              y: hovered ? -4 : 0,
               boxShadow: hovered
                 ? '0 0 32px -4px rgba(220,38,38,0.4), inset 0 1px 0 rgba(255,255,255,0.8)'
                 : '0 4px 16px -4px rgba(220,38,38,0.2), inset 0 1px 0 rgba(255,255,255,0.6)',
-              transition: {
-                y: hovered ? { duration: 0.25 } : { duration: 3, repeat: Infinity, repeatType: 'reverse' },
-                boxShadow: { duration: 0.25 },
-              },
             }}
+            transition={{ duration: 0.25 }}
           >
             <span className="text-red-600 dark:text-red-400 w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full">
               <Icon isHovered={hovered} />

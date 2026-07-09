@@ -111,19 +111,19 @@ export function HomePageClient({ accueil, slides, heroMobileFirst, heroDesktopFi
         {/* Above the fold - Critical content - Hero must render first */}
         <HeroSlider slides={slides} mobileFirst={heroMobileFirst} desktopFirst={heroDesktopFirst} />
         {/* SEO: single visible H1 for main query "proteine tunisie" + internal link creatine */}
-        <section className="text-center py-4 px-4 bg-white dark:bg-gray-950" aria-label="Titre principal">
-          <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">
+        <section className="text-center pt-6 pb-3 sm:pt-8 sm:pb-4 px-4 bg-white dark:bg-gray-950" aria-label="Titre principal">
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900 dark:text-white">
             Protéine Tunisie
           </h1>
-          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+          <p className="mt-2 text-sm sm:text-base text-gray-600 dark:text-gray-400">
             <Link href="/proteine-whey" className="text-red-600 dark:text-red-400 hover:underline font-medium">
-              whey protein
+              Whey protein
             </Link>
-            {' '}et{' '}
+            {', '}
             <Link href="/creatine" className="text-red-600 dark:text-red-400 hover:underline font-medium">
-              créatine en Tunisie
+              créatine
             </Link>
-            {' '}– compléments alimentaires – Livraison rapide à Sousse, Tunis, Sfax et dans toute la Tunisie
+            {' '}et compléments alimentaires — livraison rapide partout en Tunisie.
           </p>
         </section>
         {/* FeaturesSection - Fixed height to prevent CLS */}
@@ -137,7 +137,6 @@ export function HomePageClient({ accueil, slides, heroMobileFirst, heroDesktopFi
           <ProductSection
             id="products"
             title="Nouveaux Produits"
-            subtitle="Découvrez nos dernières nouveautés"
             products={newProducts as any}
             showBadge
             badgeText="New"
@@ -147,7 +146,6 @@ export function HomePageClient({ accueil, slides, heroMobileFirst, heroDesktopFi
         {(safeAccueil.best_sellers?.length ?? 0) > 0 && (
           <ProductSection
             title="Produits les plus vendus"
-            subtitle="Les produits les plus populaires"
             products={bestSellers as any}
             showBadge
             badgeText="Top Vendu"
@@ -162,7 +160,6 @@ export function HomePageClient({ accueil, slides, heroMobileFirst, heroDesktopFi
           <ProductSection
             id="packs"
             title="Nos Packs"
-            subtitle="Économisez avec nos packs spéciaux"
             products={packs as any}
             viewAllHref="/packs"
             viewAllLabel="Voir tous les packs"
@@ -194,33 +191,11 @@ export function HomePageClient({ accueil, slides, heroMobileFirst, heroDesktopFi
               ))}
             </nav>
             <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
-              Chez <strong>Protein.tn</strong>, nous accompagnons depuis plusieurs années les athlètes et passionnés de
-              fitness à travers toute la <strong>nutrition sportive Tunisie</strong>. Sur <strong>Proteine Tunisie</strong>,
-              vous trouvez une sélection rigoureuse de protéines, gainers, acides aminés et vitamines pensée pour la
-              performance, la prise de masse ou la sèche. Chaque référence est choisie pour sa traçabilité, son profil
-              nutritionnel et son rapport qualité / prix afin de vous garantir une expérience fiable à chaque
-              commande.
-            </p>
-            <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
-              Notre gamme <strong>proteine Tunisie</strong> couvre tous les besoins : <strong>whey Tunisie</strong> pour
-              une assimilation rapide après l&apos;entraînement, isolates pour les sportifs exigeants, protéines multi-sources
-              pour les collations, mais aussi options végétales pour ceux qui privilégient une alimentation plant-based.
-              Nous proposons également une large sélection de <strong>créatine Tunisie</strong> (monohydrate, en poudre ou
-              en capsules) afin de soutenir la force, la récupération et les performances sur le long terme.
-            </p>
-            <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
-              Pour compléter votre programme, découvrez nos formules ciblées de
-              <strong> complément alimentaire Tunisie</strong> : BCAA, oméga 3, multivitamines, brûleurs de graisses et
-              boosters pré-workout. Chaque <strong>complément alimentaire</strong> est détaillé avec sa fiche produit,
-              ses dosages et ses conseils d&apos;utilisation afin de vous aider à faire le bon choix en fonction de votre
-              niveau et de vos objectifs.
-            </p>
-            <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
-              En choisissant Protein.tn, vous profitez d&apos;une expertise locale sur la
-              <strong> nutrition sportive Tunisie</strong>, d&apos;un service client réactif et d&apos;une livraison rapide dans
-              tout le pays. Que vous soyez débutant en musculation, athlète confirmé ou coach sportif, notre équipe est
-              disponible pour vous orienter vers les meilleurs produits et vous aider à construire une routine efficace
-              et durable.
+              Chez <strong>Protein.tn</strong>, nous accompagnons les sportifs tunisiens avec une sélection rigoureuse de{' '}
+              <strong>protéines</strong>, <strong>whey</strong>, <strong>créatine</strong>, gainers et{' '}
+              <strong>compléments alimentaires</strong> (BCAA, oméga 3, vitamines, brûleurs) — pour la performance, la
+              prise de masse ou la sèche. Chaque produit est choisi pour son authenticité, son profil nutritionnel et son
+              rapport qualité / prix, avec une fiche détaillée pour vous aider à faire le bon choix.
             </p>
             <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white mt-6 mb-3">
               Livraison en Tunisie & avis clients
