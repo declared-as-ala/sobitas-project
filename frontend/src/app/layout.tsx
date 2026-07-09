@@ -10,6 +10,7 @@ import { GlobalLoader } from "@/app/components/GlobalLoader";
 import { NavigationHandler } from "@/app/components/NavigationHandler";
 import { DeferredToaster } from "@/app/components/DeferredToaster";
 import { InstallAppBanner } from "@/app/components/InstallAppBanner";
+import { WhatsAppFab } from "@/app/components/WhatsAppFab";
 
 const inter = Inter({
   subsets: ["latin", "latin-ext"],
@@ -176,6 +177,7 @@ export default async function RootLayout({
             <GlobalLoader />
             <DeferredToaster />
             <InstallAppBanner />
+            <WhatsAppFab />
           </Providers>
         </ThemeProvider>
       </body>
