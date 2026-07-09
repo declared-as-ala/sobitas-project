@@ -1348,27 +1348,10 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     })}
                   </div>
 
-                  {/* What customers say */}
-                  <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                    <h3 className="font-semibold text-sm text-gray-900 dark:text-white mb-2">Ce que disent les clients</h3>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-                      Les clients apprécient la qualité élevée et les ingrédients détaillés de ce produit. 
-                      Beaucoup soulignent son efficacité et sa facilité d'utilisation. 
-                      La qualité du produit et son rapport qualité-prix sont également salués.
-                    </p>
-                  </div>
-
-                  {/* Review Highlights */}
-                  <div>
-                    <h3 className="font-semibold text-sm text-gray-900 dark:text-white mb-2">Points forts des avis</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {['Qualité élevée', 'Efficace', 'Bon rapport qualité-prix', 'Facile à utiliser'].map((tag) => (
-                        <Badge key={tag} className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-0 px-2 py-1 text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
+                  {/* Removed: fabricated "Ce que disent les clients" summary + hardcoded
+                      "Points forts des avis" badges. They rendered identical, invented review
+                      sentiment on EVERY product regardless of real reviews — a trust liability and
+                      a Google review-content policy risk. The real, per-product reviews render below. */}
 
                   {/* Sample Reviews */}
                   <div className="space-y-2 sm:space-y-3">
