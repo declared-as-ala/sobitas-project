@@ -163,7 +163,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
         {items.length > 0 && (
           <DrawerFooter className="border-t border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/80 p-4">
             <div className="flex justify-between items-center mb-4">
-              <span className="text-base font-semibold text-gray-900 dark:text-white">Totale</span>
+              <span className="text-base font-semibold text-gray-900 dark:text-white">Total</span>
               <span className="text-xl font-bold text-red-600 dark:text-red-400 tabular-nums">
                 {formatCurrency(totalPrice)}
               </span>

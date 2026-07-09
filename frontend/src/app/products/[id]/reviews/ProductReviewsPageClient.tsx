@@ -336,27 +336,9 @@ export function ProductReviewsPageClient({ product }: ProductReviewsPageClientPr
               </div>
             )}
 
-            {/* What customers say */}
-            <div className="p-4 sm:p-5 lg:p-6 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
-              <h3 className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white mb-2 sm:mb-3">Ce que disent les clients</h3>
-              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                Les clients apprécient la qualité élevée et les ingrédients détaillés de ce produit. 
-                Beaucoup soulignent son efficacité et sa facilité d'utilisation. 
-                La qualité du produit et son rapport qualité-prix sont également salués.
-              </p>
-            </div>
-
-            {/* Review Highlights */}
-            <div className="p-4 sm:p-5 lg:p-6 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
-              <h3 className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white mb-2 sm:mb-3">Points forts des avis</h3>
-              <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                {['Qualité élevée', 'Efficace', 'Bon rapport qualité-prix', 'Facile à utiliser', 'Livraison rapide'].map((tag) => (
-                  <span key={tag} className="inline-flex items-center gap-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium">
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </div>
+            {/* Removed: fabricated "Ce que disent les clients" summary + hardcoded
+                "Points forts des avis" badges (identical invented sentiment on every product).
+                Real per-product reviews render below. */}
             {/* Search Reviews */}
             <div className="p-4 sm:p-5 lg:p-6 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
               <h3 className="font-semibold text-xs sm:text-sm lg:text-base text-gray-900 dark:text-white mb-2 sm:mb-3">Rechercher dans les avis</h3>
