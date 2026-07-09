@@ -37,16 +37,16 @@ export const ProductSection = memo(function ProductSection({
   imageContext = 'default',
 }: ProductSectionProps) {
   return (
-    <section id={id} className="py-8 sm:py-12 md:py-20 bg-white dark:bg-gray-950">
+    <section id={id} className="py-12 sm:py-16 lg:py-20 bg-white dark:bg-gray-950">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between mb-10 md:mb-14">
-          <div className="mb-4 md:mb-0">
-            <h2 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white mb-2 sm:mb-3 bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
+        <div className="flex flex-row items-end justify-between gap-4 mb-8 sm:mb-10">
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
               {title}
             </h2>
             {subtitle && (
-              <p className="text-sm sm:text-lg md:text-xl text-gray-600 dark:text-gray-400">
+              <p className="mt-1.5 text-sm sm:text-base text-gray-600 dark:text-gray-400">
                 {subtitle}
               </p>
             )}
@@ -63,7 +63,7 @@ export const ProductSection = memo(function ProductSection({
         </div>
 
         {/* Products Grid - Optimized responsive layout */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
           {products.map((product) => (
             <ProductCard
               key={product.id}
