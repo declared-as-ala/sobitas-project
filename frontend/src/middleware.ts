@@ -12,6 +12,23 @@ function redirectPreservingQuery(request: NextRequest, path: string): NextRespon
   return NextResponse.redirect(url, 301);
 }
 
+/**
+ * Slugify a brand/category name the same way the app's nameToSlug does, so legacy URLs
+ * like /brand/BIOTECH USA/6 or /brand/OSTROVIT resolve to the real page (/biotech-usa,
+ * /ostrovit). Lowercases, strips accents, and collapses non-alphanumerics to hyphens.
+ */
+function slugifyName(name: string): string {
+  let decoded = name;
+  try { decoded = decodeURIComponent(name); } catch { /* keep raw */ }
+  return decoded
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .trim();
+}
+
 /** Resolve /shop/:slug → /{subcat}/{slug} or /{slug} via backend API. Returns null on failure. */
 async function resolveShopSlug(slug: string): Promise<string | null> {
   const apiBase =
@@ -54,14 +71,32 @@ export async function middleware(request: NextRequest) {
     // If API is unreachable, fall through to the page (it handles it too)
   }
 
+  // Legacy locale-prefixed URLs (old i18n scheme): /en/... , /ar/... → strip the prefix.
+  // Locale is client-side now, so /ar/shop/x and /en/category/y should land on the real URL.
+  const legacyLocale = pathname.match(/^\/(en|ar)(\/.*)?$/);
+  if (legacyLocale) {
+    return redirectPreservingQuery(request, legacyLocale[2] || '/');
+  }
+
+  // Legacy review sub-pages: /product/{slug}/reviews or /products/{slug}/reviews →
+  // the product resolver (single-hop to canonical). Must run before the /products/ rule.
+  const legacyReviews = pathname.match(/^\/products?\/(.+?)\/reviews\/?$/);
+  if (legacyReviews?.[1]) {
+    return redirectPreservingQuery(request, `/product/${legacyReviews[1]}`);
+  }
+
   const legacyCategory = pathname.match(/^\/category\/([^/]+)\/?$/);
   if (legacyCategory?.[1]) {
     return redirectPreservingQuery(request, `/${legacyCategory[1]}`);
   }
 
-  const legacyBrand = pathname.match(/^\/brand\/([^/]+)\/?$/);
+  // Legacy brand URLs: /brand/{NAME} or /brand/{NAME}/{id}. The NAME must be slugified
+  // (e.g. "BIOTECH USA" → "biotech-usa") — the old code redirected to the RAW name, which
+  // 404'd for every multi-word/uppercase brand. Lands on /{brand-slug}, which resolves.
+  const legacyBrand = pathname.match(/^\/brand\/(.+?)(?:\/\d+)?\/?$/);
   if (legacyBrand?.[1]) {
-    return redirectPreservingQuery(request, `/${legacyBrand[1]}`);
+    const slug = slugifyName(legacyBrand[1]);
+    if (slug) return redirectPreservingQuery(request, `/${slug}`);
   }
 
   // Legacy /products/ URLs → /product/ (which resolves and 301s to canonical)
