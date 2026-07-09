@@ -25,21 +25,25 @@ function nameToSlug(name: string): string {
 
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
-export default function BrandsPageClient() {
+export default function BrandsPageClient({ initialBrands = [] }: { initialBrands?: Brand[] }) {
   const router = useRouter();
-  const [brands, setBrands] = useState<Brand[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // Seed from the server-rendered brands so the list is present on first paint (SEO + no CLS).
+  const [brands, setBrands] = useState<Brand[]>(initialBrands);
+  const [isLoading, setIsLoading] = useState(initialBrands.length === 0);
   const [searchQuery, setSearchQuery] = useState('');
   const [navigatingToBrand, setNavigatingToBrand] = useState(false);
   const [activeLetter, setActiveLetter] = useState<string | null>(null);
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
+    // Server already provided the brands — no client refetch needed. Only fetch as a
+    // fallback if the server fetch failed (initialBrands empty).
+    if (initialBrands.length > 0) return;
     getAllBrands()
       .then(data => setBrands(data))
       .catch(err => console.error('Error fetching brands:', err))
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [initialBrands.length]);
 
   const filteredBrands = useMemo(() => {
     if (!searchQuery.trim()) return brands;

@@ -1,5 +1,12 @@
 import { Metadata } from 'next';
 import BrandsPageClient from './BrandsPageClient';
+import { getAllBrands } from '@/services/api';
+import { buildBreadcrumbListSchema } from '@/util/structuredData';
+
+// ISR: the brand list changes rarely, so cache the server-rendered page.
+export const revalidate = 3600;
+
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
 
 export const metadata: Metadata = {
   title: { absolute: 'Brands — Compléments Alimentaires | Protéine Tunisie' },
@@ -31,6 +38,22 @@ export const metadata: Metadata = {
   },
 };
 
-export default function BrandsPage() {
-  return <BrandsPageClient />;
+export default async function BrandsPage() {
+  // Fetch server-side so the brand list (and its links) is in the initial HTML.
+  // Previously the client fetched brands on mount, so crawlers saw an empty
+  // "Chargement des marques…" shell — the /brands page was effectively unindexable.
+  const initialBrands = await getAllBrands().catch(() => []);
+  const breadcrumbSchema = buildBreadcrumbListSchema(
+    [
+      { name: 'Accueil', url: '/' },
+      { name: 'Marques', url: '/brands' },
+    ],
+    BASE_URL
+  );
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
+      <BrandsPageClient initialBrands={initialBrands} />
+    </>
+  );
 }
