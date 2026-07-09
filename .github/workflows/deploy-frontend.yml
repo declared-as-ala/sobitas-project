@@ -98,7 +98,11 @@ jobs:
             cd "$APP_DIR"
 
             echo "🔐 Logging in to GHCR..."
-            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u declared-as-ala --password-stdin
+            # Non-fatal: if the GHCR_PAT secret is expired/invalid, a login failure must NOT
+            # abort the deploy when the image is public. The `docker pull` below stays strict
+            # under `set -e`, so a genuinely unreachable image still fails honestly (no false success).
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u declared-as-ala --password-stdin \
+              || echo "⚠️  GHCR login failed (token likely expired) — continuing; pull will succeed only if the image is public."
 
             echo "📦 Pull latest frontend image..."
             docker pull ghcr.io/declared-as-ala/sobitas-frontend:latest
