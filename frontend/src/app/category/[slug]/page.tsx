@@ -127,19 +127,24 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     // Ensure brand suffix — API-sourced titles may omit it
     // Skip when title already includes the domain brand (Protein.tn) to avoid double suffix
     const brand = ' | Protéine Tunisie';
-    if (
-      !metaTitle.toLowerCase().includes('protéine') &&
-      !metaTitle.toLowerCase().includes('proteine') &&
-      !metaTitle.toLowerCase().includes('protein.tn')
-    ) {
-      metaTitle = (metaTitle + brand).slice(0, META_TITLE_MAX_LEN);
-    }
-    if (metaTitle.length > META_TITLE_MAX_LEN) {
+    const hasBrand =
+      /protéine|proteine|protein\.tn/i.test(metaTitle);
+    if (!hasBrand) {
+      // Trim the BASE title on a word boundary BEFORE appending the full brand suffix,
+      // so the brand (and "Tunisie") is never chopped mid-word. Previously
+      // `(metaTitle + brand).slice(0, MAX)` could mangle the suffix to "…Protéine Tuni".
+      const maxBase = META_TITLE_MAX_LEN - brand.length;
+      if (metaTitle.length > maxBase) {
+        const cut = metaTitle.slice(0, maxBase);
+        const lastSpace = cut.lastIndexOf(' ');
+        metaTitle = (lastSpace > 30 ? cut.slice(0, lastSpace) : cut).trim();
+      }
+      metaTitle = metaTitle + brand;
+    } else if (metaTitle.length > META_TITLE_MAX_LEN) {
       const cut = metaTitle.slice(0, META_TITLE_MAX_LEN - 1);
       const lastSpace = cut.lastIndexOf(' ');
       metaTitle = lastSpace > 40 ? cut.slice(0, lastSpace) : cut;
     }
-    metaTitle = metaTitle.slice(0, META_TITLE_MAX_LEN);
     const tunisiaKeywords = getTunisiaKeywordsForCategory(canonicalSlug);
     const description =
       merged.metaDescription && merged.metaDescription.length <= 500

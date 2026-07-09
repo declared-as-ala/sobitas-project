@@ -1,11 +1,13 @@
 import { Metadata } from 'next';
 import { getFAQs } from '@/services/api';
 import { buildFAQPageSchema, validateStructuredData } from '@/util/structuredData';
+import { buildCanonicalUrl } from '@/util/canonical';
 import { FAQsPageClient } from './FAQsPageClient';
 
 export const metadata: Metadata = {
   title: { absolute: 'FAQ – Livraison, Paiement, Protéines | Protéine Tunisie' },
   description: 'Réponses sur commande, livraison, paiement et produits. Tout savoir sur l’achat de compléments alimentaires en Tunisie.',
+  alternates: { canonical: buildCanonicalUrl('/faqs') },
 };
 
 async function getFAQsData() {

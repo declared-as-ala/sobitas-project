@@ -299,11 +299,11 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-10"
         >
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6 sm:mb-8">
-            Blog
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900 dark:text-white mb-4">
+            Blog nutrition sportive &amp; compléments en Tunisie
           </h1>
-          <p className="text-sm sm:text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-6 sm:mb-8">
-            Conseils, guides et actualités nutrition sportive & compléments alimentaires
+          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-6 sm:mb-8">
+            Conseils, guides et actualités : whey, créatine, prise de masse et compléments alimentaires.
           </p>
 
           {/* Category tabs – horizontal, centered */}
