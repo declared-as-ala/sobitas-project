@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
-import { Suspense } from 'react';
-import { buildCanonicalUrl } from '@/util/canonical';
+import { getPageBySlug, getCoordinates } from '@/services/api';
+import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
+import { buildBreadcrumbListSchema } from '@/util/structuredData';
 import AboutPageClient from './AboutPageClient';
 
 export const metadata: Metadata = {
@@ -9,10 +10,36 @@ export const metadata: Metadata = {
   alternates: { canonical: buildCanonicalUrl('/qui-sommes-nous') },
 };
 
-export default function QuiSommesNousPage() {
+// ISR so the "À propos" CMS body is server-rendered (previously fetched in a client useEffect,
+// so the unique About content was invisible to crawlers).
+export const revalidate = 3600;
+
+export default async function QuiSommesNousPage() {
+  const [page, coordinates] = await Promise.all([
+    getPageBySlug('qui-sommes-nous').catch(() => null),
+    getCoordinates().catch(() => null),
+  ]);
+
+  const baseUrl = getBaseUrl();
+  const canonical = buildCanonicalUrl('/qui-sommes-nous');
+  const aboutSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'AboutPage',
+    name: page?.title || 'Qui sommes-nous',
+    url: canonical,
+    inLanguage: 'fr-TN',
+    mainEntity: { '@id': `${baseUrl}/#organization` },
+  };
+  const breadcrumbSchema = buildBreadcrumbListSchema(
+    [{ name: 'Accueil', url: '/' }, { name: 'À propos', url: '/qui-sommes-nous' }],
+    baseUrl
+  );
+
   return (
-    <Suspense fallback={<div>Chargement...</div>}>
-      <AboutPageClient />
-    </Suspense>
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(aboutSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
+      <AboutPageClient initialPage={page} initialCoordinates={coordinates} />
+    </>
   );
 }
