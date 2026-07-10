@@ -26,3 +26,8 @@ filament/node_modules/
 temp_auto_push.bat
 temp_interactive_push.bat
 branch_structure.json
+
+# Database dumps — NEVER commit (contain customer PII + password hashes)
+*.sql
+protein_db_backup.sql
+db/mysql-protein.sql
