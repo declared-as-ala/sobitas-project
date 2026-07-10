@@ -20,6 +20,7 @@ import {
   DEFAULT_LOCALE,
   LOCALE_COOKIE,
   LOCALE_STORAGE_KEY,
+  MULTILOCALE_ENABLED,
   getLocaleDirection,
   isLocale,
   type Locale,
@@ -137,6 +138,12 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const observerRef = useRef<MutationObserver | null>(null);
 
   useEffect(() => {
+    if (!MULTILOCALE_ENABLED) {
+      // French-only: forget any persisted ar/en so the whole app (incl. the API locale param)
+      // stays French. No translation pass runs while locale === 'fr'.
+      try { localStorage.removeItem(LOCALE_STORAGE_KEY); } catch { /* ignore */ }
+      return;
+    }
     const stored = localStorage.getItem(LOCALE_STORAGE_KEY);
     if (isLocale(stored)) setLocaleState(stored);
   }, []);

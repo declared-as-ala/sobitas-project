@@ -57,6 +57,7 @@ import { buildProductUrlPath } from '@/util/productUrl';
 import type { Product, SiteNavigationItem } from '@/types';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { useI18n } from '@/i18n/I18nProvider';
+import { MULTILOCALE_ENABLED } from '@/i18n';
 import { localizedName } from '@/i18n/content';
 
 const SCROLL_THRESHOLD = 24;
@@ -576,7 +577,7 @@ export function HeaderClient() {
               </div>
 
               <div className="flex items-center gap-3 flex-shrink-0">
-                <LanguageSwitcher />
+                {MULTILOCALE_ENABLED && <LanguageSwitcher />}
                 {isAuthenticated ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -750,7 +751,7 @@ export function HeaderClient() {
             </div>
 
             <div className="mt-auto pt-4 px-4 border-t border-gray-200 dark:border-gray-800 space-y-0.5">
-              <LanguageSwitcher mobile />
+              {MULTILOCALE_ENABLED && <LanguageSwitcher mobile />}
               <Button
                 variant="ghost"
                 className="w-full justify-start h-12 rounded-xl text-base font-medium leading-snug -mx-1"
