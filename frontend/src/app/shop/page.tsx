@@ -1,6 +1,8 @@
 import { Metadata } from 'next';
 import { getAllProducts, getCategories, getAllBrands } from '@/services/api';
-import { buildCanonicalUrl } from '@/util/canonical';
+import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
+import { buildBreadcrumbListSchema, buildCollectionPageSchema, buildItemListSchema } from '@/util/structuredData';
+import { getProductLink } from '@/util/productUrl';
 import { ShopPageClient } from './ShopPageClient';
 
 type ShopSearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -90,6 +92,38 @@ async function getShopData() {
 
 export default async function ShopPage() {
   const { productsData, categories, brands } = await getShopData();
+  const baseUrl = getBaseUrl();
+  const products = Array.isArray(productsData.products) ? productsData.products : [];
 
-  return <ShopPageClient productsData={productsData} categories={categories} brands={brands} />;
+  const breadcrumbSchema = buildBreadcrumbListSchema(
+    [{ name: 'Accueil', url: '/' }, { name: 'Boutique', url: '/shop' }],
+    baseUrl
+  );
+  const collectionSchema = buildCollectionPageSchema(
+    'Boutique Protéines & Compléments en Tunisie',
+    '/shop',
+    baseUrl,
+    { description: 'Découvrez nos protéines, créatine, gainer et BCAA en Tunisie. Large choix, livraison rapide.' }
+  );
+  const itemListSchema = products.length > 0
+    ? buildItemListSchema(
+        products.slice(0, 20).map((p: { designation_fr?: string }) => ({
+          name: p.designation_fr || 'Produit',
+          url: getProductLink(p as never),
+        })),
+        baseUrl,
+        { name: 'Boutique' }
+      )
+    : null;
+
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionSchema) }} />
+      {itemListSchema && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }} />
+      )}
+      <ShopPageClient productsData={productsData} categories={categories} brands={brands} />
+    </>
+  );
 }
