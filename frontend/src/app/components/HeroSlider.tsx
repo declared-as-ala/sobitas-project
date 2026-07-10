@@ -236,10 +236,6 @@ export const HeroSlider = memo(function HeroSlider({ slides, mobileFirst, deskto
           aria-hidden="true"
         />
         <div
-          className="absolute -right-20 top-[22%] h-64 w-64 rounded-full bg-amber-200/10 blur-3xl md:hidden"
-          aria-hidden="true"
-        />
-        <div
           className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-black/62 via-black/28 to-transparent md:h-44 md:from-black/30 md:via-black/10"
           aria-hidden="true"
         />
@@ -249,7 +245,10 @@ export const HeroSlider = memo(function HeroSlider({ slides, mobileFirst, deskto
           {/* Mobile: drop the text/button to the bottom floor strip so it sits
               under the products in the banner. Desktop stays centered/right. */}
           <div className="flex min-h-0 min-w-0 flex-1 flex-col items-start justify-end text-left lg:ml-auto lg:max-w-2xl lg:flex-none lg:items-end lg:justify-center lg:text-right xl:max-w-3xl">
-            <h2 className="max-w-[13ch] text-[2.05rem] font-extrabold leading-[1.04] tracking-tight text-white drop-shadow-[0_3px_12px_rgba(0,0,0,0.65)] sm:max-w-[14ch] sm:text-4xl md:text-4xl lg:text-5xl xl:text-6xl">
+            <span className="mb-2 font-display uppercase tracking-[0.2em] text-[11px] sm:text-xs font-semibold text-red-400 drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]">
+              100% Authentique · Livraison partout en Tunisie
+            </span>
+            <h2 className="font-display uppercase max-w-[13ch] text-[2.4rem] font-bold leading-[0.92] tracking-tight text-white drop-shadow-[0_3px_12px_rgba(0,0,0,0.65)] sm:max-w-[14ch] sm:text-5xl md:text-5xl lg:text-6xl xl:text-7xl">
               {currentSlideData.titre}
             </h2>
             {currentSlideData.description ? (
@@ -260,7 +259,7 @@ export const HeroSlider = memo(function HeroSlider({ slides, mobileFirst, deskto
             <div className="mt-5 flex flex-wrap gap-3 sm:mt-6 md:mt-7 md:gap-4">
               <Button
                 size="lg"
-                className="min-h-[50px] min-w-[178px] rounded-xl bg-gradient-to-b from-red-500 to-red-600 px-7 text-base font-semibold text-white shadow-[0_12px_28px_rgba(239,68,68,0.34)] transition-all hover:from-red-500 hover:to-red-700 hover:shadow-[0_14px_30px_rgba(239,68,68,0.45)] sm:min-h-[52px] sm:min-w-[190px] sm:px-8 md:min-h-[60px] md:px-10 md:text-lg lg:px-12 lg:text-xl"
+                className="min-h-[50px] min-w-[178px] rounded-xl bg-red-600 px-7 font-display uppercase tracking-wide text-base font-semibold text-white shadow-[0_10px_24px_rgba(220,38,38,0.35)] transition-all hover:bg-red-700 sm:min-h-[52px] sm:min-w-[190px] sm:px-8 md:min-h-[60px] md:px-10 md:text-lg lg:px-12 lg:text-xl"
                 asChild
               >
                 <LinkWithLoading href={heroHref} aria-label="Découvrir nos produits" loadingMessage="Chargement...">
