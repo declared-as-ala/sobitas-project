@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
-import { ShoppingCart, Flame, Sparkles } from 'lucide-react';
+import { ShoppingCart, Flame, Sparkles, Check } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { getStorageUrl } from '@/services/api';
 import { useCart } from '@/app/contexts/CartContext';
@@ -87,7 +87,7 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
   }, [productData.priceDisplay.hasPromo, productData.discount, productData.isInStock]);
 
   return (
-    <article className="group relative flex flex-col h-full w-full overflow-hidden rounded-xl lg:rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-800 shadow-sm transition-shadow duration-300 [@media(hover:hover)]:hover:shadow-xl">
+    <article className="group relative flex flex-col h-full w-full overflow-hidden rounded-xl lg:rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm transition-shadow duration-300 [@media(hover:hover)]:hover:shadow-xl">
       {/* Image Container - Fixed height to prevent layout shift */}
       <div className="relative aspect-square w-full flex-shrink-0 overflow-hidden bg-gray-50 dark:bg-gray-900 rounded-t-xl lg:rounded-t-2xl">
         <LinkWithLoading
@@ -214,7 +214,11 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
             disabled={isAdding || !productData.isInStock || !canAddMore}
             aria-label={!canAddMore && productData.isInStock ? 'Stock maximum atteint' : `Ajouter ${productData.name} au panier`}
           >
-            <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2 flex-shrink-0" aria-hidden="true" />
+            {isAdding ? (
+              <Check className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2 flex-shrink-0" aria-hidden="true" />
+            ) : (
+              <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2 flex-shrink-0" aria-hidden="true" />
+            )}
             <span className="truncate">
               {!productData.isInStock || stockDisponible <= 0
                 ? 'Rupture'

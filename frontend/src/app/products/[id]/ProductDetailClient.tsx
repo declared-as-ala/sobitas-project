@@ -727,7 +727,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     />
                   ))}
                 </div>
-                <span className="text-sm sm:text-base text-gray-600 dark:text-gray-400 font-medium tabular-nums transition-colors group-hover:text-red-600">
+                <span className="text-sm sm:text-base text-gray-600 dark:text-gray-400 font-medium tabular-nums transition-colors group-hover:text-red-600 dark:group-hover:text-red-400">
                   ({rating > 0 ? rating.toFixed(1) : '0'}) • {reviewCount} avis
                 </span>
               </button>

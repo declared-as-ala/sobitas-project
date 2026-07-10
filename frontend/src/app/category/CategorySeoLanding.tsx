@@ -356,7 +356,7 @@ export function CategorySeoLanding({
       {(showTop || showContentBelowFold) && hasHowTo && (
         <section className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 sm:p-6 lg:p-8 shadow-sm relative overflow-hidden">
           <div className="absolute top-0 left-0 w-1.5 h-full bg-red-600" />
-          <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center gap-2">
+          <h2 className="text-lg sm:text-xl font-display uppercase tracking-tight font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-red-500" />
             {howToChooseTitle}
           </h2>
@@ -376,7 +376,7 @@ export function CategorySeoLanding({
           className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 sm:p-6 lg:p-8 shadow-sm"
           aria-labelledby="category-seo-long-heading"
         >
-          <h2 id="category-seo-long-heading" className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <h2 id="category-seo-long-heading" className="text-lg sm:text-xl font-display uppercase tracking-tight font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
             <Bookmark className="h-5 w-5 text-red-500" />
             En savoir plus
           </h2>
@@ -390,7 +390,7 @@ export function CategorySeoLanding({
       {/* Full content (FAQs) */}
       {(showTop || showContentBelowFold) && hasFaqs && (
         <section className="space-y-4">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2 px-1">
+          <h2 className="text-xl font-display uppercase tracking-tight font-bold text-gray-900 dark:text-white flex items-center gap-2 px-1">
             Questions fréquentes (FAQ)
           </h2>
           <div className="border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden bg-white dark:bg-gray-900 shadow-sm divide-y divide-gray-100 dark:divide-gray-800">
@@ -421,7 +421,7 @@ export function CategorySeoLanding({
         <section className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8 mt-4">
           {hasRelated && (
             <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/30 p-5 sm:p-6 shadow-sm">
-              <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center gap-2">
+              <h2 className="text-base sm:text-lg font-display uppercase tracking-tight font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center gap-2">
                 <TrendingUp className="h-4.5 w-4.5 text-red-500" />
                 Catégories associées
               </h2>
@@ -444,7 +444,7 @@ export function CategorySeoLanding({
           )}
           {hasBest && (
             <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 sm:p-6 shadow-sm">
-              <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center gap-2">
+              <h2 className="text-base sm:text-lg font-display uppercase tracking-tight font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center gap-2">
                 <Sparkles className="h-4.5 w-4.5 text-red-500" />
                 Produits phares
               </h2>

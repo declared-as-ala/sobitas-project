@@ -14,7 +14,7 @@ export function AnnouncementBar() {
         <div className="flex items-center justify-center gap-3 text-sm md:text-base">
           <Gift className="h-5 w-5 shrink-0" aria-hidden />
           <span className="font-display uppercase tracking-wide font-semibold">🎉 Promotion exceptionnelle</span>
-          <span className="hidden sm:inline font-medium text-red-100">• Livraison gratuite dès 300 DT</span>
+          <span className="hidden sm:inline font-display uppercase tracking-wide font-medium text-red-100">• Livraison gratuite dès 300 DT</span>
           <span className="hidden lg:flex items-center gap-1 ml-2">
             <Sparkles className="h-4 w-4" aria-hidden />
             <span className="text-xs font-display uppercase tracking-wide font-semibold">Nouveau</span>
