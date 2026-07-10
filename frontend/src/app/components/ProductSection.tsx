@@ -1,17 +1,17 @@
 'use client';
 
 import { memo } from 'react';
-import Link from 'next/link';
 import { ProductCard } from './ProductCard';
+import { SectionHeader } from './SectionHeader';
 import { Product as DataProduct } from '@/data/products';
 import type { Product as ApiProduct } from '@/types';
-import { Button } from '@/app/components/ui/button';
-import { ArrowRight } from 'lucide-react';
 
 type Product = ApiProduct | DataProduct;
 
 interface ProductSectionProps {
   title: string;
+  /** Small red uppercase kicker above the title. */
+  kicker?: string;
   subtitle?: string;
   products: Product[];
   showBadge?: boolean;
@@ -27,6 +27,7 @@ interface ProductSectionProps {
 
 export const ProductSection = memo(function ProductSection({
   title,
+  kicker,
   subtitle,
   products,
   showBadge,
@@ -39,28 +40,13 @@ export const ProductSection = memo(function ProductSection({
   return (
     <section id={id} className="py-12 sm:py-16 lg:py-20 bg-white dark:bg-gray-950">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Section Header */}
-        <div className="flex flex-row items-end justify-between gap-4 mb-8 sm:mb-10">
-          <div>
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
-              {title}
-            </h2>
-            {subtitle && (
-              <p className="mt-1.5 text-sm sm:text-base text-gray-600 dark:text-gray-400">
-                {subtitle}
-              </p>
-            )}
-          </div>
-          
-          <div className="hidden sm:block">
-            <Button variant="outline" className="group min-h-[44px]" asChild>
-              <Link href={viewAllHref} aria-label={viewAllLabel}>
-                {viewAllLabel}
-                <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
-              </Link>
-            </Button>
-          </div>
-        </div>
+        <SectionHeader
+          kicker={kicker}
+          title={title}
+          subtitle={subtitle}
+          viewAllHref={viewAllHref}
+          viewAllLabel={viewAllLabel}
+        />
 
         {/* Products Grid - Optimized responsive layout */}
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
