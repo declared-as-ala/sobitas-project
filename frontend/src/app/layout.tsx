@@ -11,6 +11,7 @@ import { NavigationHandler } from "@/app/components/NavigationHandler";
 import { DeferredToaster } from "@/app/components/DeferredToaster";
 import { InstallAppBanner } from "@/app/components/InstallAppBanner";
 import { WhatsAppFab } from "@/app/components/WhatsAppFab";
+import { LOCALE_STORAGE_KEY } from "@/i18n";
 
 const inter = Inter({
   subsets: ["latin", "latin-ext"],
@@ -123,10 +124,14 @@ export default async function RootLayout({
   return (
     <html lang="fr" suppressHydrationWarning data-scroll-behavior="smooth" className={`${inter.variable} ${notoArabic.variable}`}>
       <head>
+        {/* Anti-FOUC: set lang/dir from the persisted locale BEFORE first paint. Must read the
+            same key I18nProvider writes (LOCALE_STORAGE_KEY = 'sobitas-locale'); it previously
+            hardcoded the wrong 'protein-locale', so this was dead code and ar/en users got a
+            French-LTR flash + a half-flipped mixed render before hydration. */}
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "try{var l=localStorage.getItem('protein-locale');if(l==='fr'||l==='en'||l==='ar'){document.documentElement.lang=l;document.documentElement.dir=l==='ar'?'rtl':'ltr';document.documentElement.dataset.locale=l}}catch(e){}",
+              `try{var l=localStorage.getItem('${LOCALE_STORAGE_KEY}');if(l==='fr'||l==='en'||l==='ar'){document.documentElement.lang=l;document.documentElement.dir=l==='ar'?'rtl':'ltr';document.documentElement.dataset.locale=l}}catch(e){}`,
           }}
         />
         <meta name="theme-color" content="#dc2626" />
