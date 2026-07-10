@@ -148,19 +148,19 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
                 transition={{ duration: 0.6 }}
                 className="flex items-center gap-4 flex-wrap"
               >
-                <div className="flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-red-500 via-orange-500 to-red-600 shadow-2xl flex-shrink-0">
+                <div className="flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-red-600 shadow-lg flex-shrink-0">
                   <Flame className="h-7 w-7 sm:h-8 sm:w-8 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black bg-gradient-to-r from-red-600 via-orange-600 to-red-600 dark:from-red-400 dark:via-orange-400 dark:to-red-400 bg-clip-text text-transparent leading-tight">
-                    VENTES FLASH
+                  <h2 className="font-display uppercase tracking-tight leading-none text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 dark:text-white">
+                    Ventes flash
                   </h2>
                   <motion.div
                     initial={{ opacity: 0, scaleX: 0 }}
                     whileInView={{ opacity: 1, scaleX: 1 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.8, delay: 0.3 }}
-                    className="h-1 w-full origin-left bg-gradient-to-r from-red-600 to-orange-600 rounded-full mt-2 will-change-transform"
+                    className="h-1 w-24 origin-left bg-red-600 rounded-full mt-2 will-change-transform"
                   />
                 </div>
               </motion.div>

@@ -88,9 +88,9 @@ export function BlogSection({ articles }: BlogSectionProps) {
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2"
+              className="font-display uppercase tracking-tight text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2"
             >
-              Nos Derniers Articles
+              Nos derniers articles
             </motion.h2>
             <motion.p
               initial={{ opacity: 0, y: 20 }}
