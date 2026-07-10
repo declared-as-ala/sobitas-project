@@ -1,9 +1,11 @@
 import { Metadata } from 'next';
 import { unstable_noStore as noStore } from 'next/cache';
 import { getAccueil } from '@/services/api';
-import { buildCanonicalUrl } from '@/util/canonical';
+import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
+import { buildWebPageSchema, buildItemListSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
+import { buildProductUrlPath } from '@/util/productUrl';
 import { HomePageClient } from './components/HomePageClient';
-import type { AccueilData } from '@/types';
+import type { AccueilData, Product } from '@/types';
 
 export async function generateMetadata(): Promise<Metadata> {
   const canonical = buildCanonicalUrl('/');
@@ -20,7 +22,9 @@ export async function generateMetadata(): Promise<Metadata> {
     openGraph: {
       title,
       description,
-      images: [{ url: '/favicon-512x512.png', width: 512, height: 512, alt: 'Protéine Tunisie' }],
+      // Use the 1200×630 hero, not the 512² favicon — otherwise every Facebook/WhatsApp/LinkedIn
+      // share of the homepage previews as a tiny square icon instead of a real banner.
+      images: [{ url: '/slides/home-hero-web.webp', width: 1200, height: 630, alt: 'Protéine Tunisie — Whey, Créatine & Compléments' }],
       url: canonical,
       type: 'website',
       siteName: 'Protéine Tunisie',
@@ -30,7 +34,7 @@ export async function generateMetadata(): Promise<Metadata> {
       card: 'summary_large_image',
       title,
       description,
-      images: ['/favicon-512x512.png'],
+      images: ['/slides/home-hero-web.webp'],
     },
     other: {},
   };
@@ -146,8 +150,42 @@ export default async function Home() {
   const mobileSrcSet = mobileFirst ? buildImgSrcSet(mobileFirst.imageUrl, [640, 750, 828], 50) : null;
   const desktopSrcSet = desktopFirst ? buildImgSrcSet(desktopFirst.imageUrl, [1080, 1200], 75) : null;
 
+  // Homepage JSON-LD: WebPage (this page) + BreadcrumbList (root) + ItemList of the featured
+  // products so the flagship URL isn't schema-less. Built from the server `accueil` payload so
+  // the markup matches the SSR HTML.
+  const baseUrl = getBaseUrl();
+  const featured: Product[] = [
+    ...(Array.isArray(accueil.best_sellers) ? accueil.best_sellers : []),
+    ...(Array.isArray(accueil.new_product) ? accueil.new_product : []),
+  ];
+  const seenFeatured = new Set<number>();
+  const featuredUnique = featured.filter((p) => {
+    if (!p || seenFeatured.has(p.id)) return false;
+    seenFeatured.add(p.id);
+    return true;
+  });
+  const webPageSchema = buildWebPageSchema(
+    'Protéine Tunisie | Whey, Créatine & Compléments en Tunisie',
+    '/',
+    baseUrl,
+    { description: 'Achetez whey protein, créatine, vitamines et compléments alimentaires en Tunisie avec livraison rapide et produits authentiques.' }
+  );
+  const breadcrumbSchema = buildBreadcrumbListSchema([{ name: 'Accueil', url: '/' }], baseUrl);
+  const itemListSchema = featuredUnique.length > 0
+    ? buildItemListSchema(
+        featuredUnique.slice(0, 20).map((p) => ({ name: p.designation_fr || 'Produit', url: buildProductUrlPath(p) })),
+        baseUrl,
+        { name: 'Produits en vedette' }
+      )
+    : null;
+
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
+      {itemListSchema && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }} />
+      )}
       {/* LCP hero preloads — media-specific so mobile only downloads mobile image */}
       {mobileSrcSet && mobileFirst && (
         <link
