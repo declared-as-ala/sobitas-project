@@ -94,22 +94,40 @@ const parseHTMLContent = (html: string) => {
   return { sections, lists, paragraphs, keyNumbers: uniqueKeyNumbers };
 };
 
-export default function AboutPageClient() {
-  const [coordinates, setCoordinates] = useState<any>(null);
-  const [page, setPage] = useState<Page | null>(null);
-  const [loading, setLoading] = useState(true);
+export default function AboutPageClient({
+  initialPage = null,
+  initialCoordinates = null,
+}: {
+  initialPage?: Page | null;
+  initialCoordinates?: any;
+} = {}) {
+  const [coordinates, setCoordinates] = useState<any>(initialCoordinates);
+  const [page, setPage] = useState<Page | null>(initialPage);
+  const [loading, setLoading] = useState(!initialPage);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    Promise.all([getCoordinates(), getPageBySlug('qui-sommes-nous')])
-      .then(([coordsData, pageData]) => { setCoordinates(coordsData); setPage(pageData); })
-      .catch(err => console.error(err))
-      .finally(() => setLoading(false));
+    setMounted(true);
+    // Data is provided server-side (SSR/crawlers see the body); only fetch client-side if missing.
+    if (!initialPage || !initialCoordinates) {
+      Promise.all([getCoordinates(), getPageBySlug('qui-sommes-nous')])
+        .then(([coordsData, pageData]) => {
+          if (!initialCoordinates) setCoordinates(coordsData);
+          if (!initialPage) setPage(pageData);
+        })
+        .catch(err => console.error(err))
+        .finally(() => setLoading(false));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const parsedContent = useMemo(() => {
-    if (!page?.body) return { sections: [], lists: [], paragraphs: [], keyNumbers: [] };
+    // parseHTMLContent uses DOMParser (browser only) — gate on `mounted` so the server and the
+    // first client render both fall through to the raw-HTML block below (no DOMParser on the
+    // server, no hydration mismatch). The enhanced card layout appears after hydration.
+    if (!mounted || !page?.body) return { sections: [], lists: [], paragraphs: [], keyNumbers: [] };
     return parseHTMLContent(page.body);
-  }, [page?.body]);
+  }, [mounted, page?.body]);
 
   const defaultKeyNumbers = [
     { label: 'ans d\'expérience', value: '16+' },
