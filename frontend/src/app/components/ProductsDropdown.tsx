@@ -94,7 +94,7 @@ export function ProductsDropdown({
   const dropdownContent = isOpen && mounted ? (
     <div
       ref={dropdownRef}
-      className="fixed left-0 right-0 w-full bg-white dark:bg-gray-900 shadow-2xl border-t-2 border-red-600 z-[200]"
+      className="fixed left-0 right-0 w-full bg-white dark:bg-gray-900 shadow-xl border-t-2 border-red-600 z-[200]"
       style={{ top: `${dropdownTop}px`, maxHeight: 'calc(100vh - 80px)' }}
       onMouseEnter={() => { hoverDropdown.current = true; cancelClose(); }}
       onMouseLeave={() => { hoverDropdown.current = false; scheduleClose(); }}
@@ -107,7 +107,7 @@ export function ProductsDropdown({
               <div key={cat.id} className="min-w-0">
                 <LinkWithLoading
                   href={`/${cat.slug}`}
-                  className="font-bold text-caption tracking-wide text-red-600 dark:text-red-500 uppercase mb-3 hover:text-red-700 transition-colors block leading-snug"
+                  className="font-display text-caption tracking-wide text-red-600 dark:text-red-400 uppercase mb-3 hover:text-red-700 dark:hover:text-red-300 transition-colors block leading-snug"
                   loadingMessage="Chargement..."
                   onMouseEnter={() => router.prefetch(`/${cat.slug}`)}
                   onClick={close}
@@ -115,7 +115,7 @@ export function ProductsDropdown({
                   {cat.designation_fr}
                 </LinkWithLoading>
 
-                <div className="w-8 h-0.5 bg-red-200 dark:bg-red-900 mb-3 rounded-full" />
+                <div className="w-8 h-px bg-red-600 dark:bg-red-400 mb-3" />
 
                 <ul className="space-y-1">
                   {subs.map((sub) => (
@@ -144,7 +144,7 @@ export function ProductsDropdown({
           </p>
           <LinkWithLoading
             href={href}
-            className="inline-flex items-center gap-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors px-4 py-2 rounded-lg"
+            className="inline-flex items-center gap-2 font-display uppercase tracking-wide text-sm font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors px-4 py-2 rounded-xl"
             loadingMessage="Chargement de la boutique..."
             onMouseEnter={prefetchShop}
             onClick={close}
@@ -167,7 +167,7 @@ export function ProductsDropdown({
     >
       <LinkWithLoading
         href={href}
-        className="text-sm font-semibold text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-400 transition-colors flex items-center gap-1 whitespace-nowrap py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+        className="font-display uppercase tracking-wide text-sm font-semibold text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-400 transition-colors flex items-center gap-1 whitespace-nowrap py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
         loadingMessage="Chargement de la boutique..."
         onMouseEnter={prefetchShop}
         {...targetProps}

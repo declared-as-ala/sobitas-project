@@ -32,12 +32,12 @@ export function BlogSeoBlock({ slug }: BlogSeoBlockProps) {
 
       {hasFaqs && (
         <section aria-labelledby="faq-heading">
-          <h2 id="faq-heading" className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4">
+          <h2 id="faq-heading" className="font-display uppercase tracking-tight text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4">
             Questions fréquentes
           </h2>
           <ul className="space-y-4">
             {faqs.map((faq, i) => (
-              <li key={i} className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+              <li key={i} className="rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 p-4">
                 <h3 className="font-semibold text-gray-900 dark:text-white mb-2">{faq.question}</h3>
                 <p className="text-gray-700 dark:text-gray-300 text-sm sm:text-base">{faq.answer}</p>
               </li>
@@ -48,7 +48,7 @@ export function BlogSeoBlock({ slug }: BlogSeoBlockProps) {
 
       {hasLinks && (
         <section aria-labelledby="read-also-heading">
-          <h2 id="read-also-heading" className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4">
+          <h2 id="read-also-heading" className="font-display uppercase tracking-tight text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4">
             Lire aussi
           </h2>
           <ul className="flex flex-wrap gap-2">

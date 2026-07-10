@@ -6,8 +6,7 @@ import { Header } from '@/app/components/Header';
 import { Footer } from '@/app/components/Footer';
 import { Button } from '@/app/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
-import { CheckCircle2, Package, Truck, Home, FileText, Download, Printer, Mail, Calendar, CreditCard, Wallet } from 'lucide-react';
-import { motion } from 'motion/react';
+import { CheckCircle2, Package, Truck, Home, FileText, Printer, Mail, Calendar, CreditCard, Wallet } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { getOrderDetails, getStorageUrl, getSiteLogoUrlResolved } from '@/services/api';
@@ -363,7 +362,7 @@ export default function OrderConfirmationPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
           <p className="text-gray-600 dark:text-gray-400">Chargement de la commande...</p>
@@ -374,11 +373,11 @@ export default function OrderConfirmationPage() {
 
   if (!order) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
         <Header />
         <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
-          <h1 className="text-2xl font-bold mb-4">Commande introuvable</h1>
-          <Button asChild>
+          <h1 className="font-display uppercase tracking-tight text-2xl text-gray-900 dark:text-white mb-4">Commande introuvable</h1>
+          <Button asChild className="bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide rounded-xl">
             <Link href="/shop">Retour à la boutique</Link>
           </Button>
         </main>
@@ -392,7 +391,7 @@ export default function OrderConfirmationPage() {
   const total = order.prix_ttc || subtotal + shipping;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Header />
       
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -402,34 +401,25 @@ export default function OrderConfirmationPage() {
         </div>
 
         {/* Success Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
-        >
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.2, type: 'spring' }}
-            className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 dark:bg-green-900/20 mb-6"
-          >
-            <CheckCircle2 className="h-10 w-10 text-green-600 dark:text-green-400" />
-          </motion.div>
-          
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 dark:bg-green-900/20 mb-6">
+            <CheckCircle2 className="h-10 w-10 text-green-600 dark:text-green-400" aria-hidden="true" />
+          </div>
+
+          <h1 className="font-display uppercase tracking-tight text-4xl md:text-5xl text-gray-900 dark:text-white mb-4">
             Merci. Votre commande a été reçue.
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-400 mb-6">
             Nous avons bien reçu votre commande et vous en remercions.
           </p>
-        </motion.div>
+        </div>
 
         {/* Order Summary Card */}
-        <Card className="mb-6 shadow-lg">
-          <CardHeader className="bg-gradient-to-r from-red-50 to-red-100 dark:from-red-950/20 dark:to-red-900/20 border-b">
+        <Card className="mb-6 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+          <CardHeader className="bg-red-50 dark:bg-red-950/20 border-b border-gray-100 dark:border-gray-800">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
-                <CardTitle className="text-2xl mb-2">Résumé de la commande</CardTitle>
+                <CardTitle className="font-display uppercase tracking-tight text-2xl text-gray-900 dark:text-white mb-2">Résumé de la commande</CardTitle>
                 <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
                   <div className="flex items-center gap-2">
                     <FileText className="h-4 w-4" />
@@ -447,7 +437,7 @@ export default function OrderConfirmationPage() {
               </div>
               <div className="text-right">
                 <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total</div>
-                <div className="text-3xl font-bold text-red-600 dark:text-red-400">
+                <div className="font-display font-bold tracking-tight tabular-nums text-3xl text-red-600 dark:text-red-400">
                   {total.toFixed(2)} TND
                 </div>
                 <div className="text-sm text-gray-500 dark:text-gray-500 mt-1">
@@ -468,9 +458,9 @@ export default function OrderConfirmationPage() {
           </CardHeader>
           <CardContent className="p-6">
             {order.livraison === 1 && (
-              <div className="mb-4 p-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900 rounded-lg">
-                <p className="text-sm text-orange-800 dark:text-orange-200">
-                  <strong>Paiement à la livraison:</strong> Payez en argent comptant à la livraison.
+              <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-800 rounded-xl">
+                <p className="text-sm text-gray-700 dark:text-gray-300">
+                  <strong className="text-gray-900 dark:text-white">Paiement à la livraison:</strong> Payez en argent comptant à la livraison.
                 </p>
               </div>
             )}
@@ -480,10 +470,10 @@ export default function OrderConfirmationPage() {
         {/* Order Details */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           {/* Order Items - Takes 2 columns */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
+          <Card className="lg:col-span-2 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+            <CardHeader className="border-b border-gray-100 dark:border-gray-800">
+              <CardTitle className="flex items-center gap-2 font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white">
+                <Package className="h-5 w-5 text-red-600 dark:text-red-400" aria-hidden="true" />
                 Détails de la commande
               </CardTitle>
             </CardHeader>
@@ -497,7 +487,7 @@ export default function OrderConfirmationPage() {
                   const itemTotal = (detail.prix_ttc || detail.prix_ht || 0);
                   
                   return (
-                    <div key={detail.id} className="flex items-start gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <div key={detail.id} className="flex items-start gap-4 p-4 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
                       {productImage && (
                         <div className="relative w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-white dark:bg-gray-700">
                           <Image
@@ -519,7 +509,7 @@ export default function OrderConfirmationPage() {
                         </p>
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <p className="font-bold text-gray-900 dark:text-white">
+                        <p className="font-display font-bold tracking-tight tabular-nums text-gray-900 dark:text-white">
                           {itemTotal.toFixed(2)} TND
                         </p>
                       </div>
@@ -529,20 +519,20 @@ export default function OrderConfirmationPage() {
               </div>
 
               {/* Price Summary */}
-              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 space-y-3">
+              <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-800 space-y-3">
                 <div className="flex justify-between text-gray-700 dark:text-gray-300">
                   <span>Sous-total</span>
-                  <span className="font-semibold">{subtotal.toFixed(2)} TND</span>
+                  <span className="font-display font-semibold tabular-nums">{subtotal.toFixed(2)} TND</span>
                 </div>
                 <div className="flex justify-between text-gray-700 dark:text-gray-300">
                   <span>Expédition</span>
-                  <span className={shipping === 0 ? 'text-green-600 dark:text-green-400 font-semibold' : 'font-semibold'}>
+                  <span className={shipping === 0 ? 'text-green-600 dark:text-green-400 font-semibold' : 'font-display font-semibold tabular-nums'}>
                     {shipping === 0 ? 'Livraison gratuite' : `${shipping} TND`}
                   </span>
                 </div>
-                <div className="flex justify-between text-lg font-bold pt-3 border-t border-gray-200 dark:border-gray-700">
-                  <span>Total</span>
-                  <span className="text-red-600 dark:text-red-400">
+                <div className="flex justify-between items-baseline pt-3 border-t border-gray-100 dark:border-gray-800">
+                  <span className="font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white">Total</span>
+                  <span className="font-display font-bold tracking-tight tabular-nums text-lg text-red-600 dark:text-red-400">
                     {total.toFixed(2)} TND
                   </span>
                 </div>
@@ -553,9 +543,9 @@ export default function OrderConfirmationPage() {
           {/* Addresses - Takes 1 column */}
           <div className="space-y-6">
             {/* Billing Address */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Adresse de facturation</CardTitle>
+            <Card className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+              <CardHeader className="border-b border-gray-100 dark:border-gray-800">
+                <CardTitle className="font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white">Adresse de facturation</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
@@ -577,10 +567,10 @@ export default function OrderConfirmationPage() {
 
             {/* Shipping Address */}
             {order.livraison === 1 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Truck className="h-4 w-4" />
+              <Card className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+                <CardHeader className="border-b border-gray-100 dark:border-gray-800">
+                  <CardTitle className="font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white flex items-center gap-2">
+                    <Truck className="h-4 w-4 text-red-600 dark:text-red-400" aria-hidden="true" />
                     Adresse de livraison
                   </CardTitle>
                 </CardHeader>
@@ -609,48 +599,48 @@ export default function OrderConfirmationPage() {
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <Button
             size="lg"
-            className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+            className="flex-1 bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide rounded-xl"
             onClick={handlePrintPDF}
           >
-            <Printer className="h-5 w-5 mr-2" />
+            <Printer className="h-5 w-5 mr-2" aria-hidden="true" />
             Imprimer / PDF
           </Button>
           <Button
             size="lg"
             variant="outline"
-            className="flex-1"
+            className="flex-1 rounded-xl"
             asChild
           >
             <Link href="/account/orders">
-              <FileText className="h-5 w-5 mr-2" />
+              <FileText className="h-5 w-5 mr-2" aria-hidden="true" />
               Voir mes commandes
             </Link>
           </Button>
           <Button
             size="lg"
             variant="outline"
-            className="flex-1"
+            className="flex-1 rounded-xl"
             asChild
           >
             <Link href="/shop">
-              <Home className="h-5 w-5 mr-2" />
+              <Home className="h-5 w-5 mr-2" aria-hidden="true" />
               Continuer les achats
             </Link>
           </Button>
         </div>
 
         {/* Next Steps */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
+        <Card className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+          <CardHeader className="border-b border-gray-100 dark:border-gray-800">
+            <CardTitle className="flex items-center gap-2 font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white">
+              <Package className="h-5 w-5 text-red-600 dark:text-red-400" aria-hidden="true" />
               Prochaines étapes
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center">
-                <span className="text-sm font-bold text-blue-600 dark:text-blue-400">1</span>
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-red-50 dark:bg-red-950/40 flex items-center justify-center">
+                <span className="text-sm font-display font-bold text-red-600 dark:text-red-400">1</span>
               </div>
               <div>
                 <h3 className="font-semibold mb-1">Confirmation par email</h3>
@@ -661,8 +651,8 @@ export default function OrderConfirmationPage() {
             </div>
             
             <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center">
-                <span className="text-sm font-bold text-blue-600 dark:text-blue-400">2</span>
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-red-50 dark:bg-red-950/40 flex items-center justify-center">
+                <span className="text-sm font-display font-bold text-red-600 dark:text-red-400">2</span>
               </div>
               <div>
                 <h3 className="font-semibold mb-1">Traitement de la commande</h3>
@@ -673,8 +663,8 @@ export default function OrderConfirmationPage() {
             </div>
             
             <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center">
-                <span className="text-sm font-bold text-blue-600 dark:text-blue-400">3</span>
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-red-50 dark:bg-red-950/40 flex items-center justify-center">
+                <span className="text-sm font-display font-bold text-red-600 dark:text-red-400">3</span>
               </div>
               <div>
                 <h3 className="font-semibold mb-1">Livraison</h3>

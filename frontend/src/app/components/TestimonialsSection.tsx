@@ -1,8 +1,6 @@
-'use client';
-
 import Image from 'next/image';
-import { motion } from 'motion/react';
 import { Star, Quote } from 'lucide-react';
+import { SectionHeader } from '@/app/components/SectionHeader';
 
 const testimonials = [
   {
@@ -33,39 +31,20 @@ const testimonials = [
 
 export function TestimonialsSection() {
   return (
-    <section className="py-16 md:py-24 bg-white dark:bg-gray-950">
+    <section className="py-12 sm:py-16 lg:py-20 bg-white dark:bg-gray-950">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Section Header */}
-        <div className="text-center mb-12">
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-4"
-          >
-            Témoignages Clients
-          </motion.h2>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.1 }}
-            className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto"
-          >
-            Ce que nos clients disent de nous
-          </motion.p>
-        </div>
+        <SectionHeader
+          kicker="Témoignages"
+          title="Témoignages Clients"
+          subtitle="Ce que nos clients disent de nous"
+        />
 
         {/* Testimonials Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {testimonials.map((testimonial, index) => (
-            <motion.div
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+          {testimonials.map((testimonial) => (
+            <div
               key={testimonial.id}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: index * 0.1 }}
-              className="relative bg-gray-50 dark:bg-gray-900 rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all"
+              className="relative bg-gray-50 dark:bg-gray-900 rounded-xl p-8 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow"
             >
               {/* Quote Icon */}
               <div className="absolute top-6 right-6 text-red-600/10 dark:text-red-500/10">
@@ -75,40 +54,37 @@ export function TestimonialsSection() {
               {/* Rating */}
               <div className="flex gap-1 mb-4">
                 {[...Array(testimonial.rating)].map((_, i) => (
-                  <Star key={i} className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                  <Star key={i} className="h-5 w-5 fill-red-600 text-red-600 dark:fill-red-400 dark:text-red-400" />
                 ))}
               </div>
 
               {/* Text */}
               <p className="text-gray-700 dark:text-gray-300 mb-6 leading-relaxed">
-                "{testimonial.text}"
+                &ldquo;{testimonial.text}&rdquo;
               </p>
 
               {/* Author */}
               <div className="flex items-center gap-4">
                 <div className="relative w-14 h-14 rounded-full ring-2 ring-red-600 overflow-hidden">
                   <Image
-                  src={testimonial.image}
-                  alt={testimonial.name}
+                    src={testimonial.image}
+                    alt={testimonial.name}
                     fill
                     className="object-cover"
                     sizes="56px"
                     loading="lazy"
-                />
+                  />
                 </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900 dark:text-white text-lg">
-                        {testimonial.name}
-                      </h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {testimonial.role}
-                      </p>
-                    </div>
+                <div>
+                  <h3 className="font-display uppercase tracking-wide font-semibold text-gray-900 dark:text-white text-lg">
+                    {testimonial.name}
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {testimonial.role}
+                  </p>
+                </div>
               </div>
-
-              {/* Decorative Element */}
-              <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-red-600 to-red-400 rounded-b-2xl" />
-            </motion.div>
+            </div>
           ))}
         </div>
       </div>

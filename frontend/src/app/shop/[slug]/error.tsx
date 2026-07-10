@@ -24,13 +24,13 @@ export default function ShopSlugError({
       <Header />
       <main className="w-full mx-auto px-4 sm:px-6 max-w-[1024px] md:max-w-[1280px] lg:max-w-[1400px] xl:max-w-[1600px] py-4 sm:py-8 lg:py-12">
         {/* Banner erreur (non plein écran) */}
-        <div className="mb-6 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
+        <div className="mb-6 p-4 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-red-700 dark:text-red-300">
             <AlertCircle className="h-5 w-5 shrink-0" />
             <span className="text-sm font-medium">Problème réseau. Réessayez ou consultez la boutique.</span>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button onClick={reset} size="sm" className="gap-2">
+            <Button onClick={reset} size="sm" className="gap-2 bg-red-600 hover:bg-red-700 text-white">
               <RefreshCw className="h-4 w-4" />
               Réessayer
             </Button>

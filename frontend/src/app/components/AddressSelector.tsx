@@ -186,7 +186,7 @@ function AddressSelectorComponent({
   }, [instanceId, handleLocaliteChange]);
 
   if (loading) {
-    return <div className="text-sm text-gray-500">Chargement des données...</div>;
+    return <div className="text-sm text-gray-500 dark:text-gray-400">Chargement des données...</div>;
   }
 
   return (
@@ -197,7 +197,7 @@ function AddressSelectorComponent({
           Gouvernorat {required && <span className="text-red-500">*</span>}
         </Label>
         <Select value={gouvernorat} onValueChange={onGouvernoratChange}>
-          <SelectTrigger id="gouvernorat" className="w-full">
+          <SelectTrigger id="gouvernorat" className="w-full rounded-xl focus:border-red-500 focus:ring-red-500/30">
             <SelectValue placeholder="Sélectionnez le gouvernorat" />
           </SelectTrigger>
           <SelectContent side="bottom" position="popper">
@@ -221,7 +221,7 @@ function AddressSelectorComponent({
             onValueChange={handleDelegationChange}
             disabled={!gouvernorat}
           >
-            <SelectTrigger id="delegation" className="w-full">
+            <SelectTrigger id="delegation" className="w-full rounded-xl focus:border-red-500 focus:ring-red-500/30">
               <SelectValue placeholder="Sélectionnez la délégation" />
             </SelectTrigger>
             <SelectContent side="bottom" position="popper">
@@ -255,7 +255,7 @@ function AddressSelectorComponent({
             onValueChange={handleLocaliteValueChange}
             disabled={!delegation}
           >
-            <SelectTrigger id="localite" className="w-full">
+            <SelectTrigger id="localite" className="w-full rounded-xl focus:border-red-500 focus:ring-red-500/30">
               <SelectValue placeholder="Sélectionnez la localité" />
             </SelectTrigger>
             <SelectContent side="bottom" position="popper">
@@ -289,7 +289,7 @@ function AddressSelectorComponent({
             id="code_postal"
             value={codePostal}
             readOnly
-            className="mt-1 w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800"
+            className="mt-1 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
           />
         </div>
       )}

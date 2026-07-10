@@ -5,6 +5,8 @@ import { Header } from '@/app/components/Header';
 import { Footer } from '@/app/components/Footer';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import { ProductCard } from '@/app/components/ProductCard';
+import { PageHeader } from '@/app/components/PageHeader';
+import { Heart } from 'lucide-react';
 import type { Product } from '@/types';
 
 export function FavorisPageClient() {
@@ -22,17 +24,16 @@ export function FavorisPageClient() {
   })) as Product[];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Header />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          Favoris
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400 mb-6 sm:mb-8">
-          {count === 0
-            ? 'Aucun produit en favoris. Ajoutez des produits depuis la boutique ou les fiches produit.'
-            : `${count} produit${count > 1 ? 's' : ''} en favoris`}
-        </p>
+        <div className="mb-6 sm:mb-8">
+          <PageHeader
+            kicker="Ma sélection"
+            title="Favoris"
+            subtitle={count === 0 ? undefined : `${count} produit${count > 1 ? 's' : ''} en favoris`}
+          />
+        </div>
         {count > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-[360px]:gap-1.5 sm:gap-4 lg:gap-6">
             {productsAsProduct.map((product) => (
@@ -40,9 +41,18 @@ export function FavorisPageClient() {
             ))}
           </div>
         ) : (
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-8 sm:p-12 text-center">
-            <p className="text-gray-500 dark:text-gray-400">Votre liste de favoris est vide.</p>
-            <Link href="/shop" className="mt-4 inline-block text-red-600 dark:text-red-400 font-medium hover:underline">
+          <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm p-8 sm:p-12 text-center">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/40 mb-4">
+              <Heart className="h-8 w-8 text-red-600 dark:text-red-400" aria-hidden="true" />
+            </div>
+            <h2 className="font-display uppercase tracking-tight text-xl text-gray-900 dark:text-white mb-2">Votre liste de favoris est vide</h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              Ajoutez des produits depuis la boutique ou les fiches produit.
+            </p>
+            <Link
+              href="/shop"
+              className="inline-flex items-center justify-center rounded-xl bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide px-6 py-3 transition-colors"
+            >
               Découvrir la boutique
             </Link>
           </div>

@@ -5,9 +5,9 @@ import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Header } from '@/app/components/Header';
 import { Footer } from '@/app/components/Footer';
-import { Calendar, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, Clock, ChevronLeft, ChevronRight, ArrowRight, Newspaper } from 'lucide-react';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
-import { motion } from 'motion/react';
+import { PageHeader } from '@/app/components/PageHeader';
 import type { Article } from '@/types';
 import { getStorageUrl, getAllArticlesClient } from '@/services/api';
 import { format } from 'date-fns';
@@ -292,37 +292,31 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
     <div className="min-h-screen bg-white dark:bg-gray-950">
       <Header />
 
-      <main className="w-full mx-auto px-4 sm:px-6 max-w-[1024px] md:max-w-[1280px] lg:max-w-[1400px] xl:max-w-[1600px] py-6 sm:py-10 lg:py-14">
-        {/* Hero title – centered */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-10"
-        >
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900 dark:text-white mb-4">
-            Blog nutrition sportive &amp; compléments en Tunisie
-          </h1>
-          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-6 sm:mb-8">
-            Conseils, guides et actualités : whey, créatine, prise de masse et compléments alimentaires.
-          </p>
-
-          {/* Category tabs – horizontal, centered */}
-          <nav className="flex flex-wrap justify-center gap-2 md:gap-3" aria-label="Catégories du blog">
-            {BLOG_CATEGORIES.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setActiveCategory(cat.id)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  activeCategory === cat.id
-                    ? 'bg-red-600 text-white'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                }`}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </nav>
-        </motion.div>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 lg:py-14">
+        <div className="mb-10 sm:mb-12">
+          <PageHeader
+            kicker="Blog"
+            title="Blog nutrition sportive & compléments en Tunisie"
+            subtitle="Conseils, guides et actualités : whey, créatine, prise de masse et compléments alimentaires."
+          >
+            {/* Category filters – pills, red accent */}
+            <nav className="flex flex-wrap gap-2 md:gap-3" aria-label="Catégories du blog">
+              {BLOG_CATEGORIES.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setActiveCategory(cat.id)}
+                  className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+                    activeCategory === cat.id
+                      ? 'border-red-600 bg-red-600 text-white'
+                      : 'border-gray-200 bg-white text-gray-700 hover:border-red-600 hover:text-red-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-red-400 dark:hover:text-red-400'
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </nav>
+          </PageHeader>
+        </div>
 
         {sortedArticles.length === 0 && !isRefreshing ? (
           <div className="text-center py-16">
@@ -332,8 +326,8 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
           <>
             {/* Loading overlay during page navigation */}
             {isNavigating && (
-              <div className="fixed inset-0 bg-black/20 dark:bg-black/40 backdrop-blur-sm z-40 flex items-center justify-center">
-                <div className="bg-white dark:bg-gray-900 rounded-lg px-6 py-4 shadow-lg">
+              <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 dark:bg-black/60">
+                <div className="rounded-xl bg-white px-6 py-4 shadow-lg dark:bg-gray-900">
                   <p className="text-sm font-medium text-gray-900 dark:text-white">
                     Chargement de la page {currentPage}...
                   </p>
@@ -342,7 +336,7 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
             )}
 
             {/* Article grid: 1 col mobile, 2 tablet, 3 desktop */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-7 lg:gap-8 xl:gap-9 mb-8 sm:mb-12">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 mb-8 sm:mb-12">
               {isNavigating ? (
                 // Show skeletons during navigation
                 Array.from({ length: ARTICLES_PER_PAGE }).map((_, idx) => (
@@ -356,52 +350,54 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
                   const stableKey = `blog-${currentPage}-${article.id}`;
 
                   return (
-                    <motion.article
-                      key={stableKey}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      className="group"
-                    >
+                    <article key={stableKey} className="group">
                       <Link href={blogHref(article.slug)} className="block h-full">
-                        <div className="bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm hover:shadow-2xl hover:border-red-500/40 dark:hover:border-red-500/40 transition-all duration-300 h-full flex flex-col group-hover:-translate-y-1">
+                        <div className="flex h-full flex-col overflow-hidden rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm transition-all duration-300 hover:shadow-xl">
                           <div className="relative aspect-[4/3] overflow-hidden bg-gray-100 dark:bg-gray-800 min-h-[200px] sm:min-h-[240px] md:min-h-[280px] lg:min-h-[320px]">
                             {article.cover ? (
                               <SafeImage
                                 src={getStorageUrl(article.cover, article.updated_at || article.created_at)}
                                 alt={article.designation_fr || 'Article image'}
                                 fill
-                                className="group-hover:scale-110 transition-transform duration-500"
+                                className="object-cover transition-transform duration-500 group-hover:scale-105"
                                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                                 priority={index < 3}
                               />
                             ) : (
-                              <div className="w-full h-full bg-gradient-to-br from-red-600 to-red-800" />
+                              <div className="flex h-full w-full items-center justify-center bg-gray-100 dark:bg-gray-800">
+                                <Newspaper className="h-10 w-10 text-gray-300 dark:text-gray-700" strokeWidth={1.5} aria-hidden="true" />
+                              </div>
                             )}
                           </div>
-                          <div className="p-4 sm:p-5 md:p-6 lg:p-7 flex flex-col flex-1 min-w-0">
-                            <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white mb-2 sm:mb-3 md:mb-4 line-clamp-2 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors leading-tight">
+                          <div className="flex flex-1 flex-col p-4 sm:p-5 lg:p-6 min-w-0">
+                            <h2 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 dark:text-white mb-2 sm:mb-3 line-clamp-2 leading-snug transition-colors group-hover:text-red-600 dark:group-hover:text-red-400">
                               {decodeHtmlEntities(article.designation_fr || '')}
                             </h2>
                             {excerpt && (
-                              <p className="text-sm sm:text-base md:text-lg text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-2 sm:line-clamp-3 mb-3 sm:mb-4 md:mb-5 flex-1">
+                              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-2 sm:line-clamp-3 mb-4 flex-1">
                                 {excerpt}
                               </p>
                             )}
-                            <div className="flex items-center gap-3 sm:gap-4 md:gap-5 text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-auto flex-wrap">
-                              <span className="flex items-center gap-1.5 sm:gap-2">
-                                <Calendar className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-                                {format(articleDate, 'd MMM yyyy', { locale: fr })}
-                              </span>
-                              <span className="flex items-center gap-1.5 sm:gap-2">
-                                <Clock className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-                                {readingMin} min
+                            <div className="mt-auto flex flex-col gap-3">
+                              <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                                <span className="flex items-center gap-1.5">
+                                  <Calendar className="h-4 w-4 flex-shrink-0" strokeWidth={1.75} />
+                                  {format(articleDate, 'd MMM yyyy', { locale: fr })}
+                                </span>
+                                <span className="flex items-center gap-1.5">
+                                  <Clock className="h-4 w-4 flex-shrink-0" strokeWidth={1.75} />
+                                  {readingMin} min
+                                </span>
+                              </div>
+                              <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-red-600 dark:text-red-400">
+                                Lire la suite
+                                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" strokeWidth={1.75} aria-hidden="true" />
                               </span>
                             </div>
                           </div>
                         </div>
                       </Link>
-                    </motion.article>
+                    </article>
                   );
                 })
               )}
@@ -413,18 +409,18 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
                 <button
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className="p-2 rounded-full border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50 disabled:pointer-events-none transition-colors"
+                  className="rounded-full border border-gray-200 p-2 text-gray-700 transition-colors hover:border-red-600 hover:text-red-600 disabled:pointer-events-none disabled:opacity-50 dark:border-gray-800 dark:text-gray-300 dark:hover:border-red-400 dark:hover:text-red-400"
                   aria-label="Page précédente"
                 >
                   <ChevronLeft className="h-5 w-5" />
                 </button>
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 min-w-[4rem] text-center">
+                <span className="min-w-[4rem] text-center font-display font-semibold tabular-nums text-gray-900 dark:text-white">
                   {currentPage} / {totalPages}
                 </span>
                 <button
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  className="p-2 rounded-full border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50 disabled:pointer-events-none transition-colors"
+                  className="rounded-full border border-gray-200 p-2 text-gray-700 transition-colors hover:border-red-600 hover:text-red-600 disabled:pointer-events-none disabled:opacity-50 dark:border-gray-800 dark:text-gray-300 dark:hover:border-red-400 dark:hover:text-red-400"
                   aria-label="Page suivante"
                 >
                   <ChevronRight className="h-5 w-5" />

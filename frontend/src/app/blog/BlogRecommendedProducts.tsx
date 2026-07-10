@@ -39,7 +39,7 @@ interface BlogRecommendedProductsProps {
 
 function SkeletonCard() {
   return (
-    <div className="flex-shrink-0 w-[220px] sm:w-[240px] md:flex-shrink md:w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden animate-pulse">
+    <div className="flex-shrink-0 w-[220px] sm:w-[240px] md:flex-shrink md:w-full rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden animate-pulse">
       <div className="aspect-square bg-gray-200 dark:bg-gray-800" />
       <div className="p-3 space-y-2">
         <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-4/5" />
@@ -128,7 +128,7 @@ export function BlogRecommendedProducts({
     >
       <h2
         id="blog-recommended-heading"
-        className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-6 sm:mb-8"
+        className="font-display uppercase tracking-tight text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-6 sm:mb-8"
       >
         {title}
       </h2>

@@ -2,9 +2,8 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { motion } from 'motion/react';
-import { 
-  Truck, 
+import {
+  Truck,
   Wallet, 
   ShieldCheck, 
   Tag, 
@@ -162,14 +161,9 @@ export function CategorySeoLanding({
         />
       )}
 
-      {/* Header section - Custom ultra-premium layouts */}
+      {/* Header section */}
       {showHeader && (
-        <motion.div
-          initial={false}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="space-y-6"
-        >
+        <div className="space-y-6">
           {heroSrc && (
             <div className="relative w-full overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-100 dark:bg-gray-800 mb-4 sm:mb-6 aspect-[21/9] max-h-[260px] sm:max-h-[320px] shadow-sm">
               <picture className="contents">
@@ -193,11 +187,11 @@ export function CategorySeoLanding({
             {TRUST_BADGES.map((badge, idx) => {
               const Icon = badge.icon;
               return (
-                <div 
+                <div
                   key={idx}
-                  className="flex items-center gap-2.5 p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white/70 dark:bg-gray-900/40 backdrop-blur-md shadow-[0_2px_8px_rgba(0,0,0,0.02)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_8px_20px_rgba(0,0,0,0.4)] hover:border-red-500/20 dark:hover:border-red-500/20 transition-all duration-300 group"
+                  className="flex items-center gap-2.5 p-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm hover:shadow-md hover:border-red-200 dark:hover:border-red-500/30 transition-all duration-300 group"
                 >
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 group-hover:bg-red-600 group-hover:text-white transition-colors duration-300">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 group-hover:bg-red-600 group-hover:text-white transition-colors duration-300">
                     <Icon className="h-4.5 w-4.5" />
                   </div>
                   <div className="min-w-0">
@@ -213,40 +207,31 @@ export function CategorySeoLanding({
             })}
           </div>
 
-          {/* SPECIAL CREATINE CUSTOM HERO */}
+          {/* CREATINE HERO */}
           {isCreatine ? (
-            <div className="relative p-6 sm:p-8 md:p-10 rounded-2xl sm:rounded-3xl border border-amber-200/60 dark:border-amber-900/30 bg-gradient-to-br from-white via-amber-50/20 to-orange-50/30 dark:from-gray-900 dark:via-amber-950/10 dark:to-orange-950/15 overflow-hidden shadow-md">
-              {/* Glow effects & animations */}
-              <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-amber-400/20 via-orange-400/10 to-transparent dark:from-amber-500/10 dark:via-orange-500/5 rounded-full blur-3xl -translate-y-1/3 translate-x-1/3 pointer-events-none" />
-              <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-amber-300/10 dark:bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
-              
-              {/* CSS Particle background (delicate dots in gold/amber color) */}
-              <div className="absolute inset-0 opacity-[0.15] dark:opacity-10 bg-[radial-gradient(circle_at_1px_1px,rgba(217,119,6,0.15)_1px,transparent_0)] dark:bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.1)_1px,transparent_0)] bg-[size:20px_20px] pointer-events-none" />
-
-              <div className="relative z-10 flex flex-col lg:flex-row items-center gap-8">
+            <div className="p-6 sm:p-8 md:p-10 rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+              <div className="flex flex-col lg:flex-row items-center gap-8">
                 <div className="flex-1 min-w-0 text-center lg:text-left">
-                  {/* Premium Badge */}
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 dark:bg-amber-500/20 border border-amber-500/25 mb-4 sm:mb-5">
-                    <Sparkles className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 animate-pulse" />
-                    <span className="text-[10px] sm:text-xs text-amber-800 dark:text-amber-350 font-bold uppercase tracking-wider">
-                      Force & Volume Maximum
-                    </span>
-                  </div>
+                  {/* Kicker */}
+                  <span className="inline-flex items-center gap-2 mb-4 sm:mb-5 font-display uppercase tracking-[0.2em] text-[11px] sm:text-xs font-semibold text-red-600 dark:text-red-400 justify-center lg:justify-start">
+                    <span className="h-px w-5 bg-red-600 dark:bg-red-400" aria-hidden="true" />
+                    Force &amp; Volume Maximum
+                  </span>
 
-                  <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-gray-900 dark:text-white leading-tight">
-                    Créatine <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 drop-shadow-[0_2px_10px_rgba(245,158,11,0.25)]">Tunisie</span>
+                  <h1 className="font-display uppercase tracking-tight leading-[0.95] font-bold text-gray-900 dark:text-white text-3xl sm:text-4xl md:text-5xl lg:text-6xl">
+                    Créatine <span className="text-red-600 dark:text-red-400">Tunisie</span>
                   </h1>
 
-                  <p className="mt-4 text-sm sm:text-base text-gray-600 dark:text-gray-350 leading-relaxed font-light max-w-2xl mx-auto lg:mx-0">
+                  <p className="mt-4 text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed max-w-2xl mx-auto lg:mx-0">
                     Vous souhaitez franchir un palier et augmenter votre force de manière explosive ? Sur <strong>Protein.tn</strong>, découvrez les meilleures formules de <strong>créatine monohydrate</strong>, micronisée et labellisée Creapure® aux meilleurs prix en Tunisie. Importation 100% officielle avec livraison express chez vous.
                   </p>
 
                   {/* Horizontal mini-guide tags */}
                   <div className="mt-6 flex flex-wrap justify-center lg:justify-start gap-2 text-xs">
-                    <span className="px-3 py-1.5 rounded-lg bg-amber-500/5 dark:bg-white/[0.04] border border-amber-500/10 dark:border-white/[0.06] text-amber-800 dark:text-neutral-300 font-medium"># Monohydrate</span>
-                    <span className="px-3 py-1.5 rounded-lg bg-amber-500/5 dark:bg-white/[0.04] border border-amber-500/10 dark:border-white/[0.06] text-amber-800 dark:text-neutral-300 font-medium"># Creapure®</span>
-                    <span className="px-3 py-1.5 rounded-lg bg-amber-500/5 dark:bg-white/[0.04] border border-amber-500/10 dark:border-white/[0.06] text-amber-800 dark:text-neutral-300 font-medium"># Micronisée</span>
-                    <span className="px-3 py-1.5 rounded-lg bg-amber-500/5 dark:bg-white/[0.04] border border-amber-500/10 dark:border-white/[0.06] text-amber-800 dark:text-neutral-300 font-medium"># Capsules</span>
+                    <span className="px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/40 text-red-700 dark:text-red-300 font-medium"># Monohydrate</span>
+                    <span className="px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/40 text-red-700 dark:text-red-300 font-medium"># Creapure®</span>
+                    <span className="px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/40 text-red-700 dark:text-red-300 font-medium"># Micronisée</span>
+                    <span className="px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/40 text-red-700 dark:text-red-300 font-medium"># Capsules</span>
                   </div>
                 </div>
 
@@ -255,18 +240,18 @@ export function CategorySeoLanding({
                   {CREATINE_BENEFITS.map((benefit, i) => {
                     const BIcon = benefit.icon;
                     return (
-                      <div 
+                      <div
                         key={i}
-                        className="flex gap-3 p-3.5 rounded-xl border border-amber-100 dark:border-white/[0.05] bg-white/95 dark:bg-white/[0.03] shadow-sm hover:border-amber-300 dark:hover:border-amber-500/30 transition-all duration-300 group"
+                        className="flex gap-3 p-3.5 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 shadow-sm hover:shadow-md hover:border-red-200 dark:hover:border-red-500/30 transition-all duration-300 group"
                       >
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 group-hover:bg-gradient-to-r group-hover:from-amber-500 group-hover:to-orange-500 group-hover:text-white transition-all duration-300">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 group-hover:bg-red-600 group-hover:text-white transition-colors duration-300">
                           <BIcon className="h-4.5 w-4.5" />
                         </div>
                         <div className="min-w-0">
                           <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white leading-tight">
                             {benefit.title}
                           </h4>
-                          <p className="text-[10px] sm:text-xs text-gray-500 dark:text-neutral-400 mt-1 leading-snug">
+                          <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-1 leading-snug">
                             {benefit.desc}
                           </p>
                         </div>
@@ -277,108 +262,79 @@ export function CategorySeoLanding({
               </div>
             </div>
           ) : (
-            /* Gold / Champagne Premium Hero */
-            <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-lg border border-amber-200/70 dark:border-amber-800/30">
+            /* Generic category hero — flat, one-accent */
+            <div className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm p-6 sm:p-8 md:p-10">
+              <div className="flex flex-col lg:flex-row items-start gap-8 lg:gap-10">
 
-              {/* Gold gradient background */}
-              <div className="absolute inset-0 bg-gradient-to-br from-amber-50 via-yellow-50/80 to-orange-50/60 dark:from-gray-900 dark:via-amber-950/20 dark:to-yellow-950/10" />
+                {/* ── Left column: kicker + H1 + clamped intro ── */}
+                <div className="flex-1 min-w-0">
 
-              {/* Shimmering diagonal stripe */}
-              <div className="absolute inset-0 opacity-[0.07] dark:opacity-[0.04] bg-[repeating-linear-gradient(45deg,#d97706_0px,#d97706_1px,transparent_1px,transparent_12px)] pointer-events-none" />
+                  {/* Kicker */}
+                  <span className="inline-flex items-center gap-2 mb-5 font-display uppercase tracking-[0.2em] text-[11px] sm:text-xs font-semibold text-red-600 dark:text-red-400">
+                    <span className="h-px w-5 bg-red-600 dark:bg-red-400" aria-hidden="true" />
+                    Qualité Premium
+                  </span>
 
-              {/* Top-right gold glow */}
-              <div className="absolute -top-16 -right-16 w-72 h-72 bg-gradient-to-br from-amber-400/30 via-yellow-300/15 to-transparent rounded-full blur-3xl pointer-events-none" />
-              {/* Bottom-left warm glow */}
-              <div className="absolute -bottom-16 -left-16 w-56 h-56 bg-amber-300/20 dark:bg-amber-600/10 rounded-full blur-3xl pointer-events-none" />
+                  {/* H1 */}
+                  <h1 className="font-display uppercase tracking-tight leading-[0.95] font-bold text-gray-900 dark:text-white text-3xl sm:text-4xl md:text-5xl lg:text-[3.25rem] mb-4">
+                    {title.replace(/\s+tunisie\s*$/i, '')}{' '}
+                    <span className="text-red-600 dark:text-red-400">Tunisie</span>
+                  </h1>
 
-              {/* Thin gold top accent line */}
-              <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-transparent via-amber-400 to-transparent" />
+                  {/* Intro — hard-clamped to 3 lines */}
+                  {headerIntro && (
+                    <p className="text-sm sm:text-[0.9rem] text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-3 max-w-xl">
+                      {headerIntro}
+                    </p>
+                  )}
 
-              <div className="relative z-10 p-6 sm:p-8 md:p-10">
-                <div className="flex flex-col lg:flex-row items-start gap-8 lg:gap-10">
+                  {/* Divider */}
+                  <div className="h-px w-full max-w-xs bg-gray-200 dark:bg-gray-800 mt-5" />
 
-                  {/* ── Left column: badge + H1 + clamped intro ── */}
-                  <div className="flex-1 min-w-0">
-
-                    {/* Gold badge */}
-                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-amber-400/20 to-yellow-400/20 dark:from-amber-500/20 dark:to-yellow-500/15 border border-amber-400/40 dark:border-amber-500/30 mb-5">
-                      <Sparkles className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 animate-pulse" />
-                      <span className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-amber-800 dark:text-amber-300">
-                        Qualité Premium
-                      </span>
-                    </div>
-
-                    {/* H1 */}
-                    <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.25rem] font-extrabold tracking-tight text-gray-900 dark:text-white leading-[1.1] mb-4">
-                      {title.replace(/\s+tunisie\s*$/i, '')}{' '}
-                      <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-500 via-yellow-500 to-orange-500 drop-shadow-[0_2px_12px_rgba(217,119,6,0.35)]">
-                        Tunisie
-                      </span>
-                    </h1>
-
-                    {/* Intro — hard-clamped to 3 lines */}
-                    {headerIntro && (
-                      <div className="relative">
-                        <p className="text-sm sm:text-[0.9rem] text-gray-600 dark:text-gray-300 leading-relaxed font-normal line-clamp-3 max-w-xl">
-                          {headerIntro}
-                        </p>
-                        {/* fade-out bottom */}
-                        <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-amber-50/90 dark:from-gray-900/80 to-transparent pointer-events-none" />
+                  {/* Mini stat row */}
+                  <div className="flex flex-wrap gap-4 mt-4">
+                    {[
+                      { label: 'Livraison', value: '24-72h' },
+                      { label: 'Produits', value: '100% Originaux' },
+                      { label: 'Paiement', value: 'Cash à la livraison' },
+                    ].map((stat) => (
+                      <div key={stat.label} className="flex flex-col">
+                        <span className="text-[10px] font-display font-semibold uppercase tracking-wider text-red-600/80 dark:text-red-400/70">{stat.label}</span>
+                        <span className="text-xs sm:text-sm font-bold text-gray-800 dark:text-gray-100">{stat.value}</span>
                       </div>
-                    )}
-
-                    {/* Decorative gold divider */}
-                    <div className="flex items-center gap-3 mt-5">
-                      <div className="h-px flex-1 bg-gradient-to-r from-amber-300/60 to-transparent" />
-                      <span className="text-amber-400 text-xs">✦</span>
-                      <div className="h-px flex-1 bg-gradient-to-l from-amber-300/60 to-transparent" />
-                    </div>
-
-                    {/* Mini stat row */}
-                    <div className="flex flex-wrap gap-4 mt-4">
-                      {[
-                        { label: 'Livraison', value: '24-72h' },
-                        { label: 'Produits', value: '100% Originaux' },
-                        { label: 'Paiement', value: 'Cash à la livraison' },
-                      ].map((stat) => (
-                        <div key={stat.label} className="flex flex-col">
-                          <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-600/70 dark:text-amber-500/60">{stat.label}</span>
-                          <span className="text-xs sm:text-sm font-bold text-gray-800 dark:text-gray-100">{stat.value}</span>
-                        </div>
-                      ))}
-                    </div>
+                    ))}
                   </div>
-
-                  {/* ── Right column: benefit cards ── */}
-                  <div className="w-full lg:w-[300px] xl:w-[320px] shrink-0 space-y-2.5">
-                    {GENERIC_BENEFITS.map((benefit, i) => {
-                      const BIcon = benefit.icon;
-                      return (
-                        <div
-                          key={i}
-                          className="group flex gap-3 p-3.5 rounded-xl border border-amber-200/60 dark:border-amber-800/20 bg-white/80 dark:bg-white/[0.03] backdrop-blur-sm shadow-sm hover:shadow-md hover:border-amber-400/60 dark:hover:border-amber-600/40 hover:-translate-y-0.5 transition-all duration-300"
-                        >
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-amber-400/20 to-yellow-400/10 dark:from-amber-500/20 dark:to-yellow-500/10 text-amber-600 dark:text-amber-400 group-hover:from-amber-500 group-hover:to-orange-500 group-hover:text-white transition-all duration-300 shadow-sm">
-                            <BIcon className="h-4 w-4" />
-                          </div>
-                          <div className="min-w-0">
-                            <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white leading-tight">
-                              {benefit.title}
-                            </h4>
-                            <p className="text-[10px] sm:text-xs text-gray-500 dark:text-neutral-400 mt-0.5 leading-snug">
-                              {benefit.desc}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
                 </div>
+
+                {/* ── Right column: benefit cards ── */}
+                <div className="w-full lg:w-[300px] xl:w-[320px] shrink-0 space-y-2.5">
+                  {GENERIC_BENEFITS.map((benefit, i) => {
+                    const BIcon = benefit.icon;
+                    return (
+                      <div
+                        key={i}
+                        className="group flex gap-3 p-3.5 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 shadow-sm hover:shadow-md hover:border-red-200 dark:hover:border-red-500/30 hover:-translate-y-0.5 transition-all duration-300"
+                      >
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 group-hover:bg-red-600 group-hover:text-white transition-colors duration-300">
+                          <BIcon className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white leading-tight">
+                            {benefit.title}
+                          </h4>
+                          <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
+                            {benefit.desc}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
               </div>
             </div>
           )}
-        </motion.div>
+        </div>
       )}
 
       {/* Full content (intro) – expanded below-fold */}
@@ -398,9 +354,9 @@ export function CategorySeoLanding({
 
       {/* Full content (how to choose) */}
       {(showTop || showContentBelowFold) && hasHowTo && (
-        <section className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/50 dark:bg-gray-900/30 p-5 sm:p-6 lg:p-8 backdrop-blur-sm relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-2 h-full bg-red-600" />
-          <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center gap-2">
+        <section className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 sm:p-6 lg:p-8 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-1.5 h-full bg-red-600" />
+          <h2 className="text-lg sm:text-xl font-display uppercase tracking-tight font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-red-500" />
             {howToChooseTitle}
           </h2>
@@ -417,11 +373,10 @@ export function CategorySeoLanding({
       {/* Full content (longBottomHtml) */}
       {(showTop || showContentBelowFold) && hasLongBottom && (
         <article
-          className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 sm:p-6 lg:p-8 shadow-sm relative"
+          className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 sm:p-6 lg:p-8 shadow-sm"
           aria-labelledby="category-seo-long-heading"
         >
-          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-red-50/10 to-transparent dark:from-red-900/5 rounded-full blur-2xl pointer-events-none" />
-          <h2 id="category-seo-long-heading" className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <h2 id="category-seo-long-heading" className="text-lg sm:text-xl font-display uppercase tracking-tight font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
             <Bookmark className="h-5 w-5 text-red-500" />
             En savoir plus
           </h2>
@@ -435,7 +390,7 @@ export function CategorySeoLanding({
       {/* Full content (FAQs) */}
       {(showTop || showContentBelowFold) && hasFaqs && (
         <section className="space-y-4">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2 px-1">
+          <h2 className="text-xl font-display uppercase tracking-tight font-bold text-gray-900 dark:text-white flex items-center gap-2 px-1">
             Questions fréquentes (FAQ)
           </h2>
           <div className="border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden bg-white dark:bg-gray-900 shadow-sm divide-y divide-gray-100 dark:divide-gray-800">
@@ -466,7 +421,7 @@ export function CategorySeoLanding({
         <section className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8 mt-4">
           {hasRelated && (
             <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/30 p-5 sm:p-6 shadow-sm">
-              <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center gap-2">
+              <h2 className="text-base sm:text-lg font-display uppercase tracking-tight font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center gap-2">
                 <TrendingUp className="h-4.5 w-4.5 text-red-500" />
                 Catégories associées
               </h2>
@@ -489,7 +444,7 @@ export function CategorySeoLanding({
           )}
           {hasBest && (
             <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 sm:p-6 shadow-sm">
-              <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center gap-2">
+              <h2 className="text-base sm:text-lg font-display uppercase tracking-tight font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center gap-2">
                 <Sparkles className="h-4.5 w-4.5 text-red-500" />
                 Produits phares
               </h2>

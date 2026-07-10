@@ -41,7 +41,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
     <Drawer open={open} onOpenChange={onOpenChange} direction="right">
       <DrawerContent className="max-h-[96vh] w-full sm:max-w-md bg-white dark:bg-gray-900 border-0 shadow-none">
         <DrawerHeader className="border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 pb-4">
-          <DrawerTitle className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">
+          <DrawerTitle className="font-display uppercase tracking-tight text-xl font-bold text-gray-900 dark:text-white">
             Panier
           </DrawerTitle>
           <DrawerDescription className="text-sm text-gray-500 dark:text-gray-400">
@@ -61,7 +61,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                 Votre panier est vide
               </p>
               <DrawerClose asChild>
-                <Button onClick={() => onOpenChange(false)} className="rounded-xl">
+                <Button onClick={() => onOpenChange(false)} className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide">
                   Continuer les achats
                 </Button>
               </DrawerClose>
@@ -110,7 +110,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                       <h3 className="font-semibold text-gray-900 dark:text-white text-sm line-clamp-2 mb-0.5 leading-tight">
                         {localizedName(item.product as any, locale)}
                       </h3>
-                      <p className="text-red-600 dark:text-red-400 font-bold text-sm mb-2">
+                      <p className="text-red-600 dark:text-red-400 font-display font-bold tracking-tight tabular-nums text-sm mb-2">
                         {formatCurrency(displayPrice)}
                       </p>
                       <div className="flex items-center gap-1.5">
@@ -149,7 +149,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                     </div>
 
                     <div className="text-right flex-shrink-0">
-                      <p className="font-bold text-gray-900 dark:text-white text-sm">
+                      <p className="font-display font-bold tracking-tight tabular-nums text-gray-900 dark:text-white text-sm">
                         {formatCurrency(displayPrice * item.quantity)}
                       </p>
                     </div>
@@ -163,15 +163,15 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
         {items.length > 0 && (
           <DrawerFooter className="border-t border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/80 p-4">
             <div className="flex justify-between items-center mb-4">
-              <span className="text-base font-semibold text-gray-900 dark:text-white">Total</span>
-              <span className="text-xl font-bold text-red-600 dark:text-red-400 tabular-nums">
+              <span className="font-display uppercase tracking-wide text-base font-semibold text-gray-900 dark:text-white">Total</span>
+              <span className="font-display font-bold tracking-tight text-xl text-red-600 dark:text-red-400 tabular-nums">
                 {formatCurrency(totalPrice)}
               </span>
             </div>
             <div className="flex flex-col gap-2.5">
               <DrawerClose asChild>
                 <Link href="/checkout" className="block">
-                  <Button className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold h-12 rounded-xl shadow-md hover:shadow-lg transition-shadow">
+                  <Button className="w-full bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide font-semibold h-12 rounded-xl shadow-sm hover:shadow-md transition-shadow">
                     Passer commande
                   </Button>
                 </Link>
@@ -180,7 +180,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                 <Link href="/cart" className="block">
                   <Button
                     variant="outline"
-                    className="w-full border-2 border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 dark:border-red-500 dark:text-red-400 h-11 rounded-xl font-medium"
+                    className="w-full border-2 border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 dark:border-red-500 dark:text-red-400 h-11 rounded-xl font-display uppercase tracking-wide font-medium"
                   >
                     Voir le panier
                   </Button>

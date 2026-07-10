@@ -355,7 +355,7 @@ export function HeaderClient() {
       {/* Main Header */}
       <header
         className={cn(
-          'bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 shadow-sm',
+          'bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm',
           'transition-all duration-300 ease-out'
         )}
       >
@@ -468,7 +468,7 @@ export function HeaderClient() {
                     }}
                     onFocus={() => setShowSearchResults(true)}
                     placeholder="Rechercher tous les produits..."
-                    className="w-full h-11 pl-4 pr-12 rounded-lg border-0 bg-white text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-red-300 text-sm"
+                    className="w-full h-11 pl-4 pr-12 rounded-xl border-0 bg-white text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-red-300 text-sm"
                   />
                   {searchQuery && (
                     <button
@@ -488,7 +488,7 @@ export function HeaderClient() {
                 {showSearchResults && (searchQuery.trim() || searchResults.length > 0 || isSearching) && (
                   <div
                     ref={searchResultsRef}
-                    className="absolute left-0 right-0 top-full mt-2 z-50 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl max-h-[500px] overflow-y-auto"
+                    className="absolute left-0 right-0 top-full mt-2 z-50 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-lg max-h-[500px] overflow-y-auto"
                   >
                     {(isSearching || (searchQuery.trim() && debouncedSearchQuery.trim() !== searchQuery.trim())) ? (
                       <div className="flex items-center justify-center py-8 text-gray-500">
@@ -593,7 +593,7 @@ export function HeaderClient() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
                       align="end"
-                      className="z-[9999] min-w-[200px] shadow-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 backdrop-blur-sm"
+                      className="z-[9999] min-w-[200px] rounded-xl shadow-lg bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800"
                       sideOffset={8}
                     >
                       <div className="px-3 py-2.5 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
@@ -690,7 +690,7 @@ export function HeaderClient() {
               <NavigationLink
                 key={`${link.href}-${link.label}`}
                 item={link}
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-400 transition-colors whitespace-nowrap py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                className="inline-flex items-center gap-1.5 font-display uppercase tracking-wide text-sm font-semibold text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-400 transition-colors whitespace-nowrap py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
               >
                 <NavigationIcon name={link.icon} className="h-4 w-4" />
                 <span>{translateLegacy(link.label)}</span>
@@ -720,7 +720,7 @@ export function HeaderClient() {
 
           <div className="flex-1 overflow-y-auto py-4 flex flex-col">
             <div className="px-4 pb-4">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 px-3 mb-2">Navigation</h3>
+              <h3 className="font-display uppercase tracking-[0.2em] text-[11px] font-semibold text-gray-500 dark:text-gray-400 px-3 mb-2">Navigation</h3>
               <nav className="space-y-0.5">
                 {sidebarLinks.map((link) => (
                   isProductsNavLink(link) ? (

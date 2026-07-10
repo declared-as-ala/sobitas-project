@@ -123,7 +123,7 @@ export function InstallAppBanner() {
           transform: show ? 'translateY(0)' : 'translateY(110%)',
           transition: 'transform 0.45s cubic-bezier(0.32,0.72,0,1)',
         }}
-        className="fixed bottom-0 left-0 right-0 z-[9999] flex items-center gap-3 px-4 py-3 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 shadow-[0_-6px_32px_rgba(0,0,0,0.15)] md:hidden"
+        className="fixed bottom-0 left-0 right-0 z-[9999] flex items-center gap-3 px-4 py-3 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] md:hidden"
       >
         {/* App icon */}
         <div className="relative h-11 w-11 shrink-0 rounded-xl overflow-hidden border border-gray-100 dark:border-gray-700 shadow">
@@ -143,7 +143,7 @@ export function InstallAppBanner() {
         {/* CTA */}
         <button
           onClick={handleInstall}
-          className="flex shrink-0 items-center gap-1.5 rounded-lg bg-red-600 px-3 py-2 text-sm font-bold leading-snug text-white active:bg-red-800 hover:bg-red-700 transition-colors"
+          className="flex shrink-0 items-center gap-1.5 rounded-lg bg-red-600 px-3 py-2 text-sm font-display uppercase tracking-wide font-bold leading-snug text-white active:bg-red-800 hover:bg-red-700 transition-colors"
         >
           <Download className="h-3.5 w-3.5" />
           Installer
@@ -165,9 +165,9 @@ export function InstallAppBanner() {
           className="fixed inset-0 z-[10000] flex flex-col justify-end md:hidden"
           onClick={(e) => { if (e.target === e.currentTarget) dismiss(); }}
         >
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={dismiss} />
+          <div className="absolute inset-0 bg-black/50" onClick={dismiss} />
 
-          <div className="relative bg-white dark:bg-gray-900 rounded-t-2xl px-5 pt-4 pb-safe-or-8 shadow-2xl animate-slide-up pb-8">
+          <div className="relative bg-white dark:bg-gray-900 rounded-t-2xl px-5 pt-4 pb-safe-or-8 shadow-xl animate-slide-up pb-8">
             {/* Handle */}
             <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-gray-300 dark:bg-gray-600" />
 
@@ -207,10 +207,10 @@ export function InstallAppBanner() {
                 </>
               ) : (
                 <>
-                  <Step icon={<span className="text-base">⋮</span>} bg="bg-blue-50 dark:bg-blue-900/30 border-blue-100 dark:border-blue-800">
+                  <Step icon={<span className="text-base">⋮</span>} bg="bg-red-50 dark:bg-red-900/30 border-red-100 dark:border-red-800">
                     <span>Ouvrez le menu du navigateur <strong>(⋮)</strong> en haut à droite</span>
                   </Step>
-                  <Step icon={<Plus className="h-4 w-4 text-blue-600 dark:text-blue-400" />} bg="bg-blue-50 dark:bg-blue-900/30 border-blue-100 dark:border-blue-800">
+                  <Step icon={<Plus className="h-4 w-4 text-red-600 dark:text-red-400" />} bg="bg-red-50 dark:bg-red-900/30 border-red-100 dark:border-red-800">
                     <span>Appuyez sur <strong>« Ajouter à l&apos;écran d&apos;accueil »</strong></span>
                   </Step>
                   <Step icon={<span className="text-sm">✓</span>} bg="bg-green-50 dark:bg-green-900/30 border-green-100 dark:border-green-800">

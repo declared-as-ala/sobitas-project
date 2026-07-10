@@ -364,7 +364,7 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
               <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shrink-0 safe-area-pb">
                 <Button
                   onClick={handleSubmit}
-                  className="w-full h-12 rounded-xl text-base font-semibold bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-600/20"
+                  className="w-full h-12 rounded-xl text-base font-display uppercase tracking-wide font-semibold bg-red-600 hover:bg-red-700 text-white shadow-sm"
                 >
                   <Search className="h-5 w-5 mr-2" />
                   Voir tous les résultats
@@ -423,7 +423,7 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
 
       {isPopoverOpen && showResults && (
         <div
-          className="absolute left-0 right-0 top-full mt-1 z-50 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl p-3 max-h-[400px] overflow-y-auto"
+          className="absolute left-0 right-0 top-full mt-1 z-50 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-lg p-3 max-h-[400px] overflow-y-auto"
           role="listbox"
           onMouseDown={(e) => e.preventDefault()}
         >

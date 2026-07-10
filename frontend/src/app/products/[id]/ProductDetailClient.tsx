@@ -12,14 +12,11 @@ import { ProductCard } from '@/app/components/ProductCard';
 import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
-import { Input } from '@/app/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
-import { Minus, Plus, ShoppingCart, Star, Shield, ArrowLeft, Heart, Share2, ZoomIn, CheckCircle2, Loader2, BadgeCheck, Search, Zap, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { SectionHeader } from '@/app/components/SectionHeader';
+import { Minus, Plus, ShoppingCart, Star, Shield, ArrowLeft, Heart, Share2, ZoomIn, CheckCircle2, Loader2, Zap, X, ChevronLeft, ChevronRight, Sparkles, TrendingUp, Flame } from 'lucide-react';
 import { useQuickOrder } from '@/contexts/QuickOrderContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import type { QuickOrderProduct } from '@/contexts/QuickOrderContext';
-import { motion } from 'motion/react';
-import { Card, CardContent } from '@/app/components/ui/card';
 import type { Product, Review } from '@/types';
 import { getStorageUrl, addReview, getProductDetails } from '@/services/api';
 import { hasValidPromo } from '@/util/productPrice';
@@ -495,7 +492,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
+    <div className="min-h-screen bg-white dark:bg-gray-950">
       <Header />
 
       <main className="w-full mx-auto px-4 sm:px-6 max-w-[1024px] md:max-w-[1280px] lg:max-w-[1400px] xl:max-w-[1600px] py-3 sm:py-6 lg:py-12 pb-32 sm:pb-40 lg:pb-12">
@@ -519,32 +516,24 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
           </nav>
         )}
         {/* Back Button */}
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="mb-4 sm:mb-6"
-        >
+        <div className="mb-4 sm:mb-6">
           <Button
             variant="ghost"
             onClick={() => router.back()}
-            className="min-h-[44px]"
+            className="min-h-[44px] font-display uppercase tracking-wide text-sm hover:text-red-600 dark:hover:text-red-400"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Retour
           </Button>
-        </motion.div>
+        </div>
 
         {/* Layout: 2 cols desktop (Image left, larger | Info + buy right), mobile single col. */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8 xl:gap-10 mb-6 sm:mb-8 lg:mb-10">
           {/* A) COLONNE GAUCHE — Gallery (desktop): image slightly smaller */}
           <div className="hidden lg:block lg:col-span-5 min-w-0">
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="sticky top-24 max-w-[520px] xl:max-w-[560px] ml-auto"
-            >
+            <div className="sticky top-24 max-w-[520px] xl:max-w-[560px] ml-auto">
               <div
-                className="relative w-full rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-lg group aspect-square min-h-[290px] xl:min-h-[350px] bg-gradient-to-b from-gray-50 to-white dark:from-gray-800 dark:to-gray-900/90"
+                className="relative w-full rounded-xl overflow-hidden border border-gray-100 dark:border-gray-800 shadow-sm group aspect-square min-h-[290px] xl:min-h-[350px] bg-gray-50 dark:bg-gray-900"
                 onTouchStart={handleGalleryTouchStart}
                 onTouchEnd={handleGalleryTouchEnd}
               >
@@ -587,10 +576,10 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       type="button"
                       onClick={() => setSelectedImage(index)}
                       className={cn(
-                        'relative aspect-square rounded-lg overflow-hidden border transition',
+                        'relative aspect-square rounded-lg overflow-hidden border transition-colors',
                         index === safeSelectedImage
-                          ? 'border-red-500 ring-2 ring-red-200 dark:ring-red-900'
-                          : 'border-gray-200 dark:border-gray-700 hover:border-red-300'
+                          ? 'border-red-600 ring-2 ring-red-100 dark:ring-red-950'
+                          : 'border-gray-100 dark:border-gray-800 hover:border-red-300'
                       )}
                       aria-label={`Voir image ${index + 1}`}
                     >
@@ -607,7 +596,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   ))}
                 </div>
               )}
-            </motion.div>
+            </div>
           </div>
 
           {/* B) COLONNE DROITE — Infos + prix + quantité + CTAs + garanties (desktop) / mobile first block */}
@@ -624,33 +613,35 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       : stockStatus.isLowStock
                         ? 'bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
                         : 'bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800',
-                    'text-xs sm:text-sm px-2.5 py-1'
+                    'font-display uppercase tracking-wide text-xs sm:text-sm px-2.5 py-1'
                   )}
                 >
                   <CheckCircle2 className="h-3 w-3 mr-1" />
                   {stockStatus.stockLabel}
                   {stockStatus.isLowStock && stockStatus.qte > 0 && (
-                    <span className="ml-1">({stockStatus.qte})</span>
+                    <span className="ml-1 tabular-nums">({stockStatus.qte})</span>
                   )}
                 </Badge>
                 {discount > 0 && (
-                  <Badge className="bg-red-600 text-white text-xs sm:text-sm px-2.5 py-1">-{discount}% OFF</Badge>
+                  <Badge className="gap-1 bg-red-600 text-white font-display uppercase tracking-wide tabular-nums text-xs sm:text-sm px-2.5 py-1">
+                    <Flame className="h-3 w-3 shrink-0" aria-hidden="true" />-{discount}% OFF
+                  </Badge>
                 )}
                 {product.new_product === 1 && (
-                  <Badge className="bg-blue-600 text-white text-xs sm:text-sm px-2.5 py-1">New</Badge>
+                  <Badge variant="outline" className="gap-1 bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-gray-200 dark:border-gray-700 font-display uppercase tracking-wide text-xs sm:text-sm px-2.5 py-1">
+                    <Sparkles className="h-3 w-3 shrink-0 text-red-600 dark:text-red-400" aria-hidden="true" />New
+                  </Badge>
                 )}
                 {product.best_seller === 1 && (
-                  <Badge className="bg-amber-600 text-white text-xs sm:text-sm px-2.5 py-1">Top Vendu</Badge>
+                  <Badge variant="outline" className="gap-1 bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-gray-200 dark:border-gray-700 font-display uppercase tracking-wide text-xs sm:text-sm px-2.5 py-1">
+                    <TrendingUp className="h-3 w-3 shrink-0 text-red-600 dark:text-red-400" aria-hidden="true" />Top Vendu
+                  </Badge>
                 )}
               </div>
               {/* Product Image - slightly smaller on mobile */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="w-full max-w-[260px] sm:max-w-[320px] mx-auto"
-              >
+              <div className="w-full max-w-[260px] sm:max-w-[320px] mx-auto">
                 <div
-                  className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-700 group w-full aspect-square bg-gradient-to-b from-gray-50 to-white dark:from-gray-800 dark:to-gray-900/90"
+                  className="relative rounded-xl overflow-hidden shadow-sm border border-gray-100 dark:border-gray-800 group w-full aspect-square bg-gray-50 dark:bg-gray-900"
                   onTouchStart={handleGalleryTouchStart}
                   onTouchEnd={handleGalleryTouchEnd}
                 >
@@ -693,10 +684,10 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                         type="button"
                         onClick={() => setSelectedImage(index)}
                         className={cn(
-                          'relative aspect-square rounded-lg overflow-hidden border transition',
+                          'relative aspect-square rounded-lg overflow-hidden border transition-colors',
                           index === safeSelectedImage
-                            ? 'border-red-500 ring-2 ring-red-200 dark:ring-red-900'
-                            : 'border-gray-200 dark:border-gray-700'
+                            ? 'border-red-600 ring-2 ring-red-100 dark:ring-red-950'
+                            : 'border-gray-100 dark:border-gray-800'
                         )}
                         aria-label={`Voir image ${index + 1}`}
                       >
@@ -713,11 +704,11 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     ))}
                   </div>
                 )}
-              </motion.div>
+              </div>
 
               {/* 1. Title — mobile mirror of desktop H1; rendered as <p> to avoid duplicate H1 in DOM */}
               <div className="min-w-0 px-1">
-                <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight break-words line-clamp-2">
+                <p className="font-display uppercase tracking-tight text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white leading-[0.95] break-words line-clamp-3">
                   {product.designation_fr}
                 </p>
               </div>
@@ -726,7 +717,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
               <button
                 type="button"
                 onClick={() => document.getElementById('reviews')?.scrollIntoView({ behavior: 'smooth' })}
-                className="flex items-center gap-2 px-1 text-left"
+                className="group flex items-center gap-2 px-1 text-left"
               >
                 <div className="flex items-center gap-1">
                   {[1,2,3,4,5].map((i) => (
@@ -736,7 +727,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     />
                   ))}
                 </div>
-                <span className="text-sm sm:text-base text-primary-600 dark:text-primary-400 font-medium">
+                <span className="text-sm sm:text-base text-gray-600 dark:text-gray-400 font-medium tabular-nums transition-colors group-hover:text-red-600 dark:group-hover:text-red-400">
                   ({rating > 0 ? rating.toFixed(1) : '0'}) • {reviewCount} avis
                 </span>
               </button>
@@ -749,19 +740,19 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
               )}
 
               {/* 3. Price - current + old + savings */}
-              <div className="py-3 sm:py-4 border-y border-gray-200 dark:border-gray-800 px-1">
+              <div className="py-3 sm:py-4 border-y border-gray-100 dark:border-gray-800 px-1">
                 <div className="flex flex-wrap items-baseline gap-2 sm:gap-3">
-                  <span className="text-3xl sm:text-4xl font-bold text-red-600 dark:text-red-400">
+                  <span className="font-display font-bold tracking-tight tabular-nums text-3xl sm:text-4xl text-red-600 dark:text-red-400">
                     {displayPrice} DT
                   </span>
                   {oldPrice && (
-                    <span className="text-xl sm:text-2xl text-gray-400 line-through">
+                    <span className="font-display tracking-tight tabular-nums text-xl sm:text-2xl text-gray-400 dark:text-gray-500 line-through">
                       {oldPrice} DT
                     </span>
                   )}
                 </div>
                 {oldPrice && (
-                  <p className="text-sm sm:text-base text-green-600 dark:text-green-400 mt-2">
+                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-2 tabular-nums">
                     Vous économisez {oldPrice - displayPrice} DT
                   </p>
                 )}
@@ -894,11 +885,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
             </div>
 
             {/* Desktop Layout: badges, title, rating, price, description, category, quantity, CTAs, arômes, service cards */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="hidden lg:block space-y-4 min-w-0"
-            >
+            <div className="hidden lg:block space-y-4 min-w-0">
                 {/* Badges (stock from API: rupture + qte + low_stock_threshold) */}
                 <div className="flex items-center gap-2 flex-wrap">
                   <Badge
@@ -909,26 +896,32 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                         : stockStatus.isLowStock
                           ? 'bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
                           : 'bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800',
-                      'text-xs px-2.5 py-1'
+                      'font-display uppercase tracking-wide text-xs px-2.5 py-1'
                     )}
                   >
                     <CheckCircle2 className="h-3 w-3 mr-1" />
                     {stockStatus.stockLabel}
                     {stockStatus.isLowStock && stockStatus.qte > 0 && (
-                      <span className="ml-1">({stockStatus.qte})</span>
+                      <span className="ml-1 tabular-nums">({stockStatus.qte})</span>
                     )}
                   </Badge>
                   {discount > 0 && (
-                    <Badge className="bg-red-600 text-white text-xs px-2.5 py-1">-{discount}% OFF</Badge>
+                    <Badge className="gap-1 bg-red-600 text-white font-display uppercase tracking-wide tabular-nums text-xs px-2.5 py-1">
+                      <Flame className="h-3 w-3 shrink-0" aria-hidden="true" />-{discount}% OFF
+                    </Badge>
                   )}
                   {product.new_product === 1 && (
-                    <Badge className="bg-blue-600 text-white text-xs px-2.5 py-1">New</Badge>
+                    <Badge variant="outline" className="gap-1 bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-gray-200 dark:border-gray-700 font-display uppercase tracking-wide text-xs px-2.5 py-1">
+                      <Sparkles className="h-3 w-3 shrink-0 text-red-600 dark:text-red-400" aria-hidden="true" />New
+                    </Badge>
                   )}
                   {product.best_seller === 1 && (
-                    <Badge className="bg-amber-600 text-white text-xs px-2.5 py-1">Top Vendu</Badge>
+                    <Badge variant="outline" className="gap-1 bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-gray-200 dark:border-gray-700 font-display uppercase tracking-wide text-xs px-2.5 py-1">
+                      <TrendingUp className="h-3 w-3 shrink-0 text-red-600 dark:text-red-400" aria-hidden="true" />Top Vendu
+                    </Badge>
                   )}
                 </div>
-                <h1 className="text-xl xl:text-2xl font-bold text-gray-900 dark:text-white leading-snug line-clamp-2 break-words">
+                <h1 className="font-display uppercase tracking-tight text-2xl xl:text-3xl font-bold text-gray-900 dark:text-white leading-[0.95] line-clamp-3 break-words">
                   {product.designation_fr}
                 </h1>
                 <button
@@ -941,20 +934,20 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       <Star key={i} className={`h-4 w-4 ${i <= Math.round(rating) ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 dark:fill-gray-700 text-gray-200 dark:text-gray-700'}`} />
                     ))}
                   </div>
-                  <span className="text-sm text-primary-600 dark:text-primary-400 font-medium hover:underline">({rating > 0 ? rating.toFixed(1) : '0'}) – {reviewCount} avis</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400 font-medium tabular-nums transition-colors hover:text-red-600 dark:hover:text-red-400">({rating > 0 ? rating.toFixed(1) : '0'}) – {reviewCount} avis</span>
                 </button>
                 {metaDescription && (
                   <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap break-words">{metaDescription}</p>
                 )}
                 {/* Price */}
                 <div className="flex flex-wrap items-baseline gap-2">
-                  <span className="text-2xl xl:text-3xl font-bold text-red-600 dark:text-red-400">{displayPrice} DT</span>
+                  <span className="font-display font-bold tracking-tight tabular-nums text-2xl xl:text-3xl text-red-600 dark:text-red-400">{displayPrice} DT</span>
                   {oldPrice && (
-                    <span className="text-lg text-gray-400 dark:text-gray-500 line-through">{oldPrice} DT</span>
+                    <span className="font-display tracking-tight tabular-nums text-lg text-gray-400 dark:text-gray-500 line-through">{oldPrice} DT</span>
                   )}
                 </div>
                 {oldPrice && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Vous économisez {(oldPrice - displayPrice).toFixed(0)} DT</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 tabular-nums">Vous économisez {(oldPrice - displayPrice).toFixed(0)} DT</p>
                 )}
                 {/* Quantity + Total — placed high so CTAs are visible without scroll */}
                 <div className="flex items-center gap-3">
@@ -967,7 +960,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>
-                  <span className="text-sm font-semibold text-gray-900 dark:text-white">Total: {(displayPrice * quantity).toFixed(0)} DT</span>
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white tabular-nums">Total: {(displayPrice * quantity).toFixed(0)} DT</span>
                 </div>
                 {/* Arômes */}
                 {product.aromes && product.aromes.length > 0 && (
@@ -1001,7 +994,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 <div className="flex flex-col gap-2">
                   <Button
                     size="default"
-                    className="w-full min-h-[42px] h-auto py-2.5 text-sm bg-red-600 hover:bg-red-700 text-white font-bold"
+                    className="w-full min-h-[42px] h-auto py-2.5 text-sm bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide font-bold"
                     onClick={handleAddToCart}
                     disabled={stockStatus.isOutOfStock}
                   >
@@ -1010,7 +1003,8 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   </Button>
                   <Button
                     size="default"
-                    className="w-full min-h-[42px] h-auto py-2.5 text-sm bg-amber-500 hover:bg-amber-600 !text-white font-semibold shadow-md hover:shadow-lg transition-shadow [&_svg]:!text-white"
+                    variant="outline"
+                    className="w-full min-h-[42px] h-auto py-2.5 text-sm bg-transparent border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 dark:text-red-400 dark:border-red-400 font-display uppercase tracking-wide font-semibold"
                     onClick={handleQuickOrderClick}
                     disabled={stockStatus.isOutOfStock}
                   >
@@ -1056,13 +1050,13 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     )}
                   </div>
                 )}
-              </motion.div>
+              </div>
           </div>
         </div>
 
         {/* Description / Nutrition / Questions — full width; spacing so sections never overlap */}
         <section className="mx-auto w-full px-4 md:px-6 pt-8 sm:pt-10 lg:pt-12 pb-6 sm:pb-8 border-t border-gray-100 dark:border-gray-800 mt-8 sm:mt-10" aria-label="Description et informations produit">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="w-full mb-0">
+          <div className="w-full mb-0">
             {(() => {
               const hasNutritionContent = product.nutrition_values != null &&
                 String(product.nutrition_values).trim() !== '' &&
@@ -1093,9 +1087,9 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     )}
                   </TabsList>
 
-                  <TabsContent value="description" className="mt-0 pt-0 flex-1 min-h-0 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden focus-visible:outline-none data-[state=inactive]:hidden">
-                    <div className="p-4 sm:p-5 lg:p-6 pt-5 sm:pt-6 border-t border-gray-200 dark:border-gray-800">
-                    <h2 className="text-lg sm:text-xl font-bold mb-3 text-gray-900 dark:text-white">
+                  <TabsContent value="description" className="mt-0 pt-0 flex-1 min-h-0 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden focus-visible:outline-none data-[state=inactive]:hidden">
+                    <div className="p-4 sm:p-5 lg:p-6 pt-5 sm:pt-6 border-t border-gray-100 dark:border-gray-800">
+                    <h2 className="font-display uppercase tracking-tight text-xl sm:text-2xl font-bold mb-3 text-gray-900 dark:text-white">
                       {product.zone1 || 'Description du produit'}
                     </h2>
                     <div
@@ -1112,15 +1106,15 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     </div>
                   </TabsContent>
 
-                  <TabsContent value="nutrition" className="mt-0 pt-0 rounded-xl sm:rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden focus-visible:outline-none data-[state=inactive]:hidden data-[state=inactive]:absolute data-[state=inactive]:pointer-events-none">
+                  <TabsContent value="nutrition" className="mt-0 pt-0 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden focus-visible:outline-none data-[state=inactive]:hidden data-[state=inactive]:absolute data-[state=inactive]:pointer-events-none">
                     {(() => {
                       const nutritionImages = Array.isArray((product as any).nutrition_images)
                         ? ((product as any).nutrition_images as string[]).filter(Boolean)
                         : [];
                       const hasNutritionImages = nutritionImages.length > 0;
                       return (
-                        <div className="p-3 sm:p-5 lg:p-6 pt-4 sm:pt-6 border-t border-gray-200 dark:border-gray-800">
-                          <h2 className="text-base sm:text-lg font-bold mb-4 text-gray-900 dark:text-white">
+                        <div className="p-3 sm:p-5 lg:p-6 pt-4 sm:pt-6 border-t border-gray-100 dark:border-gray-800">
+                          <h2 className="font-display uppercase tracking-tight text-lg sm:text-xl font-bold mb-4 text-gray-900 dark:text-white">
                             {product.zone3 || 'Valeurs Nutritionnelles'}
                           </h2>
 
@@ -1131,7 +1125,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                                 <button
                                   type="button"
                                   onClick={() => setNutritionLightbox(0)}
-                                  className="relative group block w-full max-w-lg mx-auto rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-200 cursor-zoom-in"
+                                  className="relative group block w-full max-w-lg mx-auto rounded-xl overflow-hidden border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow duration-200 cursor-zoom-in"
                                   aria-label="Agrandir l'image nutritionnelle"
                                 >
                                   <Image
@@ -1254,9 +1248,9 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     })()}
                   </TabsContent>
 
-                  <TabsContent value="questions" className="mt-0 pt-0 flex-1 min-h-0 rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden focus-visible:outline-none data-[state=inactive]:hidden">
-                    <div className="p-4 sm:p-5 lg:p-6 pt-5 sm:pt-6 border-t border-gray-200 dark:border-gray-800">
-                    <h2 className="text-lg sm:text-xl font-bold mb-3 text-gray-900 dark:text-white">
+                  <TabsContent value="questions" className="mt-0 pt-0 flex-1 min-h-0 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden focus-visible:outline-none data-[state=inactive]:hidden">
+                    <div className="p-4 sm:p-5 lg:p-6 pt-5 sm:pt-6 border-t border-gray-100 dark:border-gray-800">
+                    <h2 className="font-display uppercase tracking-tight text-xl sm:text-2xl font-bold mb-3 text-gray-900 dark:text-white">
                       {product.zone4 || 'Questions Fréquentes'}
                     </h2>
                     {hasProductFaq ? (
@@ -1287,32 +1281,29 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
               </Tabs>
                 );
               })()}
-            </motion.div>
+            </div>
 
             {/* Avis clients — below tabs (no longer sidebar) */}
-            <motion.div
+            <div
               id="reviews"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15 }}
-              className="min-w-0 pt-8 sm:pt-10 border-t border-gray-200 dark:border-gray-800 mt-8 sm:mt-10"
+              className="min-w-0 pt-8 sm:pt-10 border-t border-gray-100 dark:border-gray-800 mt-8 sm:mt-10"
             >
             <div className="space-y-3 sm:space-y-4 lg:space-y-6">
-              <h2 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-800 pb-2 sm:pb-3">Avis clients</h2>
+              <h2 className="font-display uppercase tracking-tight leading-[0.95] text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-3 sm:pb-4">Avis clients</h2>
 
               {reviewCount > 0 ? (
                 <>
                   {/* Overall Rating */}
-                  <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-3 sm:p-4 border border-green-200 dark:border-green-900/50">
-                    <div className="flex items-center gap-2 text-green-600 dark:text-green-400 text-xs sm:text-sm font-medium mb-2 sm:mb-3">
+                  <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-3 sm:p-4 border border-gray-100 dark:border-gray-800">
+                    <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-xs sm:text-sm font-display uppercase tracking-wide font-semibold mb-2 sm:mb-3">
                       <Shield className="h-4 w-4 sm:h-5 sm:w-5" />
                       <span>100% authentique</span>
                     </div>
                     <div className="flex items-baseline gap-2 mb-2">
-                      <span className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white">
+                      <span className="font-display font-bold tracking-tight tabular-nums text-3xl sm:text-4xl lg:text-5xl text-gray-900 dark:text-white">
                         {rating > 0 ? rating.toFixed(1) : '–'}
                       </span>
-                      <span className="text-gray-500 dark:text-gray-400 text-sm sm:text-base">/ 5</span>
+                      <span className="text-gray-500 dark:text-gray-400 text-sm sm:text-base tabular-nums">/ 5</span>
                     </div>
                     <div className="flex items-center gap-1 mb-2 sm:mb-3">
                       {[1, 2, 3, 4, 5].map((i) => (
@@ -1338,7 +1329,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                           <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400 shrink-0" />
                           <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                             <div
-                              className="h-full bg-green-500 rounded-full transition-all"
+                              className="h-full bg-red-600 rounded-full transition-all"
                               style={{ width: `${pct}%` }}
                             />
                           </div>
@@ -1394,7 +1385,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   {isAuthenticated && (
                     <Button
                       onClick={() => setShowReviewForm(!showReviewForm)}
-                      className="w-full bg-red-600 hover:bg-red-700 text-white"
+                      className="w-full bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide font-semibold"
                       size="default"
                     >
                       {showReviewForm ? 'Annuler' : 'Écrire un avis'}
@@ -1409,7 +1400,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   {isAuthenticated && (
                     <Button
                       onClick={() => setShowReviewForm(!showReviewForm)}
-                      className="w-full bg-red-600 hover:bg-red-700 text-white"
+                      className="w-full bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide font-semibold"
                       size="default"
                     >
                       {showReviewForm ? 'Annuler' : 'Écrire un avis'}
@@ -1428,7 +1419,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       <div className="flex gap-1">
                         {[1, 2, 3, 4, 5].map((star) => (
                           <button key={star} onClick={() => setReviewStars(star)} className="focus:outline-none min-h-[44px] min-w-[44px] flex items-center justify-center" aria-label={`Noter ${star} étoile${star > 1 ? 's' : ''}`}>
-                            <Star className={`h-6 w-6 ${star <= reviewStars ? 'fill-orange-500 text-orange-500' : 'fill-gray-300 text-gray-300 dark:fill-gray-600'}`} />
+                            <Star className={`h-6 w-6 ${star <= reviewStars ? 'fill-amber-400 text-amber-400' : 'fill-gray-300 text-gray-300 dark:fill-gray-600'}`} />
                           </button>
                         ))}
                       </div>
@@ -1439,7 +1430,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       <p className="text-xs mt-0.5 text-gray-500">{reviewComment.length}/500</p>
                     </div>
                     <div className="flex gap-2">
-                      <Button onClick={handleSubmitReview} disabled={reviewStars === 0 || isSubmittingReview} className="flex-1 bg-orange-500 hover:bg-orange-600 text-white" size="sm">
+                      <Button onClick={handleSubmitReview} disabled={reviewStars === 0 || isSubmittingReview} className="flex-1 bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide font-semibold" size="sm">
                         {isSubmittingReview ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Publication...</> : 'Publier'}
                       </Button>
                       <Button variant="outline" size="sm" onClick={() => { setShowReviewForm(false); setReviewStars(0); setReviewComment(''); }}>Annuler</Button>
@@ -1448,20 +1439,13 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 </div>
               )}
             </div>
-          </motion.div>
+          </div>
         </section>
 
         {/* Similar Products */}
         {similarProducts.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="min-w-0"
-          >
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6 lg:mb-8">
-              Produits similaires
-            </h2>
+          <div className="min-w-0">
+            <SectionHeader kicker="Vous aimerez aussi" title="Produits similaires" />
             {/* Mobile: horizontal carousel with snap; Desktop: grid 4 cols */}
             <div
               className="flex md:grid overflow-x-auto md:overflow-visible gap-3 sm:gap-4 lg:gap-6 pb-2 md:pb-0 snap-x snap-mandatory md:snap-none md:grid-cols-4 scrollbar-hide -mx-3 px-3 sm:mx-0 sm:px-0"
@@ -1476,25 +1460,25 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 </div>
               ))}
             </div>
-          </motion.div>
+          </div>
         )}
       </main>
 
       {/* Sticky CTAs (Mobile): slightly smaller buttons */}
       <div
-        className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 p-2.5 sm:p-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] z-50"
+        className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 p-2.5 sm:p-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] z-50"
         style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}
       >
         <div className="w-full mx-auto px-1 sm:px-2 max-w-[1024px] md:max-w-[1280px] lg:max-w-[1400px] xl:max-w-[1600px] flex flex-col gap-2 sm:gap-3">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total</p>
-            <p className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400 truncate">
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-display uppercase tracking-wide">Total</p>
+            <p className="font-display font-bold tracking-tight tabular-nums text-xl sm:text-2xl text-red-600 dark:text-red-400 truncate">
               {(displayPrice * quantity).toFixed(0)} DT
             </p>
           </div>
           <Button
             size="default"
-            className="w-full min-h-[42px] h-auto py-2.5 text-sm bg-red-600 hover:bg-red-700 text-white font-bold shrink-0"
+            className="w-full min-h-[42px] h-auto py-2.5 text-sm bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide font-bold shrink-0"
             onClick={handleAddToCart}
             disabled={stockStatus.isOutOfStock}
             aria-label="Ajouter au panier"
@@ -1504,7 +1488,8 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
           </Button>
           <Button
             size="default"
-            className="w-full min-h-[42px] h-auto py-2.5 text-sm bg-amber-500 hover:bg-amber-600 !text-white font-semibold shrink-0 shadow-md hover:shadow-lg transition-shadow [&_svg]:!text-white"
+            variant="outline"
+            className="w-full min-h-[42px] h-auto py-2.5 text-sm bg-transparent border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 dark:text-red-400 dark:border-red-400 font-display uppercase tracking-wide font-semibold shrink-0"
             onClick={handleQuickOrderClick}
             disabled={stockStatus.isOutOfStock}
             aria-label="Commander maintenant"

@@ -8,7 +8,7 @@ import { buildCanonicalUrl } from '@/util/canonical';
 import { buildProductUrlPath, getProductPrimarySubCategory, buildProductCanonicalUrl } from '@/util/productUrl';
 
 const ProductDetailClient = nextDynamic(() => import('./ProductDetailClient').then((m) => ({ default: m.ProductDetailClient })), {
-  loading: () => <div className="min-h-screen animate-pulse bg-gray-50" />,
+  loading: () => <div className="min-h-screen animate-pulse bg-white dark:bg-gray-950" />,
 });
 
 interface ProductPageProps {

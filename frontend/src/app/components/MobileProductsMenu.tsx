@@ -8,7 +8,6 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/app/components/u
 import { Button } from '@/app/components/ui/button';
 import { getCategories } from '@/services/api';
 import { Category } from '@/types';
-import { motion, AnimatePresence } from 'motion/react';
 
 interface MobileProductsMenuProps {
   open: boolean;
@@ -96,7 +95,7 @@ export function MobileProductsMenu({ open, onOpenChange }: MobileProductsMenuPro
                 <span className="w-10 shrink-0" aria-hidden />
               )}
 
-              <SheetTitle className="flex-1 text-center font-bold text-gray-900 dark:text-white line-clamp-1 px-1">
+              <SheetTitle className="flex-1 text-center font-display uppercase tracking-tight text-gray-900 dark:text-white line-clamp-1 px-1">
                 {selectedCategory ? (
                   <span className="text-red-600 dark:text-red-400 text-sm">{selectedCategory.designation_fr}</span>
                 ) : (
@@ -126,33 +125,26 @@ export function MobileProductsMenu({ open, onOpenChange }: MobileProductsMenuPro
                 <span className="text-sm">Chargement des catégories…</span>
                 <div className="w-full px-3 space-y-2 mt-2">
                   {Array.from({ length: 6 }).map((_, i) => (
-                    <div key={i} className="h-14 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+                    <div key={i} className="h-14 rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
                   ))}
                 </div>
               </div>
             ) : (
-              <AnimatePresence mode="wait">
+              <>
                 {!selectedCategory ? (
                   /* ── Category list ── */
-                  <motion.div
-                    key="categories"
-                    initial={{ opacity: 0, x: -16 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -16 }}
-                    transition={{ duration: 0.18 }}
-                  >
+                  <div>
                     <div className="px-3 pt-3 pb-1 space-y-2">
                       {categories.map((cat) => (
-                        <motion.button
+                        <button
                           key={cat.id}
                           onClick={() => setSelectedCategory(cat)}
-                          className="w-full flex items-center justify-between py-3.5 px-4 text-left bg-white dark:bg-gray-900 active:bg-gray-50 dark:active:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm"
-                          whileTap={{ scale: 0.985 }}
+                          className="w-full flex items-center justify-between py-3.5 px-4 text-left bg-white dark:bg-gray-900 active:bg-gray-50 dark:active:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-colors"
                         >
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-0.5">
                               <div className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
-                              <span className="font-bold text-caption tracking-wide text-red-600 dark:text-red-400 uppercase leading-snug">
+                              <span className="font-display text-caption tracking-wide text-red-600 dark:text-red-400 uppercase leading-snug">
                                 {cat.designation_fr}
                               </span>
                             </div>
@@ -163,35 +155,29 @@ export function MobileProductsMenu({ open, onOpenChange }: MobileProductsMenuPro
                             )}
                           </div>
                           <ChevronRight className="h-4 w-4 text-gray-400 shrink-0 ml-3" />
-                        </motion.button>
+                        </button>
                       ))}
                     </div>
 
                     <div className="px-3 pt-3 pb-6">
                       <LinkWithLoading
                         href="/shop"
-                        className="flex items-center justify-center gap-2 py-3.5 px-4 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded-2xl font-semibold text-sm transition-colors shadow-md shadow-red-200 dark:shadow-red-950/40"
+                        className="flex items-center justify-center gap-2 py-3.5 px-4 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded-xl font-display uppercase tracking-wide font-semibold text-sm transition-colors shadow-sm"
                         loadingMessage="Chargement..."
                       >
                         Voir tous les produits
                         <ArrowRight className="h-4 w-4" />
                       </LinkWithLoading>
                     </div>
-                  </motion.div>
+                  </div>
                 ) : (
                   /* ── Subcategory list ── */
-                  <motion.div
-                    key={`sub-${selectedCategory.id}`}
-                    initial={{ opacity: 0, x: 16 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 16 }}
-                    transition={{ duration: 0.18 }}
-                  >
+                  <div>
                     {/* "Tout voir" for the parent category */}
                     <div className="px-3 pt-3 pb-2">
                       <LinkWithLoading
                         href={`/${selectedCategory.slug}`}
-                        className="flex items-center justify-between py-3 px-4 bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/40 rounded-2xl text-red-600 dark:text-red-400 font-semibold text-sm"
+                        className="flex items-center justify-between py-3 px-4 bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/40 rounded-xl text-red-600 dark:text-red-400 font-semibold text-sm"
                         loadingMessage="Chargement..."
                       >
                         <span>Tout voir — {selectedCategory.designation_fr}</span>
@@ -205,7 +191,7 @@ export function MobileProductsMenu({ open, onOpenChange }: MobileProductsMenuPro
                         <LinkWithLoading
                           key={sub.id}
                           href={`/${sub.slug}`}
-                          className="flex items-center gap-3 py-3.5 px-4 bg-white dark:bg-gray-900 active:bg-gray-50 dark:active:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm"
+                          className="flex items-center gap-3 py-3.5 px-4 bg-white dark:bg-gray-900 active:bg-gray-50 dark:active:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-colors"
                           loadingMessage="Chargement..."
                         >
                           <span className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" />
@@ -216,9 +202,9 @@ export function MobileProductsMenu({ open, onOpenChange }: MobileProductsMenuPro
                         </LinkWithLoading>
                       ))}
                     </div>
-                  </motion.div>
+                  </div>
                 )}
-              </AnimatePresence>
+              </>
             )}
           </div>
         </div>

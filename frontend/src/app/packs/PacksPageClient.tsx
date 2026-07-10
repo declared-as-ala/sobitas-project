@@ -4,7 +4,7 @@ import { Header } from '@/app/components/Header';
 import { Footer } from '@/app/components/Footer';
 import { ProductCard } from '@/app/components/ProductCard';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
-import { motion } from 'motion/react';
+import { PageHeader } from '@/app/components/PageHeader';
 import type { Product } from '@/types';
 
 interface PacksPageClientProps {
@@ -13,22 +13,18 @@ interface PacksPageClientProps {
 
 export function PacksPageClient({ packs }: PacksPageClientProps) {
   return (
-    <div className="min-h-screen bg-[#F7F7F8] dark:bg-gray-950">
+    <div className="min-h-screen bg-white dark:bg-gray-950">
       <Header />
 
-      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-10 lg:py-12">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-6 sm:mb-10 lg:mb-12"
-        >
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2 sm:mb-4">
-            Nos Packs
-          </h1>
-          <p className="text-sm sm:text-base lg:text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto px-1">
-            Économisez avec nos packs spéciaux conçus pour répondre à vos objectifs spécifiques
-          </p>
-        </motion.div>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
+        <div className="mb-8 sm:mb-10 lg:mb-12">
+          <PageHeader
+            align="center"
+            kicker="Packs"
+            title="Nos Packs"
+            subtitle="Économisez avec nos packs spéciaux conçus pour répondre à vos objectifs spécifiques"
+          />
+        </div>
 
         {packs.length === 0 ? (
           <div className="text-center py-10 sm:py-12">
@@ -37,16 +33,9 @@ export function PacksPageClient({ packs }: PacksPageClientProps) {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
-            {packs.map((pack, index) => (
-              <motion.div
-                key={pack.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: Math.min(index * 0.05, 0.3) }}
-              >
-                <ProductCard product={pack} showDescription={true} imageContext="packs" />
-              </motion.div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6">
+            {packs.map((pack) => (
+              <ProductCard key={pack.id} product={pack} showDescription={true} imageContext="packs" />
             ))}
           </div>
         )}
