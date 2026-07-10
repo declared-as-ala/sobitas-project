@@ -14,10 +14,6 @@ import {
   Package,
   MapPin,
   Truck,
-  Search,
-  X,
-  Loader2,
-  ArrowRight,
   ChevronRight,
   Heart,
   Home,
@@ -49,16 +45,12 @@ import {
 } from '@/app/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/app/components/ui/sheet';
 import { cn } from '@/app/components/ui/utils';
-import { searchProducts, getStorageUrl, getNavigationItems } from '@/services/api';
+import { getNavigationItems } from '@/services/api';
 import { useSiteLogos } from '@/hooks/useSiteLogos';
-import { getPriceDisplay } from '@/util/productPrice';
-import { useDebounce } from '@/util/debounce';
-import { buildProductUrlPath } from '@/util/productUrl';
-import type { Product, SiteNavigationItem } from '@/types';
+import type { SiteNavigationItem } from '@/types';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { useI18n } from '@/i18n/I18nProvider';
 import { MULTILOCALE_ENABLED } from '@/i18n';
-import { localizedName } from '@/i18n/content';
 
 const SCROLL_THRESHOLD = 24;
 const MOBILE_NAV_SCROLL_THRESHOLD = 20;
@@ -156,7 +148,7 @@ function NavigationLink({
 }
 
 export function HeaderClient() {
-  const { locale, translateLegacy } = useI18n();
+  const { translateLegacy } = useI18n();
   const { headerLogoUrl } = useSiteLogos();
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -210,50 +202,6 @@ export function HeaderClient() {
     return () => {
       active = false;
     };
-  }, []);
-
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<Product[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [showSearchResults, setShowSearchResults] = useState(false);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const searchResultsRef = useRef<HTMLDivElement>(null);
-  const debouncedSearchQuery = useDebounce(searchQuery, 300);
-
-  useEffect(() => {
-    const performSearch = async () => {
-      const trimmed = debouncedSearchQuery.trim();
-      if (!trimmed) {
-        setSearchResults([]);
-        setIsSearching(false);
-        return;
-      }
-      setIsSearching(true);
-      try {
-        const { products } = await searchProducts(trimmed);
-        setSearchResults(products || []);
-      } catch {
-        setSearchResults([]);
-      } finally {
-        setIsSearching(false);
-      }
-    };
-    performSearch();
-  }, [debouncedSearchQuery]);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        searchResultsRef.current &&
-        !searchResultsRef.current.contains(event.target as Node) &&
-        searchInputRef.current &&
-        !searchInputRef.current.contains(event.target as Node)
-      ) {
-        setShowSearchResults(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const onScroll = useCallback(() => {
@@ -319,7 +267,7 @@ export function HeaderClient() {
     >
       {/* Top Info Bar */}
       <div className="bg-gray-900 text-white border-b border-gray-800/50">
-        <div className="hidden md:flex max-w-7xl mx-auto h-9 px-4 lg:px-8 items-center justify-between text-xs font-medium">
+        <div className="hidden md:flex max-w-7xl mx-auto h-8 px-4 lg:px-8 items-center justify-between text-xs font-medium">
           <div className="flex items-center gap-4">
             <a href={`tel:${PHONE.replace(/\s/g, '')}`} className="flex items-center gap-1.5 hover:text-red-500 transition-colors shrink-0" aria-label={`Appeler ${PHONE}`}>
               <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -348,7 +296,7 @@ export function HeaderClient() {
         </div>
         <div className="md:hidden flex h-8 px-4 items-center justify-center text-xs font-medium leading-snug text-gray-200">
           <Truck className="h-3.5 w-3.5 mr-1.5 shrink-0" aria-hidden />
-          Livraison gratuite dès 300 DT
+          {DELIVERY_MSG}
         </div>
       </div>
 
@@ -445,136 +393,7 @@ export function HeaderClient() {
                 />
               </Link>
 
-              <div className="flex-1 max-w-2xl mx-4 min-w-0 relative">
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    if (searchQuery.trim()) {
-                      router.push(`/shop?search=${encodeURIComponent(searchQuery.trim())}`);
-                      setSearchQuery('');
-                      setShowSearchResults(false);
-                    }
-                  }}
-                  className="relative w-full"
-                >
-                  <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-red-600 pointer-events-none z-10" />
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => {
-                      setSearchQuery(e.target.value);
-                      setShowSearchResults(true);
-                    }}
-                    onFocus={() => setShowSearchResults(true)}
-                    placeholder="Rechercher tous les produits..."
-                    className="w-full h-11 pl-4 pr-12 rounded-xl border-0 bg-white text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-red-300 text-sm"
-                  />
-                  {searchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSearchQuery('');
-                        setSearchResults([]);
-                        searchInputRef.current?.focus();
-                      }}
-                      className="absolute right-10 top-1/2 -translate-y-1/2 h-6 w-6 flex items-center justify-center text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  )}
-                </form>
-
-                {showSearchResults && (searchQuery.trim() || searchResults.length > 0 || isSearching) && (
-                  <div
-                    ref={searchResultsRef}
-                    className="absolute left-0 right-0 top-full mt-2 z-50 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-lg max-h-[500px] overflow-y-auto"
-                  >
-                    {(isSearching || (searchQuery.trim() && debouncedSearchQuery.trim() !== searchQuery.trim())) ? (
-                      <div className="flex items-center justify-center py-8 text-gray-500">
-                        <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                        <span>Recherche en cours...</span>
-                      </div>
-                    ) : !searchQuery.trim() ? (
-                      <div className="py-6 text-center text-sm text-gray-400">
-                        Tapez pour rechercher des protéines, gainers, compléments...
-                      </div>
-                    ) : searchResults.length === 0 ? (
-                      <div className="py-6 text-center text-sm text-gray-500">
-                        <p>Aucun produit trouvé pour &quot;{searchQuery}&quot;</p>
-                        <p className="mt-1 text-xs text-gray-400">Essayez d&apos;autres termes</p>
-                      </div>
-                    ) : searchResults.length > 0 ? (
-                      <>
-                        <div className="max-h-[400px] overflow-y-auto">
-                          {searchResults.slice(0, 6).map((product) => (
-                            <Link
-                              key={product.id}
-                              href={buildProductUrlPath(product)}
-                              onClick={() => {
-                                setSearchQuery('');
-                                setShowSearchResults(false);
-                              }}
-                              className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-b border-gray-100 dark:border-gray-800 last:border-b-0"
-                            >
-                              <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-md bg-gray-100">
-                                {product.cover ? (
-                                  <Image
-                                    src={getStorageUrl(product.cover)}
-                                    alt={localizedName(product, locale)}
-                                    fill
-                                    className="object-cover"
-                                    sizes="48px"
-                                  />
-                                ) : (
-                                  <div className="h-full w-full bg-gray-200" />
-                                )}
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
-                                  {localizedName(product, locale)}
-                                </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                  {(() => {
-                                    const pd = getPriceDisplay(product);
-                                    if (pd.hasPromo && pd.oldPrice != null) {
-                                      return (
-                                        <>
-                                          <span className="line-through">{pd.oldPrice} DT</span>
-                                          <span className="ml-1 text-red-600 dark:text-red-400">
-                                            → {pd.finalPrice} DT
-                                          </span>
-                                        </>
-                                      );
-                                    }
-                                    return <>{pd.finalPrice} DT</>;
-                                  })()}
-                                </p>
-                              </div>
-                              <ArrowRight className="h-4 w-4 flex-shrink-0 text-gray-400" />
-                            </Link>
-                          ))}
-                        </div>
-                        {searchResults.length > 6 && (
-                          <div className="border-t border-gray-200 dark:border-gray-700 p-3">
-                            <Link
-                              href={`/shop?search=${encodeURIComponent(searchQuery.trim())}`}
-                              onClick={() => {
-                                setSearchQuery('');
-                                setShowSearchResults(false);
-                              }}
-                              className="flex items-center justify-center gap-2 text-sm font-medium text-red-600 hover:text-red-700"
-                            >
-                              Voir tous les résultats ({searchResults.length})
-                              <ArrowRight className="h-4 w-4" />
-                            </Link>
-                          </div>
-                        )}
-                      </>
-                    ) : null}
-                  </div>
-                )}
-              </div>
+              <SearchBar variant="desktop" className="mx-4 min-w-0" />
 
               <div className="flex items-center gap-3 flex-shrink-0">
                 {MULTILOCALE_ENABLED && <LanguageSwitcher />}
@@ -677,26 +496,31 @@ export function HeaderClient() {
           </div>
         </div>
 
-        <nav className="hidden md:flex items-center justify-center gap-5 xl:gap-8 py-3 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 flex-wrap" aria-label="Navigation principale">
-          {navLinks.map((link) => (
-            isProductsNavLink(link) ? (
-              <ProductsDropdown
-                key={`${link.href}-${link.label}`}
-                label={translateLegacy(link.label)}
-                href={link.href}
-                opensNewTab={link.opensNewTab}
-              />
-            ) : (
-              <NavigationLink
-                key={`${link.href}-${link.label}`}
-                item={link}
-                className="inline-flex items-center gap-1.5 font-display uppercase tracking-wide text-sm font-semibold text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-400 transition-colors whitespace-nowrap py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
-              >
-                <NavigationIcon name={link.icon} className="h-4 w-4" />
-                <span>{translateLegacy(link.label)}</span>
-              </NavigationLink>
-            )
-          ))}
+        <nav
+          className="hidden md:block bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          aria-label="Navigation principale"
+        >
+          <div className="flex w-max mx-auto items-center gap-4 lg:gap-6 xl:gap-8 px-4 py-2.5">
+            {navLinks.map((link) => (
+              isProductsNavLink(link) ? (
+                <ProductsDropdown
+                  key={`${link.href}-${link.label}`}
+                  label={translateLegacy(link.label)}
+                  href={link.href}
+                  opensNewTab={link.opensNewTab}
+                />
+              ) : (
+                <NavigationLink
+                  key={`${link.href}-${link.label}`}
+                  item={link}
+                  className="inline-flex items-center gap-1.5 font-display uppercase tracking-wide text-sm font-semibold text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-400 transition-colors whitespace-nowrap py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                >
+                  <NavigationIcon name={link.icon} className="h-4 w-4" />
+                  <span>{translateLegacy(link.label)}</span>
+                </NavigationLink>
+              )
+            ))}
+          </div>
         </nav>
       </header>
 

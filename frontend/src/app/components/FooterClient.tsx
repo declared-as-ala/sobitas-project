@@ -16,6 +16,9 @@ interface FooterClientProps {
   pages?: CmsPage[];
 }
 
+/** Single source for the newsletter subtitle so both breakpoints read identically. */
+const NEWSLETTER_SUBTITLE = 'Recevez les dernières offres exclusives et nouveautés.';
+
 export function FooterClient({ pages: pagesProp }: FooterClientProps) {
   const { footerLogoUrl } = useSiteLogos();
   const [newsletterEmail, setNewsletterEmail] = useState('');
@@ -153,7 +156,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
           <div className="space-y-3 w-full">
             <h3 className="font-display text-white text-sm uppercase tracking-wide">Abonnez-vous</h3>
             <p className="text-sm text-gray-400">
-              Rejoignez nos abonnés et recevez les nouveautés et offres chaque semaine.
+              {NEWSLETTER_SUBTITLE}
             </p>
             <form onSubmit={handleNewsletterSubmit} className="space-y-3 w-full">
               <div className="flex flex-col sm:flex-row gap-2 w-full">
@@ -245,7 +248,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
                 height={75}
                 className="h-16 w-auto object-contain"
                 style={{ width: 'auto', height: 'auto' }}
-                priority
+                loading="lazy"
               />
             </div>
 
@@ -379,7 +382,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
                 <h3 className="font-display uppercase tracking-wide text-white text-lg">Abonnez-vous</h3>
               </div>
               <p className="text-sm text-gray-400 mb-4">
-                Recevez les dernières offres exclusives et nouveautés
+                {NEWSLETTER_SUBTITLE}
               </p>
               <form onSubmit={handleNewsletterSubmit} className="space-y-3">
                 <Input
@@ -437,12 +440,14 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
       <div className="border-t border-gray-800/50 bg-black/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div 
-              className="text-center md:text-left text-sm text-gray-400 cursor-pointer hover:text-red-500 transition-colors"
+            <button
+              type="button"
+              aria-label="Remonter en haut"
+              className="text-center md:text-left text-sm text-gray-400 hover:text-red-500 transition-colors"
               onClick={() => typeof window !== 'undefined' && window.scrollTo({ top: 0, behavior: 'smooth' })}
             >
               © {new Date().getFullYear()} <span className="text-red-500 font-display uppercase tracking-wide">PROTEINE TUNISIE</span>. Tous droits réservés.
-            </div>
+            </button>
           </div>
         </div>
       </div>

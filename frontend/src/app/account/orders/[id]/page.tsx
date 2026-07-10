@@ -10,11 +10,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/ca
 import { Badge } from '@/app/components/ui/badge';
 import { ArrowLeft, Calendar, MapPin, Phone, Mail } from 'lucide-react';
 import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import Image from 'next/image';
 import { getStorageUrl } from '@/services/api';
 import type { OrderDetail } from '@/types';
 import { PageHeader } from '@/app/components/PageHeader';
-import { LoadingSpinner } from '@/app/components/LoadingSpinner';
+import { OrderDetailSkeleton } from '../../AccountSkeletons';
 
 export default function OrderDetailPage() {
   const params = useParams();
@@ -67,7 +68,7 @@ export default function OrderDetailPage() {
   };
 
   if (isLoading) {
-    return <LoadingSpinner fullScreen message="Chargement de la commande..." />;
+    return <OrderDetailSkeleton />;
   }
 
   if (!order) {
@@ -114,7 +115,7 @@ export default function OrderDetailPage() {
                   <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                     <Calendar className="h-4 w-4" aria-hidden="true" />
                     <span>
-                      {order.created_at ? format(new Date(order.created_at), 'dd MMMM yyyy à HH:mm') : 'Date inconnue'}
+                      {order.created_at ? format(new Date(order.created_at), 'dd MMMM yyyy à HH:mm', { locale: fr }) : 'Date inconnue'}
                     </span>
                   </div>
 

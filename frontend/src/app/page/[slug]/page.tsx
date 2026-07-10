@@ -9,8 +9,9 @@ export type PageProps = {
   params: Promise<{ slug: string }>;
 };
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+// Legal/CMS pages (cookies, mentions légales, CGV…) are effectively static — cache with ISR
+// (revalidate hourly) instead of re-fetching on every request. Rendered output is identical.
+export const revalidate = 3600;
 
 const slugMapping: Record<string, string> = {
   cookies: 'politique-des-cookies',

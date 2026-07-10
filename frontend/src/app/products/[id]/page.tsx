@@ -4,11 +4,12 @@ import nextDynamic from 'next/dynamic';
 import { getSimilarProducts } from '@/services/api';
 import { getCachedProductDetails } from '@/services/getCachedProductDetails';
 import { ProductDetailFallbackClient } from '@/app/shop/ProductDetailFallbackClient';
+import { ProductDetailSkeleton } from '@/app/components/ProductDetailSkeleton';
 import { buildCanonicalUrl } from '@/util/canonical';
 import { buildProductUrlPath, getProductPrimarySubCategory, buildProductCanonicalUrl } from '@/util/productUrl';
 
 const ProductDetailClient = nextDynamic(() => import('./ProductDetailClient').then((m) => ({ default: m.ProductDetailClient })), {
-  loading: () => <div className="min-h-screen animate-pulse bg-white dark:bg-gray-950" />,
+  loading: () => <ProductDetailSkeleton />,
 });
 
 interface ProductPageProps {

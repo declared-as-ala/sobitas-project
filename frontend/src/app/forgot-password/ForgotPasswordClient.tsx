@@ -2,15 +2,14 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Header } from '@/app/components/Header';
-import { Footer } from '@/app/components/Footer';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
+import { Card, CardContent } from '@/app/components/ui/card';
 import { Mail, Loader2, ArrowLeft } from 'lucide-react';
 import { requestPasswordReset } from '@/services/api';
 import { toast } from 'sonner';
+import { AuthShell, AuthCardHeader } from '@/app/components/AuthShell';
 
 export default function ForgotPasswordClient() {
   const [email, setEmail] = useState('');
@@ -32,22 +31,17 @@ export default function ForgotPasswordClient() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <Header />
-      <main className="max-w-md mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
-        <Card className="border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
-          <CardHeader className="text-center">
-            <span className="inline-flex items-center justify-center gap-2 mb-3 font-display uppercase tracking-[0.2em] text-[11px] sm:text-xs font-semibold text-red-600 dark:text-red-400">
-              <span className="h-px w-5 bg-red-600 dark:bg-red-400" aria-hidden="true" />
-              Récupération
-            </span>
-            <CardTitle className="font-display uppercase tracking-tight text-3xl font-bold text-gray-900 dark:text-white">Mot de passe oublié</CardTitle>
-            <CardDescription className="text-gray-600 dark:text-gray-400">
-              {done
+    <AuthShell>
+      <Card className="border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+          <AuthCardHeader
+            kicker="Récupération"
+            title="Mot de passe oublié"
+            subtitle={
+              done
                 ? 'Si un compte correspond à cet e-mail, vous recevrez un lien pour réinitialiser votre mot de passe.'
-                : 'Indiquez votre adresse e-mail. Nous vous enverrons un lien sécurisé.'}
-            </CardDescription>
-          </CardHeader>
+                : 'Indiquez votre adresse e-mail. Nous vous enverrons un lien sécurisé.'
+            }
+          />
           <CardContent>
             {!done ? (
               <form onSubmit={onSubmit} className="space-y-4">
@@ -89,9 +83,7 @@ export default function ForgotPasswordClient() {
               </Link>
             </Button>
           </CardContent>
-        </Card>
-      </main>
-      <Footer />
-    </div>
+      </Card>
+    </AuthShell>
   );
 }

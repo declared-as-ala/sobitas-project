@@ -3,15 +3,14 @@
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Header } from '@/app/components/Header';
-import { Footer } from '@/app/components/Footer';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
+import { Card, CardContent } from '@/app/components/ui/card';
 import { Lock, Loader2, Mail } from 'lucide-react';
 import { resetPasswordWithToken } from '@/services/api';
 import { toast } from 'sonner';
+import { AuthShell, AuthCardHeader } from '@/app/components/AuthShell';
 
 export default function ResetPasswordClient() {
   const searchParams = useSearchParams();
@@ -55,17 +54,13 @@ export default function ResetPasswordClient() {
   const invalid = !token || !email;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <Header />
-      <main className="max-w-md mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+    <AuthShell>
         {invalid ? (
           <Card className="border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
-            <CardHeader className="text-center">
-              <CardTitle className="font-display uppercase tracking-tight text-3xl font-bold text-gray-900 dark:text-white">Lien invalide</CardTitle>
-              <CardDescription className="text-gray-600 dark:text-gray-400">
-                Utilisez le lien reçu par e-mail ou demandez une nouvelle réinitialisation.
-              </CardDescription>
-            </CardHeader>
+            <AuthCardHeader
+              title="Lien invalide"
+              subtitle="Utilisez le lien reçu par e-mail ou demandez une nouvelle réinitialisation."
+            />
             <CardContent>
               <Button
                 asChild
@@ -78,14 +73,11 @@ export default function ResetPasswordClient() {
           </Card>
         ) : (
           <Card className="border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
-            <CardHeader className="text-center">
-              <span className="inline-flex items-center justify-center gap-2 mb-3 font-display uppercase tracking-[0.2em] text-[11px] sm:text-xs font-semibold text-red-600 dark:text-red-400">
-                <span className="h-px w-5 bg-red-600 dark:bg-red-400" aria-hidden="true" />
-                Sécurité
-              </span>
-              <CardTitle className="font-display uppercase tracking-tight text-3xl font-bold text-gray-900 dark:text-white">Nouveau mot de passe</CardTitle>
-              <CardDescription className="text-gray-600 dark:text-gray-400">Choisissez un mot de passe sécurisé (minimum 6 caractères).</CardDescription>
-            </CardHeader>
+            <AuthCardHeader
+              kicker="Sécurité"
+              title="Nouveau mot de passe"
+              subtitle="Choisissez un mot de passe sécurisé (minimum 6 caractères)."
+            />
             <CardContent>
               <form onSubmit={onSubmit} className="space-y-4">
                 <div className="space-y-2">
@@ -154,8 +146,6 @@ export default function ResetPasswordClient() {
             </CardContent>
           </Card>
         )}
-      </main>
-      <Footer />
-    </div>
+    </AuthShell>
   );
 }

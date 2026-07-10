@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import { Suspense } from 'react';
 import ForgotPasswordClient from './ForgotPasswordClient';
+import { LoadingSpinner } from '@/app/components/LoadingSpinner';
 
 export const metadata: Metadata = {
   title: 'Mot de passe oublié',
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
 
 export default function ForgotPasswordPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center">Chargement…</div>}>
+    <Suspense fallback={<LoadingSpinner message="Chargement..." />}>
       <ForgotPasswordClient />
     </Suspense>
   );

@@ -1,37 +1,10 @@
-'use client';
-
 import { cn } from '@/app/components/ui/utils';
+import { Skeleton as SkeletonLine } from '@/app/components/ui/skeleton';
+import { ProductGrid } from '@/app/components/ProductGrid';
+import { ProductCardSkeleton } from '@/app/components/ProductCardSkeleton';
 
-/** Number of product cards to show: 8 on mobile (2 cols), 12 on desktop (4 cols) */
+/** Number of product cards to show while loading. */
 const CARD_COUNT = 12;
-
-function SkeletonLine({ className }: { className?: string }) {
-  return (
-    <div
-      className={cn('rounded-md bg-gray-200 dark:bg-gray-700 animate-pulse', className)}
-      aria-hidden
-    />
-  );
-}
-
-function ProductCardSkeleton() {
-  return (
-    <div
-      className={cn(
-        'flex flex-col overflow-hidden rounded-[14px] sm:rounded-xl lg:rounded-2xl',
-        'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
-        'shadow-[0_2px_12px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_12px_rgba(0,0,0,0.2)]'
-      )}
-    >
-      <div className="aspect-square w-full bg-gray-200 dark:bg-gray-700 animate-pulse min-h-[200px] sm:min-h-[240px] md:min-h-[280px]" />
-      <div className="p-3 sm:p-4 space-y-2">
-        <SkeletonLine className="h-4 w-full" />
-        <SkeletonLine className="h-4 w-3/4" />
-        <SkeletonLine className="h-5 w-20 mt-2" />
-      </div>
-    </div>
-  );
-}
 
 export interface ProductsSkeletonProps {
   /** Show breadcrumb skeleton */
@@ -44,9 +17,9 @@ export interface ProductsSkeletonProps {
 }
 
 /**
- * Skeleton UI for the shop/products list page.
- * Matches layout: header (title + subtitle), optional filters pills, product grid.
- * Used in loading.tsx (route transition) and when isSearching in ShopPageClient.
+ * Skeleton for the shop/products list. Matches the real layout exactly — same container,
+ * the shared <ProductGrid> columns/gaps, and <ProductCardSkeleton> cards — so the swap to
+ * real content causes no layout shift. Server-safe (no 'use client').
  */
 export function ProductsSkeleton({
   showBreadcrumb = true,
@@ -59,18 +32,18 @@ export function ProductsSkeleton({
       {showBreadcrumb && (
         <div className="flex items-center gap-2 mb-4 sm:mb-6">
           <SkeletonLine className="h-4 w-16" />
-          <span className="text-gray-400 dark:text-gray-500">/</span>
+          <span className="text-gray-300 dark:text-gray-600" aria-hidden>/</span>
           <SkeletonLine className="h-4 w-24" />
         </div>
       )}
 
       {/* Page header */}
-      <div className="mb-4 sm:mb-10">
+      <div className="mb-6 sm:mb-10">
         <SkeletonLine className="h-8 sm:h-10 w-3/4 max-w-md mb-2" />
         <SkeletonLine className="h-4 w-48" />
       </div>
 
-      {/* Search + Filter row */}
+      {/* Search + filter row */}
       <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6">
         <SkeletonLine className="h-11 flex-1 rounded-lg" />
         <SkeletonLine className="h-11 w-24 sm:w-28 rounded-lg" />
@@ -78,19 +51,19 @@ export function ProductsSkeleton({
 
       {/* Filter pills */}
       {showFilters && (
-        <div className="flex flex-wrap gap-2 mb-4 sm:mb-6">
+        <div className="flex flex-wrap gap-2 mb-6 sm:mb-8">
           {[1, 2, 3, 4].map((i) => (
             <SkeletonLine key={i} className="h-8 w-20 sm:w-24 rounded-full" />
           ))}
         </div>
       )}
 
-      {/* Product grid — aligned with ShopPageClient */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-2 max-[360px]:gap-1.5 sm:gap-3 md:gap-4 lg:gap-6">
+      {/* Product grid — shared primitive, matches the real grid */}
+      <ProductGrid>
         {Array.from({ length: cardCount }).map((_, i) => (
           <ProductCardSkeleton key={i} />
         ))}
-      </div>
+      </ProductGrid>
     </div>
   );
 }

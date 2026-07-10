@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { ChevronDown, ArrowRight } from 'lucide-react';
+import { Skeleton } from '@/app/components/ui/skeleton';
 import { getCategories } from '@/services/api';
 import { Category } from '@/types';
 
@@ -101,7 +102,19 @@ export function ProductsDropdown({
     >
       <div className="max-w-7xl mx-auto px-4 lg:px-8 py-6 overflow-y-auto max-h-[calc(100vh-80px)] overscroll-contain">
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-6 lg:gap-8">
-          {categories.map((cat) => {
+          {categories.length === 0 ? (
+            Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="min-w-0" role="status" aria-label="Chargement des catégories">
+                <Skeleton className="h-3 w-24 mb-3" />
+                <div className="w-8 h-px bg-gray-200 dark:bg-gray-700 mb-3" />
+                <div className="space-y-2">
+                  {Array.from({ length: 4 }).map((_, j) => (
+                    <Skeleton key={j} className="h-3 w-20" />
+                  ))}
+                </div>
+              </div>
+            ))
+          ) : categories.map((cat) => {
             const subs = (cat.sous_categories ?? []) as Array<{ id: number; slug: string; designation_fr: string }>;
             return (
               <div key={cat.id} className="min-w-0">

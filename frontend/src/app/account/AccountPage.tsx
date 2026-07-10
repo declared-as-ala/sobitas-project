@@ -10,7 +10,7 @@ import { OrdersSection } from './OrdersSection';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 import { User, Package } from 'lucide-react';
 import { PageHeader } from '@/app/components/PageHeader';
-import { LoadingSpinner } from '@/app/components/LoadingSpinner';
+import { AccountPageSkeleton } from './AccountSkeletons';
 
 export default function AccountPage() {
   const router = useRouter();
@@ -31,7 +31,7 @@ export default function AccountPage() {
   }, [isAuthenticated]);
 
   if (isLoading) {
-    return <LoadingSpinner fullScreen message="Chargement de votre compte..." />;
+    return <AccountPageSkeleton />;
   }
 
   if (!isAuthenticated) {

@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
-import { ShoppingCart, Flame, Sparkles, Check } from 'lucide-react';
+import { ShoppingCart, Flame, Check } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { getStorageUrl } from '@/services/api';
 import { useCart } from '@/app/contexts/CartContext';
@@ -34,6 +34,7 @@ interface FlashProductCardProps {
 export const FlashProductCard = memo(function FlashProductCard({ product }: FlashProductCardProps) {
   const { addToCart, getCartQty } = useCart();
   const [isAdding, setIsAdding] = useState(false);
+  const [hasError, setHasError] = useState(false);
   const stockDisponible = getStockDisponible(product as any);
   const inCartQty = getCartQty(product.id);
   const canAddMore = stockDisponible > 0 && inCartQty < stockDisponible;
@@ -74,17 +75,14 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
     setTimeout(() => setIsAdding(false), 500);
   }, [productData.isInStock, stockDisponible, inCartQty, addToCart, product]);
 
-  // Determine which badges to show (max 2) – only when promo is active
+  // Determine which badges to show – only the red promo discount (one-accent discipline).
   const badges = useMemo(() => {
-    const badgeList: Array<{ text: string; color: 'red' | 'green' }> = [];
+    const badgeList: Array<{ text: string }> = [];
     if (productData.priceDisplay.hasPromo && productData.discount > 0) {
-      badgeList.push({ text: `-${productData.discount}%`, color: 'red' });
+      badgeList.push({ text: `-${productData.discount}%` });
     }
-    if (productData.priceDisplay.hasPromo && productData.isInStock) {
-      badgeList.push({ text: 'Promo', color: 'green' });
-    }
-    return badgeList.slice(0, 2);
-  }, [productData.priceDisplay.hasPromo, productData.discount, productData.isInStock]);
+    return badgeList;
+  }, [productData.priceDisplay.hasPromo, productData.discount]);
 
   return (
     <article className="group relative flex flex-col h-full w-full overflow-hidden rounded-xl lg:rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm transition-shadow duration-300 [@media(hover:hover)]:hover:shadow-xl">
@@ -96,7 +94,7 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
           aria-label={`Voir ${productData.name}`}
           loadingMessage="Chargement"
         >
-          {productData.image ? (
+          {productData.image && !hasError ? (
             <Image
               src={productData.image}
               alt={productData.name}
@@ -106,17 +104,7 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
               loading="lazy"
               sizes="(max-width: 640px) 46vw, (max-width: 1024px) 46vw, (max-width: 1280px) 32vw, 24vw"
               quality={75}
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-                const parent = target.parentElement;
-                if (parent && !parent.querySelector('.error-placeholder')) {
-                  const ph = document.createElement('div');
-                  ph.className = 'error-placeholder size-full flex items-center justify-center bg-gray-200 dark:bg-gray-700';
-                  ph.innerHTML = '<svg class="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>';
-                  parent.appendChild(ph);
-                }
-              }}
+              onError={() => setHasError(true)}
             />
           ) : (
             <div className="size-full flex items-center justify-center bg-gray-200 dark:bg-gray-700" aria-hidden="true">
@@ -136,25 +124,15 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
 
         {productData.isInStock && badges.length > 0 && (
           <div className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 z-10 flex flex-col items-start gap-1 sm:gap-1.5 max-w-[calc(100%-1.5rem)]">
-            {badges.map((badge, index) =>
-              badge.color === 'red' ? (
-                <span
-                  key={index}
-                  className="inline-flex items-center gap-1 rounded-md bg-red-600 text-white font-display font-bold uppercase tabular-nums tracking-wide text-[10px] sm:text-xs px-2 py-0.5 shadow-sm"
-                >
-                  <Flame className="h-3 w-3 shrink-0" aria-hidden="true" />
-                  <span className="truncate">{badge.text}</span>
-                </span>
-              ) : (
-                <span
-                  key={index}
-                  className="inline-flex items-center gap-1 rounded-md bg-white/95 dark:bg-gray-900/90 text-gray-900 dark:text-white font-display font-semibold uppercase tracking-wide text-[10px] sm:text-xs px-2 py-0.5 shadow-sm ring-1 ring-gray-900/10 dark:ring-white/10"
-                >
-                  <Sparkles className="h-3 w-3 shrink-0 text-red-600 dark:text-red-400" aria-hidden="true" />
-                  <span className="truncate">{badge.text}</span>
-                </span>
-              )
-            )}
+            {badges.map((badge, index) => (
+              <span
+                key={index}
+                className="inline-flex items-center gap-1 rounded-md bg-red-600 text-white font-display font-bold uppercase tabular-nums tracking-wide text-[10px] sm:text-xs px-2 py-0.5 shadow-sm"
+              >
+                <Flame className="h-3 w-3 shrink-0" aria-hidden="true" />
+                <span className="truncate">{badge.text}</span>
+              </span>
+            ))}
           </div>
         )}
       </div>

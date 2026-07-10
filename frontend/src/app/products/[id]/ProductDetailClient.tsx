@@ -13,7 +13,7 @@ import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 import { SectionHeader } from '@/app/components/SectionHeader';
-import { Minus, Plus, ShoppingCart, Star, Shield, ArrowLeft, Heart, Share2, ZoomIn, CheckCircle2, Loader2, Zap, X, ChevronLeft, ChevronRight, Sparkles, TrendingUp, Flame } from 'lucide-react';
+import { Minus, Plus, ShoppingCart, Star, Shield, Heart, Share2, ZoomIn, CheckCircle2, XCircle, AlertTriangle, Loader2, Zap, X, ChevronLeft, ChevronRight, Sparkles, TrendingUp, Flame } from 'lucide-react';
 import { useQuickOrder } from '@/contexts/QuickOrderContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import type { QuickOrderProduct } from '@/contexts/QuickOrderContext';
@@ -51,6 +51,64 @@ function nameToSlug(name: string): string {
     .trim();
 }
 
+/**
+ * Stock / promo / "Nouveau" / "Top Vendu" badges.
+ * Rendered once here and reused by both the mobile and desktop buy-box trees so their
+ * French labels and the state-aware stock icon can never diverge again.
+ */
+function ProductBadges({
+  stockStatus,
+  discount,
+  isNew,
+  isBestSeller,
+  textSize,
+}: {
+  stockStatus: ReturnType<typeof getProductStockStatus>;
+  discount: number;
+  isNew: boolean;
+  isBestSeller: boolean;
+  textSize: string;
+}) {
+  const StockIcon = stockStatus.isOutOfStock ? XCircle : stockStatus.isLowStock ? AlertTriangle : CheckCircle2;
+  return (
+    <>
+      <Badge
+        variant="outline"
+        className={cn(
+          stockStatus.isOutOfStock
+            ? 'bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800'
+            : stockStatus.isLowStock
+              ? 'bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
+              : 'bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800',
+          'font-display uppercase tracking-wide px-2.5 py-1',
+          textSize
+        )}
+      >
+        <StockIcon className="h-3 w-3 mr-1" />
+        {stockStatus.stockLabel}
+        {stockStatus.isLowStock && stockStatus.qte > 0 && (
+          <span className="ml-1 tabular-nums">({stockStatus.qte})</span>
+        )}
+      </Badge>
+      {discount > 0 && (
+        <Badge className={cn('gap-1 bg-red-600 text-white font-display uppercase tracking-wide tabular-nums px-2.5 py-1', textSize)}>
+          <Flame className="h-3 w-3 shrink-0" aria-hidden="true" />-{discount}%
+        </Badge>
+      )}
+      {isNew && (
+        <Badge variant="outline" className={cn('gap-1 bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-gray-200 dark:border-gray-700 font-display uppercase tracking-wide px-2.5 py-1', textSize)}>
+          <Sparkles className="h-3 w-3 shrink-0 text-red-600 dark:text-red-400" aria-hidden="true" />Nouveau
+        </Badge>
+      )}
+      {isBestSeller && (
+        <Badge variant="outline" className={cn('gap-1 bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-gray-200 dark:border-gray-700 font-display uppercase tracking-wide px-2.5 py-1', textSize)}>
+          <TrendingUp className="h-3 w-3 shrink-0 text-red-600 dark:text-red-400" aria-hidden="true" />Top Vendu
+        </Badge>
+      )}
+    </>
+  );
+}
+
 export function ProductDetailClient({ product: initialProduct, similarProducts, slugOverride, breadcrumbItems = [] }: ProductDetailClientProps) {
   const REVIEW_PAGE_SIZE = 12;
   const router = useRouter();
@@ -65,10 +123,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
   const [reviewComment, setReviewComment] = useState('');
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
-  const [reviewSort, setReviewSort] = useState<'recent' | 'helpful'>('recent');
-  const [reviewSearch, setReviewSearch] = useState('');
   const [descExpanded, setDescExpanded] = useState(false);
-  const [showFullDescription, setShowFullDescription] = useState(false);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [visibleReviewCount, setVisibleReviewCount] = useState(12);
   const { openQuickOrder } = useQuickOrder();
@@ -152,18 +207,13 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
     : 0);
   const reviewCount = reviews.length;
 
-  // Filter and sort reviews for display directly on product page (no separate reviews page required)
-  const filteredReviews = [...reviews]
-    .filter(r => !reviewSearch || (r.comment?.toLowerCase().includes(reviewSearch.toLowerCase())))
-    .sort((a, b) => {
-      if (reviewSort === 'recent') {
-        const da = a.created_at ? new Date(a.created_at).getTime() : 0;
-        const db = b.created_at ? new Date(b.created_at).getTime() : 0;
-        return db - da;
-      }
-      return 0;
-    });
-  const reviewsToShowOnPage = filteredReviews.slice(0, visibleReviewCount);
+  // Reviews rendered newest-first directly on the product page (no separate reviews page/controls)
+  const sortedReviews = [...reviews].sort((a, b) => {
+    const da = a.created_at ? new Date(a.created_at).getTime() : 0;
+    const db = b.created_at ? new Date(b.created_at).getTime() : 0;
+    return db - da;
+  });
+  const reviewsToShowOnPage = sortedReviews.slice(0, visibleReviewCount);
 
   /** Filament stores product FAQ as JSON array `{ q, a }[]` on `faq`; exposed as-is from `GET /product_details/{slug}`. */
   const productFaqItems = useMemo(() => {
@@ -203,7 +253,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
 
   useEffect(() => {
     setVisibleReviewCount(REVIEW_PAGE_SIZE);
-  }, [reviewSearch, reviewSort, reviews.length, REVIEW_PAGE_SIZE]);
+  }, [reviews.length, REVIEW_PAGE_SIZE]);
 
   const handleGalleryTouchStart = (event: React.TouchEvent) => {
     setTouchStartX(event.touches[0]?.clientX ?? null);
@@ -222,11 +272,6 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
     });
     setTouchStartX(null);
   };
-
-  const slugLower = (product.slug || '').toLowerCase();
-  const nameLower = (product.designation_fr || '').toLowerCase();
-  const isPackProduct =
-    product.pack === 1 || slugLower.includes('pack') || nameLower.includes('pack');
 
   // Helper function to strip HTML tags and decode HTML entities for meta description
   const stripHtml = (html: string | null | undefined): string => {
@@ -305,15 +350,6 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
     ? stripHtml(product.description_cover)
     : null;
 
-  /** Points clés: 3–6 bullets derived from description (Amazon-style) */
-  const keyPoints = (() => {
-    const raw = product.description_fr || product.description_cover || '';
-    if (!raw) return [];
-    const text = stripHtml(raw);
-    const sentences = text.split(/[.\n]+/).map(s => s.trim()).filter(s => s.length > 15);
-    return sentences.slice(0, 6);
-  })();
-
   const quickOrderProduct: QuickOrderProduct = {
     id: product.id,
     designation_fr: product.designation_fr ?? '',
@@ -326,7 +362,6 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
     aromes: product.aromes,
   };
 
-  const hasMultipleAromes = (product.aromes?.length ?? 0) > 1;
   /** Effective aroma for cart/quick order: selected or first (never block add/command). */
   const effectiveAromaId = selectedAromaId ?? product.aromes?.[0]?.id;
 
@@ -495,14 +530,14 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
     <div className="min-h-screen bg-white dark:bg-gray-950">
       <Header />
 
-      <main className="w-full mx-auto px-4 sm:px-6 max-w-[1024px] md:max-w-[1280px] lg:max-w-[1400px] xl:max-w-[1600px] py-3 sm:py-6 lg:py-12 pb-32 sm:pb-40 lg:pb-12">
+      <main className="w-full mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl py-3 sm:py-6 lg:py-12 pb-40 sm:pb-44 lg:pb-12">
         {/* Breadcrumb: Accueil > Boutique > Category > Subcategory (ends at category, no product name) */}
         {breadcrumbItems.length > 0 && (
           <nav aria-label="Fil d'Ariane" className="mb-3 sm:mb-4 text-sm text-gray-500 dark:text-gray-400">
             <ol className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
               {breadcrumbItems.map((item, i) => (
                 <li key={i} className="flex items-center gap-x-1.5">
-                  {i > 0 && <span className="text-gray-400 dark:text-gray-500" aria-hidden>›</span>}
+                  {i > 0 && <ChevronRight className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500 shrink-0" aria-hidden />}
                   {i < breadcrumbItems.length - 1 ? (
                     <Link href={item.url} className="hover:text-red-600 dark:hover:text-red-400 underline-offset-2 hover:underline">
                       {item.name}
@@ -515,23 +550,11 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
             </ol>
           </nav>
         )}
-        {/* Back Button */}
-        <div className="mb-4 sm:mb-6">
-          <Button
-            variant="ghost"
-            onClick={() => router.back()}
-            className="min-h-[44px] font-display uppercase tracking-wide text-sm hover:text-red-600 dark:hover:text-red-400"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Retour
-          </Button>
-        </div>
-
         {/* Layout: 2 cols desktop (Image left, larger | Info + buy right), mobile single col. */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8 xl:gap-10 mb-6 sm:mb-8 lg:mb-10">
           {/* A) COLONNE GAUCHE — Gallery (desktop): image slightly smaller */}
           <div className="hidden lg:block lg:col-span-5 min-w-0">
-            <div className="sticky top-24 max-w-[520px] xl:max-w-[560px] ml-auto">
+            <div className="sticky top-24 max-w-[520px] xl:max-w-[560px]">
               <div
                 className="relative w-full rounded-xl overflow-hidden border border-gray-100 dark:border-gray-800 shadow-sm group aspect-square min-h-[290px] xl:min-h-[350px] bg-gray-50 dark:bg-gray-900"
                 onTouchStart={handleGalleryTouchStart}
@@ -599,44 +622,19 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
             </div>
           </div>
 
-          {/* B) COLONNE DROITE — Infos + prix + quantité + CTAs + garanties (desktop) / mobile first block */}
+          {/* B) COLONNE DROITE — Infos + prix + quantité + CTAs (mobile & desktop trees) */}
           <div className="lg:col-span-7 min-w-0 space-y-3 sm:space-y-4">
             {/* Mobile Layout: Image First then badges, title, etc. */}
             <div className="lg:hidden space-y-4 sm:space-y-5">
               {/* Badges at top (stock from API: rupture + qte + low_stock_threshold) */}
               <div className="flex items-center gap-2 sm:gap-3 flex-wrap px-1">
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    stockStatus.isOutOfStock
-                      ? 'bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800'
-                      : stockStatus.isLowStock
-                        ? 'bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
-                        : 'bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800',
-                    'font-display uppercase tracking-wide text-xs sm:text-sm px-2.5 py-1'
-                  )}
-                >
-                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                  {stockStatus.stockLabel}
-                  {stockStatus.isLowStock && stockStatus.qte > 0 && (
-                    <span className="ml-1 tabular-nums">({stockStatus.qte})</span>
-                  )}
-                </Badge>
-                {discount > 0 && (
-                  <Badge className="gap-1 bg-red-600 text-white font-display uppercase tracking-wide tabular-nums text-xs sm:text-sm px-2.5 py-1">
-                    <Flame className="h-3 w-3 shrink-0" aria-hidden="true" />-{discount}% OFF
-                  </Badge>
-                )}
-                {product.new_product === 1 && (
-                  <Badge variant="outline" className="gap-1 bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-gray-200 dark:border-gray-700 font-display uppercase tracking-wide text-xs sm:text-sm px-2.5 py-1">
-                    <Sparkles className="h-3 w-3 shrink-0 text-red-600 dark:text-red-400" aria-hidden="true" />New
-                  </Badge>
-                )}
-                {product.best_seller === 1 && (
-                  <Badge variant="outline" className="gap-1 bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-gray-200 dark:border-gray-700 font-display uppercase tracking-wide text-xs sm:text-sm px-2.5 py-1">
-                    <TrendingUp className="h-3 w-3 shrink-0 text-red-600 dark:text-red-400" aria-hidden="true" />Top Vendu
-                  </Badge>
-                )}
+                <ProductBadges
+                  stockStatus={stockStatus}
+                  discount={discount}
+                  isNew={product.new_product === 1}
+                  isBestSeller={product.best_seller === 1}
+                  textSize="text-xs sm:text-sm"
+                />
               </div>
               {/* Product Image - slightly smaller on mobile */}
               <div className="w-full max-w-[260px] sm:max-w-[320px] mx-auto">
@@ -728,7 +726,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   ))}
                 </div>
                 <span className="text-sm sm:text-base text-gray-600 dark:text-gray-400 font-medium tabular-nums transition-colors group-hover:text-red-600 dark:group-hover:text-red-400">
-                  ({rating > 0 ? rating.toFixed(1) : '0'}) • {reviewCount} avis
+                  ({rating > 0 ? rating.toFixed(1) : '0'}) – {reviewCount} avis
                 </span>
               </button>
 
@@ -753,7 +751,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 </div>
                 {oldPrice && (
                   <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-2 tabular-nums">
-                    Vous économisez {oldPrice - displayPrice} DT
+                    Vous économisez {(oldPrice - displayPrice).toFixed(0)} DT
                   </p>
                 )}
               </div>
@@ -884,42 +882,17 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
 
             </div>
 
-            {/* Desktop Layout: badges, title, rating, price, description, category, quantity, CTAs, arômes, service cards */}
+            {/* Desktop Layout: badges → title → rating → price → category/brand → quantity → arômes → CTAs → trust */}
             <div className="hidden lg:block space-y-4 min-w-0">
                 {/* Badges (stock from API: rupture + qte + low_stock_threshold) */}
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      stockStatus.isOutOfStock
-                        ? 'bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800'
-                        : stockStatus.isLowStock
-                          ? 'bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
-                          : 'bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800',
-                      'font-display uppercase tracking-wide text-xs px-2.5 py-1'
-                    )}
-                  >
-                    <CheckCircle2 className="h-3 w-3 mr-1" />
-                    {stockStatus.stockLabel}
-                    {stockStatus.isLowStock && stockStatus.qte > 0 && (
-                      <span className="ml-1 tabular-nums">({stockStatus.qte})</span>
-                    )}
-                  </Badge>
-                  {discount > 0 && (
-                    <Badge className="gap-1 bg-red-600 text-white font-display uppercase tracking-wide tabular-nums text-xs px-2.5 py-1">
-                      <Flame className="h-3 w-3 shrink-0" aria-hidden="true" />-{discount}% OFF
-                    </Badge>
-                  )}
-                  {product.new_product === 1 && (
-                    <Badge variant="outline" className="gap-1 bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-gray-200 dark:border-gray-700 font-display uppercase tracking-wide text-xs px-2.5 py-1">
-                      <Sparkles className="h-3 w-3 shrink-0 text-red-600 dark:text-red-400" aria-hidden="true" />New
-                    </Badge>
-                  )}
-                  {product.best_seller === 1 && (
-                    <Badge variant="outline" className="gap-1 bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-gray-200 dark:border-gray-700 font-display uppercase tracking-wide text-xs px-2.5 py-1">
-                      <TrendingUp className="h-3 w-3 shrink-0 text-red-600 dark:text-red-400" aria-hidden="true" />Top Vendu
-                    </Badge>
-                  )}
+                  <ProductBadges
+                    stockStatus={stockStatus}
+                    discount={discount}
+                    isNew={product.new_product === 1}
+                    isBestSeller={product.best_seller === 1}
+                    textSize="text-xs"
+                  />
                 </div>
                 <h1 className="font-display uppercase tracking-tight text-2xl xl:text-3xl font-bold text-gray-900 dark:text-white leading-[0.95] line-clamp-3 break-words">
                   {product.designation_fr}
@@ -948,6 +921,37 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 </div>
                 {oldPrice && (
                   <p className="text-sm text-gray-600 dark:text-gray-400 tabular-nums">Vous économisez {(oldPrice - displayPrice).toFixed(0)} DT</p>
+                )}
+                {/* Category + Brand/Tags/SKU — above the selectors (matches mobile reading order) */}
+                {product.sous_categorie?.slug && (
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
+                    <Link href={`/${product.sous_categorie.slug}`} className="text-red-600 dark:text-red-400 hover:underline">
+                      {product.sous_categorie.designation_fr}
+                    </Link>
+                  </div>
+                )}
+                {(product.brand?.designation_fr || (product.tags?.length ?? 0) > 0) && (
+                  <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                    {product.brand?.designation_fr && (
+                      <Link href={`/${nameToSlug(product.brand.designation_fr)}`} className="text-red-600 dark:text-red-400 hover:underline">
+                        Marque: {product.brand.designation_fr}
+                      </Link>
+                    )}
+                    {product.tags?.map((tag) => (
+                      <Link
+                        key={tag.id}
+                        href={`/shop?search=${encodeURIComponent(tag.designation_fr)}&sort=relevance`}
+                        className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 px-2 py-0.5 hover:border-red-300 hover:text-red-600"
+                      >
+                        #{tag.designation_fr.toLowerCase()}
+                      </Link>
+                    ))}
+                    {(product.sku || product.code_product) && (
+                      <span className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 px-2 py-0.5">
+                        SKU: {product.sku || product.code_product}
+                      </span>
+                    )}
+                  </div>
                 )}
                 {/* Quantity + Total — placed high so CTAs are visible without scroll */}
                 <div className="flex items-center gap-3">
@@ -994,7 +998,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 <div className="flex flex-col gap-2">
                   <Button
                     size="default"
-                    className="w-full min-h-[42px] h-auto py-2.5 text-sm bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide font-bold"
+                    className="w-full min-h-[44px] h-auto py-2.5 text-sm bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide font-bold"
                     onClick={handleAddToCart}
                     disabled={stockStatus.isOutOfStock}
                   >
@@ -1004,7 +1008,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   <Button
                     size="default"
                     variant="outline"
-                    className="w-full min-h-[42px] h-auto py-2.5 text-sm bg-transparent border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 dark:text-red-400 dark:border-red-400 font-display uppercase tracking-wide font-semibold"
+                    className="w-full min-h-[44px] h-auto py-2.5 text-sm bg-transparent border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 dark:text-red-400 dark:border-red-400 font-display uppercase tracking-wide font-semibold"
                     onClick={handleQuickOrderClick}
                     disabled={stockStatus.isOutOfStock}
                   >
@@ -1020,42 +1024,14 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     <Share2 className="h-5 w-5" />
                   </Button>
                 </div>
-                {product.sous_categorie?.slug && (
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
-                    <Link href={`/${product.sous_categorie.slug}`} className="text-red-600 dark:text-red-400 hover:underline">
-                      {product.sous_categorie.designation_fr}
-                    </Link>
-                  </div>
-                )}
-                {(product.brand?.designation_fr || (product.tags?.length ?? 0) > 0) && (
-                  <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                    {product.brand?.designation_fr && (
-                      <Link href={`/${nameToSlug(product.brand.designation_fr)}`} className="text-red-600 dark:text-red-400 hover:underline">
-                        Marque: {product.brand.designation_fr}
-                      </Link>
-                    )}
-                    {product.tags?.map((tag) => (
-                      <Link
-                        key={tag.id}
-                        href={`/shop?search=${encodeURIComponent(tag.designation_fr)}&sort=relevance`}
-                        className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 px-2 py-0.5 hover:border-red-300 hover:text-red-600"
-                      >
-                        #{tag.designation_fr.toLowerCase()}
-                      </Link>
-                    ))}
-                    {(product.sku || product.code_product) && (
-                      <span className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 px-2 py-0.5">
-                        SKU: {product.sku || product.code_product}
-                      </span>
-                    )}
-                  </div>
-                )}
+                {/* Trust line — mirrors the mobile reassurance copy under the CTAs */}
+                <p className="text-xs text-gray-500 dark:text-gray-400">Paiement à la livraison • Livraison 24–72h • Produits authentiques</p>
               </div>
           </div>
         </div>
 
         {/* Description / Nutrition / Questions — full width; spacing so sections never overlap */}
-        <section className="mx-auto w-full px-4 md:px-6 pt-8 sm:pt-10 lg:pt-12 pb-6 sm:pb-8 border-t border-gray-100 dark:border-gray-800 mt-8 sm:mt-10" aria-label="Description et informations produit">
+        <section className="mx-auto w-full pt-8 sm:pt-10 lg:pt-12 pb-6 sm:pb-8 border-t border-gray-100 dark:border-gray-800 mt-8 sm:mt-10" aria-label="Description et informations produit">
           <div className="w-full mb-0">
             {(() => {
               const hasNutritionContent = product.nutrition_values != null &&
@@ -1347,33 +1323,33 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   {/* Sample Reviews */}
                   <div className="space-y-2 sm:space-y-3">
                     {reviewsToShowOnPage.map((review) => (
-                      <div key={review.id} className="p-2 sm:p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-                        <div className="flex items-center gap-2 mb-1">
+                      <div key={review.id} className="p-3 sm:p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center gap-2 mb-1.5">
                           <div className="flex items-center gap-0.5">
                             {[1, 2, 3, 4, 5].map((i) => (
-                              <Star key={i} className={`h-3 w-3 sm:h-3.5 sm:w-3.5 ${i <= review.stars ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 text-gray-200 dark:fill-gray-700'}`} />
+                              <Star key={i} className={`h-3.5 w-3.5 ${i <= review.stars ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 text-gray-200 dark:fill-gray-700'}`} />
                             ))}
                           </div>
-                          <span className="text-caption sm:text-xs font-semibold leading-snug text-gray-900 dark:text-white truncate">{review.user?.name || 'Client'}</span>
-                          <span className="text-caption sm:text-xs leading-snug text-gray-500 dark:text-gray-400 shrink-0">
+                          <span className="text-xs sm:text-sm font-semibold leading-snug text-gray-900 dark:text-white truncate">{review.user?.name || 'Client'}</span>
+                          <span className="text-xs leading-snug text-gray-500 dark:text-gray-400 shrink-0">
                             {review.created_at ? new Date(review.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''}
                           </span>
                         </div>
                         {review.comment && (
-                          <p className="text-caption sm:text-xs leading-relaxed text-gray-700 dark:text-gray-300 line-clamp-2">{review.comment}</p>
+                          <p className="text-sm leading-relaxed text-gray-700 dark:text-gray-300 line-clamp-3">{review.comment}</p>
                         )}
                       </div>
                     ))}
                   </div>
 
-                  {visibleReviewCount < filteredReviews.length ? (
+                  {visibleReviewCount < sortedReviews.length ? (
                     <Button
                       variant="outline"
                       className="w-full min-h-[44px] py-2.5 leading-snug text-xs sm:text-sm whitespace-normal border-gray-300 dark:border-gray-600"
                       size="default"
                       onClick={() => setVisibleReviewCount((prev) => prev + REVIEW_PAGE_SIZE)}
                     >
-                      Charger plus d'avis ({filteredReviews.length - reviewsToShowOnPage.length} restants sur {reviewCount})
+                      Charger plus d'avis ({sortedReviews.length - reviewsToShowOnPage.length} restants sur {reviewCount})
                     </Button>
                   ) : (
                     <p className="text-sm text-center text-gray-500 dark:text-gray-400">
@@ -1381,14 +1357,23 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     </p>
                   )}
 
-                  {/* Add Review Button */}
-                  {isAuthenticated && (
+                  {/* Add Review Button (logged-in) / login prompt (logged-out) */}
+                  {isAuthenticated ? (
                     <Button
                       onClick={() => setShowReviewForm(!showReviewForm)}
                       className="w-full bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide font-semibold"
                       size="default"
                     >
                       {showReviewForm ? 'Annuler' : 'Écrire un avis'}
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => router.push('/login')}
+                      variant="outline"
+                      className="w-full border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 dark:text-red-400 dark:border-red-400 font-display uppercase tracking-wide font-semibold"
+                      size="default"
+                    >
+                      Connectez-vous pour laisser un avis
                     </Button>
                   )}
                 </>
@@ -1397,13 +1382,22 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-4">
                     Aucun avis pour le moment
                   </p>
-                  {isAuthenticated && (
+                  {isAuthenticated ? (
                     <Button
                       onClick={() => setShowReviewForm(!showReviewForm)}
                       className="w-full bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide font-semibold"
                       size="default"
                     >
                       {showReviewForm ? 'Annuler' : 'Écrire un avis'}
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => router.push('/login')}
+                      variant="outline"
+                      className="w-full border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 dark:text-red-400 dark:border-red-400 font-display uppercase tracking-wide font-semibold"
+                      size="default"
+                    >
+                      Connectez-vous pour laisser un avis
                     </Button>
                   )}
                 </div>
@@ -1469,7 +1463,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
         className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 p-2.5 sm:p-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] z-50"
         style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}
       >
-        <div className="w-full mx-auto px-1 sm:px-2 max-w-[1024px] md:max-w-[1280px] lg:max-w-[1400px] xl:max-w-[1600px] flex flex-col gap-2 sm:gap-3">
+        <div className="w-full mx-auto px-4 sm:px-6 max-w-7xl flex flex-col gap-2 sm:gap-3">
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-display uppercase tracking-wide">Total</p>
             <p className="font-display font-bold tracking-tight tabular-nums text-xl sm:text-2xl text-red-600 dark:text-red-400 truncate">
@@ -1478,7 +1472,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
           </div>
           <Button
             size="default"
-            className="w-full min-h-[42px] h-auto py-2.5 text-sm bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide font-bold shrink-0"
+            className="w-full min-h-[44px] h-auto py-2.5 text-sm bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide font-bold shrink-0"
             onClick={handleAddToCart}
             disabled={stockStatus.isOutOfStock}
             aria-label="Ajouter au panier"
@@ -1489,7 +1483,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
           <Button
             size="default"
             variant="outline"
-            className="w-full min-h-[42px] h-auto py-2.5 text-sm bg-transparent border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 dark:text-red-400 dark:border-red-400 font-display uppercase tracking-wide font-semibold shrink-0"
+            className="w-full min-h-[44px] h-auto py-2.5 text-sm bg-transparent border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 dark:text-red-400 dark:border-red-400 font-display uppercase tracking-wide font-semibold shrink-0"
             onClick={handleQuickOrderClick}
             disabled={stockStatus.isOutOfStock}
             aria-label="Commander maintenant"

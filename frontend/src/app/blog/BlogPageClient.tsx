@@ -1,20 +1,15 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Header } from '@/app/components/Header';
 import { Footer } from '@/app/components/Footer';
-import { Calendar, Clock, ChevronLeft, ChevronRight, ArrowRight, Newspaper } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { PageHeader } from '@/app/components/PageHeader';
 import type { Article } from '@/types';
-import { getStorageUrl, getAllArticlesClient } from '@/services/api';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import { SafeImage } from '@/app/components/SafeImage';
-import { BlogCardSkeleton } from '@/app/components/BlogCardSkeleton';
-import { blogHref } from '@/util/blogSlug';
+import { getAllArticlesClient } from '@/services/api';
+import { BlogCard } from './BlogCard';
 
 interface BlogPageClientProps {
   articles: Article[];
@@ -160,9 +155,11 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
   const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
   const [activeCategory, setActiveCategory] = useState('all');
-  const [isNavigating, setIsNavigating] = useState(false);
   const [mounted, setMounted] = useState(false);
   const isUserAction = useRef(false);
+  // Timestamp of the last successful client re-fetch — used to skip redundant
+  // refetches on tab-refocus (only refresh if the data is older than STALE_MS).
+  const lastFetchRef = useRef(0);
 
   // ─── Client-side re-fetch: ensures data is ALWAYS fresh ───
   // The server component provides `articles` for the initial SSR/SEO render.
@@ -177,6 +174,7 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
       setIsRefreshing(true);
       const fresh = await getAllArticlesClient();
       setLiveArticles(fresh);
+      lastFetchRef.current = Date.now();
     } catch {
       // Silently fall back to server-provided data
       console.warn('[Blog] Client-side re-fetch failed, using server data');
@@ -199,9 +197,12 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
     // Fetch fresh data from API (bypasses all server-side caching)
     refreshArticles();
 
-    // Also re-fetch when user returns to this tab (handles admin edits in another tab)
+    // Also re-fetch when user returns to this tab (handles admin edits in another
+    // tab), but only if the data is stale — avoids re-downloading the whole corpus
+    // on every focus/blur.
+    const STALE_MS = 60_000;
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
+      if (document.visibilityState === 'visible' && Date.now() - lastFetchRef.current > STALE_MS) {
         refreshArticles();
       }
     };
@@ -233,6 +234,18 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
     [sortedArticles, startIndex, endIndex]
   );
 
+  // Derive excerpt + reading time once per visible slice (they strip the full HTML body),
+  // instead of recomputing on every render. Recomputes only when the page slice changes.
+  const cardData = useMemo(
+    () =>
+      paginatedArticles.map((article) => ({
+        article,
+        excerpt: getExcerpt(article),
+        readingMinutes: getReadingTimeMinutes(article),
+      })),
+    [paginatedArticles]
+  );
+
   // Sync currentPage from URL params (on URL change from external navigation)
   useEffect(() => {
     const pageParam = searchParams.get('page');
@@ -258,7 +271,6 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
     const urlPage = pageParam ? parseInt(pageParam, 10) : 1;
 
     if (currentPage !== urlPage && isUserAction.current) {
-      setIsNavigating(true);
       const params = new URLSearchParams(searchParams.toString());
       if (currentPage === 1) {
         params.delete('page');
@@ -267,11 +279,6 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
       }
       const newUrl = params.toString() ? `/blog?${params.toString()}` : '/blog';
       router.replace(newUrl, { scroll: false });
-
-      // Reset loading state after a short delay
-      setTimeout(() => {
-        setIsNavigating(false);
-      }, 300);
     }
   }, [currentPage, router, searchParams, mounted]);
 
@@ -305,7 +312,8 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
                 <button
                   key={cat.id}
                   onClick={() => setActiveCategory(cat.id)}
-                  className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+                  aria-pressed={activeCategory === cat.id}
+                  className={`inline-flex min-h-11 items-center rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
                     activeCategory === cat.id
                       ? 'border-red-600 bg-red-600 text-white'
                       : 'border-gray-200 bg-white text-gray-700 hover:border-red-600 hover:text-red-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-red-400 dark:hover:text-red-400'
@@ -324,106 +332,43 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
           </div>
         ) : (
           <>
-            {/* Loading overlay during page navigation */}
-            {isNavigating && (
-              <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 dark:bg-black/60">
-                <div className="rounded-xl bg-white px-6 py-4 shadow-lg dark:bg-gray-900">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    Chargement de la page {currentPage}...
-                  </p>
-                </div>
-              </div>
-            )}
-
             {/* Article grid: 1 col mobile, 2 tablet, 3 desktop */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 mb-8 sm:mb-12">
-              {isNavigating ? (
-                // Show skeletons during navigation
-                Array.from({ length: ARTICLES_PER_PAGE }).map((_, idx) => (
-                  <BlogCardSkeleton key={`skeleton-${currentPage}-${idx}`} />
-                ))
-              ) : (
-                paginatedArticles.map((article, index) => {
-                  const articleDate = article.created_at ? new Date(article.created_at) : new Date();
-                  const excerpt = getExcerpt(article);
-                  const readingMin = getReadingTimeMinutes(article);
-                  const stableKey = `blog-${currentPage}-${article.id}`;
-
-                  return (
-                    <article key={stableKey} className="group">
-                      <Link href={blogHref(article.slug)} className="block h-full">
-                        <div className="flex h-full flex-col overflow-hidden rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm transition-all duration-300 hover:shadow-xl">
-                          <div className="relative aspect-[4/3] overflow-hidden bg-gray-100 dark:bg-gray-800 min-h-[200px] sm:min-h-[240px] md:min-h-[280px] lg:min-h-[320px]">
-                            {article.cover ? (
-                              <SafeImage
-                                src={getStorageUrl(article.cover, article.updated_at || article.created_at)}
-                                alt={article.designation_fr || 'Article image'}
-                                fill
-                                className="object-cover transition-transform duration-500 group-hover:scale-105"
-                                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                                priority={index < 3}
-                              />
-                            ) : (
-                              <div className="flex h-full w-full items-center justify-center bg-gray-100 dark:bg-gray-800">
-                                <Newspaper className="h-10 w-10 text-gray-300 dark:text-gray-700" strokeWidth={1.5} aria-hidden="true" />
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex flex-1 flex-col p-4 sm:p-5 lg:p-6 min-w-0">
-                            <h2 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 dark:text-white mb-2 sm:mb-3 line-clamp-2 leading-snug transition-colors group-hover:text-red-600 dark:group-hover:text-red-400">
-                              {decodeHtmlEntities(article.designation_fr || '')}
-                            </h2>
-                            {excerpt && (
-                              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-2 sm:line-clamp-3 mb-4 flex-1">
-                                {excerpt}
-                              </p>
-                            )}
-                            <div className="mt-auto flex flex-col gap-3">
-                              <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-                                <span className="flex items-center gap-1.5">
-                                  <Calendar className="h-4 w-4 flex-shrink-0" strokeWidth={1.75} />
-                                  {format(articleDate, 'd MMM yyyy', { locale: fr })}
-                                </span>
-                                <span className="flex items-center gap-1.5">
-                                  <Clock className="h-4 w-4 flex-shrink-0" strokeWidth={1.75} />
-                                  {readingMin} min
-                                </span>
-                              </div>
-                              <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-red-600 dark:text-red-400">
-                                Lire la suite
-                                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" strokeWidth={1.75} aria-hidden="true" />
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </Link>
-                    </article>
-                  );
-                })
-              )}
+              {cardData.map(({ article, excerpt, readingMinutes }, index) => (
+                <BlogCard
+                  key={`blog-${currentPage}-${article.id}`}
+                  article={article}
+                  excerpt={excerpt}
+                  readingMinutes={readingMinutes}
+                  priority={index < 3}
+                />
+              ))}
             </div>
 
-            {/* Compact pagination – "← 1/37 →" style */}
+            {/* Compact pagination – "‹ 1/37 ›" style */}
             {totalPages > 1 && (
               <div className="flex items-center justify-center gap-4">
                 <button
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className="rounded-full border border-gray-200 p-2 text-gray-700 transition-colors hover:border-red-600 hover:text-red-600 disabled:pointer-events-none disabled:opacity-50 dark:border-gray-800 dark:text-gray-300 dark:hover:border-red-400 dark:hover:text-red-400"
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 text-gray-700 transition-colors hover:border-red-600 hover:text-red-600 disabled:pointer-events-none disabled:opacity-50 dark:border-gray-800 dark:text-gray-300 dark:hover:border-red-400 dark:hover:text-red-400"
                   aria-label="Page précédente"
                 >
-                  <ChevronLeft className="h-5 w-5" />
+                  <ChevronLeft className="h-5 w-5" aria-hidden="true" />
                 </button>
-                <span className="min-w-[4rem] text-center font-display font-semibold tabular-nums text-gray-900 dark:text-white">
+                <span
+                  className="min-w-[4rem] text-center font-display font-semibold tabular-nums text-gray-900 dark:text-white"
+                  aria-live="polite"
+                >
                   {currentPage} / {totalPages}
                 </span>
                 <button
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  className="rounded-full border border-gray-200 p-2 text-gray-700 transition-colors hover:border-red-600 hover:text-red-600 disabled:pointer-events-none disabled:opacity-50 dark:border-gray-800 dark:text-gray-300 dark:hover:border-red-400 dark:hover:text-red-400"
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 text-gray-700 transition-colors hover:border-red-600 hover:text-red-600 disabled:pointer-events-none disabled:opacity-50 dark:border-gray-800 dark:text-gray-300 dark:hover:border-red-400 dark:hover:text-red-400"
                   aria-label="Page suivante"
                 >
-                  <ChevronRight className="h-5 w-5" />
+                  <ChevronRight className="h-5 w-5" aria-hidden="true" />
                 </button>
               </div>
             )}

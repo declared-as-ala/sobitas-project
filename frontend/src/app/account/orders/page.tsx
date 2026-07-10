@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import { Suspense } from 'react';
 import OrdersPageClient from './OrdersPageClient';
+import { OrdersPageSkeleton } from '../AccountSkeletons';
 
 export const metadata: Metadata = {
   title: 'Mes Commandes',
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
 
 export default function OrdersPage() {
   return (
-    <Suspense fallback={<div>Chargement...</div>}>
+    <Suspense fallback={<OrdersPageSkeleton />}>
       <OrdersPageClient />
     </Suspense>
   );

@@ -16,7 +16,8 @@ import {
   Zap,
   Flame,
   Activity,
-  HeartHandshake
+  HeartHandshake,
+  Star
 } from 'lucide-react';
 import { buildFAQPageSchemaFromQA, validateStructuredData } from '@/util/structuredData';
 import { CategorySeoLandingExpandable } from '@/app/category/CategorySeoLandingExpandable';
@@ -228,10 +229,10 @@ export function CategorySeoLanding({
 
                   {/* Horizontal mini-guide tags */}
                   <div className="mt-6 flex flex-wrap justify-center lg:justify-start gap-2 text-xs">
-                    <span className="px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/40 text-red-700 dark:text-red-300 font-medium"># Monohydrate</span>
-                    <span className="px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/40 text-red-700 dark:text-red-300 font-medium"># Creapure®</span>
-                    <span className="px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/40 text-red-700 dark:text-red-300 font-medium"># Micronisée</span>
-                    <span className="px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/40 text-red-700 dark:text-red-300 font-medium"># Capsules</span>
+                    <span className="px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/40 text-red-700 dark:text-red-300 font-medium">Monohydrate</span>
+                    <span className="px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/40 text-red-700 dark:text-red-300 font-medium">Creapure®</span>
+                    <span className="px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/40 text-red-700 dark:text-red-300 font-medium">Micronisée</span>
+                    <span className="px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/40 text-red-700 dark:text-red-300 font-medium">Capsules</span>
                   </div>
                 </div>
 
@@ -455,8 +456,8 @@ export function CategorySeoLanding({
                       href={p.url}
                       className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-850 hover:bg-red-50 dark:hover:bg-red-950/10 hover:border-red-200 dark:hover:border-red-900/40 transition-all duration-300 group"
                     >
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 text-xs font-bold group-hover:bg-red-600 group-hover:text-white transition-all duration-300">
-                        ★
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 group-hover:bg-red-600 group-hover:text-white transition-all duration-300">
+                        <Star className="h-4 w-4" aria-hidden="true" />
                       </span>
                       <span className="font-semibold text-xs sm:text-sm text-gray-800 dark:text-gray-200 group-hover:text-red-600 dark:group-hover:text-red-400 line-clamp-2 transition-colors">
                         {p.name}

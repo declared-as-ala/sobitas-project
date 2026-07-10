@@ -12,6 +12,7 @@ import Image from 'next/image';
 import { getOrderDetails, getStorageUrl, getSiteLogoUrlResolved } from '@/services/api';
 import type { Order } from '@/types';
 import { toast } from 'sonner';
+import { LoadingSpinner } from '@/app/components/LoadingSpinner';
 
 interface OrderDetail {
   id: number;
@@ -246,7 +247,7 @@ export default function OrderConfirmationPage() {
           </div>
 
           <div class="confirmation-message">
-            <h1>✓ Merci. Votre commande a été reçue.</h1>
+            <h1><svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:8px;"><polyline points="20 6 9 17 4 12"></polyline></svg>Merci. Votre commande a été reçue.</h1>
             <p style="color: #16a34a; margin: 5px 0;">Votre commande a été enregistrée avec succès.</p>
           </div>
 
@@ -361,14 +362,7 @@ export default function OrderConfirmationPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Chargement de la commande...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner fullScreen message="Chargement de la commande..." />;
   }
 
   if (!order) {

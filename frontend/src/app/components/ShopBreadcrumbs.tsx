@@ -1,5 +1,3 @@
-'use client';
-
 import Link from 'next/link';
 import { ChevronRight, Home } from 'lucide-react';
 import {
@@ -11,13 +9,13 @@ import {
   BreadcrumbSeparator,
 } from '@/app/components/ui/breadcrumb';
 
-interface BreadcrumbItem {
+interface BreadcrumbItemData {
   label: string;
   href?: string;
 }
 
 interface ShopBreadcrumbsProps {
-  items: BreadcrumbItem[];
+  items: BreadcrumbItemData[];
 }
 
 export function ShopBreadcrumbs({ items }: ShopBreadcrumbsProps) {

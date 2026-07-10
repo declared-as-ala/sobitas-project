@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Header } from '@/app/components/Header';
@@ -8,28 +8,83 @@ import { Footer } from '@/app/components/Footer';
 import { PageHeader } from '@/app/components/PageHeader';
 import { useCart } from '@/app/contexts/CartContext';
 import { Button } from '@/app/components/ui/button';
-import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft, Sparkles, Shield, Truck, X } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft, Shield, Truck } from 'lucide-react';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
-import { productsData } from '@/data/products';
+import { Skeleton } from '@/app/components/ui/skeleton';
 import { getStorageUrl } from '@/services/api';
 import { getStockDisponible } from '@/util/cartStock';
 import { toast } from 'sonner';
 
 const FREE_SHIPPING_THRESHOLD = 300;
 
+/** Layout-matching placeholder shown until the cart rehydrates from localStorage (no flash of empty). */
+function CartSkeleton() {
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      <Header />
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-12">
+        <div className="mb-4 sm:mb-6 space-y-3">
+          <Skeleton className="h-4 w-40" />
+          <Skeleton className="h-9 w-56" />
+        </div>
+        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+          <div className="flex-1 min-w-0">
+            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm">
+              <div className="px-3 py-3 sm:px-4 sm:py-4 border-b border-gray-100 dark:border-gray-800">
+                <Skeleton className="h-5 w-32" />
+              </div>
+              <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="flex gap-3 sm:gap-4 p-3 sm:p-4">
+                    <Skeleton className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg shrink-0" />
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-4 w-20" />
+                      <div className="flex items-center justify-between pt-2">
+                        <Skeleton className="h-10 w-28 rounded-lg" />
+                        <Skeleton className="h-6 w-16" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <aside className="lg:w-[380px] xl:w-[400px] flex-shrink-0">
+            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+              <div className="p-4 sm:p-5 lg:p-6 border-b border-gray-100 dark:border-gray-800">
+                <Skeleton className="h-6 w-48" />
+              </div>
+              <div className="p-4 sm:p-5 lg:p-6 space-y-3">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
+              </div>
+              <div className="p-4 sm:p-5 lg:p-6 border-t border-gray-100 dark:border-gray-800 space-y-3">
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-12 w-full rounded-xl" />
+                <Skeleton className="h-11 w-full rounded-xl" />
+              </div>
+            </div>
+          </aside>
+        </div>
+      </main>
+      <Footer />
+    </div>
+  );
+}
+
 export default function CartPage() {
   const {
     items,
+    isLoaded,
     removeFromCart,
     updateQuantity,
     clearCart,
     getTotalPrice,
     getTotalItems,
     getEffectivePrice,
-    addToCart,
   } = useCart();
 
-  const [showUpsells, setShowUpsells] = useState(true);
   const hasClampedRef = useRef(false);
 
   // Clamp cart quantities to current stock when product stock dropped below cart qty
@@ -57,19 +112,17 @@ export default function CartPage() {
   const remainingForFreeShipping = Math.max(0, FREE_SHIPPING_THRESHOLD - totalPrice);
   const freeShippingProgress = Math.min(100, (totalPrice / FREE_SHIPPING_THRESHOLD) * 100);
 
-  const upsellProducts = useMemo(() => {
-    const cartProductIds = new Set(items.map(item => item.product.id));
-    return productsData
-      .filter(p => !cartProductIds.has(p.id))
-      .slice(0, 6);
-  }, [items]);
+  // Gate on rehydration so returning users never see a flash of the empty state.
+  if (!isLoaded) {
+    return <CartSkeleton />;
+  }
 
   if (totalItems === 0) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
         <Header />
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-16">
-          <div className="text-center py-8 sm:py-16">
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
+          <div className="text-center">
             <div className="mx-auto flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/40 mb-4 sm:mb-6">
               <ShoppingBag className="h-10 w-10 sm:h-12 sm:w-12 text-red-600 dark:text-red-400" aria-hidden="true" />
             </div>
@@ -173,6 +226,7 @@ export default function CartPage() {
                             fill
                             className="object-contain p-1"
                             sizes="96px"
+                            unoptimized
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
@@ -188,7 +242,7 @@ export default function CartPage() {
                             {productName}
                           </h3>
                           <p className="text-sm text-red-600 dark:text-red-400 font-display font-bold tracking-tight tabular-nums mt-1">
-                            {displayPrice} DT
+                            {displayPrice.toFixed(0)} DT
                             {item.quantity > 1 && (
                               <span className="text-gray-500 dark:text-gray-400 font-normal ml-1">
                                 × {item.quantity}
@@ -243,69 +297,6 @@ export default function CartPage() {
                 })}
               </div>
             </div>
-
-            {/* Recommended - horizontal scroll on mobile */}
-            {showUpsells && upsellProducts.length > 0 && (
-              <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm">
-                <div className="flex items-center justify-between px-3 py-3 sm:px-4 sm:py-4 border-b border-gray-100 dark:border-gray-800">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-red-600 dark:text-red-400 shrink-0" aria-hidden="true" />
-                    <h3 className="font-display uppercase tracking-tight text-sm sm:text-base text-gray-900 dark:text-white">
-                      Recommandé pour vous
-                    </h3>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowUpsells(false)}
-                    className="p-2 -m-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 min-h-[44px] min-w-[44px] flex items-center justify-center"
-                    aria-label="Masquer les recommandations"
-                  >
-                    <X className="h-4 w-4" aria-hidden="true" />
-                  </button>
-                </div>
-                <div className="p-3 sm:p-4 overflow-x-auto overflow-y-hidden scrollbar-hide">
-                  <div className="flex gap-3 sm:gap-4 pb-2 -mx-1" style={{ scrollSnapType: 'x mandatory' }}>
-                    {upsellProducts.map((product) => {
-                      const price = product.price || 0;
-                      const priceText = product.priceText;
-                      const newPriceMatch = priceText?.match(/(\d+)\s*DT$/);
-                      const displayPrice = newPriceMatch ? parseInt(newPriceMatch[1]) : price;
-                      return (
-                        <div
-                          key={product.id}
-                          className="flex-shrink-0 w-[140px] sm:w-[160px] rounded-xl border border-gray-100 dark:border-gray-800 overflow-hidden bg-gray-50 dark:bg-gray-800/50 hover:border-red-300 dark:hover:border-red-800 transition-colors cursor-pointer group"
-                          style={{ scrollSnapAlign: 'start' }}
-                          onClick={() => addToCart(product)}
-                        >
-                          {product.image && (
-                            <div className="relative w-full aspect-square bg-white dark:bg-gray-800">
-                              <Image
-                                src={product.image}
-                                alt={product.name}
-                                fill
-                                className="object-contain p-2 group-hover:scale-105 transition-transform"
-                                sizes="160px"
-                              />
-                            </div>
-                          )}
-                          <div className="p-2 sm:p-3">
-                            <h4 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-tight mb-1">
-                              {product.name}
-                            </h4>
-                            <p className="font-display font-bold tracking-tight tabular-nums text-sm text-red-600 dark:text-red-400 mb-2">
-                              {displayPrice} DT
-                            </p>
-                            <span className="inline-block text-xs font-medium text-red-600 dark:text-red-400 group-hover:underline">
-                              Ajouter
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Right: Order summary - below on mobile, sticky sidebar on desktop */}

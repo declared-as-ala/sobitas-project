@@ -6,7 +6,9 @@ import Image from 'next/image';
 import { Header } from '@/app/components/Header';
 import { Footer } from '@/app/components/Footer';
 import { ProductCard } from '@/app/components/ProductCard';
+import { ProductGrid } from '@/app/components/ProductGrid';
 import { ProductsSkeleton } from '@/app/components/ProductsSkeleton';
+import { EmptyState } from '@/app/components/EmptyState';
 import { ShopBreadcrumbs } from '@/app/components/ShopBreadcrumbs';
 import { PageHeader } from '@/app/components/PageHeader';
 import { Button } from '@/app/components/ui/button';
@@ -33,6 +35,274 @@ import { getEffectivePrice } from '@/util/productPrice';
 import { isInStock } from '@/util/cartStock';
 
 const SKELETON_MIN_MS = 300;
+
+const CREATINE_TYPES = ['Monohydrate', 'Micronisée', 'Capsules', 'Creapure'];
+const CREATINE_GOALS = ['Force', 'Masse', 'Performance', 'Récupération'];
+
+interface ProductFiltersProps {
+  variant: 'mobile' | 'desktop';
+  inStockOnly: boolean;
+  setInStockOnly: (value: boolean) => void;
+  isCreatineCategory: boolean;
+  selectedTypes: string[];
+  toggleType: (type: string) => void;
+  selectedGoals: string[];
+  toggleGoal: (goal: string) => void;
+  uniqueFlavors: string[];
+  selectedFlavors: string[];
+  toggleFlavor: (flavor: string) => void;
+  categories: Category[];
+  brands: Brand[];
+  filterCounts: { categoryCounts: Map<string, number>; brandCounts: Map<number, number> };
+  selectedCategories: string[];
+  toggleCategory: (slug: string) => void;
+  selectedBrands: number[];
+  toggleBrand: (id: number) => void;
+  priceRange: [number, number];
+  setPriceRange: (value: [number, number]) => void;
+  priceBounds: { min: number; max: number };
+}
+
+/**
+ * The shop filter accordion (Disponibilité, Type/Objectif Créatine, Arômes, Catégories, Marques,
+ * Prix). Rendered in BOTH the mobile Sheet and the desktop aside from this single source so the two
+ * can no longer drift. `variant` only tunes density (checkbox size, paddings, default-open groups);
+ * all state + handlers are owned by ShopContent and passed in, so the filter behavior is identical.
+ */
+function ProductFilters({
+  variant,
+  inStockOnly,
+  setInStockOnly,
+  isCreatineCategory,
+  selectedTypes,
+  toggleType,
+  selectedGoals,
+  toggleGoal,
+  uniqueFlavors,
+  selectedFlavors,
+  toggleFlavor,
+  categories,
+  brands,
+  filterCounts,
+  selectedCategories,
+  toggleCategory,
+  selectedBrands,
+  toggleBrand,
+  priceRange,
+  setPriceRange,
+  priceBounds,
+}: ProductFiltersProps) {
+  const isMobile = variant === 'mobile';
+  const idPrefix = isMobile ? 'mobile' : 'desktop';
+  const itemClass = `border ${isMobile ? 'border-gray-250' : 'border-gray-150'} dark:border-gray-800 rounded-xl px-4`;
+  const triggerClass = `${isMobile ? 'py-3 text-sm' : 'py-2.5 text-xs sm:text-sm'} font-semibold hover:no-underline`;
+  const listClass = isMobile ? 'space-y-3' : 'space-y-2';
+  const scrollListClass = `${listClass} max-h-60 overflow-y-auto`;
+  const checkboxClass = isMobile ? 'h-4.5 w-4.5' : 'h-4 w-4';
+  const labelBase = isMobile ? 'text-sm' : 'text-xs sm:text-sm';
+  const labelState = (selected: boolean) =>
+    selected ? 'font-semibold text-gray-900 dark:text-white' : 'font-normal text-gray-700 dark:text-gray-300';
+  const defaultOpen = isMobile
+    ? ['availability', 'categories', 'types', 'goals', 'flavors']
+    : ['availability', 'types', 'goals', 'flavors'];
+
+  return (
+    <Accordion type="multiple" defaultValue={defaultOpen} className={isMobile ? 'space-y-2' : 'space-y-1'}>
+      {/* Availability */}
+      <AccordionItem value="availability" className={itemClass}>
+        <AccordionTrigger className={triggerClass}>Disponibilité</AccordionTrigger>
+        <AccordionContent className="pb-3">
+          <div className="flex items-center space-x-3">
+            <Checkbox
+              id={`${idPrefix}-in-stock`}
+              checked={inStockOnly}
+              onCheckedChange={(checked) => setInStockOnly(checked === true)}
+              className={checkboxClass}
+            />
+            <label htmlFor={`${idPrefix}-in-stock`} className={`${labelBase} cursor-pointer flex-1 font-normal`}>
+              En stock uniquement
+            </label>
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+
+      {/* Créatine Type */}
+      {isCreatineCategory && (
+        <AccordionItem value="types" className={itemClass}>
+          <AccordionTrigger className={triggerClass}>Type de Créatine</AccordionTrigger>
+          <AccordionContent className="pb-3">
+            <div className={listClass}>
+              {CREATINE_TYPES.map((type) => (
+                <div key={type} className="flex items-center space-x-3">
+                  <Checkbox
+                    id={`${idPrefix}-type-${type}`}
+                    checked={selectedTypes.includes(type)}
+                    onCheckedChange={() => toggleType(type)}
+                    className={checkboxClass}
+                  />
+                  <label
+                    htmlFor={`${idPrefix}-type-${type}`}
+                    className={`${labelBase} cursor-pointer flex-1 ${labelState(selectedTypes.includes(type))}`}
+                  >
+                    {type}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      )}
+
+      {/* Créatine Goal */}
+      {isCreatineCategory && (
+        <AccordionItem value="goals" className={itemClass}>
+          <AccordionTrigger className={triggerClass}>Objectif</AccordionTrigger>
+          <AccordionContent className="pb-3">
+            <div className={listClass}>
+              {CREATINE_GOALS.map((goal) => (
+                <div key={goal} className="flex items-center space-x-3">
+                  <Checkbox
+                    id={`${idPrefix}-goal-${goal}`}
+                    checked={selectedGoals.includes(goal)}
+                    onCheckedChange={() => toggleGoal(goal)}
+                    className={checkboxClass}
+                  />
+                  <label
+                    htmlFor={`${idPrefix}-goal-${goal}`}
+                    className={`${labelBase} cursor-pointer flex-1 ${labelState(selectedGoals.includes(goal))}`}
+                  >
+                    {goal}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      )}
+
+      {/* Arômes */}
+      {uniqueFlavors.length > 0 && (
+        <AccordionItem value="flavors" className={itemClass}>
+          <AccordionTrigger className={triggerClass}>Arômes</AccordionTrigger>
+          <AccordionContent className="pb-3">
+            <div className={scrollListClass}>
+              {uniqueFlavors.map((flavor) => (
+                <div key={flavor} className="flex items-center space-x-3">
+                  <Checkbox
+                    id={`${idPrefix}-flavor-${flavor}`}
+                    checked={selectedFlavors.includes(flavor)}
+                    onCheckedChange={() => toggleFlavor(flavor)}
+                    className={checkboxClass}
+                  />
+                  <label
+                    htmlFor={`${idPrefix}-flavor-${flavor}`}
+                    className={`${labelBase} cursor-pointer flex-1 ${labelState(selectedFlavors.includes(flavor))}`}
+                  >
+                    {flavor}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      )}
+
+      {/* Catégories */}
+      {categories.length > 0 && (
+        <AccordionItem value="categories" className={itemClass}>
+          <AccordionTrigger className={triggerClass}>Catégories</AccordionTrigger>
+          <AccordionContent className="pb-3">
+            <div className={scrollListClass}>
+              {categories.map((category) => {
+                const count = filterCounts.categoryCounts.get(category.slug) || 0;
+                const isSelected = selectedCategories.includes(category.slug);
+                return (
+                  <div key={category.id} className="flex items-center justify-between space-x-3 group">
+                    <div className="flex items-center space-x-3 flex-1 min-w-0">
+                      <Checkbox
+                        id={`${idPrefix}-cat-${category.id}`}
+                        checked={isSelected}
+                        onCheckedChange={() => toggleCategory(category.slug)}
+                        className={checkboxClass}
+                      />
+                      <label
+                        htmlFor={`${idPrefix}-cat-${category.id}`}
+                        className={`${labelBase} cursor-pointer flex-1 truncate ${labelState(isSelected)}`}
+                      >
+                        {category.designation_fr}
+                      </label>
+                    </div>
+                    <span className="text-xs text-gray-400 dark:text-gray-500 tabular-nums">{count}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      )}
+
+      {/* Marques */}
+      {brands.length > 0 && (
+        <AccordionItem value="brands" className={itemClass}>
+          <AccordionTrigger className={triggerClass}>Marques</AccordionTrigger>
+          <AccordionContent className="pb-3">
+            <div className={scrollListClass}>
+              {brands.map((brand) => {
+                const count = filterCounts.brandCounts.get(brand.id) || 0;
+                const isSelected = selectedBrands.includes(brand.id);
+                return (
+                  <div key={brand.id} className="flex items-center justify-between space-x-3 group">
+                    <div className="flex items-center space-x-3 flex-1 min-w-0">
+                      <Checkbox
+                        id={`${idPrefix}-brand-${brand.id}`}
+                        checked={isSelected}
+                        onCheckedChange={() => toggleBrand(brand.id)}
+                        className={checkboxClass}
+                      />
+                      <label
+                        htmlFor={`${idPrefix}-brand-${brand.id}`}
+                        className={`${labelBase} cursor-pointer flex-1 truncate ${labelState(isSelected)}`}
+                      >
+                        {brand.designation_fr}
+                      </label>
+                    </div>
+                    <span className="text-xs text-gray-400 dark:text-gray-500 tabular-nums">{count}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      )}
+
+      {/* Prix */}
+      <AccordionItem value="price" className={itemClass}>
+        <AccordionTrigger className={triggerClass}>Prix</AccordionTrigger>
+        <AccordionContent className="pb-3">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-semibold text-gray-900 dark:text-white">
+                {priceRange[0]} DT - {priceRange[1]} DT
+              </span>
+            </div>
+            <Slider
+              value={priceRange}
+              onValueChange={(value) => setPriceRange(value as [number, number])}
+              min={priceBounds.min}
+              max={priceBounds.max}
+              step={10}
+              className="w-full [&_[data-slot=slider-range]]:bg-red-600 [&_[data-slot=slider-thumb]]:border-red-600"
+            />
+            <div className="flex justify-between text-xs text-gray-400">
+              <span>{priceBounds.min} DT</span>
+              <span>{priceBounds.max} DT</span>
+            </div>
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
+  );
+}
 
 interface ShopPageClientProps {
   productsData: {
@@ -678,11 +948,36 @@ function ShopContent({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Shared props for the filter accordion — one source rendered in both the mobile Sheet and the
+  // desktop aside (see <ProductFilters>), so the two panels can never drift again.
+  const filterProps = {
+    inStockOnly,
+    setInStockOnly,
+    isCreatineCategory,
+    selectedTypes,
+    toggleType,
+    selectedGoals,
+    toggleGoal,
+    uniqueFlavors,
+    selectedFlavors,
+    toggleFlavor,
+    categories,
+    brands,
+    filterCounts,
+    selectedCategories,
+    toggleCategory,
+    selectedBrands,
+    toggleBrand,
+    priceRange,
+    setPriceRange,
+    priceBounds,
+  };
+
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
       <Header />
 
-      <main className="w-full mx-auto px-2.5 sm:px-4 md:px-5 lg:px-6 max-w-[1024px] md:max-w-[1280px] lg:max-w-[1400px] xl:max-w-[1600px] py-4 sm:py-8 lg:py-12 animate-fade-in">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16 animate-fade-in">
         {/* Breadcrumbs */}
         {(() => {
           const breadcrumbItems = [];
@@ -734,11 +1029,7 @@ function ShopContent({
           const catName = subcat?.designation_fr || initialCategory?.replace(/-/g, ' ') || '';
           return (
             <div className="mb-6 sm:mb-8">
-              <PageHeader
-                kicker="Catégorie"
-                title={catName}
-                subtitle={`${filteredProducts.length} produit${filteredProducts.length !== 1 ? 's' : ''} disponible${filteredProducts.length !== 1 ? 's' : ''}`}
-              />
+              <PageHeader kicker="Catégorie" title={catName} />
             </div>
           );
         })()}
@@ -759,7 +1050,6 @@ function ShopContent({
                     className="object-contain"
                     sizes="(max-width: 640px) 80px, 112px"
                     priority
-                    unoptimized
                   />
                 </div>
               )}
@@ -888,207 +1178,7 @@ function ShopContent({
                   </div>
                 </SheetHeader>
                 <div className="pt-4 pb-8 space-y-4">
-                  <Accordion type="multiple" defaultValue={['availability', 'categories', 'types', 'goals', 'flavors']} className="space-y-2">
-                    
-                    {/* Availability */}
-                    <AccordionItem value="availability" className="border border-gray-250 dark:border-gray-800 rounded-xl px-4">
-                      <AccordionTrigger className="py-3 text-sm font-semibold hover:no-underline">
-                        Disponibilité
-                      </AccordionTrigger>
-                      <AccordionContent className="pb-3">
-                        <div className="flex items-center space-x-3">
-                          <Checkbox
-                            id="mobile-in-stock"
-                            checked={inStockOnly}
-                            onCheckedChange={(checked) => setInStockOnly(checked === true)}
-                            className="h-4.5 w-4.5"
-                          />
-                          <label htmlFor="mobile-in-stock" className="text-sm cursor-pointer flex-1 font-normal">
-                            En stock uniquement
-                          </label>
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-
-                    {/* Creatine Type */}
-                    {isCreatineCategory && (
-                      <AccordionItem value="types" className="border border-gray-250 dark:border-gray-800 rounded-xl px-4">
-                        <AccordionTrigger className="py-3 text-sm font-semibold hover:no-underline">
-                          Type de Créatine
-                        </AccordionTrigger>
-                        <AccordionContent className="pb-3">
-                          <div className="space-y-3">
-                            {['Monohydrate', 'Micronisée', 'Capsules', 'Creapure'].map(type => (
-                              <div key={type} className="flex items-center space-x-3">
-                                <Checkbox
-                                  id={`mobile-type-${type}`}
-                                  checked={selectedTypes.includes(type)}
-                                  onCheckedChange={() => toggleType(type)}
-                                  className="h-4.5 w-4.5"
-                                />
-                                <label htmlFor={`mobile-type-${type}`} className="text-sm cursor-pointer flex-1 font-normal">
-                                  {type}
-                                </label>
-                              </div>
-                            ))}
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    )}
-
-                    {/* Creatine Goal */}
-                    {isCreatineCategory && (
-                      <AccordionItem value="goals" className="border border-gray-250 dark:border-gray-800 rounded-xl px-4">
-                        <AccordionTrigger className="py-3 text-sm font-semibold hover:no-underline">
-                          Objectif
-                        </AccordionTrigger>
-                        <AccordionContent className="pb-3">
-                          <div className="space-y-3">
-                            {['Force', 'Masse', 'Performance', 'Récupération'].map(goal => (
-                              <div key={goal} className="flex items-center space-x-3">
-                                <Checkbox
-                                  id={`mobile-goal-${goal}`}
-                                  checked={selectedGoals.includes(goal)}
-                                  onCheckedChange={() => toggleGoal(goal)}
-                                  className="h-4.5 w-4.5"
-                                />
-                                <label htmlFor={`mobile-goal-${goal}`} className="text-sm cursor-pointer flex-1 font-normal">
-                                  {goal}
-                                </label>
-                              </div>
-                            ))}
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    )}
-
-                    {/* Dynamic Flavors */}
-                    {uniqueFlavors.length > 0 && (
-                      <AccordionItem value="flavors" className="border border-gray-250 dark:border-gray-800 rounded-xl px-4">
-                        <AccordionTrigger className="py-3 text-sm font-semibold hover:no-underline">
-                          Arômes
-                        </AccordionTrigger>
-                        <AccordionContent className="pb-3">
-                          <div className="space-y-3 max-h-60 overflow-y-auto">
-                            {uniqueFlavors.map(flavor => (
-                              <div key={flavor} className="flex items-center space-x-3">
-                                <Checkbox
-                                  id={`mobile-flavor-${flavor}`}
-                                  checked={selectedFlavors.includes(flavor)}
-                                  onCheckedChange={() => toggleFlavor(flavor)}
-                                  className="h-4.5 w-4.5"
-                                />
-                                <label htmlFor={`mobile-flavor-${flavor}`} className="text-sm cursor-pointer flex-1 font-normal">
-                                  {flavor}
-                                </label>
-                              </div>
-                            ))}
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    )}
-
-                    {/* Categories */}
-                    {categories.length > 0 && (
-                      <AccordionItem value="categories" className="border border-gray-250 dark:border-gray-800 rounded-xl px-4">
-                        <AccordionTrigger className="py-3 text-sm font-semibold hover:no-underline">
-                          Catégories
-                        </AccordionTrigger>
-                        <AccordionContent className="pb-3">
-                          <div className="space-y-3 max-h-60 overflow-y-auto">
-                            {categories.map(category => {
-                              const count = filterCounts.categoryCounts.get(category.slug) || 0;
-                              const isSelected = selectedCategories.includes(category.slug);
-                              return (
-                                <div key={category.id} className="flex items-center justify-between space-x-3 group">
-                                  <div className="flex items-center space-x-3 flex-1 min-w-0">
-                                    <Checkbox
-                                      id={`mobile-cat-${category.id}`}
-                                      checked={isSelected}
-                                      onCheckedChange={() => toggleCategory(category.slug)}
-                                      className="h-4.5 w-4.5"
-                                    />
-                                    <label
-                                      htmlFor={`mobile-cat-${category.id}`}
-                                      className={`text-sm cursor-pointer flex-1 font-normal truncate ${isSelected ? 'font-semibold text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}
-                                    >
-                                      {category.designation_fr}
-                                    </label>
-                                  </div>
-                                  <span className="text-xs text-gray-400 tabular-nums">{count}</span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    )}
-
-                    {/* Brands */}
-                    {brands.length > 0 && (
-                      <AccordionItem value="brands" className="border border-gray-250 dark:border-gray-800 rounded-xl px-4">
-                        <AccordionTrigger className="py-3 text-sm font-semibold hover:no-underline">
-                          Marques
-                        </AccordionTrigger>
-                        <AccordionContent className="pb-3">
-                          <div className="space-y-3 max-h-60 overflow-y-auto">
-                            {brands.map(brand => {
-                              const count = filterCounts.brandCounts.get(brand.id) || 0;
-                              const isSelected = selectedBrands.includes(brand.id);
-                              return (
-                                <div key={brand.id} className="flex items-center justify-between space-x-3 group">
-                                  <div className="flex items-center space-x-3 flex-1 min-w-0">
-                                    <Checkbox
-                                      id={`mobile-brand-${brand.id}`}
-                                      checked={isSelected}
-                                      onCheckedChange={() => toggleBrand(brand.id)}
-                                      className="h-4.5 w-4.5"
-                                    />
-                                    <label
-                                      htmlFor={`mobile-brand-${brand.id}`}
-                                      className={`text-sm cursor-pointer flex-1 font-normal truncate ${isSelected ? 'font-semibold text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}
-                                    >
-                                      {brand.designation_fr}
-                                    </label>
-                                  </div>
-                                  <span className="text-xs text-gray-400 tabular-nums">{count}</span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    )}
-
-                    {/* Price Range */}
-                    <AccordionItem value="price" className="border border-gray-250 dark:border-gray-800 rounded-xl px-4">
-                      <AccordionTrigger className="py-3 text-sm font-semibold hover:no-underline">
-                        Prix
-                      </AccordionTrigger>
-                      <AccordionContent className="pb-3">
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="font-semibold text-gray-900 dark:text-white">
-                              {priceRange[0]} DT - {priceRange[1]} DT
-                            </span>
-                          </div>
-                          <Slider
-                            value={priceRange}
-                            onValueChange={(value) => setPriceRange(value as [number, number])}
-                            min={priceBounds.min}
-                            max={priceBounds.max}
-                            step={10}
-                            className="w-full [&_[data-slot=slider-range]]:bg-red-600 [&_[data-slot=slider-thumb]]:border-red-600"
-                          />
-                          <div className="flex justify-between text-xs text-gray-400">
-                            <span>{priceBounds.min} DT</span>
-                            <span>{priceBounds.max} DT</span>
-                          </div>
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-
-                  </Accordion>
+                  <ProductFilters variant="mobile" {...filterProps} />
                 </div>
                 <div className="sticky bottom-0 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 -mx-6 px-6 py-4 mt-4">
                   <Button className="w-full min-h-[46px] rounded-xl font-display uppercase tracking-wide font-semibold bg-red-600 hover:bg-red-700 text-white shadow-sm" onClick={() => setShowFilters(false)}>
@@ -1163,215 +1253,7 @@ function ShopContent({
                     </div>
                   </div>
 
-                  <Accordion type="multiple" defaultValue={['availability', 'types', 'goals', 'flavors']} className="space-y-1">
-                    
-                    {/* Availability */}
-                    <AccordionItem value="availability" className="border border-gray-150 dark:border-gray-800 rounded-xl px-4">
-                      <AccordionTrigger className="py-2.5 text-xs sm:text-sm font-semibold hover:no-underline">
-                        Disponibilité
-                      </AccordionTrigger>
-                      <AccordionContent className="pb-3">
-                        <div className="flex items-center space-x-3">
-                          <Checkbox
-                            id="desktop-in-stock"
-                            checked={inStockOnly}
-                            onCheckedChange={(checked) => setInStockOnly(checked === true)}
-                            className="h-4 w-4"
-                          />
-                          <label htmlFor="desktop-in-stock" className="text-xs sm:text-sm cursor-pointer flex-1 font-normal">
-                            En stock uniquement
-                          </label>
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-
-                    {/* Creatine Type */}
-                    {isCreatineCategory && (
-                      <AccordionItem value="types" className="border border-gray-150 dark:border-gray-800 rounded-xl px-4">
-                        <AccordionTrigger className="py-2.5 text-xs sm:text-sm font-semibold hover:no-underline">
-                          Type de Créatine
-                        </AccordionTrigger>
-                        <AccordionContent className="pb-3">
-                          <div className="space-y-2">
-                            {['Monohydrate', 'Micronisée', 'Capsules', 'Creapure'].map(type => (
-                              <div key={type} className="flex items-center space-x-3">
-                                <Checkbox
-                                  id={`desktop-type-${type}`}
-                                  checked={selectedTypes.includes(type)}
-                                  onCheckedChange={() => toggleType(type)}
-                                  className="h-4 w-4"
-                                />
-                                <label
-                                  htmlFor={`desktop-type-${type}`}
-                                  className={`text-xs sm:text-sm cursor-pointer flex-1 font-normal ${selectedTypes.includes(type) ? 'font-medium text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}
-                                >
-                                  {type}
-                                </label>
-                              </div>
-                            ))}
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    )}
-
-                    {/* Creatine Goal */}
-                    {isCreatineCategory && (
-                      <AccordionItem value="goals" className="border border-gray-150 dark:border-gray-800 rounded-xl px-4">
-                        <AccordionTrigger className="py-2.5 text-xs sm:text-sm font-semibold hover:no-underline">
-                          Objectif
-                        </AccordionTrigger>
-                        <AccordionContent className="pb-3">
-                          <div className="space-y-2">
-                            {['Force', 'Masse', 'Performance', 'Récupération'].map(goal => (
-                              <div key={goal} className="flex items-center space-x-3">
-                                <Checkbox
-                                  id={`desktop-goal-${goal}`}
-                                  checked={selectedGoals.includes(goal)}
-                                  onCheckedChange={() => toggleGoal(goal)}
-                                  className="h-4 w-4"
-                                />
-                                <label
-                                  htmlFor={`desktop-goal-${goal}`}
-                                  className={`text-xs sm:text-sm cursor-pointer flex-1 font-normal ${selectedGoals.includes(goal) ? 'font-medium text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}
-                                >
-                                  {goal}
-                                </label>
-                              </div>
-                            ))}
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    )}
-
-                    {/* Dynamic Flavors */}
-                    {uniqueFlavors.length > 0 && (
-                      <AccordionItem value="flavors" className="border border-gray-150 dark:border-gray-800 rounded-xl px-4">
-                        <AccordionTrigger className="py-2.5 text-xs sm:text-sm font-semibold hover:no-underline">
-                          Arômes
-                        </AccordionTrigger>
-                        <AccordionContent className="pb-3">
-                          <div className="space-y-2 max-h-60 overflow-y-auto">
-                            {uniqueFlavors.map(flavor => (
-                              <div key={flavor} className="flex items-center space-x-3">
-                                <Checkbox
-                                  id={`desktop-flavor-${flavor}`}
-                                  checked={selectedFlavors.includes(flavor)}
-                                  onCheckedChange={() => toggleFlavor(flavor)}
-                                  className="h-4 w-4"
-                                />
-                                <label
-                                  htmlFor={`desktop-flavor-${flavor}`}
-                                  className={`text-xs sm:text-sm cursor-pointer flex-1 font-normal ${selectedFlavors.includes(flavor) ? 'font-medium text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}
-                                >
-                                  {flavor}
-                                </label>
-                              </div>
-                            ))}
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    )}
-
-                    {/* Categories */}
-                    {categories.length > 0 && (
-                      <AccordionItem value="categories" className="border border-gray-150 dark:border-gray-800 rounded-xl px-4">
-                        <AccordionTrigger className="py-2.5 text-xs sm:text-sm font-semibold hover:no-underline">
-                          Catégories
-                        </AccordionTrigger>
-                        <AccordionContent className="pb-3">
-                          <div className="space-y-2">
-                            {categories.map(category => {
-                              const count = filterCounts.categoryCounts.get(category.slug) || 0;
-                              const isSelected = selectedCategories.includes(category.slug);
-                              return (
-                                <div key={category.id} className="flex items-center justify-between space-x-3 group">
-                                  <div className="flex items-center space-x-3 flex-1 min-w-0">
-                                    <Checkbox
-                                      id={`desktop-cat-${category.id}`}
-                                      checked={isSelected}
-                                      onCheckedChange={() => toggleCategory(category.slug)}
-                                      className="h-4 w-4"
-                                    />
-                                    <label
-                                      htmlFor={`desktop-cat-${category.id}`}
-                                      className={`text-xs sm:text-sm cursor-pointer flex-1 font-normal truncate ${isSelected ? 'font-medium text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}
-                                    >
-                                      {category.designation_fr}
-                                    </label>
-                                  </div>
-                                  <span className="text-xs text-gray-400 dark:text-gray-500 tabular-nums">{count}</span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    )}
-
-                    {/* Brands */}
-                    {brands.length > 0 && (
-                      <AccordionItem value="brands" className="border border-gray-150 dark:border-gray-800 rounded-xl px-4">
-                        <AccordionTrigger className="py-2.5 text-xs sm:text-sm font-semibold hover:no-underline">
-                          Marques
-                        </AccordionTrigger>
-                        <AccordionContent className="pb-3">
-                          <div className="space-y-2">
-                            {brands.map(brand => {
-                              const count = filterCounts.brandCounts.get(brand.id) || 0;
-                              const isSelected = selectedBrands.includes(brand.id);
-                              return (
-                                <div key={brand.id} className="flex items-center justify-between space-x-3 group">
-                                  <div className="flex items-center space-x-3 flex-1 min-w-0">
-                                    <Checkbox
-                                      id={`desktop-brand-${brand.id}`}
-                                      checked={isSelected}
-                                      onCheckedChange={() => toggleBrand(brand.id)}
-                                      className="h-4 w-4"
-                                    />
-                                    <label
-                                      htmlFor={`desktop-brand-${brand.id}`}
-                                      className={`text-xs sm:text-sm cursor-pointer flex-1 font-normal truncate ${isSelected ? 'font-medium text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}
-                                    >
-                                      {brand.designation_fr}
-                                    </label>
-                                  </div>
-                                  <span className="text-xs text-gray-400 dark:text-gray-500 tabular-nums">{count}</span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    )}
-
-                    {/* Price Range */}
-                    <AccordionItem value="price" className="border border-gray-150 dark:border-gray-800 rounded-xl px-4">
-                      <AccordionTrigger className="py-2.5 text-xs sm:text-sm font-semibold hover:no-underline">
-                        Prix
-                      </AccordionTrigger>
-                      <AccordionContent className="pb-3">
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="font-semibold text-gray-900 dark:text-white">
-                              {priceRange[0]} DT - {priceRange[1]} DT
-                            </span>
-                          </div>
-                          <Slider
-                            value={priceRange}
-                            onValueChange={(value) => setPriceRange(value as [number, number])}
-                            min={priceBounds.min}
-                            max={priceBounds.max}
-                            step={10}
-                            className="w-full [&_[data-slot=slider-range]]:bg-red-600 [&_[data-slot=slider-thumb]]:border-red-600"
-                          />
-                          <div className="flex justify-between text-xs text-gray-400">
-                            <span>{priceBounds.min} DT</span>
-                            <span>{priceBounds.max} DT</span>
-                          </div>
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
+                  <ProductFilters variant="desktop" {...filterProps} />
                 </div>
               </aside>
             )}
@@ -1399,22 +1281,26 @@ function ShopContent({
             ) : showSkeleton ? (
               <ProductsSkeleton showBreadcrumb={false} showFilters={false} />
             ) : filteredProducts.length === 0 ? (
-              <div className="text-center py-16 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-8 shadow-sm">
-                <p className="text-gray-500 dark:text-gray-400 text-lg">
-                  Aucun produit ne correspond à ces critères
-                </p>
-                <Button
-                  variant="outline"
-                  onClick={clearFilters}
-                  className="mt-5 rounded-xl border-red-600 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-950/40 min-h-[44px]"
-                >
-                  Réinitialiser les filtres
-                </Button>
+              <div className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+                <EmptyState
+                  title="Aucun résultat"
+                  description="Aucun produit ne correspond à ces filtres."
+                  showShopLink={false}
+                  className="pb-2"
+                />
+                <div className="flex justify-center pb-12 sm:pb-16">
+                  <Button
+                    variant="outline"
+                    onClick={clearFilters}
+                    className="rounded-xl border-red-600 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-950/40 min-h-[44px]"
+                  >
+                    Réinitialiser les filtres
+                  </Button>
+                </div>
               </div>
             ) : (
               <div className="space-y-8 sm:space-y-12">
-                {/* 2-column mobile, 3-column tablet, 3/4-column desktop responsive grid */}
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 max-[360px]:gap-2 sm:gap-4 md:gap-5 lg:gap-6 min-w-0 w-full">
+                <ProductGrid className="min-w-0 w-full">
                   {paginatedProducts.map((product, idx) => (
                     <ProductCard
                       key={product.id}
@@ -1424,7 +1310,7 @@ function ShopContent({
                       priority={idx < 4}
                     />
                   ))}
-                </div>
+                </ProductGrid>
                 {totalPages > 1 && (
                   <div className="mt-8 flex justify-center">
                     <Pagination
@@ -1456,7 +1342,7 @@ export function ShopPageClient(props: ShopPageClientProps) {
     <Suspense fallback={
       <>
         <Header />
-        <main className="w-full mx-auto px-2.5 sm:px-4 md:px-5 lg:px-6 max-w-[1024px] md:max-w-[1280px] lg:max-w-[1400px] xl:max-w-[1600px] py-4 sm:py-8 lg:py-12">
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
           <ProductsSkeleton />
         </main>
         <Footer />

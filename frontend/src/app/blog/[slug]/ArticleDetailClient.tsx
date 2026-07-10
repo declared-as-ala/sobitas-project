@@ -1,16 +1,15 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { SafeImage } from '@/app/components/SafeImage';
 import { Header } from '@/app/components/Header';
 import { Footer } from '@/app/components/Footer';
 import { Button } from '@/app/components/ui/button';
 import { BlogRecommendedProducts } from '@/app/blog/BlogRecommendedProducts';
-import { ArrowLeft, Calendar, Clock, ArrowRight, Share2, Sparkles } from 'lucide-react';
+import { BlogCard } from '@/app/blog/BlogCard';
+import { ArrowLeft, Calendar, Clock, Share2, Sparkles } from 'lucide-react';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import type { Article } from '@/types';
-import { blogHref } from '@/util/blogSlug';
 import { getStorageUrl } from '@/services/api';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -144,7 +143,6 @@ function resolveArticleBodyDir(article: Article): 'ltr' | 'rtl' | undefined {
 }
 
 export function ArticleDetailClient({ article, relatedArticles, children }: ArticleDetailClientProps) {
-  const router = useRouter();
   const contentRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
   const articleDate = article.created_at ? new Date(article.created_at) : new Date();
@@ -179,7 +177,7 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
       }).catch(() => {});
     } else {
       navigator.clipboard.writeText(window.location.href);
-      alert('Lien copié dans le presse-papiers !');
+      toast.success('Lien copié dans le presse-papiers !');
     }
   };
 
@@ -216,14 +214,16 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
       
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
         <div>
-          {/* Back Button */}
+          {/* Back to blog — real link so the "Retour au blog" label is truthful for search/social arrivals */}
           <Button
+            asChild
             variant="ghost"
-            onClick={() => router.back()}
-            className="mb-4 sm:mb-6 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+            className="mb-4 sm:mb-6 min-h-11 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Retour au blog
+            <Link href="/blog">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Retour au blog
+            </Link>
           </Button>
 
           <article className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
@@ -252,7 +252,7 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
                     variant="outline"
                     size="sm"
                     onClick={handleSummarizeWithChatGPT}
-                    className="border-gray-200 text-gray-700 hover:border-red-600 hover:text-red-600 dark:border-gray-700 dark:text-gray-300 dark:hover:border-red-400 dark:hover:text-red-400"
+                    className="min-h-11 border-gray-200 text-gray-700 hover:border-red-600 hover:text-red-600 dark:border-gray-700 dark:text-gray-300 dark:hover:border-red-400 dark:hover:text-red-400"
                   >
                     <Sparkles className="h-4 w-4 mr-2" />
                     Résumer avec ChatGPT
@@ -261,7 +261,7 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
                     variant="ghost"
                     size="sm"
                     onClick={handleShare}
-                    className="text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+                    className="min-h-11 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
                   >
                     <Share2 className="h-4 w-4 mr-2" />
                     Partager
@@ -327,7 +327,7 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
                           href={`/${encodeURIComponent(c.slug)}`}
                           className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm font-medium text-gray-800 dark:text-gray-100 hover:border-red-300 hover:text-red-600 dark:hover:border-red-800 dark:hover:text-red-400 transition-colors"
                         >
-                          {c.slug.replace(/-/g, ' ')}
+                          {c.slug.replace(/-/g, ' ').replace(/\b\w/g, (ch) => ch.toUpperCase())}
                         </Link>
                       </li>
                     ))}
@@ -364,36 +364,7 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {relatedArticles.map((related) => (
-                  <Link
-                    key={related.id}
-                    href={blogHref(related.slug)}
-                    className="group flex h-full flex-col overflow-hidden rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm transition-all duration-300 hover:shadow-xl"
-                  >
-                    {related.cover && (
-                      <div className="relative aspect-[4/3] overflow-hidden bg-gray-100 dark:bg-gray-800">
-                        <SafeImage
-                          src={getStorageUrl(related.cover, related.updated_at || related.created_at)}
-                          alt={related.designation_fr || 'Related article'}
-                          fill
-                          className="object-cover transition-transform duration-500 group-hover:scale-105"
-                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        />
-                      </div>
-                    )}
-                    <div className="p-4 sm:p-5 flex flex-col flex-grow">
-                      <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 sm:mb-3">
-                        <Calendar className="h-4 w-4" strokeWidth={1.75} />
-                        {related.created_at ? format(new Date(related.created_at), 'd MMM yyyy', { locale: fr }) : 'Récent'}
-                      </div>
-                      <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-3 line-clamp-2 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors flex-grow">
-                        {decodeHtmlEntities(related.designation_fr || '')}
-                      </h3>
-                      <span className="mt-auto inline-flex items-center gap-1.5 text-sm font-semibold text-red-600 dark:text-red-400">
-                        Lire la suite
-                        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" strokeWidth={1.75} aria-hidden="true" />
-                      </span>
-                    </div>
-                  </Link>
+                  <BlogCard key={related.id} article={related} titleAs="h3" />
                 ))}
               </div>
             </div>
@@ -402,12 +373,14 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
           {/* Back to Blog Button */}
           <div className="mt-8 sm:mt-12 text-center">
             <Button
+              asChild
               variant="outline"
-              onClick={() => router.push('/blog')}
-              className="rounded-full border-red-600 text-red-600 hover:bg-red-600 hover:text-white dark:border-red-500 dark:text-red-500 dark:hover:bg-red-500"
+              className="min-h-11 rounded-full border-red-600 text-red-600 hover:bg-red-600 hover:text-white dark:border-red-500 dark:text-red-500 dark:hover:bg-red-500"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Voir tous les articles
+              <Link href="/blog">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Voir tous les articles
+              </Link>
             </Button>
           </div>
         </div>

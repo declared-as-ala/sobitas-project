@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/app/components/ui/select';
+import { Skeleton } from '@/app/components/ui/skeleton';
 import type { AddressData } from '@/types';
 
 interface AddressSelectorProps {
@@ -186,7 +187,17 @@ function AddressSelectorComponent({
   }, [instanceId, handleLocaliteChange]);
 
   if (loading) {
-    return <div className="text-sm text-gray-500 dark:text-gray-400">Chargement des données...</div>;
+    // Skeleton mirrors the gouvernorat field (label + h-10 select) so the form
+    // reserves height and doesn't jump when the data resolves.
+    return (
+      <div className="space-y-5">
+        <span className="sr-only" role="status">Chargement des données…</span>
+        <div className="space-y-2" aria-hidden="true">
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="h-10 w-full rounded-xl" />
+        </div>
+      </div>
+    );
   }
 
   return (

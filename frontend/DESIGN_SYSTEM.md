@@ -92,3 +92,37 @@ border `border-gray-100 dark:border-gray-800`; accent `text-red-600 dark:text-re
 `PromoBanner`; all of `components/ui/*` (shadcn primitives — use, don't restyle); `tailwind.config.ts`,
 `globals.css`, `styles/*`, `layout.tsx`; `middleware.ts` and `app/x-crawler/*`; anything under
 `structuredData`/metadata. Change none of these during a page redesign unless that is the explicit task.
+
+---
+
+## 10. Refinement standards (v2 — density, responsive, loaders, perf, copy)
+
+The second pass raises craft: compact, clear, fast. Apply these on top of §1–§9.
+
+### Spacing & rhythm
+- Section vertical padding: `py-12 sm:py-16 lg:py-20` (flagship/hero sections may reach `lg:py-24`). Never `py-8` or `py-28` — one rhythm across the whole page. Section titles keep `mb-8 sm:mb-10` (via SectionHeader/PageHeader).
+- Container: `max-w-7xl mx-auto px-4 sm:px-6 lg:px-8` everywhere (product rails may use `max-w-[1400px]`). Never exceed it (no 1600px). Keep every section's left edge aligned.
+- Card padding `p-4 sm:p-5`; compact tiles `p-3`. Favor compact, scannable density over loose padding — but stay breathable.
+
+### Responsive & tap targets
+- Mobile-first. Every interactive control has a ≥ 44×44px hit area (`min-h-11 min-w-11`, or an icon-only button as `h-11 w-11 flex items-center justify-center`).
+- Product grids use the shared **`ProductGrid`**: `grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6`. No orphan rows. Category tiles `grid-cols-2 sm:grid-cols-3 lg:grid-cols-4`.
+- No horizontal body scroll; wide content scrolls inside its own `overflow-x-auto` container.
+
+### Loaders (ONE system)
+- The placeholder atom is `components/ui/skeleton` `<Skeleton>` (`bg-gray-200 dark:bg-gray-700 animate-pulse`). No bare `animate-pulse` divs, no hand-rolled border-spinners, no local `SkeletonLine` copies.
+- Skeletons MUST match the final layout — same container padding, same grid gaps, same aspect ratios — so there is **zero layout shift**. Reuse `ProductCardSkeleton` / `ProductsSkeleton` / `ProductDetailSkeleton` / `BlogCardSkeleton`.
+- Every data-fetching / `force-dynamic` route ships a `loading.tsx` with a layout-matching skeleton. Client pages that gate on `localStorage`/`isLoaded` render a skeleton, never a flash of the empty state.
+- `LoadingSpinner` = indeterminate/action loads only (pure-CSS spinner, no motion, server-safe). The click-triggered `GlobalLoader` must never obscure a route skeleton (no dark scrim + artificial delay over a route that has its own `loading.tsx`).
+
+### No emojis / glyphs (hard rule)
+- Zero emoji or dingbat glyphs as UI — `🎉 ⚡ ✓ ✦ ★ › → ⋮` etc. Always a lucide icon. Broken-image fallbacks render a lucide icon via React state, never `document.createElement`/`innerHTML`.
+
+### Copy & i18n
+- French only. No English UI labels (`New`→`Nouveau`, `OFF`/`-30% OFF`→`-30%`, `Brands`→`Marques`) and no Arabic leftovers. aria-labels in French too.
+- Tight, non-redundant microcopy; one obvious primary action per screen; real empty / loading / error states everywhere. French dates must use French month names (`toLocaleDateString('fr-FR', …)`).
+
+### Performance & maintainability
+- Server-first: no `'use client'` without state/effects/handlers/browser-API. No `framer-motion`/`motion` on the shopping-critical path (cards, rails, home sections) — use CSS transitions.
+- `next/image`: correct `sizes`, `priority` only on the true LCP image, `unoptimized` only for already-optimized storage/remote images (`unoptimized={isStorageImageUrl(src)}`), never blanket.
+- Prefer shared primitives (`ProductGrid`, `Skeleton`, `SectionHeader`, `PageHeader`, `EmptyState`) over copy-pasted markup. Delete dead code rather than reskinning it.

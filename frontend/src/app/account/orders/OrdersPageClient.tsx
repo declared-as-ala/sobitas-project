@@ -6,7 +6,7 @@ import { Header } from '@/app/components/Header';
 import { Footer } from '@/app/components/Footer';
 import { useAuth } from '@/contexts/AuthContext';
 import { OrdersSection } from '../OrdersSection';
-import { LoadingSpinner } from '@/app/components/LoadingSpinner';
+import { OrdersPageSkeleton } from '../AccountSkeletons';
 import { PageHeader } from '@/app/components/PageHeader';
 
 export default function OrdersPageClient() {
@@ -20,7 +20,7 @@ export default function OrdersPageClient() {
   }, [isAuthenticated, isLoading, router]);
 
   if (isLoading) {
-    return <LoadingSpinner fullScreen message="Chargement de vos commandes..." />;
+    return <OrdersPageSkeleton />;
   }
 
   if (!isAuthenticated) {

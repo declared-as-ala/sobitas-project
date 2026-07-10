@@ -9,6 +9,7 @@ import {
   Package, Heart, Sparkles
 } from 'lucide-react';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
+import { Skeleton } from '@/app/components/ui/skeleton';
 import { getCoordinates, getPageBySlug } from '@/services/api';
 import Link from 'next/link';
 import type { Page } from '@/types';
@@ -157,8 +158,8 @@ export default function AboutPageClient({
             <PageHeader
               align="center"
               kicker="Notre histoire"
-              title={page?.title || 'Qui sommes nous ?'}
-              subtitle="Protein.tn — votre distributeur officiel d'articles de sport et de compléments alimentaires en Tunisie depuis 2010."
+              title={page?.title || 'Qui sommes-nous ?'}
+              subtitle="Protein.tn — votre distributeur officiel d'articles de sport et de compléments alimentaires en Tunisie."
             >
               <div className="flex flex-wrap items-center justify-center gap-3">
                 <Link
@@ -180,11 +181,14 @@ export default function AboutPageClient({
 
         {/* ── Stats ── */}
         {keyNumbers.length > 0 && (
-          <section className="py-10 sm:py-16 bg-white dark:bg-gray-950">
+          <section className="py-12 sm:py-16 lg:py-20 bg-white dark:bg-gray-950">
             <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
                 {keyNumbers.map((stat, i) => {
                   const Icon = statIcons[i] || Award;
+                  // Numeric stats ('16+', '2010') get the giant condensed treatment; a phrase value
+                  // ('Toute la Tunisie') gets a smaller size so it doesn't wrap into awkward lines.
+                  const isNumeric = /\d/.test(stat.value);
                   return (
                     <div
                       key={i}
@@ -193,7 +197,13 @@ export default function AboutPageClient({
                       <div className="w-12 h-12 sm:w-14 sm:h-14 mx-auto mb-4 rounded-lg bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 flex items-center justify-center">
                         <Icon className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={1.75} />
                       </div>
-                      <div className="font-display font-bold tracking-tight tabular-nums text-3xl sm:text-4xl lg:text-5xl text-gray-900 dark:text-white mb-2">
+                      <div
+                        className={
+                          isNumeric
+                            ? 'font-display font-bold tracking-tight tabular-nums text-3xl sm:text-4xl lg:text-5xl text-gray-900 dark:text-white mb-2'
+                            : 'font-display font-bold uppercase tracking-tight leading-tight text-xl sm:text-2xl text-gray-900 dark:text-white mb-2 text-balance'
+                        }
+                      >
                         {stat.value}
                       </div>
                       <div className="text-sm sm:text-base text-gray-600 dark:text-gray-400 font-medium">{stat.label}</div>
@@ -206,12 +216,26 @@ export default function AboutPageClient({
         )}
 
         {/* ── Dynamic content ── */}
-        <section className="py-8 sm:py-14 bg-white dark:bg-gray-950">
+        <section className="py-12 sm:py-16 lg:py-20 bg-white dark:bg-gray-950">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             {loading ? (
-              <div className="flex items-center justify-center py-16 gap-3">
-                <div className="w-8 h-8 rounded-full border-2 border-red-600 border-t-transparent animate-spin" />
-                <span className="text-gray-500 dark:text-gray-400 text-sm">Chargement...</span>
+              <div className="space-y-6 sm:space-y-8">
+                {Array.from({ length: 2 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm p-5 sm:p-8"
+                  >
+                    <div className="flex items-center gap-3 mb-5 pb-4 border-b border-gray-100 dark:border-gray-800">
+                      <Skeleton className="w-1 h-6 rounded-full" />
+                      <Skeleton className="h-6 w-48 max-w-full rounded" />
+                    </div>
+                    <div className="space-y-3">
+                      <Skeleton className="h-4 w-full rounded" />
+                      <Skeleton className="h-4 w-11/12 rounded" />
+                      <Skeleton className="h-4 w-4/5 rounded" />
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : page?.body ? (
               <div className="space-y-6 sm:space-y-8">
@@ -290,7 +314,7 @@ export default function AboutPageClient({
         </section>
 
         {/* ── Map ── */}
-        <section className="py-8 sm:py-14 bg-white dark:bg-gray-950">
+        <section className="py-12 sm:py-16 lg:py-20 bg-white dark:bg-gray-950">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center gap-3 mb-6 sm:mb-8 justify-center">
               <div className="h-px flex-1 bg-gray-100 dark:bg-gray-800" />
@@ -327,7 +351,7 @@ export default function AboutPageClient({
         </section>
 
         {/* ── CTA ── */}
-        <section className="py-12 sm:py-20 bg-gray-50 dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800">
+        <section className="py-12 sm:py-16 lg:py-20 bg-gray-50 dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800">
           <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
             <span className="inline-flex items-center gap-2 mb-3 font-display uppercase tracking-[0.2em] text-[11px] sm:text-xs font-semibold text-red-600 dark:text-red-400">
               <span className="h-px w-5 bg-red-600 dark:bg-red-400" aria-hidden="true" />

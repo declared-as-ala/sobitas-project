@@ -22,6 +22,8 @@ function getEffectivePrice(product: Product): number {
 
 interface CartContextType {
   items: CartItem[];
+  /** True once the cart has been rehydrated from localStorage (avoid flashing the empty state). */
+  isLoaded: boolean;
   addToCart: (product: Product, quantity?: number) => void;
   removeFromCart: (productId: number) => void;
   updateQuantity: (productId: number, quantity: number) => void;
@@ -144,6 +146,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo(() => ({
     items,
+    isLoaded,
     addToCart,
     removeFromCart,
     updateQuantity,
@@ -154,7 +157,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     getCartQty: getCartQtyForProduct,
     cartDrawerOpen,
     setCartDrawerOpen: setCartDrawerOpenStable,
-  }), [items, cartDrawerOpen, addToCart, removeFromCart, updateQuantity, clearCart, getTotalItems, getTotalPrice, getCartQtyForProduct, setCartDrawerOpenStable]);
+  }), [items, isLoaded, cartDrawerOpen, addToCart, removeFromCart, updateQuantity, clearCart, getTotalItems, getTotalPrice, getCartQtyForProduct, setCartDrawerOpenStable]);
 
   return (
     <CartContext.Provider value={value}>
