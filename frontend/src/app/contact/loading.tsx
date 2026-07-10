@@ -29,6 +29,8 @@ export default function ContactLoading() {
                 </div>
               ))}
             </div>
+            {/* Localisation map placeholder (rendered when coordinates exist) */}
+            <Skeleton className="h-64 w-full rounded-xl" />
           </div>
 
           {/* Form */}

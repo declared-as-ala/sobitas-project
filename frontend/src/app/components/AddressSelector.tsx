@@ -190,8 +190,9 @@ function AddressSelectorComponent({
     // Skeleton mirrors the gouvernorat field (label + h-10 select) so the form
     // reserves height and doesn't jump when the data resolves.
     return (
-      <div className="space-y-5" aria-hidden="true">
-        <div className="space-y-2">
+      <div className="space-y-5">
+        <span className="sr-only" role="status">Chargement des données…</span>
+        <div className="space-y-2" aria-hidden="true">
           <Skeleton className="h-4 w-28" />
           <Skeleton className="h-10 w-full rounded-xl" />
         </div>

@@ -389,6 +389,7 @@ export function HeaderClient() {
                   width={200}
                   height={70}
                   className="h-10 lg:h-14 xl:h-16 w-auto object-contain brightness-0 invert"
+                  priority
                 />
               </Link>
 

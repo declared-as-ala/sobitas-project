@@ -42,6 +42,7 @@ export function PacksPageClient({ packs }: PacksPageClientProps) {
                 product={pack}
                 variant="compact"
                 imageContext="packs"
+                showDescription
                 priority={idx < 4}
               />
             ))}

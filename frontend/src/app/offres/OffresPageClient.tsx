@@ -81,7 +81,6 @@ export function OffresPageClient({ products }: OffresPageClientProps) {
                   key={product.id}
                   product={product as any}
                   variant="compact"
-                  imageContext="packs"
                   priority={idx < 4}
                 />
               ))}
