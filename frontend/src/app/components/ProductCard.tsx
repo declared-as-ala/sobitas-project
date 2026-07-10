@@ -2,7 +2,7 @@
 
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { motion } from 'motion/react';
-import { ShoppingCart, Heart } from 'lucide-react';
+import { ShoppingCart, Heart, Flame, Sparkles, TrendingUp, Truck } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { PackCardImage } from '@/app/components/PackCardImage';
 import type { Product as ApiProduct } from '@/types';
@@ -186,33 +186,37 @@ export const ProductCard = memo(function ProductCard({
           <Heart className={`h-4 w-4 ${favorite ? 'fill-red-500 text-red-500' : 'text-gray-600 dark:text-gray-300'}`} />
         </button>
 
-        {/* Badges – top-left */}
-        <div className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 z-10 flex flex-col gap-1 sm:gap-1.5 pointer-events-none">
+        {/* Badges – top-left. One-accent discipline: red = promo only; meta badges are clean
+            white chips with a small red icon. All in the Oswald display face, uppercase. */}
+        <div className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 z-10 flex flex-col items-start gap-1 sm:gap-1.5 pointer-events-none">
           {!productData.isInStock && (
-            <span className="inline-flex items-center rounded-md bg-gray-900/90 dark:bg-gray-900 text-white font-bold text-caption sm:text-xs px-2.5 py-1 shadow-md backdrop-blur-sm">
+            <span className="inline-flex items-center rounded-md bg-gray-900 text-white font-display font-semibold uppercase tracking-wide text-[10px] sm:text-xs px-2 py-0.5 shadow-sm">
               Rupture
             </span>
           )}
           {productData.isInStock && productData.priceDisplay.hasPromo && productData.discount > 0 && (
-            <span className="inline-flex items-center rounded-md bg-red-600 text-white font-bold text-caption sm:text-xs px-2.5 py-1 shadow-md">
+            <span className="inline-flex items-center gap-1 rounded-md bg-red-600 text-white font-display font-bold tabular-nums tracking-wide text-[10px] sm:text-xs px-2 py-0.5 shadow-sm">
+              <Flame className="h-3 w-3 shrink-0" aria-hidden="true" />
               -{productData.discount}%
             </span>
           )}
           {!isCompact && (
             <>
               {productData.isInStock && showBadge && badgeText && (
-                <span className="inline-flex items-center rounded-md bg-green-600 text-white font-bold text-caption sm:text-xs px-2.5 py-1 shadow-md">
+                <span className="inline-flex items-center rounded-md bg-white/95 dark:bg-gray-900/90 text-gray-900 dark:text-white font-display font-semibold uppercase tracking-wide text-[10px] sm:text-xs px-2 py-0.5 shadow-sm ring-1 ring-gray-900/10 dark:ring-white/10 backdrop-blur-sm">
                   {badgeText}
                 </span>
               )}
               {productData.isInStock && !productData.priceDisplay.hasPromo && !showBadge && productData.isNew && (
-                <span className="inline-flex items-center rounded-md bg-blue-600 text-white font-bold text-caption sm:text-xs px-2.5 py-1 shadow-md">
-                  New
+                <span className="inline-flex items-center gap-1 rounded-md bg-white/95 dark:bg-gray-900/90 text-gray-900 dark:text-white font-display font-semibold uppercase tracking-wide text-[10px] sm:text-xs px-2 py-0.5 shadow-sm ring-1 ring-gray-900/10 dark:ring-white/10 backdrop-blur-sm">
+                  <Sparkles className="h-3 w-3 shrink-0 text-red-600 dark:text-red-400" aria-hidden="true" />
+                  Nouveau
                 </span>
               )}
               {productData.isInStock && !productData.priceDisplay.hasPromo && !showBadge && productData.isBestSeller && (
-                <span className="inline-flex items-center rounded-md bg-amber-500 text-white font-bold text-caption sm:text-xs px-2.5 py-1 shadow-md">
-                  Top Vendu
+                <span className="inline-flex items-center gap-1 rounded-md bg-white/95 dark:bg-gray-900/90 text-gray-900 dark:text-white font-display font-semibold uppercase tracking-wide text-[10px] sm:text-xs px-2 py-0.5 shadow-sm ring-1 ring-gray-900/10 dark:ring-white/10 backdrop-blur-sm">
+                  <TrendingUp className="h-3 w-3 shrink-0 text-red-600 dark:text-red-400" aria-hidden="true" />
+                  Top vendu
                 </span>
               )}
             </>
@@ -247,11 +251,11 @@ export const ProductCard = memo(function ProductCard({
         <div className="flex flex-wrap items-center gap-2 mt-auto">
           {productData.priceDisplay.hasPromo && productData.priceDisplay.oldPrice != null ? (
             <>
-              <span className={`font-extrabold text-red-600 dark:text-red-400 tabular-nums ${isCompact ? 'text-base sm:text-xl' : 'text-base sm:text-lg lg:text-xl'}`}>
+              <span className={`font-display font-bold tracking-tight text-red-600 dark:text-red-400 tabular-nums ${isCompact ? 'text-lg sm:text-2xl' : 'text-lg sm:text-xl lg:text-2xl'}`}>
                 {productData.priceDisplay.finalPrice} DT
               </span>
               <span
-                className="text-gray-400 dark:text-gray-500 line-through tabular-nums text-xs leading-snug sm:text-sm sm:leading-normal"
+                className="font-display text-gray-400 dark:text-gray-500 line-through tabular-nums text-xs leading-snug sm:text-sm sm:leading-normal"
                 style={{ textDecorationThickness: '1.5px' }}
                 aria-label={`Prix barré: ${productData.priceDisplay.oldPrice} DT`}
               >
@@ -259,7 +263,7 @@ export const ProductCard = memo(function ProductCard({
               </span>
             </>
           ) : (
-            <span className={`font-extrabold text-gray-900 dark:text-white tabular-nums ${isCompact ? 'text-base sm:text-xl' : 'text-base sm:text-lg lg:text-xl'}`}>
+            <span className={`font-display font-bold tracking-tight text-gray-900 dark:text-white tabular-nums ${isCompact ? 'text-lg sm:text-2xl' : 'text-lg sm:text-xl lg:text-2xl'}`}>
               {productData.priceDisplay.finalPrice} DT
             </span>
           )}
