@@ -91,7 +91,9 @@ const nextConfig = {
         headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000' }],
       },
       {
-        source: '/manifest.json',
+        // The app links /site.webmanifest (layout.tsx), not /manifest.json — cache the file
+        // that's actually requested.
+        source: '/site.webmanifest',
         headers: [{ key: 'Cache-Control', value: 'public, max-age=3600' }],
       },
       {

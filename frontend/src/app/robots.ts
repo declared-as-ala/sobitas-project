@@ -23,6 +23,10 @@ export default function robots(): MetadataRoute.Robots {
     '/admin',
     '/admin/',
     '/order-confirmation/',
+    // Internal crawler-rewrite target (middleware routes bots here). Not meant to be
+    // reached or indexed directly — belt-and-suspenders alongside the route's own noindex.
+    '/x-crawler',
+    '/x-crawler/',
     // NOTE: We intentionally do NOT Disallow the faceted query-param URLs
     // (?search=, ?brand=, ?category=, ?page=) any more.
     // Those variants are now served with `<meta robots="noindex,follow">` and a

@@ -1,4 +1,5 @@
 import type { MetadataRoute } from 'next';
+import { unstable_cache } from 'next/cache';
 import { getAllProducts, getAllArticles, getCategories, getAllBrands, getBlogCategories, getBlogTags, getAppPages } from '@/services/api';
 import type { Product, Article, Category, Brand, SubCategory, Page } from '@/types';
 import { getProductPrimarySubCategory } from '@/util/productUrl';
@@ -101,7 +102,7 @@ function encodeSitemapUrl(url: string): string {
 }
 
 /** Returns sitemap entries for XML. Used by app/sitemap.ts (Next.js metadata file → /sitemap.xml as application/xml). */
-export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
+async function computeSitemapEntries(): Promise<MetadataRoute.Sitemap> {
   const seenUrls = new Set<string>();
   const sitemapEntries: MetadataRoute.Sitemap = [];
   // Lowercased slugs of categories/subcategories that actually exist in the backend.
@@ -374,3 +375,16 @@ export async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
 
   return sitemapEntries.filter((entry) => isValidUrl(entry.url));
 }
+
+/**
+ * Cached sitemap entries. The /sitemap.xml route is `force-dynamic` (the API is unreachable
+ * from CI at build time), which makes its `revalidate` a no-op — so without this every crawler
+ * poll of /sitemap.xml re-ran the full data crawl (paginated getAllProducts over the whole
+ * catalogue + categories + brands + pages + articles + blog cats/tags). unstable_cache memoises
+ * the computed payload for 1h; bust on demand with revalidateTag('sitemap').
+ */
+export const getSitemapEntries = unstable_cache(
+  computeSitemapEntries,
+  ['sitemap-entries'],
+  { revalidate: 3600, tags: ['sitemap'] }
+);
