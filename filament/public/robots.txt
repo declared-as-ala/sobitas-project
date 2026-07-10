@@ -1,2 +1,5 @@
+# admin.protein.tn is the Filament admin + API host — it must never be indexed.
+# (The empty "Disallow:" here previously meant ALLOW-ALL, inviting Google to index the
+# backend/API as a second copy of the catalogue.)
 User-agent: *
-Disallow:
+Disallow: /
