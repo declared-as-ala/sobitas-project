@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import Image from 'next/image';
-import { Search, X, Loader2, ArrowRight } from 'lucide-react';
+import { Search, X, ArrowRight } from 'lucide-react';
 import { Input } from '@/app/components/ui/input';
 import { Button } from '@/app/components/ui/button';
+import { Skeleton } from '@/app/components/ui/skeleton';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/app/components/ui/sheet';
 import { useDebounce } from '@/util/debounce';
 import { searchProducts } from '@/services/api';
@@ -49,9 +50,17 @@ function SearchResults({
 
   if (isLoading || isPending) {
     return (
-      <div className="flex flex-col items-center justify-center py-8 gap-2 text-muted-foreground">
-        <Loader2 className="h-6 w-6 animate-spin text-red-500" aria-hidden />
-        <span className="text-sm">Recherche en cours...</span>
+      <div className="space-y-1" role="status" aria-label="Recherche en cours">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-3 rounded-lg p-2">
+            <Skeleton className="h-12 w-12 shrink-0 rounded-md" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <Skeleton className="h-3.5 w-2/3" />
+              <Skeleton className="h-3 w-1/3" />
+            </div>
+          </div>
+        ))}
+        <span className="sr-only">Recherche en cours...</span>
       </div>
     );
   }
@@ -110,8 +119,8 @@ function SearchResults({
                   return (
                     <>
                       <span className="line-through">{pd.oldPrice} DT</span>
-                      <span className="ml-1 text-red-600 dark:text-red-400">
-                        → {pd.finalPrice} DT
+                      <span className="ml-1.5 font-medium text-red-600 dark:text-red-400">
+                        {pd.finalPrice} DT
                       </span>
                     </>
                   );
@@ -377,12 +386,12 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
     );
   }
 
-  // Desktop: inline input with popover dropdown
+  // Desktop: inline input with popover dropdown (lives in the red header bar)
   return (
-    <div className={cn('relative flex-1 max-w-xl', className)}>
+    <div className={cn('relative flex-1 max-w-2xl', className)}>
       <form onSubmit={handleSubmit} className="relative">
         <Search
-          className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none"
+          className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none z-10"
           aria-hidden
         />
         <Input
@@ -401,7 +410,7 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
             setTimeout(() => setIsPopoverOpen(false), 150);
           }}
           autoComplete="off"
-          className="w-full pl-10 pr-10 h-10 bg-muted/50 dark:bg-muted/30 border-gray-200 dark:border-gray-700 focus:bg-background transition-colors"
+          className="w-full pl-10 pr-10 h-11 rounded-xl border-0 bg-white text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-red-300 focus-visible:ring-2 focus-visible:ring-red-300"
           aria-label="Rechercher un produit"
           aria-expanded={isPopoverOpen}
           aria-haspopup="listbox"

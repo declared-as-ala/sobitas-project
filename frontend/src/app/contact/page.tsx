@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { getCoordinates } from '@/services/api';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
 import { buildBreadcrumbListSchema } from '@/util/structuredData';
 import ContactPageClient from './ContactPageClient';
@@ -10,7 +11,12 @@ export const metadata: Metadata = {
   alternates: { canonical: buildCanonicalUrl('/contact') },
 };
 
-export default function ContactPage() {
+// ISR so the email / address / map (from /coordonnees) are server-rendered — previously fetched in
+// a client useEffect, so they popped in after hydration (CLS) and were invisible to crawlers.
+export const revalidate = 3600;
+
+export default async function ContactPage() {
+  const coordinates = await getCoordinates().catch(() => null);
   const baseUrl = getBaseUrl();
   // ContactPage referencing the sitewide LocalBusiness/Organization by @id — do NOT re-emit a
   // full LocalBusiness (layout.tsx already outputs one).
@@ -42,7 +48,7 @@ export default function ContactPage() {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(contactPageSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
-      <ContactPageClient />
+      <ContactPageClient coordinates={coordinates} />
     </>
   );
 }

@@ -4,9 +4,12 @@ import { useState, useMemo } from 'react';
 import { Header } from '@/app/components/Header';
 import { Footer } from '@/app/components/Footer';
 import { ProductCard } from '@/app/components/ProductCard';
+import { ProductGrid } from '@/app/components/ProductGrid';
+import { EmptyState } from '@/app/components/EmptyState';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { PageHeader } from '@/app/components/PageHeader';
 import { Input } from '@/app/components/ui/input';
+import { Button } from '@/app/components/ui/button';
 import { Search, ChevronDown } from 'lucide-react';
 import type { Product } from '@/types';
 
@@ -61,35 +64,38 @@ export function OffresPageClient({ products }: OffresPageClientProps) {
         </div>
 
         {filteredProducts.length === 0 ? (
-          <div className="text-center py-16">
-            <p className="text-gray-500 dark:text-gray-400 text-lg">
-              {searchQuery.trim()
+          <EmptyState
+            title={searchQuery.trim() ? 'Aucun résultat' : 'Aucune offre disponible'}
+            description={
+              searchQuery.trim()
                 ? 'Aucun produit en promo ne correspond à votre recherche.'
-                : 'Aucune offre disponible pour le moment.'}
-            </p>
-          </div>
+                : 'Aucune offre disponible pour le moment. Revenez bientôt.'
+            }
+            showShopLink={!searchQuery.trim()}
+          />
         ) : (
           <>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6">
-              {visibleProducts.map((product) => (
+            <ProductGrid>
+              {visibleProducts.map((product, idx) => (
                 <ProductCard
                   key={product.id}
                   product={product as any}
-                  showBadge
-                  badgeText="Promo"
+                  variant="compact"
+                  imageContext="packs"
+                  priority={idx < 4}
                 />
               ))}
-            </div>
+            </ProductGrid>
 
             {hasMore && (
               <div className="flex justify-center mt-10">
-                <button
+                <Button
                   onClick={() => setVisibleCount((n) => n + PAGE_SIZE)}
-                  className="inline-flex items-center gap-2 px-8 py-3 rounded-xl font-display uppercase tracking-wide font-semibold text-sm bg-red-600 hover:bg-red-700 text-white shadow-sm hover:shadow-md transition-all"
+                  className="min-h-[44px] gap-2 px-8 rounded-xl font-display uppercase tracking-wide font-semibold text-sm bg-red-600 hover:bg-red-700 text-white shadow-sm hover:shadow-md"
                 >
                   <ChevronDown className="h-4 w-4" aria-hidden="true" />
                   Voir plus ({filteredProducts.length - visibleCount} restants)
-                </button>
+                </Button>
               </div>
             )}
           </>

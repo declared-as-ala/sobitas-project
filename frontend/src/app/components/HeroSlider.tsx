@@ -210,7 +210,7 @@ export const HeroSlider = memo(function HeroSlider({ slides, mobileFirst, deskto
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
-      aria-label="Hero carousel"
+      aria-label="Carrousel promotionnel"
     >
       <div key={currentSlide} className="absolute inset-0 transition-opacity duration-300 ease-in-out">
         {canUseFirstPicture ? (

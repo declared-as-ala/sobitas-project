@@ -5,12 +5,16 @@ import { Header } from '@/app/components/Header';
 import { Footer } from '@/app/components/Footer';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import { ProductCard } from '@/app/components/ProductCard';
+import { ProductCardSkeleton } from '@/app/components/ProductCardSkeleton';
 import { PageHeader } from '@/app/components/PageHeader';
 import { Heart } from 'lucide-react';
 import type { Product } from '@/types';
 
+const FAVORIS_GRID_CLASS =
+  'grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-[360px]:gap-1.5 sm:gap-4 lg:gap-6';
+
 export function FavorisPageClient() {
-  const { favoriteProducts, count } = useFavorites();
+  const { favoriteProducts, count, isLoaded } = useFavorites();
 
   const productsAsProduct: Product[] = favoriteProducts.map((p) => ({
     id: p.id,
@@ -31,11 +35,17 @@ export function FavorisPageClient() {
           <PageHeader
             kicker="Ma sélection"
             title="Favoris"
-            subtitle={count === 0 ? undefined : `${count} produit${count > 1 ? 's' : ''} en favoris`}
+            subtitle={!isLoaded || count === 0 ? undefined : `${count} produit${count > 1 ? 's' : ''} en favoris`}
           />
         </div>
-        {count > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-[360px]:gap-1.5 sm:gap-4 lg:gap-6">
+        {!isLoaded ? (
+          <div className={FAVORIS_GRID_CLASS} aria-hidden="true">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <ProductCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : count > 0 ? (
+          <div className={FAVORIS_GRID_CLASS}>
             {productsAsProduct.map((product) => (
               <ProductCard key={product.id} product={product} variant="compact" />
             ))}

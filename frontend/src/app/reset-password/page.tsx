@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import { Suspense } from 'react';
 import ResetPasswordClient from './ResetPasswordClient';
+import { LoadingSpinner } from '@/app/components/LoadingSpinner';
 
 export const metadata: Metadata = {
   title: 'Réinitialiser le mot de passe',
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center">Chargement…</div>}>
+    <Suspense fallback={<LoadingSpinner message="Chargement..." />}>
       <ResetPasswordClient />
     </Suspense>
   );

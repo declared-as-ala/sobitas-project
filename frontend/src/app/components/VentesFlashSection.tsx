@@ -2,10 +2,10 @@
 
 import { memo, useMemo, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { motion } from 'motion/react';
 import { FlashProductCard } from './FlashProductCard';
 import { Button } from '@/app/components/ui/button';
-import { ArrowRight, Flame, Clock, Zap, TrendingDown } from 'lucide-react';
+import { SectionHeader } from '@/app/components/SectionHeader';
+import { ArrowRight, Clock } from 'lucide-react';
 
 interface FlashProduct {
   id: number;
@@ -33,7 +33,7 @@ interface CountdownState {
   isExpired: boolean;
 }
 
-// Isolated memo so the 1-second interval only re-renders this component, not the product list
+// Isolated memo so the 1-second interval only re-renders this compact strip, not the product list.
 const CountdownDisplay = memo(function CountdownDisplay({ expirationDate }: { expirationDate: Date }) {
   const [countdown, setCountdown] = useState<CountdownState>({ days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: false });
 
@@ -60,31 +60,25 @@ const CountdownDisplay = memo(function CountdownDisplay({ expirationDate }: { ex
   if (countdown.isExpired) return null;
 
   const units = [
-    countdown.days > 0 ? { value: countdown.days, label: 'Jours', short: 'J' } : null,
-    { value: countdown.hours, label: 'Heures', short: 'H' },
-    { value: countdown.minutes, label: 'Min', short: 'Min' },
-    { value: countdown.seconds, label: 'Sec', short: 'Sec' },
-  ].filter(Boolean) as { value: number; label: string; short: string }[];
+    countdown.days > 0 ? { value: countdown.days, label: 'J' } : null,
+    { value: countdown.hours, label: 'H' },
+    { value: countdown.minutes, label: 'Min' },
+    { value: countdown.seconds, label: 'Sec' },
+  ].filter(Boolean) as { value: number; label: string }[];
 
   return (
-    <div className="relative bg-gradient-to-br from-red-600 to-red-700 dark:from-red-700 dark:to-red-800 rounded-2xl p-4 sm:p-6 shadow-2xl border-2 border-red-400/50 dark:border-red-600/50">
-      <div className="flex items-center gap-2 mb-3">
-        <Clock className="h-5 w-5 text-white flex-shrink-0" />
-        <span className="text-white/90 text-sm font-semibold uppercase tracking-wide">Temps restant</span>
-      </div>
-      <div className="grid grid-cols-4 gap-2">
-        {units.map(({ value, label, short }) => (
-          <div
-            key={label}
-            className="bg-white/10 rounded-lg p-2 sm:p-3 text-center border border-white/20"
-          >
-            <div className="text-2xl sm:text-3xl font-black text-white tabular-nums leading-none">
+    <div className="inline-flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl bg-red-600 px-4 py-2.5 text-white shadow-sm">
+      <span className="inline-flex items-center gap-1.5 font-display uppercase tracking-wide text-xs font-semibold">
+        <Clock className="h-4 w-4" aria-hidden="true" />
+        Se termine dans
+      </span>
+      <div className="flex items-center gap-1.5">
+        {units.map(({ value, label }) => (
+          <div key={label} className="flex min-w-[2.75rem] flex-col items-center rounded-lg bg-white/15 px-2 py-1">
+            <span className="font-display text-lg font-bold leading-none tabular-nums">
               {String(value).padStart(2, '0')}
-            </div>
-            <div className="text-xs text-white/80 mt-1 uppercase">
-              <span className="hidden sm:block">{label}</span>
-              <span className="sm:hidden">{short}</span>
-            </div>
+            </span>
+            <span className="mt-0.5 text-[10px] uppercase tracking-wide text-white/80">{label}</span>
           </div>
         ))}
       </div>
@@ -123,116 +117,30 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
 
   if (products.length === 0) return null;
 
+  const subtitle =
+    maxDiscount > 0
+      ? `Réductions jusqu'à ${maxDiscount}% sur nos meilleurs produits — pour une durée limitée.`
+      : 'Réductions exceptionnelles sur nos meilleurs produits — pour une durée limitée.';
+
   return (
-    <section
-      id="ventes-flash"
-      className="relative py-16 sm:py-20 md:py-24 lg:py-28 overflow-hidden"
-    >
-      {/* Static background — no animated orbs to reduce TBT */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        aria-hidden
-        style={{ background: 'linear-gradient(135deg, rgba(220,38,38,0.06) 0%, rgba(249,115,22,0.06) 50%, rgba(220,38,38,0.06) 100%)' }}
-      />
+    <section id="ventes-flash" className="py-12 sm:py-16 lg:py-20 bg-red-50/60 dark:bg-red-950/10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <SectionHeader
+          kicker="Offres limitées"
+          title="Ventes flash"
+          subtitle={subtitle}
+          viewAllHref="/offres"
+          viewAllLabel="Voir toutes les offres"
+        />
 
-      <div className="relative max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-12 sm:mb-16 md:mb-20">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 lg:gap-8 mb-8">
-            {/* Left: Title & Stats */}
-            <div className="flex-1 min-w-0 space-y-4">
-              <motion.div
-                initial={{ opacity: 0, x: -30 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6 }}
-                className="flex items-center gap-4 flex-wrap"
-              >
-                <div className="flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-red-600 shadow-lg flex-shrink-0">
-                  <Flame className="h-7 w-7 sm:h-8 sm:w-8 text-white" />
-                </div>
-                <div>
-                  <h2 className="font-display uppercase tracking-tight leading-none text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 dark:text-white">
-                    Ventes flash
-                  </h2>
-                  <motion.div
-                    initial={{ opacity: 0, scaleX: 0 }}
-                    whileInView={{ opacity: 1, scaleX: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.8, delay: 0.3 }}
-                    className="h-1 w-24 origin-left bg-red-600 rounded-full mt-2 will-change-transform"
-                  />
-                </div>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: 0.2 }}
-                className="flex items-center gap-4 sm:gap-6 flex-wrap"
-              >
-                <div className="flex items-center gap-2 px-4 py-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl shadow-lg border border-red-200 dark:border-red-900">
-                  <TrendingDown className="h-5 w-5 text-red-600 dark:text-red-400" />
-                  <span className="text-sm sm:text-base font-bold text-gray-900 dark:text-white">
-                    {maxDiscount > 0 ? (
-                      <>Jusqu'à <span className="text-red-600 dark:text-red-400">{maxDiscount}%</span> de réduction</>
-                    ) : (
-                      <>Offres du moment</>
-                    )}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 px-4 py-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl shadow-lg border border-orange-200 dark:border-orange-900">
-                  <Zap className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-                  <span className="text-sm sm:text-base font-bold text-gray-900 dark:text-white">
-                    {products.length} produits
-                  </span>
-                </div>
-              </motion.div>
-            </div>
-
-            {/* Right: Countdown (isolated memo — only this re-renders every second) */}
-            {earliestExpiration && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, type: 'spring' }}
-                className="w-full shrink-0 lg:max-w-[min(100%,22rem)] xl:max-w-[min(100%,26rem)]"
-              >
-                <CountdownDisplay expirationDate={earliestExpiration} />
-              </motion.div>
-            )}
+        {earliestExpiration && (
+          <div className="mb-8 sm:mb-10">
+            <CountdownDisplay expirationDate={earliestExpiration} />
           </div>
+        )}
 
-          {/* Subtitle & CTA */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-          >
-            <p className="text-base sm:text-lg text-gray-700 dark:text-gray-300 max-w-2xl leading-relaxed">
-              ⚡ <strong>Offres limitées dans le temps</strong> – Profitez de réductions exceptionnelles sur nos meilleurs produits.
-              Ne manquez pas cette opportunité unique !
-            </p>
-            <Button
-              variant="outline"
-              className="group min-h-[48px] sm:min-h-[52px] border-2 border-red-500 dark:border-red-400 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white dark:hover:bg-red-500 dark:hover:text-white transition-all duration-300 shadow-lg hover:shadow-xl rounded-xl px-6 sm:px-8 font-semibold"
-              asChild
-            >
-              <Link href="/offres" aria-label="Voir toutes les offres et promos">
-                <span className="hidden sm:inline">Voir toutes les offres</span>
-                <span className="sm:hidden">Toutes les offres</span>
-                <ArrowRight className="h-5 w-5 ml-2 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
-              </Link>
-            </Button>
-          </motion.div>
-        </div>
-
-        {/* Products Grid — no per-card motion wrapper; FlashProductCard already has its own animation */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4 md:gap-5 lg:gap-6">
+        {/* Shared grid rhythm — matches ProductGrid (2 → 3 → 4, no orphan rows) */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
           {products.map((product) => (
             <div key={product.id} className="w-full min-w-0">
               <FlashProductCard product={product} />
@@ -240,11 +148,11 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
           ))}
         </div>
 
-        {/* Mobile CTA */}
-        <div className="mt-12 sm:mt-16 text-center md:hidden">
+        {/* Mobile CTA — SectionHeader's "Voir tout" link is hidden below sm */}
+        <div className="mt-10 text-center sm:hidden">
           <Button
             variant="outline"
-            className="w-full min-h-[52px] border-2 border-red-500 dark:border-red-400 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white dark:hover:bg-red-500 dark:hover:text-white transition-all duration-300 shadow-lg hover:shadow-xl rounded-xl font-semibold"
+            className="w-full min-h-[48px] rounded-xl border-2 border-red-500 text-red-600 hover:bg-red-600 hover:text-white dark:border-red-400 dark:text-red-400 dark:hover:bg-red-500 font-display uppercase tracking-wide font-semibold"
             asChild
           >
             <Link href="/offres" aria-label="Voir toutes les offres et promos">

@@ -110,24 +110,28 @@ export function HomePageClient({ accueil, slides, heroMobileFirst, heroDesktopFi
       <main>
         {/* Above the fold - Critical content - Hero must render first */}
         <HeroSlider slides={slides} mobileFirst={heroMobileFirst} desktopFirst={heroDesktopFirst} />
-        {/* SEO: single visible H1 for main query "proteine tunisie" + internal link creatine */}
-        <section className="text-center pt-8 pb-4 sm:pt-10 sm:pb-6 px-4 bg-white dark:bg-gray-950" aria-label="Titre principal">
-          <span className="mb-2 block font-display uppercase tracking-[0.2em] text-[11px] sm:text-xs font-semibold text-red-600 dark:text-red-400">
-            Nutrition sportive · Tunisie
-          </span>
-          <h1 className="font-display uppercase tracking-tight leading-[0.95] text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white">
-            Protéine Tunisie
-          </h1>
-          <p className="mt-3 max-w-2xl mx-auto text-sm sm:text-base text-gray-600 dark:text-gray-400">
-            <Link href="/proteine-whey" className="text-red-600 dark:text-red-400 hover:underline font-medium">
-              Whey protein
-            </Link>
-            {', '}
-            <Link href="/creatine" className="text-red-600 dark:text-red-400 hover:underline font-medium">
-              créatine
-            </Link>
-            {' '}et compléments alimentaires — livraison rapide partout en Tunisie.
-          </p>
+        {/* SEO: single visible H1 for main query "proteine tunisie" + internal link creatine.
+            Left-aligned lede inside the rail so it does not read as a second hero title. */}
+        <section className="py-6 bg-white dark:bg-gray-950" aria-label="Titre principal">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <span className="mb-2 inline-flex items-center gap-2 font-display uppercase tracking-[0.2em] text-[11px] sm:text-xs font-semibold text-red-600 dark:text-red-400">
+              <span className="h-px w-5 bg-red-600 dark:bg-red-400" aria-hidden="true" />
+              Nutrition sportive · Tunisie
+            </span>
+            <h1 className="font-display uppercase tracking-tight leading-[0.95] text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">
+              Protéine Tunisie
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm sm:text-base text-gray-600 dark:text-gray-400">
+              <Link href="/proteine-whey" className="text-red-600 dark:text-red-400 hover:underline font-medium">
+                Whey protein
+              </Link>
+              {', '}
+              <Link href="/creatine" className="text-red-600 dark:text-red-400 hover:underline font-medium">
+                créatine
+              </Link>
+              {' '}et compléments alimentaires — livraison rapide partout en Tunisie.
+            </p>
+          </div>
         </section>
         <FeaturesSection />
         {/* Products first — best-sellers → nouveautés → flash — so shoppers reach real products
@@ -177,7 +181,7 @@ export function HomePageClient({ accueil, slides, heroMobileFirst, heroDesktopFi
 
         {/* SEO text block – visible, crawlable content near bottom of homepage */}
         <section
-          className="py-10 sm:py-14 md:py-16 bg-white dark:bg-gray-950 border-t border-gray-100 dark:border-gray-800"
+          className="py-12 sm:py-16 lg:py-20 bg-white dark:bg-gray-950 border-t border-gray-100 dark:border-gray-800"
           aria-label="Informations sur la protéine en Tunisie"
         >
           <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">

@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/ca
 import { Badge } from '@/app/components/ui/badge';
 import { Package, Eye, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import Link from 'next/link';
 import { LoadingSpinner } from '@/app/components/LoadingSpinner';
 
@@ -103,7 +104,7 @@ export function OrdersSection() {
                 <div className="flex items-center gap-2 mt-2 text-sm text-gray-600 dark:text-gray-400">
                   <Calendar className="h-4 w-4" aria-hidden="true" />
                   <span>
-                    {order.created_at ? format(new Date(order.created_at), 'dd MMMM yyyy') : 'Date inconnue'}
+                    {order.created_at ? format(new Date(order.created_at), 'dd MMMM yyyy', { locale: fr }) : 'Date inconnue'}
                   </span>
                 </div>
               </div>

@@ -1,37 +1,29 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Header } from '@/app/components/Header';
 import { Footer } from '@/app/components/Footer';
 import { PageHeader } from '@/app/components/PageHeader';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Textarea } from '@/app/components/ui/textarea';
-import { Phone, Mail, MapPin, Clock, Send, Loader2 } from 'lucide-react';
+import { Phone, Mail, MapPin, Clock, Send, Loader2, ArrowRight } from 'lucide-react';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
-import { sendContact, getCoordinates } from '@/services/api';
+import { sendContact } from '@/services/api';
 import { toast } from 'sonner';
+import type { Coordinate } from '@/types';
 
-export default function ContactPageClient() {
+export default function ContactPageClient({
+  coordinates = null,
+}: {
+  coordinates?: Coordinate | null;
+}) {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     message: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [coordinates, setCoordinates] = useState<any>(null);
-
-  useEffect(() => {
-    const fetchCoordinates = async () => {
-      try {
-        const data = await getCoordinates();
-        setCoordinates(data);
-      } catch (error) {
-        console.error('Error fetching coordinates:', error);
-      }
-    };
-    fetchCoordinates();
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,19 +66,24 @@ export default function ContactPageClient() {
                 <div className="flex-shrink-0 flex h-11 w-11 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400">
                   <Phone className="h-5 w-5" strokeWidth={1.75} />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <h3 className="font-display uppercase tracking-wide text-sm font-semibold text-gray-900 dark:text-white mb-1">
                     Téléphone
                   </h3>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    <a href="tel:73200169" className="transition-colors hover:text-red-600 dark:hover:text-red-400">
+                  <div className="flex flex-col gap-1 text-gray-600 dark:text-gray-400">
+                    <a
+                      href="tel:73200169"
+                      className="inline-flex min-h-11 items-center rounded-lg -mx-2 px-2 transition-colors hover:text-red-600 hover:bg-red-50/60 dark:hover:text-red-400 dark:hover:bg-red-950/30"
+                    >
                       73 200 169
                     </a>
-                    <span className="mx-1">/</span>
-                    <a href="tel:27612500" className="transition-colors hover:text-red-600 dark:hover:text-red-400">
+                    <a
+                      href="tel:27612500"
+                      className="inline-flex min-h-11 items-center rounded-lg -mx-2 px-2 transition-colors hover:text-red-600 hover:bg-red-50/60 dark:hover:text-red-400 dark:hover:bg-red-950/30"
+                    >
                       27 612 500
                     </a>
-                  </p>
+                  </div>
                 </div>
               </div>
 
@@ -133,7 +130,12 @@ export default function ContactPageClient() {
                     Horaires
                   </h3>
                   <p className="text-gray-600 dark:text-gray-400">
-                    Lundi → Samedi : 10 h – 19 h 30
+                    <span className="inline-flex items-center gap-1.5">
+                      Lundi
+                      <ArrowRight className="h-3.5 w-3.5 text-red-600 dark:text-red-400" strokeWidth={1.75} aria-hidden="true" />
+                      Samedi
+                    </span>
+                    {' : 10 h – 19 h 30'}
                     <br />
                     Dimanche : 14 h – 19 h
                   </p>

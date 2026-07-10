@@ -1,30 +1,24 @@
-'use client';
+import { Skeleton } from '@/app/components/ui/skeleton';
 
+/**
+ * Placeholder for {@link BlogCard} — same 4:3 cover, `p-4 sm:p-5` body, two title lines, excerpt
+ * lines and meta row, so swapping skeleton → card produces zero layout shift.
+ */
 export function BlogCardSkeleton() {
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm h-full flex flex-col animate-pulse">
-      {/* Image skeleton */}
-      <div className="relative aspect-[4/3] overflow-hidden bg-gray-200 dark:bg-gray-800 min-h-[200px] sm:min-h-[240px] md:min-h-[280px] lg:min-h-[320px]">
-        <div className="w-full h-full bg-gray-200 dark:bg-gray-800" />
-      </div>
-      
-      {/* Content skeleton */}
-      <div className="p-4 sm:p-5 md:p-6 lg:p-7 flex flex-col flex-1 min-w-0">
-        {/* Title skeleton */}
-        <div className="h-6 sm:h-7 md:h-8 bg-gray-200 dark:bg-gray-700 rounded mb-2 sm:mb-3 md:mb-4 w-3/4" />
-        <div className="h-6 sm:h-7 md:h-8 bg-gray-200 dark:bg-gray-700 rounded mb-2 sm:mb-3 md:mb-4 w-1/2" />
-        
-        {/* Excerpt skeleton */}
-        <div className="space-y-2 mb-3 sm:mb-4 md:mb-5 flex-1">
-          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full" />
-          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full" />
-          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3" />
+    <div className="flex h-full flex-col overflow-hidden rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+      <Skeleton className="aspect-[4/3] w-full rounded-none" />
+      <div className="flex min-w-0 flex-1 flex-col p-4 sm:p-5">
+        <Skeleton className="mb-2 h-5 sm:h-6 w-3/4" />
+        <Skeleton className="mb-2 sm:mb-3 h-5 sm:h-6 w-1/2" />
+        <div className="mb-4 flex-1 space-y-2">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-2/3" />
         </div>
-        
-        {/* Meta skeleton */}
-        <div className="flex items-center gap-3 sm:gap-4 md:gap-5 mt-auto">
-          <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
-          <div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded" />
+        <div className="mt-auto flex items-center gap-3 sm:gap-4">
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-4 w-16" />
         </div>
       </div>
     </div>

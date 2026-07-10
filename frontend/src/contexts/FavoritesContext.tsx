@@ -17,6 +17,8 @@ export interface FavoriteProduct {
 interface FavoritesContextValue {
   favoriteIds: Set<number>;
   favoriteProducts: FavoriteProduct[];
+  /** True once favorites have been rehydrated from localStorage (avoid flashing the empty state). */
+  isLoaded: boolean;
   isFavorite: (productId: number) => boolean;
   toggleFavorite: (product: FavoriteProduct) => void;
   addFavorite: (product: FavoriteProduct) => void;
@@ -49,10 +51,12 @@ function saveToStorage(products: FavoriteProduct[]) {
 
 export function FavoritesProvider({ children }: { children: ReactNode }) {
   const [favoriteProducts, setFavoriteProducts] = useState<FavoriteProduct[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false);
   const favoriteIds = useMemo(() => new Set(favoriteProducts.map((p) => p.id)), [favoriteProducts]);
 
   useEffect(() => {
     setFavoriteProducts(loadFromStorage());
+    setIsLoaded(true);
   }, []);
 
   const persist = useCallback((next: FavoriteProduct[]) => {
@@ -96,12 +100,13 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
   const value = useMemo<FavoritesContextValue>(() => ({
     favoriteIds,
     favoriteProducts,
+    isLoaded,
     isFavorite,
     toggleFavorite,
     addFavorite,
     removeFavorite,
     count: favoriteProducts.length,
-  }), [favoriteIds, favoriteProducts, isFavorite, toggleFavorite, addFavorite, removeFavorite]);
+  }), [favoriteIds, favoriteProducts, isLoaded, isFavorite, toggleFavorite, addFavorite, removeFavorite]);
 
   return <FavoritesContext.Provider value={value}>{children}</FavoritesContext.Provider>;
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { ProductCard } from '@/app/components/ProductCard';
+import { Skeleton } from '@/app/components/ui/skeleton';
 import type { Article, Product } from '@/types';
 
 const DEFAULT_TITLE = 'Produits recommandés';
@@ -39,12 +40,12 @@ interface BlogRecommendedProductsProps {
 
 function SkeletonCard() {
   return (
-    <div className="flex-shrink-0 w-[220px] sm:w-[240px] md:flex-shrink md:w-full rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden animate-pulse">
-      <div className="aspect-square bg-gray-200 dark:bg-gray-800" />
+    <div className="flex-shrink-0 w-[220px] sm:w-[260px] md:flex-shrink md:w-full rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden">
+      <Skeleton className="aspect-square w-full rounded-none" />
       <div className="p-3 space-y-2">
-        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-4/5" />
-        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/3" />
-        <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded mt-2" />
+        <Skeleton className="h-4 w-4/5" />
+        <Skeleton className="h-4 w-1/3" />
+        <Skeleton className="mt-2 h-10 w-full" />
       </div>
     </div>
   );
@@ -117,6 +118,13 @@ export function BlogRecommendedProducts({
   if (!hasFetched && !loading) return null;
 
   const isInline = variant === 'inline';
+
+  // Inline (mid-article) block: once the fetch resolves with no products, remove the whole
+  // section rather than wedging an empty "Aucun produit…" line + tall skeleton gap between
+  // paragraphs. The standalone variant keeps its empty-state copy below.
+  if (isInline && hasFetched && !loading && products.length === 0) {
+    return null;
+  }
 
   return (
     <section

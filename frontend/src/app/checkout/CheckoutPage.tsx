@@ -22,7 +22,6 @@ import { RadioGroup, RadioGroupItem } from '@/app/components/ui/radio-group';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/app/components/ui/sheet';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import Link from 'next/link';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/app/components/ui/dialog';
 import { CheckoutFooterCTA } from '@/app/checkout/CheckoutFooterCTA';
 import { useKeyboardOpen } from '@/hooks/useKeyboardOpen';
 
@@ -40,7 +39,6 @@ export default function CheckoutPage() {
   const printRef = useRef<HTMLDivElement>(null);
   const [showOptionalFields, setShowOptionalFields] = useState(false);
   const [mobileSummaryOpen, setMobileSummaryOpen] = useState(false);
-  const [showCardPaymentModal, setShowCardPaymentModal] = useState(false);
   const keyboardOpen = useKeyboardOpen();
   const [couponInput, setCouponInput] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<{
@@ -276,12 +274,6 @@ export default function CheckoutPage() {
       return;
     }
 
-    // Check if card payment is selected
-    if (paymentMethod === 'card') {
-      setShowCardPaymentModal(true);
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
@@ -446,7 +438,7 @@ export default function CheckoutPage() {
             </div>
           </div>
           <div class="confirmation-message">
-            <h1>✓ Commande confirmée</h1>
+            <h1><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><polyline points="20 6 9 17 4 12"></polyline></svg>Commande confirmée</h1>
             <p>Merci pour votre commande !</p>
           </div>
           <div class="section">
@@ -704,18 +696,6 @@ export default function CheckoutPage() {
                 </CardContent>
               </Card>
             </div>
-
-            {/* Back Button */}
-            <div className="text-center">
-              <Button
-                variant="ghost"
-                onClick={() => setCurrentStep(2)}
-                className="mb-4"
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Retour à l'étape précédente
-              </Button>
-            </div>
           </div>
         </main>
 
@@ -854,14 +834,6 @@ export default function CheckoutPage() {
                           />
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setShowOptionalFields(!showOptionalFields)}
-                        className="text-sm leading-snug font-medium text-red-600 dark:text-red-400 hover:underline flex items-center gap-1"
-                      >
-                        {showOptionalFields ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                        {showOptionalFields ? 'Masquer les détails optionnels' : '+ Ajouter plus de détails'}
-                      </button>
                       <div className="hidden">
                         <Label htmlFor="pays">Pays</Label>
                         <Input id="pays" value={formData.pays} readOnly className="sr-only" />
@@ -894,6 +866,15 @@ export default function CheckoutPage() {
                           required
                         />
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowOptionalFields(!showOptionalFields)}
+                        className="text-sm leading-snug font-medium text-red-600 dark:text-red-400 hover:underline flex items-center gap-1"
+                        aria-expanded={showOptionalFields}
+                      >
+                        {showOptionalFields ? <ChevronUp className="h-4 w-4" aria-hidden="true" /> : <ChevronDown className="h-4 w-4" aria-hidden="true" />}
+                        {showOptionalFields ? 'Masquer les détails optionnels' : 'Ajouter une note de livraison'}
+                      </button>
                       {showOptionalFields && (
                         <div className="space-y-1.5">
                             <Label htmlFor="note" className="text-sm leading-snug font-medium text-gray-700 dark:text-gray-300">
@@ -953,32 +934,23 @@ export default function CheckoutPage() {
                             </div>
                           </label>
 
-                          {/* Carte Bancaire */}
-                          <label
-                            htmlFor="card"
-                            className={`flex items-start gap-4 p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer min-h-[52px] ${
-                              paymentMethod === 'card'
-                                ? 'border-red-500 bg-red-50/50 dark:bg-red-950/20 shadow-[0_4px_16px_rgba(0,0,0,0.05)]'
-                                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800'
-                            }`}
+                          {/* Carte Bancaire — bientôt disponible (désactivé) */}
+                          <div
+                            aria-disabled="true"
+                            className="flex items-start gap-4 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 min-h-[52px] opacity-60 cursor-not-allowed"
                           >
-                            <RadioGroupItem value="card" id="card" className="mt-1.5 h-5 w-5 shrink-0" />
+                            <RadioGroupItem value="card" id="card" disabled className="mt-1.5 h-5 w-5 shrink-0" />
                             <div className="flex-1 w-full min-w-0">
                               <div className="flex items-center gap-3 mb-2">
-                                <div className={`p-2 rounded-lg shrink-0 ${
-                                  paymentMethod === 'card'
-                                    ? 'bg-red-50 dark:bg-red-950/40'
-                                    : 'bg-gray-100 dark:bg-gray-700'
-                                }`}>
-                                  <CreditCard className={`h-5 w-5 ${
-                                    paymentMethod === 'card'
-                                      ? 'text-red-600 dark:text-red-400'
-                                      : 'text-gray-600 dark:text-gray-400'
-                                  }`} aria-hidden="true" />
+                                <div className="p-2 rounded-lg shrink-0 bg-gray-100 dark:bg-gray-700">
+                                  <CreditCard className="h-5 w-5 text-gray-600 dark:text-gray-400" aria-hidden="true" />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <span className="font-semibold text-gray-900 dark:text-white block">
+                                  <span className="font-semibold text-gray-900 dark:text-white flex flex-wrap items-center gap-2">
                                     Carte Bancaire
+                                    <span className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-700 px-2 py-0.5 font-display uppercase tracking-wide text-[10px] font-semibold text-gray-500 dark:text-gray-400">
+                                      Bientôt disponible
+                                    </span>
                                   </span>
                                   <span className="text-sm leading-snug text-gray-500 dark:text-gray-400">
                                     Paiement sécurisé SSL
@@ -995,25 +967,8 @@ export default function CheckoutPage() {
                                   priority={false}
                                 />
                               </div>
-
-                              {/* Free shipping message */}
-                              {shippingCost > 0 && totalPrice < FREE_SHIPPING_THRESHOLD && (
-                                <div className="mt-2 flex items-start gap-2 p-2 bg-red-50 dark:bg-red-950/20 rounded-xl border border-red-100 dark:border-red-900/50">
-                                  <Truck className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" aria-hidden="true" />
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-medium text-gray-900 dark:text-white">Livraison gratuite disponible</p>
-                                    <p className="text-xs text-gray-600 dark:text-gray-400">Ajoutez {(FREE_SHIPPING_THRESHOLD - totalPrice).toFixed(0)} DT pour la livraison gratuite</p>
-                                  </div>
-                                </div>
-                              )}
-                              {shippingCost === 0 && (
-                                <div className="mt-2 flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
-                                  <Truck className="h-4 w-4 shrink-0" aria-hidden="true" />
-                                  <span className="font-medium">Livraison gratuite incluse</span>
-                                </div>
-                              )}
                             </div>
-                          </label>
+                          </div>
                         </div>
                       </RadioGroup>
                     </div>
@@ -1221,34 +1176,25 @@ export default function CheckoutPage() {
                     </div>
                   </div>
 
-                  {/* Trust Badges */}
-                  <div className="pt-4 border-t border-gray-100 dark:border-gray-800 space-y-3">
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  {/* Trust Badges — compact 3-up row */}
+                  <div className="pt-4 border-t border-gray-100 dark:border-gray-800 grid grid-cols-3 gap-2">
+                    <div className="flex flex-col items-center text-center gap-1.5 p-2.5 bg-gray-50 dark:bg-gray-800 rounded-lg">
                       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/40">
                         <Shield className="h-5 w-5 text-red-600 dark:text-red-400" aria-hidden="true" />
                       </span>
-                      <div>
-                        <p className="text-sm font-semibold text-gray-900 dark:text-white">Paiement sécurisé</p>
-                        <p className="text-xs text-gray-600 dark:text-gray-400">Vos données sont protégées</p>
-                      </div>
+                      <p className="text-[11px] leading-tight font-medium text-gray-700 dark:text-gray-300">Paiement sécurisé</p>
                     </div>
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div className="flex flex-col items-center text-center gap-1.5 p-2.5 bg-gray-50 dark:bg-gray-800 rounded-lg">
                       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/40">
                         <Truck className="h-5 w-5 text-red-600 dark:text-red-400" aria-hidden="true" />
                       </span>
-                      <div>
-                        <p className="text-sm font-semibold text-gray-900 dark:text-white">Livraison rapide</p>
-                        <p className="text-xs text-gray-600 dark:text-gray-400">3-4 jours ouvrés</p>
-                      </div>
+                      <p className="text-[11px] leading-tight font-medium text-gray-700 dark:text-gray-300">Livraison rapide</p>
                     </div>
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div className="flex flex-col items-center text-center gap-1.5 p-2.5 bg-gray-50 dark:bg-gray-800 rounded-lg">
                       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/40">
                         <CheckCircle2 className="h-5 w-5 text-red-600 dark:text-red-400" aria-hidden="true" />
                       </span>
-                      <div>
-                        <p className="text-sm font-semibold text-gray-900 dark:text-white">Garantie qualité</p>
-                        <p className="text-xs text-gray-600 dark:text-gray-400">Produits certifiés</p>
-                      </div>
+                      <p className="text-[11px] leading-tight font-medium text-gray-700 dark:text-gray-300">Garantie qualité</p>
                     </div>
                   </div>
                 </CardContent>
@@ -1273,50 +1219,6 @@ export default function CheckoutPage() {
 
       <Footer />
       <ScrollToTop />
-
-      {/* Card Payment Modal */}
-      <Dialog open={showCardPaymentModal} onOpenChange={setShowCardPaymentModal}>
-        <DialogContent className="sm:max-w-lg bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 shadow-xl">
-          <DialogHeader className="space-y-3">
-            <DialogTitle className="flex items-center gap-3 font-display uppercase tracking-tight text-2xl text-gray-900 dark:text-white">
-              <div className="p-2 rounded-lg bg-red-50 dark:bg-red-950/40">
-                <CreditCard className="h-6 w-6 text-red-600 dark:text-red-400" aria-hidden="true" />
-              </div>
-              Paiement par carte
-            </DialogTitle>
-            <DialogDescription className="text-base text-gray-700 dark:text-gray-300 leading-relaxed pt-2">
-              Cette méthode de paiement n'est pas encore intégrée. Nous travaillons actuellement sur son implémentation et elle sera bientôt disponible.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4 space-y-3">
-            <div className="flex items-start gap-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
-              <Wallet className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5 shrink-0" aria-hidden="true" />
-              <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                En attendant, vous pouvez utiliser le <strong className="font-semibold text-gray-900 dark:text-white">paiement à la livraison</strong> pour finaliser votre commande.
-              </p>
-            </div>
-          </div>
-          <DialogFooter className="sm:flex-col gap-2">
-            <Button
-              onClick={() => {
-                setShowCardPaymentModal(false);
-                setPaymentMethod('cod');
-              }}
-              className="w-full bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide py-6 text-base rounded-xl transition-all"
-              size="lg"
-            >
-              Utiliser le paiement à la livraison
-            </Button>
-            <Button
-              onClick={() => setShowCardPaymentModal(false)}
-              variant="outline"
-              className="w-full border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-            >
-              Fermer
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

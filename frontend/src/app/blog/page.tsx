@@ -5,7 +5,7 @@ import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
 import { buildCollectionPageSchema, buildItemListSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
 import { decodeHtmlEntities } from '@/util/htmlEntities';
 import { BlogPageClient } from './BlogPageClient';
-import { LoadingSpinner } from '@/app/components/LoadingSpinner';
+import { BlogListSkeleton } from './BlogListSkeleton';
 
 const ARTICLES_PER_PAGE = 9;
 
@@ -118,7 +118,7 @@ export default async function BlogPage() {
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }} />
       )}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
-      <Suspense fallback={<LoadingSpinner fullScreen message="Chargement du blog..." />}>
+      <Suspense fallback={<BlogListSkeleton />}>
         <BlogPageClient articles={articles} />
       </Suspense>
     </>

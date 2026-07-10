@@ -3,8 +3,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
-import { ChevronRight, ChevronLeft, X, ArrowRight, Loader2 } from 'lucide-react';
+import { ChevronRight, ChevronLeft, X, ArrowRight } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/app/components/ui/sheet';
+import { Skeleton } from '@/app/components/ui/skeleton';
 import { Button } from '@/app/components/ui/button';
 import { getCategories } from '@/services/api';
 import { Category } from '@/types';
@@ -118,16 +119,25 @@ export function MobileProductsMenu({ open, onOpenChange }: MobileProductsMenuPro
           {/* Scrollable content */}
           <div className="flex-1 overflow-y-auto overscroll-contain min-h-0">
 
-            {/* Loading state */}
+            {/* Loading state — skeletons shaped like the category rows */}
             {loading ? (
-              <div className="flex flex-col items-center justify-center gap-3 py-16 text-gray-400">
-                <Loader2 className="h-6 w-6 animate-spin text-red-500" />
-                <span className="text-sm">Chargement des catégories…</span>
-                <div className="w-full px-3 space-y-2 mt-2">
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <div key={i} className="h-14 rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
-                  ))}
-                </div>
+              <div className="px-3 pt-3 pb-1 space-y-2" role="status" aria-label="Chargement des catégories">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="w-full flex items-center justify-between py-3.5 px-4 rounded-xl border border-gray-100 dark:border-gray-800"
+                  >
+                    <div className="flex-1 min-w-0 space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="w-2 h-2 rounded-full" />
+                        <Skeleton className="h-3 w-32" />
+                      </div>
+                      <Skeleton className="h-2.5 w-20 ml-4" />
+                    </div>
+                    <Skeleton className="h-4 w-4 rounded ml-3 shrink-0" />
+                  </div>
+                ))}
+                <span className="sr-only">Chargement des catégories…</span>
               </div>
             ) : (
               <>

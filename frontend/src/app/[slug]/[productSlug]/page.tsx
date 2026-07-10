@@ -3,6 +3,7 @@ import { notFound, permanentRedirect } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { getSimilarProducts, getFAQs } from '@/services/api';
 import { getCachedProductDetails } from '@/services/getCachedProductDetails';
+import { ProductDetailSkeleton } from '@/app/components/ProductDetailSkeleton';
 import { ApiError } from '@/services/http';
 import {
   buildProductJsonLd,
@@ -18,7 +19,7 @@ import { buildShopProductSocialMetadata } from '@/util/productSeo';
 import type { Product } from '@/types';
 
 const ProductDetailClient = dynamic(() => import('@/app/products/[id]/ProductDetailClient').then((m) => ({ default: m.ProductDetailClient })), {
-  loading: () => <div className="min-h-screen animate-pulse bg-white dark:bg-gray-950" />,
+  loading: () => <ProductDetailSkeleton />,
 });
 
 export type PageProps = {

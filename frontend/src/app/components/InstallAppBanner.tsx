@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Image from 'next/image';
-import { X, Download, Share, Plus } from 'lucide-react';
+import { X, Download, Share, Plus, Check, MoreVertical } from 'lucide-react';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -111,6 +111,14 @@ export function InstallAppBanner() {
     setTimeout(() => setReady(false), 400);
   }, []);
 
+  // Flag the banner's presence on <body> so the WhatsApp FAB can lift above it
+  // (and drop back once dismissed) — no cross-component state coupling needed.
+  useEffect(() => {
+    if (show) document.body.setAttribute('data-install-banner', '');
+    else document.body.removeAttribute('data-install-banner');
+    return () => document.body.removeAttribute('data-install-banner');
+  }, [show]);
+
   if (!ready) return null;
 
   return (
@@ -201,19 +209,19 @@ export function InstallAppBanner() {
                   <Step icon={<Plus className="h-4 w-4 text-red-600 dark:text-red-400" />} bg="bg-red-50 dark:bg-red-900/30 border-red-100 dark:border-red-800">
                     <span>Choisissez <strong>« Sur l&apos;écran d&apos;accueil »</strong></span>
                   </Step>
-                  <Step icon={<span className="text-sm">✓</span>} bg="bg-green-50 dark:bg-green-900/30 border-green-100 dark:border-green-800">
+                  <Step icon={<Check className="h-4 w-4 text-red-600 dark:text-red-400" />} bg="bg-red-50 dark:bg-red-900/30 border-red-100 dark:border-red-800">
                     <span>Appuyez sur <strong>Ajouter</strong> — c&apos;est fait !</span>
                   </Step>
                 </>
               ) : (
                 <>
-                  <Step icon={<span className="text-base">⋮</span>} bg="bg-red-50 dark:bg-red-900/30 border-red-100 dark:border-red-800">
-                    <span>Ouvrez le menu du navigateur <strong>(⋮)</strong> en haut à droite</span>
+                  <Step icon={<MoreVertical className="h-4 w-4 text-red-600 dark:text-red-400" />} bg="bg-red-50 dark:bg-red-900/30 border-red-100 dark:border-red-800">
+                    <span>Ouvrez le menu du navigateur <MoreVertical className="inline h-3.5 w-3.5 mx-0.5 align-middle" /> en haut à droite</span>
                   </Step>
                   <Step icon={<Plus className="h-4 w-4 text-red-600 dark:text-red-400" />} bg="bg-red-50 dark:bg-red-900/30 border-red-100 dark:border-red-800">
                     <span>Appuyez sur <strong>« Ajouter à l&apos;écran d&apos;accueil »</strong></span>
                   </Step>
-                  <Step icon={<span className="text-sm">✓</span>} bg="bg-green-50 dark:bg-green-900/30 border-green-100 dark:border-green-800">
+                  <Step icon={<Check className="h-4 w-4 text-red-600 dark:text-red-400" />} bg="bg-red-50 dark:bg-red-900/30 border-red-100 dark:border-red-800">
                     <span>Appuyez sur <strong>Ajouter</strong> pour confirmer</span>
                   </Step>
                 </>

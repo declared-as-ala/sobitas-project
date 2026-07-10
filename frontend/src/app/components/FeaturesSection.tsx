@@ -22,11 +22,13 @@ export function FeaturesSection() {
         Pourquoi choisir Protéine Tunisie
       </h2>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex md:grid md:grid-cols-4 overflow-x-auto md:overflow-visible snap-x md:snap-none scrollbar-hide divide-y-0 md:divide-x divide-gray-100 dark:divide-gray-800">
+        {/* 2×2 on mobile, single row on desktop — every feature always visible (no hidden
+            scroll content). Hairline dividers come from the gap-px grid background. */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-gray-100 dark:bg-gray-800">
           {features.map(({ Icon, title, description }) => (
             <div
               key={title}
-              className="flex flex-shrink-0 w-[72%] sm:w-[46%] md:w-auto snap-start items-center gap-3 py-6 sm:py-7 px-1 sm:px-5 md:px-6"
+              className="flex items-center gap-3 bg-white dark:bg-gray-950 py-6 sm:py-7 px-4 sm:px-5 md:px-6"
             >
               <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400">
                 <Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden="true" />

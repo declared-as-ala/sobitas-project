@@ -8,6 +8,9 @@ import { Header } from '@/app/components/Header';
 import { Footer } from '@/app/components/Footer';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { PageHeader } from '@/app/components/PageHeader';
+import { EmptyState } from '@/app/components/EmptyState';
+import { Input } from '@/app/components/ui/input';
+import { Skeleton } from '@/app/components/ui/skeleton';
 import { Search, ArrowRight, Zap, Building2, X } from 'lucide-react';
 import { getAllBrands, getStorageUrl } from '@/services/api';
 import type { Brand } from '@/types';
@@ -80,7 +83,31 @@ export default function BrandsPageClient({ initialBrands = [] }: { initialBrands
     router.push(href);
   };
 
-  if (isLoading) return <LoadingSpinner fullScreen message="Chargement des marques..." />;
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-gray-950">
+        <Header />
+        <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
+          <div className="flex flex-col items-center gap-3 mb-10 sm:mb-12">
+            <Skeleton className="h-3.5 w-40" />
+            <Skeleton className="h-10 w-56 sm:w-72" />
+            <Skeleton className="h-4 w-80 max-w-full" />
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+            {Array.from({ length: 15 }).map((_, i) => (
+              <div key={i} className="rounded-xl border border-gray-100 dark:border-gray-800 overflow-hidden">
+                <Skeleton className="aspect-square w-full rounded-none" />
+                <div className="px-2.5 py-3">
+                  <Skeleton className="h-3 w-3/4 mx-auto" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
@@ -99,19 +126,21 @@ export default function BrandsPageClient({ initialBrands = [] }: { initialBrands
           <PageHeader
             align="center"
             kicker="Distributeur Officiel"
-            title="Brands"
+            title="Nos Marques"
             subtitle={`${brands.length} marques premium de nutrition sportive sélectionnées pour vous`}
           />
 
           {/* Search */}
           <div className="relative w-full max-w-sm sm:max-w-md mx-auto mt-8">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" aria-hidden="true" />
-            <input
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none z-10" aria-hidden="true" />
+            {/* z-10 keeps the icon above the Input's own background */}
+            <Input
               type="text"
               placeholder="Rechercher une marque..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-11 pr-10 py-3.5 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-100 dark:focus:ring-red-950/50 text-gray-800 dark:text-gray-100 placeholder-gray-400 text-sm shadow-sm transition-colors"
+              aria-label="Rechercher une marque"
+              className="w-full pl-11 pr-10 h-12 rounded-xl border-gray-200 dark:border-gray-800 focus:border-red-500 dark:focus:border-red-500 shadow-sm text-sm"
             />
             {searchQuery && (
               <button
@@ -186,18 +215,21 @@ export default function BrandsPageClient({ initialBrands = [] }: { initialBrands
 
         {/* Empty state */}
         {filteredBrands.length === 0 ? (
-          <div className="text-center py-24">
-            <div className="w-16 h-16 rounded-lg bg-red-50 dark:bg-red-950/40 flex items-center justify-center mx-auto mb-4">
-              <Search className="h-7 w-7 text-red-600 dark:text-red-400" />
+          <div>
+            <EmptyState
+              title="Aucune marque trouvée"
+              description="Essayez avec d'autres mots-clés."
+              showShopLink={false}
+              className="pb-2"
+            />
+            <div className="flex justify-center pb-12 sm:pb-16">
+              <button
+                onClick={() => setSearchQuery('')}
+                className="min-h-[44px] px-5 rounded-xl border border-red-600 text-red-600 dark:text-red-400 dark:border-red-400 text-sm font-display uppercase tracking-wide font-semibold hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
+              >
+                Voir toutes les marques
+              </button>
             </div>
-            <p className="text-gray-700 dark:text-gray-200 font-semibold mb-1">Aucune marque trouvée</p>
-            <p className="text-gray-400 dark:text-gray-500 text-sm mb-5">Essayez avec d'autres mots-clés</p>
-            <button
-              onClick={() => setSearchQuery('')}
-              className="px-5 py-2 rounded-xl border border-red-600 text-red-600 dark:text-red-400 dark:border-red-400 text-sm font-display uppercase tracking-wide font-semibold hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
-            >
-              Voir toutes les marques
-            </button>
           </div>
 
         ) : searchQuery ? (
@@ -293,7 +325,6 @@ function BrandCard({
             className="object-contain p-3 sm:p-4 group-hover:scale-105 transition-transform duration-300"
             sizes="(max-width: 480px) 44vw, (max-width: 640px) 44vw, (max-width: 1024px) 22vw, 18vw"
             loading="lazy"
-            unoptimized
             onError={() => setImageError(true)}
           />
         ) : (

@@ -43,7 +43,7 @@ function CategoryCard({ category }: { category: Category }) {
             alt={category.designation_fr}
             fill
             className="object-cover object-center transition-transform duration-500 ease-out sm:group-hover:scale-105"
-            sizes="(max-width: 640px) 48vw, (max-width: 1024px) 48vw, 30vw"
+            sizes="(max-width: 640px) 48vw, (max-width: 1024px) 31vw, 23vw"
             loading="lazy"
             quality={70}
             onError={() => setImageError(true)}
@@ -54,7 +54,7 @@ function CategoryCard({ category }: { category: Category }) {
             alt=""
             fill
             className="object-cover object-center"
-            sizes="(max-width: 640px) 48vw, (max-width: 1024px) 48vw, 30vw"
+            sizes="(max-width: 640px) 48vw, (max-width: 1024px) 31vw, 23vw"
             aria-hidden="true"
             unoptimized
           />
@@ -85,7 +85,7 @@ export function CategoryGrid({ categories = [] }: CategoryGridProps) {
         <SectionHeader kicker="Par objectif" title="Catégories populaires" viewAllHref="/shop" />
 
         {categories.length > 0 ? (
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
             {categories.map((category) => (
               <CategoryCard key={category.id} category={category} />
             ))}

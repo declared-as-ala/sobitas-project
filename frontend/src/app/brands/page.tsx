@@ -20,10 +20,10 @@ function nameToSlug(name: string): string {
 }
 
 export const metadata: Metadata = {
-  title: { absolute: 'Brands — Compléments Alimentaires | Protéine Tunisie' },
+  title: { absolute: 'Marques — Compléments Alimentaires | Protéine Tunisie' },
   description: 'Optimum Nutrition, Biotech USA, MyProtein et plus. Toutes nos marques de protéines et compléments en Tunisie.',
   openGraph: {
-    title: 'Brands — Compléments Alimentaires | Protéine Tunisie',
+    title: 'Marques — Compléments Alimentaires | Protéine Tunisie',
     description: 'Optimum Nutrition, Biotech USA et plus. Marques de protéines et compléments en Tunisie.',
     url: 'https://protein.tn/brands',
     siteName: 'Protéine Tunisie',
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Brands — Compléments Alimentaires | Protéine Tunisie',
+    title: 'Marques — Compléments Alimentaires | Protéine Tunisie',
     description: 'Optimum Nutrition, Biotech USA et plus. Marques de protéines et compléments en Tunisie.',
     images: ['https://protein.tn/slides/home-hero-web.webp'],
   },

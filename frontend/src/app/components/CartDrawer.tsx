@@ -168,7 +168,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                 {formatCurrency(totalPrice)}
               </span>
             </div>
-            <div className="flex flex-col gap-2.5">
+            <div className="flex flex-col gap-1">
               <DrawerClose asChild>
                 <Link href="/checkout" className="block">
                   <Button className="w-full bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide font-semibold h-12 rounded-xl shadow-sm hover:shadow-md transition-shadow">
@@ -176,24 +176,16 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                   </Button>
                 </Link>
               </DrawerClose>
-              <DrawerClose asChild>
-                <Link href="/cart" className="block">
-                  <Button
-                    variant="outline"
-                    className="w-full border-2 border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 dark:border-red-500 dark:text-red-400 h-11 rounded-xl font-display uppercase tracking-wide font-medium"
+              <div className="text-center">
+                <DrawerClose asChild>
+                  <Link
+                    href="/cart"
+                    className="inline-block py-2.5 text-sm font-medium text-gray-600 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 transition-colors"
                   >
                     Voir le panier
-                  </Button>
-                </Link>
-              </DrawerClose>
-              <DrawerClose asChild>
-                <Button
-                  variant="ghost"
-                  className="w-full text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 h-11 rounded-xl font-medium"
-                >
-                  Continuer mes achats
-                </Button>
-              </DrawerClose>
+                  </Link>
+                </DrawerClose>
+              </div>
             </div>
           </DrawerFooter>
         )}

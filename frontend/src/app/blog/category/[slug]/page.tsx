@@ -1,16 +1,18 @@
 import Link from 'next/link';
-import Image from 'next/image';
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getArticlesByBlogCategory, getStorageUrl } from '@/services/api';
+import { getArticlesByBlogCategory } from '@/services/api';
 import { buildCanonicalUrl } from '@/util/canonical';
 import { buildBreadcrumbListSchema, buildItemListSchema, buildCollectionPageSchema } from '@/util/structuredData';
 import { blogHref } from '@/util/blogSlug';
-import { ArrowRight } from 'lucide-react';
+import { ChevronRight, ArrowLeft } from 'lucide-react';
 import { Header } from '@/app/components/Header';
 import { Footer } from '@/app/components/Footer';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { PageHeader } from '@/app/components/PageHeader';
+import { BlogCard } from '@/app/blog/BlogCard';
+import { BlogPager } from '@/app/blog/BlogPager';
+import { EmptyState } from '@/app/components/EmptyState';
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -48,6 +50,14 @@ export default async function BlogCategoryPage({ params, searchParams }: Props) 
   const data = await getArticlesByBlogCategory(slug, page, 9).catch(() => null);
   if (!data) notFound();
 
+  const perPage = 9;
+  const currentPage = Math.max(1, Number(data.meta?.current_page) || page);
+  const total = Number(data.meta?.total);
+  const totalPages = Math.max(
+    1,
+    Number(data.meta?.last_page) || (Number.isFinite(total) ? Math.ceil(total / perPage) : 1)
+  );
+
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
   const breadcrumbSchema = buildBreadcrumbListSchema(
     [
@@ -77,48 +87,41 @@ export default async function BlogCategoryPage({ params, searchParams }: Props) 
       <div className="min-h-screen bg-white dark:bg-gray-950">
         <Header />
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
-          <nav aria-label="Fil d'Ariane" className="mb-6 text-sm text-gray-500 dark:text-gray-400">
+          <nav aria-label="Fil d'Ariane" className="mb-6 flex flex-wrap items-center text-sm text-gray-500 dark:text-gray-400">
             <Link href="/" className="transition-colors hover:text-red-600 dark:hover:text-red-400">Accueil</Link>
-            <span className="mx-1">›</span>
+            <ChevronRight className="mx-1 h-4 w-4 text-gray-400" aria-hidden="true" />
             <Link href="/blog" className="transition-colors hover:text-red-600 dark:hover:text-red-400">Blog</Link>
-            <span className="mx-1">›</span>
+            <ChevronRight className="mx-1 h-4 w-4 text-gray-400" aria-hidden="true" />
             <span className="text-gray-800 dark:text-gray-200">{data.category.name}</span>
           </nav>
           <div className="mb-8 sm:mb-10">
             <PageHeader kicker="Catégorie" title={data.category.name} />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-            {data.articles.map((article) => (
+          {data.articles.length === 0 ? (
+            <div className="flex flex-col items-center pb-12">
+              <EmptyState
+                title="Aucun article"
+                description="Aucun article dans cette catégorie pour le moment."
+                showShopLink={false}
+              />
               <Link
-                key={article.id}
-                href={blogHref(article.slug)}
-                className="group flex h-full flex-col overflow-hidden rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm transition-all duration-300 hover:shadow-xl"
+                href="/blog"
+                className="-mt-2 inline-flex min-h-11 items-center gap-2 rounded-full border border-red-600 px-5 py-2.5 text-sm font-semibold text-red-600 transition-colors hover:bg-red-600 hover:text-white dark:border-red-500 dark:text-red-400 dark:hover:bg-red-500 dark:hover:text-white"
               >
-                <div className="relative aspect-[4/3] overflow-hidden bg-gray-100 dark:bg-gray-800">
-                  {article.cover ? (
-                    <Image
-                      src={getStorageUrl(article.cover, article.updated_at || article.created_at)}
-                      alt={article.designation_fr || 'Article'}
-                      fill
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                      className="object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                  ) : (
-                    <div className="h-full w-full bg-gray-100 dark:bg-gray-800" />
-                  )}
-                </div>
-                <div className="flex flex-1 flex-col p-4 sm:p-5">
-                  <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white line-clamp-2 leading-snug transition-colors group-hover:text-red-600 dark:group-hover:text-red-400">
-                    {article.designation_fr}
-                  </h2>
-                  <span className="mt-auto pt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-red-600 dark:text-red-400">
-                    Lire la suite
-                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" strokeWidth={1.75} aria-hidden="true" />
-                  </span>
-                </div>
+                <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+                Retour au blog
               </Link>
-            ))}
-          </div>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+                {data.articles.map((article) => (
+                  <BlogCard key={article.id} article={article} />
+                ))}
+              </div>
+              <BlogPager page={currentPage} totalPages={totalPages} basePath={`/blog/category/${data.category.slug}`} />
+            </>
+          )}
         </main>
         <Footer />
         <ScrollToTop />
