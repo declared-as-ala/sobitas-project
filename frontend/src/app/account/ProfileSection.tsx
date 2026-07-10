@@ -39,6 +39,7 @@ export function ProfileSection() {
       });
       toast.success('Profil mis à jour avec succès !');
       setFormData({ ...formData, password: '', confirmPassword: '' });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       toast.error(error.message || 'Erreur lors de la mise à jour');
     } finally {

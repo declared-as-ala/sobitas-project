@@ -14,7 +14,7 @@ import { LoadingSpinner } from '@/app/components/LoadingSpinner';
 
 export default function AccountPage() {
   const router = useRouter();
-  const { isAuthenticated, isLoading, user, fetchOrders } = useAuth();
+  const { isAuthenticated, isLoading, fetchOrders } = useAuth();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {

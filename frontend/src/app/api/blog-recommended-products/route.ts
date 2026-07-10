@@ -14,7 +14,6 @@ const MIN_PRODUCTS = 4;
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const articleSlug = searchParams.get('articleSlug') ?? '';
     const categorySlug = (searchParams.get('categorySlug') ?? '').trim();
     const productSlugsParam = (searchParams.get('productSlugs') ?? '').trim();
     const productSlugs = productSlugsParam
