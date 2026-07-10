@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
+import { SectionHeader } from '@/app/components/SectionHeader';
 import Image from 'next/image';
 import type { Category } from '@/types';
 import { getStorageUrl } from '@/services/api';
@@ -19,13 +20,6 @@ interface CategoryGridProps {
   categories?: Category[];
 }
 
-/**
- * Cause probable des images grises (ex. "Prise de masse") :
- * - URL incorrecte en prod (chemin relatif vs STORAGE_URL), webp non supporté sur certains devices,
- *   ou lazy-load / Intersection Observer qui ne déclenche pas.
- * Fix : wrapper avec dimensions fixes, <img> fiable (Next Image avec fill + object-fit), et fallback
- * visible (placeholder gradient + shimmer) sur onError pour éviter une card toute grise.
- */
 function CategoryCard({ category }: { category: Category }) {
   const router = useRouter();
   const [imageError, setImageError] = useState(false);
@@ -34,10 +28,7 @@ function CategoryCard({ category }: { category: Category }) {
   const href = `/${category.slug}`;
 
   return (
-    <article
-      className="group relative h-40 sm:h-48 md:h-64 rounded-xl sm:rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300"
-      style={{ minHeight: '160px' }}
-    >
+    <article className="group relative aspect-[4/3] overflow-hidden rounded-xl bg-gray-200 ring-1 ring-black/5 dark:bg-gray-800 dark:ring-white/10">
       <LinkWithLoading
         href={href}
         aria-label={`Voir les produits de ${category.designation_fr}`}
@@ -45,48 +36,43 @@ function CategoryCard({ category }: { category: Category }) {
         onMouseEnter={() => router.prefetch(href)}
         className="absolute inset-0"
       >
-        {/* Image container: position relative + overflow hidden + border-radius (inherited). Same height/ratio for all cards. */}
-        <div className="absolute inset-0 bg-gray-200 dark:bg-gray-800">
-          {showImage ? (
-            <Image
-              src={imageUrl}
-              alt={category.designation_fr}
-              fill
-              className="object-cover object-center block transition-transform duration-300 sm:group-hover:scale-110"
-              sizes="(max-width: 640px) 48vw, (max-width: 1024px) 48vw, 30vw"
-              loading="lazy"
-              quality={70}
-              onError={() => setImageError(true)}
-            />
-          ) : (
-            /* Fallback: placeholder image (same red gradient style) so the card always shows an image */
-            <Image
-              src={CATEGORY_PLACEHOLDER_SVG}
-              alt=""
-              fill
-              className="object-cover object-center block"
-              sizes="(max-width: 640px) 48vw, (max-width: 1024px) 48vw, 30vw"
-              aria-hidden="true"
-              unoptimized
-            />
-          )}
-        </div>
+        {/* Consistent aspect ratio for every tile across breakpoints. */}
+        {showImage ? (
+          <Image
+            src={imageUrl}
+            alt={category.designation_fr}
+            fill
+            className="object-cover object-center transition-transform duration-500 ease-out sm:group-hover:scale-105"
+            sizes="(max-width: 640px) 48vw, (max-width: 1024px) 48vw, 30vw"
+            loading="lazy"
+            quality={70}
+            onError={() => setImageError(true)}
+          />
+        ) : (
+          <Image
+            src={CATEGORY_PLACEHOLDER_SVG}
+            alt=""
+            fill
+            className="object-cover object-center"
+            sizes="(max-width: 640px) 48vw, (max-width: 1024px) 48vw, 30vw"
+            aria-hidden="true"
+            unoptimized
+          />
+        )}
 
-        {/* Gradient overlay (same for image and fallback) */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" aria-hidden="true" />
+        {/* Gradient overlay for legibility */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent" aria-hidden="true" />
 
         {/* Content */}
-        <div className="relative h-full flex flex-col justify-end p-3 sm:p-6">
-          <h3 className="text-sm sm:text-lg md:text-xl lg:text-2xl font-bold text-white mb-1 sm:mb-2 group-hover:translate-x-1 transition-transform line-clamp-2">
+        <div className="relative flex h-full flex-col justify-end p-3 sm:p-5">
+          <h3 className="font-display uppercase tracking-tight leading-none text-white text-base sm:text-xl md:text-2xl line-clamp-2">
             {category.designation_fr}
           </h3>
-          <div className="flex items-center text-white/90 group-hover:text-red-400 transition-colors">
-            <span className="text-xs sm:text-sm font-medium">Découvrir</span>
-            <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-1 sm:ml-2 group-hover:translate-x-1 transition-transform" />
+          <div className="mt-1.5 flex items-center gap-1.5 text-white/80 transition-colors group-hover:text-red-400">
+            <span className="font-display uppercase tracking-wide text-[11px] sm:text-xs font-semibold">Découvrir</span>
+            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" aria-hidden="true" />
           </div>
         </div>
-
-        <div className="absolute inset-0 ring-2 ring-transparent group-hover:ring-red-500 rounded-2xl transition-all pointer-events-none" aria-hidden="true" />
       </LinkWithLoading>
     </article>
   );
@@ -96,11 +82,7 @@ export function CategoryGrid({ categories = [] }: CategoryGridProps) {
   return (
     <section className="py-12 sm:py-16 lg:py-20 bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-8 sm:mb-10">
-          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
-            Nos catégories populaires
-          </h2>
-        </div>
+        <SectionHeader kicker="Par objectif" title="Catégories populaires" viewAllHref="/shop" />
 
         {categories.length > 0 ? (
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
@@ -109,9 +91,7 @@ export function CategoryGrid({ categories = [] }: CategoryGridProps) {
             ))}
           </div>
         ) : (
-          <div className="text-center text-gray-500 py-12">
-            Aucune catégorie disponible
-          </div>
+          <div className="text-center text-gray-500 py-12">Aucune catégorie disponible</div>
         )}
       </div>
     </section>
