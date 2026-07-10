@@ -127,7 +127,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     // which may still point to legacy /shop/ paths causing sitemap/canonical mismatch (C3)
     const canonicalUrl = ensureProductionDomain(buildProductCanonicalUrl(product));
 
-    const isPublished = (product.publier as any) === 1 || (product.publier as any) === true || product.publier === undefined;
+    const publier = product.publier as number | boolean | undefined;
+    const isPublished = publier === 1 || publier === true || publier === undefined;
 
     return {
       title: { absolute: title },

@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/app/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
-import { ArrowLeft, Package, Calendar, MapPin, Phone, Mail, Truck } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, Phone, Mail } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion } from 'motion/react';
 import Image from 'next/image';
@@ -20,6 +20,7 @@ export default function OrderDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { getOrderDetails } = useAuth();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [order, setOrder] = useState<any>(null);
   const [details, setDetails] = useState<OrderDetail[]>([]);
   const [isLoading, setIsLoading] = useState(true);
