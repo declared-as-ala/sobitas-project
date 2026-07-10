@@ -1,7 +1,9 @@
 import { Metadata } from 'next';
 import { Suspense } from 'react';
 import { getAllArticles } from '@/services/api';
-import { buildCanonicalUrl } from '@/util/canonical';
+import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
+import { buildCollectionPageSchema, buildItemListSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
+import { decodeHtmlEntities } from '@/util/htmlEntities';
 import { BlogPageClient } from './BlogPageClient';
 import { LoadingSpinner } from '@/app/components/LoadingSpinner';
 
@@ -85,9 +87,40 @@ async function getBlogData() {
 
 export default async function BlogPage() {
   const { articles } = await getBlogData();
+  const baseUrl = getBaseUrl();
+  const list = Array.isArray(articles) ? articles : [];
+
+  const collectionSchema = buildCollectionPageSchema(
+    'Blog Nutrition Sportive & Compléments Alimentaires en Tunisie',
+    '/blog',
+    baseUrl,
+    { description: 'Guides, conseils prise de masse, choix whey et créatine. Tout pour la nutrition sportive en Tunisie.' }
+  );
+  const itemListSchema = list.length > 0
+    ? buildItemListSchema(
+        list.slice(0, 20).map((a: { designation_fr?: string; slug?: string }) => ({
+          name: decodeHtmlEntities(a.designation_fr || a.slug || 'Article'),
+          url: `/blog/${encodeURIComponent(a.slug || '')}`,
+        })),
+        baseUrl,
+        { name: 'Articles' }
+      )
+    : null;
+  const breadcrumbSchema = buildBreadcrumbListSchema(
+    [{ name: 'Accueil', url: '/' }, { name: 'Blog', url: '/blog' }],
+    baseUrl
+  );
+
   return (
-    <Suspense fallback={<LoadingSpinner fullScreen message="Chargement du blog..." />}>
-      <BlogPageClient articles={articles} />
-    </Suspense>
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionSchema) }} />
+      {itemListSchema && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }} />
+      )}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
+      <Suspense fallback={<LoadingSpinner fullScreen message="Chargement du blog..." />}>
+        <BlogPageClient articles={articles} />
+      </Suspense>
+    </>
   );
 }
