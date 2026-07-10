@@ -129,10 +129,7 @@ export function HomePageClient({ accueil, slides, heroMobileFirst, heroDesktopFi
             {' '}et compléments alimentaires — livraison rapide partout en Tunisie.
           </p>
         </section>
-        {/* FeaturesSection - Fixed height to prevent CLS */}
-        <div style={{ minHeight: '200px' }}>
-          <FeaturesSection />
-        </div>
+        <FeaturesSection />
         {/* Products first — best-sellers → nouveautés → flash — so shoppers reach real products
             right after the hero. Browse-by-category follows. */}
         {(safeAccueil.best_sellers?.length ?? 0) > 0 && (
