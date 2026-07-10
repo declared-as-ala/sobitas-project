@@ -123,6 +123,17 @@ export async function middleware(request: NextRequest) {
         new URL(`/x-crawler/product/${encodeURIComponent(productPath[2])}`, request.url)
       );
     }
+    // Single-segment listings — category / subcategory / brand — live at /{slug} (served by
+    // app/[slug]/page.tsx). Their H1 + product links sit inside ShopPageClient's useSearchParams
+    // Suspense bailout, so the prerendered HTML crawlers get is just a skeleton. Rewrite bots to
+    // the zero-JS SSR listing view (which resolves category→subcategory→brand→CMS the same way,
+    // so a CMS/404 slug is never mis-served). Reserved routes (/shop, /blog…) are excluded.
+    const categoryPath = pathname.match(/^\/([^/]+)\/?$/);
+    if (categoryPath && !isReservedRouteSlug(categoryPath[1])) {
+      return NextResponse.rewrite(
+        new URL(`/x-crawler/category/${encodeURIComponent(categoryPath[1])}`, request.url)
+      );
+    }
   }
 
   // Add no-cache headers for blog pages to ensure fresh content
