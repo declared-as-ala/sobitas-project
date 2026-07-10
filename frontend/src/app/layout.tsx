@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Noto_Sans_Arabic } from "next/font/google";
+import { Inter, Noto_Sans_Arabic, Oswald } from "next/font/google";
 import { Suspense } from "react";
 import Script from "next/script";
 import { cn } from "@/app/components/ui/utils";
@@ -31,6 +31,18 @@ const notoArabic = Noto_Sans_Arabic({
   // (it added ~4 render-blocking font requests to a French-default site). It is still
   // applied via the CSS variable when the user switches to Arabic (dir=rtl).
   preload: false,
+});
+
+// Athletic condensed display face for headings/prices/badges/countdowns (body stays Inter).
+// Only 2 weights + latin-ext (French diacritics) to protect the mobile LCP budget.
+const oswald = Oswald({
+  subsets: ["latin", "latin-ext"],
+  weight: ["600", "700"],
+  display: "swap",
+  variable: "--font-display",
+  preload: true,
+  adjustFontFallback: true,
+  fallback: ["var(--font-inter)", "system-ui", "sans-serif"],
 });
 
 const SITE_TITLE_DEFAULT =
@@ -121,7 +133,7 @@ export default async function RootLayout({
   const websiteSchema = buildWebSiteSchema(baseUrl);
 
   return (
-    <html lang="fr" suppressHydrationWarning data-scroll-behavior="smooth" className={`${inter.variable} ${notoArabic.variable}`}>
+    <html lang="fr" suppressHydrationWarning data-scroll-behavior="smooth" className={`${inter.variable} ${notoArabic.variable} ${oswald.variable}`}>
       <head>
         <script
           dangerouslySetInnerHTML={{
