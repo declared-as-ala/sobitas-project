@@ -6,9 +6,11 @@ import { getArticlesByBlogTag, getStorageUrl } from '@/services/api';
 import { buildCanonicalUrl } from '@/util/canonical';
 import { buildBreadcrumbListSchema, buildItemListSchema, buildCollectionPageSchema } from '@/util/structuredData';
 import { blogHref } from '@/util/blogSlug';
+import { ArrowRight } from 'lucide-react';
 import { Header } from '@/app/components/Header';
 import { Footer } from '@/app/components/Footer';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
+import { PageHeader } from '@/app/components/PageHeader';
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -74,37 +76,55 @@ export default async function BlogTagPage({ params, searchParams }: Props) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }} />
-      <Header />
-      <main className="max-w-5xl mx-auto px-4 py-10">
-        <nav aria-label="Fil d'Ariane" className="mb-4 text-sm text-gray-500">
-          <Link href="/" className="hover:text-red-700">Accueil</Link>
-          <span className="mx-1">›</span>
-          <Link href="/blog" className="hover:text-red-700">Blog</Link>
-          <span className="mx-1">›</span>
-          <span className="text-gray-800">Tag: {data.tag.name}</span>
-        </nav>
-        <h1 className="text-3xl font-bold mb-8">Tag: {data.tag.name}</h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {data.articles.map((article) => (
-            <Link key={article.id} href={blogHref(article.slug)} className="border rounded-xl p-4 hover:shadow-md transition">
-              {article.cover && (
-                <div className="relative w-full aspect-[16/9] rounded-lg overflow-hidden mb-3 bg-gray-100">
-                  <Image
-                    src={getStorageUrl(article.cover, article.updated_at || article.created_at)}
-                    alt={article.designation_fr || 'Article'}
-                    fill
-                    sizes="(max-width: 768px) 100vw, 50vw"
-                    className="object-cover"
-                  />
+      <div className="min-h-screen bg-white dark:bg-gray-950">
+        <Header />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
+          <nav aria-label="Fil d'Ariane" className="mb-6 text-sm text-gray-500 dark:text-gray-400">
+            <Link href="/" className="transition-colors hover:text-red-600 dark:hover:text-red-400">Accueil</Link>
+            <span className="mx-1">›</span>
+            <Link href="/blog" className="transition-colors hover:text-red-600 dark:hover:text-red-400">Blog</Link>
+            <span className="mx-1">›</span>
+            <span className="text-gray-800 dark:text-gray-200">Tag: {data.tag.name}</span>
+          </nav>
+          <div className="mb-8 sm:mb-10">
+            <PageHeader kicker="Tag" title={data.tag.name} />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+            {data.articles.map((article) => (
+              <Link
+                key={article.id}
+                href={blogHref(article.slug)}
+                className="group flex h-full flex-col overflow-hidden rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm transition-all duration-300 hover:shadow-xl"
+              >
+                <div className="relative aspect-[4/3] overflow-hidden bg-gray-100 dark:bg-gray-800">
+                  {article.cover ? (
+                    <Image
+                      src={getStorageUrl(article.cover, article.updated_at || article.created_at)}
+                      alt={article.designation_fr || 'Article'}
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      className="object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="h-full w-full bg-gray-100 dark:bg-gray-800" />
+                  )}
                 </div>
-              )}
-              <h2 className="font-semibold text-lg">{article.designation_fr}</h2>
-            </Link>
-          ))}
-        </div>
-      </main>
-      <Footer />
-      <ScrollToTop />
+                <div className="flex flex-1 flex-col p-4 sm:p-5">
+                  <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white line-clamp-2 leading-snug transition-colors group-hover:text-red-600 dark:group-hover:text-red-400">
+                    {article.designation_fr}
+                  </h2>
+                  <span className="mt-auto pt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-red-600 dark:text-red-400">
+                    Lire la suite
+                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" strokeWidth={1.75} aria-hidden="true" />
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </main>
+        <Footer />
+        <ScrollToTop />
+      </div>
     </>
   );
 }

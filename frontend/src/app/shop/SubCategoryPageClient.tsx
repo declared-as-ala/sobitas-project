@@ -176,9 +176,9 @@ export function SubCategoryPageClient({ categorySlug, subcategorySlug }: SubCate
         />
         {showErrorUi && (
           <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-4">
-            <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 flex flex-wrap items-center justify-between gap-3 shadow-lg">
-              <span className="text-sm font-medium text-amber-800 dark:text-amber-200">Problème réseau. Réessayez.</span>
-              <Button onClick={handleRetry} size="sm" className="gap-2 shrink-0">
+            <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 flex flex-wrap items-center justify-between gap-3 shadow-lg">
+              <span className="text-sm font-medium text-red-700 dark:text-red-300">Problème réseau. Réessayez.</span>
+              <Button onClick={handleRetry} size="sm" className="gap-2 shrink-0 bg-red-600 hover:bg-red-700 text-white">
                 <RefreshCw className="h-4 w-4" />
                 Réessayer
               </Button>
@@ -214,12 +214,12 @@ export function SubCategoryPageClient({ categorySlug, subcategorySlug }: SubCate
         {status === 'error' && !displayData && (
           <>
             {showErrorUi && (
-              <div className="mb-4 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
+              <div className="mb-4 p-4 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-red-700 dark:text-red-300">
                   <AlertCircle className="h-5 w-5 shrink-0" />
                   <span className="text-sm font-medium">Problème réseau. Réessayez.</span>
                 </div>
-                <Button onClick={handleRetry} size="sm" className="gap-2 shrink-0">
+                <Button onClick={handleRetry} size="sm" className="gap-2 shrink-0 bg-red-600 hover:bg-red-700 text-white">
                   <RefreshCw className="h-4 w-4" />
                   Réessayer
                 </Button>

@@ -19,7 +19,7 @@ function SkeletonLine({ className }: { className?: string }) {
  */
 export function ProductDetailSkeleton() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
+    <div className="min-h-screen bg-white dark:bg-gray-950">
       <Header />
 
       <main className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-3 sm:py-6 lg:py-12 pb-20 lg:pb-12">
@@ -32,16 +32,14 @@ export function ProductDetailSkeleton() {
           {/* Image column — matches ProductDetailClient aspect and sticky */}
           <div className="hidden lg:block lg:col-span-2 lg:sticky lg:top-24 lg:self-start">
             <div
-              className="relative bg-gray-200 dark:bg-gray-700 rounded-2xl overflow-hidden animate-pulse"
-              style={{ aspectRatio: '1 / 1.15' }}
+              className="relative bg-gray-100 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-800 overflow-hidden animate-pulse aspect-square"
             />
           </div>
 
           {/* Mobile image */}
-          <div className="lg:hidden w-full rounded-2xl overflow-hidden">
+          <div className="lg:hidden w-full rounded-xl overflow-hidden">
             <div
-              className="relative bg-gray-200 dark:bg-gray-700 rounded-2xl overflow-hidden animate-pulse w-full"
-              style={{ aspectRatio: '1 / 1' }}
+              className="relative bg-gray-100 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-800 overflow-hidden animate-pulse w-full aspect-square"
             />
           </div>
 
@@ -69,7 +67,7 @@ export function ProductDetailSkeleton() {
               <SkeletonLine className="h-4 w-16" />
             </div>
             {/* Price */}
-            <div className="py-4 sm:py-5 border-y border-gray-200 dark:border-gray-800 px-1 flex flex-wrap items-baseline gap-2">
+            <div className="py-4 sm:py-5 border-y border-gray-100 dark:border-gray-800 px-1 flex flex-wrap items-baseline gap-2">
               <SkeletonLine className="h-10 w-28" />
               <SkeletonLine className="h-6 w-20" />
             </div>
@@ -90,7 +88,7 @@ export function ProductDetailSkeleton() {
 
         {/* Tabs skeleton */}
         <div className="space-y-4 mb-8">
-          <div className="flex gap-2 border-b border-gray-200 dark:border-gray-800 pb-2">
+          <div className="flex gap-2 border-b border-gray-100 dark:border-gray-800 pb-2">
             <SkeletonLine className="h-9 w-24 rounded-lg" />
             <SkeletonLine className="h-9 w-28 rounded-lg" />
             <SkeletonLine className="h-9 w-20 rounded-lg" />
@@ -110,11 +108,11 @@ export function ProductDetailSkeleton() {
               <div
                 key={i}
                 className={cn(
-                  'flex flex-col overflow-hidden rounded-[14px] sm:rounded-xl',
-                  'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700'
+                  'flex flex-col overflow-hidden rounded-xl',
+                  'bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800'
                 )}
               >
-                <div className="aspect-square w-full bg-gray-200 dark:bg-gray-700 animate-pulse min-h-[140px]" />
+                <div className="aspect-square w-full bg-gray-100 dark:bg-gray-800 animate-pulse min-h-[140px]" />
                 <div className="p-3 space-y-2">
                   <SkeletonLine className="h-4 w-full" />
                   <SkeletonLine className="h-4 w-3/4" />

@@ -32,13 +32,17 @@ export default function ForgotPasswordClient() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Header />
-      <main className="max-w-md mx-auto px-4 py-16">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl">Mot de passe oublié</CardTitle>
-            <CardDescription>
+      <main className="max-w-md mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+        <Card className="border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+          <CardHeader className="text-center">
+            <span className="inline-flex items-center justify-center gap-2 mb-3 font-display uppercase tracking-[0.2em] text-[11px] sm:text-xs font-semibold text-red-600 dark:text-red-400">
+              <span className="h-px w-5 bg-red-600 dark:bg-red-400" aria-hidden="true" />
+              Récupération
+            </span>
+            <CardTitle className="font-display uppercase tracking-tight text-3xl font-bold text-gray-900 dark:text-white">Mot de passe oublié</CardTitle>
+            <CardDescription className="text-gray-600 dark:text-gray-400">
               {done
                 ? 'Si un compte correspond à cet e-mail, vous recevrez un lien pour réinitialiser votre mot de passe.'
                 : 'Indiquez votre adresse e-mail. Nous vous enverrons un lien sécurisé.'}
@@ -50,19 +54,19 @@ export default function ForgotPasswordClient() {
                 <div className="space-y-2">
                   <Label htmlFor="email">E-mail</Label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                     <Input
                       id="email"
                       type="email"
                       required
                       autoComplete="email"
-                      className="pl-9"
+                      className="pl-10 h-11 rounded-xl focus-visible:ring-red-500 dark:focus-visible:ring-red-400"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                     />
                   </div>
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full h-11 bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide" disabled={loading}>
                   {loading ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -74,7 +78,11 @@ export default function ForgotPasswordClient() {
                 </Button>
               </form>
             ) : null}
-            <Button variant="ghost" className="mt-6 w-full" asChild>
+            <Button
+              variant="ghost"
+              className="mt-6 w-full text-gray-600 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
+              asChild
+            >
               <Link href="/login">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Retour à la connexion

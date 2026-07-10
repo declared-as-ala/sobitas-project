@@ -111,12 +111,12 @@ export function ProductDetailFallbackClient({ slug }: ProductDetailFallbackClien
       <ProductDetailSkeleton />
       {status === 'error' && showErrorUi && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] w-full max-w-md px-4">
-          <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 flex flex-wrap items-center justify-between gap-3 shadow-lg">
-            <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
+          <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 flex flex-wrap items-center justify-between gap-3 shadow-lg">
+            <div className="flex items-center gap-2 text-red-700 dark:text-red-300">
               <AlertCircle className="h-5 w-5 shrink-0" />
               <span className="text-sm font-medium">Problème réseau. Réessayez.</span>
             </div>
-            <Button onClick={load} size="sm" className="gap-2 shrink-0">
+            <Button onClick={load} size="sm" className="gap-2 shrink-0 bg-red-600 hover:bg-red-700 text-white">
               <RefreshCw className="h-4 w-4" />
               Réessayer
             </Button>

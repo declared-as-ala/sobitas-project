@@ -48,22 +48,24 @@ export function ProfileSection() {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Informations personnelles</CardTitle>
+    <Card className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+      <CardHeader className="border-b border-gray-100 dark:border-gray-800">
+        <CardTitle className="font-display uppercase tracking-tight text-xl text-gray-900 dark:text-white">
+          Informations personnelles
+        </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="name">Nom complet</Label>
             <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" aria-hidden="true" />
               <Input
                 id="name"
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="pl-10"
+                className="pl-10 rounded-xl focus-visible:border-red-500 focus-visible:ring-red-500/20"
                 required
               />
             </div>
@@ -72,13 +74,13 @@ export function ProfileSection() {
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" aria-hidden="true" />
               <Input
                 id="email"
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="pl-10"
+                className="pl-10 rounded-xl focus-visible:border-red-500 focus-visible:ring-red-500/20"
                 autoComplete="email"
                 required
               />
@@ -88,19 +90,21 @@ export function ProfileSection() {
           <div className="space-y-2">
             <Label htmlFor="phone">Téléphone</Label>
             <div className="relative">
-              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" aria-hidden="true" />
               <Input
                 id="phone"
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="pl-10"
+                className="pl-10 rounded-xl focus-visible:border-red-500 focus-visible:ring-red-500/20"
               />
             </div>
           </div>
 
-          <div className="pt-6 border-t">
-            <h3 className="text-lg font-semibold mb-4">Changer le mot de passe</h3>
+          <div className="pt-6 border-t border-gray-100 dark:border-gray-800">
+            <h3 className="font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white mb-4">
+              Changer le mot de passe
+            </h3>
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="password">Nouveau mot de passe</Label>
@@ -111,6 +115,7 @@ export function ProfileSection() {
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   placeholder="Laisser vide pour ne pas changer"
                   autoComplete="new-password"
+                  className="rounded-xl focus-visible:border-red-500 focus-visible:ring-red-500/20"
                 />
               </div>
 
@@ -123,6 +128,7 @@ export function ProfileSection() {
                     value={formData.confirmPassword}
                     onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                     autoComplete="new-password"
+                    className="rounded-xl focus-visible:border-red-500 focus-visible:ring-red-500/20"
                   />
                 </div>
               )}
@@ -132,17 +138,17 @@ export function ProfileSection() {
           <Button
             type="submit"
             size="lg"
-            className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
+            className="w-full bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide rounded-xl"
             disabled={isLoading}
           >
             {isLoading ? (
               <>
-                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                <Loader2 className="h-5 w-5 mr-2 animate-spin" aria-hidden="true" />
                 Enregistrement...
               </>
             ) : (
               <>
-                <Save className="h-5 w-5 mr-2" />
+                <Save className="h-5 w-5 mr-2" aria-hidden="true" />
                 Enregistrer les modifications
               </>
             )}

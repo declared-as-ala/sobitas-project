@@ -3,10 +3,9 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Facebook, Instagram, Linkedin, Mail, Phone, MapPin, Sparkles, Loader2, Youtube } from 'lucide-react';
+import { Facebook, Instagram, Linkedin, Mail, Phone, MapPin, Loader2, Youtube } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
-import { motion } from 'motion/react';
 import { subscribeNewsletter, getCmsPages, getCoordinates } from '@/services/api';
 import type { Coordinate } from '@/types';
 import { useSiteLogos } from '@/hooks/useSiteLogos';
@@ -98,19 +97,13 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
   };
 
   return (
-    <footer id="contact" className="bg-gradient-to-b from-gray-900 via-gray-950 to-black text-gray-300 border-t border-gray-800/60">
+    <footer id="contact" className="bg-gray-950 text-gray-300 border-t border-gray-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-16">
         {/* Mobile: Premium single-column stacked layout (Nike/Gymshark style) */}
         <div className="md:hidden flex flex-col gap-8 pb-6 w-full max-w-full overflow-hidden">
           {/* 1. Logo + tagline - scaled down, premium, no crop */}
           <div className="space-y-4 w-full">
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-20px' }}
-              transition={{ duration: 0.4, ease: 'easeOut' }}
-              className="flex justify-start"
-            >
+            <div className="flex justify-start">
               <Link href="/" className="block max-w-[220px] opacity-90 hover:opacity-100 transition-opacity duration-300">
                 <Image
                   src={footerLogoUrl}
@@ -122,33 +115,33 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
                   loading="lazy"
                 />
               </Link>
-            </motion.div>
+            </div>
           </div>
 
           <div className="h-px bg-gray-800/60 w-full" aria-hidden="true" role="separator" />
 
           {/* 2. Suivez-nous */}
           <div className="space-y-3 w-full">
-            <h3 className="font-bold text-white text-sm uppercase tracking-wide">Suivez-nous</h3>
+            <h3 className="font-display text-white text-sm uppercase tracking-wide">Suivez-nous</h3>
             <p className="text-sm text-gray-400">
               Nous facilitons la communication et le suivi sur nos réseaux sociaux.
             </p>
             <div className="flex flex-wrap gap-2 sm:gap-3">
-              <a href="https://facebook.com/proteinetunisie" target="_blank" rel="noopener noreferrer" className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-gray-800 hover:bg-[#1877F2] flex items-center justify-center transition-colors shrink-0" aria-label="Facebook">
+              <a href="https://facebook.com/proteinetunisie" target="_blank" rel="noopener noreferrer" className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors shrink-0" aria-label="Facebook">
                 <Facebook className="h-5 w-5" />
               </a>
-              <a href="https://www.instagram.com/sobitas.proteine.tunisie/" target="_blank" rel="noopener noreferrer" className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-gray-800 hover:bg-gradient-to-r hover:from-purple-600 hover:via-pink-600 hover:to-orange-500 flex items-center justify-center transition-colors shrink-0" aria-label="Instagram">
+              <a href="https://www.instagram.com/sobitas.proteine.tunisie/" target="_blank" rel="noopener noreferrer" className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors shrink-0" aria-label="Instagram">
                 <Instagram className="h-5 w-5" />
               </a>
-              <a href="https://www.linkedin.com/in/sobitas-proteine-tunisie-b63b671a8/" target="_blank" rel="noopener noreferrer" className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-gray-800 hover:bg-[#0077B5] flex items-center justify-center transition-colors shrink-0" aria-label="LinkedIn">
+              <a href="https://www.linkedin.com/in/sobitas-proteine-tunisie-b63b671a8/" target="_blank" rel="noopener noreferrer" className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors shrink-0" aria-label="LinkedIn">
                 <Linkedin className="h-5 w-5" />
               </a>
-              <a href="https://www.tiktok.com/@sobitas.proteine.tunisie" target="_blank" rel="noopener noreferrer" className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-gray-800 hover:bg-black flex items-center justify-center transition-colors shrink-0 group" aria-label="TikTok">
-                <svg className="h-5 w-5 text-white group-hover:text-[#FF0050]" viewBox="0 0 24 24" fill="currentColor">
+              <a href="https://www.tiktok.com/@sobitas.proteine.tunisie" target="_blank" rel="noopener noreferrer" className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors shrink-0" aria-label="TikTok">
+                <svg className="h-5 w-5 text-white" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
                 </svg>
               </a>
-              <a href="https://www.youtube.com/@proteine-tunisie" target="_blank" rel="noopener noreferrer" className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-gray-800 hover:bg-[#FF0000] flex items-center justify-center transition-colors shrink-0" aria-label="YouTube">
+              <a href="https://www.youtube.com/@proteine-tunisie" target="_blank" rel="noopener noreferrer" className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors shrink-0" aria-label="YouTube">
                 <Youtube className="h-5 w-5" />
               </a>
             </div>
@@ -158,7 +151,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
 
           {/* 3. Abonnez-vous */}
           <div className="space-y-3 w-full">
-            <h3 className="font-bold text-white text-sm uppercase tracking-wide">Abonnez-vous</h3>
+            <h3 className="font-display text-white text-sm uppercase tracking-wide">Abonnez-vous</h3>
             <p className="text-sm text-gray-400">
               Rejoignez nos abonnés et recevez les nouveautés et offres chaque semaine.
             </p>
@@ -174,7 +167,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
                 />
                 <Button
                   type="submit"
-                  className="h-11 sm:h-12 px-6 font-bold rounded-xl bg-red-600 hover:bg-red-700 text-white shadow-lg shrink-0"
+                  className="h-11 sm:h-12 px-6 font-display uppercase tracking-wide font-semibold rounded-xl bg-red-600 hover:bg-red-700 text-white shadow-sm shrink-0"
                   disabled={isSubscribing}
                 >
                   {isSubscribing ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" /> ...</>) : "S'abonner"}
@@ -188,7 +181,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
 
           {/* 4. Contact */}
           <div className="space-y-3 w-full">
-            <h3 className="font-bold text-white text-sm uppercase tracking-wide">Contact</h3>
+            <h3 className="font-display text-white text-sm uppercase tracking-wide">Contact</h3>
             <div className="space-y-2 text-sm text-gray-400">
               <a href={contactPhoneHref} className="flex items-center gap-3 py-1.5 hover:text-red-500 min-w-0" aria-label="Appeler">
                 <Phone className="h-5 w-5 text-red-500 shrink-0" />
@@ -211,7 +204,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
 
           {/* 5. Services & Ventes (from API) */}
           <div className="space-y-3 w-full">
-            <h3 className="font-bold text-white text-sm uppercase tracking-wide">Services & Ventes</h3>
+            <h3 className="font-display text-white text-sm uppercase tracking-wide">Services & Ventes</h3>
             <ul className="space-y-1.5">
               {footerPages.length > 0 ? footerPages.map((p) => (
                 <li key={p.id}>
@@ -229,7 +222,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
 
           {/* 6. Navigation */}
           <div className="space-y-3 w-full">
-            <h3 className="font-bold text-white text-sm uppercase tracking-wide">Navigation</h3>
+            <h3 className="font-display text-white text-sm uppercase tracking-wide">Navigation</h3>
             <ul className="space-y-1.5">
               <li><Link href="/" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Accueil</Link></li>
               <li><Link href="/shop" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Nos produits</Link></li>
@@ -276,13 +269,13 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
 
             {/* Social Media */}
             <div>
-              <h3 className="font-semibold text-white mb-4">Suivez-nous</h3>
+              <h3 className="font-display uppercase tracking-wide text-white mb-4">Suivez-nous</h3>
               <div className="flex flex-wrap gap-3">
                 <a
                   href="https://facebook.com/proteinetunisie"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="h-10 w-10 rounded-full bg-gray-800 hover:bg-[#1877F2] flex items-center justify-center transition-colors"
+                  className="h-10 w-10 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors"
                   aria-label="Facebook"
                 >
                   <Facebook className="h-5 w-5" />
@@ -291,7 +284,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
                   href="https://www.instagram.com/sobitas.proteine.tunisie/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="h-10 w-10 rounded-full bg-gray-800 hover:bg-gradient-to-r hover:from-purple-600 hover:via-pink-600 hover:to-orange-500 flex items-center justify-center transition-colors"
+                  className="h-10 w-10 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors"
                   aria-label="Instagram"
                 >
                   <Instagram className="h-5 w-5" />
@@ -300,7 +293,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
                   href="https://www.linkedin.com/in/sobitas-proteine-tunisie-b63b671a8/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="h-10 w-10 rounded-full bg-gray-800 hover:bg-[#0077B5] flex items-center justify-center transition-colors"
+                  className="h-10 w-10 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors"
                   aria-label="LinkedIn"
                 >
                   <Linkedin className="h-5 w-5" />
@@ -309,10 +302,10 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
                   href="https://www.tiktok.com/@sobitas.proteine.tunisie"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="h-10 w-10 rounded-full bg-gray-800 hover:bg-black flex items-center justify-center transition-colors group"
+                  className="h-10 w-10 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors"
                   aria-label="TikTok"
                 >
-                  <svg className="h-5 w-5 text-white group-hover:text-[#FF0050]" viewBox="0 0 24 24" fill="currentColor">
+                  <svg className="h-5 w-5 text-white" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
                   </svg>
                 </a>
@@ -320,7 +313,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
                   href="https://www.youtube.com/@proteine-tunisie"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="h-10 w-10 rounded-full bg-gray-800 hover:bg-[#FF0000] flex items-center justify-center transition-colors"
+                  className="h-10 w-10 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors"
                   aria-label="YouTube"
                 >
                   <Youtube className="h-5 w-5" />
@@ -331,7 +324,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
 
           {/* Navigation */}
           <div>
-            <h3 className="font-semibold text-white mb-6">Navigation</h3>
+            <h3 className="font-display uppercase tracking-wide text-white mb-6">Navigation</h3>
             <ul className="space-y-3">
               <li>
                 <Link href="/" className="text-sm hover:text-red-500 transition-colors">
@@ -363,7 +356,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
 
           {/* Services & Ventes (from API) */}
           <div>
-            <h3 className="font-semibold text-white mb-6">Services & Ventes</h3>
+            <h3 className="font-display uppercase tracking-wide text-white mb-6">Services & Ventes</h3>
             <ul className="space-y-3">
               {footerPages.map((p) => (
                 <li key={p.id}>
@@ -383,8 +376,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
           <div className="space-y-6">
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <Sparkles className="h-5 w-5 text-yellow-400" />
-                <h3 className="font-bold text-white text-lg">Abonnez-vous</h3>
+                <h3 className="font-display uppercase tracking-wide text-white text-lg">Abonnez-vous</h3>
               </div>
               <p className="text-sm text-gray-400 mb-4">
                 Recevez les dernières offres exclusives et nouveautés
@@ -400,7 +392,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
                 />
                 <Button
                   type="submit"
-                  className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white h-12 font-bold rounded-xl shadow-lg"
+                  className="w-full bg-red-600 hover:bg-red-700 text-white h-12 font-display uppercase tracking-wide font-semibold rounded-xl shadow-sm"
                   disabled={isSubscribing}
                 >
                   {isSubscribing ? (
@@ -423,7 +415,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
         {/* Map Section - Deferred loading, reduced height on mobile */}
         {mapEmbedHtml ? (
         <div className="mt-8 md:mt-12" ref={mapRef}>
-          <h3 className="font-bold md:font-semibold text-white text-base md:text-inherit mb-3 md:mb-4">Géolocalisation</h3>
+          <h3 className="font-display uppercase tracking-wide text-white text-base md:text-inherit mb-3 md:mb-4">Géolocalisation</h3>
           <div className="rounded-2xl md:rounded-xl overflow-hidden h-48 md:h-64 bg-gray-800 [&_iframe]:h-full [&_iframe]:w-full [&_iframe]:border-0">
             {shouldLoadMap ? (
               <div
@@ -449,7 +441,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
               className="text-center md:text-left text-sm text-gray-400 cursor-pointer hover:text-red-500 transition-colors"
               onClick={() => typeof window !== 'undefined' && window.scrollTo({ top: 0, behavior: 'smooth' })}
             >
-              © {new Date().getFullYear()} <span className="text-red-500 font-bold">PROTEINE TUNISIE</span>. Tous droits réservés.
+              © {new Date().getFullYear()} <span className="text-red-500 font-display uppercase tracking-wide">PROTEINE TUNISIE</span>. Tous droits réservés.
             </div>
           </div>
         </div>

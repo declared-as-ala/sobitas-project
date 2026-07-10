@@ -10,10 +10,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/ca
 import { Badge } from '@/app/components/ui/badge';
 import { ArrowLeft, Calendar, MapPin, Phone, Mail } from 'lucide-react';
 import { format } from 'date-fns';
-import { motion } from 'motion/react';
 import Image from 'next/image';
 import { getStorageUrl } from '@/services/api';
 import type { OrderDetail } from '@/types';
+import { PageHeader } from '@/app/components/PageHeader';
 import { LoadingSpinner } from '@/app/components/LoadingSpinner';
 
 export default function OrderDetailPage() {
@@ -44,17 +44,26 @@ export default function OrderDetailPage() {
   }, [params.id, getOrderDetails]);
 
   const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-      'nouvelle_commande': { label: 'Nouvelle', variant: 'default' },
-      'en_cours_de_preparation': { label: 'En préparation', variant: 'secondary' },
-      'prete': { label: 'Prête', variant: 'secondary' },
-      'en_cours_de_livraison': { label: 'En livraison', variant: 'secondary' },
-      'expidee': { label: 'Expédiée', variant: 'default' },
-      'annuler': { label: 'Annulée', variant: 'destructive' },
+    const green = 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950/40 dark:text-green-400 dark:border-green-900';
+    const amber = 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-900';
+    const red = 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-400 dark:border-red-900';
+    const gray = 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700';
+
+    const statusMap: Record<string, { label: string; className: string }> = {
+      'nouvelle_commande': { label: 'Nouvelle', className: gray },
+      'en_cours_de_preparation': { label: 'En préparation', className: amber },
+      'prete': { label: 'Prête', className: amber },
+      'en_cours_de_livraison': { label: 'En livraison', className: amber },
+      'expidee': { label: 'Expédiée', className: green },
+      'annuler': { label: 'Annulée', className: red },
     };
 
-    const statusInfo = statusMap[status] || { label: status, variant: 'outline' as const };
-    return <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>;
+    const statusInfo = statusMap[status] || { label: status, className: gray };
+    return (
+      <Badge className={`font-display uppercase tracking-wide ${statusInfo.className}`}>
+        {statusInfo.label}
+      </Badge>
+    );
   };
 
   if (isLoading) {
@@ -66,8 +75,8 @@ export default function OrderDetailPage() {
       <div className="min-h-screen bg-white dark:bg-gray-950">
         <Header />
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
-          <h1 className="text-2xl font-bold mb-4">Commande non trouvée</h1>
-          <Button onClick={() => router.push('/account')}>Retour au compte</Button>
+          <h1 className="font-display uppercase tracking-tight text-2xl text-gray-900 dark:text-white mb-4">Commande non trouvée</h1>
+          <Button className="bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide rounded-xl" onClick={() => router.push('/account')}>Retour au compte</Button>
         </main>
         <Footer />
       </div>
@@ -75,151 +84,147 @@ export default function OrderDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Header />
-      
+
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+        <Button
+          variant="ghost"
+          onClick={() => router.back()}
+          className="mb-6 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
         >
-          <Button
-            variant="ghost"
-            onClick={() => router.back()}
-            className="mb-6"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Retour
-          </Button>
+          <ArrowLeft className="h-4 w-4 mr-2" aria-hidden="true" />
+          Retour
+        </Button>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Order Details */}
-            <div className="lg:col-span-2 space-y-6">
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle>Commande #{order.numero}</CardTitle>
-                    {getStatusBadge(order.etat)}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                      <Calendar className="h-4 w-4" />
-                      <span>
-                        {order.created_at ? format(new Date(order.created_at), 'dd MMMM yyyy à HH:mm') : 'Date inconnue'}
-                      </span>
-                    </div>
+        <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
+          <PageHeader kicker="Détail commande" title={`Commande #${order.numero}`} />
+          {getStatusBadge(order.etat)}
+        </div>
 
-                    {/* Order Items */}
-                    <div className="space-y-4 mt-6">
-                      <h3 className="font-semibold">Articles commandés</h3>
-                      {details.map((detail) => (
-                        <div key={detail.id} className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                          {detail.produit?.cover && (
-                            <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
-                              <Image
-                                src={getStorageUrl(detail.produit.cover)}
-                                alt={detail.produit.designation_fr || 'Produit'}
-                                fill
-                                className="object-contain p-2"
-                                sizes="64px"
-                                unoptimized
-                              />
-                            </div>
-                          )}
-                          <div className="flex-1">
-                            <h4 className="font-semibold">
-                              {detail.produit?.designation_fr || 'Produit'}
-                            </h4>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                              Quantité: {detail.qte} × {detail.prix_unitaire} DT
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-bold">
-                              {(detail.prix_ttc || detail.prix_ht || 0).toFixed(0)} DT
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Order Summary */}
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Résumé</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between">
-                    <span>Sous-total</span>
-                    <span className="font-semibold">{order.prix_ht?.toFixed(0) || 0} DT</span>
-                  </div>
-                  {order.frais_livraison && (
-                    <div className="flex justify-between">
-                      <span>Livraison</span>
-                      <span className="font-semibold">{order.frais_livraison} DT</span>
-                    </div>
-                  )}
-                  <div className="border-t pt-4 flex justify-between text-lg font-bold">
-                    <span>Total</span>
-                    <span className="text-red-600 dark:text-red-400">
-                      {order.prix_ttc?.toFixed(0) || 0} DT
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+          {/* Order Details */}
+          <div className="lg:col-span-2 space-y-6">
+            <Card className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+              <CardHeader className="border-b border-gray-100 dark:border-gray-800">
+                <CardTitle className="font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white">Articles commandés</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                    <Calendar className="h-4 w-4" aria-hidden="true" />
+                    <span>
+                      {order.created_at ? format(new Date(order.created_at), 'dd MMMM yyyy à HH:mm') : 'Date inconnue'}
                     </span>
                   </div>
-                </CardContent>
-              </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MapPin className="h-5 w-5" />
-                    Adresse de livraison
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                  <p className="font-semibold">
-                    {order.livraison_nom || order.nom} {order.livraison_prenom || order.prenom}
-                  </p>
-                  <p>{order.livraison_adresse1 || order.adresse1}</p>
-                  {order.livraison_adresse2 || order.adresse2 && (
-                    <p>{order.livraison_adresse2 || order.adresse2}</p>
-                  )}
-                  <p>
-                    {order.livraison_ville || order.ville}, {order.livraison_region || order.region}
-                  </p>
-                  {order.livraison_code_postale || order.code_postale && (
-                    <p>{order.livraison_code_postale || order.code_postale}</p>
-                  )}
-                  <div className="flex items-center gap-2 mt-4 pt-4 border-t">
-                    <Phone className="h-4 w-4 text-gray-400" />
-                    <span>{order.livraison_phone || order.phone}</span>
+                  {/* Order Items */}
+                  <div className="space-y-4 mt-6">
+                    {details.map((detail) => (
+                      <div key={detail.id} className="flex items-center gap-4 p-4 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+                        {detail.produit?.cover && (
+                          <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
+                            <Image
+                              src={getStorageUrl(detail.produit.cover)}
+                              alt={detail.produit.designation_fr || 'Produit'}
+                              fill
+                              className="object-contain p-2"
+                              sizes="64px"
+                              unoptimized
+                            />
+                          </div>
+                        )}
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-gray-900 dark:text-white">
+                            {detail.produit?.designation_fr || 'Produit'}
+                          </h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            Quantité: {detail.qte} × {detail.prix_unitaire} DT
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-display font-bold tracking-tight tabular-nums text-gray-900 dark:text-white">
+                            {(detail.prix_ttc || detail.prix_ht || 0).toFixed(0)} DT
+                          </p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-gray-400" />
-                    <span>{order.livraison_email || order.email}</span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {order.note && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Notes</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">{order.note}</p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </motion.div>
+
+          {/* Order Summary */}
+          <div className="space-y-6">
+            <Card className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+              <CardHeader className="border-b border-gray-100 dark:border-gray-800">
+                <CardTitle className="font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white">Résumé</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-4">
+                <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
+                  <span>Sous-total</span>
+                  <span className="font-display font-semibold tabular-nums text-gray-900 dark:text-white">{order.prix_ht?.toFixed(0) || 0} DT</span>
+                </div>
+                {order.frais_livraison && (
+                  <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
+                    <span>Livraison</span>
+                    <span className="font-display font-semibold tabular-nums text-gray-900 dark:text-white">{order.frais_livraison} DT</span>
+                  </div>
+                )}
+                <div className="border-t border-gray-100 dark:border-gray-800 pt-4 flex justify-between items-baseline">
+                  <span className="font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white">Total</span>
+                  <span className="font-display font-bold tracking-tight tabular-nums text-lg text-red-600 dark:text-red-400">
+                    {order.prix_ttc?.toFixed(0) || 0} DT
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+              <CardHeader className="border-b border-gray-100 dark:border-gray-800">
+                <CardTitle className="flex items-center gap-2 font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white">
+                  <MapPin className="h-5 w-5 text-red-600 dark:text-red-400" aria-hidden="true" />
+                  Adresse de livraison
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                <p className="font-semibold text-gray-900 dark:text-white">
+                  {order.livraison_nom || order.nom} {order.livraison_prenom || order.prenom}
+                </p>
+                <p>{order.livraison_adresse1 || order.adresse1}</p>
+                {order.livraison_adresse2 || order.adresse2 && (
+                  <p>{order.livraison_adresse2 || order.adresse2}</p>
+                )}
+                <p>
+                  {order.livraison_ville || order.ville}, {order.livraison_region || order.region}
+                </p>
+                {order.livraison_code_postale || order.code_postale && (
+                  <p>{order.livraison_code_postale || order.code_postale}</p>
+                )}
+                <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+                  <Phone className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                  <span>{order.livraison_phone || order.phone}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                  <span>{order.livraison_email || order.email}</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            {order.note && (
+              <Card className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+                <CardHeader className="border-b border-gray-100 dark:border-gray-800">
+                  <CardTitle className="font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white">Notes</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{order.note}</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
       </main>
 
       <Footer />

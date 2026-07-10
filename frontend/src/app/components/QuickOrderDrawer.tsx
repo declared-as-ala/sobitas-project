@@ -294,11 +294,11 @@ export function QuickOrderDrawer({
   return (
     <DialogPrimitive.Root open={internalOpen} onOpenChange={handleOpenChange}>
       <DialogPrimitive.Portal>
-        {/* Overlay: opaque dark + optional blur */}
+        {/* Overlay: opaque dark dim */}
         <DialogPrimitive.Overlay
           className={cn(
             'fixed inset-0 z-[100]',
-            'bg-black/55 backdrop-blur-sm',
+            'bg-black/60',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0'
           )}
@@ -308,7 +308,7 @@ export function QuickOrderDrawer({
         <DialogPrimitive.Content
           className={cn(
             'fixed z-[101] flex flex-col',
-            'bg-white dark:bg-gray-900 shadow-2xl',
+            'bg-white dark:bg-gray-900 shadow-xl',
             'outline-none',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
@@ -323,8 +323,8 @@ export function QuickOrderDrawer({
           {/* Header: title + summary + close X */}
           <div className="shrink-0 flex items-start justify-between gap-4 p-4 pb-3 border-b border-gray-200 dark:border-gray-800">
             <div className="min-w-0">
-              <DialogPrimitive.Title className="flex items-center gap-2 text-lg font-bold text-gray-900 dark:text-white">
-                <Zap className="h-5 w-5 shrink-0 text-amber-500" />
+              <DialogPrimitive.Title className="flex items-center gap-2 font-display uppercase tracking-tight text-lg font-bold text-gray-900 dark:text-white">
+                <Zap className="h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
                 Commander maintenant
               </DialogPrimitive.Title>
               <DialogPrimitive.Description className="mt-1 text-sm text-gray-600 dark:text-gray-400 truncate">
@@ -388,7 +388,7 @@ export function QuickOrderDrawer({
                         {product.designation_fr}
                       </p>
                       <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        <span className="font-bold text-red-600 dark:text-red-400 text-sm">{unitPrice} DT</span>
+                        <span className="font-display font-bold tracking-tight tabular-nums text-red-600 dark:text-red-400 text-sm">{unitPrice} DT</span>
                         {priceDisplay.hasPromo && priceDisplay.oldPrice != null && (
                           <span className="text-gray-500 dark:text-gray-400 line-through text-xs">{priceDisplay.oldPrice} DT</span>
                         )}
@@ -655,8 +655,8 @@ export function QuickOrderDrawer({
                   </div>
                 )}
                 <div className="flex justify-between text-base font-bold pt-2 border-t border-gray-200 dark:border-gray-700">
-                  <span className="text-gray-900 dark:text-white">Total</span>
-                  <span className="text-red-600 dark:text-red-400">{total.toFixed(0)} DT</span>
+                  <span className="font-display uppercase tracking-wide text-gray-900 dark:text-white">Total</span>
+                  <span className="font-display font-bold tracking-tight tabular-nums text-red-600 dark:text-red-400">{total.toFixed(0)} DT</span>
                 </div>
                 {subtotal < FREE_SHIPPING_THRESHOLD && fraisLivraison > 0 && !appliedCoupon?.free_shipping && (
                   <p className="text-xs text-green-700 dark:text-green-300">Ajoutez {(FREE_SHIPPING_THRESHOLD - subtotal).toFixed(0)} DT pour la livraison gratuite</p>
@@ -669,7 +669,7 @@ export function QuickOrderDrawer({
                 type="submit"
                 form="quick-order-form"
                 disabled={isSubmitting || needsAromaSelection}
-                className="w-full h-12 rounded-lg text-base font-bold bg-red-600 hover:bg-red-700 text-white focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
+                className="w-full h-12 rounded-xl text-base font-display uppercase tracking-wide font-bold bg-red-600 hover:bg-red-700 text-white focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
               >
                 {isSubmitting ? (
                   <>

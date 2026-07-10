@@ -10,7 +10,6 @@ import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Loader2, Mail, Lock, User, Phone, ArrowRight } from 'lucide-react';
-import { motion } from 'motion/react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { toast } from 'sonner';
@@ -84,15 +83,12 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Header />
-      
-      <main className="max-w-md mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <Card>
+
+      <main className="max-w-md mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+        <div>
+          <Card className="border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
             <CardHeader className="text-center">
               <div className="flex justify-center mb-6">
                 <Link href="/" className="flex items-center justify-center">
@@ -108,8 +104,12 @@ export default function RegisterPage() {
                   />
                 </Link>
               </div>
-              <CardTitle className="text-3xl font-bold mb-2">Créer un compte</CardTitle>
-              <CardDescription>
+              <span className="inline-flex items-center justify-center gap-2 mb-3 font-display uppercase tracking-[0.2em] text-[11px] sm:text-xs font-semibold text-red-600 dark:text-red-400">
+                <span className="h-px w-5 bg-red-600 dark:bg-red-400" aria-hidden="true" />
+                Rejoignez-nous
+              </span>
+              <CardTitle className="font-display uppercase tracking-tight text-3xl font-bold text-gray-900 dark:text-white">Créer un compte</CardTitle>
+              <CardDescription className="text-gray-600 dark:text-gray-400">
                 Rejoignez-nous pour profiter de nos services
               </CardDescription>
             </CardHeader>
@@ -125,7 +125,7 @@ export default function RegisterPage() {
                       placeholder="Jean Dupont"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="pl-10"
+                      className="pl-10 h-11 rounded-xl focus-visible:ring-red-500 dark:focus-visible:ring-red-400"
                       required
                     />
                   </div>
@@ -141,7 +141,7 @@ export default function RegisterPage() {
                       placeholder="votre@email.com"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="pl-10"
+                      className="pl-10 h-11 rounded-xl focus-visible:ring-red-500 dark:focus-visible:ring-red-400"
                       autoComplete="email"
                       required
                     />
@@ -158,7 +158,7 @@ export default function RegisterPage() {
                       placeholder="+216 XX XXX XXX"
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      className="pl-10"
+                      className="pl-10 h-11 rounded-xl focus-visible:ring-red-500 dark:focus-visible:ring-red-400"
                       required
                     />
                   </div>
@@ -174,7 +174,7 @@ export default function RegisterPage() {
                       placeholder="••••••••"
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      className="pl-10"
+                      className="pl-10 h-11 rounded-xl focus-visible:ring-red-500 dark:focus-visible:ring-red-400"
                       autoComplete="new-password"
                       required
                       minLength={6}
@@ -192,7 +192,7 @@ export default function RegisterPage() {
                       placeholder="••••••••"
                       value={formData.confirmPassword}
                       onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                      className="pl-10"
+                      className="pl-10 h-11 rounded-xl focus-visible:ring-red-500 dark:focus-visible:ring-red-400"
                       autoComplete="new-password"
                       required
                       minLength={6}
@@ -203,7 +203,7 @@ export default function RegisterPage() {
                 <Button
                   type="submit"
                   size="lg"
-                  className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
+                  className="w-full h-11 bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide"
                   disabled={isLoading}
                 >
                   {isLoading ? (
@@ -233,7 +233,7 @@ export default function RegisterPage() {
               </div>
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
       </main>
 
       <Footer />

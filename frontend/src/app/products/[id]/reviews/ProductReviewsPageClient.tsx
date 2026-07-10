@@ -9,7 +9,6 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
 import { Checkbox } from '@/app/components/ui/checkbox';
-import { Badge } from '@/app/components/ui/badge';
 import {
   Star,
   Shield,
@@ -17,9 +16,8 @@ import {
   ChevronLeft,
   Loader2,
 } from 'lucide-react';
-import { motion } from 'motion/react';
 import type { Product, Review } from '@/types';
-import { getStorageUrl, addReview } from '@/services/api';
+import { addReview } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { buildProductUrlPath } from '@/util/productUrl';
 import { toast } from 'sonner';
@@ -197,7 +195,7 @@ export function ProductReviewsPageClient({ product }: ProductReviewsPageClientPr
   }, [reviews]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-white dark:bg-gray-950">
       <Header />
 
       <main className="max-w-6xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-12">
@@ -213,11 +211,11 @@ export function ProductReviewsPageClient({ product }: ProductReviewsPageClientPr
         </nav>
 
         <div className="flex items-center justify-between mb-2 sm:mb-4">
-          <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white px-1 line-clamp-2">
+          <h1 className="font-display uppercase tracking-tight leading-[0.95] text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white px-1 line-clamp-2">
             {product.designation_fr}
           </h1>
         </div>
-        <h2 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 lg:mb-6 px-1">
+        <h2 className="font-display uppercase tracking-tight text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 lg:mb-6 px-1">
           Avis clients
         </h2>
 
@@ -226,15 +224,15 @@ export function ProductReviewsPageClient({ product }: ProductReviewsPageClientPr
           <aside className="lg:col-span-4 space-y-3 sm:space-y-4 lg:space-y-6 min-w-0">
             {/* Rating Summary */}
             <div className="p-4 sm:p-5 lg:p-6 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
-              <div className="flex items-center gap-2 text-green-600 dark:text-green-400 text-xs sm:text-sm font-medium mb-3 sm:mb-4">
+              <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-xs sm:text-sm font-display uppercase tracking-wide font-semibold mb-3 sm:mb-4">
                 <Shield className="h-4 w-4 sm:h-5 sm:w-5" />
                 <span>100% authentique</span>
               </div>
               <div className="flex items-baseline gap-2 mb-2">
-                <span className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white">
+                <span className="font-display font-bold tracking-tight tabular-nums text-4xl sm:text-5xl lg:text-6xl text-gray-900 dark:text-white">
                   {rating > 0 ? rating.toFixed(1) : '–'}
                 </span>
-                <span className="text-gray-500 dark:text-gray-400 text-base sm:text-lg">/ 5</span>
+                <span className="text-gray-500 dark:text-gray-400 text-base sm:text-lg tabular-nums">/ 5</span>
               </div>
               <div className="flex items-center gap-1 mb-2 sm:mb-3">
                 {[1, 2, 3, 4, 5].map((i) => (
@@ -265,7 +263,7 @@ export function ProductReviewsPageClient({ product }: ProductReviewsPageClientPr
                       </button>
                       <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-green-500 rounded-full transition-all"
+                          className="h-full bg-red-600 rounded-full transition-all"
                           style={{ width: `${pct}%` }}
                         />
                       </div>
@@ -278,7 +276,7 @@ export function ProductReviewsPageClient({ product }: ProductReviewsPageClientPr
               {isAuthenticated && (
                 <Button
                   onClick={() => setShowReviewForm(!showReviewForm)}
-                  className="mt-6 w-full bg-red-600 hover:bg-red-700 text-white"
+                  className="mt-6 w-full bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide font-semibold"
                   size="lg"
                 >
                   {showReviewForm ? 'Annuler' : 'Écrire un avis'}
@@ -324,7 +322,7 @@ export function ProductReviewsPageClient({ product }: ProductReviewsPageClientPr
                   <Button
                     onClick={handleSubmitReview}
                     disabled={reviewStars === 0 || isSubmittingReview}
-                    className="w-full bg-red-600 hover:bg-red-700 text-white"
+                    className="w-full bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide font-semibold"
                   >
                     {isSubmittingReview ? (
                       <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Publication...</>
@@ -376,7 +374,7 @@ export function ProductReviewsPageClient({ product }: ProductReviewsPageClientPr
           {/* Main – Reviews List */}
           <div className="lg:col-span-8 space-y-3 sm:space-y-4 lg:space-y-6 min-w-0">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 lg:gap-4 mb-3 sm:mb-4">
-              <h3 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 dark:text-white">
+              <h3 className="font-display uppercase tracking-tight text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">
                 Avis clients ({filteredReviews.length})
               </h3>
               <div className="flex items-center gap-3">

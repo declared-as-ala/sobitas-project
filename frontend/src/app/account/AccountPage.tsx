@@ -9,7 +9,7 @@ import { ProfileSection } from './ProfileSection';
 import { OrdersSection } from './OrdersSection';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 import { User, Package } from 'lucide-react';
-import { motion } from 'motion/react';
+import { PageHeader } from '@/app/components/PageHeader';
 import { LoadingSpinner } from '@/app/components/LoadingSpinner';
 
 export default function AccountPage() {
@@ -39,39 +39,38 @@ export default function AccountPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Header />
-      
+
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-8">
-            Mon Compte
-          </h1>
+        <PageHeader kicker="Espace client" title="Mon Compte" />
 
-          <Tabs defaultValue="profile" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-8">
-              <TabsTrigger value="profile" className="flex items-center gap-2">
-                <User className="h-4 w-4" />
-                Profil
-              </TabsTrigger>
-              <TabsTrigger value="orders" className="flex items-center gap-2">
-                <Package className="h-4 w-4" />
-                Mes Commandes
-              </TabsTrigger>
-            </TabsList>
+        <Tabs defaultValue="profile" className="w-full mt-8">
+          <TabsList className="grid w-full grid-cols-2 mb-8 h-auto p-1 rounded-xl bg-gray-100 dark:bg-gray-900 border border-gray-100 dark:border-gray-800">
+            <TabsTrigger
+              value="profile"
+              className="flex items-center justify-center gap-2 rounded-lg py-2.5 font-display uppercase tracking-wide text-sm data-[state=active]:bg-red-600 data-[state=active]:text-white data-[state=active]:shadow-sm"
+            >
+              <User className="h-4 w-4" aria-hidden="true" />
+              Profil
+            </TabsTrigger>
+            <TabsTrigger
+              value="orders"
+              className="flex items-center justify-center gap-2 rounded-lg py-2.5 font-display uppercase tracking-wide text-sm data-[state=active]:bg-red-600 data-[state=active]:text-white data-[state=active]:shadow-sm"
+            >
+              <Package className="h-4 w-4" aria-hidden="true" />
+              Mes Commandes
+            </TabsTrigger>
+          </TabsList>
 
-            <TabsContent value="profile">
-              <ProfileSection />
-            </TabsContent>
+          <TabsContent value="profile">
+            <ProfileSection />
+          </TabsContent>
 
-            <TabsContent value="orders">
-              <OrdersSection />
-            </TabsContent>
-          </Tabs>
-        </motion.div>
+          <TabsContent value="orders">
+            <OrdersSection />
+          </TabsContent>
+        </Tabs>
       </main>
 
       <Footer />

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { motion } from 'motion/react';
 import { Calculator, Sparkles } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
@@ -36,7 +35,7 @@ export function ProteinCalculator() {
 
     const baseProtein = weightNum * baseMultipliers[goal];
     const totalProtein = Math.round(baseProtein * activityMultipliers[activity]);
-    
+
     setResult(totalProtein);
   };
 
@@ -53,14 +52,14 @@ export function ProteinCalculator() {
   };
 
   return (
-    <Card className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-950/20 dark:to-orange-950/20 border-red-200 dark:border-red-900 shadow-xl">
+    <Card className="bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 rounded-xl shadow-sm">
       <CardHeader>
         <div className="flex items-center gap-3 mb-2">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center">
-            <Calculator className="h-6 w-6 text-white" />
+          <div className="w-12 h-12 rounded-lg bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 flex items-center justify-center">
+            <Calculator className="h-6 w-6" strokeWidth={1.75} />
           </div>
           <div>
-            <CardTitle className="text-2xl">Calculateur de Protéines</CardTitle>
+            <CardTitle className="text-2xl font-display uppercase tracking-tight">Calculateur de Protéines</CardTitle>
             <CardDescription>
               Trouvez votre besoin quotidien en protéines
             </CardDescription>
@@ -76,7 +75,7 @@ export function ProteinCalculator() {
             placeholder="Ex: 75"
             value={weight}
             onChange={(e) => setWeight(e.target.value)}
-            className="h-12 text-lg"
+            className="h-12 text-lg rounded-xl"
           />
         </div>
 
@@ -110,25 +109,21 @@ export function ProteinCalculator() {
 
         <Button
           onClick={calculateProtein}
-          className="w-full bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white h-12 text-lg font-bold"
+          className="w-full bg-red-600 hover:bg-red-700 text-white h-12 text-lg font-display uppercase tracking-wide"
         >
           Calculer
         </Button>
 
         {result !== null && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white dark:bg-gray-900 rounded-xl p-6 border-2 border-red-500 shadow-lg"
-          >
+          <div className="bg-white dark:bg-gray-950 rounded-xl p-6 border border-red-200 dark:border-red-900/60 shadow-sm">
             <div className="flex items-center gap-3 mb-4">
-              <Sparkles className="h-6 w-6 text-yellow-500" />
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+              <Sparkles className="h-6 w-6 text-red-600 dark:text-red-400" strokeWidth={1.75} />
+              <h3 className="font-display uppercase tracking-tight text-xl font-bold text-gray-900 dark:text-white">
                 Vos besoins quotidiens
               </h3>
             </div>
             <div className="text-center">
-              <p className="text-5xl font-bold text-red-600 dark:text-red-400 mb-2">
+              <p className="font-display font-bold tracking-tight text-5xl text-red-600 dark:text-red-400 mb-2">
                 {result}g
               </p>
               <p className="text-gray-600 dark:text-gray-400 mb-4">
@@ -139,14 +134,14 @@ export function ProteinCalculator() {
               </p>
               <Button
                 asChild
-                className="w-full bg-red-600 hover:bg-red-700 text-white"
+                className="w-full bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide"
               >
                 <Link href="/shop">
                   Trouver mes produits
                 </Link>
               </Button>
             </div>
-          </motion.div>
+          </div>
         )}
       </CardContent>
     </Card>

@@ -9,7 +9,7 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
-import { Lock, Loader2 } from 'lucide-react';
+import { Lock, Loader2, Mail } from 'lucide-react';
 import { resetPasswordWithToken } from '@/services/api';
 import { toast } from 'sonner';
 
@@ -55,46 +55,63 @@ export default function ResetPasswordClient() {
   const invalid = !token || !email;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Header />
-      <main className="max-w-md mx-auto px-4 py-16">
+      <main className="max-w-md mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
         {invalid ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>Lien invalide</CardTitle>
-              <CardDescription>
+          <Card className="border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+            <CardHeader className="text-center">
+              <CardTitle className="font-display uppercase tracking-tight text-3xl font-bold text-gray-900 dark:text-white">Lien invalide</CardTitle>
+              <CardDescription className="text-gray-600 dark:text-gray-400">
                 Utilisez le lien reçu par e-mail ou demandez une nouvelle réinitialisation.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button asChild variant="outline">
+              <Button
+                asChild
+                variant="outline"
+                className="w-full h-11 rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950/40"
+              >
                 <Link href="/forgot-password">Demander un nouveau lien</Link>
               </Button>
             </CardContent>
           </Card>
         ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-2xl">Nouveau mot de passe</CardTitle>
-              <CardDescription>Choisissez un mot de passe sécurisé (minimum 6 caractères).</CardDescription>
+          <Card className="border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+            <CardHeader className="text-center">
+              <span className="inline-flex items-center justify-center gap-2 mb-3 font-display uppercase tracking-[0.2em] text-[11px] sm:text-xs font-semibold text-red-600 dark:text-red-400">
+                <span className="h-px w-5 bg-red-600 dark:bg-red-400" aria-hidden="true" />
+                Sécurité
+              </span>
+              <CardTitle className="font-display uppercase tracking-tight text-3xl font-bold text-gray-900 dark:text-white">Nouveau mot de passe</CardTitle>
+              <CardDescription className="text-gray-600 dark:text-gray-400">Choisissez un mot de passe sécurisé (minimum 6 caractères).</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={onSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">E-mail</Label>
-                  <Input id="email" type="email" value={email} readOnly className="bg-muted" />
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      readOnly
+                      className="pl-10 h-11 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">Nouveau mot de passe</Label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                     <Input
                       id="password"
                       type="password"
                       required
                       minLength={6}
                       autoComplete="new-password"
-                      className="pl-9"
+                      className="pl-10 h-11 rounded-xl focus-visible:ring-red-500 dark:focus-visible:ring-red-400"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                     />
@@ -103,20 +120,20 @@ export default function ResetPasswordClient() {
                 <div className="space-y-2">
                   <Label htmlFor="password_confirmation">Confirmer</Label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                     <Input
                       id="password_confirmation"
                       type="password"
                       required
                       minLength={6}
                       autoComplete="new-password"
-                      className="pl-9"
+                      className="pl-10 h-11 rounded-xl focus-visible:ring-red-500 dark:focus-visible:ring-red-400"
                       value={passwordConfirmation}
                       onChange={(e) => setPasswordConfirmation(e.target.value)}
                     />
                   </div>
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full h-11 bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide" disabled={loading}>
                   {loading ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -127,7 +144,11 @@ export default function ResetPasswordClient() {
                   )}
                 </Button>
               </form>
-              <Button variant="ghost" className="mt-4 w-full" asChild>
+              <Button
+                variant="ghost"
+                className="mt-4 w-full text-gray-600 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
+                asChild
+              >
                 <Link href="/login">Connexion</Link>
               </Button>
             </CardContent>

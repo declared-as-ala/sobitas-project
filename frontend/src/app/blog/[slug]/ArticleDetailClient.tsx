@@ -9,7 +9,6 @@ import { Button } from '@/app/components/ui/button';
 import { BlogRecommendedProducts } from '@/app/blog/BlogRecommendedProducts';
 import { ArrowLeft, Calendar, Clock, ArrowRight, Share2, Sparkles } from 'lucide-react';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
-import { motion } from 'motion/react';
 import type { Article } from '@/types';
 import { blogHref } from '@/util/blogSlug';
 import { getStorageUrl } from '@/services/api';
@@ -216,11 +215,7 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
       <Header />
       
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
+        <div>
           {/* Back Button */}
           <Button
             variant="ghost"
@@ -231,21 +226,25 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
             Retour au blog
           </Button>
 
-          <article className="bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl shadow-sm overflow-hidden">
+          <article className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
             {/* Article Header */}
             <header className="px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-4 sm:pb-6">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6 leading-tight">
+              <span className="inline-flex items-center gap-2 mb-3 font-display uppercase tracking-[0.2em] text-[11px] sm:text-xs font-semibold text-red-600 dark:text-red-400">
+                <span className="h-px w-5 bg-red-600 dark:bg-red-400" aria-hidden="true" />
+                Blog
+              </span>
+              <h1 className="font-display uppercase tracking-tight leading-[1.05] font-bold text-gray-900 dark:text-white text-3xl sm:text-4xl lg:text-5xl mb-4 sm:mb-6">
                 {decodeHtmlEntities(article.designation_fr || '')}
               </h1>
-              
+
               {/* Meta Information */}
               <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm sm:text-base text-gray-600 dark:text-gray-400">
                 <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <Calendar className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={1.75} />
                   <span>{format(articleDate, 'd MMMM yyyy', { locale: fr })}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <Clock className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={1.75} />
                   <span>{readingTime} min de lecture</span>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 ml-auto">
@@ -253,7 +252,7 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
                     variant="outline"
                     size="sm"
                     onClick={handleSummarizeWithChatGPT}
-                    className="border-emerald-500/60 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 dark:border-emerald-500/50"
+                    className="border-gray-200 text-gray-700 hover:border-red-600 hover:text-red-600 dark:border-gray-700 dark:text-gray-300 dark:hover:border-red-400 dark:hover:text-red-400"
                   >
                     <Sparkles className="h-4 w-4 mr-2" />
                     Résumer avec ChatGPT
@@ -315,10 +314,10 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
               </div>
               {article.related_shop_categories && article.related_shop_categories.length > 0 ? (
                 <nav
-                  className="mt-8 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/40 p-4 sm:p-6"
+                  className="mt-8 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 p-4 sm:p-6"
                   aria-label="Catégories boutique liées"
                 >
-                  <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                  <h2 className="font-display uppercase tracking-tight text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-3">
                     Voir aussi sur la boutique
                   </h2>
                   <ul className="flex flex-wrap gap-2 sm:gap-3">
@@ -326,7 +325,7 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
                       <li key={c.slug}>
                         <Link
                           href={`/${encodeURIComponent(c.slug)}`}
-                          className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm font-medium text-gray-800 dark:text-gray-100 hover:border-red-300 hover:text-red-600 dark:hover:border-red-800 dark:hover:text-red-400 transition-colors"
+                          className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm font-medium text-gray-800 dark:text-gray-100 hover:border-red-300 hover:text-red-600 dark:hover:border-red-800 dark:hover:text-red-400 transition-colors"
                         >
                           {c.slug.replace(/-/g, ' ')}
                         </Link>
@@ -341,7 +340,7 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
 
           {/* Internal linking: creatine category CTA for creatine-related articles */}
           {/\bcréatine\b|\bcreatine\b/i.test(`${article.designation_fr ?? ''} ${article.description_fr ?? ''}`) && (
-            <div className="mt-6 p-4 sm:p-5 rounded-xl border border-amber-200/60 dark:border-amber-900/30 bg-amber-50/40 dark:bg-amber-950/10">
+            <div className="mt-6 p-4 sm:p-5 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
               <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Prêt à passer à l'action ?</p>
               <p className="text-sm text-gray-700 dark:text-gray-300">
                 <Link href="/creatine" className="text-red-600 dark:text-red-400 font-medium hover:underline">Voir toutes nos créatines disponibles en Tunisie</Link> : monohydrate, micronisée, Creapure®, capsules — livraison rapide et paiement à la livraison partout en Tunisie.
@@ -350,7 +349,7 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
           )}
           {/* Internal linking: whey category for whey-related articles */}
           {/\bwhey\b|\bprot[eé]ine\s+(lactos[eé]rum|lait)\b/i.test(`${article.designation_fr ?? ''} ${article.description_fr ?? ''}`) && (
-            <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30">
+            <div className="mt-6 px-4 sm:px-6 lg:px-8 py-4 sm:py-6 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
               <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
                 <Link href="/proteine-whey" className="text-red-600 dark:text-red-400 font-medium hover:underline">Whey protein Tunisie</Link> au meilleur prix : livraison rapide, produits originaux. <Link href="/proteine-whey" className="text-red-600 dark:text-red-400 hover:underline">Acheter whey en Tunisie</Link> – découvrez notre sélection de <Link href="/proteine-whey" className="text-red-600 dark:text-red-400 hover:underline">meilleure whey protein</Link> sur Proteine Tunisie.
               </p>
@@ -360,50 +359,40 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
           {/* Related Articles */}
           {relatedArticles.length > 0 && (
             <div className="mt-8 sm:mt-12 lg:mt-16 pt-8 sm:pt-12 border-t border-gray-200 dark:border-gray-800">
-              <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-6 sm:mb-8">
+              <h2 className="font-display uppercase tracking-tight leading-[0.95] text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-6 sm:mb-8">
                 Articles similaires
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {relatedArticles.map((related) => (
-                  <Link key={related.id} href={blogHref(related.slug)}>
-                    <motion.article
-                      initial={{ opacity: 0, y: 20 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true }}
-                      whileHover={{ scale: 1.02 }}
-                      transition={{ duration: 0.3 }}
-                      className="group bg-white dark:bg-gray-900 rounded-lg sm:rounded-xl shadow-sm hover:shadow-xl dark:shadow-none dark:hover:shadow-red-900/10 transition-all duration-300 overflow-hidden h-full flex flex-col border border-gray-100 dark:border-gray-700/50"
-                    >
-                      {related.cover && (
-                        <div className="relative h-40 sm:h-48 overflow-hidden">
-                          <SafeImage
-                            src={getStorageUrl(related.cover, related.updated_at || related.created_at)}
-                            alt={related.designation_fr || 'Related article'}
-                            fill
-                            className="object-cover transition-transform duration-500 group-hover:scale-110"
-                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                        </div>
-                      )}
-                      <div className="p-4 sm:p-5 flex flex-col flex-grow">
-                        <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 sm:mb-3">
-                          <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
-                          {related.created_at ? format(new Date(related.created_at), 'd MMM yyyy', { locale: fr }) : 'Récent'}
-                        </div>
-                        <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-2 sm:mb-3 line-clamp-2 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors flex-grow">
-                          {decodeHtmlEntities(related.designation_fr || '')}
-                        </h3>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="w-full mt-auto text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 justify-start"
-                        >
-                          Lire la suite
-                          <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                        </Button>
+                  <Link
+                    key={related.id}
+                    href={blogHref(related.slug)}
+                    className="group flex h-full flex-col overflow-hidden rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm transition-all duration-300 hover:shadow-xl"
+                  >
+                    {related.cover && (
+                      <div className="relative aspect-[4/3] overflow-hidden bg-gray-100 dark:bg-gray-800">
+                        <SafeImage
+                          src={getStorageUrl(related.cover, related.updated_at || related.created_at)}
+                          alt={related.designation_fr || 'Related article'}
+                          fill
+                          className="object-cover transition-transform duration-500 group-hover:scale-105"
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        />
                       </div>
-                    </motion.article>
+                    )}
+                    <div className="p-4 sm:p-5 flex flex-col flex-grow">
+                      <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 sm:mb-3">
+                        <Calendar className="h-4 w-4" strokeWidth={1.75} />
+                        {related.created_at ? format(new Date(related.created_at), 'd MMM yyyy', { locale: fr }) : 'Récent'}
+                      </div>
+                      <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-3 line-clamp-2 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors flex-grow">
+                        {decodeHtmlEntities(related.designation_fr || '')}
+                      </h3>
+                      <span className="mt-auto inline-flex items-center gap-1.5 text-sm font-semibold text-red-600 dark:text-red-400">
+                        Lire la suite
+                        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" strokeWidth={1.75} aria-hidden="true" />
+                      </span>
+                    </div>
                   </Link>
                 ))}
               </div>
@@ -421,7 +410,7 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
               Voir tous les articles
             </Button>
           </div>
-        </motion.div>
+        </div>
       </main>
 
       <Footer />

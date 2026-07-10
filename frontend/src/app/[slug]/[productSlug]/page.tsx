@@ -18,7 +18,7 @@ import { buildShopProductSocialMetadata } from '@/util/productSeo';
 import type { Product } from '@/types';
 
 const ProductDetailClient = dynamic(() => import('@/app/products/[id]/ProductDetailClient').then((m) => ({ default: m.ProductDetailClient })), {
-  loading: () => <div className="min-h-screen animate-pulse bg-gray-50" />,
+  loading: () => <div className="min-h-screen animate-pulse bg-white dark:bg-gray-950" />,
 });
 
 export type PageProps = {

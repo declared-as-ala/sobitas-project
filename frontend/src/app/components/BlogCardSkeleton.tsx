@@ -2,10 +2,10 @@
 
 export function BlogCardSkeleton() {
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm h-full flex flex-col animate-pulse">
+    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm h-full flex flex-col animate-pulse">
       {/* Image skeleton */}
-      <div className="relative aspect-[4/3] overflow-hidden bg-gray-200 dark:bg-gray-700 min-h-[200px] sm:min-h-[240px] md:min-h-[280px] lg:min-h-[320px]">
-        <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800" />
+      <div className="relative aspect-[4/3] overflow-hidden bg-gray-200 dark:bg-gray-800 min-h-[200px] sm:min-h-[240px] md:min-h-[280px] lg:min-h-[320px]">
+        <div className="w-full h-full bg-gray-200 dark:bg-gray-800" />
       </div>
       
       {/* Content skeleton */}

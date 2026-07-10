@@ -43,8 +43,8 @@ export function PackCardImage({
     'relative w-full flex-shrink-0 overflow-hidden rounded-t-xl lg:rounded-t-2xl',
     isContain
       ? // Fixed frame + object-contain: full packshot visible; taller on narrow 2-col grids, wider on sm+.
-        'aspect-[4/5] sm:aspect-[3/2] w-full bg-gradient-to-b from-gray-50 via-gray-50/95 to-white dark:from-gray-800 dark:via-gray-800/95 dark:to-gray-900/90'
-      : 'h-[220px] sm:h-[240px] lg:h-[260px] xl:h-[280px] bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900/80'
+        'aspect-[4/5] sm:aspect-[3/2] w-full bg-gray-50 dark:bg-gray-900'
+      : 'h-[220px] sm:h-[240px] lg:h-[260px] xl:h-[280px] bg-gray-50 dark:bg-gray-900'
   );
 
   const imageClasses = cn(
@@ -89,17 +89,6 @@ export function PackCardImage({
           </div>
         )}
       </LinkWithLoading>
-
-      {imageSrc && !hasError && (
-        <div
-          className={cn(
-            'pointer-events-none absolute inset-0',
-            isContain
-              ? 'bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0)_55%,rgba(0,0,0,0.04)_100%)] dark:bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0)_55%,rgba(0,0,0,0.12)_100%)]'
-              : 'bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0)_60%,rgba(0,0,0,0.03)_100%)] dark:bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0)_60%,rgba(0,0,0,0.1)_100%)]'
-          )}
-        />
-      )}
     </div>
   );
 }
