@@ -1,8 +1,7 @@
 'use client';
 
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
-import { motion } from 'motion/react';
-import { ShoppingCart, Heart, Flame, Sparkles, TrendingUp, Truck } from 'lucide-react';
+import { ShoppingCart, Heart, Flame, Sparkles, TrendingUp } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { PackCardImage } from '@/app/components/PackCardImage';
 import type { Product as ApiProduct } from '@/types';
@@ -148,11 +147,7 @@ export const ProductCard = memo(function ProductCard({
   const isCompact = variant === 'compact';
 
   return (
-    <motion.article
-      initial={priority ? { opacity: 1, y: 0 } : { opacity: 0, y: 12 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '20px' }}
-      transition={{ duration: 0.2 }}
+    <article
       className={[
         'group flex flex-col h-full w-full min-w-0 overflow-hidden',
         'rounded-xl lg:rounded-2xl',
@@ -180,7 +175,7 @@ export const ProductCard = memo(function ProductCard({
         <button
           type="button"
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(toFavoriteProduct(product)); }}
-          className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 z-10 p-1.5 sm:p-2 rounded-full bg-white/90 dark:bg-gray-700/95 shadow-sm backdrop-blur-sm hover:bg-white dark:hover:bg-gray-700 transition-all hover:scale-110 pointer-events-auto"
+          className="absolute top-2 right-2 sm:top-2.5 sm:right-2.5 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/90 dark:bg-gray-700/95 shadow-sm backdrop-blur-sm hover:bg-white dark:hover:bg-gray-700 transition-all hover:scale-110 pointer-events-auto"
           aria-label={favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
         >
           <Heart className={`h-4 w-4 ${favorite ? 'fill-red-500 text-red-500' : 'text-gray-600 dark:text-gray-300'}`} />
@@ -269,38 +264,22 @@ export const ProductCard = memo(function ProductCard({
           )}
         </div>
 
-        {/* CTA – desktop */}
-        <div className="hidden lg:block flex-shrink-0 pt-3 mt-1 border-t border-gray-100 dark:border-gray-700">
+        {/* CTA – single responsive add-to-cart button */}
+        <div className="flex-shrink-0 pt-2.5 sm:pt-3 mt-1 border-t border-gray-100 dark:border-gray-700">
           <Button
             size="sm"
-            className={`w-full min-h-[44px] h-auto py-2.5 rounded-xl font-semibold text-sm whitespace-normal transition-all duration-150 select-none ${productData.isInStock && canAddMore ? 'bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg' : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed text-white'}`}
+            className={`flex w-full min-h-[44px] h-auto items-center justify-center gap-1.5 rounded-lg sm:rounded-xl px-2 sm:px-3 py-2 sm:py-2.5 font-semibold text-xs sm:text-sm leading-snug whitespace-normal active:scale-[0.98] transition-all duration-150 select-none ${productData.isInStock && canAddMore ? 'bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg' : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed text-white'}`}
             onClick={handleAddToCart}
             disabled={isAdding || !productData.isInStock || !canAddMore}
             aria-label={!canAddMore && productData.isInStock ? 'Stock maximum atteint' : `Ajouter ${productData.name} au panier`}
           >
-            <ShoppingCart className="size-4 shrink-0 mr-2" aria-hidden="true" />
+            <ShoppingCart className="size-4 shrink-0" aria-hidden="true" />
             <span className="text-center leading-snug line-clamp-2 break-words">
               {!productData.isInStock || stockDisponible <= 0 ? 'Rupture de stock' : !canAddMore ? 'Stock max' : isAdding ? 'Ajouté !' : 'Ajouter au panier'}
             </span>
           </Button>
         </div>
-
-        {/* CTA – mobile/tablet visible, desktop hidden (overlay is used) */}
-        <div className="flex-shrink-0 pt-2.5 sm:pt-3 mt-1 border-t border-gray-100 dark:border-gray-700 lg:hidden block">
-          <Button
-            size="sm"
-            className={`w-full min-h-[44px] h-auto py-2 gap-1 rounded-lg sm:rounded-xl px-2 sm:px-3 font-semibold text-xs leading-snug sm:text-sm sm:leading-normal whitespace-normal active:scale-[0.98] transition-all duration-150 select-none flex flex-col sm:flex-row sm:gap-0 items-center justify-center ${productData.isInStock && canAddMore ? 'bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg' : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed text-white'}`}
-            onClick={handleAddToCart}
-            disabled={isAdding || !productData.isInStock || !canAddMore}
-            aria-label={`Ajouter ${productData.name} au panier`}
-          >
-            <ShoppingCart className="size-3.5 sm:size-4 shrink-0 sm:mr-2" aria-hidden="true" />
-            <span className="text-center leading-tight line-clamp-2 max-w-full break-words">
-              {!productData.isInStock || stockDisponible <= 0 ? 'Rupture de stock' : !canAddMore ? 'Stock max' : isAdding ? 'Ajouté !' : 'Ajouter au panier'}
-            </span>
-          </Button>
-        </div>
       </div>
-    </motion.article>
+    </article>
   );
 });

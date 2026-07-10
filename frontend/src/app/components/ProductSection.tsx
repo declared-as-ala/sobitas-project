@@ -2,6 +2,7 @@
 
 import { memo } from 'react';
 import { ProductCard } from './ProductCard';
+import { ProductGrid } from './ProductGrid';
 import { SectionHeader } from './SectionHeader';
 import { Product as DataProduct } from '@/data/products';
 import type { Product as ApiProduct } from '@/types';
@@ -48,8 +49,8 @@ export const ProductSection = memo(function ProductSection({
           viewAllLabel={viewAllLabel}
         />
 
-        {/* Products Grid - Optimized responsive layout */}
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+        {/* Products grid — shared canonical ProductGrid (2 → 3 → 4, no orphan rows) */}
+        <ProductGrid>
           {products.map((product) => (
             <ProductCard
               key={product.id}
@@ -59,7 +60,7 @@ export const ProductSection = memo(function ProductSection({
               imageContext={imageContext}
             />
           ))}
-        </div>
+        </ProductGrid>
       </div>
     </section>
   );

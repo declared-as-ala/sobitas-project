@@ -1,7 +1,3 @@
-'use client';
-
-import { motion } from 'motion/react';
-
 interface LoadingSpinnerProps {
   size?: 'sm' | 'md' | 'lg';
   fullScreen?: boolean;
@@ -9,8 +5,9 @@ interface LoadingSpinnerProps {
 }
 
 /**
- * Same loading experience as "Voir les offres" (GlobalLoader): overlay + card + CSS spinner + message.
- * Used across the app for consistency (blog, brands, account, login, Suspense fallbacks, etc.).
+ * Indeterminate/action loader: overlay + card + pure-CSS spinner + message.
+ * Server-safe (no 'use client', no motion) so route-level loaders stay zero-JS.
+ * For content placeholders prefer a layout-matching <Skeleton>, not this spinner.
  */
 export function LoadingSpinner({
   size = 'md',
@@ -24,33 +21,27 @@ export function LoadingSpinner({
   };
 
   const card = (
-    <motion.div
-      initial={fullScreen ? { scale: 0.95, opacity: 0 } : undefined}
-      animate={{ scale: 1, opacity: 1 }}
-      className="bg-white dark:bg-gray-800 rounded-xl px-5 py-4 shadow-xl flex items-center gap-3 min-w-[200px] justify-center"
-    >
+    <div className="bg-white dark:bg-gray-800 rounded-xl px-5 py-4 shadow-xl flex items-center gap-3 min-w-[180px] max-w-[calc(100vw-2rem)] justify-center">
       <div
         className={`shrink-0 rounded-full border-gray-200 dark:border-gray-600 border-t-red-600 dark:border-t-red-500 animate-spin ${spinnerSizeClasses[size]}`}
         aria-hidden
       />
-      <p className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
+      <p className="text-sm font-medium text-gray-700 dark:text-gray-300 text-center">
         {message}
       </p>
-    </motion.div>
+    </div>
   );
 
   if (fullScreen) {
     return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+      <div
         className="fixed inset-0 bg-black/50 dark:bg-black/70 z-[9999] flex items-center justify-center p-4"
         aria-busy="true"
         aria-live="polite"
         role="status"
       >
         {card}
-      </motion.div>
+      </div>
     );
   }
 
