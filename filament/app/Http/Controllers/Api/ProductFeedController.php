@@ -25,8 +25,12 @@ class ProductFeedController extends Controller
 
         $products = Cache::remember('merchant_feed_products', self::CACHE_TTL, function () {
             return Product::where('publier', 1)
-                ->where('rupture', '!=', 0)
-                ->with(['sous_categorie', 'brand'])
+                // rupture: 1 = OUT of stock, 0 = in stock (Product.php:153 + saving hook :73-78).
+                // Was `!= 0`, which shipped ONLY out-of-stock products. Feed the in-stock ones.
+                ->where('rupture', 0)
+                // Relationship is sousCategorie() (Product.php:87); `sous_categorie` (snake) is not a
+                // real relation and made ->with() throw RelationNotFoundException → the feed 500'd.
+                ->with(['sousCategorie', 'brand'])
                 ->select([
                     'id', 'designation_fr', 'slug', 'prix', 'promo', 'cover',
                     'description_fr', 'sous_categorie_id', 'brand_id', 'code_product',
@@ -41,7 +45,8 @@ class ProductFeedController extends Controller
 
         if ($format === 'json') {
             return response()->json($this->buildJsonFeed($products, $coord, $currency))
-                ->header('Cache-Control', 'public, max-age=1800');
+                ->header('Cache-Control', 'public, max-age=1800')
+                ->header('X-Robots-Tag', 'noindex');
         }
 
         $xml = $this->buildXmlFeed($products, $coord, $currency);
@@ -49,6 +54,8 @@ class ProductFeedController extends Controller
         return response($xml, 200, [
             'Content-Type'  => 'application/xml; charset=UTF-8',
             'Cache-Control' => 'public, max-age=1800',
+            // The feed is a data endpoint on the admin host — do not let it get indexed.
+            'X-Robots-Tag'  => 'noindex',
         ]);
     }
 
@@ -66,13 +73,15 @@ class ProductFeedController extends Controller
             $price      = $this->effectivePrice($p);
             $productUrl = $this->productUrl($p);
             $imageUrl   = $this->imageUrl($p->cover);
-            $category   = $p->sous_categorie?->designation_fr ?? 'Compléments alimentaires';
-            $brand      = $p->brand?->designation_fr ?? $storeName;
+            // Escape brand/product_type too (were raw — a name with & < > broke the XML).
+            $category   = htmlspecialchars($p->sousCategorie?->designation_fr ?? 'Compléments alimentaires', ENT_XML1, 'UTF-8');
+            $brand      = htmlspecialchars($p->brand?->designation_fr ?? $storeName, ENT_XML1, 'UTF-8');
             $desc       = strip_tags($p->description_fr ?? $p->designation_fr ?? '');
             $desc       = htmlspecialchars(mb_substr($desc, 0, 5000), ENT_XML1, 'UTF-8');
             $title      = htmlspecialchars($p->designation_fr ?? '', ENT_XML1, 'UTF-8');
             $sku        = htmlspecialchars($p->code_product ?? (string) $p->id, ENT_XML1, 'UTF-8');
-            $availability = ($p->rupture == 1) ? 'in stock' : 'out of stock';
+            // rupture 1 = out of stock, 0 = in stock. Was inverted (labeled OOS items 'in stock').
+            $availability = $p->rupture ? 'out of stock' : 'in stock';
 
             $items .= <<<XML
 
@@ -124,7 +133,7 @@ XML;
                 'id'           => (string) $p->id,
                 'title'        => $p->designation_fr,
                 'description'  => strip_tags($p->description_fr ?? $p->designation_fr ?? ''),
-                'availability' => ($p->rupture == 1) ? 'in stock' : 'out of stock',
+                'availability' => $p->rupture ? 'out of stock' : 'in stock',
                 'condition'    => 'new',
                 'price'        => "{$price} {$currency}",
                 'link'         => $this->productUrl($p),
@@ -146,7 +155,7 @@ XML;
 
     private function productUrl($product): string
     {
-        $subcatSlug = $product->sous_categorie?->slug;
+        $subcatSlug = $product->sousCategorie?->slug;
         $slug       = $product->slug ?? $product->id;
         $path       = $subcatSlug ? "/{$subcatSlug}/{$slug}" : "/shop/{$slug}";
         return self::SITE_URL . $path;
