@@ -1489,12 +1489,13 @@ function ShopContent({
               <div className="space-y-8 sm:space-y-12">
                 {/* 2-column mobile, 3-column tablet, 3/4-column desktop responsive grid */}
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 max-[360px]:gap-2 sm:gap-4 md:gap-5 lg:gap-6 min-w-0 w-full">
-                  {paginatedProducts.map(product => (
+                  {paginatedProducts.map((product, idx) => (
                     <ProductCard
                       key={product.id}
                       product={product}
                       variant="compact"
                       imageContext="packs"
+                      priority={idx < 4}
                     />
                   ))}
                 </div>

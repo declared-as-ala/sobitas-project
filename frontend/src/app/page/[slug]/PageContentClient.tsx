@@ -52,7 +52,7 @@ export function PageContentClient({ page }: PageContentClientProps) {
               className="object-cover"
               sizes="100vw"
               priority
-              unoptimized
+              quality={85}
             />
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-amber-900/10 to-amber-50/80" />
           </div>
@@ -141,21 +141,6 @@ export function PageContentClient({ page }: PageContentClientProps) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.45, delay: 0.2 }}
             >
-              {/* In-body cover image */}
-              {imageUrl && (
-                <div className="relative w-full aspect-[16/7] mb-10 sm:mb-12 rounded-2xl sm:rounded-3xl overflow-hidden shadow-xl border border-amber-100">
-                  <Image
-                    src={imageUrl}
-                    alt={page.title}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 100vw, 896px"
-                    priority
-                    unoptimized
-                  />
-                </div>
-              )}
-
               {/* Prose content — white bg, orange/gold accents */}
               <div
                 className="

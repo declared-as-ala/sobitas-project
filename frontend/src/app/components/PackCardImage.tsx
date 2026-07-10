@@ -19,6 +19,8 @@ interface PackCardImageProps {
   objectPosition?: string;
   scale?: number;
   product?: Product;
+  /** Eager-load this image (above-the-fold cards) to speed up LCP. */
+  priority?: boolean;
 }
 
 export function PackCardImage({
@@ -30,6 +32,7 @@ export function PackCardImage({
   objectPosition = 'center center',
   scale = 1,
   product,
+  priority = false,
 }: PackCardImageProps) {
   const [hasError, setHasError] = useState(false);
   const productHref = product ? buildProductUrlPath(product) : `/shop/${encodeURIComponent(slug || String(productId))}`;
@@ -72,7 +75,7 @@ export function PackCardImage({
               objectPosition: isContain ? 'center center' : objectPosition,
               transform: !isContain && scale > 1 ? `scale(${scale})` : undefined,
             }}
-            loading="lazy"
+            {...(priority ? { priority: true, fetchPriority: 'high' as const } : { loading: 'lazy' as const })}
             sizes="(max-width: 640px) 46vw, (max-width: 768px) 32vw, (max-width: 1024px) 26vw, (max-width: 1280px) 20vw, 16vw"
             quality={75}
             onError={() => setHasError(true)}
