@@ -5,7 +5,7 @@
  */
 
 import { getStorageUrl } from '@/services/api';
-import { getEffectivePrice } from '@/util/productPrice';
+import { getEffectivePrice, hasValidPromo } from '@/util/productPrice';
 import { isInStock } from '@/util/cartStock';
 import type { Product, FAQ, Review } from '@/types';
 
@@ -162,6 +162,54 @@ export function buildProductSchema(product: Product, baseUrl: string): object | 
  * Builds Product JSON-LD. Pass canonicalUrl so it matches rel=canonical (one script per product page).
  * Fallback when `json_ld_product` is missing from the API; prefer server-built graph from Laravel.
  */
+/**
+ * Compute AggregateRating + up to 3 Review snippets from a product's real (published) reviews.
+ * Returns {} when there are no valid reviews — we never fabricate ratings. Shared by
+ * buildProductJsonLd and sanitizeBackendProductJsonLd so the human PDP and the crawler/bot view
+ * carry the same stars (the sanitize path used to silently drop them).
+ */
+function buildAggregateRatingAndReviews(product: Product): { aggregateRating?: object; review?: object[] } {
+  const reviewsRaw = product.reviews ?? (product as { avis?: Review[] }).avis ?? [];
+  const reviews = (reviewsRaw as Review[]).filter((r) => {
+    if (r.publier !== undefined && r.publier !== 1) return false;
+    const star = typeof r.stars === 'number' ? r.stars : typeof r.note === 'number' ? r.note : NaN;
+    return Number.isFinite(star) && star >= 1 && star <= 5;
+  });
+  if (reviews.length === 0) return {};
+
+  const sum = reviews.reduce((s, r) => {
+    const v = typeof r.stars === 'number' ? r.stars : typeof r.note === 'number' ? r.note : 0;
+    return s + v;
+  }, 0);
+  const ratingValue = Math.max(1, Math.min(5, Math.round((sum / reviews.length) * 10) / 10));
+  const result: { aggregateRating?: object; review?: object[] } = {
+    aggregateRating: {
+      '@type': 'AggregateRating',
+      ratingValue: String(ratingValue),
+      bestRating: 5,
+      worstRating: 1,
+      reviewCount: reviews.length,
+    },
+  };
+  const reviewSnippets = reviews
+    .slice(0, 3)
+    .filter((r) => r.comment && String(r.comment).trim())
+    .map((r) => {
+      const authorName = (r.user?.name && String(r.user.name).trim()) || 'Client';
+      const raw = typeof r.stars === 'number' ? r.stars : typeof r.note === 'number' ? r.note : 5;
+      const ratingVal = Math.max(1, Math.min(5, raw));
+      return {
+        '@type': 'Review' as const,
+        author: { '@type': 'Person' as const, name: authorName },
+        datePublished: r.created_at || undefined,
+        reviewRating: { '@type': 'Rating' as const, ratingValue: ratingVal, bestRating: 5, worstRating: 1 },
+        reviewBody: String(r.comment).trim().slice(0, 1000),
+      };
+    });
+  if (reviewSnippets.length > 0) result.review = reviewSnippets;
+  return result;
+}
+
 export function buildProductJsonLd(product: Product, canonicalUrl: string): object | null {
   // Main product cover first so Google uses it as primary image in Product rich results.
   const rawImages = [product.schema?.image, product.seo?.image, product.cover, (product as { alt_cover?: string }).alt_cover].filter(Boolean) as string[];
@@ -171,8 +219,13 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
     .map((path) => getStorageUrl(path))
     .filter((url) => isValidImageUrl(url));
   const dedupedImages = [...new Set(imageArray)];
-  const schemaPrice = parsePriceForSchema(product.schema?.price);
-  const price = schemaPrice ?? getSchemaPrice(product);
+  // Authoritative Offer price = the effective (promo-aware) selling price, so structured data
+  // matches the price the user sees and the sanitizeBackendProductJsonLd path. Fall back to the
+  // backend's declared schema.price only when the effective price is unavailable.
+  const effectivePrice = getSchemaPrice(product);
+  const price = (Number.isFinite(effectivePrice) && effectivePrice > 0)
+    ? effectivePrice
+    : (parsePriceForSchema(product.schema?.price) ?? effectivePrice);
   const availability =
     product.schema?.availability
     ?? (isInStock(product) ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock');
@@ -217,7 +270,11 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
     hasMerchantReturnPolicy: DEFAULT_RETURN_POLICY,
   };
 
-  const untilRaw = product.schema?.price_valid_until ?? product.price_valid_until;
+  // On an active promo, the sale price is only valid until the promo expires — tell Google so it
+  // doesn't keep showing a stale sale price after the promotion ends.
+  const untilRaw = product.schema?.price_valid_until
+    ?? product.price_valid_until
+    ?? (hasValidPromo(product) ? product.promo_expiration_date : undefined);
   const until = untilRaw != null && String(untilRaw).trim() !== '' ? String(untilRaw).trim().slice(0, 10) : '';
   if (until) {
     offersPayload.priceValidUntil = until;
@@ -259,47 +316,9 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
     schema.mpn = product.mpn.trim();
   }
 
-  const reviewsRaw = product.reviews ?? (product as { avis?: Review[] }).avis ?? [];
-  const reviews = (reviewsRaw as Review[]).filter((r) => {
-    if (r.publier !== undefined && r.publier !== 1) return false;
-    const star = typeof r.stars === 'number' ? r.stars : typeof r.note === 'number' ? r.note : NaN;
-    return Number.isFinite(star) && star >= 1 && star <= 5;
-  });
-
-  /* Only add aggregateRating and review when real reviews exist (no fake ratings). */
-  if (reviews.length > 0) {
-    const sum = reviews.reduce((s, r) => {
-      const v = typeof r.stars === 'number' ? r.stars : typeof r.note === 'number' ? r.note : 0;
-      return s + v;
-    }, 0);
-    const ratingValue = Math.max(1, Math.min(5, Math.round((sum / reviews.length) * 10) / 10));
-    const reviewCount = reviews.length;
-    schema.aggregateRating = {
-      '@type': 'AggregateRating',
-      ratingValue: String(ratingValue),
-      bestRating: 5,
-      worstRating: 1,
-      reviewCount,
-    };
-    const reviewSnippets = reviews
-      .slice(0, 3)
-      .filter((r) => r.comment && String(r.comment).trim())
-      .map((r) => {
-        const authorName = (r.user?.name && String(r.user.name).trim()) || 'Client';
-        const raw = typeof r.stars === 'number' ? r.stars : typeof r.note === 'number' ? r.note : 5;
-        const ratingVal = Math.max(1, Math.min(5, raw));
-        return {
-          '@type': 'Review' as const,
-          author: { '@type': 'Person' as const, name: authorName },
-          datePublished: r.created_at || undefined,
-          reviewRating: { '@type': 'Rating' as const, ratingValue: ratingVal, bestRating: 5, worstRating: 1 },
-          reviewBody: String(r.comment).trim().slice(0, 1000),
-        };
-      });
-    if (reviewSnippets.length > 0) {
-      schema.review = reviewSnippets;
-    }
-  }
+  const ratingAndReviews = buildAggregateRatingAndReviews(product);
+  if (ratingAndReviews.aggregateRating) schema.aggregateRating = ratingAndReviews.aggregateRating;
+  if (ratingAndReviews.review) schema.review = ratingAndReviews.review;
 
   return schema;
 }
@@ -351,6 +370,14 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
     hasMerchantReturnPolicy: DEFAULT_RETURN_POLICY,
   };
 
+  // Mirror buildProductJsonLd: on an active promo the sale price expires with the promo.
+  const sanitizeUntilRaw = product.schema?.price_valid_until
+    ?? product.price_valid_until
+    ?? (hasValidPromo(product) ? product.promo_expiration_date : undefined);
+  const sanitizeUntil = sanitizeUntilRaw != null && String(sanitizeUntilRaw).trim() !== ''
+    ? String(sanitizeUntilRaw).trim().slice(0, 10) : '';
+  if (sanitizeUntil) offers.priceValidUntil = sanitizeUntil;
+
   const sanitized: Record<string, unknown> = {
     ...source,
     '@context': 'https://schema.org',
@@ -395,6 +422,15 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
   // in field returnPolicyCategory" warning even though our Offer-level policy is valid.
   delete sanitized.hasMerchantReturnPolicy;
 
+  // Re-derive AggregateRating/Review from the product's real reviews. The backend json_ld_product
+  // often omits these even when the PDP shows a visible star rating, so the bot view lost its stars.
+  // Delete any backend-provided values first so ours (star-clamped, author-validated) win.
+  delete sanitized.aggregateRating;
+  delete sanitized.review;
+  const ratingAndReviews = buildAggregateRatingAndReviews(product);
+  if (ratingAndReviews.aggregateRating) sanitized.aggregateRating = ratingAndReviews.aggregateRating;
+  if (ratingAndReviews.review) sanitized.review = ratingAndReviews.review;
+
   return sanitized;
 }
 
@@ -427,7 +463,7 @@ export function buildOrganizationSchema(baseUrl: string): object {
   const base = baseUrl.replace(/\/$/, '');
   return {
     '@context': 'https://schema.org',
-    '@type': 'Organization',
+    '@type': ['Organization', 'OnlineStore'],
     '@id': `${base}/#organization`,
     name: SITE_BRAND_NAME,
     url: base,
@@ -467,6 +503,7 @@ export function buildLocalBusinessSchema(baseUrl: string): object {
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',
     '@id': `${base}/#localbusiness`,
+    parentOrganization: { '@id': `${base}/#organization` },
     name: `${SITE_BRAND_NAME} – Protéines & Compléments Alimentaires Tunisie`,
     image: `${base}/icon.png`,
     logo: `${base}/logo.png`,
@@ -489,12 +526,21 @@ export function buildLocalBusinessSchema(baseUrl: string): object {
     priceRange: '$$',
     currenciesAccepted: 'TND',
     paymentAccepted: 'Cash on delivery, Bank transfer',
-    openingHoursSpecification: {
-      '@type': 'OpeningHoursSpecification',
-      dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
-      opens: '09:00',
-      closes: '19:00',
-    },
+    // Must match the visible hours on the Contact page (Lun→Sam 10h–19h30, Dimanche 14h–19h).
+    openingHoursSpecification: [
+      {
+        '@type': 'OpeningHoursSpecification',
+        dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+        opens: '10:00',
+        closes: '19:30',
+      },
+      {
+        '@type': 'OpeningHoursSpecification',
+        dayOfWeek: 'Sunday',
+        opens: '14:00',
+        closes: '19:00',
+      },
+    ],
     sameAs: [
       'https://www.facebook.com/protein.tn',
       'https://www.instagram.com/protein.tn',
@@ -644,10 +690,20 @@ export function buildArticleSchema(article: {
     ?.map((t) => (typeof t === 'string' ? t : t?.name))
     .filter(Boolean)
     .join(', ') || undefined;
-  const schemaImage = article.seo?.image || article.schema?.image || imageUrl || undefined;
+  // Guarantee an absolute image (Article rich results are ineligible without one): resolve storage
+  // paths, and fall back to the brand logo when the article has no cover.
+  const rawSchemaImage = article.seo?.image || article.schema?.image || imageUrl || '';
+  const schemaImage = rawSchemaImage
+    ? (rawSchemaImage.startsWith('http') ? rawSchemaImage : getStorageUrl(rawSchemaImage))
+    : `${base}/logo.png`;
   const published = article.schema?.date_published || article.created_at || undefined;
   const modified = article.schema?.date_modified || article.updated_at || article.created_at || undefined;
-  const authorName = article.seo?.author || article.schema?.author || SITE_BRAND_NAME;
+  // Author is Organization when it's the brand (the default for every article); Person only for a
+  // genuine human byline. A brand name under @type Person is a structured-data smell.
+  const rawAuthor = String(article.seo?.author || article.schema?.author || '').trim();
+  const author = rawAuthor && rawAuthor !== SITE_BRAND_NAME
+    ? { '@type': 'Person', name: rawAuthor }
+    : { '@type': 'Organization', name: SITE_BRAND_NAME, '@id': `${base}/#organization` };
   return {
     '@context': 'https://schema.org',
     '@type': article.schema?.type || 'BlogPosting',
@@ -661,10 +717,7 @@ export function buildArticleSchema(article: {
       '@type': 'WebPage',
       '@id': url,
     },
-    author: {
-      '@type': 'Person',
-      name: authorName,
-    },
+    author,
     articleSection: section,
     keywords,
     publisher: { '@type': 'Organization', name: SITE_BRAND_NAME, logo: { '@type': 'ImageObject', url: `${base}/icon.png` } },
