@@ -261,13 +261,10 @@ export default async function CategoryPage({ params }: PageProps) {
         description: collectionDesc,
       });
       validateStructuredData(collectionPageSchema, 'CollectionPage');
-      const productList = (sub.products ?? []).slice(0, 20).map((p: any) => {
-        const subCategory = p.sous_categorie || (p.sous_categories && p.sous_categories[0]);
-        const url = subCategory?.slug 
-          ? `/${subCategory.slug}/${p.slug}` 
-          : `/shop/${p.slug}`;
-        return { name: p.designation_fr || p.slug, url };
-      }).filter((p: { name: string; url: string }) => p.url !== '/shop/');
+      const productList = (sub.products ?? []).slice(0, 20)
+        // Use the canonical product URL so ItemList entries match each Product schema's offers.url.
+        .map((p: any) => ({ name: p.designation_fr || p.slug, url: getProductLink(p) }))
+        .filter((p: { name: string; url: string }) => p.url && p.url !== '/shop/');
       const itemListSchema = productList.length > 0 ? buildItemListSchema(productList, baseUrl, { name: pageTitle }) : null;
       const productSchemas = (sub.products ?? [])
         .slice(0, 6)
@@ -403,13 +400,10 @@ export default async function CategoryPage({ params }: PageProps) {
         description: collectionDescCat,
       });
       validateStructuredData(collectionPageSchemaCat, 'CollectionPage');
-      const productListCat = (cat.products ?? []).slice(0, 20).map((p: any) => {
-        const subCategory = p.sous_categorie || (p.sous_categories && p.sous_categories[0]);
-        const url = subCategory?.slug 
-          ? `/${subCategory.slug}/${p.slug}` 
-          : `/shop/${p.slug}`;
-        return { name: p.designation_fr || p.slug, url };
-      }).filter((p: { name: string; url: string }) => p.url !== '/shop/');
+      const productListCat = (cat.products ?? []).slice(0, 20)
+        // Use the canonical product URL so ItemList entries match each Product schema's offers.url.
+        .map((p: any) => ({ name: p.designation_fr || p.slug, url: getProductLink(p) }))
+        .filter((p: { name: string; url: string }) => p.url && p.url !== '/shop/');
       const itemListSchemaCat = productListCat.length > 0 ? buildItemListSchema(productListCat, baseUrl, { name: pageTitleCat }) : null;
       const productSchemasCat = (cat.products ?? [])
         .slice(0, 6)

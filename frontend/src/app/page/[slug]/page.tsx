@@ -1,7 +1,8 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getPageBySlug, getStorageUrl } from '@/services/api';
-import { buildCanonicalUrl } from '@/util/canonical';
+import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
+import { buildWebPageSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
 import { PageContentClient } from './PageContentClient';
 
 export type PageProps = {
@@ -60,7 +61,22 @@ export default async function DynamicPage({ params }: PageProps) {
   try {
     const page = await getPageBySlug(apiSlug);
     if (!page) notFound();
-    return <PageContentClient page={page} />;
+    const baseUrl = getBaseUrl();
+    const canonical = page.canonical_url?.trim() || buildCanonicalUrl(`/${encodeURIComponent(page.slug || apiSlug)}`);
+    const rawDesc = page.meta_description ?? page.excerpt ?? '';
+    const description = rawDesc ? String(rawDesc).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300) : undefined;
+    const webPageSchema = buildWebPageSchema(page.title || 'Page', canonical, baseUrl, { description });
+    const breadcrumbSchema = buildBreadcrumbListSchema(
+      [{ name: 'Accueil', url: '/' }, { name: page.title || 'Page', url: `/${page.slug || apiSlug}` }],
+      baseUrl
+    );
+    return (
+      <>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageSchema) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
+        <PageContentClient page={page} />
+      </>
+    );
   } catch (error) {
     console.error('Error fetching page:', error);
     notFound();

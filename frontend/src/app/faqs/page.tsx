@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import { getFAQs } from '@/services/api';
-import { buildFAQPageSchema, validateStructuredData } from '@/util/structuredData';
-import { buildCanonicalUrl } from '@/util/canonical';
+import { buildFAQPageSchema, buildBreadcrumbListSchema, validateStructuredData } from '@/util/structuredData';
+import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
 import { FAQsPageClient } from './FAQsPageClient';
 
 export const metadata: Metadata = {
@@ -24,12 +24,17 @@ export default async function FAQsPage() {
   const { faqs } = await getFAQsData();
   const faqSchema = buildFAQPageSchema(faqs);
   if (faqSchema) validateStructuredData(faqSchema, 'FAQPage');
+  const breadcrumbSchema = buildBreadcrumbListSchema(
+    [{ name: 'Accueil', url: '/' }, { name: 'FAQ', url: '/faqs' }],
+    getBaseUrl()
+  );
 
   return (
     <>
       {faqSchema && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       )}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       <FAQsPageClient faqs={faqs} />
     </>
   );
