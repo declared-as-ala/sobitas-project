@@ -22,6 +22,14 @@ const config: Config = {
           "Arial",
           "sans-serif",
         ],
+        // Athletic condensed display face for hero/section titles, prices, badges, countdowns.
+        // Body/UI stays `sans` (Inter). Use via the `font-display` utility.
+        display: [
+          "var(--font-display)",
+          "var(--font-inter)",
+          "system-ui",
+          "sans-serif",
+        ],
       },
       fontSize: {
         /** Page / section titles */
