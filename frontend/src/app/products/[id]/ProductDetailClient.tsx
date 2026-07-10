@@ -1140,7 +1140,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                                     width={600}
                                     height={400}
                                     className="w-full h-auto object-contain"
-                                    unoptimized
+                                    quality={90}
                                   />
                                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200 flex items-center justify-center">
                                     <ZoomIn className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 drop-shadow-lg" size={32} />
@@ -1162,7 +1162,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                                         fill
                                         sizes="(max-width: 640px) 50vw, 33vw"
                                         className="object-contain p-1"
-                                        unoptimized
+                                        quality={90}
                                       />
                                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200 flex items-center justify-center">
                                         <ZoomIn className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 drop-shadow-lg" size={20} />
@@ -1239,7 +1239,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                                   width={900}
                                   height={700}
                                   className="max-w-[90vw] max-h-[90vh] w-auto h-auto object-contain rounded-lg shadow-2xl"
-                                  unoptimized
+                                  quality={90}
                                 />
                                 {nutritionImages.length > 1 && (
                                   <span className="absolute bottom-3 left-1/2 -translate-x-1/2 text-white/70 text-xs bg-black/40 px-2 py-0.5 rounded-full">

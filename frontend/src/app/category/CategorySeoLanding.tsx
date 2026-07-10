@@ -164,8 +164,8 @@ export function CategorySeoLanding({
 
       {/* Header section - Custom ultra-premium layouts */}
       {showHeader && (
-        <motion.div 
-          initial={{ opacity: 0, y: 15 }}
+        <motion.div
+          initial={false}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
           className="space-y-6"

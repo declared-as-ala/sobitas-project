@@ -42,6 +42,8 @@ interface ProductCardProps {
   showDescription?: boolean;
   hideCountdown?: boolean;
   imageContext?: 'default' | 'packs';
+  /** Above-the-fold cards: paint immediately (no entrance fade) + eager-load the image for a faster LCP. */
+  priority?: boolean;
 }
 
 function toFavoriteProduct(product: Product): { id: number; designation_fr: string; slug?: string; cover?: string; prix?: number; promo?: number | null; rupture?: number } {
@@ -65,6 +67,7 @@ export const ProductCard = memo(function ProductCard({
   showDescription = false,
   hideCountdown = false,
   imageContext = 'default',
+  priority = false,
 }: ProductCardProps) {
   const { locale } = useI18n();
   const { addToCart, getCartQty } = useCart();
@@ -146,7 +149,7 @@ export const ProductCard = memo(function ProductCard({
 
   return (
     <motion.article
-      initial={{ opacity: 0, y: 12 }}
+      initial={priority ? { opacity: 1, y: 0 } : { opacity: 0, y: 12 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '20px' }}
       transition={{ duration: 0.2 }}
@@ -170,6 +173,7 @@ export const ProductCard = memo(function ProductCard({
           objectPosition={productData.imagePresentation.objectPosition}
           scale={productData.imagePresentation.scale}
           product={product as any}
+          priority={priority}
         />
 
         {/* Favoris – top-right */}
