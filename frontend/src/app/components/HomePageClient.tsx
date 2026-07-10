@@ -111,11 +111,14 @@ export function HomePageClient({ accueil, slides, heroMobileFirst, heroDesktopFi
         {/* Above the fold - Critical content - Hero must render first */}
         <HeroSlider slides={slides} mobileFirst={heroMobileFirst} desktopFirst={heroDesktopFirst} />
         {/* SEO: single visible H1 for main query "proteine tunisie" + internal link creatine */}
-        <section className="text-center pt-6 pb-3 sm:pt-8 sm:pb-4 px-4 bg-white dark:bg-gray-950" aria-label="Titre principal">
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900 dark:text-white">
+        <section className="text-center pt-8 pb-4 sm:pt-10 sm:pb-6 px-4 bg-white dark:bg-gray-950" aria-label="Titre principal">
+          <span className="mb-2 block font-display uppercase tracking-[0.2em] text-[11px] sm:text-xs font-semibold text-red-600 dark:text-red-400">
+            Nutrition sportive · Tunisie
+          </span>
+          <h1 className="font-display uppercase tracking-tight leading-[0.95] text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white">
             Protéine Tunisie
           </h1>
-          <p className="mt-2 text-sm sm:text-base text-gray-600 dark:text-gray-400">
+          <p className="mt-3 max-w-2xl mx-auto text-sm sm:text-base text-gray-600 dark:text-gray-400">
             <Link href="/proteine-whey" className="text-red-600 dark:text-red-400 hover:underline font-medium">
               Whey protein
             </Link>
@@ -130,25 +133,26 @@ export function HomePageClient({ accueil, slides, heroMobileFirst, heroDesktopFi
         <div style={{ minHeight: '200px' }}>
           <FeaturesSection />
         </div>
-        <CategoryGrid categories={safeAccueil.categories || []} />
-
-        {/* Product sections – order: Nouveaux Produits → Meilleurs Ventes → Ventes Flash */}
-        {(safeAccueil.new_product?.length ?? 0) > 0 && (
-          <ProductSection
-            id="products"
-            title="Nouveaux Produits"
-            products={newProducts as any}
-            showBadge
-            badgeText="New"
-          />
-        )}
-
+        {/* Products first — best-sellers → nouveautés → flash — so shoppers reach real products
+            right after the hero. Browse-by-category follows. */}
         {(safeAccueil.best_sellers?.length ?? 0) > 0 && (
           <ProductSection
-            title="Produits les plus vendus"
+            id="products"
+            kicker="Best-sellers"
+            title="Les plus vendus"
             products={bestSellers as any}
             showBadge
             badgeText="Top Vendu"
+          />
+        )}
+
+        {(safeAccueil.new_product?.length ?? 0) > 0 && (
+          <ProductSection
+            kicker="Nouveautés"
+            title="Nouveaux produits"
+            products={newProducts as any}
+            showBadge
+            badgeText="New"
           />
         )}
 
@@ -156,10 +160,14 @@ export function HomePageClient({ accueil, slides, heroMobileFirst, heroDesktopFi
           <VentesFlashSection products={flashSales as any} />
         )}
 
+        {/* Browse by goal — moved below the product rails */}
+        <CategoryGrid categories={safeAccueil.categories || []} />
+
         {(safeAccueil.packs?.length ?? 0) > 0 && (
           <ProductSection
             id="packs"
-            title="Nos Packs"
+            kicker="Économisez"
+            title="Nos packs"
             products={packs as any}
             viewAllHref="/packs"
             viewAllLabel="Voir tous les packs"
