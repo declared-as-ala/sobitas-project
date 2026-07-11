@@ -15,6 +15,7 @@ import { Search, ArrowRight, Zap, Building2, X } from 'lucide-react';
 import { getAllBrands, getStorageUrl } from '@/services/api';
 import type { Brand } from '@/types';
 import { LoadingSpinner } from '@/app/components/LoadingSpinner';
+import { buildBrandAlt } from '@/util/productAlt';
 
 function nameToSlug(name: string): string {
   return name
@@ -322,7 +323,7 @@ function BrandCard({
         {logoUrl && !imageError ? (
           <Image
             src={logoUrl}
-            alt={brand.designation_fr || brand.alt_cover || 'Brand logo'}
+            alt={buildBrandAlt(brand.designation_fr, brand.alt_cover)}
             fill
             className="object-contain p-3 sm:p-4 group-hover:scale-105 transition-transform duration-300"
             sizes="(max-width: 480px) 44vw, (max-width: 640px) 44vw, (max-width: 1024px) 22vw, 18vw"

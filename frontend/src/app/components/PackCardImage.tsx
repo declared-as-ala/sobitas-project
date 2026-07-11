@@ -13,6 +13,8 @@ import type { Product } from '@/types';
 interface PackCardImageProps {
   imageSrc: string;
   productName: string;
+  /** SEO/a11y alt for the <Image>. Defaults to productName; pass an enriched alt (brand + locality). */
+  imageAlt?: string;
   productId: number;
   slug?: string;
   mode: ProductImageMode;
@@ -26,6 +28,7 @@ interface PackCardImageProps {
 export function PackCardImage({
   imageSrc,
   productName,
+  imageAlt,
   productId,
   slug,
   mode,
@@ -68,7 +71,7 @@ export function PackCardImage({
         {imageSrc && !hasError ? (
           <Image
             src={imageSrc}
-            alt={productName}
+            alt={imageAlt || productName}
             fill
             className={imageClasses}
             style={{
