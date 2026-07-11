@@ -758,7 +758,7 @@ export default function CheckoutPage() {
           <section className="checkout-form">
             <div>
               <Card className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm overflow-hidden">
-                <CardHeader className="border-b border-gray-100 dark:border-gray-800 pb-4">
+                <CardHeader className="border-b border-gray-100 dark:border-gray-800 px-4 sm:px-6 lg:px-8 pb-4">
                   <CardTitle className="font-display uppercase tracking-tight text-[clamp(1.125rem,2.5vw,1.375rem)] text-gray-900 dark:text-white flex items-center gap-2">
                     <Truck className="h-5 w-5 text-red-600 dark:text-red-400" aria-hidden="true" />
                     Adresse de livraison
@@ -869,7 +869,7 @@ export default function CheckoutPage() {
                       <button
                         type="button"
                         onClick={() => setShowOptionalFields(!showOptionalFields)}
-                        className="text-sm leading-snug font-medium text-red-600 dark:text-red-400 hover:underline flex items-center gap-1"
+                        className="text-sm leading-snug font-medium text-red-600 dark:text-red-400 hover:underline flex items-center gap-1 min-h-[44px] py-1"
                         aria-expanded={showOptionalFields}
                       >
                         {showOptionalFields ? <ChevronUp className="h-4 w-4" aria-hidden="true" /> : <ChevronDown className="h-4 w-4" aria-hidden="true" />}
@@ -1002,7 +1002,7 @@ export default function CheckoutPage() {
           <aside className="checkout-summary" aria-label="Récapitulatif de la commande">
             <div className="checkout-summary-inner">
               <Card className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm overflow-hidden">
-                <CardHeader className="border-b border-gray-100 dark:border-gray-800 pb-4">
+                <CardHeader className="border-b border-gray-100 dark:border-gray-800 px-4 sm:px-6 pb-4">
                   <CardTitle className="flex items-center gap-3 font-display uppercase tracking-tight text-xl text-gray-900 dark:text-white">
                     <ShoppingCart className="h-5 w-5 text-red-600 dark:text-red-400" aria-hidden="true" />
                     Récapitulatif
@@ -1011,9 +1011,9 @@ export default function CheckoutPage() {
                     {items.length} {items.length === 1 ? 'article' : 'articles'}
                   </p>
                 </CardHeader>
-                <CardContent className="p-6 space-y-6">
+                <CardContent className="p-4 sm:p-6 space-y-6">
                   {/* Items */}
-                  <div className="space-y-3 max-h-80 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700">
+                  <div className="space-y-3 max-h-none overflow-visible pr-0 lg:max-h-80 lg:overflow-y-auto lg:pr-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700">
                     {items.map((item) => {
                       const price = getEffectivePrice(item.product);
                       const productName = (item.product as any).designation_fr || (item.product as any).name;
@@ -1076,7 +1076,7 @@ export default function CheckoutPage() {
                             type="button"
                             variant="ghost"
                             size="sm"
-                            className="text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/30"
+                            className="min-h-[44px] shrink-0 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/30"
                             onClick={handleRemoveCoupon}
                           >
                             <X className="h-4 w-4 mr-1" aria-hidden="true" /> Retirer
