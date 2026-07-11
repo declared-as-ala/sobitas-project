@@ -8,6 +8,7 @@ import { SectionHeader } from '@/app/components/SectionHeader';
 import Image from 'next/image';
 import type { Category } from '@/types';
 import { getStorageUrl } from '@/services/api';
+import { buildCategoryAlt } from '@/util/productAlt';
 
 // Placeholder when category has no cover or image fails (404/504) – sports/fitness themed
 const CATEGORY_PLACEHOLDER_SVG =
@@ -40,7 +41,7 @@ function CategoryCard({ category }: { category: Category }) {
         {showImage ? (
           <Image
             src={imageUrl}
-            alt={category.designation_fr}
+            alt={buildCategoryAlt(category.designation_fr)}
             fill
             className="object-cover object-center transition-transform duration-500 ease-out sm:group-hover:scale-105"
             sizes="(max-width: 640px) 48vw, (max-width: 1024px) 31vw, 23vw"

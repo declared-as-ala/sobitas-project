@@ -10,6 +10,7 @@ import { getAllBrands, getStorageUrl } from '@/services/api';
 import type { Brand } from '@/types';
 import { useRouter } from 'next/navigation';
 import { useLoading } from '@/contexts/LoadingContext';
+import { buildBrandAlt } from '@/util/productAlt';
 
 // Helper to generate slug from name
 function nameToSlug(name: string): string {
@@ -39,7 +40,7 @@ function BrandCard({ brand, onNavigate }: { brand: Brand; onNavigate: (slug: str
         <div className="relative flex h-full w-full min-h-[80px] items-center justify-center">
           <Image
             src={logoUrl}
-            alt={brand.designation_fr || brand.alt_cover || 'Logo de la marque'}
+            alt={buildBrandAlt(brand.designation_fr, brand.alt_cover)}
             width={200}
             height={100}
             className="max-h-full max-w-full object-contain p-1 transition-transform duration-300 group-hover:scale-105 sm:p-2"

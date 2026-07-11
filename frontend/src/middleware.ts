@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { isCrawlerUA, CRAWLER_PREVIEW_PARAM } from '@/util/isCrawler';
 import { isReservedRouteSlug } from '@/util/productUrl';
+import { getAdminRedirect } from '@/util/adminRedirects';
 
 function redirectPreservingQuery(request: NextRequest, path: string): NextResponse {
   const url = new URL(path, request.url);
@@ -61,6 +62,24 @@ async function resolveShopSlug(slug: string): Promise<string | null> {
 
 export async function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
+
+  // ── Admin-defined redirects (301 / 302 / 410) ───────────────────────────
+  // Managed in Filament → "Redirections", served from /api/redirections, cached in-process
+  // (~1 backend hit per 5 min) and fail-open. Runs FIRST so the store owner can retire any dead
+  // URL — this is how the "Not found (404)" bucket in Search Console gets cleaned up without a
+  // code deploy. Exact-path match only (never shadows a real page unless explicitly configured).
+  const adminRule = await getAdminRedirect(pathname);
+  if (adminRule) {
+    if (adminRule.code === 410) {
+      // Permanently gone — tells Google to drop the URL from the index.
+      return new NextResponse('Gone', { status: 410, headers: { 'Cache-Control': 'no-store' } });
+    }
+    const dest = new URL(adminRule.to as string, request.url);
+    request.nextUrl.searchParams.forEach((value, key) => {
+      if (!dest.searchParams.has(key)) dest.searchParams.append(key, value);
+    });
+    return NextResponse.redirect(dest, adminRule.code === 302 ? 302 : 301);
+  }
 
   // /shop/:slug → resolve to /{subcat}/{slug} with real HTTP 301
   // This fires before the page renders, eliminating the __next-page-redirect meta-refresh tag.

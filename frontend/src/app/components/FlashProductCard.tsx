@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { getPriceDisplay } from '@/util/productPrice';
 import { getStockDisponible, isInStock } from '@/util/cartStock';
 import { buildProductUrlPath } from '@/util/productUrl';
+import { buildProductAlt } from '@/util/productAlt';
 import { useState, useMemo, memo, useCallback } from 'react';
 
 type FlashProduct = {
@@ -97,7 +98,7 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
           {productData.image && !hasError ? (
             <Image
               src={productData.image}
-              alt={productData.name}
+              alt={buildProductAlt(product as any, { name: productData.name })}
               width={500}
               height={500}
               className="size-full object-contain p-3 sm:p-4 md:p-5 lg:p-6 transition-transform duration-300 [@media(hover:hover)]:group-hover:scale-105"

@@ -13,6 +13,7 @@ import { getPriceDisplay } from '@/util/productPrice';
 import { getStockDisponible, isInStock } from '@/util/cartStock';
 import { getProductImagePresentation } from '@/util/productImagePresentation';
 import { buildProductUrlPath } from '@/util/productUrl';
+import { buildProductAlt } from '@/util/productAlt';
 import { useState, useMemo, memo, useCallback } from 'react';
 import { useI18n } from '@/i18n/I18nProvider';
 import { localizedField, localizedName } from '@/i18n/content';
@@ -162,6 +163,7 @@ export const ProductCard = memo(function ProductCard({
         <PackCardImage
           imageSrc={productData.image}
           productName={productData.name}
+          imageAlt={buildProductAlt(product as any, { name: productData.name })}
           productId={product.id}
           slug={productData.slug}
           mode={productData.imagePresentation.mode}

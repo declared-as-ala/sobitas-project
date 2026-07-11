@@ -24,6 +24,7 @@ import { getPriceDisplay } from '@/util/productPrice';
 import { isInStock } from '@/util/cartStock';
 import { sanitizeProductHtml } from '@/util/sanitizeProductHtml';
 import { getProductBreadcrumbs, getProductLink } from '@/util/productUrl';
+import { buildProductAlt } from '@/util/productAlt';
 import type { Product } from '@/types';
 
 function formatTnd(n: number): string {
@@ -101,7 +102,7 @@ export function CrawlerProductView({
             src={cover}
             width={640}
             height={640}
-            alt={product.alt_cover || product.designation_fr}
+            alt={buildProductAlt(product as any)}
             className="my-4 h-auto w-full max-w-md rounded border"
           />
         )}
