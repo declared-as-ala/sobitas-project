@@ -20,23 +20,38 @@ changes unless that is the explicit task).
 - **Perf**: culled 11 unused heavy deps (PR #34); homepage/offres/packs → ISR (PR #35); hero LCP
   image → pre-optimized **direct-static AVIF**, edge-cached (PR #36).
 
-## In progress (this batch)
+## Shipped — 2026-07-11 session (PRs #37–#48)
 
-1. **Mobile UX v3 — clarity & density.** No squeezed text; measured spacing; delete unhelpful
-   copy/sections; smart use of full screen; no overlapping/"popped" components. Targets: product
-   detail (tighten mobile sticky buy-bar + meta rows), cart/checkout, blog, footer/account.
-2. **Store ratings (customer reviews in Google next to products).**
-   - Product-level `AggregateRating`/`Review` from **real** reviews → already emitted (this is what
-     puts star ratings next to products in Search). Keep robust.
-   - Store/seller rating: emit `aggregateRating` on the `OnlineStore` Organization **only from real
-     operator-supplied numbers** (`NEXT_PUBLIC_STORE_RATING_VALUE` + `NEXT_PUBLIC_STORE_RATING_COUNT`).
-     Never fabricated. If unset, nothing is emitted.
-   - **Operator note:** true Google *seller ratings* come from Google Customer Reviews / Merchant
-     Center enrollment + third-party review sources — not from self-markup. See "Operator" below.
-3. **Internal linking.** Contextual cross-links on product (related categories, brand, complementary),
-   category (associated categories), and blog (recommended products / related articles).
-4. **Automated JSON-LD + SEO audit.** Fill any page missing WebPage/Breadcrumb/CollectionPage;
-   verify FAQ + Breadcrumb coverage per product.
+**UX / mobile:** design-system store-rating + brand JSON-LD (#37); checkout mobile pass (#38);
+home squeeze + empty-categories resilience + floating-button declutter + sidebar rebrand + bundle
+wins (#39); hardcoded category fallback so the grid never blanks (#40); **product detail page
+rebuilt around a grouped buy card** (#41); homepage empty-`accueil` resilience — categories +
+product rails backfilled from dedicated endpoints (#40/#43); free-shipping progress nudge in the
+cart drawer (#47).
+
+**INDEXING (the crisis fixes):**
+- **Sitemap had 0 product URLs** → now the **full 303-product catalogue** (canonical `/{subcat}/{slug}`)
+  via `enrichProductSubcategory` (#44). It also **throws instead of caching a product-less sitemap**,
+  and stops submitting noindex blog-tag / CMS URLs (#45).
+- **Middleware served Googlebot a 404 for `/sitemap.xml` AND `/robots.txt`** (the "couldn't fetch"
+  cause) → fixed with a dot-guard + matcher exclusion; verified `curl -A Googlebot` = 200 (#45).
+- Canonical internal links: home/offres/brand/packs/shop product links + ItemList now canonical,
+  not the `/shop/` 301 (#42/#45). Product FAQPage policy fix (drop invisible sitewide-FAQ) (#45).
+- `/products/{slug}` redirect chain collapsed to one hop (#46).
+
+**Thin content + internal linking (targets "Crawled – currently not indexed"):**
+- Category pages now link their **subcategories**; blog **taxonomy** pages get inbound links from
+  every article; unique auto-generated intro/description copy for **category & brand** pages (from
+  real product data, never fabricated); blog cat/tag intros (#46).
+
+**Schema / navigation:** sitewide **SiteNavigationElement** ItemList so crawlers understand the
+hub structure (#48); CMS pages get WebPage + Breadcrumb (#48).
+
+**Perf:** i18n client bundle slimmed — AR/EN dictionaries tree-shaken off first-load JS (kept in
+repo for future server-side i18n) (#48); heavy client islands lazy-loaded + mobile image `sizes` (#48).
+
+**Store ratings:** product `AggregateRating`/`Review` from real reviews live; `OnlineStore`
+aggregateRating gated on real operator numbers (`NEXT_PUBLIC_STORE_RATING_VALUE`/`_COUNT`).
 
 ## Next / backlog
 

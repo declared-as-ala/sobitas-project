@@ -8,7 +8,7 @@ import { ApiError } from '@/services/http';
 import { buildCanonicalUrl, getBaseUrl, forceProteinDomain } from '@/util/canonical';
 import { isReservedRouteSlug, buildProductUrlPath } from '@/util/productUrl';
 import { enrichProductsWithSubcategory } from '@/util/enrichProductSubcategory';
-import { buildCollectionPageSchema, buildItemListSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
+import { buildCollectionPageSchema, buildItemListSchema, buildBreadcrumbListSchema, buildWebPageSchema } from '@/util/structuredData';
 import type { Brand, Page } from '@/types';
 
 export type RootSlugPageProps = {
@@ -214,7 +214,24 @@ export default async function RootSlugPage({ params }: RootSlugPageProps) {
 
   const page = await findPageBySlug(cleanSlug);
   if (page) {
-    return <PageContentClient page={page} />;
+    // CMS page: emit WebPage + Breadcrumb so this branch has parity with the dedicated
+    // /page/[slug] route (which already does). Canonical mirrors metadataForPage above.
+    const baseUrl = getBaseUrl();
+    const canonical = page.canonical_url?.trim() || buildCanonicalUrl(`/${encodeURIComponent(cleanSlug)}`);
+    const rawDesc = page.meta_description ?? page.excerpt ?? '';
+    const description = rawDesc ? String(rawDesc).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300) : undefined;
+    const webPageSchema = buildWebPageSchema(page.title || 'Page', canonical, baseUrl, { description });
+    const breadcrumbSchema = buildBreadcrumbListSchema(
+      [{ name: 'Accueil', url: '/' }, { name: page.title || 'Page', url: `/${page.slug || cleanSlug}` }],
+      baseUrl
+    );
+    return (
+      <>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageSchema) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
+        <PageContentClient page={page} />
+      </>
+    );
   }
 
   notFound();

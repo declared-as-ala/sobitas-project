@@ -34,7 +34,7 @@ import { getCategorySeoContent } from '@/util/categorySeoContent';
 import { mergeCategorySeo } from '@/util/resolveCategorySeo';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
 import { isReservedRouteSlug, getProductLink } from '@/util/productUrl';
-import { buildBreadcrumbListSchema, buildCollectionPageSchema, buildItemListSchema } from '@/util/structuredData';
+import { buildBreadcrumbListSchema, buildCollectionPageSchema, buildItemListSchema, buildWebPageSchema } from '@/util/structuredData';
 import { sanitizeProductHtml } from '@/util/sanitizeProductHtml';
 import { CrawlerCategoryView, type CrawlerListLink } from '@/app/components/crawler/CrawlerCategoryView';
 import type { Brand, Page, Product } from '@/types';
@@ -244,10 +244,25 @@ export default async function CrawlerCategoryPage({ params }: PageProps) {
   }
 
   // 3. CMS page — already SSR-friendly on the real route; render the same so a rewritten bot
-  //    request never 404s a valid page.
+  //    request never 404s a valid page. Emit WebPage + Breadcrumb for parity with the human
+  //    /{slug} CMS branch (both feed the crawler the same structured data).
   const page = await findPageBySlug(cleanSlug);
   if (page) {
-    return <PageContentClient page={page} />;
+    const canonical = page.canonical_url?.trim() || buildCanonicalUrl(`/${encodeURIComponent(cleanSlug)}`);
+    const rawDesc = page.meta_description ?? page.excerpt ?? '';
+    const description = rawDesc ? String(rawDesc).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300) : undefined;
+    const webPageSchema = buildWebPageSchema(page.title || 'Page', canonical, baseUrl, { description });
+    const breadcrumbSchema = buildBreadcrumbListSchema(
+      [{ name: 'Accueil', url: '/' }, { name: page.title || 'Page', url: `/${page.slug || cleanSlug}` }],
+      baseUrl
+    );
+    return (
+      <>
+        {ldScript(webPageSchema, 'wp')}
+        {ldScript(breadcrumbSchema, 'bc')}
+        <PageContentClient page={page} />
+      </>
+    );
   }
 
   notFound();

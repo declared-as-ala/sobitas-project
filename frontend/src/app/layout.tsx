@@ -128,7 +128,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
-  const { buildOrganizationSchema, buildLocalBusinessSchema, buildWebSiteSchema, parseStoreRating } = await import('@/util/structuredData');
+  const { buildOrganizationSchema, buildLocalBusinessSchema, buildWebSiteSchema, buildSiteNavigationSchema, parseStoreRating } = await import('@/util/structuredData');
   // Store/seller rating is emitted ONLY from a real, operator-supplied aggregate (Google Business /
   // Facebook / Google Customer Reviews). Unset → no aggregateRating (never fabricated).
   const storeRating = parseStoreRating(
@@ -138,6 +138,7 @@ export default async function RootLayout({
   const orgSchema = buildOrganizationSchema(baseUrl, { rating: storeRating });
   const localBusinessSchema = buildLocalBusinessSchema(baseUrl);
   const websiteSchema = buildWebSiteSchema(baseUrl);
+  const siteNavigationSchema = buildSiteNavigationSchema(baseUrl);
 
   return (
     <html lang="fr" suppressHydrationWarning data-scroll-behavior="smooth" className={`${inter.variable} ${notoArabic.variable} ${oswald.variable}`}>
@@ -177,6 +178,7 @@ export default async function RootLayout({
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(siteNavigationSchema) }} />
         {/* NOTE: Removed <link rel="prerender"> hints. The legacy `prerender` hint is deprecated
             (superseded by the Speculation Rules API) and it eagerly downloaded three full pages
             on every single page load — wasted bandwidth that hurt Core Web Vitals for no gain. */}

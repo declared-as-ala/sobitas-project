@@ -42,7 +42,15 @@ type I18nValue = {
 };
 
 const I18nContext = createContext<I18nValue | null>(null);
-const dictionaries = { fr, en, ar };
+// French is the only client locale today (MULTILOCALE_ENABLED === false), so only the French
+// dictionary needs to ship. en/ar (+ the legacy/seo maps used below) are referenced ONLY inside
+// `if (MULTILOCALE_ENABLED)` guards — a compile-time `false` — so the production build tree-shakes
+// ~30KB of unused translation data off every page's first-load JS. They stay in the repo for the
+// future server-side i18n rework.
+const dictionaries: Partial<Record<Locale, typeof fr>> = { fr };
+if (MULTILOCALE_ENABLED) {
+  Object.assign(dictionaries, { en, ar });
+}
 const translatedNodes = new WeakMap<Text, string>();
 const translatedAttributes = new WeakMap<Element, Map<string, string>>();
 const ATTRIBUTES = ['placeholder', 'title', 'aria-label', 'alt'] as const;
@@ -57,6 +65,9 @@ function interpolate(text: string, values?: Values): string {
 }
 
 function translateLegacyText(text: string, locale: Locale): string {
+  // French-only today: identity translation. This early return makes the legacy-ar/legacy-en maps
+  // unreachable (compile-time), so they tree-shake out of the client bundle.
+  if (!MULTILOCALE_ENABLED) return text;
   const leading = text.match(/^\s*/)?.[0] ?? '';
   const trailing = text.match(/\s*$/)?.[0] ?? '';
   const clean = text.trim();
@@ -189,7 +200,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   }, [locale]);
 
   useEffect(() => {
-    if (locale === 'fr') return;
+    if (!MULTILOCALE_ENABLED || locale === 'fr') return;
     const seo = locale === 'ar' ? getArabicSeo(pathname) : getEnglishSeo(pathname);
     if (!seo) return;
     const applySeo = () => {
@@ -213,7 +224,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       locale,
       dir: getLocaleDirection(locale),
       setLocale,
-      t: (key, values) => interpolate(dictionaries[locale][key] ?? fr[key] ?? key, values),
+      t: (key, values) => interpolate(dictionaries[locale]?.[key] ?? fr[key] ?? key, values),
       translateLegacy,
       formatDate: (value, options) =>
         new Intl.DateTimeFormat(intlLocale, options ?? { dateStyle: 'medium' }).format(new Date(value)),
