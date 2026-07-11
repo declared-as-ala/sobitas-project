@@ -5,7 +5,7 @@ import { PageContentClient } from '@/app/page/[slug]/PageContentClient';
 import { ShopPageClient } from '@/app/shop/ShopPageClient';
 import { fetchCategoryOrSubCategory, getAllBrands, getCategories, getPageBySlug, getProductsByBrand, getStorageUrl } from '@/services/api';
 import { ApiError } from '@/services/http';
-import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
+import { buildCanonicalUrl, getBaseUrl, forceProteinDomain } from '@/util/canonical';
 import { isReservedRouteSlug, buildProductUrlPath } from '@/util/productUrl';
 import { enrichProductsWithSubcategory } from '@/util/enrichProductSubcategory';
 import { buildCollectionPageSchema, buildItemListSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
@@ -93,9 +93,15 @@ function metadataForPage(page: Page, slug: string): Metadata {
 
 function metadataForBrand(brand: Brand, slug: string): Metadata {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
-  const canonical = `${baseUrl}/${slug}`;
-  const title = `${brand.designation_fr} - Proteines & Complements Tunisie | Proteine Tunisie`;
-  const description = `Decouvrez tous les produits ${brand.designation_fr} en Tunisie. Qualite premium, livraison rapide.`;
+  // Force the apex protein.tn domain so the canonical can never point at a host that 301s
+  // (www / legacy sobitas), which Search Console flags as "Google chose a different canonical".
+  const canonical = forceProteinDomain(`${baseUrl}/${slug}`);
+  // Accented + consistent with the page's own JSON-LD/CollectionPage ("Protéine", not "Proteine"),
+  // so the <title>/description no longer mismatch the structured data on the same page.
+  const title = `${brand.designation_fr} — Protéines & Compléments en Tunisie | Protéine Tunisie`;
+  const description = `Découvrez tous les produits ${brand.designation_fr} en Tunisie : qualité premium, produits 100% authentiques, livraison rapide.`;
+  const ogImage = '/slides/home-hero-web.webp';
+  const ogAlt = `${brand.designation_fr} — Protéine Tunisie`;
 
   return {
     title,
@@ -106,6 +112,13 @@ function metadataForBrand(brand: Brand, slug: string): Metadata {
       description,
       url: canonical,
       type: 'website',
+      images: [{ url: ogImage, width: 1200, height: 630, alt: ogAlt }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [ogImage],
     },
   };
 }

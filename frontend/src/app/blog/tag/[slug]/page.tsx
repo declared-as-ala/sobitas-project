@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getArticlesByBlogTag } from '@/services/api';
-import { buildCanonicalUrl } from '@/util/canonical';
+import { buildCanonicalUrl, forceProteinDomain } from '@/util/canonical';
 import { buildBreadcrumbListSchema, buildItemListSchema, buildCollectionPageSchema } from '@/util/structuredData';
 import { blogHref } from '@/util/blogSlug';
 import { ChevronRight, ArrowLeft } from 'lucide-react';
@@ -26,9 +26,16 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 
   try {
     const data = await getArticlesByBlogTag(slug, page, 9);
+    const total = Number(data.meta?.total);
+    const countText =
+      Number.isFinite(total) && total > 0 ? `${total} article${total > 1 ? 's' : ''}` : 'nos articles';
     const title = data.tag.seo?.title || `Blog tag ${data.tag.name} | Proteine Tunisie`;
-    const description = data.tag.seo?.description || `Articles de blog avec le tag ${data.tag.name}.`;
-    const canonical = data.tag.seo?.canonical_url || buildCanonicalUrl(`/blog/tag/${data.tag.slug}${page > 1 ? `?page=${page}` : ''}`);
+    const description =
+      data.tag.seo?.description ||
+      `Explorez ${countText} associés au tag ${data.tag.name} : conseils nutrition & sport, guides et actualités sur Proteine Tunisie.`;
+    const canonical = data.tag.seo?.canonical_url
+      ? forceProteinDomain(data.tag.seo.canonical_url)
+      : buildCanonicalUrl(`/blog/tag/${data.tag.slug}${page > 1 ? `?page=${page}` : ''}`);
     return {
       title,
       description,
@@ -38,6 +45,12 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
         // SEO config explicitly opts in.
         index: data.tag.seo?.robots?.index === true,
         follow: data.tag.seo?.robots?.follow ?? true,
+      },
+      openGraph: {
+        title,
+        description,
+        url: canonical,
+        type: 'website',
       },
     };
   } catch {
@@ -81,6 +94,11 @@ export default async function BlogTagPage({ params, searchParams }: Props) {
     { description: data.tag.seo?.description || `Articles de blog avec le tag ${data.tag.name}.` }
   );
 
+  // Unique intro copy so the tag page isn't a thin, templated listing (SEO: avoids "thin content").
+  const introText =
+    data.tag.seo?.description?.trim() ||
+    `Tous nos articles associés au tag ${data.tag.name} : conseils nutrition & sport, astuces et guides pratiques signés Proteine Tunisie pour vous accompagner dans vos objectifs.`;
+
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
@@ -98,6 +116,9 @@ export default async function BlogTagPage({ params, searchParams }: Props) {
           </nav>
           <div className="mb-8 sm:mb-10">
             <PageHeader kicker="Tag" title={data.tag.name} />
+            <p className="mt-4 max-w-3xl text-base sm:text-lg leading-relaxed text-gray-600 dark:text-gray-400">
+              {introText}
+            </p>
           </div>
           {data.articles.length === 0 ? (
             <div className="flex flex-col items-center pb-12">
