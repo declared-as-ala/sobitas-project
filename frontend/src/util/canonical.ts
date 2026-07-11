@@ -48,13 +48,15 @@ export function buildCanonicalUrl(path: string, search?: string): string {
 }
 
 /**
- * Ensures a canonical URL always uses the production domain (protein.tn).
- * If the URL hostname contains sobitas.tn, it rewrites to the base domain.
+ * Ensures a canonical URL always uses the production apex domain (protein.tn).
+ * Rewrites legacy hosts (sobitas.tn) AND a leading `www.` to the non-www apex, so an
+ * admin-supplied canonical can never point at a host that 301s (which Search Console reports
+ * as "Google chose a different canonical" / duplicate www vs non-www).
  */
 export function forceProteinDomain(url: string): string {
   try {
     const parsed = new URL(url);
-    if (/sobitas\.tn$/i.test(parsed.hostname)) {
+    if (/sobitas\.tn$/i.test(parsed.hostname) || /^www\./i.test(parsed.hostname)) {
       const base = getBaseUrl();
       return `${base}${parsed.pathname}${parsed.search}${parsed.hash}`;
     }

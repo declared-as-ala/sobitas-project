@@ -206,7 +206,7 @@ export const HeroSlider = memo(function HeroSlider({ slides, mobileFirst, deskto
 
   return (
     <section
-      className="relative w-full overflow-hidden bg-gray-900 h-[82dvh] min-h-[500px] sm:h-[70vh] sm:min-h-0 md:h-[80vh] md:min-h-[420px] lg:h-[520px] xl:h-[600px] 2xl:h-[680px]"
+      className="relative w-full overflow-hidden bg-gray-900 h-[78dvh] min-h-[460px] sm:h-[64vh] sm:min-h-0 md:h-[70vh] md:min-h-[400px] lg:h-[460px] xl:h-[520px] 2xl:h-[560px]"
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
@@ -228,7 +228,7 @@ export const HeroSlider = memo(function HeroSlider({ slides, mobileFirst, deskto
 
         {/* Mobile-first cinematic overlays for text readability and cleaner hierarchy */}
         <div
-          className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/42 to-black/24 md:bg-gradient-to-l md:from-black/58 md:via-black/24 md:to-transparent"
+          className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/42 to-black/24 md:bg-gradient-to-r md:from-black/78 md:via-black/42 md:to-transparent"
           aria-hidden="true"
         />
         <div
@@ -241,10 +241,10 @@ export const HeroSlider = memo(function HeroSlider({ slides, mobileFirst, deskto
         />
 
         {/* Content */}
-        <div className="relative mx-auto flex h-full w-full max-w-7xl flex-col px-5 pb-28 pt-[calc(env(safe-area-inset-top)+1.25rem)] sm:px-6 sm:pb-28 md:pb-16 md:pt-16 lg:flex-row lg:items-center lg:px-8 lg:pb-10 lg:pt-0">
-          {/* Mobile: drop the text/button to the bottom floor strip so it sits
-              under the products in the banner. Desktop stays centered/right. */}
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col items-start justify-end text-left lg:ml-auto lg:max-w-2xl lg:flex-none lg:items-end lg:justify-center lg:text-right xl:max-w-3xl">
+        <div className="relative mx-auto flex h-full w-full max-w-7xl flex-col px-5 pb-28 pt-[calc(env(safe-area-inset-top)+1.25rem)] sm:px-6 sm:pb-28 md:justify-center md:pb-16 md:pt-0 lg:px-8">
+          {/* Left-aligned (French LTR): copy sits on the left over a left-darkened gradient.
+              Mobile drops it to the bottom floor; desktop centers it vertically on the left. */}
+          <div className="flex min-h-0 min-w-0 max-w-xl flex-1 flex-col items-start justify-end text-left md:flex-none md:justify-center lg:max-w-2xl xl:max-w-3xl">
             <span className="mb-2 font-display uppercase tracking-[0.2em] text-[11px] sm:text-xs font-semibold text-red-400 drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]">
               100% Authentique · Livraison partout en Tunisie
             </span>
