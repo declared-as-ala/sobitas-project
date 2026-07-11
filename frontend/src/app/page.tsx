@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { getAccueil, getCategories } from '@/services/api';
+import { getAccueil, getCategories, getBestSellers, getNewProducts } from '@/services/api';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
 import { buildWebPageSchema, buildItemListSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
 import { buildProductUrlPath } from '@/util/productUrl';
@@ -121,14 +121,24 @@ async function getHomeData(): Promise<{ accueil: AccueilData; slides: LocalHomeS
       }
     }
 
+    // The /accueil payload intermittently returns EMPTY product rails (an ISR render that captures
+    // that leaves the homepage with no products at all). Backfill the two flagship rails from their
+    // dedicated, more reliable endpoints so the homepage never renders product-less. (packs /
+    // ventes_flash can be legitimately empty — no active packs or flash sale — so we don't fabricate
+    // them.)
+    const [best, news] = await Promise.all([
+      accueil.best_sellers?.length ? Promise.resolve(accueil.best_sellers) : getBestSellers().catch(() => [] as Product[]),
+      accueil.new_product?.length ? Promise.resolve(accueil.new_product) : getNewProducts().catch(() => [] as Product[]),
+    ]);
+
     // Enrich list products (which ship only `sous_categorie_id`) with their subcategory so every
     // product link + ItemList URL is the canonical /{subcat}/{slug} instead of /shop/{slug} — the
     // latter 301-redirects, which is exactly the "Page with redirect" bucket in Search Console.
     const enriched: AccueilData = {
       ...accueil,
       categories: categories.length > 0 ? categories : (FALLBACK_CATEGORIES as AccueilData['categories']),
-      best_sellers: enrichProductsWithSubcategory(accueil.best_sellers, categories),
-      new_product: enrichProductsWithSubcategory(accueil.new_product, categories),
+      best_sellers: enrichProductsWithSubcategory(best, categories),
+      new_product: enrichProductsWithSubcategory(news, categories),
       packs: enrichProductsWithSubcategory(accueil.packs, categories),
       ventes_flash: enrichProductsWithSubcategory(accueil.ventes_flash, categories),
     };
