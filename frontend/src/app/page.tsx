@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { getAccueil } from '@/services/api';
+import { getAccueil, getCategories } from '@/services/api';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
 import { buildWebPageSchema, buildItemListSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
 import { buildProductUrlPath } from '@/util/productUrl';
@@ -93,6 +93,20 @@ const LOCAL_HOME_SLIDES: LocalHomeSlide[] = [
 async function getHomeData(): Promise<{ accueil: AccueilData; slides: LocalHomeSlide[] }> {
   try {
     const accueil = await getAccueil();
+    // Resilience: the /accueil payload intermittently returns an empty `categories` array, and an
+    // ISR render that captures that empties the homepage "Catégories populaires" grid for up to the
+    // revalidate window. Fall back to the dedicated (more reliable) /categories endpoint so the
+    // section is never blank.
+    if (!Array.isArray(accueil.categories) || accueil.categories.length === 0) {
+      try {
+        const categories = await getCategories();
+        if (Array.isArray(categories) && categories.length > 0) {
+          return { accueil: { ...accueil, categories }, slides: LOCAL_HOME_SLIDES };
+        }
+      } catch {
+        // keep accueil as-is; CategoryGrid renders nothing rather than an error
+      }
+    }
     return { accueil, slides: LOCAL_HOME_SLIDES };
   } catch {
     return { accueil: emptyAccueil, slides: LOCAL_HOME_SLIDES };

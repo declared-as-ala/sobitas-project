@@ -22,15 +22,16 @@ export function FeaturesSection() {
         Pourquoi choisir Protéine Tunisie
       </h2>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* 2×2 on mobile, single row on desktop — every feature always visible (no hidden
-            scroll content). Hairline dividers come from the gap-px grid background. */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-gray-100 dark:bg-gray-800">
+        {/* One per row on phones (full width → titles never wrap awkwardly), 2×2 on sm, single
+            row on desktop — every feature always visible (no hidden scroll content). Hairline
+            dividers come from the gap-px grid background. */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-px bg-gray-100 dark:bg-gray-800">
           {features.map(({ Icon, title, description }) => (
             <div
               key={title}
-              className="flex items-center gap-3 bg-white dark:bg-gray-950 py-6 sm:py-7 px-4 sm:px-5 md:px-6"
+              className="flex items-center gap-3.5 bg-white dark:bg-gray-950 py-4 sm:py-6 md:py-7 px-4 sm:px-5 md:px-6"
             >
-              <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400">
+              <span className="flex h-11 w-11 sm:h-10 sm:w-10 flex-shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400">
                 <Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden="true" />
               </span>
               <div className="min-w-0">

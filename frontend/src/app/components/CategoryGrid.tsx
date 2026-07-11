@@ -79,20 +79,21 @@ function CategoryCard({ category }: { category: Category }) {
 }
 
 export function CategoryGrid({ categories = [] }: CategoryGridProps) {
+  // Never render an empty "Aucune catégorie disponible" state: if the section has no categories
+  // (e.g. a transient API hiccup captured by ISR), hide the whole block instead of showing a
+  // broken-looking message. The homepage server fetch also falls back to /categories.
+  if (!Array.isArray(categories) || categories.length === 0) return null;
+
   return (
     <section className="py-12 sm:py-16 lg:py-20 bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeader kicker="Par objectif" title="Catégories populaires" viewAllHref="/shop" />
 
-        {categories.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-            {categories.map((category) => (
-              <CategoryCard key={category.id} category={category} />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center text-gray-500 py-12">Aucune catégorie disponible</div>
-        )}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+          {categories.map((category) => (
+            <CategoryCard key={category.id} category={category} />
+          ))}
+        </div>
       </div>
     </section>
   );
