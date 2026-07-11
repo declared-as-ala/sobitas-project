@@ -58,6 +58,19 @@ const emptyAccueil: AccueilData = {
   best_sellers: [],
 };
 
+// Bulletproof last-resort categories (the catalogue's real top categories + real covers). Used ONLY
+// when BOTH /accueil and /categories come back empty — a rare backend hiccup (e.g. a cold start right
+// after a deploy) that would otherwise blank the homepage "Catégories populaires" grid. The next ISR
+// revalidation replaces these with the live (identical) categories, so the swap is invisible.
+const FALLBACK_CATEGORIES = [
+  { id: 1, slug: 'sante-vitalite', designation_fr: 'SANTÉ & VITALITÉ', cover: 'categories/rRqCff4GDcYE3tnmOyxssRSNgxDMTq5BjwgwZqH2.webp' },
+  { id: 2, slug: 'proteines', designation_fr: 'PROTÉINES', cover: 'categories/HckZ8s5a0261W1s4eM6YuvVc1oZQi8ZCFMW5gd8L.webp' },
+  { id: 3, slug: 'perte-de-poids', designation_fr: 'PERTE DE POIDS', cover: 'categories/ogKd9PviN1xVzx0vgImR2UPezcr0pHLjyh3l71cb.webp' },
+  { id: 4, slug: 'prise-de-masse', designation_fr: 'PRISE DE MASSE', cover: 'categories/c1af5df5-848e-4a02-9597-00b193a8bae9.webp' },
+  { id: 5, slug: 'performance', designation_fr: 'PERFORMANCE', cover: 'categories/6b5acbd3-290d-40ef-9295-f2c2811af738.webp' },
+  { id: 6, slug: 'equipement', designation_fr: 'ÉQUIPEMENT', cover: 'categories/8ba629b9-88b9-42a8-b4e2-3c4fb703a177.webp' },
+] as unknown as AccueilData['categories'];
+
 type LocalHomeSlide = {
   id: string;
   cover: string;
@@ -104,12 +117,14 @@ async function getHomeData(): Promise<{ accueil: AccueilData; slides: LocalHomeS
           return { accueil: { ...accueil, categories }, slides: LOCAL_HOME_SLIDES };
         }
       } catch {
-        // keep accueil as-is; CategoryGrid renders nothing rather than an error
+        // fall through to the hardcoded fallback below
       }
+      // Both live sources empty → never blank the section; use the real top categories.
+      return { accueil: { ...accueil, categories: FALLBACK_CATEGORIES }, slides: LOCAL_HOME_SLIDES };
     }
     return { accueil, slides: LOCAL_HOME_SLIDES };
   } catch {
-    return { accueil: emptyAccueil, slides: LOCAL_HOME_SLIDES };
+    return { accueil: { ...emptyAccueil, categories: FALLBACK_CATEGORIES }, slides: LOCAL_HOME_SLIDES };
   }
 }
 
