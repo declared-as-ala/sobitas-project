@@ -126,25 +126,22 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
           {/* 2. Suivez-nous */}
           <div className="space-y-3 w-full">
             <h3 className="font-display text-white text-sm uppercase tracking-wide">Suivez-nous</h3>
-            <p className="text-sm text-gray-400">
-              Nous facilitons la communication et le suivi sur nos réseaux sociaux.
-            </p>
             <div className="flex flex-wrap gap-2 sm:gap-3">
-              <a href="https://facebook.com/proteinetunisie" target="_blank" rel="noopener noreferrer" className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors shrink-0" aria-label="Facebook">
+              <a href="https://facebook.com/proteinetunisie" target="_blank" rel="noopener noreferrer" className="h-11 w-11 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors shrink-0" aria-label="Facebook">
                 <Facebook className="h-5 w-5" />
               </a>
-              <a href="https://www.instagram.com/sobitas.proteine.tunisie/" target="_blank" rel="noopener noreferrer" className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors shrink-0" aria-label="Instagram">
+              <a href="https://www.instagram.com/sobitas.proteine.tunisie/" target="_blank" rel="noopener noreferrer" className="h-11 w-11 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors shrink-0" aria-label="Instagram">
                 <Instagram className="h-5 w-5" />
               </a>
-              <a href="https://www.linkedin.com/in/sobitas-proteine-tunisie-b63b671a8/" target="_blank" rel="noopener noreferrer" className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors shrink-0" aria-label="LinkedIn">
+              <a href="https://www.linkedin.com/in/sobitas-proteine-tunisie-b63b671a8/" target="_blank" rel="noopener noreferrer" className="h-11 w-11 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors shrink-0" aria-label="LinkedIn">
                 <Linkedin className="h-5 w-5" />
               </a>
-              <a href="https://www.tiktok.com/@sobitas.proteine.tunisie" target="_blank" rel="noopener noreferrer" className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors shrink-0" aria-label="TikTok">
+              <a href="https://www.tiktok.com/@sobitas.proteine.tunisie" target="_blank" rel="noopener noreferrer" className="h-11 w-11 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors shrink-0" aria-label="TikTok">
                 <svg className="h-5 w-5 text-white" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
                 </svg>
               </a>
-              <a href="https://www.youtube.com/@proteine-tunisie" target="_blank" rel="noopener noreferrer" className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors shrink-0" aria-label="YouTube">
+              <a href="https://www.youtube.com/@proteine-tunisie" target="_blank" rel="noopener noreferrer" className="h-11 w-11 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors shrink-0" aria-label="YouTube">
                 <Youtube className="h-5 w-5" />
               </a>
             </div>
@@ -186,16 +183,16 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
           <div className="space-y-3 w-full">
             <h3 className="font-display text-white text-sm uppercase tracking-wide">Contact</h3>
             <div className="space-y-2 text-sm text-gray-400">
-              <a href={contactPhoneHref} className="flex items-center gap-3 py-1.5 hover:text-red-500 min-w-0" aria-label="Appeler">
+              <a href={contactPhoneHref} className="flex min-h-11 items-center gap-3 py-2 hover:text-red-500 min-w-0" aria-label="Appeler">
                 <Phone className="h-5 w-5 text-red-500 shrink-0" />
                 <span className="break-words">{contactPhones}</span>
               </a>
-              <a href={`mailto:${contactEmail}`} className="flex items-center gap-3 py-1.5 hover:text-red-500 min-w-0">
+              <a href={`mailto:${contactEmail}`} className="flex min-h-11 items-center gap-3 py-2 hover:text-red-500 min-w-0">
                 <Mail className="h-5 w-5 text-red-500 shrink-0" />
                 <span>{contactEmail}</span>
               </a>
               {contactAddress ? (
-                <div className="flex items-start gap-3 py-1.5 min-w-0">
+                <div className="flex items-start gap-3 py-2 min-w-0">
                   <MapPin className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
                   <span className="break-words">{contactAddress}</span>
                 </div>
@@ -212,9 +209,9 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
               {footerPages.length > 0 ? footerPages.map((p) => (
                 <li key={p.id}>
                   {p.slug ? (
-                    <Link href={`/${p.slug}`} className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">{p.title}</Link>
+                    <Link href={`/${p.slug}`} className="flex min-h-11 items-center py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">{p.title}</Link>
                   ) : (
-                    <span className="block py-2 text-sm text-gray-500">{p.title}</span>
+                    <span className="flex min-h-11 items-center py-2 text-sm text-gray-500">{p.title}</span>
                   )}
                 </li>
               )) : null}
@@ -227,11 +224,11 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
           <div className="space-y-3 w-full">
             <h3 className="font-display text-white text-sm uppercase tracking-wide">Navigation</h3>
             <ul className="space-y-1.5">
-              <li><Link href="/" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Accueil</Link></li>
-              <li><Link href="/shop" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Nos produits</Link></li>
-              <li><Link href="/packs" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Packs</Link></li>
-              <li><Link href="/blog" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Blog</Link></li>
-              <li><Link href="/contact" className="block py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Contact</Link></li>
+              <li><Link href="/" className="flex min-h-11 items-center py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Accueil</Link></li>
+              <li><Link href="/shop" className="flex min-h-11 items-center py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Nos produits</Link></li>
+              <li><Link href="/packs" className="flex min-h-11 items-center py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Packs</Link></li>
+              <li><Link href="/blog" className="flex min-h-11 items-center py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Blog</Link></li>
+              <li><Link href="/contact" className="flex min-h-11 items-center py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Contact</Link></li>
             </ul>
           </div>
         </div>
@@ -278,7 +275,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
                   href="https://facebook.com/proteinetunisie"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="h-10 w-10 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors"
+                  className="h-11 w-11 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors"
                   aria-label="Facebook"
                 >
                   <Facebook className="h-5 w-5" />
@@ -287,7 +284,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
                   href="https://www.instagram.com/sobitas.proteine.tunisie/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="h-10 w-10 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors"
+                  className="h-11 w-11 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors"
                   aria-label="Instagram"
                 >
                   <Instagram className="h-5 w-5" />
@@ -296,7 +293,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
                   href="https://www.linkedin.com/in/sobitas-proteine-tunisie-b63b671a8/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="h-10 w-10 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors"
+                  className="h-11 w-11 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors"
                   aria-label="LinkedIn"
                 >
                   <Linkedin className="h-5 w-5" />
@@ -305,7 +302,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
                   href="https://www.tiktok.com/@sobitas.proteine.tunisie"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="h-10 w-10 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors"
+                  className="h-11 w-11 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors"
                   aria-label="TikTok"
                 >
                   <svg className="h-5 w-5 text-white" viewBox="0 0 24 24" fill="currentColor">
@@ -316,7 +313,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
                   href="https://www.youtube.com/@proteine-tunisie"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="h-10 w-10 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors"
+                  className="h-11 w-11 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors"
                   aria-label="YouTube"
                 >
                   <Youtube className="h-5 w-5" />

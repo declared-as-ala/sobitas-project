@@ -128,8 +128,14 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
-  const { buildOrganizationSchema, buildLocalBusinessSchema, buildWebSiteSchema } = await import('@/util/structuredData');
-  const orgSchema = buildOrganizationSchema(baseUrl);
+  const { buildOrganizationSchema, buildLocalBusinessSchema, buildWebSiteSchema, parseStoreRating } = await import('@/util/structuredData');
+  // Store/seller rating is emitted ONLY from a real, operator-supplied aggregate (Google Business /
+  // Facebook / Google Customer Reviews). Unset → no aggregateRating (never fabricated).
+  const storeRating = parseStoreRating(
+    process.env.NEXT_PUBLIC_STORE_RATING_VALUE,
+    process.env.NEXT_PUBLIC_STORE_RATING_COUNT
+  );
+  const orgSchema = buildOrganizationSchema(baseUrl, { rating: storeRating });
   const localBusinessSchema = buildLocalBusinessSchema(baseUrl);
   const websiteSchema = buildWebSiteSchema(baseUrl);
 

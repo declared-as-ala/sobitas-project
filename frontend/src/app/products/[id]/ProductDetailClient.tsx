@@ -530,7 +530,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
     <div className="min-h-screen bg-white dark:bg-gray-950">
       <Header />
 
-      <main className="w-full mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl py-3 sm:py-6 lg:py-12 pb-44 sm:pb-44 lg:pb-12">
+      <main className="w-full mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl py-3 sm:py-6 lg:py-12 pb-36 sm:pb-36 lg:pb-12">
         {/* Breadcrumb: Accueil > Boutique > Category > Subcategory (ends at category, no product name) */}
         {breadcrumbItems.length > 0 && (
           <nav aria-label="Fil d'Ariane" className="mb-3 sm:mb-4 text-sm text-gray-500 dark:text-gray-400">
@@ -756,19 +756,15 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 )}
               </div>
 
-              {/* Category line only (directly above Arômes) — product code hidden on detail page */}
-              {product.sous_categorie?.slug && (
+              {/* Meta: category, brand, tags, SKU — one tight row (product code hidden on detail page) */}
+              {(product.sous_categorie?.slug || product.brand?.designation_fr || (product.tags?.length ?? 0) > 0 || product.sku || product.code_product) && (
                 <div className="px-1">
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
-                    <Link href={`/${product.sous_categorie.slug}`} className="text-red-600 dark:text-red-400 hover:underline">
-                      {product.sous_categorie.designation_fr}
-                    </Link>
-                  </div>
-                </div>
-              )}
-              {(product.brand?.designation_fr || (product.tags?.length ?? 0) > 0) && (
-                <div className="px-1">
-                  <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-gray-600 dark:text-gray-400">
+                    {product.sous_categorie?.slug && (
+                      <Link href={`/${product.sous_categorie.slug}`} className="text-red-600 dark:text-red-400 hover:underline">
+                        {product.sous_categorie.designation_fr}
+                      </Link>
+                    )}
                     {product.brand?.designation_fr && (
                       <Link href={`/${nameToSlug(product.brand.designation_fr)}`} className="text-red-600 dark:text-red-400 hover:underline">
                         Marque: {product.brand.designation_fr}
@@ -1458,32 +1454,34 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
         )}
       </main>
 
-      {/* Sticky CTAs (Mobile): slightly smaller buttons */}
+      {/* Sticky CTAs (Mobile): compact — Total inline with primary CTA, secondary below */}
       <div
-        className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 p-2.5 sm:p-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] z-50"
-        style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}
+        className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 px-3 pt-2 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] z-50"
+        style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom, 0px))' }}
       >
-        <div className="w-full mx-auto px-4 sm:px-6 max-w-7xl flex flex-col gap-2 sm:gap-3">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-display uppercase tracking-wide">Total</p>
-            <p className="font-display font-bold tracking-tight tabular-nums text-xl sm:text-2xl text-red-600 dark:text-red-400 truncate">
-              {(displayPrice * quantity).toFixed(0)} DT
-            </p>
+        <div className="w-full mx-auto max-w-7xl flex flex-col gap-2">
+          <div className="flex items-center gap-3">
+            <div className="flex flex-col leading-tight shrink-0">
+              <span className="text-[10px] font-display uppercase tracking-wide text-gray-500 dark:text-gray-400">Total</span>
+              <span className="font-display font-bold tracking-tight tabular-nums text-lg text-red-600 dark:text-red-400">
+                {(displayPrice * quantity).toFixed(0)} DT
+              </span>
+            </div>
+            <Button
+              size="default"
+              className="flex-1 min-w-0 min-h-[44px] h-auto py-2 text-sm bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide font-bold"
+              onClick={handleAddToCart}
+              disabled={stockStatus.isOutOfStock}
+              aria-label="Ajouter au panier"
+            >
+              <ShoppingCart className="h-4 w-4 mr-2 shrink-0" />
+              {stockStatus.isOutOfStock ? 'Rupture' : 'Ajouter au panier'}
+            </Button>
           </div>
           <Button
             size="default"
-            className="w-full min-h-[44px] h-auto py-2.5 text-sm bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide font-bold shrink-0"
-            onClick={handleAddToCart}
-            disabled={stockStatus.isOutOfStock}
-            aria-label="Ajouter au panier"
-          >
-            <ShoppingCart className="h-4 w-4 mr-2 shrink-0" />
-            {stockStatus.isOutOfStock ? 'Rupture' : 'Ajouter au panier'}
-          </Button>
-          <Button
-            size="default"
             variant="outline"
-            className="w-full min-h-[44px] h-auto py-2.5 text-sm bg-transparent border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 dark:text-red-400 dark:border-red-400 font-display uppercase tracking-wide font-semibold shrink-0"
+            className="w-full min-h-[44px] h-auto py-2 text-sm bg-transparent border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 dark:text-red-400 dark:border-red-400 font-display uppercase tracking-wide font-semibold"
             onClick={handleQuickOrderClick}
             disabled={stockStatus.isOutOfStock}
             aria-label="Commander maintenant"

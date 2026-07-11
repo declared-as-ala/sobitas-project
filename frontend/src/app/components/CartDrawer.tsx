@@ -54,8 +54,8 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 bg-white dark:bg-gray-900">
           {items.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <div className="rounded-full bg-gray-100 dark:bg-gray-800 p-6 mb-4">
-                <ShoppingBag className="h-12 w-12 text-gray-400 dark:text-gray-500" />
+              <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/40 mb-4">
+                <ShoppingBag className="h-10 w-10 text-red-600 dark:text-red-400" />
               </div>
               <p className="text-gray-500 dark:text-gray-400 mb-6 text-center">
                 Votre panier est vide
@@ -107,54 +107,53 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-900 dark:text-white text-sm line-clamp-2 mb-0.5 leading-tight">
-                        {localizedName(item.product as any, locale)}
-                      </h3>
-                      <p className="text-red-600 dark:text-red-400 font-display font-bold tracking-tight tabular-nums text-sm mb-2">
-                        {formatCurrency(displayPrice)}
-                      </p>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-9 w-9 rounded-lg border-gray-200 dark:border-gray-600"
-                          onClick={() =>
-                            updateQuantity(item.product.id, Math.max(1, item.quantity - 1))
-                          }
-                          disabled={item.quantity <= 1}
-                          aria-label="Diminuer la quantité"
-                        >
-                          <Minus className="h-4 w-4" />
-                        </Button>
-                        <span className="w-8 text-center text-sm font-medium tabular-nums" aria-live="polite">
-                          {item.quantity}
-                        </span>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-9 w-9 rounded-lg border-gray-200 dark:border-gray-600"
-                          onClick={handleIncrease}
-                          disabled={item.quantity >= maxQty}
-                          aria-label="Augmenter la quantité"
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="font-semibold text-gray-900 dark:text-white text-sm line-clamp-2 leading-snug">
+                          {localizedName(item.product as any, locale)}
+                        </h3>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-9 w-9 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg ml-auto"
+                          className="h-9 w-9 -mt-1 -mr-1 shrink-0 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
                           onClick={() => removeFromCart(item.product.id)}
                           aria-label="Retirer du panier"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
-                    </div>
-
-                    <div className="text-right flex-shrink-0">
-                      <p className="font-display font-bold tracking-tight tabular-nums text-gray-900 dark:text-white text-sm">
-                        {formatCurrency(displayPrice * item.quantity)}
+                      <p className="text-red-600 dark:text-red-400 font-display font-bold tracking-tight tabular-nums text-sm mt-0.5">
+                        {formatCurrency(displayPrice)}
                       </p>
+                      <div className="flex items-center justify-between gap-2 mt-2">
+                        <div className="flex items-center rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden bg-white dark:bg-gray-800">
+                          <button
+                            type="button"
+                            className="flex items-center justify-center w-10 h-10 min-h-[44px] min-w-[44px] text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:pointer-events-none"
+                            onClick={() =>
+                              updateQuantity(item.product.id, Math.max(1, item.quantity - 1))
+                            }
+                            disabled={item.quantity <= 1}
+                            aria-label="Diminuer la quantité"
+                          >
+                            <Minus className="h-4 w-4" />
+                          </button>
+                          <span className="w-9 text-center text-sm font-semibold tabular-nums" aria-live="polite">
+                            {item.quantity}
+                          </span>
+                          <button
+                            type="button"
+                            className="flex items-center justify-center w-10 h-10 min-h-[44px] min-w-[44px] text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:pointer-events-none"
+                            onClick={handleIncrease}
+                            disabled={item.quantity >= maxQty}
+                            aria-label="Augmenter la quantité"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </button>
+                        </div>
+                        <p className="font-display font-bold tracking-tight tabular-nums text-gray-900 dark:text-white text-sm sm:text-base">
+                          {formatCurrency(displayPrice * item.quantity)}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 );

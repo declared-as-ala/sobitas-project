@@ -235,7 +235,7 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
                 <span className="h-px w-5 bg-red-600 dark:bg-red-400" aria-hidden="true" />
                 Blog
               </span>
-              <h1 className="font-display uppercase tracking-tight leading-[1.05] font-bold text-gray-900 dark:text-white text-3xl sm:text-4xl lg:text-5xl mb-4 sm:mb-6">
+              <h1 className="font-display uppercase tracking-tight leading-[1.1] sm:leading-[1.05] font-bold text-gray-900 dark:text-white text-2xl sm:text-4xl lg:text-5xl mb-4 sm:mb-6 text-balance break-words">
                 {decodeHtmlEntities(article.designation_fr || '')}
               </h1>
 
@@ -351,7 +351,7 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
           )}
           {/* Internal linking: whey category for whey-related articles */}
           {/\bwhey\b|\bprot[eé]ine\s+(lactos[eé]rum|lait)\b/i.test(`${article.designation_fr ?? ''} ${article.description_fr ?? ''}`) && (
-            <div className="mt-6 px-4 sm:px-6 lg:px-8 py-4 sm:py-6 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
+            <div className="mt-6 p-4 sm:p-5 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
               <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
                 <Link href="/proteine-whey" className="text-red-600 dark:text-red-400 font-medium hover:underline">Whey protein Tunisie</Link> au meilleur prix : livraison rapide, produits originaux. <Link href="/proteine-whey" className="text-red-600 dark:text-red-400 hover:underline">Acheter whey en Tunisie</Link> – découvrez notre sélection de <Link href="/proteine-whey" className="text-red-600 dark:text-red-400 hover:underline">meilleure whey protein</Link> sur Proteine Tunisie.
               </p>

@@ -368,7 +368,7 @@ export default function CartPage() {
                 </div>
                 <Button
                   size="lg"
-                  className="w-full bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide h-12 sm:h-14 min-h-[44px] text-base sm:text-lg rounded-xl"
+                  className="hidden lg:flex w-full bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide h-12 sm:h-14 min-h-[44px] text-base sm:text-lg rounded-xl"
                   asChild
                 >
                   <Link href="/checkout">
