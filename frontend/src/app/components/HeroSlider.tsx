@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, memo, useMemo } from 'react';
 import Image from 'next/image';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ShieldCheck, Truck, CreditCard } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { HeroTrustGuarantee } from '@/app/components/HeroTrustGuarantee';
@@ -200,7 +200,7 @@ export const HeroSlider = memo(function HeroSlider({ slides, mobileFirst, deskto
 
   return (
     <section
-      className="relative w-full overflow-hidden bg-gray-900 h-[78dvh] min-h-[460px] sm:h-[64vh] sm:min-h-0 md:h-[70vh] md:min-h-[400px] lg:h-[460px] xl:h-[520px] 2xl:h-[560px]"
+      className="relative w-full overflow-hidden bg-gray-900 h-[64dvh] min-h-[440px] sm:h-[64vh] sm:min-h-0 md:h-[70vh] md:min-h-[400px] lg:h-[460px] xl:h-[520px] 2xl:h-[560px]"
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
@@ -220,22 +220,16 @@ export const HeroSlider = memo(function HeroSlider({ slides, mobileFirst, deskto
           />
         )}
 
-        {/* Mobile-first cinematic overlays for text readability and cleaner hierarchy */}
+        {/* Single readability gradient. Mobile: bottom-up — the image stays crisp up top and the
+            copy is legible over a clean dark floor (replaces 3 stacked layers that muddied the photo).
+            Desktop: left-anchored for the left-aligned copy. */}
         <div
-          className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/42 to-black/24 md:bg-gradient-to-r md:from-black/78 md:via-black/42 md:to-transparent"
-          aria-hidden="true"
-        />
-        <div
-          className="absolute inset-x-0 top-0 h-[44%] bg-gradient-to-b from-black/88 via-black/68 to-transparent backdrop-blur-[1px] md:hidden"
-          aria-hidden="true"
-        />
-        <div
-          className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-black/62 via-black/28 to-transparent md:h-44 md:from-black/30 md:via-black/10"
+          className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/5 md:bg-gradient-to-r md:from-black/78 md:via-black/42 md:to-transparent"
           aria-hidden="true"
         />
 
         {/* Content */}
-        <div className="relative mx-auto flex h-full w-full max-w-7xl flex-col px-5 pb-28 pt-[calc(env(safe-area-inset-top)+1.25rem)] sm:px-6 sm:pb-28 md:justify-center md:pb-16 md:pt-0 lg:px-8">
+        <div className="relative mx-auto flex h-full w-full max-w-7xl flex-col px-5 pb-11 pt-[calc(env(safe-area-inset-top)+1rem)] sm:px-6 sm:pb-14 md:justify-center md:pb-16 md:pt-0 lg:px-8">
           {/* Left-aligned (French LTR): copy sits on the left over a left-darkened gradient.
               Mobile drops it to the bottom floor; desktop centers it vertically on the left. */}
           <div className="flex min-h-0 min-w-0 max-w-xl flex-1 flex-col items-start justify-end text-left md:flex-none md:justify-center lg:max-w-2xl xl:max-w-3xl">
@@ -261,16 +255,28 @@ export const HeroSlider = memo(function HeroSlider({ slides, mobileFirst, deskto
                 </LinkWithLoading>
               </Button>
             </div>
+            {/* Mobile trust row — clean inline replacement for the old scaled floating card */}
+            <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 lg:hidden">
+              {[
+                { Icon: ShieldCheck, label: '100% authentique' },
+                { Icon: Truck, label: 'Livraison 24–72h' },
+                { Icon: CreditCard, label: 'Paiement à la livraison' },
+              ].map(({ Icon, label }) => (
+                <span
+                  key={label}
+                  className="inline-flex items-center gap-1.5 text-[11px] font-medium text-white/90 drop-shadow-[0_1px_6px_rgba(0,0,0,0.7)]"
+                >
+                  <Icon className="h-3.5 w-3.5 text-red-400" strokeWidth={2} aria-hidden="true" />
+                  {label}
+                </span>
+              ))}
+            </div>
             <div className="mt-6 hidden lg:block">
               <HeroTrustGuarantee layout="inline" />
             </div>
           </div>
         </div>
 
-        {/* Mobile trust card: visible on phones with safe spacing */}
-        <div className="absolute inset-x-0 bottom-[0.75rem] z-[2] mx-auto w-[86%] max-w-sm scale-[0.9] sm:bottom-[1rem] sm:w-[82%] sm:scale-95 lg:hidden">
-          <HeroTrustGuarantee layout="docked" />
-        </div>
       </div>
 
       {/* Navigation arrows */}
