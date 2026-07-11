@@ -3,6 +3,7 @@ import { getAccueil, getCategories } from '@/services/api';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
 import { buildWebPageSchema, buildItemListSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
 import { buildProductUrlPath } from '@/util/productUrl';
+import { enrichProductsWithSubcategory } from '@/util/enrichProductSubcategory';
 import { HomePageClient } from './components/HomePageClient';
 import type { AccueilData, Product } from '@/types';
 
@@ -106,23 +107,33 @@ const LOCAL_HOME_SLIDES: LocalHomeSlide[] = [
 async function getHomeData(): Promise<{ accueil: AccueilData; slides: LocalHomeSlide[] }> {
   try {
     const accueil = await getAccueil();
-    // Resilience: the /accueil payload intermittently returns an empty `categories` array, and an
-    // ISR render that captures that empties the homepage "Catégories populaires" grid for up to the
-    // revalidate window. Fall back to the dedicated (more reliable) /categories endpoint so the
-    // section is never blank.
-    if (!Array.isArray(accueil.categories) || accueil.categories.length === 0) {
+
+    // Categories serve two jobs: resolve each product's subcategory slug (for canonical links) and
+    // fill the "Catégories populaires" grid. The /accueil payload ships `categories[].sous_categories`;
+    // if it's empty (rare hiccup) fall back to the dedicated /categories endpoint.
+    let categories = Array.isArray(accueil.categories) ? accueil.categories : [];
+    if (categories.length === 0) {
       try {
-        const categories = await getCategories();
-        if (Array.isArray(categories) && categories.length > 0) {
-          return { accueil: { ...accueil, categories }, slides: LOCAL_HOME_SLIDES };
-        }
+        const fetched = await getCategories();
+        if (Array.isArray(fetched) && fetched.length > 0) categories = fetched;
       } catch {
-        // fall through to the hardcoded fallback below
+        // keep empty; the fallback categories below still fill the grid
       }
-      // Both live sources empty → never blank the section; use the real top categories.
-      return { accueil: { ...accueil, categories: FALLBACK_CATEGORIES }, slides: LOCAL_HOME_SLIDES };
     }
-    return { accueil, slides: LOCAL_HOME_SLIDES };
+
+    // Enrich list products (which ship only `sous_categorie_id`) with their subcategory so every
+    // product link + ItemList URL is the canonical /{subcat}/{slug} instead of /shop/{slug} — the
+    // latter 301-redirects, which is exactly the "Page with redirect" bucket in Search Console.
+    const enriched: AccueilData = {
+      ...accueil,
+      categories: categories.length > 0 ? categories : (FALLBACK_CATEGORIES as AccueilData['categories']),
+      best_sellers: enrichProductsWithSubcategory(accueil.best_sellers, categories),
+      new_product: enrichProductsWithSubcategory(accueil.new_product, categories),
+      packs: enrichProductsWithSubcategory(accueil.packs, categories),
+      ventes_flash: enrichProductsWithSubcategory(accueil.ventes_flash, categories),
+    };
+
+    return { accueil: enriched, slides: LOCAL_HOME_SLIDES };
   } catch {
     return { accueil: { ...emptyAccueil, categories: FALLBACK_CATEGORIES }, slides: LOCAL_HOME_SLIDES };
   }

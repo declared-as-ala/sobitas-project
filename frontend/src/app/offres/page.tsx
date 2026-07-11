@@ -5,6 +5,7 @@ import { isInStock } from '@/util/cartStock';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
 import { buildCollectionPageSchema, buildItemListSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
 import { buildProductUrlPath } from '@/util/productUrl';
+import { enrichProductsWithSubcategory } from '@/util/enrichProductSubcategory';
 import { OffresPageClient } from './OffresPageClient';
 import type { Product } from '@/types';
 
@@ -38,9 +39,9 @@ export const revalidate = 300;
 export default async function OffresPage() {
   let promoProducts: Product[] = [];
   try {
-    const { products } = await getAllProducts();
+    const { products, categories } = await getAllProducts();
     if (Array.isArray(products)) {
-      promoProducts = products.filter((p: Product) => {
+      const filtered = products.filter((p: Product) => {
         // Filter: must have valid promo AND be in stock
         const hasPromo = hasValidPromo(p);
         // rupture === 1 means in stock, rupture === 0 or undefined might mean out of stock
@@ -49,6 +50,9 @@ export default async function OffresPage() {
         const isInStock = (p as any).rupture !== 0;
         return hasPromo && isInStock;
       });
+      // Resolve subcategory so product links + ItemList URLs are canonical /{subcat}/{slug}, not the
+      // /shop/{slug} 301. No-op if the payload has no category data.
+      promoProducts = enrichProductsWithSubcategory(filtered, categories);
     }
   } catch (e) {
     console.error('Error fetching products for offres:', e);

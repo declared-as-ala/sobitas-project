@@ -7,6 +7,7 @@ import { fetchCategoryOrSubCategory, getAllBrands, getCategories, getPageBySlug,
 import { ApiError } from '@/services/http';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
 import { isReservedRouteSlug, buildProductUrlPath } from '@/util/productUrl';
+import { enrichProductsWithSubcategory } from '@/util/enrichProductSubcategory';
 import { buildCollectionPageSchema, buildItemListSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
 import type { Brand, Page } from '@/types';
 
@@ -149,8 +150,11 @@ export default async function RootSlugPage({ params }: RootSlugPageProps) {
   if (brand?.id) {
     const result = await getProductsByBrand(brand.id);
     const categories = result.categories || await getCategories();
+    // Resolve each product's subcategory so links + the ItemList below are canonical
+    // /{subcat}/{slug} (not the /shop/{slug} 301). No-op if categories lack sous_categories.
+    const brandProductsList = enrichProductsWithSubcategory(result.products, categories);
     const productsData = {
-      products: result.products,
+      products: brandProductsList,
       brands: result.brands,
       categories,
     };
@@ -169,7 +173,7 @@ export default async function RootSlugPage({ params }: RootSlugPageProps) {
       baseUrl
     );
     const collectionSchema = buildCollectionPageSchema(brandTitle, `/${cleanSlug}`, baseUrl, { description: brandDesc });
-    const brandProducts = Array.isArray(result.products) ? result.products : [];
+    const brandProducts = Array.isArray(brandProductsList) ? brandProductsList : [];
     const itemListSchema = brandProducts.length > 0
       ? buildItemListSchema(
           brandProducts.slice(0, 20).map((p) => ({ name: p.designation_fr || 'Produit', url: buildProductUrlPath(p) })),
