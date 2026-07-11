@@ -345,11 +345,11 @@ input[type="search"]::-webkit-search-results-decoration {
   }
 }
 
-/* Blog article content: links as orange text only, no box */
+/* Blog article content: links in the one-accent red, no box */
 .article-content a {
   @apply font-medium no-underline
-    text-orange-600 dark:text-orange-400
-    hover:text-orange-700 dark:hover:text-orange-300 hover:underline
+    text-red-600 dark:text-red-400
+    hover:text-red-700 dark:hover:text-red-300 hover:underline
     transition-colors duration-150;
 }
 
