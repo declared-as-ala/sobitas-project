@@ -30,8 +30,9 @@ export const metadata: Metadata = {
 };
 
 // Force dynamic rendering to ensure fresh data on every request
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+// ISR (was force-dynamic → rendered every request, slow TTFB/LCP). Packs are cache-safe;
+// revalidate in the background every 10 min.
+export const revalidate = 600;
 
 async function getPacksData() {
   try {

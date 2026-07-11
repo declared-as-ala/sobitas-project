@@ -12,9 +12,9 @@ interface ArticlePageProps {
   params: Promise<{ slug: string }>;
 }
 
-// dynamic = 'force-dynamic': page is rendered on every request.
-// fetch calls use next:{tags:['blog']} for on-demand revalidation.
-export const dynamic = 'force-dynamic';
+// ISR (was force-dynamic → rendered every request, slow TTFB/LCP). Articles rarely change;
+// cache the render and revalidate hourly (fetch tags:['blog'] still allow on-demand purge).
+export const revalidate = 3600;
 
 // Helper to strip HTML and get plain text
 function stripHtml(html: string): string {
