@@ -327,12 +327,12 @@ export function QuickOrderDrawer({
                 <Zap className="h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
                 Commander maintenant
               </DialogPrimitive.Title>
-              <DialogPrimitive.Description className="mt-1 text-sm text-gray-600 dark:text-gray-400 truncate">
+              <DialogPrimitive.Description className="mt-1 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
                 {summaryLine}
               </DialogPrimitive.Description>
             </div>
             <DialogPrimitive.Close
-              className="-mr-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+              className="-mr-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
               aria-label="Fermer"
             >
               <X className="h-5 w-5" />
@@ -414,7 +414,7 @@ export function QuickOrderDrawer({
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="h-10 w-10 shrink-0 rounded-lg"
+                          className="h-11 w-11 shrink-0 rounded-lg"
                           onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                           disabled={quantity <= 1}
                           aria-label="Diminuer la quantité"
@@ -426,7 +426,7 @@ export function QuickOrderDrawer({
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="h-10 w-10 shrink-0 rounded-lg"
+                          className="h-11 w-11 shrink-0 rounded-lg"
                           onClick={() => setQuantity((q) => q + 1)}
                           disabled={!inStock}
                           aria-label="Augmenter la quantité"

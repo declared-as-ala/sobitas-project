@@ -456,11 +456,36 @@ export function buildBreadcrumbListSchema(
 }
 
 /**
+ * Parse a store-wide rating aggregate that the OPERATOR supplies (e.g. from Google Business /
+ * Facebook / Google Customer Reviews). Returns null unless BOTH a valid average (1–5) and a
+ * positive review count are present. We never fabricate a store rating: an unset/invalid value
+ * emits no aggregateRating at all (Google forbids self-serving, unsourced business ratings).
+ */
+export function parseStoreRating(
+  ratingValue: unknown,
+  ratingCount: unknown
+): { ratingValue: number; reviewCount: number } | null {
+  const value = typeof ratingValue === 'number' ? ratingValue : parseFloat(String(ratingValue ?? '').replace(',', '.'));
+  const count = typeof ratingCount === 'number' ? ratingCount : parseInt(String(ratingCount ?? '').replace(/[^\d]/g, ''), 10);
+  if (!Number.isFinite(value) || value < 1 || value > 5) return null;
+  if (!Number.isFinite(count) || count < 1) return null;
+  return { ratingValue: Math.round(value * 10) / 10, reviewCount: Math.floor(count) };
+}
+
+/**
  * Organization schema: name, logo, address (Tunisia), contactPoint, sameAs.
  * Use sitewide (e.g. in layout).
+ *
+ * `options.rating` — optional REAL store rating (see parseStoreRating). When present, an
+ * `aggregateRating` is attached to the OnlineStore so Google can show store/seller stars alongside
+ * the brand. Only pass genuine, operator-supplied numbers.
  */
-export function buildOrganizationSchema(baseUrl: string): object {
+export function buildOrganizationSchema(
+  baseUrl: string,
+  options?: { rating?: { ratingValue: number; reviewCount: number } | null }
+): object {
   const base = baseUrl.replace(/\/$/, '');
+  const rating = options?.rating ?? null;
   return {
     '@context': 'https://schema.org',
     '@type': ['Organization', 'OnlineStore'],
@@ -470,6 +495,17 @@ export function buildOrganizationSchema(baseUrl: string): object {
     logo: `${base}/logo.png`,
     description:
       'Whey protein, créatine, vitamines et compléments alimentaires en Tunisie — livraison rapide et produits authentiques. Boutique à Sousse, livraison dans tout le pays.',
+    ...(rating
+      ? {
+          aggregateRating: {
+            '@type': 'AggregateRating',
+            ratingValue: String(rating.ratingValue),
+            reviewCount: rating.reviewCount,
+            bestRating: 5,
+            worstRating: 1,
+          },
+        }
+      : {}),
     address: {
       '@type': 'PostalAddress',
       streetAddress: 'Rue Ribat',

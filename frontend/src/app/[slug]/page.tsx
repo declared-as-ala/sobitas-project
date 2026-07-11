@@ -5,8 +5,9 @@ import { PageContentClient } from '@/app/page/[slug]/PageContentClient';
 import { ShopPageClient } from '@/app/shop/ShopPageClient';
 import { fetchCategoryOrSubCategory, getAllBrands, getCategories, getPageBySlug, getProductsByBrand, getStorageUrl } from '@/services/api';
 import { ApiError } from '@/services/http';
-import { buildCanonicalUrl } from '@/util/canonical';
-import { isReservedRouteSlug } from '@/util/productUrl';
+import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
+import { isReservedRouteSlug, buildProductUrlPath } from '@/util/productUrl';
+import { buildCollectionPageSchema, buildItemListSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
 import type { Brand, Page } from '@/types';
 
 export type RootSlugPageProps = {
@@ -153,20 +154,37 @@ export default async function RootSlugPage({ params }: RootSlugPageProps) {
       brands: result.brands,
       categories,
     };
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
-    const breadcrumbJsonLd = {
-      '@context': 'https://schema.org',
-      '@type': 'BreadcrumbList',
-      itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'Accueil', item: baseUrl },
-        { '@type': 'ListItem', position: 2, name: 'Boutique', item: `${baseUrl}/shop` },
-        { '@type': 'ListItem', position: 3, name: brand.designation_fr, item: `${baseUrl}/${cleanSlug}` },
+    // Brand landing SEO: Breadcrumb + CollectionPage + ItemList (the product grid). Previously only
+    // a bare BreadcrumbList was emitted, so brand pages (a primary ranking surface) were nearly
+    // schema-less; the ItemList also gives Google the product URLs for internal-link discovery.
+    const baseUrl = getBaseUrl();
+    const brandTitle = `${brand.designation_fr} — Protéines & Compléments en Tunisie | Protéine Tunisie`;
+    const brandDesc = `Tous les produits ${brand.designation_fr} en Tunisie : qualité premium, produits authentiques, livraison rapide partout dans le pays.`;
+    const breadcrumbSchema = buildBreadcrumbListSchema(
+      [
+        { name: 'Accueil', url: '/' },
+        { name: 'Boutique', url: '/shop' },
+        { name: brand.designation_fr, url: `/${cleanSlug}` },
       ],
-    };
+      baseUrl
+    );
+    const collectionSchema = buildCollectionPageSchema(brandTitle, `/${cleanSlug}`, baseUrl, { description: brandDesc });
+    const brandProducts = Array.isArray(result.products) ? result.products : [];
+    const itemListSchema = brandProducts.length > 0
+      ? buildItemListSchema(
+          brandProducts.slice(0, 20).map((p) => ({ name: p.designation_fr || 'Produit', url: buildProductUrlPath(p) })),
+          baseUrl,
+          { name: `Produits ${brand.designation_fr}` }
+        )
+      : null;
 
     return (
       <>
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionSchema) }} />
+        {itemListSchema && (
+          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }} />
+        )}
         <ShopPageClient
           productsData={productsData}
           categories={categories}

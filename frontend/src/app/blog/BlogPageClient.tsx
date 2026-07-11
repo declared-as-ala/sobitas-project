@@ -299,7 +299,7 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
     <div className="min-h-screen bg-white dark:bg-gray-950">
       <Header />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 lg:py-14">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
         <div className="mb-10 sm:mb-12">
           <PageHeader
             kicker="Blog"
@@ -307,7 +307,7 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
             subtitle="Conseils, guides et actualités : whey, créatine, prise de masse et compléments alimentaires."
           >
             {/* Category filters – pills, red accent */}
-            <nav className="flex flex-wrap gap-2 md:gap-3" aria-label="Catégories du blog">
+            <nav className="flex flex-wrap gap-2.5 md:gap-3" aria-label="Catégories du blog">
               {BLOG_CATEGORIES.map((cat) => (
                 <button
                   key={cat.id}
