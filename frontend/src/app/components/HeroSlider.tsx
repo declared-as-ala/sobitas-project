@@ -23,15 +23,13 @@ const fallbackSlides = [
   },
 ];
 
-// Build a Next.js image optimization URL
-function nextImgUrl(src: string, w: number, q = 75) {
-  return `/_next/image?url=${encodeURIComponent(src)}&w=${w}&q=${q}`;
-}
-
-// Build srcset string: "url 640w, url 828w, ..."
-function buildSrcSet(src: string, widths: number[], q = 75) {
-  return widths.map((w) => `${nextImgUrl(src, w, q)} ${w}w`).join(', ');
-}
+// Optimized, right-sized hero variants (pre-generated with sharp), served DIRECT-static so
+// Cloudflare edge-caches them. The Next image optimizer output was ~800ms-TTFB / Cf DYNAMIC on
+// every hit (killing LCP); these tiny AVIFs (~30KB) are edge-cached (Cf REVALIDATED).
+const HERO_M_AVIF = '/slides/hero-m.avif';
+const HERO_M_WEBP = '/slides/hero-m.webp';
+const HERO_D_AVIF = '/slides/hero-d.avif';
+const HERO_D_WEBP = '/slides/hero-d.webp';
 
 function resolveSlideImageUrl(path: string) {
   if (!path) return '';
@@ -51,29 +49,25 @@ interface HeroSliderProps {
 // This is what gets measured as LCP — it loads in parallel with the JS bundle.
 const HeroFirstPicture = memo(function HeroFirstPicture({
   mobileFirst,
-  desktopFirst,
 }: {
   mobileFirst: HeroFirstSlide;
   desktopFirst: HeroFirstSlide;
 }) {
-  // q=50 on mobile matches the preload hint in page.tsx — ensures preload cache hit.
-  const mobileSrcSet = buildSrcSet(mobileFirst.imageUrl, [640, 750, 828], 50);
-  const desktopSrcSet = buildSrcSet(desktopFirst.imageUrl, [1080, 1200], 75);
-
+  // Direct-static AVIF (edge-cached) with WebP fallback, per breakpoint. No /_next/image optimizer.
   return (
     <picture
       style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block' }}
     >
-      {/* Mobile: q=50 keeps file size small on slow connections */}
-      <source media="(max-width: 767px)" srcSet={mobileSrcSet} sizes="100vw" />
-      {/* Desktop: q=75 for high fidelity on large screens */}
-      <source media="(min-width: 768px)" srcSet={desktopSrcSet} sizes="100vw" />
+      <source type="image/avif" media="(max-width: 767px)" srcSet={HERO_M_AVIF} />
+      <source type="image/webp" media="(max-width: 767px)" srcSet={HERO_M_WEBP} />
+      <source type="image/avif" media="(min-width: 768px)" srcSet={HERO_D_AVIF} />
+      <source type="image/webp" media="(min-width: 768px)" srcSet={HERO_D_WEBP} />
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={nextImgUrl(mobileFirst.imageUrl, 828, 50)}
+        src={HERO_M_WEBP}
         alt={mobileFirst.title}
         width={828}
-        height={466}
+        height={1471}
         fetchPriority="high"
         decoding="async"
         loading="eager"

@@ -123,16 +123,6 @@ function getFirstSlideAnyType(slides: any[]) {
   return getSlideData(sorted[0] ?? null);
 }
 
-// Build Next.js image optimization URL
-function nextImgUrl(src: string, w: number, q = 75) {
-  return `/_next/image?url=${encodeURIComponent(src)}&w=${w}&q=${q}`;
-}
-
-// Build srcset string for <link rel="preload" imagesrcset> — browser picks correct width by DPR
-function buildImgSrcSet(src: string, widths: number[], q = 75) {
-  return widths.map((w) => `${nextImgUrl(src, w, q)} ${w}w`).join(', ');
-}
-
 export interface HeroFirstSlide {
   imageUrl: string;
   title: string;
@@ -147,12 +137,6 @@ export default async function Home() {
   // show the hero image. This is the key fix for LCP 6.5s on mobile.
   const mobileFirst = getFirstSlideByType(slides, 'mobile') ?? getFirstSlideAnyType(slides);
   const desktopFirst = getFirstSlideByType(slides, 'web') ?? getFirstSlideAnyType(slides);
-
-  // Mobile: quality=50 (hero background, fidelity matters less than speed on slow 4G).
-  // Max width 828 (covers @2x retina on 414px phone — 1080 is wasteful on mobile).
-  // Desktop: quality=75, covers HiDPI up to 1200px.
-  const mobileSrcSet = mobileFirst ? buildImgSrcSet(mobileFirst.imageUrl, [640, 750, 828], 50) : null;
-  const desktopSrcSet = desktopFirst ? buildImgSrcSet(desktopFirst.imageUrl, [1080, 1200], 75) : null;
 
   // Homepage JSON-LD: WebPage (this page) + BreadcrumbList (root) + ItemList of the featured
   // products so the flagship URL isn't schema-less. Built from the server `accueil` payload so
@@ -190,29 +174,9 @@ export default async function Home() {
       {itemListSchema && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }} />
       )}
-      {/* LCP hero preloads — media-specific so mobile only downloads mobile image */}
-      {mobileSrcSet && mobileFirst && (
-        <link
-          rel="preload"
-          as="image"
-          href={nextImgUrl(mobileFirst.imageUrl, 828, 50)}
-          imageSrcSet={mobileSrcSet}
-          imageSizes="100vw"
-          media="(max-width: 767px)"
-          fetchPriority="high"
-        />
-      )}
-      {desktopSrcSet && desktopFirst && (
-        <link
-          rel="preload"
-          as="image"
-          href={nextImgUrl(desktopFirst.imageUrl, 1200, 75)}
-          imageSrcSet={desktopSrcSet}
-          imageSizes="100vw"
-          media="(min-width: 768px)"
-          fetchPriority="high"
-        />
-      )}
+      {/* LCP hero preloads — direct-static AVIF (edge-cached), media-specific per breakpoint */}
+      <link rel="preload" as="image" href="/slides/hero-m.avif" type="image/avif" media="(max-width: 767px)" fetchPriority="high" />
+      <link rel="preload" as="image" href="/slides/hero-d.avif" type="image/avif" media="(min-width: 768px)" fetchPriority="high" />
       <HomePageClient
         accueil={accueil}
         slides={slides}
