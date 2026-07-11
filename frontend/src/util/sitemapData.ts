@@ -165,6 +165,12 @@ async function computeSitemapEntries(): Promise<MetadataRoute.Sitemap> {
       }
     }
 
+    // Robustness: a product-less sitemap is the regression we just fixed. If the catalogue crawl
+    // yields 0 products, THROW so unstable_cache does NOT memoize a degraded (categories-only)
+    // sitemap for an hour — the next request retries instead.
+    if (allProducts.length === 0) {
+      throw new Error('[sitemap] getAllProducts returned 0 products — refusing to cache a product-less sitemap');
+    }
     if (allProducts.length > 0) {
       // CRITICAL: /all_products returns products with only `sous_categorie_id` (no relation), so
       // getProductPrimarySubCategory() returned undefined for EVERY product and the filter below
@@ -207,6 +213,9 @@ async function computeSitemapEntries(): Promise<MetadataRoute.Sitemap> {
     }
   } catch (error) {
     console.error('Error processing products for sitemap:', error);
+    // Rethrow: never let unstable_cache store a sitemap whose product crawl failed transiently
+    // (that would serve a product-less sitemap for the full 1h TTL).
+    throw error;
   }
 
   try {
@@ -312,7 +321,13 @@ async function computeSitemapEntries(): Promise<MetadataRoute.Sitemap> {
   try {
     if (pages.status === 'fulfilled' && Array.isArray(pages.value) && pages.value.length > 0) {
       pages.value
-        .filter((page: Page) => page.slug && page.slug !== 'api')
+        // Gate like categories: don't submit CMS pages an admin marked noindex / excluded from the
+        // sitemap (otherwise Search Console flags "Submitted URL marked noindex").
+        .filter((page: Page) =>
+          page.slug && page.slug !== 'api'
+          && (page as { robots_index?: boolean }).robots_index !== false
+          && (page as { sitemap_include?: boolean }).sitemap_include !== false
+        )
         .forEach((page: Page) => {
           const url = `${BASE_URL}/${encodeURIComponent(page.slug)}`;
           if (!seenUrls.has(url)) {
@@ -380,7 +395,11 @@ async function computeSitemapEntries(): Promise<MetadataRoute.Sitemap> {
   try {
     if (blogTags.status === 'fulfilled' && Array.isArray(blogTags.value)) {
       blogTags.value.forEach((tag) => {
-        if (tag.slug) {
+        // Blog tag pages are noindex UNLESS a tag explicitly opts in (blog/tag/[slug] sets
+        // index = seo.robots.index === true). Only sitemap the opt-in ones, so we never submit a
+        // URL that renders <meta robots=noindex> ("Submitted URL marked noindex" in Search Console).
+        const tagIndexable = (tag as { seo?: { robots?: { index?: boolean } } })?.seo?.robots?.index === true;
+        if (tag.slug && tagIndexable) {
           const url = `${BASE_URL}/blog/tag/${encodeURIComponent(tag.slug)}`;
           if (!seenUrls.has(url)) {
             seenUrls.add(url);

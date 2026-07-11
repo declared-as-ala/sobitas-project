@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { getSimilarProducts, getFAQs } from '@/services/api';
+import { getSimilarProducts } from '@/services/api';
 import { getCachedProductDetails } from '@/services/getCachedProductDetails';
 import { ApiError } from '@/services/http';
 import { buildCanonicalUrl } from '@/util/canonical';
@@ -11,7 +11,6 @@ import {
   buildProductJsonLd,
   buildBreadcrumbListSchema,
   buildWebPageSchema,
-  buildFAQPageSchema,
   buildFAQPageSchemaFromProductFaq,
   sanitizeBackendProductJsonLd,
   validateStructuredData,
@@ -190,9 +189,8 @@ export default async function ShopProductPage({ params, searchParams }: PageProp
   const similarPromise = safeProduct.sous_categorie_id
     ? getSimilarProducts(safeProduct.sous_categorie_id).then((s) => s?.products ?? []).catch(() => [] as Product[])
     : Promise.resolve([] as Product[]);
-  const faqsPromise = getFAQs().catch(() => [] as Awaited<ReturnType<typeof getFAQs>>);
 
-  const [similarProducts, faqs] = await Promise.all([similarPromise, faqsPromise]);
+  const similarProducts = await similarPromise;
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
   
@@ -234,7 +232,7 @@ export default async function ShopProductPage({ params, searchParams }: PageProp
     description: (safeProduct.description_fr || '').replace(/<[^>]*>/g, ' ').trim().slice(0, 200),
   });
 
-  const faqSchema = buildFAQPageSchemaFromProductFaq(safeProduct.faq) || buildFAQPageSchema(faqs);
+  const faqSchema = buildFAQPageSchemaFromProductFaq(safeProduct.faq);
   if (faqSchema) validateStructuredData(faqSchema, 'FAQPage');
 
   return (

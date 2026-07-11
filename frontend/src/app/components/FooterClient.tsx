@@ -230,6 +230,20 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
               <li><Link href="/blog" className="flex min-h-11 items-center py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Blog</Link></li>
               <li><Link href="/contact" className="flex min-h-11 items-center py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Contact</Link></li>
             </ul>
+            <h3 className="font-display text-white text-sm uppercase tracking-wide mt-5">Catégories</h3>
+            <ul className="space-y-1.5">
+              {[
+                ['/whey-proteine', 'Whey protéine'],
+                ['/creatine', 'Créatine'],
+                ['/gainers-proteines', 'Gainers'],
+                ['/prise-de-masse', 'Prise de masse'],
+                ['/perte-de-poids', 'Perte de poids'],
+                ['/pre-workout', 'Pre-workout'],
+                ['/brands', 'Toutes les marques'],
+              ].map(([href, label]) => (
+                <li key={href}><Link href={href} className="flex min-h-11 items-center py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">{label}</Link></li>
+              ))}
+            </ul>
           </div>
         </div>
 
@@ -351,6 +365,24 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
                   Contact
                 </Link>
               </li>
+            </ul>
+            {/* Catégories — real SSR links on every page so category/subcategory landing pages
+                receive sitewide internal links (equity distribution + crawl depth). */}
+            <h3 className="font-display uppercase tracking-wide text-white mt-8 mb-6">Catégories</h3>
+            <ul className="space-y-3">
+              {[
+                ['/whey-proteine', 'Whey protéine'],
+                ['/creatine', 'Créatine'],
+                ['/gainers-proteines', 'Gainers'],
+                ['/prise-de-masse', 'Prise de masse'],
+                ['/perte-de-poids', 'Perte de poids'],
+                ['/pre-workout', 'Pre-workout'],
+                ['/brands', 'Toutes les marques'],
+              ].map(([href, label]) => (
+                <li key={href}>
+                  <Link href={href} className="text-sm hover:text-red-500 transition-colors">{label}</Link>
+                </li>
+              ))}
             </ul>
           </div>
 

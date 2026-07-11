@@ -60,7 +60,18 @@ server's French HTML). When enabling AR/EN, migrate to **server-rendered, locale
 ## Indexing (GSC "Why pages aren't indexed") — status 2026-07-11
 
 **Already fixed in code (verified live):**
+- **Sitemap now includes the FULL catalogue.** It previously had **0 product URLs** — `/all_products`
+  ships products with only `sous_categorie_id`, so the "skip products without a subcategory" guard
+  dropped all 303. Now enriched from the categories payload → **519 URLs incl. 303 products** as
+  canonical `/{subcat}/{slug}`. This was the primary reason so few pages were indexed.
 - Sitemap is clean — sampled URLs all return **200**, no `/shop/` fallbacks, gated against live slugs.
+
+**Old "Page with redirect" URLs (751) — do NOT delete.** These old URLs (`/shop/{slug}`, `/product/…`,
+`/brand/…`, old category URLs) correctly 301 to the canonical page. "Page with redirect" is *not* an
+error — Google indexes the target and the 301 preserves any inbound link equity + keeps old
+links/bookmarks working. Deleting them (404/410) would lose equity and break inbound links. The count
+shrinks on its own as Google consolidates to the targets. Only return **410 Gone** for URLs of
+permanently-removed products that have NO replacement (that's the 404 bucket, not the redirect bucket).
 - `robots.txt` correct (blocks account/checkout/cart/api/admin/x-crawler; deliberately allows faceted
   URLs so their `noindex` can be seen and drop them).
 - Faceted URLs (`/shop?search=…`, `?brand=`) → `<meta robots="noindex, follow">`.

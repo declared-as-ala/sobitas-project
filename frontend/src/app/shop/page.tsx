@@ -3,6 +3,7 @@ import { getAllProducts, getCategories, getAllBrands } from '@/services/api';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
 import { buildBreadcrumbListSchema, buildCollectionPageSchema, buildItemListSchema } from '@/util/structuredData';
 import { getProductLink } from '@/util/productUrl';
+import { enrichProductsWithSubcategory } from '@/util/enrichProductSubcategory';
 import { ShopPageClient } from './ShopPageClient';
 
 type ShopSearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -118,9 +119,10 @@ export default async function ShopPage() {
     baseUrl,
     { description: 'Découvrez nos protéines, créatine, gainer et BCAA en Tunisie. Large choix, livraison rapide.' }
   );
-  const itemListSchema = products.length > 0
+  const itemListProducts = enrichProductsWithSubcategory(products, categories);
+  const itemListSchema = itemListProducts.length > 0
     ? buildItemListSchema(
-        products.slice(0, 20).map((p: { designation_fr?: string }) => ({
+        itemListProducts.slice(0, 20).map((p: { designation_fr?: string }) => ({
           name: p.designation_fr || 'Produit',
           url: getProductLink(p as never),
         })),

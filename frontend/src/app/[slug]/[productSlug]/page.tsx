@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { getSimilarProducts, getFAQs } from '@/services/api';
+import { getSimilarProducts } from '@/services/api';
 import { getCachedProductDetails } from '@/services/getCachedProductDetails';
 import { ProductDetailSkeleton } from '@/app/components/ProductDetailSkeleton';
 import { ApiError } from '@/services/http';
@@ -9,7 +9,6 @@ import {
   buildProductJsonLd,
   buildBreadcrumbListSchema,
   buildWebPageSchema,
-  buildFAQPageSchema,
   buildFAQPageSchemaFromProductFaq,
   sanitizeBackendProductJsonLd,
   validateStructuredData,
@@ -202,12 +201,9 @@ export default async function NewProductPage({ params }: PageProps) {
     permanentRedirect(`/shop/${cleanProductSlug}`);
   }
 
-  const similarPromise = product.sous_categorie_id
+  const similarProducts = await (product.sous_categorie_id
     ? getSimilarProducts(product.sous_categorie_id).then((s) => s?.products ?? []).catch(() => [] as Product[])
-    : Promise.resolve([] as Product[]);
-  const faqsPromise = getFAQs().catch(() => [] as Awaited<ReturnType<typeof getFAQs>>);
-
-  const [similarProducts, faqs] = await Promise.all([similarPromise, faqsPromise]);
+    : Promise.resolve([] as Product[]));
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
   // Always compute from subcategory — never trust legacy seo.canonical_url (C3 fix)
@@ -234,7 +230,10 @@ export default async function NewProductPage({ params }: PageProps) {
     description: (product.description_fr || '').replace(/<[^>]*>/g, ' ').trim().slice(0, 200),
   });
 
-  const faqSchema = buildFAQPageSchemaFromProductFaq(product.faq) || buildFAQPageSchema(faqs);
+  // FAQPage ONLY from the product's own FAQ (which the page renders). The old
+  // `|| buildFAQPageSchema(getFAQs())` fallback emitted the sitewide /faqs FAQ — invisible on the
+  // product page and duplicated across every product — a Google FAQ-policy violation.
+  const faqSchema = buildFAQPageSchemaFromProductFaq(product.faq);
   if (faqSchema) validateStructuredData(faqSchema, 'FAQPage');
 
   return (
