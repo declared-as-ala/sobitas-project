@@ -610,6 +610,39 @@ export function buildWebSiteSchema(baseUrl: string): object {
 }
 
 /**
+ * SiteNavigationElement (as an ItemList) describing the primary navigation + top category hubs.
+ * Emitted sitewide so crawlers understand the site's structure and the canonical hub URLs — this
+ * reinforces the main ranking targets (protéine / whey / créatine Tunisie) as first-class sections.
+ * Every URL must be a real 200 page (verified) so we never advertise a broken/redirecting nav link.
+ */
+export function buildSiteNavigationSchema(baseUrl: string): object {
+  const base = baseUrl.replace(/\/$/, '');
+  const links: Array<{ name: string; path: string }> = [
+    { name: 'Accueil', path: '/' },
+    { name: 'Nos produits', path: '/shop' },
+    { name: 'Whey protéine', path: '/whey-proteine' },
+    { name: 'Créatine', path: '/creatine' },
+    { name: 'Gainers & prise de masse', path: '/gainers-proteines' },
+    { name: 'Perte de poids', path: '/perte-de-poids' },
+    { name: 'Packs', path: '/packs' },
+    { name: 'Marques', path: '/brands' },
+    { name: 'Blog', path: '/blog' },
+    { name: 'Contact', path: '/contact' },
+  ];
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: 'Navigation principale — Protéine Tunisie',
+    itemListElement: links.map((l, index) => ({
+      '@type': 'SiteNavigationElement',
+      position: index + 1,
+      name: l.name,
+      url: `${base}${l.path}`,
+    })),
+  };
+}
+
+/**
  * WebPage schema for generic pages (name, description, url).
  */
 export function buildWebPageSchema(
