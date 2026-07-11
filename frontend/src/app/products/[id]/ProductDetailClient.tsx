@@ -567,7 +567,12 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     title={product.description_cover || product.designation_fr || 'Produit'}
                     fill
                     className="object-contain object-center p-4 sm:p-6 xl:p-8 transition-transform duration-300 [@media(hover:hover)]:group-hover:scale-[1.03]"
-                    sizes="(max-width: 1024px) 100vw, (max-width: 1400px) 40vw, 560px"
+                    // This gallery is `hidden lg:block` (visible only ≥1024px). Declare ~1px below
+                    // 1024px so on mobile Next still emits its `priority` preload but for a 16px
+                    // candidate (~1KB) instead of a ~750px image — otherwise the phone downloads
+                    // this display:none image at fetchPriority=high and starves the real mobile LCP
+                    // image, inflating LCP. See the mobile <Image> below for the visible counterpart.
+                    sizes="(max-width: 1023px) 1px, (max-width: 1400px) 40vw, 560px"
                     priority={safeSelectedImage === 0}
                     loading={safeSelectedImage === 0 ? 'eager' : 'lazy'}
                     fetchPriority={safeSelectedImage === 0 ? 'high' : 'auto'}
@@ -662,7 +667,11 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       title={product.description_cover || product.designation_fr || 'Produit'}
                       fill
                       className="object-contain object-center p-3 sm:p-4 transition-transform duration-500 group-hover:scale-[1.03]"
-                      sizes="(max-width: 640px) 260px, (max-width: 1024px) 320px, 560px"
+                      // This gallery is `lg:hidden` (visible only <1024px) and capped at max-w-[260px]
+                      // (sm:320px). Declare ~1px at ≥1024px so on desktop its `priority` preload
+                      // collapses to a 16px candidate instead of a hidden 560px image competing with
+                      // the visible desktop LCP. Mobile sizes stay matched to the real slot width.
+                      sizes="(min-width: 1024px) 1px, (max-width: 640px) 260px, 320px"
                       priority={safeSelectedImage === 0}
                       loading={safeSelectedImage === 0 ? 'eager' : 'lazy'}
                       fetchPriority={safeSelectedImage === 0 ? 'high' : 'auto'}
