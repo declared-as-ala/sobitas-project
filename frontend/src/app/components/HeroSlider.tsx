@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, memo, useMemo } from 'react';
 import Image from 'next/image';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { getStorageUrl } from '@/services/api';
@@ -254,9 +254,11 @@ export const HeroSlider = memo(function HeroSlider({ slides, mobileFirst, deskto
                 </LinkWithLoading>
               </Button>
             </div>
-            {/* Trust cues intentionally removed from the hero for a cleaner, focused above-the-fold.
-                The eyebrow line above carries the authenticity/delivery signal, and FeaturesSection
-                (right below the best-sellers) covers the full trust band. */}
+            {/* Money-back flag — one small pill (buy without risk / return within 7 days) */}
+            <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-black/25 px-3 py-1.5 text-[11px] font-medium text-white/95 backdrop-blur-sm drop-shadow-[0_1px_6px_rgba(0,0,0,0.5)] sm:mt-5 sm:text-xs">
+              <RotateCcw className="h-3.5 w-3.5 shrink-0 text-red-400" strokeWidth={2.2} aria-hidden="true" />
+              Commandez sans risque — satisfait ou remboursé sous 7 jours
+            </p>
           </div>
         </div>
 
