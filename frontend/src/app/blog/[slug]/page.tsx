@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getArticleDetails, getLatestArticles } from '@/services/api';
 import { getStorageUrl } from '@/services/api';
-import { buildCanonicalUrl } from '@/util/canonical';
+import { buildCanonicalUrl, forceProteinDomain } from '@/util/canonical';
 import { buildArticleSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
 import { blogHref } from '@/util/blogSlug';
 import { BlogSeoBlock } from '@/app/blog/BlogSeoBlock';
@@ -44,7 +44,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       `Découvrez ${article.designation_fr} sur le blog Protéine Tunisie — conseils nutrition et sport`;
 
     const canonicalUrl = article.seo?.canonical_url?.trim()
-      ? article.seo.canonical_url.trim()
+      ? forceProteinDomain(article.seo.canonical_url.trim())
       : buildCanonicalUrl(`/blog/${encodeURIComponent(article.slug || slug)}`);
     const title = article.seo?.title || article.seo_title || article.meta_title || article.designation_fr || 'Blog';
     const descriptionWithTunisia = metaDescription.includes('Tunisie') ? metaDescription : `${metaDescription} Conseils nutrition sportive Tunisie — Protéine Tunisie.`;
@@ -62,7 +62,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       openGraph: {
         title: article.seo?.open_graph?.title || title,
         description: article.seo?.open_graph?.description || descriptionWithTunisia.slice(0, 160),
-        images: imageUrl ? [imageUrl] : [],
+        images: imageUrl ? [imageUrl] : ['/slides/home-hero-web.webp'],
         type: 'article',
         url: canonicalUrl,
       },
@@ -70,7 +70,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
         card: (article.seo?.twitter?.card as 'summary' | 'summary_large_image') || article.twitter_card as 'summary' | 'summary_large_image' || 'summary_large_image',
         title: article.seo?.twitter?.title || title,
         description: article.seo?.twitter?.description || descriptionWithTunisia.slice(0, 160),
-        images: twitterImage ? [twitterImage] : [],
+        images: twitterImage ? [twitterImage] : ['/slides/home-hero-web.webp'],
       },
     };
   } catch (error) {

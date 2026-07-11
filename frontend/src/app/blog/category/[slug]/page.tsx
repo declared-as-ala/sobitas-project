@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getArticlesByBlogCategory } from '@/services/api';
-import { buildCanonicalUrl } from '@/util/canonical';
+import { buildCanonicalUrl, forceProteinDomain } from '@/util/canonical';
 import { buildBreadcrumbListSchema, buildItemListSchema, buildCollectionPageSchema } from '@/util/structuredData';
 import { blogHref } from '@/util/blogSlug';
 import { ChevronRight, ArrowLeft } from 'lucide-react';
@@ -26,9 +26,16 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 
   try {
     const data = await getArticlesByBlogCategory(slug, page, 9);
+    const total = Number(data.meta?.total);
+    const countText =
+      Number.isFinite(total) && total > 0 ? `${total} article${total > 1 ? 's' : ''}` : 'nos articles';
     const title = data.category.seo?.title || `Blog catégorie ${data.category.name} | Proteine Tunisie`;
-    const description = data.category.seo?.description || `Articles de blog dans la catégorie ${data.category.name}.`;
-    const canonical = data.category.seo?.canonical_url || buildCanonicalUrl(`/blog/category/${data.category.slug}${page > 1 ? `?page=${page}` : ''}`);
+    const description =
+      data.category.seo?.description ||
+      `Découvrez ${countText} dans la catégorie ${data.category.name} : conseils nutrition & sport, guides et actualités sur Proteine Tunisie.`;
+    const canonical = data.category.seo?.canonical_url
+      ? forceProteinDomain(data.category.seo.canonical_url)
+      : buildCanonicalUrl(`/blog/category/${data.category.slug}${page > 1 ? `?page=${page}` : ''}`);
     return {
       title,
       description,
@@ -36,6 +43,12 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
       robots: {
         index: data.category.seo?.robots?.index ?? page === 1,
         follow: data.category.seo?.robots?.follow ?? true,
+      },
+      openGraph: {
+        title,
+        description,
+        url: canonical,
+        type: 'website',
       },
     };
   } catch {
@@ -79,6 +92,11 @@ export default async function BlogCategoryPage({ params, searchParams }: Props) 
     { description: data.category.seo?.description || `Articles de blog dans la catégorie ${data.category.name}.` }
   );
 
+  // Unique intro copy so the page isn't a thin, templated listing (SEO: avoids "thin content").
+  const introText =
+    data.category.seo?.description?.trim() ||
+    `Retrouvez tous nos articles de la catégorie ${data.category.name} : conseils nutrition & sport, guides pratiques et actualités. Des contenus rédigés par l'équipe Proteine Tunisie pour vous aider à progresser au quotidien.`;
+
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
@@ -96,6 +114,9 @@ export default async function BlogCategoryPage({ params, searchParams }: Props) 
           </nav>
           <div className="mb-8 sm:mb-10">
             <PageHeader kicker="Catégorie" title={data.category.name} />
+            <p className="mt-4 max-w-3xl text-base sm:text-lg leading-relaxed text-gray-600 dark:text-gray-400">
+              {introText}
+            </p>
           </div>
           {data.articles.length === 0 ? (
             <div className="flex flex-col items-center pb-12">

@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
+import Link from 'next/link';
 import { Header } from '@/app/components/Header';
 import { Footer } from '@/app/components/Footer';
 import { ProductCard } from '@/app/components/ProductCard';
@@ -33,6 +34,7 @@ import { searchProducts, getProductsByCategory, getProductsBySubCategory, getPro
 import { getStorageUrl } from '@/services/api';
 import { getEffectivePrice } from '@/util/productPrice';
 import { isInStock } from '@/util/cartStock';
+import { generateBrandDescriptionFallback } from '@/util/brandDescriptionFallback';
 
 const SKELETON_MIN_MS = 300;
 
@@ -504,6 +506,16 @@ function ShopContent({
     return Array.from(subs.values());
   }, [safeProductsData.products]);
 
+  // Real, crawlable SSR links to this TOP category's subcategories. On a top-category view the
+  // subcategories are otherwise only reachable through filter checkboxes (client state) or bot-only
+  // markup, so they were never real anchors in the human DOM. Rendered as on-system pills below the
+  // SEO hero so search engines can discover/relate the subcategory pages.
+  const topCategorySubcategories = useMemo(() => {
+    if (isSubcategory || !initialCategory) return [];
+    const cat = categories.find((c) => c.slug === initialCategory);
+    return (cat?.sous_categories ?? []).filter((s) => Boolean(s?.slug) && Boolean(s?.designation_fr));
+  }, [categories, initialCategory, isSubcategory]);
+
   // Helper to normalize strings for comparison (remove accents, lowercase, remove extra spaces)
   const normalizeString = (str: string): string => {
     return str
@@ -860,6 +872,35 @@ function ShopContent({
     setIsDescriptionExpanded(false);
   }, [currentBrand?.id]);
 
+  // Brand description fallback (thin-content): when a brand has no `description_fr`, the panel
+  // rendered nothing. Synthesize a unique paragraph from the brand's OWN product data (real count,
+  // real parent-category names, real min price) so the brand page always carries distinct copy.
+  const brandDescriptionFallback = useMemo(() => {
+    if (!currentBrand) return '';
+    const brandProducts = products.filter((p) => p.brand_id === currentBrand.id);
+    const list = brandProducts.length > 0 ? brandProducts : products;
+    const catFreq = new Map<string, number>();
+    let priceMin: number | null = null;
+    list.forEach((p) => {
+      const catName = p.sous_categorie?.categorie?.designation_fr?.trim();
+      if (catName) catFreq.set(catName, (catFreq.get(catName) || 0) + 1);
+      const price = getEffectivePrice(p);
+      if (typeof price === 'number' && price > 0) {
+        priceMin = priceMin === null ? price : Math.min(priceMin, price);
+      }
+    });
+    const topCategories = [...catFreq.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([n]) => n)
+      .slice(0, 3);
+    return generateBrandDescriptionFallback({
+      name: currentBrand.designation_fr,
+      productCount: list.length,
+      topCategories,
+      priceMin,
+    });
+  }, [currentBrand, products]);
+
   // Compute filtered & sorted products
   const filteredProducts = useMemo(() => {
     let filtered = products;
@@ -1088,6 +1129,27 @@ function ShopContent({
         {/* Category SEO Section */}
         {categorySeoLanding && <div className="mb-6">{categorySeoLanding}</div>}
 
+        {/* Sous-catégories — real, crawlable SSR internal links (top category only) */}
+        {topCategorySubcategories.length > 0 && (
+          <nav aria-label="Sous-catégories" className="mb-6 sm:mb-8">
+            <h2 className="text-xs font-display font-semibold uppercase tracking-wider text-red-600 dark:text-red-400 mb-3">
+              Sous-catégories
+            </h2>
+            <ul className="flex flex-wrap gap-2">
+              {topCategorySubcategories.map((sub) => (
+                <li key={sub.slug}>
+                  <Link
+                    href={`/${sub.slug}`}
+                    className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 shadow-sm transition-colors hover:border-red-500 hover:text-red-600 dark:hover:border-red-500 dark:hover:text-red-400"
+                  >
+                    {sub.designation_fr}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )}
+
         {/* Brand description panel */}
         {currentBrand && (
           <div className="mb-6 sm:mb-8 lg:mb-10 rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-6 md:p-8 lg:p-10 shadow-sm">
@@ -1108,7 +1170,7 @@ function ShopContent({
                 <h2 className="font-display uppercase tracking-tight text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2 leading-tight">
                   {currentBrand.designation_fr}
                 </h2>
-                {currentBrand.description_fr && (
+                {currentBrand.description_fr ? (
                   <div className="space-y-2">
                     <div
                       className={`prose prose-sm dark:prose-invert max-w-none text-gray-600 dark:text-gray-300 ${!isDescriptionExpanded ? 'line-clamp-2' : ''}`}
@@ -1121,7 +1183,11 @@ function ShopContent({
                       {isDescriptionExpanded ? 'Lire moins' : 'Lire plus'}
                     </button>
                   </div>
-                )}
+                ) : brandDescriptionFallback ? (
+                  <p className="prose prose-sm dark:prose-invert max-w-none text-gray-600 dark:text-gray-300 leading-relaxed">
+                    {brandDescriptionFallback}
+                  </p>
+                ) : null}
               </div>
             </div>
           </div>

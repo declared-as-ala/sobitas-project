@@ -2,9 +2,10 @@
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Header } from '@/app/components/Header';
 import { Footer } from '@/app/components/Footer';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FolderOpen, Tag } from 'lucide-react';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { PageHeader } from '@/app/components/PageHeader';
 import type { Article } from '@/types';
@@ -212,6 +213,37 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ─── Crawlable taxonomy links (SEO) ───
+  // Derive real /blog/category & /blog/tag links from the articles' own taxonomy so those
+  // pages (previously orphaned → "crawled, currently not indexed") get inbound links in the
+  // SSR DOM. Sourced from the server-provided `articles` prop (not `liveArticles`) so the
+  // <a href> are present on first paint, before any client re-fetch.
+  const blogCategoryLinks = useMemo(() => {
+    const map = new Map<string, { slug: string; name: string }>();
+    for (const a of articles) {
+      for (const c of a.categories ?? []) {
+        if (c?.slug && c?.name && !map.has(c.slug)) map.set(c.slug, { slug: c.slug, name: c.name });
+      }
+    }
+    return Array.from(map.values());
+  }, [articles]);
+
+  const blogTagLinks = useMemo(() => {
+    const counts = new Map<string, { slug: string; name: string; count: number }>();
+    for (const a of articles) {
+      for (const t of a.tags ?? []) {
+        if (typeof t === 'object' && t?.slug && t?.name) {
+          const existing = counts.get(t.slug);
+          if (existing) existing.count += 1;
+          else counts.set(t.slug, { slug: t.slug, name: t.name, count: 1 });
+        }
+      }
+    }
+    return Array.from(counts.values())
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 15);
+  }, [articles]);
+
   // Filter by category (keyword-based)
   const filteredArticles = useMemo(() => {
     return liveArticles.filter(a => articleMatchesCategory(a, activeCategory));
@@ -306,7 +338,7 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
             title="Blog nutrition sportive & compléments en Tunisie"
             subtitle="Conseils, guides et actualités : whey, créatine, prise de masse et compléments alimentaires."
           >
-            {/* Category filters – pills, red accent */}
+            {/* Category filters – pills, red accent (client-side filter UX) */}
             <nav className="flex flex-wrap gap-2.5 md:gap-3" aria-label="Catégories du blog">
               {BLOG_CATEGORIES.map((cat) => (
                 <button
@@ -323,6 +355,48 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
                 </button>
               ))}
             </nav>
+
+            {/* Crawlable taxonomy navigation → real /blog/category & /blog/tag pages.
+                Real <Link href> (unlike the client filter buttons above) so search engines
+                can discover and index the taxonomy pages. */}
+            {(blogCategoryLinks.length > 0 || blogTagLinks.length > 0) && (
+              <div className="mt-5 flex flex-col gap-3">
+                {blogCategoryLinks.length > 0 && (
+                  <nav className="flex flex-wrap items-center gap-2 sm:gap-2.5" aria-label="Parcourir les catégories du blog">
+                    <span className="inline-flex items-center gap-1.5 font-display text-[11px] sm:text-xs font-semibold uppercase tracking-[0.2em] text-red-600 dark:text-red-400">
+                      <FolderOpen className="h-3.5 w-3.5" aria-hidden="true" />
+                      Catégories
+                    </span>
+                    {blogCategoryLinks.map((cat) => (
+                      <Link
+                        key={cat.slug}
+                        href={`/blog/category/${cat.slug}`}
+                        className="inline-flex min-h-9 items-center rounded-full border border-gray-200 bg-white px-3.5 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:border-red-600 hover:text-red-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-red-400 dark:hover:text-red-400"
+                      >
+                        {decodeHtmlEntities(cat.name)}
+                      </Link>
+                    ))}
+                  </nav>
+                )}
+                {blogTagLinks.length > 0 && (
+                  <nav className="flex flex-wrap items-center gap-2" aria-label="Parcourir les tags du blog">
+                    <span className="inline-flex items-center gap-1.5 font-display text-[11px] sm:text-xs font-semibold uppercase tracking-[0.2em] text-red-600 dark:text-red-400">
+                      <Tag className="h-3.5 w-3.5" aria-hidden="true" />
+                      Tags
+                    </span>
+                    {blogTagLinks.map((t) => (
+                      <Link
+                        key={t.slug}
+                        href={`/blog/tag/${t.slug}`}
+                        className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-sm text-gray-600 transition-colors hover:border-red-600 hover:text-red-600 dark:border-gray-800 dark:bg-gray-900/60 dark:text-gray-400 dark:hover:border-red-400 dark:hover:text-red-400"
+                      >
+                        {decodeHtmlEntities(t.name)}
+                      </Link>
+                    ))}
+                  </nav>
+                )}
+              </div>
+            )}
           </PageHeader>
         </div>
 

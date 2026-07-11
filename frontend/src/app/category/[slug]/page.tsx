@@ -15,6 +15,8 @@ import { getCategorySeoContent } from '@/util/categorySeoContent';
 import { mergeCategorySeo, type CategorySeoFromApi, type MergedCategorySeo } from '@/util/resolveCategorySeo';
 import { getTunisiaKeywordsForCategory, generateTunisiaMetaTitle, generateTunisiaMetaDescription, generateTunisiaH1 } from '@/util/tunisiaCategoryKeywords';
 import { getProductLink, getProductPrimarySubCategory } from '@/util/productUrl';
+import { generateCategoryIntroFallback } from '@/util/categoryIntroFallback';
+import { getEffectivePrice } from '@/util/productPrice';
 import { CategorySeoLanding } from '@/app/category/CategorySeoLanding';
 import { ShopPageClient } from '@/app/shop/ShopPageClient';
 import { Header } from '@/app/components/Header';
@@ -78,6 +80,31 @@ function resolveBestProducts(
     }
     return acc;
   }, []);
+}
+
+/**
+ * Derive REAL intro-fallback inputs (product count, most common brands, min price) from the
+ * product list already available to the page. Used only to fill an empty intro — never fabricated.
+ */
+function deriveIntroDataFromProducts(
+  products: Array<{ brand?: { designation_fr?: string }; prix?: number; promo?: number; promo_expiration_date?: string }>
+): { productCount: number; topBrands: string[]; priceMin: number | null } {
+  const list = Array.isArray(products) ? products : [];
+  const brandFreq = new Map<string, number>();
+  let priceMin: number | null = null;
+  for (const p of list) {
+    const bname = p.brand?.designation_fr?.trim();
+    if (bname) brandFreq.set(bname, (brandFreq.get(bname) || 0) + 1);
+    const price = getEffectivePrice(p as any);
+    if (typeof price === 'number' && price > 0) {
+      priceMin = priceMin === null ? price : Math.min(priceMin, price);
+    }
+  }
+  const topBrands = [...brandFreq.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([n]) => n)
+    .slice(0, 3);
+  return { productCount: list.length, topBrands, priceMin };
 }
 
 /** CTR-optimized meta title: 55–65 chars, keyword + Tunisia + brand. */
@@ -272,7 +299,31 @@ export default async function CategoryPage({ params }: PageProps) {
         .filter(Boolean) as object[];
 
       const title = merged.h1?.trim() || sub.sous_category?.designation_fr || canonicalSlug;
-      const relatedCategories = resolveRelatedCategories(merged.relatedCategorySlugs ?? [], categories);
+      // Related-links fallback: uncurated subcategory pages get no relatedCategorySlugs, leaving them
+      // with no lateral internal links. Fall back to sibling subcategories under the same parent +
+      // the parent category itself so every subcategory is reachable/reaches out.
+      const relatedSlugsSub = (merged.relatedCategorySlugs?.length
+        ? merged.relatedCategorySlugs
+        : (() => {
+            const parentSlug = sub.sous_category?.categorie?.slug as string | undefined;
+            const parent = parentSlug ? categories.find((c) => c.slug === parentSlug) : undefined;
+            const siblingSlugs = (parent?.sous_categories ?? [])
+              .map((s: SubCategory) => s.slug)
+              .filter((s: string): s is string => Boolean(s) && s !== canonicalSlug);
+            return (parentSlug ? [...siblingSlugs, parentSlug] : siblingSlugs).slice(0, 6);
+          })()) as string[];
+      const relatedCategories = resolveRelatedCategories(relatedSlugsSub, categories);
+      // Unique intro fallback (thin-content): when there is no admin/content-file intro, synthesize a
+      // distinct paragraph from this page's real product data so every indexed subcategory has copy.
+      const introDataSub = deriveIntroDataFromProducts(sub.products ?? []);
+      const introForLandingSub = merged.intro?.trim()
+        ? merged.intro
+        : generateCategoryIntroFallback({
+            name: title,
+            productCount: introDataSub.productCount,
+            topBrands: introDataSub.topBrands,
+            priceMin: introDataSub.priceMin,
+          });
       const bestProducts = resolveBestProducts(
         merged.bestProductSlugs?.length ? merged.bestProductSlugs : (productsData.products as any[]).slice(0, 6).map((p: any) => p.slug).filter(Boolean),
         productsData.products as any[]
@@ -283,7 +334,7 @@ export default async function CategoryPage({ params }: PageProps) {
         <CategorySeoLanding
           title={title}
           banners={merged.banners}
-          intro={merged.intro?.trim() ? merged.intro : null}
+          intro={introForLandingSub}
           longBottomHtml={null}
           howToChooseTitle={merged.howToChooseTitle?.trim() ? merged.howToChooseTitle : null}
           howToChooseBody={merged.howToChooseBody?.trim() ? merged.howToChooseBody : null}
@@ -297,7 +348,7 @@ export default async function CategoryPage({ params }: PageProps) {
       const hasHowTo = Boolean(merged.howToChooseTitle?.trim() && merged.howToChooseBody?.trim());
       const hasLongBottom = Boolean((merged.longBottomHtml ?? '').trim().length > 0);
       const hasSeoContentBelow =
-        (merged.intro ?? '').trim().length > 0 ||
+        (introForLandingSub ?? '').trim().length > 0 ||
         (merged.faqs?.length ?? 0) > 0 ||
         hasHowTo ||
         hasLongBottom ||
@@ -306,7 +357,7 @@ export default async function CategoryPage({ params }: PageProps) {
       const categorySeoLandingBottom = hasSeoContentBelow ? (
         <CategorySeoLanding
           title={title}
-          intro={merged.intro?.trim() ? merged.intro : null}
+          intro={introForLandingSub}
           longBottomHtml={merged.longBottomHtml?.trim() ? merged.longBottomHtml : null}
           howToChooseTitle={merged.howToChooseTitle?.trim() ? merged.howToChooseTitle : null}
           howToChooseBody={merged.howToChooseBody?.trim() ? merged.howToChooseBody : null}
@@ -411,6 +462,22 @@ export default async function CategoryPage({ params }: PageProps) {
         .filter(Boolean) as object[];
 
       const title = mergedCat.h1?.trim() || cat.category?.designation_fr || canonicalSlug;
+      // Unique intro fallback (thin-content): when there is no admin/content-file intro, synthesize a
+      // distinct paragraph from this category's real product data (count, brands, price) + its own
+      // subcategory names so every indexed category carries non-duplicate copy.
+      const introDataCat = deriveIntroDataFromProducts(cat.products ?? []);
+      const subcategoryNamesCat = (cat.sous_categories ?? [])
+        .map((s: any) => s?.designation_fr)
+        .filter((n: unknown): n is string => typeof n === 'string' && n.trim().length > 0);
+      const introForLandingCat = mergedCat.intro?.trim()
+        ? mergedCat.intro
+        : generateCategoryIntroFallback({
+            name: title,
+            productCount: introDataCat.productCount,
+            topBrands: introDataCat.topBrands,
+            priceMin: introDataCat.priceMin,
+            subcategoryNames: subcategoryNamesCat,
+          });
       const relatedSlugs = (mergedCat.relatedCategorySlugs?.length
         ? mergedCat.relatedCategorySlugs
         : categories.filter((c) => c.slug !== canonicalSlug).slice(0, 6).map((c) => c.slug)) as string[];
@@ -425,7 +492,7 @@ export default async function CategoryPage({ params }: PageProps) {
         <CategorySeoLanding
           title={title}
           banners={mergedCat.banners}
-          intro={mergedCat.intro?.trim() ? mergedCat.intro : null}
+          intro={introForLandingCat}
           longBottomHtml={null}
           howToChooseTitle={mergedCat.howToChooseTitle?.trim() ? mergedCat.howToChooseTitle : null}
           howToChooseBody={mergedCat.howToChooseBody?.trim() ? mergedCat.howToChooseBody : null}
@@ -439,7 +506,7 @@ export default async function CategoryPage({ params }: PageProps) {
       const hasHowToCat = Boolean(mergedCat.howToChooseTitle?.trim() && mergedCat.howToChooseBody?.trim());
       const hasLongBottomCat = Boolean((mergedCat.longBottomHtml ?? '').trim().length > 0);
       const hasSeoContentBelowCat =
-        (mergedCat.intro ?? '').trim().length > 0 ||
+        (introForLandingCat ?? '').trim().length > 0 ||
         (mergedCat.faqs?.length ?? 0) > 0 ||
         hasHowToCat ||
         hasLongBottomCat ||
@@ -448,7 +515,7 @@ export default async function CategoryPage({ params }: PageProps) {
       const categorySeoLandingBottom = hasSeoContentBelowCat ? (
         <CategorySeoLanding
           title={title}
-          intro={mergedCat.intro?.trim() ? mergedCat.intro : null}
+          intro={introForLandingCat}
           longBottomHtml={mergedCat.longBottomHtml?.trim() ? mergedCat.longBottomHtml : null}
           howToChooseTitle={mergedCat.howToChooseTitle?.trim() ? mergedCat.howToChooseTitle : null}
           howToChooseBody={mergedCat.howToChooseBody?.trim() ? mergedCat.howToChooseBody : null}

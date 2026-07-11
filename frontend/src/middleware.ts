@@ -78,11 +78,13 @@ export async function middleware(request: NextRequest) {
     return redirectPreservingQuery(request, legacyLocale[2] || '/');
   }
 
-  // Legacy review sub-pages: /product/{slug}/reviews or /products/{slug}/reviews →
-  // the product resolver (single-hop to canonical). Must run before the /products/ rule.
+  // Legacy review sub-pages: /product/{slug}/reviews or /products/{slug}/reviews.
+  // Resolve straight to the canonical /{subcat}/{slug} in ONE hop (falling back to /product/{slug},
+  // which resolves server-side) instead of chaining through /product/{slug} → canonical.
   const legacyReviews = pathname.match(/^\/products?\/(.+?)\/reviews\/?$/);
   if (legacyReviews?.[1]) {
-    return redirectPreservingQuery(request, `/product/${legacyReviews[1]}`);
+    const canonical = await resolveShopSlug(legacyReviews[1]);
+    return redirectPreservingQuery(request, canonical || `/product/${legacyReviews[1]}`);
   }
 
   const legacyCategory = pathname.match(/^\/category\/([^/]+)\/?$/);
@@ -99,10 +101,12 @@ export async function middleware(request: NextRequest) {
     if (slug) return redirectPreservingQuery(request, `/${slug}`);
   }
 
-  // Legacy /products/ URLs → /product/ (which resolves and 301s to canonical)
-  const legacyProducts = pathname.match(/^\/products\/(.+)$/);
+  // Legacy /products/{slug} → resolve straight to canonical /{subcat}/{slug} in ONE hop
+  // (was /products/ → /product/ → canonical, a 2-hop chain). Falls back to /product/{slug}.
+  const legacyProducts = pathname.match(/^\/products\/([^/]+)\/?$/);
   if (legacyProducts?.[1]) {
-    return redirectPreservingQuery(request, `/product/${legacyProducts[1]}`);
+    const canonical = await resolveShopSlug(legacyProducts[1]);
+    return redirectPreservingQuery(request, canonical || `/product/${legacyProducts[1]}`);
   }
 
   // ── Feed the Crawler First ──────────────────────────────────────────────

@@ -7,9 +7,9 @@ import { Footer } from '@/app/components/Footer';
 import { Button } from '@/app/components/ui/button';
 import { BlogRecommendedProducts } from '@/app/blog/BlogRecommendedProducts';
 import { BlogCard } from '@/app/blog/BlogCard';
-import { ArrowLeft, Calendar, Clock, Share2, Sparkles } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Share2, Sparkles, FolderOpen, Tag } from 'lucide-react';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
-import type { Article } from '@/types';
+import type { Article, BlogTagSummary } from '@/types';
 import { getStorageUrl } from '@/services/api';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -151,6 +151,13 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
   const content = article.description_fr || article.description || '';
   const readingTime = useMemo(() => calculateReadingTime(content), [content]);
   const [contentBefore, contentAfter] = useMemo(() => splitContentForMiddleInsert(content), [content]);
+
+  // Real taxonomy links for this article → gives every /blog/category & /blog/tag page an
+  // inbound link (fixes orphaned taxonomy pages). Only render fields the API actually returns.
+  const articleCategories = (article.categories ?? []).filter((c) => c?.slug && c?.name);
+  const articleTags = (article.tags ?? []).filter(
+    (t): t is BlogTagSummary => typeof t === 'object' && t !== null && !!t.slug && !!t.name
+  );
 
   useEffect(() => {
     setMounted(true);
@@ -336,6 +343,47 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
                   </ul>
                 </nav>
               ) : null}
+              {(articleCategories.length > 0 || articleTags.length > 0) && (
+                <nav
+                  className="mt-8 flex flex-col gap-4 border-t border-gray-100 dark:border-gray-800 pt-6"
+                  aria-label="Catégorie et tags de l'article"
+                >
+                  {articleCategories.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                      <span className="inline-flex items-center gap-1.5 font-display text-[11px] sm:text-xs font-semibold uppercase tracking-[0.2em] text-red-600 dark:text-red-400">
+                        <FolderOpen className="h-3.5 w-3.5" aria-hidden="true" />
+                        Catégorie
+                      </span>
+                      {articleCategories.map((c) => (
+                        <Link
+                          key={c.slug}
+                          href={`/blog/category/${c.slug}`}
+                          className="inline-flex min-h-9 items-center rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-1.5 text-sm font-medium text-gray-800 dark:text-gray-100 transition-colors hover:border-red-600 hover:text-red-600 dark:hover:border-red-400 dark:hover:text-red-400"
+                        >
+                          {decodeHtmlEntities(c.name)}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                  {articleTags.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="inline-flex items-center gap-1.5 font-display text-[11px] sm:text-xs font-semibold uppercase tracking-[0.2em] text-red-600 dark:text-red-400">
+                        <Tag className="h-3.5 w-3.5" aria-hidden="true" />
+                        Tags
+                      </span>
+                      {articleTags.map((t) => (
+                        <Link
+                          key={t.slug}
+                          href={`/blog/tag/${t.slug}`}
+                          className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 px-3 py-1 text-sm text-gray-700 dark:text-gray-300 transition-colors hover:border-red-600 hover:text-red-600 dark:hover:border-red-400 dark:hover:text-red-400"
+                        >
+                          {decodeHtmlEntities(t.name)}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </nav>
+              )}
               {children}
             </div>
           </article>
