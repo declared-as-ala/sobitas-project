@@ -110,7 +110,9 @@ const CHATGPT_BASE = 'https://chat.openai.com/';
 const CHATGPT_QUERY_MAX_LEN = 2000;
 
 const articleBodyProseClass =
-  'article-content prose prose-neutral prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none ' +
+  'article-content prose prose-neutral prose-base lg:prose-lg dark:prose-invert max-w-none ' +
+  // Responsive CMS content: wide tables scroll inside themselves (no horizontal body scroll on phones)
+  '[&_table]:block [&_table]:w-max [&_table]:max-w-full [&_table]:overflow-x-auto [&_pre]:overflow-x-auto ' +
   'prose-headings:text-gray-900 dark:prose-headings:text-white ' +
   'prose-p:text-gray-700 dark:prose-p:text-gray-300 ' +
   'prose-strong:text-gray-900 dark:prose-strong:text-white ' +
@@ -247,12 +249,12 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
                   <Clock className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={1.75} />
                   <span>{readingTime} min de lecture</span>
                 </div>
-                <div className="flex flex-wrap items-center gap-2 ml-auto">
+                <div className="flex w-full flex-col gap-2 sm:ml-auto sm:w-auto sm:flex-row sm:items-center">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={handleSummarizeWithChatGPT}
-                    className="min-h-11 border-gray-200 text-gray-700 hover:border-red-600 hover:text-red-600 dark:border-gray-700 dark:text-gray-300 dark:hover:border-red-400 dark:hover:text-red-400"
+                    className="min-h-11 w-full justify-center border-gray-200 text-gray-700 hover:border-red-600 hover:text-red-600 dark:border-gray-700 dark:text-gray-300 dark:hover:border-red-400 dark:hover:text-red-400 sm:w-auto"
                   >
                     <Sparkles className="h-4 w-4 mr-2" />
                     Résumer avec ChatGPT
@@ -261,7 +263,7 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
                     variant="ghost"
                     size="sm"
                     onClick={handleShare}
-                    className="min-h-11 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+                    className="min-h-11 w-full justify-center text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 sm:w-auto"
                   >
                     <Share2 className="h-4 w-4 mr-2" />
                     Partager

@@ -294,9 +294,9 @@ export function HeaderClient() {
             {DELIVERY_MSG}
           </span>
         </div>
-        <div className="md:hidden flex h-8 px-4 items-center justify-center text-xs font-medium leading-snug text-gray-200">
+        <div className="md:hidden flex h-8 px-4 items-center justify-center text-xs font-medium text-gray-200">
           <Truck className="h-3.5 w-3.5 mr-1.5 shrink-0" aria-hidden />
-          {DELIVERY_MSG}
+          <span className="min-w-0 truncate">{DELIVERY_MSG}</span>
         </div>
       </div>
 
@@ -326,18 +326,18 @@ export function HeaderClient() {
               />
             </Link>
 
-            <div className="flex items-center gap-0 flex-shrink-0">
-              <SearchBar variant="mobile" className="-mr-0.5" />
+            <div className="flex items-center gap-0.5 flex-shrink-0">
+              <SearchBar variant="mobile" />
               <Button
                 variant="ghost"
                 size="icon"
-                className="relative h-12 w-12 min-h-[48px] min-w-[48px] flex-shrink-0 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+                className="relative h-11 w-11 min-h-11 min-w-11 flex-shrink-0 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
                 onClick={() => setCartDrawerOpen(true)}
                 aria-label={cartItemsCount > 0 ? `Panier - ${cartItemsCount} article${cartItemsCount > 1 ? 's' : ''}` : 'Panier'}
               >
                 <ShoppingCart className="h-6 w-6" aria-hidden />
                 {cartItemsCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center bg-red-600 text-white text-caption font-bold leading-none rounded-full">
+                  <span className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-red-600 text-white text-caption font-bold leading-none rounded-full">
                     {cartItemsCount > 99 ? '99+' : cartItemsCount}
                   </span>
                 )}
@@ -347,7 +347,7 @@ export function HeaderClient() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-12 w-12 min-h-[48px] min-w-[48px] flex-shrink-0 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+                  className="h-11 w-11 min-h-11 min-w-11 flex-shrink-0 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
                   onClick={() => router.push('/account')}
                   aria-label="Mon compte"
                 >
@@ -357,7 +357,7 @@ export function HeaderClient() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-12 w-12 min-h-[48px] min-w-[48px] flex-shrink-0 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+                  className="h-11 w-11 min-h-11 min-w-11 flex-shrink-0 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
                   onClick={() => router.push('/login')}
                   aria-label="Connexion"
                 >
@@ -368,7 +368,7 @@ export function HeaderClient() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-12 w-12 min-h-[48px] min-w-[48px] flex-shrink-0 rounded-xl -mr-1"
+                className="h-11 w-11 min-h-11 min-w-11 flex-shrink-0 rounded-xl -mr-1 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 onClick={() => setMobileMenuOpen(true)}
                 aria-label="Menu"
                 aria-expanded={mobileMenuOpen}

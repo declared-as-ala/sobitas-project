@@ -122,9 +122,9 @@ export default function OrderDetailPage() {
                   {/* Order Items */}
                   <div className="space-y-4 mt-6">
                     {details.map((detail) => (
-                      <div key={detail.id} className="flex items-center gap-4 p-4 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+                      <div key={detail.id} className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
                         {detail.produit?.cover && (
-                          <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
+                          <div className="relative w-16 h-16 shrink-0 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
                             <Image
                               src={getStorageUrl(detail.produit.cover)}
                               alt={detail.produit.designation_fr || 'Produit'}
@@ -135,15 +135,15 @@ export default function OrderDetailPage() {
                             />
                           </div>
                         )}
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-gray-900 dark:text-white">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-gray-900 dark:text-white break-words">
                             {detail.produit?.designation_fr || 'Produit'}
                           </h4>
                           <p className="text-sm text-gray-600 dark:text-gray-400">
                             Quantité: {detail.qte} × {detail.prix_unitaire} DT
                           </p>
                         </div>
-                        <div className="text-right">
+                        <div className="text-right shrink-0">
                           <p className="font-display font-bold tracking-tight tabular-nums text-gray-900 dark:text-white">
                             {(detail.prix_ttc || detail.prix_ht || 0).toFixed(0)} DT
                           </p>

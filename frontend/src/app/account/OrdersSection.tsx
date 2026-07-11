@@ -98,23 +98,23 @@ export function OrdersSection() {
       {safeOrders.map((order) => (
         <Card key={order.id} className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm transition-shadow hover:shadow-md">
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white">Commande #{order.numero}</CardTitle>
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div className="min-w-0">
+                <CardTitle className="font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white break-words">Commande #{order.numero}</CardTitle>
                 <div className="flex items-center gap-2 mt-2 text-sm text-gray-600 dark:text-gray-400">
-                  <Calendar className="h-4 w-4" aria-hidden="true" />
+                  <Calendar className="h-4 w-4 shrink-0" aria-hidden="true" />
                   <span>
                     {order.created_at ? format(new Date(order.created_at), 'dd MMMM yyyy', { locale: fr }) : 'Date inconnue'}
                   </span>
                 </div>
               </div>
-              {getStatusBadge(order.etat)}
+              <div className="shrink-0">{getStatusBadge(order.etat)}</div>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1 break-words">
                   {order.ville && `${order.ville}, `}
                   {order.region}
                 </p>
@@ -124,7 +124,7 @@ export function OrdersSection() {
               </div>
               <Button
                 variant="outline"
-                className="rounded-xl border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20"
+                className="w-full sm:w-auto justify-center min-h-[44px] shrink-0 rounded-xl border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20"
                 onClick={() => router.push(`/account/orders/${order.id}`)}
               >
                 <Eye className="h-4 w-4 mr-2" aria-hidden="true" />

@@ -31,11 +31,11 @@ export function ShopBreadcrumbs({ items }: ShopBreadcrumbsProps) {
           </BreadcrumbLink>
         </BreadcrumbItem>
         {items.map((item, index) => (
-          <div key={index} className="flex items-center">
+          <div key={index} className="flex items-center min-w-0">
             <BreadcrumbSeparator>
               <ChevronRight className="h-4 w-4" />
             </BreadcrumbSeparator>
-            <BreadcrumbItem>
+            <BreadcrumbItem className="min-w-0">
               {item.href && index < items.length - 1 ? (
                 <BreadcrumbLink asChild>
                   <Link href={item.href} className="hover:text-red-600 dark:hover:text-red-400">
@@ -43,7 +43,7 @@ export function ShopBreadcrumbs({ items }: ShopBreadcrumbsProps) {
                   </Link>
                 </BreadcrumbLink>
               ) : (
-                <BreadcrumbPage>{item.label}</BreadcrumbPage>
+                <BreadcrumbPage className="truncate max-w-[60vw] sm:max-w-none">{item.label}</BreadcrumbPage>
               )}
             </BreadcrumbItem>
           </div>

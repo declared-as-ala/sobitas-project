@@ -15,7 +15,7 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Slider } from '@/app/components/ui/slider';
 import { Checkbox } from '@/app/components/ui/checkbox';
-import { Filter, Search, X, CircleAlert } from 'lucide-react';
+import { Filter, Search, X, CircleAlert, Check, SlidersHorizontal } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/app/components/ui/sheet';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/app/components/ui/accordion';
 import { Badge } from '@/app/components/ui/badge';
@@ -39,6 +39,15 @@ const SKELETON_MIN_MS = 300;
 const CREATINE_TYPES = ['Monohydrate', 'Micronisée', 'Capsules', 'Creapure'];
 const CREATINE_GOALS = ['Force', 'Masse', 'Performance', 'Récupération'];
 
+/** Sort options — single source shared by the desktop top-bar select and the mobile sheet's "Trier par" group. */
+const SORT_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: 'popularity', label: 'Popularité' },
+  { value: 'price-asc', label: 'Prix : croissant' },
+  { value: 'price-desc', label: 'Prix : décroissant' },
+  { value: 'newest', label: 'Nouveautés' },
+  { value: 'best-sellers', label: 'Meilleures ventes' },
+];
+
 interface ProductFiltersProps {
   variant: 'mobile' | 'desktop';
   inStockOnly: boolean;
@@ -61,6 +70,8 @@ interface ProductFiltersProps {
   priceRange: [number, number];
   setPriceRange: (value: [number, number]) => void;
   priceBounds: { min: number; max: number };
+  sortBy: string;
+  setSortBy: (value: string) => void;
 }
 
 /**
@@ -91,35 +102,73 @@ function ProductFilters({
   priceRange,
   setPriceRange,
   priceBounds,
+  sortBy,
+  setSortBy,
 }: ProductFiltersProps) {
   const isMobile = variant === 'mobile';
   const idPrefix = isMobile ? 'mobile' : 'desktop';
-  const itemClass = `border ${isMobile ? 'border-gray-250' : 'border-gray-150'} dark:border-gray-800 rounded-xl px-4`;
-  const triggerClass = `${isMobile ? 'py-3 text-sm' : 'py-2.5 text-xs sm:text-sm'} font-semibold hover:no-underline`;
-  const listClass = isMobile ? 'space-y-3' : 'space-y-2';
-  const scrollListClass = `${listClass} max-h-60 overflow-y-auto`;
-  const checkboxClass = isMobile ? 'h-4.5 w-4.5' : 'h-4 w-4';
+  const itemClass = 'border border-gray-200 dark:border-gray-800 rounded-xl px-4';
+  const triggerClass = `${isMobile ? 'py-3.5 text-sm' : 'py-2.5 text-xs sm:text-sm'} font-semibold hover:no-underline`;
+  const listClass = isMobile ? 'space-y-0.5' : 'space-y-2';
+  const scrollListClass = `${listClass} ${isMobile ? 'max-h-72' : 'max-h-60'} overflow-y-auto overflow-x-hidden -mr-2 pr-2`;
+  const checkboxClass = isMobile ? 'h-5 w-5' : 'h-4 w-4';
+  // On mobile every option row is a ≥44px tap target; the label pads to fill the row height.
+  const rowClass = isMobile ? 'flex items-center gap-3 min-h-[44px]' : 'flex items-center gap-3';
+  const rowBetweenClass = isMobile
+    ? 'flex items-center justify-between gap-3 min-h-[44px] group'
+    : 'flex items-center justify-between gap-3 group';
   const labelBase = isMobile ? 'text-sm' : 'text-xs sm:text-sm';
+  const labelPad = isMobile ? 'py-2' : '';
   const labelState = (selected: boolean) =>
     selected ? 'font-semibold text-gray-900 dark:text-white' : 'font-normal text-gray-700 dark:text-gray-300';
   const defaultOpen = isMobile
-    ? ['availability', 'categories', 'types', 'goals', 'flavors']
+    ? ['sort', 'availability', 'categories', 'brands']
     : ['availability', 'types', 'goals', 'flavors'];
 
   return (
-    <Accordion type="multiple" defaultValue={defaultOpen} className={isMobile ? 'space-y-2' : 'space-y-1'}>
+    <Accordion type="multiple" defaultValue={defaultOpen} className={isMobile ? 'space-y-2.5' : 'space-y-1'}>
+      {/* Trier — mobile only (the desktop top-bar select stays the sort control on ≥md) */}
+      {isMobile && (
+        <AccordionItem value="sort" className={itemClass}>
+          <AccordionTrigger className={triggerClass}>Trier par</AccordionTrigger>
+          <AccordionContent className="pb-3">
+            <div className="space-y-0.5">
+              {SORT_OPTIONS.map((opt) => {
+                const active = sortBy === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setSortBy(opt.value)}
+                    aria-pressed={active}
+                    className={`flex w-full items-center justify-between gap-3 min-h-[44px] px-3 rounded-lg text-sm transition-colors ${
+                      active
+                        ? 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 font-semibold'
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                    }`}
+                  >
+                    <span>{opt.label}</span>
+                    {active && <Check className="h-4 w-4 shrink-0 text-red-600 dark:text-red-400" aria-hidden="true" />}
+                  </button>
+                );
+              })}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      )}
+
       {/* Availability */}
       <AccordionItem value="availability" className={itemClass}>
         <AccordionTrigger className={triggerClass}>Disponibilité</AccordionTrigger>
         <AccordionContent className="pb-3">
-          <div className="flex items-center space-x-3">
+          <div className={rowClass}>
             <Checkbox
               id={`${idPrefix}-in-stock`}
               checked={inStockOnly}
               onCheckedChange={(checked) => setInStockOnly(checked === true)}
               className={checkboxClass}
             />
-            <label htmlFor={`${idPrefix}-in-stock`} className={`${labelBase} cursor-pointer flex-1 font-normal`}>
+            <label htmlFor={`${idPrefix}-in-stock`} className={`${labelBase} ${labelPad} cursor-pointer flex-1 font-normal`}>
               En stock uniquement
             </label>
           </div>
@@ -133,7 +182,7 @@ function ProductFilters({
           <AccordionContent className="pb-3">
             <div className={listClass}>
               {CREATINE_TYPES.map((type) => (
-                <div key={type} className="flex items-center space-x-3">
+                <div key={type} className={rowClass}>
                   <Checkbox
                     id={`${idPrefix}-type-${type}`}
                     checked={selectedTypes.includes(type)}
@@ -142,7 +191,7 @@ function ProductFilters({
                   />
                   <label
                     htmlFor={`${idPrefix}-type-${type}`}
-                    className={`${labelBase} cursor-pointer flex-1 ${labelState(selectedTypes.includes(type))}`}
+                    className={`${labelBase} ${labelPad} cursor-pointer flex-1 ${labelState(selectedTypes.includes(type))}`}
                   >
                     {type}
                   </label>
@@ -160,7 +209,7 @@ function ProductFilters({
           <AccordionContent className="pb-3">
             <div className={listClass}>
               {CREATINE_GOALS.map((goal) => (
-                <div key={goal} className="flex items-center space-x-3">
+                <div key={goal} className={rowClass}>
                   <Checkbox
                     id={`${idPrefix}-goal-${goal}`}
                     checked={selectedGoals.includes(goal)}
@@ -169,7 +218,7 @@ function ProductFilters({
                   />
                   <label
                     htmlFor={`${idPrefix}-goal-${goal}`}
-                    className={`${labelBase} cursor-pointer flex-1 ${labelState(selectedGoals.includes(goal))}`}
+                    className={`${labelBase} ${labelPad} cursor-pointer flex-1 ${labelState(selectedGoals.includes(goal))}`}
                   >
                     {goal}
                   </label>
@@ -187,7 +236,7 @@ function ProductFilters({
           <AccordionContent className="pb-3">
             <div className={scrollListClass}>
               {uniqueFlavors.map((flavor) => (
-                <div key={flavor} className="flex items-center space-x-3">
+                <div key={flavor} className={rowClass}>
                   <Checkbox
                     id={`${idPrefix}-flavor-${flavor}`}
                     checked={selectedFlavors.includes(flavor)}
@@ -196,7 +245,7 @@ function ProductFilters({
                   />
                   <label
                     htmlFor={`${idPrefix}-flavor-${flavor}`}
-                    className={`${labelBase} cursor-pointer flex-1 ${labelState(selectedFlavors.includes(flavor))}`}
+                    className={`${labelBase} ${labelPad} cursor-pointer flex-1 ${labelState(selectedFlavors.includes(flavor))}`}
                   >
                     {flavor}
                   </label>
@@ -217,8 +266,8 @@ function ProductFilters({
                 const count = filterCounts.categoryCounts.get(category.slug) || 0;
                 const isSelected = selectedCategories.includes(category.slug);
                 return (
-                  <div key={category.id} className="flex items-center justify-between space-x-3 group">
-                    <div className="flex items-center space-x-3 flex-1 min-w-0">
+                  <div key={category.id} className={rowBetweenClass}>
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
                       <Checkbox
                         id={`${idPrefix}-cat-${category.id}`}
                         checked={isSelected}
@@ -227,12 +276,12 @@ function ProductFilters({
                       />
                       <label
                         htmlFor={`${idPrefix}-cat-${category.id}`}
-                        className={`${labelBase} cursor-pointer flex-1 truncate ${labelState(isSelected)}`}
+                        className={`${labelBase} ${labelPad} cursor-pointer flex-1 truncate ${labelState(isSelected)}`}
                       >
                         {category.designation_fr}
                       </label>
                     </div>
-                    <span className="text-xs text-gray-400 dark:text-gray-500 tabular-nums">{count}</span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500 tabular-nums shrink-0">{count}</span>
                   </div>
                 );
               })}
@@ -251,8 +300,8 @@ function ProductFilters({
                 const count = filterCounts.brandCounts.get(brand.id) || 0;
                 const isSelected = selectedBrands.includes(brand.id);
                 return (
-                  <div key={brand.id} className="flex items-center justify-between space-x-3 group">
-                    <div className="flex items-center space-x-3 flex-1 min-w-0">
+                  <div key={brand.id} className={rowBetweenClass}>
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
                       <Checkbox
                         id={`${idPrefix}-brand-${brand.id}`}
                         checked={isSelected}
@@ -261,12 +310,12 @@ function ProductFilters({
                       />
                       <label
                         htmlFor={`${idPrefix}-brand-${brand.id}`}
-                        className={`${labelBase} cursor-pointer flex-1 truncate ${labelState(isSelected)}`}
+                        className={`${labelBase} ${labelPad} cursor-pointer flex-1 truncate ${labelState(isSelected)}`}
                       >
                         {brand.designation_fr}
                       </label>
                     </div>
-                    <span className="text-xs text-gray-400 dark:text-gray-500 tabular-nums">{count}</span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500 tabular-nums shrink-0">{count}</span>
                   </div>
                 );
               })}
@@ -971,6 +1020,8 @@ function ShopContent({
     priceRange,
     setPriceRange,
     priceBounds,
+    sortBy,
+    setSortBy,
   };
 
   return (
@@ -1144,10 +1195,10 @@ function ShopContent({
               <SheetTrigger asChild>
                 <Button
                   variant="outline"
-                  className="lg:hidden w-full sm:w-auto min-h-[44px] border-gray-200 dark:border-gray-700 rounded-xl"
+                  className="lg:hidden shrink-0 min-h-[44px] px-4 border-gray-200 dark:border-gray-700 rounded-xl"
                   aria-label="Ouvrir les filtres"
                 >
-                  <Filter className="h-4 w-4 mr-2" />
+                  <SlidersHorizontal className="h-4 w-4 mr-2" />
                   <span>Filtres</span>
                   {(appliedFilters.length > 0) && (
                     <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1.5 text-xs bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-400">
@@ -1156,32 +1207,57 @@ function ShopContent({
                   )}
                 </Button>
               </SheetTrigger>
-              <SheetContent side="bottom" className="rounded-t-3xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
-                <SheetHeader className="sticky top-0 bg-white dark:bg-gray-900 z-10 pb-4 border-b border-gray-200 dark:border-gray-800 -mx-6 px-6 pt-4">
-                  <div className="flex items-center justify-between">
-                    <SheetTitle className="text-lg font-bold">Filtres</SheetTitle>
-                    <div className="flex items-center gap-2">
-                      {appliedFilters.length > 0 && (
-                        <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs text-red-600 hover:text-red-700 h-8">
-                          Tout effacer
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowFilters(false)}
-                        className="h-8 w-8 p-0"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
+              <SheetContent
+                side="bottom"
+                showCloseButton={false}
+                className="h-[92dvh] max-h-[92dvh] rounded-t-2xl p-0 gap-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 flex flex-col"
+              >
+                {/* Grab handle */}
+                <div className="shrink-0 flex justify-center pt-3 pb-1">
+                  <span className="h-1.5 w-10 rounded-full bg-gray-300 dark:bg-gray-700" aria-hidden="true" />
+                </div>
+
+                {/* Header: title + active count + close (44px) */}
+                <SheetHeader className="shrink-0 flex-row items-center justify-between gap-2 space-y-0 px-4 pb-3 pt-1 border-b border-gray-200 dark:border-gray-800">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <SheetTitle className="flex items-center gap-2 font-display uppercase tracking-tight text-lg font-bold text-gray-900 dark:text-white">
+                      <Filter className="h-4 w-4 text-red-600 dark:text-red-400" aria-hidden="true" />
+                      Filtres
+                    </SheetTitle>
+                    {appliedFilters.length > 0 && (
+                      <Badge variant="secondary" className="h-5 min-w-[20px] px-1.5 text-xs bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-400">
+                        {appliedFilters.length}
+                      </Badge>
+                    )}
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowFilters(false)}
+                    aria-label="Fermer les filtres"
+                    className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
                 </SheetHeader>
-                <div className="pt-4 pb-8 space-y-4">
+
+                {/* Scrollable filter body */}
+                <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4">
                   <ProductFilters variant="mobile" {...filterProps} />
                 </div>
-                <div className="sticky bottom-0 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 -mx-6 px-6 py-4 mt-4">
-                  <Button className="w-full min-h-[46px] rounded-xl font-display uppercase tracking-wide font-semibold bg-red-600 hover:bg-red-700 text-white shadow-sm" onClick={() => setShowFilters(false)}>
+
+                {/* Sticky action footer: Réinitialiser + Appliquer */}
+                <div className="shrink-0 flex items-center gap-3 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                  <Button
+                    variant="outline"
+                    onClick={clearFilters}
+                    className="min-h-[48px] flex-1 rounded-xl border-gray-300 dark:border-gray-700 font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+                  >
+                    Réinitialiser
+                  </Button>
+                  <Button
+                    onClick={() => setShowFilters(false)}
+                    className="min-h-[48px] flex-[1.7] rounded-xl font-display uppercase tracking-wide font-semibold bg-red-600 hover:bg-red-700 text-white shadow-sm"
+                  >
                     Voir {filteredProducts.length} produit{filteredProducts.length > 1 ? 's' : ''}
                   </Button>
                 </div>
@@ -1200,13 +1276,13 @@ function ShopContent({
                 variant="outline"
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-800 rounded-xl"
               >
-                <span className="text-gray-900 dark:text-gray-150 font-medium">{filter.label}</span>
+                <span className="text-gray-900 dark:text-gray-100 font-medium">{filter.label}</span>
                 <button
                   onClick={() => removeFilter(filter.type, filter.value)}
-                  className="ml-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full p-0.5 transition-colors"
+                  className="-mr-1 ml-0.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full p-1 transition-colors"
                   aria-label={`Retirer le filtre ${filter.label}`}
                 >
-                  <X className="h-3 w-3" />
+                  <X className="h-3.5 w-3.5" />
                 </button>
               </Badge>
             ))}

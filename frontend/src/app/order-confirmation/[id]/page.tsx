@@ -400,7 +400,7 @@ export default function OrderConfirmationPage() {
             <CheckCircle2 className="h-10 w-10 text-green-600 dark:text-green-400" aria-hidden="true" />
           </div>
 
-          <h1 className="font-display uppercase tracking-tight text-4xl md:text-5xl text-gray-900 dark:text-white mb-4">
+          <h1 className="font-display uppercase tracking-tight text-3xl sm:text-4xl md:text-5xl text-gray-900 dark:text-white mb-4">
             Merci. Votre commande a été reçue.
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-400 mb-6">
@@ -429,19 +429,19 @@ export default function OrderConfirmationPage() {
                   </div>
                 </div>
               </div>
-              <div className="text-right">
+              <div className="text-left md:text-right">
                 <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total</div>
                 <div className="font-display font-bold tracking-tight tabular-nums text-3xl text-red-600 dark:text-red-400">
                   {total.toFixed(2)} TND
                 </div>
                 <div className="text-sm text-gray-500 dark:text-gray-500 mt-1">
                   {order.livraison === 1 ? (
-                    <span className="flex items-center gap-1 justify-end mt-1">
+                    <span className="flex items-center gap-1 justify-start md:justify-end mt-1">
                       <Wallet className="h-4 w-4" />
                       Paiement à la livraison
                     </span>
                   ) : (
-                    <span className="flex items-center gap-1 justify-end mt-1">
+                    <span className="flex items-center gap-1 justify-start md:justify-end mt-1">
                       <CreditCard className="h-4 w-4" />
                       Carte Bancaire
                     </span>

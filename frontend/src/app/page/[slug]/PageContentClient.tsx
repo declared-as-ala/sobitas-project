@@ -98,7 +98,7 @@ export function PageContentClient({ page }: PageContentClientProps) {
 
       {/* ── Content Section ── */}
       <main className="relative bg-white dark:bg-gray-950">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 lg:py-18">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 lg:py-20">
           {hasContent ? (
             <article>
               {/* Prose content — flat, one-accent red */}
@@ -127,6 +127,7 @@ export function PageContentClient({ page }: PageContentClientProps) {
                   prose-th:px-4 prose-th:py-3 prose-th:text-left prose-th:font-bold prose-th:text-gray-700 dark:prose-th:text-gray-200 prose-th:border prose-th:border-gray-200 dark:prose-th:border-gray-800
                   prose-td:px-4 prose-td:py-3 prose-td:border prose-td:border-gray-100 dark:prose-td:border-gray-800
                   [&>h2]:flex [&>h2]:items-center [&>h2]:gap-3 [&>h2]:before:content-[''] [&>h2]:before:block [&>h2]:before:w-1 [&>h2]:before:h-5 [&>h2]:before:bg-red-600 [&>h2]:before:rounded-full [&>h2]:before:flex-shrink-0
+                  [&_table]:block [&_table]:w-max [&_table]:max-w-full [&_table]:overflow-x-auto [&_pre]:overflow-x-auto
                 "
                 dangerouslySetInnerHTML={{ __html: page.body || page.excerpt || '' }}
               />

@@ -313,7 +313,7 @@ export function QuickOrderDrawer({
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
             // Mobile: bottom sheet
-            'inset-x-0 bottom-0 max-h-[85vh] rounded-t-2xl border-t border-gray-200 dark:border-gray-800',
+            'inset-x-0 bottom-0 max-h-[92dvh] rounded-t-2xl border-t border-gray-200 dark:border-gray-800',
             'data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom',
             // Desktop: centered modal
             'md:inset-auto md:left-1/2 md:top-1/2 md:bottom-auto md:right-auto md:max-h-[85vh] md:w-full md:max-w-[520px] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-2xl md:border md:border-gray-200 md:dark:border-gray-800',
@@ -332,7 +332,7 @@ export function QuickOrderDrawer({
               </DialogPrimitive.Description>
             </div>
             <DialogPrimitive.Close
-              className="shrink-0 rounded-lg p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+              className="-mr-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
               aria-label="Fermer"
             >
               <X className="h-5 w-5" />
@@ -636,7 +636,7 @@ export function QuickOrderDrawer({
 
           {/* Sticky footer: recap like checkout (Sous-total, Expédition, Total) + trust + primary button */}
           {!result && (
-            <div className="shrink-0 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 rounded-b-2xl md:rounded-b-2xl">
+            <div className="shrink-0 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] rounded-b-2xl md:rounded-b-2xl">
               <div className="space-y-2 mb-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600 dark:text-gray-400">Sous-total</span>

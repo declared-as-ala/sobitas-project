@@ -253,7 +253,8 @@ export default function AboutPageClient({
                       className="prose prose-sm sm:prose-base max-w-none dark:prose-invert
                         prose-p:text-gray-600 dark:prose-p:text-gray-400 prose-p:leading-7 prose-p:mb-4
                         prose-a:text-red-600 dark:prose-a:text-red-400 hover:prose-a:text-red-700
-                        prose-strong:text-gray-900 dark:prose-strong:text-white prose-ul:text-gray-600 dark:prose-ul:text-gray-400 prose-li:mb-1"
+                        prose-strong:text-gray-900 dark:prose-strong:text-white prose-ul:text-gray-600 dark:prose-ul:text-gray-400 prose-li:mb-1
+                        [&_table]:block [&_table]:w-max [&_table]:max-w-full [&_table]:overflow-x-auto"
                       dangerouslySetInnerHTML={{ __html: section.content }}
                     />
                   </div>
@@ -288,7 +289,7 @@ export default function AboutPageClient({
                 {parsedContent.paragraphs.length > 0 && (
                   <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm p-5 sm:p-8">
                     <div
-                      className="prose prose-sm sm:prose-base max-w-none dark:prose-invert prose-p:text-gray-600 dark:prose-p:text-gray-400 prose-p:leading-7 prose-a:text-red-600 dark:prose-a:text-red-400 prose-strong:text-gray-900 dark:prose-strong:text-white"
+                      className="prose prose-sm sm:prose-base max-w-none dark:prose-invert prose-p:text-gray-600 dark:prose-p:text-gray-400 prose-p:leading-7 prose-a:text-red-600 dark:prose-a:text-red-400 prose-strong:text-gray-900 dark:prose-strong:text-white [&_table]:block [&_table]:w-max [&_table]:max-w-full [&_table]:overflow-x-auto"
                       dangerouslySetInnerHTML={{ __html: parsedContent.paragraphs.join('') }}
                     />
                   </div>
@@ -301,7 +302,8 @@ export default function AboutPageClient({
                       className="prose prose-sm sm:prose-base max-w-none dark:prose-invert
                         prose-headings:text-gray-900 dark:prose-headings:text-white prose-h2:pb-3 prose-h2:border-b prose-h2:border-gray-200 dark:prose-h2:border-gray-800 prose-h2:font-display prose-h2:uppercase prose-h2:tracking-tight
                         prose-p:text-gray-600 dark:prose-p:text-gray-400 prose-p:leading-7
-                        prose-a:text-red-600 dark:prose-a:text-red-400 prose-strong:text-gray-900 dark:prose-strong:text-white"
+                        prose-a:text-red-600 dark:prose-a:text-red-400 prose-strong:text-gray-900 dark:prose-strong:text-white
+                        [&_table]:block [&_table]:w-max [&_table]:max-w-full [&_table]:overflow-x-auto"
                       dangerouslySetInnerHTML={{ __html: page.body }}
                     />
                   </div>

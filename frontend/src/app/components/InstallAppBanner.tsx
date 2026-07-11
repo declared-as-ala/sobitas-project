@@ -130,20 +130,21 @@ export function InstallAppBanner() {
         style={{
           transform: show ? 'translateY(0)' : 'translateY(110%)',
           transition: 'transform 0.45s cubic-bezier(0.32,0.72,0,1)',
+          paddingBottom: 'max(0.625rem, env(safe-area-inset-bottom))',
         }}
-        className="fixed bottom-0 left-0 right-0 z-[9999] flex items-center gap-3 px-4 py-3 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] md:hidden"
+        className="fixed bottom-0 left-0 right-0 z-[9999] flex items-center gap-2.5 px-3 py-2.5 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] md:hidden"
       >
         {/* App icon */}
         <div className="relative h-11 w-11 shrink-0 rounded-xl overflow-hidden border border-gray-100 dark:border-gray-700 shadow">
-          <Image src="/favicon-32x32.png" alt="Protéine Tunisie" fill className="object-cover" />
+          <Image src="/favicon-32x32.png" alt="Protéine Tunisie" fill className="object-cover" sizes="44px" />
         </div>
 
         {/* Labels */}
         <div className="flex-1 min-w-0 leading-tight">
-          <p className="text-[13px] font-bold text-gray-900 dark:text-white">
+          <p className="truncate text-[13px] font-bold text-gray-900 dark:text-white">
             Installer l&apos;application
           </p>
-          <p className="text-xs leading-snug text-gray-500 dark:text-gray-400 truncate">
+          <p className="truncate text-xs leading-snug text-gray-500 dark:text-gray-400">
             Accès rapide · protein.tn
           </p>
         </div>
@@ -151,9 +152,9 @@ export function InstallAppBanner() {
         {/* CTA */}
         <button
           onClick={handleInstall}
-          className="flex shrink-0 items-center gap-1.5 rounded-lg bg-red-600 px-3 py-2 text-sm font-display uppercase tracking-wide font-bold leading-snug text-white active:bg-red-800 hover:bg-red-700 transition-colors"
+          className="flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-lg bg-red-600 px-3.5 text-sm font-display uppercase tracking-wide font-bold leading-snug text-white active:bg-red-800 hover:bg-red-700 transition-colors"
         >
-          <Download className="h-3.5 w-3.5" />
+          <Download className="h-4 w-4 shrink-0" />
           Installer
         </button>
 
@@ -161,9 +162,9 @@ export function InstallAppBanner() {
         <button
           onClick={dismiss}
           aria-label="Fermer"
-          className="shrink-0 rounded-full p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 transition-colors"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 transition-colors"
         >
-          <X className="h-4 w-4" />
+          <X className="h-5 w-5" />
         </button>
       </div>
 

@@ -187,7 +187,7 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
         <div className="mt-auto pt-1.5 max-[360px]:pt-1 sm:pt-2.5">
           <Button
             size="lg"
-            className={`w-full min-h-[40px] max-[360px]:min-h-[38px] sm:min-h-[44px] md:min-h-[48px] rounded-xl font-display uppercase tracking-wide font-semibold text-xs max-[360px]:text-[11px] leading-snug sm:text-sm sm:leading-normal transition-all duration-200 whitespace-nowrap ${productData.isInStock && canAddMore ? 'bg-red-600 hover:bg-red-700 text-white shadow-sm hover:shadow-md' : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed text-white'}`}
+            className={`w-full min-h-[44px] sm:min-h-[46px] md:min-h-[48px] rounded-xl font-display uppercase tracking-wide font-semibold text-xs max-[360px]:text-[11px] leading-snug sm:text-sm sm:leading-normal transition-all duration-200 whitespace-nowrap ${productData.isInStock && canAddMore ? 'bg-red-600 hover:bg-red-700 text-white shadow-sm hover:shadow-md' : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed text-white'}`}
             onClick={handleAddToCart}
             disabled={isAdding || !productData.isInStock || !canAddMore}
             aria-label={!canAddMore && productData.isInStock ? 'Stock maximum atteint' : `Ajouter ${productData.name} au panier`}

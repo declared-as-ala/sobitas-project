@@ -95,13 +95,13 @@ export function ProductsDropdown({
   const dropdownContent = isOpen && mounted ? (
     <div
       ref={dropdownRef}
-      className="fixed left-0 right-0 w-full bg-white dark:bg-gray-900 shadow-xl border-t-2 border-red-600 z-[200]"
+      className="fixed left-0 right-0 w-full bg-white dark:bg-gray-900 shadow-lg border-t-2 border-red-600 border-b border-gray-100 dark:border-gray-800 z-[200]"
       style={{ top: `${dropdownTop}px`, maxHeight: 'calc(100vh - 80px)' }}
       onMouseEnter={() => { hoverDropdown.current = true; cancelClose(); }}
       onMouseLeave={() => { hoverDropdown.current = false; scheduleClose(); }}
     >
-      <div className="max-w-7xl mx-auto px-4 lg:px-8 py-6 overflow-y-auto max-h-[calc(100vh-80px)] overscroll-contain">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-6 lg:gap-8">
+      <div className="max-w-7xl mx-auto px-4 lg:px-8 py-7 overflow-y-auto max-h-[calc(100vh-80px)] overscroll-contain">
+        <div className="grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-x-6 gap-y-7">
           {categories.length === 0 ? (
             Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="min-w-0" role="status" aria-label="Chargement des catégories">
