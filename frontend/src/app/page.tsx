@@ -1,11 +1,16 @@
 import { Metadata } from 'next';
-import { unstable_noStore as noStore } from 'next/cache';
 import { getAccueil } from '@/services/api';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
 import { buildWebPageSchema, buildItemListSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
 import { buildProductUrlPath } from '@/util/productUrl';
 import { HomePageClient } from './components/HomePageClient';
 import type { AccueilData, Product } from '@/types';
+
+// ISR (was uncached via noStore → rendered on EVERY request, so TTFB — and the hero LCP preload —
+// waited on a live /accueil backend call; that's the 3.7s LCP). Caching the route render and
+// revalidating in the background ships the HTML + hero preload instantly. 5-min staleness is fine
+// for the home rails; the flash-sale countdown ticks client-side from each product's expiry date.
+export const revalidate = 300;
 
 export async function generateMetadata(): Promise<Metadata> {
   const canonical = buildCanonicalUrl('/');
@@ -86,7 +91,6 @@ const LOCAL_HOME_SLIDES: LocalHomeSlide[] = [
 ];
 
 async function getHomeData(): Promise<{ accueil: AccueilData; slides: LocalHomeSlide[] }> {
-  noStore();
   try {
     const accueil = await getAccueil();
     return { accueil, slides: LOCAL_HOME_SLIDES };

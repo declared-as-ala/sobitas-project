@@ -31,8 +31,9 @@ export const metadata: Metadata = {
 };
 
 // Force dynamic rendering to ensure fresh data on every request
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+// ISR (was force-dynamic → rendered every request, slow TTFB/LCP). The promo list is cache-safe
+// — promotions don't change per second — and revalidates in the background every 5 min.
+export const revalidate = 300;
 
 export default async function OffresPage() {
   let promoProducts: Product[] = [];
