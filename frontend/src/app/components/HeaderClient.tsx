@@ -290,7 +290,7 @@ export function HeaderClient() {
     >
       {/* Top Info Bar */}
       <div className="bg-gray-900 text-white border-b border-gray-800/50">
-        <div className="hidden md:flex max-w-7xl mx-auto h-8 px-4 lg:px-8 items-center justify-between text-xs font-medium">
+        <div className="hidden md:flex max-w-7xl mx-auto h-7 px-4 lg:px-8 items-center justify-between text-xs font-medium">
           <div className="flex items-center gap-4">
             <a href={`tel:${PHONE.replace(/\s/g, '')}`} className="flex items-center gap-1.5 hover:text-red-500 transition-colors shrink-0" aria-label={`Appeler ${PHONE}`}>
               <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -317,7 +317,7 @@ export function HeaderClient() {
             {DELIVERY_MSG}
           </span>
         </div>
-        <div className="md:hidden flex h-8 px-4 items-center justify-center text-xs font-medium text-gray-200">
+        <div className="md:hidden flex h-7 px-4 items-center justify-center text-[11px] font-medium text-gray-200">
           <Truck className="h-3.5 w-3.5 mr-1.5 shrink-0" aria-hidden />
           <span className="min-w-0 truncate">{DELIVERY_MSG}</span>
         </div>
@@ -334,7 +334,7 @@ export function HeaderClient() {
           <div
             className={cn(
               'flex items-center justify-between w-full px-4 gap-1 transition-all duration-300',
-              scrolled ? 'h-12 py-2' : 'h-14 py-2.5'
+              scrolled ? 'h-11 py-1.5' : 'h-12 py-2'
             )}
           >
             <Link href="/" className="flex items-center justify-start flex-1 min-w-0 max-w-[11rem] sm:max-w-[12rem] -ml-1" aria-label="Proteine Tunisie - Accueil">
@@ -343,7 +343,7 @@ export function HeaderClient() {
                 alt="Proteine Tunisie"
                 width={140}
                 height={48}
-                className="h-9 min-h-[36px] w-auto max-w-full object-contain object-left drop-shadow-sm transition-all duration-300"
+                className="h-8 min-h-[32px] w-auto max-w-full object-contain object-left drop-shadow-sm transition-all duration-300"
                 style={{ width: 'auto', height: 'auto' }}
                 priority
               />
@@ -404,14 +404,14 @@ export function HeaderClient() {
 
         <div className="hidden md:block bg-red-600 dark:bg-red-700">
           <div className="max-w-7xl mx-auto px-4 lg:px-8">
-            <div className="flex items-center justify-between h-16 gap-4">
+            <div className="flex items-center justify-between h-14 gap-4">
               <Link href="/" className="flex-shrink-0" aria-label="Proteine Tunisie - Accueil">
                 <Image
                   src={headerLogoUrl}
                   alt="Proteine Tunisie"
                   width={200}
                   height={70}
-                  className="h-10 lg:h-14 xl:h-16 w-auto object-contain brightness-0 invert"
+                  className="h-9 lg:h-11 xl:h-12 w-auto object-contain brightness-0 invert"
                   priority
                 />
               </Link>
@@ -523,7 +523,7 @@ export function HeaderClient() {
           className="hidden md:block bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           aria-label="Navigation principale"
         >
-          <div className="flex w-max mx-auto items-center gap-4 lg:gap-6 xl:gap-8 px-4 py-2.5">
+          <div className="flex w-max mx-auto items-center gap-4 lg:gap-6 xl:gap-8 px-4 py-2">
             {navLinks.map((link) => (
               isProductsNavLink(link) ? (
                 <ProductsDropdown

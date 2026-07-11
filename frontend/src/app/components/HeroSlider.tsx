@@ -2,10 +2,9 @@
 
 import React, { useState, useEffect, memo, useMemo } from 'react';
 import Image from 'next/image';
-import { ChevronLeft, ChevronRight, ShieldCheck, Truck, CreditCard } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
-import { HeroTrustGuarantee } from '@/app/components/HeroTrustGuarantee';
 import { getStorageUrl } from '@/services/api';
 import type { Slide } from '@/types';
 import type { HeroFirstSlide } from '@/app/page';
@@ -255,25 +254,9 @@ export const HeroSlider = memo(function HeroSlider({ slides, mobileFirst, deskto
                 </LinkWithLoading>
               </Button>
             </div>
-            {/* Mobile trust row — clean inline replacement for the old scaled floating card */}
-            <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 lg:hidden">
-              {[
-                { Icon: ShieldCheck, label: '100% authentique' },
-                { Icon: Truck, label: 'Livraison 24–72h' },
-                { Icon: CreditCard, label: 'Paiement à la livraison' },
-              ].map(({ Icon, label }) => (
-                <span
-                  key={label}
-                  className="inline-flex items-center gap-1.5 text-[11px] font-medium text-white/90 drop-shadow-[0_1px_6px_rgba(0,0,0,0.7)]"
-                >
-                  <Icon className="h-3.5 w-3.5 text-red-400" strokeWidth={2} aria-hidden="true" />
-                  {label}
-                </span>
-              ))}
-            </div>
-            <div className="mt-6 hidden lg:block">
-              <HeroTrustGuarantee layout="inline" />
-            </div>
+            {/* Trust cues intentionally removed from the hero for a cleaner, focused above-the-fold.
+                The eyebrow line above carries the authenticity/delivery signal, and FeaturesSection
+                (right below the best-sellers) covers the full trust band. */}
           </div>
         </div>
 
