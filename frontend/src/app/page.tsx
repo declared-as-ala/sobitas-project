@@ -30,7 +30,7 @@ export async function generateMetadata(): Promise<Metadata> {
       description,
       // Use the 1200×630 hero, not the 512² favicon — otherwise every Facebook/WhatsApp/LinkedIn
       // share of the homepage previews as a tiny square icon instead of a real banner.
-      images: [{ url: '/slides/home-hero-web.webp', width: 1200, height: 630, alt: 'Protéine Tunisie — Whey, Créatine & Compléments' }],
+      images: [{ url: '/og-banner.jpg', width: 1200, height: 630, alt: 'Protéine Tunisie — Whey, Créatine & Compléments' }],
       url: canonical,
       type: 'website',
       siteName: 'Protéine Tunisie',
@@ -40,7 +40,7 @@ export async function generateMetadata(): Promise<Metadata> {
       card: 'summary_large_image',
       title,
       description,
-      images: ['/slides/home-hero-web.webp'],
+      images: ['/og-banner.jpg'],
     },
     other: {},
   };

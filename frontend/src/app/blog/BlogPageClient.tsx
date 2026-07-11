@@ -9,11 +9,15 @@ import { ChevronLeft, ChevronRight, FolderOpen, Tag } from 'lucide-react';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { PageHeader } from '@/app/components/PageHeader';
 import type { Article } from '@/types';
-import { getAllArticlesClient } from '@/services/api';
+import { getAllArticlesClient, type BlogTaxonomyItem } from '@/services/api';
 import { BlogCard } from './BlogCard';
 
 interface BlogPageClientProps {
   articles: Article[];
+  /** Real blog taxonomy from the server (the article LIST payload omits categories/tags, so the
+   *  taxonomy nav must be fed from the dedicated endpoints to render its crawlable links). */
+  blogCategories?: BlogTaxonomyItem[];
+  blogTags?: BlogTaxonomyItem[];
 }
 
 const ARTICLES_PER_PAGE = 9;
@@ -151,7 +155,7 @@ function articleMatchesCategory(article: Article, categoryId: string): boolean {
   return cat.keywords.some(kw => searchText.includes(kw.toLowerCase()));
 }
 
-export function BlogPageClient({ articles }: BlogPageClientProps) {
+export function BlogPageClient({ articles, blogCategories, blogTags }: BlogPageClientProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
@@ -219,6 +223,11 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
   // SSR DOM. Sourced from the server-provided `articles` prop (not `liveArticles`) so the
   // <a href> are present on first paint, before any client re-fetch.
   const blogCategoryLinks = useMemo(() => {
+    // Prefer the dedicated /blog_categories payload (complete); fall back to the taxonomy embedded
+    // in the articles (empty when the list API omits it).
+    if (blogCategories && blogCategories.length > 0) {
+      return blogCategories.filter((c) => c?.slug && c?.name).map((c) => ({ slug: c.slug, name: c.name }));
+    }
     const map = new Map<string, { slug: string; name: string }>();
     for (const a of articles) {
       for (const c of a.categories ?? []) {
@@ -226,9 +235,12 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
       }
     }
     return Array.from(map.values());
-  }, [articles]);
+  }, [articles, blogCategories]);
 
   const blogTagLinks = useMemo(() => {
+    if (blogTags && blogTags.length > 0) {
+      return blogTags.filter((t) => t?.slug && t?.name).slice(0, 15).map((t) => ({ slug: t.slug, name: t.name, count: 0 }));
+    }
     const counts = new Map<string, { slug: string; name: string; count: number }>();
     for (const a of articles) {
       for (const t of a.tags ?? []) {
@@ -242,7 +254,7 @@ export function BlogPageClient({ articles }: BlogPageClientProps) {
     return Array.from(counts.values())
       .sort((a, b) => b.count - a.count)
       .slice(0, 15);
-  }, [articles]);
+  }, [articles, blogTags]);
 
   // Filter by category (keyword-based)
   const filteredArticles = useMemo(() => {

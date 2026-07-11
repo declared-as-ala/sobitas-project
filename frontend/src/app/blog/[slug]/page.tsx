@@ -62,7 +62,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       openGraph: {
         title: article.seo?.open_graph?.title || title,
         description: article.seo?.open_graph?.description || descriptionWithTunisia.slice(0, 160),
-        images: imageUrl ? [imageUrl] : ['/slides/home-hero-web.webp'],
+        images: imageUrl ? [imageUrl] : ['/og-banner.jpg'],
         type: 'article',
         url: canonicalUrl,
       },
@@ -70,7 +70,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
         card: (article.seo?.twitter?.card as 'summary' | 'summary_large_image') || article.twitter_card as 'summary' | 'summary_large_image' || 'summary_large_image',
         title: article.seo?.twitter?.title || title,
         description: article.seo?.twitter?.description || descriptionWithTunisia.slice(0, 160),
-        images: twitterImage ? [twitterImage] : ['/slides/home-hero-web.webp'],
+        images: twitterImage ? [twitterImage] : ['/og-banner.jpg'],
       },
     };
   } catch (error) {

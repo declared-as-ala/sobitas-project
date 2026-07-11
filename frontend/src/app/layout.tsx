@@ -93,7 +93,7 @@ export const metadata: Metadata = {
       {
         // Was '/og-banner.jpg', which does not exist in /public → every share/preview 404'd.
         // Point at the real optimized hero until a purpose-built 1200×630 banner is designed.
-        url: '/slides/home-hero-web.webp',
+        url: '/og-banner.jpg',
         width: 1200,
         height: 630,
         alt: 'Protéine Tunisie — whey, créatine et compléments en Tunisie',
@@ -104,7 +104,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: SITE_TITLE_DEFAULT,
     description: SITE_DESCRIPTION,
-    images: ['/slides/home-hero-web.webp'],
+    images: ['/og-banner.jpg'],
   },
   robots: {
     index: true,
