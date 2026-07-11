@@ -853,35 +853,22 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 </div>
               </div>
 
-              {/* Secondary meta: tags + SKU (de-emphasized, below the buy card) */}
-              {((product.tags?.length ?? 0) > 0 || product.sku || product.code_product) && (
-                <div className="px-1 flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                  {product.tags?.map((tag) => (
-                    <Link
-                      key={tag.id}
-                      href={`/shop?search=${encodeURIComponent(tag.designation_fr)}`}
-                      className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 px-2 py-0.5 hover:border-red-300 hover:text-red-600"
-                    >
-                      #{tag.designation_fr.toLowerCase()}
-                    </Link>
-                  ))}
-                  {(product.sku || product.code_product) && (
-                    <span className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 px-2 py-0.5">
-                      SKU: {product.sku || product.code_product}
-                    </span>
-                  )}
-                </div>
+              {/* Reference — one quiet line (tags kept in the description/footer to keep mobile clean) */}
+              {(product.sku || product.code_product) && (
+                <p className="px-1 text-xs text-gray-400 dark:text-gray-500">
+                  Réf. {product.sku || product.code_product}
+                </p>
               )}
 
-              {/* Trust row — icons (favoris/share moved to the top action row) */}
-              <div className="mx-1 grid grid-cols-3 gap-2 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-3">
+              {/* Trust row — borderless so the mobile column reads as clean content, not stacked cards */}
+              <div className="mx-1 grid grid-cols-3 gap-2 border-t border-gray-100 dark:border-gray-800 pt-4">
                 {[
                   { Icon: Truck, label: 'Livraison 24–72h' },
                   { Icon: CreditCard, label: 'Paiement à la livraison' },
                   { Icon: Shield, label: '100% authentique' },
                 ].map(({ Icon, label }) => (
                   <div key={label} className="flex flex-col items-center gap-1 text-center">
-                    <Icon className="h-4 w-4 text-red-600 dark:text-red-400" strokeWidth={1.75} aria-hidden="true" />
+                    <Icon className="h-5 w-5 text-red-600 dark:text-red-400" strokeWidth={1.75} aria-hidden="true" />
                     <span className="text-[11px] leading-tight text-gray-500 dark:text-gray-400">{label}</span>
                   </div>
                 ))}
@@ -1316,50 +1303,42 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
 
               {reviewCount > 0 ? (
                 <>
-                  {/* Overall Rating */}
-                  <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-3 sm:p-4 border border-gray-100 dark:border-gray-800">
-                    <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-xs sm:text-sm font-display uppercase tracking-wide font-semibold mb-2 sm:mb-3">
-                      <Shield className="h-4 w-4 sm:h-5 sm:w-5" />
-                      <span>100% authentique</span>
+                  {/* Summary — big rating + distribution together in one clean card (stacks on phones) */}
+                  <div className="grid gap-5 rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-900/40 p-4 sm:grid-cols-[auto,1fr] sm:items-center sm:gap-8 sm:p-6">
+                    <div className="flex flex-col items-center sm:items-start sm:border-r sm:border-gray-200 sm:pr-8 dark:sm:border-gray-800">
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="font-display font-bold tracking-tight tabular-nums text-5xl text-gray-900 dark:text-white">
+                          {rating > 0 ? rating.toFixed(1) : '–'}
+                        </span>
+                        <span className="text-gray-500 dark:text-gray-400 text-base tabular-nums">/ 5</span>
+                      </div>
+                      <div className="mt-1.5 flex items-center gap-1">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                          <Star
+                            key={i}
+                            className={`h-5 w-5 shrink-0 ${i <= Math.round(rating) ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 dark:fill-gray-700'}`}
+                          />
+                        ))}
+                      </div>
+                      <p className="mt-2 text-xs sm:text-sm text-gray-500 dark:text-gray-400">Basé sur {reviewCount} avis</p>
                     </div>
-                    <div className="flex items-baseline gap-2 mb-2">
-                      <span className="font-display font-bold tracking-tight tabular-nums text-3xl sm:text-4xl lg:text-5xl text-gray-900 dark:text-white">
-                        {rating > 0 ? rating.toFixed(1) : '–'}
-                      </span>
-                      <span className="text-gray-500 dark:text-gray-400 text-sm sm:text-base tabular-nums">/ 5</span>
-                    </div>
-                    <div className="flex items-center gap-1 mb-2 sm:mb-3">
-                      {[1, 2, 3, 4, 5].map((i) => (
-                        <Star
-                          key={i}
-                          className={`h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 shrink-0 ${i <= Math.round(rating) ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 dark:fill-gray-700'}`}
-                        />
-                      ))}
-                    </div>
-                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                      Basé sur {reviewCount} avis
-                    </p>
-                  </div>
-
-                  {/* Rating Distribution */}
-                  <div className="space-y-2">
-                    {[5, 4, 3, 2, 1].map((starLevel) => {
-                      const count = reviews.filter(r => r.stars === starLevel).length;
-                      const pct = reviewCount > 0 ? (count / reviewCount) * 100 : 0;
-                      return (
-                        <div key={starLevel} className="flex items-center gap-2">
-                          <span className="text-sm text-gray-700 dark:text-gray-300 w-6 shrink-0">{starLevel}</span>
-                          <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400 shrink-0" />
-                          <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-red-600 rounded-full transition-all"
-                              style={{ width: `${pct}%` }}
-                            />
+                    <div className="space-y-1.5">
+                      {[5, 4, 3, 2, 1].map((starLevel) => {
+                        const count = reviews.filter(r => r.stars === starLevel).length;
+                        const pct = reviewCount > 0 ? (count / reviewCount) * 100 : 0;
+                        return (
+                          <div key={starLevel} className="flex items-center gap-2">
+                            <span className="flex w-9 shrink-0 items-center gap-0.5 text-xs text-gray-600 dark:text-gray-400 tabular-nums">
+                              {starLevel} <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                            </span>
+                            <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                              <div className="h-full rounded-full bg-amber-400 transition-all" style={{ width: `${pct}%` }} />
+                            </div>
+                            <span className="w-7 shrink-0 text-right text-xs text-gray-500 dark:text-gray-400 tabular-nums">{count}</span>
                           </div>
-                          <span className="text-sm text-gray-600 dark:text-gray-400 w-8 text-right shrink-0">{count}</span>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
 
                   {/* Removed: fabricated "Ce que disent les clients" summary + hardcoded
@@ -1367,27 +1346,36 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       sentiment on EVERY product regardless of real reviews — a trust liability and
                       a Google review-content policy risk. The real, per-product reviews render below. */}
 
-                  {/* Sample Reviews */}
-                  <div className="space-y-2 sm:space-y-3">
-                    {reviewsToShowOnPage.map((review) => (
-                      <div key={review.id} className="p-3 sm:p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <div className="flex items-center gap-0.5">
-                            {[1, 2, 3, 4, 5].map((i) => (
-                              <Star key={i} className={`h-3.5 w-3.5 ${i <= review.stars ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 text-gray-200 dark:fill-gray-700'}`} />
-                            ))}
+                  {/* Review list — clean divided list with initial avatars (no stacked boxes) */}
+                  <ul className="divide-y divide-gray-100 dark:divide-gray-800">
+                    {reviewsToShowOnPage.map((review) => {
+                      const reviewerName = review.user?.name?.trim() || 'Client';
+                      const initial = reviewerName.slice(0, 1).toUpperCase();
+                      return (
+                        <li key={review.id} className="flex gap-3 py-4">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-100 font-display text-sm font-bold text-red-600 dark:bg-red-950/40 dark:text-red-400">
+                            {initial}
                           </div>
-                          <span className="text-xs sm:text-sm font-semibold leading-snug text-gray-900 dark:text-white truncate">{review.user?.name || 'Client'}</span>
-                          <span className="text-xs leading-snug text-gray-500 dark:text-gray-400 shrink-0">
-                            {review.created_at ? new Date(review.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''}
-                          </span>
-                        </div>
-                        {review.comment && (
-                          <p className="text-sm leading-relaxed text-gray-700 dark:text-gray-300 line-clamp-3">{review.comment}</p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="truncate text-sm font-semibold text-gray-900 dark:text-white">{reviewerName}</span>
+                              <span className="shrink-0 text-xs text-gray-400 dark:text-gray-500">
+                                {review.created_at ? new Date(review.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}
+                              </span>
+                            </div>
+                            <div className="mt-0.5 flex items-center gap-0.5">
+                              {[1, 2, 3, 4, 5].map((i) => (
+                                <Star key={i} className={`h-3.5 w-3.5 ${i <= review.stars ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 text-gray-200 dark:fill-gray-700'}`} />
+                              ))}
+                            </div>
+                            {review.comment && (
+                              <p className="mt-1.5 text-sm leading-relaxed text-gray-700 dark:text-gray-300">{review.comment}</p>
+                            )}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
 
                   {visibleReviewCount < sortedReviews.length ? (
                     <Button
