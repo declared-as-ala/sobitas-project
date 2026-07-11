@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { Product as DataProduct } from '@/data/products';
+import type { Product as DataProduct } from '@/data/products';
 import type { Product as ApiProduct } from '@/types';
 import { toast } from 'sonner';
 import { getEffectivePrice as getEffectivePriceUtil } from '@/util/productPrice';

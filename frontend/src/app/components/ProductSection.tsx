@@ -4,7 +4,7 @@ import { memo } from 'react';
 import { ProductCard } from './ProductCard';
 import { ProductGrid } from './ProductGrid';
 import { SectionHeader } from './SectionHeader';
-import { Product as DataProduct } from '@/data/products';
+import type { Product as DataProduct } from '@/data/products';
 import type { Product as ApiProduct } from '@/types';
 
 type Product = ApiProduct | DataProduct;

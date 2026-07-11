@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import {
   ShoppingCart,
@@ -32,7 +33,6 @@ import { Button } from '@/app/components/ui/button';
 import { useTheme } from 'next-themes';
 import { ProductsDropdown } from './ProductsDropdown';
 import { MobileProductsMenu } from './MobileProductsMenu';
-import { CartDrawer } from './CartDrawer';
 import { useCart } from '@/app/contexts/CartContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -51,6 +51,10 @@ import type { SiteNavigationItem } from '@/types';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { useI18n } from '@/i18n/I18nProvider';
 import { MULTILOCALE_ENABLED } from '@/i18n';
+
+// CartDrawer is interaction-gated (opens on cart click) and carries no SEO content, so lazy-load
+// it — this keeps its `vaul` drawer chunk out of every page's first-load JS.
+const CartDrawer = dynamic(() => import('./CartDrawer').then((m) => ({ default: m.CartDrawer })), { ssr: false });
 
 const SCROLL_THRESHOLD = 24;
 const MOBILE_NAV_SCROLL_THRESHOLD = 20;
@@ -93,13 +97,32 @@ const NAV_ICON_MAP: Record<string, LucideIcon> = {
   gift: Gift,
 };
 
+/**
+ * The backend nav occasionally ships English labels (e.g. "BRANDS") even though the site default is
+ * French. Normalize known ones to French at the source so both the desktop nav and the mobile
+ * sidebar read French — and locale switching still works (translateLegacy maps MARQUES→BRANDS for EN).
+ */
+const FRENCH_NAV_LABELS: Record<string, string> = {
+  BRANDS: 'MARQUES',
+  Brands: 'Marques',
+  brands: 'Marques',
+  HOME: 'ACCUEIL',
+  SHOP: 'BOUTIQUE',
+  BLOG: 'BLOG',
+  CONTACT: 'CONTACT',
+};
+
+function frenchifyNavLabel(label: string): string {
+  return FRENCH_NAV_LABELS[label.trim()] ?? label;
+}
+
 function normalizeNavigationItems(items: SiteNavigationItem[]): HeaderNavLink[] {
   return items
     .filter((item) => item?.is_visible !== false && item.label && item.url)
     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.id - b.id)
     .map((item) => ({
       href: item.url,
-      label: item.label,
+      label: frenchifyNavLabel(item.label),
       icon: item.icon,
       opensNewTab: item.opens_new_tab,
     }));
@@ -542,9 +565,9 @@ export function HeaderClient() {
             </Link>
           </SheetHeader>
 
-          <div className="flex-1 overflow-y-auto py-4 flex flex-col">
+          <div className="flex-1 overflow-y-auto py-4 flex flex-col [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <div className="px-4 pb-4">
-              <h3 className="font-display uppercase tracking-[0.2em] text-[11px] font-semibold text-gray-500 dark:text-gray-400 px-3 mb-2">Navigation</h3>
+              <h3 className="font-display uppercase tracking-[0.2em] text-[11px] font-semibold text-red-600 dark:text-red-400 px-3 mb-2">Navigation</h3>
               <nav className="space-y-0.5">
                 {sidebarLinks.map((link) => (
                   isProductsNavLink(link) ? (
@@ -554,7 +577,7 @@ export function HeaderClient() {
                         closeMobileMenu();
                         setTimeout(() => setMobileProductsMenuOpen(true), 150);
                       }}
-                      className="w-full text-left py-3 px-3 text-base font-medium leading-snug text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-red-600 dark:hover:text-red-500 rounded-xl transition-colors -mx-1 flex items-center justify-between"
+                      className="w-full text-left min-h-[48px] py-3 px-3 font-display uppercase tracking-wide text-[15px] font-semibold leading-snug text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-red-600 dark:hover:text-red-500 rounded-xl transition-colors -mx-1 flex items-center justify-between"
                     >
                       <span>{translateLegacy(link.label)}</span>
                       <ChevronRight className="h-4 w-4 text-gray-400" />
@@ -564,7 +587,7 @@ export function HeaderClient() {
                       key={`${link.href}-${link.label}`}
                       item={link}
                       onClick={closeMobileMenu}
-                      className="flex items-center gap-3 py-3 px-3 text-base font-medium leading-snug text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-red-600 dark:hover:text-red-500 rounded-xl transition-colors -mx-1"
+                      className="flex items-center gap-3 min-h-[48px] py-3 px-3 font-display uppercase tracking-wide text-[15px] font-semibold leading-snug text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-red-600 dark:hover:text-red-500 rounded-xl transition-colors -mx-1"
                     >
                       <NavigationIcon name={link.icon} className="h-5 w-5 shrink-0 text-red-500" />
                       <span>{translateLegacy(link.label)}</span>
