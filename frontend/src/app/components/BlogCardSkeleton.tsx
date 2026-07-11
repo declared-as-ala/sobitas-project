@@ -16,9 +16,12 @@ export function BlogCardSkeleton() {
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-2/3" />
         </div>
-        <div className="mt-auto flex items-center gap-3 sm:gap-4">
-          <Skeleton className="h-4 w-20" />
-          <Skeleton className="h-4 w-16" />
+        <div className="mt-auto flex items-center justify-between gap-4 border-t border-gray-100 dark:border-gray-800 pt-3">
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-4 w-14" />
+          </div>
+          <Skeleton className="h-4 w-24" />
         </div>
       </div>
     </div>

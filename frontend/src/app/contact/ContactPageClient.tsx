@@ -92,12 +92,15 @@ export default function ContactPageClient({
                   <div className="flex-shrink-0 flex h-11 w-11 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400">
                     <Mail className="h-5 w-5" strokeWidth={1.75} />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <h3 className="font-display uppercase tracking-wide text-sm font-semibold text-gray-900 dark:text-white mb-1">
                       Email
                     </h3>
                     <p className="text-gray-600 dark:text-gray-400">
-                      <a href={`mailto:${coordinates.email}`} className="transition-colors hover:text-red-600 dark:hover:text-red-400">
+                      <a
+                        href={`mailto:${coordinates.email}`}
+                        className="inline-flex min-h-11 items-center break-all rounded-lg -mx-2 px-2 transition-colors hover:text-red-600 hover:bg-red-50/60 dark:hover:text-red-400 dark:hover:bg-red-950/30"
+                      >
                         {coordinates.email}
                       </a>
                     </p>
@@ -110,11 +113,11 @@ export default function ContactPageClient({
                   <div className="flex-shrink-0 flex h-11 w-11 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400">
                     <MapPin className="h-5 w-5" strokeWidth={1.75} />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <h3 className="font-display uppercase tracking-wide text-sm font-semibold text-gray-900 dark:text-white mb-1">
                       Adresse
                     </h3>
-                    <p className="text-gray-600 dark:text-gray-400">
+                    <p className="text-gray-600 dark:text-gray-400 break-words">
                       {coordinates.adresse}
                     </p>
                   </div>
@@ -125,7 +128,7 @@ export default function ContactPageClient({
                 <div className="flex-shrink-0 flex h-11 w-11 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400">
                   <Clock className="h-5 w-5" strokeWidth={1.75} />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <h3 className="font-display uppercase tracking-wide text-sm font-semibold text-gray-900 dark:text-white mb-1">
                     Horaires
                   </h3>

@@ -172,18 +172,20 @@ export default function BrandsPageClient({ initialBrands = [] }: { initialBrands
       {/* ── A–Z Sticky Nav ── */}
       {!searchQuery && (
         <div className="sticky top-0 z-40 bg-white/95 dark:bg-gray-950/95 border-b border-gray-100 dark:border-gray-800 shadow-sm">
-          <div className="max-w-5xl mx-auto px-2 sm:px-6 lg:px-8 py-2 sm:py-2.5">
-            <div className="flex items-center gap-0.5 sm:gap-1 overflow-x-auto scrollbar-none">
+          <div className="max-w-5xl mx-auto px-2 sm:px-6 lg:px-8 py-1.5 sm:py-2.5">
+            <div className="flex items-center gap-0.5 sm:gap-1 overflow-x-auto scrollbar-none scroll-px-2">
               {LETTERS.map(letter => {
                 const isActive = activeLetters.has(letter);
                 const isCurrent = activeLetter === letter;
                 return (
                   <button
                     key={letter}
+                    type="button"
                     onClick={() => isActive && scrollToLetter(letter)}
                     disabled={!isActive}
+                    aria-label={`Aller à la lettre ${letter}`}
                     className={`
-                      flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-lg font-display text-[11px] sm:text-xs font-bold transition-colors duration-150
+                      flex-shrink-0 w-9 h-11 sm:w-8 sm:h-8 rounded-lg font-display text-xs sm:text-xs font-bold transition-colors duration-150
                       ${isCurrent
                         ? 'bg-red-600 text-white shadow-sm'
                         : isActive
@@ -329,7 +331,7 @@ function BrandCard({
           />
         ) : (
           <div className="flex flex-col items-center gap-1 p-3">
-            <Building2 className="h-7 w-7 sm:h-8 sm:h-8 text-gray-300 dark:text-gray-600" />
+            <Building2 className="h-7 w-7 sm:h-8 sm:w-8 text-gray-300 dark:text-gray-600" />
             <span className="text-xs text-gray-400 dark:text-gray-500 font-medium text-center leading-tight line-clamp-2">
               {brand.designation_fr}
             </span>

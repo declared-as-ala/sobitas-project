@@ -269,7 +269,7 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
       variant="ghost"
       size="icon"
       className={cn(
-        'h-12 w-12 min-h-[48px] min-w-[48px]',
+        'h-11 w-11 min-h-11 min-w-11',
         'hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl active:scale-95 transition-transform',
         className
       )}
@@ -288,7 +288,7 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
             variant="ghost"
             size="icon"
             className={cn(
-              'h-12 w-12 min-h-[48px] min-w-[48px]',
+              'h-11 w-11 min-h-11 min-w-11',
               'hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl active:scale-95 transition-transform',
               className
             )}

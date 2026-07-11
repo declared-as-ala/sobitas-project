@@ -34,7 +34,7 @@ export function BlogCard({ article, priority = false, excerpt, readingMinutes, t
     <article className="group h-full">
       <Link
         href={blogHref(article.slug)}
-        className="flex h-full flex-col overflow-hidden rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm transition-all duration-300 hover:shadow-xl"
+        className="flex h-full flex-col overflow-hidden rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm transition-all duration-300 hover:border-gray-200 hover:shadow-xl dark:hover:border-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-950"
       >
         <div className="relative aspect-[4/3] overflow-hidden bg-gray-100 dark:bg-gray-800">
           {article.cover ? (
@@ -61,8 +61,8 @@ export function BlogCard({ article, priority = false, excerpt, readingMinutes, t
               {excerpt}
             </p>
           )}
-          <div className="mt-auto flex flex-col gap-3">
-            <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+          <div className="mt-auto flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-gray-100 dark:border-gray-800 pt-3">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
               <span className="flex items-center gap-1.5">
                 <Calendar className="h-4 w-4 flex-shrink-0" strokeWidth={1.75} aria-hidden="true" />
                 {date ? format(date, 'd MMM yyyy', { locale: fr }) : 'Récent'}

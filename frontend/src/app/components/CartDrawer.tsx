@@ -39,8 +39,8 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange} direction="right">
-      <DrawerContent className="max-h-[96vh] w-full sm:max-w-md bg-white dark:bg-gray-900 border-0 shadow-none">
-        <DrawerHeader className="border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 pb-4">
+      <DrawerContent className="max-h-[96dvh] w-full sm:max-w-md bg-white dark:bg-gray-900 border-0 shadow-none">
+        <DrawerHeader className="shrink-0 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 pb-4">
           <DrawerTitle className="font-display uppercase tracking-tight text-xl font-bold text-gray-900 dark:text-white">
             Panier
           </DrawerTitle>
@@ -51,7 +51,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
           </DrawerDescription>
         </DrawerHeader>
 
-        <div className="flex-1 overflow-y-auto px-4 bg-white dark:bg-gray-900">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 bg-white dark:bg-gray-900">
           {items.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
               <div className="rounded-full bg-gray-100 dark:bg-gray-800 p-6 mb-4">
@@ -113,17 +113,18 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                       <p className="text-red-600 dark:text-red-400 font-display font-bold tracking-tight tabular-nums text-sm mb-2">
                         {formatCurrency(displayPrice)}
                       </p>
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1">
                         <Button
                           variant="outline"
                           size="icon"
-                          className="h-7 w-7 rounded-md border-gray-200 dark:border-gray-600"
+                          className="h-9 w-9 rounded-lg border-gray-200 dark:border-gray-600"
                           onClick={() =>
                             updateQuantity(item.product.id, Math.max(1, item.quantity - 1))
                           }
                           disabled={item.quantity <= 1}
+                          aria-label="Diminuer la quantité"
                         >
-                          <Minus className="h-3.5 w-3.5" />
+                          <Minus className="h-4 w-4" />
                         </Button>
                         <span className="w-8 text-center text-sm font-medium tabular-nums" aria-live="polite">
                           {item.quantity}
@@ -131,19 +132,21 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                         <Button
                           variant="outline"
                           size="icon"
-                          className="h-7 w-7 rounded-md border-gray-200 dark:border-gray-600"
+                          className="h-9 w-9 rounded-lg border-gray-200 dark:border-gray-600"
                           onClick={handleIncrease}
                           disabled={item.quantity >= maxQty}
+                          aria-label="Augmenter la quantité"
                         >
-                          <Plus className="h-3.5 w-3.5" />
+                          <Plus className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md ml-0.5"
+                          className="h-9 w-9 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg ml-auto"
                           onClick={() => removeFromCart(item.product.id)}
+                          aria-label="Retirer du panier"
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
@@ -161,7 +164,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
         </div>
 
         {items.length > 0 && (
-          <DrawerFooter className="border-t border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/80 p-4">
+          <DrawerFooter className="shrink-0 border-t border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/80 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
             <div className="flex justify-between items-center mb-4">
               <span className="font-display uppercase tracking-wide text-base font-semibold text-gray-900 dark:text-white">Total</span>
               <span className="font-display font-bold tracking-tight text-xl text-red-600 dark:text-red-400 tabular-nums">

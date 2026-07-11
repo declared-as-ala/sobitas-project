@@ -251,7 +251,7 @@ export default function CartPage() {
                           </p>
                         </div>
 
-                        <div className="flex items-center justify-between gap-2 mt-2">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-2 mt-2">
                           {/* Quantity - touch-friendly, clamped to stock */}
                           <div className="flex items-center rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                             <button
@@ -277,7 +277,7 @@ export default function CartPage() {
                             </button>
                           </div>
 
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1 ml-auto">
                             <span className="text-sm sm:text-base font-display font-bold tracking-tight text-gray-900 dark:text-white tabular-nums">
                               {(displayPrice * item.quantity).toFixed(0)} DT
                             </span>

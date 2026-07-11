@@ -614,7 +614,7 @@ export default function CheckoutPage() {
                           ? getStorageUrl(detail.produit.cover) 
                           : null;
                         return (
-                          <div key={detail.id} className="flex items-center gap-4 p-4 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+                          <div key={detail.id} className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
                             {productImage && (
                               <div className="relative w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-white dark:bg-gray-700">
                                 <Image
@@ -627,15 +627,15 @@ export default function CheckoutPage() {
                                 />
                               </div>
                             )}
-                            <div className="flex-1">
-                              <p className="font-medium text-gray-900 dark:text-white">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-gray-900 dark:text-white break-words">
                                 {detail.produit?.designation_fr || 'Produit'}
                               </p>
                               <p className="text-sm text-gray-500 dark:text-gray-400">
                                 Quantité: {detail.qte || 0}
                               </p>
                             </div>
-                            <div className="text-right">
+                            <div className="text-right shrink-0">
                               <p className="font-display font-bold tracking-tight tabular-nums text-gray-900 dark:text-white">
                                 {(detail.prix_ttc || 0).toFixed(2)} TND
                               </p>

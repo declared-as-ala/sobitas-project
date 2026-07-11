@@ -530,7 +530,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
     <div className="min-h-screen bg-white dark:bg-gray-950">
       <Header />
 
-      <main className="w-full mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl py-3 sm:py-6 lg:py-12 pb-40 sm:pb-44 lg:pb-12">
+      <main className="w-full mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl py-3 sm:py-6 lg:py-12 pb-44 sm:pb-44 lg:pb-12">
         {/* Breadcrumb: Accueil > Boutique > Category > Subcategory (ends at category, no product name) */}
         {breadcrumbItems.length > 0 && (
           <nav aria-label="Fil d'Ariane" className="mb-3 sm:mb-4 text-sm text-gray-500 dark:text-gray-400">

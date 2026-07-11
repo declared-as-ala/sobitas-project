@@ -193,7 +193,7 @@ export function CategorySeoLanding({
                   className="flex items-center gap-2.5 p-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm hover:shadow-md hover:border-red-200 dark:hover:border-red-500/30 transition-all duration-300 group"
                 >
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 group-hover:bg-red-600 group-hover:text-white transition-colors duration-300">
-                    <Icon className="h-4.5 w-4.5" />
+                    <Icon className="h-[18px] w-[18px]" />
                   </div>
                   <div className="min-w-0">
                     <h4 className="text-xs font-bold text-gray-900 dark:text-white leading-tight">
@@ -246,7 +246,7 @@ export function CategorySeoLanding({
                         className="flex gap-3 p-3.5 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 shadow-sm hover:shadow-md hover:border-red-200 dark:hover:border-red-500/30 transition-all duration-300 group"
                       >
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 group-hover:bg-red-600 group-hover:text-white transition-colors duration-300">
-                          <BIcon className="h-4.5 w-4.5" />
+                          <BIcon className="h-[18px] w-[18px]" />
                         </div>
                         <div className="min-w-0">
                           <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white leading-tight">
@@ -404,7 +404,7 @@ export function CategorySeoLanding({
                       <span className="text-sm sm:text-[15px]">{faq.question}</span>
                     </span>
                     <span className="shrink-0 text-gray-400 group-open:rotate-180 transition-transform duration-300" aria-hidden>
-                      <ChevronDown className="h-4.5 w-4.5" />
+                      <ChevronDown className="h-[18px] w-[18px]" />
                     </span>
                   </summary>
                   <div className="pb-5 px-5 sm:px-6 pt-1 text-gray-600 dark:text-gray-300 text-sm sm:text-base leading-relaxed border-t border-gray-100 dark:border-gray-800 bg-gray-50/30 dark:bg-gray-950/20">
@@ -423,7 +423,7 @@ export function CategorySeoLanding({
           {hasRelated && (
             <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/30 p-5 sm:p-6 shadow-sm">
               <h2 className="text-base sm:text-lg font-display uppercase tracking-tight font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center gap-2">
-                <TrendingUp className="h-4.5 w-4.5 text-red-500" />
+                <TrendingUp className="h-[18px] w-[18px] text-red-500" />
                 Catégories associées
               </h2>
               <ul className="grid grid-cols-1 gap-2.5">
@@ -446,7 +446,7 @@ export function CategorySeoLanding({
           {hasBest && (
             <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 sm:p-6 shadow-sm">
               <h2 className="text-base sm:text-lg font-display uppercase tracking-tight font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center gap-2">
-                <Sparkles className="h-4.5 w-4.5 text-red-500" />
+                <Sparkles className="h-[18px] w-[18px] text-red-500" />
                 Produits phares
               </h2>
               <ul className="grid grid-cols-1 gap-2.5">
@@ -454,7 +454,7 @@ export function CategorySeoLanding({
                   <li key={p.slug}>
                     <Link
                       href={p.url}
-                      className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-850 hover:bg-red-50 dark:hover:bg-red-950/10 hover:border-red-200 dark:hover:border-red-900/40 transition-all duration-300 group"
+                      className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-800/50 hover:bg-red-50 dark:hover:bg-red-950/10 hover:border-red-200 dark:hover:border-red-900/40 transition-all duration-300 group"
                     >
                       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 group-hover:bg-red-600 group-hover:text-white transition-all duration-300">
                         <Star className="h-4 w-4" aria-hidden="true" />

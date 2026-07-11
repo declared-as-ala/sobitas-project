@@ -25,7 +25,7 @@ export default function PageLoading() {
 
       {/* Content */}
       <main className="relative bg-white dark:bg-gray-950">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 lg:py-18">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 lg:py-20">
           <div className="space-y-4">
             <Skeleton className="h-4 w-full rounded" />
             <Skeleton className="h-4 w-11/12 rounded" />

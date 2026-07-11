@@ -24,14 +24,14 @@ export default function NotFound() {
         <div className="mt-8 flex flex-wrap gap-4 justify-center">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 text-sm font-display uppercase tracking-wide font-semibold text-white hover:bg-red-700 transition-colors"
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 text-sm font-display uppercase tracking-wide font-semibold text-white hover:bg-red-700 transition-colors"
           >
             <Home className="h-4 w-4" />
             Accueil
           </Link>
           <Link
             href="/shop"
-            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 dark:border-gray-700 px-5 py-2.5 text-sm font-semibold text-gray-900 dark:text-white hover:border-red-600 hover:text-red-600 dark:hover:border-red-400 dark:hover:text-red-400 transition-colors"
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-gray-200 dark:border-gray-700 px-5 py-2.5 text-sm font-semibold text-gray-900 dark:text-white hover:border-red-600 hover:text-red-600 dark:hover:border-red-400 dark:hover:text-red-400 transition-colors"
           >
             <ShoppingBag className="h-4 w-4" />
             Boutique

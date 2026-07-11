@@ -71,7 +71,7 @@ export function MobileProductsMenu({ open, onOpenChange }: MobileProductsMenuPro
       <SheetContent
         side="bottom"
         showCloseButton={false}
-        className="left-0 right-0 mx-0 w-full max-h-[90vh] rounded-t-2xl p-0 flex flex-col overflow-hidden z-[60] border-t-2 border-red-600"
+        className="left-0 right-0 mx-0 w-full h-[90dvh] max-h-[90dvh] rounded-t-2xl p-0 flex flex-col overflow-hidden z-[60] border-t-2 border-red-600"
       >
         <div className="flex flex-col flex-1 min-h-0">
           {/* Drag handle */}
@@ -143,42 +143,30 @@ export function MobileProductsMenu({ open, onOpenChange }: MobileProductsMenuPro
               <>
                 {!selectedCategory ? (
                   /* ── Category list ── */
-                  <div>
-                    <div className="px-3 pt-3 pb-1 space-y-2">
-                      {categories.map((cat) => (
+                  <div className="px-3 pt-3 pb-4 space-y-2">
+                    {categories.map((cat) => {
+                      const subCount = cat.sous_categories?.length ?? 0;
+                      return (
                         <button
                           key={cat.id}
                           onClick={() => setSelectedCategory(cat)}
-                          className="w-full flex items-center justify-between py-3.5 px-4 text-left bg-white dark:bg-gray-900 active:bg-gray-50 dark:active:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-colors"
+                          className="w-full min-h-[56px] flex items-center gap-3 py-3 px-4 text-left bg-white dark:bg-gray-900 active:bg-gray-50 dark:active:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-colors"
                         >
+                          <span className="h-2 w-2 rounded-full bg-red-500 flex-shrink-0" aria-hidden />
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-0.5">
-                              <div className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
-                              <span className="font-display text-caption tracking-wide text-red-600 dark:text-red-400 uppercase leading-snug">
-                                {cat.designation_fr}
+                            <span className="block font-display text-caption tracking-wide text-red-600 dark:text-red-400 uppercase leading-snug">
+                              {cat.designation_fr}
+                            </span>
+                            {subCount > 0 && (
+                              <span className="block text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                                {subCount} sous-catégorie{subCount > 1 ? 's' : ''}
                               </span>
-                            </div>
-                            {cat.sous_categories && (
-                              <p className="text-xs text-gray-400 dark:text-gray-500 pl-4">
-                                {cat.sous_categories.length} sous-catégorie{cat.sous_categories.length > 1 ? 's' : ''}
-                              </p>
                             )}
                           </div>
-                          <ChevronRight className="h-4 w-4 text-gray-400 shrink-0 ml-3" />
+                          <ChevronRight className="h-5 w-5 text-gray-400 shrink-0" aria-hidden />
                         </button>
-                      ))}
-                    </div>
-
-                    <div className="px-3 pt-3 pb-6">
-                      <LinkWithLoading
-                        href="/shop"
-                        className="flex items-center justify-center gap-2 py-3.5 px-4 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded-xl font-display uppercase tracking-wide font-semibold text-sm transition-colors shadow-sm"
-                        loadingMessage="Chargement..."
-                      >
-                        Voir tous les produits
-                        <ArrowRight className="h-4 w-4" />
-                      </LinkWithLoading>
-                    </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   /* ── Subcategory list ── */
@@ -187,36 +175,56 @@ export function MobileProductsMenu({ open, onOpenChange }: MobileProductsMenuPro
                     <div className="px-3 pt-3 pb-2">
                       <LinkWithLoading
                         href={`/${selectedCategory.slug}`}
-                        className="flex items-center justify-between py-3 px-4 bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/40 rounded-xl text-red-600 dark:text-red-400 font-semibold text-sm"
+                        className="min-h-[52px] flex items-center justify-between gap-3 py-3 px-4 bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/40 rounded-xl text-red-600 dark:text-red-400 font-semibold text-sm active:bg-red-100 dark:active:bg-red-950/50 transition-colors"
                         loadingMessage="Chargement..."
                       >
-                        <span>Tout voir — {selectedCategory.designation_fr}</span>
-                        <ArrowRight className="h-4 w-4 shrink-0" />
+                        <span className="min-w-0 truncate">Tout voir — {selectedCategory.designation_fr}</span>
+                        <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
                       </LinkWithLoading>
                     </div>
 
                     {/* Subcategory items — slug comes directly from API */}
-                    <div className="px-3 pb-6 space-y-1.5">
-                      {subCategories.map((sub) => (
-                        <LinkWithLoading
-                          key={sub.id}
-                          href={`/${sub.slug}`}
-                          className="flex items-center gap-3 py-3.5 px-4 bg-white dark:bg-gray-900 active:bg-gray-50 dark:active:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-colors"
-                          loadingMessage="Chargement..."
-                        >
-                          <span className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" />
-                          <span className="flex-1 text-sm font-medium text-gray-800 dark:text-gray-200 leading-snug">
-                            {sub.designation_fr}
-                          </span>
-                          <ChevronRight className="h-4 w-4 text-gray-300 dark:text-gray-600 shrink-0" />
-                        </LinkWithLoading>
-                      ))}
-                    </div>
+                    {subCategories.length > 0 ? (
+                      <div className="px-3 pb-4 space-y-1.5">
+                        {subCategories.map((sub) => (
+                          <LinkWithLoading
+                            key={sub.id}
+                            href={`/${sub.slug}`}
+                            className="min-h-[52px] flex items-center gap-3 py-3 px-4 bg-white dark:bg-gray-900 active:bg-gray-50 dark:active:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-colors"
+                            loadingMessage="Chargement..."
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" aria-hidden />
+                            <span className="flex-1 min-w-0 text-sm font-medium text-gray-800 dark:text-gray-200 leading-snug">
+                              {sub.designation_fr}
+                            </span>
+                            <ChevronRight className="h-4 w-4 text-gray-300 dark:text-gray-600 shrink-0" aria-hidden />
+                          </LinkWithLoading>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="px-6 pb-4 text-sm text-gray-500 dark:text-gray-400">
+                        Aucune sous-catégorie. Utilisez « Tout voir » ci-dessus.
+                      </p>
+                    )}
                   </div>
                 )}
               </>
             )}
           </div>
+
+          {/* Sticky footer CTA — always reachable */}
+          {!loading && (
+            <div className="shrink-0 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+              <LinkWithLoading
+                href="/shop"
+                className="flex min-h-[48px] items-center justify-center gap-2 py-3 px-4 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded-xl font-display uppercase tracking-wide font-semibold text-sm transition-colors shadow-sm"
+                loadingMessage="Chargement..."
+              >
+                Voir tous les produits
+                <ArrowRight className="h-4 w-4" aria-hidden />
+              </LinkWithLoading>
+            </div>
+          )}
         </div>
       </SheetContent>
     </Sheet>
