@@ -133,9 +133,8 @@ export function HomePageClient({ accueil, slides, heroMobileFirst, heroDesktopFi
             </p>
           </div>
         </section>
-        <FeaturesSection />
-        {/* Products first — best-sellers → nouveautés → flash — so shoppers reach real products
-            right after the hero. Browse-by-category follows. */}
+        {/* Best-sellers FIRST — shoppers reach the most-sold products immediately after the hero,
+            then the "what we do" trust band, then the rest of the rails. */}
         {(safeAccueil.best_sellers?.length ?? 0) > 0 && (
           <ProductSection
             id="products"
@@ -146,6 +145,9 @@ export function HomePageClient({ accueil, slides, heroMobileFirst, heroDesktopFi
             badgeText="Top Vendu"
           />
         )}
+
+        {/* "Ce que nous faisons" / trust badges — after the flagship products */}
+        <FeaturesSection />
 
         {(safeAccueil.new_product?.length ?? 0) > 0 && (
           <ProductSection
