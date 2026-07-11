@@ -531,19 +531,20 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
       <Header />
 
       <main className="w-full mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl py-3 sm:py-6 lg:py-12 pb-36 sm:pb-36 lg:pb-12">
-        {/* Breadcrumb: Accueil > Boutique > Category > Subcategory (ends at category, no product name) */}
+        {/* Breadcrumb — single scrollable line on mobile (was flex-wrap → 2–3 tall rows); the long
+            final crumb truncates on phones and the row swipes horizontally instead of eating height. */}
         {breadcrumbItems.length > 0 && (
-          <nav aria-label="Fil d'Ariane" className="mb-3 sm:mb-4 text-sm text-gray-500 dark:text-gray-400">
-            <ol className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+          <nav aria-label="Fil d'Ariane" className="mb-3 sm:mb-4 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+            <ol className="flex flex-nowrap items-center gap-x-1.5 overflow-x-auto scrollbar-hide">
               {breadcrumbItems.map((item, i) => (
-                <li key={i} className="flex items-center gap-x-1.5">
+                <li key={i} className="flex shrink-0 items-center gap-x-1.5">
                   {i > 0 && <ChevronRight className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500 shrink-0" aria-hidden />}
                   {i < breadcrumbItems.length - 1 ? (
-                    <Link href={item.url} className="hover:text-red-600 dark:hover:text-red-400 underline-offset-2 hover:underline">
+                    <Link href={item.url} className="whitespace-nowrap hover:text-red-600 dark:hover:text-red-400 underline-offset-2 hover:underline">
                       {item.name}
                     </Link>
                   ) : (
-                    <span className="text-gray-900 dark:text-white font-medium" aria-current="page">{item.name}</span>
+                    <span className="max-w-[46vw] truncate whitespace-nowrap font-medium text-gray-900 dark:text-white sm:max-w-none" aria-current="page">{item.name}</span>
                   )}
                 </li>
               ))}

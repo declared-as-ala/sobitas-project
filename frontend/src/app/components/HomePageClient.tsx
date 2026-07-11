@@ -112,24 +112,21 @@ export function HomePageClient({ accueil, slides, heroMobileFirst, heroDesktopFi
         <HeroSlider slides={slides} mobileFirst={heroMobileFirst} desktopFirst={heroDesktopFirst} />
         {/* SEO: single visible H1 for main query "proteine tunisie" + internal link creatine.
             Left-aligned lede inside the rail so it does not read as a second hero title. */}
-        <section className="py-6 bg-white dark:bg-gray-950" aria-label="Titre principal">
+        {/* Compact SEO strip — keeps the single H1 + whey/créatine internal links, but small so it
+            doesn't eat the fold right under the hero. */}
+        <section className="py-3 sm:py-4 bg-white dark:bg-gray-950" aria-label="Titre principal">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <span className="mb-2 inline-flex items-center gap-2 font-display uppercase tracking-[0.2em] text-[11px] sm:text-xs font-semibold text-red-600 dark:text-red-400">
-              <span className="h-px w-5 bg-red-600 dark:bg-red-400" aria-hidden="true" />
-              Nutrition sportive · Tunisie
-            </span>
-            <h1 className="font-display uppercase tracking-tight leading-[0.95] text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">
+            <h1 className="font-display uppercase tracking-tight text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">
               Protéine Tunisie
+              <span className="ml-2 align-middle font-sans text-[11px] sm:text-xs font-medium normal-case tracking-normal text-red-600 dark:text-red-400">
+                Nutrition sportive · Tunisie
+              </span>
             </h1>
-            <p className="mt-3 max-w-2xl text-sm sm:text-base text-gray-600 dark:text-gray-400">
-              <Link href="/proteine-whey" className="text-red-600 dark:text-red-400 hover:underline font-medium">
-                Whey protein
-              </Link>
+            <p className="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+              <Link href="/proteine-whey" className="text-red-600 dark:text-red-400 hover:underline font-medium">Whey protein</Link>
               {', '}
-              <Link href="/creatine" className="text-red-600 dark:text-red-400 hover:underline font-medium">
-                créatine
-              </Link>
-              {' '}et compléments alimentaires — livraison rapide partout en Tunisie.
+              <Link href="/creatine" className="text-red-600 dark:text-red-400 hover:underline font-medium">créatine</Link>
+              {' '}et compléments — livraison rapide partout en Tunisie.
             </p>
           </div>
         </section>
