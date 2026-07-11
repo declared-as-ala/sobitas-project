@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { unstable_cache } from 'next/cache';
-import { getAllProducts, getAllArticles, getCategories, getAllBrands, getBlogCategories, getBlogTags, getAppPages } from '@/services/api';
+import { getAllProducts, getAllArticles, getCategories, getAllBrands, getBlogCategories, getBlogTags, getAppPages, getStorageUrl } from '@/services/api';
 import type { Product, Article, Category, Brand, SubCategory, Page } from '@/types';
 import { getProductPrimarySubCategory } from '@/util/productUrl';
 import { listCategorySeoSlugs } from '@/util/categorySeoContent';
@@ -35,6 +35,18 @@ function getLastModified(item: { updated_at?: string; created_at?: string }): Da
   if (item.updated_at) return new Date(item.updated_at);
   if (item.created_at) return new Date(item.created_at);
   return new Date();
+}
+
+/**
+ * Absolute, space-free https image URL for the sitemap <image:image> extension (Google Images),
+ * or undefined. Image search already drives real traffic, so product/article covers are declared
+ * in /sitemap.xml. Storage paths are resolved through getStorageUrl.
+ */
+function toSitemapImage(path?: string | null): string | undefined {
+  if (!path || typeof path !== 'string') return undefined;
+  const raw = /^https?:\/\//i.test(path) ? path : getStorageUrl(path);
+  if (!raw || /\s/.test(raw) || !/^https?:\/\//i.test(raw)) return undefined;
+  return raw;
 }
 
 function nameToSlug(name: string): string {
@@ -166,11 +178,13 @@ async function computeSitemapEntries(): Promise<MetadataRoute.Sitemap> {
           // /shop/{slug}, which middleware immediately 301s → a self-redirecting
           // sitemap URL (a "page with redirect" in Search Console).
           if (!subCategorySlug) return null;
+          const coverImg = toSitemapImage(p.cover);
           return {
             url: `${BASE_URL}/${encodeURIComponent(subCategorySlug)}/${encodeURIComponent(p.slug)}`,
             lastModified: getLastModified(p as ItemWithDates),
             changeFrequency: 'weekly' as const,
             priority: 0.7,
+            ...(coverImg ? { images: [coverImg] } : {}),
           };
         })
         .filter((e): e is NonNullable<typeof e> => e !== null);
@@ -313,11 +327,13 @@ async function computeSitemapEntries(): Promise<MetadataRoute.Sitemap> {
         .filter((a: Article) => a.slug)
         .map((a: Article) => {
           const url = `${BASE_URL}/blog/${encodeURIComponent(a.slug)}`;
+          const coverImg = toSitemapImage(a.cover);
           return {
             url,
             lastModified: getLastModified(a as ItemWithDates),
             changeFrequency: 'monthly' as const,
             priority: 0.6,
+            ...(coverImg ? { images: [coverImg] } : {}),
           };
         });
       for (const entry of articleUrls) {

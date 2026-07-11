@@ -29,6 +29,19 @@ export async function generateMetadata(props: { searchParams?: BlogSearchParams 
       ...(prev && { prev }),
       ...(next && { next }),
     },
+    openGraph: {
+      title: { absolute: 'Blog Nutrition Sportive & Compléments | Protéine Tunisie' },
+      description: 'Guides, conseils prise de masse, choix whey et créatine. Tout pour la nutrition sportive en Tunisie.',
+      type: 'website',
+      url: canonical,
+      images: [{ url: '/slides/home-hero-web.webp', width: 1200, height: 630, alt: 'Blog Nutrition Sportive | Protéine Tunisie' }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: 'Blog Nutrition Sportive & Compléments',
+      description: 'Guides, conseils prise de masse, choix whey et créatine.',
+      images: ['/slides/home-hero-web.webp'],
+    },
     robots: {
       index: pageNum === 1,
       follow: true,

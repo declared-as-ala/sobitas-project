@@ -54,7 +54,7 @@ export function HeroTrustGuarantee({ layout = 'inline' }: HeroTrustGuaranteeProp
             <p className="font-display uppercase tracking-tight text-lg font-bold leading-none text-white sm:text-xl">
               Satisfait ou remboursé
             </p>
-            <p className="mt-1 text-sm text-white/70">Retour gratuit sous 7 jours, sans condition.</p>
+            <p className="mt-1 text-sm text-white/70">Retour sous 7 jours, satisfait ou remboursé.</p>
           </div>
         </div>
         <div className="flex flex-wrap gap-x-5 gap-y-2 border-t border-white/10 px-5 py-3 sm:px-6">
