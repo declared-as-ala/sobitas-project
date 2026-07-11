@@ -8,6 +8,19 @@ export const metadata: Metadata = {
   title: { absolute: 'FAQ – Livraison, Paiement, Protéines | Protéine Tunisie' },
   description: 'Réponses sur commande, livraison, paiement et produits. Tout savoir sur l’achat de compléments alimentaires en Tunisie.',
   alternates: { canonical: buildCanonicalUrl('/faqs') },
+  openGraph: {
+    title: { absolute: 'FAQ – Livraison, Paiement, Protéines | Protéine Tunisie' },
+    description: 'Réponses sur commande, livraison, paiement et produits. Tout savoir sur l’achat de compléments alimentaires en Tunisie.',
+    type: 'website',
+    url: buildCanonicalUrl('/faqs'),
+    images: [{ url: '/slides/home-hero-web.webp', width: 1200, height: 630, alt: 'FAQ Protéine Tunisie' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'FAQ – Livraison, Paiement, Protéines',
+    description: 'Réponses sur commande, livraison, paiement et produits en Tunisie.',
+    images: ['/slides/home-hero-web.webp'],
+  },
 };
 
 async function getFAQsData() {

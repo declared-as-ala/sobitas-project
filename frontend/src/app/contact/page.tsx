@@ -9,6 +9,19 @@ export const metadata: Metadata = {
   title: { absolute: 'Contact – Protéine Tunisie, Sousse | Compléments & Whey' },
   description: 'Nous contacter à Sousse : adresse, téléphone, email. Questions sur nos protéines, créatine et compléments en Tunisie.',
   alternates: { canonical: buildCanonicalUrl('/contact') },
+  openGraph: {
+    title: { absolute: 'Contact – Protéine Tunisie, Sousse | Compléments & Whey' },
+    description: 'Nous contacter à Sousse : adresse, téléphone, email. Questions sur nos protéines, créatine et compléments en Tunisie.',
+    type: 'website',
+    url: buildCanonicalUrl('/contact'),
+    images: [{ url: '/slides/home-hero-web.webp', width: 1200, height: 630, alt: 'Contact Protéine Tunisie' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Contact – Protéine Tunisie, Sousse',
+    description: 'Nous contacter à Sousse : adresse, téléphone, email.',
+    images: ['/slides/home-hero-web.webp'],
+  },
 };
 
 // ISR so the email / address / map (from /coordonnees) are server-rendered — previously fetched in
