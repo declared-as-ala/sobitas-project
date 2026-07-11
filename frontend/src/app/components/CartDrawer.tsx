@@ -12,7 +12,7 @@ import {
   DrawerTitle,
 } from '@/app/components/ui/drawer';
 import { Button } from '@/app/components/ui/button';
-import { Minus, Plus, Trash2, ShoppingBag } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingBag, Truck } from 'lucide-react';
 import Link from 'next/link';
 import { getStorageUrl } from '@/services/api';
 import { getStockDisponible } from '@/util/cartStock';
@@ -164,6 +164,28 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
 
         {items.length > 0 && (
           <DrawerFooter className="shrink-0 border-t border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/80 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            {/* Free-shipping nudge — surfaces the 300 DT threshold at the highest-intent moment
+                (right after add-to-cart) to lift average order value. */}
+            {totalPrice < 300 ? (
+              <div className="mb-4 rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
+                <p className="mb-2 flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                  <Truck className="h-4 w-4 shrink-0 text-red-600 dark:text-red-400" aria-hidden="true" />
+                  <span>
+                    Plus que{' '}
+                    <span className="font-bold tabular-nums text-gray-900 dark:text-white">{formatCurrency(300 - totalPrice)}</span>
+                    {' '}pour la <span className="font-semibold text-red-600 dark:text-red-400">livraison gratuite</span>
+                  </span>
+                </p>
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                  <div className="h-full rounded-full bg-red-600 transition-all duration-300" style={{ width: `${Math.min(100, (totalPrice / 300) * 100)}%` }} />
+                </div>
+              </div>
+            ) : (
+              <div className="mb-4 flex items-center gap-2 rounded-xl border border-green-100 dark:border-green-900/40 bg-green-50 dark:bg-green-950/30 p-3 text-sm font-medium text-green-700 dark:text-green-400">
+                <Truck className="h-4 w-4 shrink-0" aria-hidden="true" />
+                Vous bénéficiez de la livraison gratuite !
+              </div>
+            )}
             <div className="flex justify-between items-center mb-4">
               <span className="font-display uppercase tracking-wide text-base font-semibold text-gray-900 dark:text-white">Total</span>
               <span className="font-display font-bold tracking-tight text-xl text-red-600 dark:text-red-400 tabular-nums">
