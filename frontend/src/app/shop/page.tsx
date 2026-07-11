@@ -41,13 +41,13 @@ export async function generateMetadata(props: { searchParams?: ShopSearchParams 
       description: 'Découvrez nos protéines, créatine, gainer et BCAA en Tunisie. Large choix, livraison rapide. Filtrez par marque et catégorie.',
       type: 'website',
       url: canonical,
-      images: [{ url: '/slides/home-hero-web.webp', width: 1200, height: 630, alt: 'Boutique Protéines & Compléments en Tunisie' }],
+      images: [{ url: '/og-banner.jpg', width: 1200, height: 630, alt: 'Boutique Protéines & Compléments en Tunisie' }],
     },
     twitter: {
       card: 'summary_large_image',
       title: 'Boutique Protéines & Compléments en Tunisie',
       description: 'Découvrez nos protéines, créatine, gainer et BCAA en Tunisie. Large choix, livraison rapide.',
-      images: ['/slides/home-hero-web.webp'],
+      images: ['/og-banner.jpg'],
     },
   };
 }

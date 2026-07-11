@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { Suspense } from 'react';
-import { getAllArticles } from '@/services/api';
+import { getAllArticles, getBlogCategories, getBlogTags } from '@/services/api';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
 import { buildCollectionPageSchema, buildItemListSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
 import { decodeHtmlEntities } from '@/util/htmlEntities';
@@ -34,13 +34,13 @@ export async function generateMetadata(props: { searchParams?: BlogSearchParams 
       description: 'Guides, conseils prise de masse, choix whey et créatine. Tout pour la nutrition sportive en Tunisie.',
       type: 'website',
       url: canonical,
-      images: [{ url: '/slides/home-hero-web.webp', width: 1200, height: 630, alt: 'Blog Nutrition Sportive | Protéine Tunisie' }],
+      images: [{ url: '/og-banner.jpg', width: 1200, height: 630, alt: 'Blog Nutrition Sportive | Protéine Tunisie' }],
     },
     twitter: {
       card: 'summary_large_image',
       title: 'Blog Nutrition Sportive & Compléments',
       description: 'Guides, conseils prise de masse, choix whey et créatine.',
-      images: ['/slides/home-hero-web.webp'],
+      images: ['/og-banner.jpg'],
     },
     robots: {
       index: pageNum === 1,
@@ -90,16 +90,22 @@ export const dynamic = 'force-dynamic';
 
 async function getBlogData() {
   try {
-    const articles = await getAllArticles();
-    return { articles };
+    // Fetch the real taxonomy alongside the articles so the /blog index can render crawlable
+    // /blog/category & /blog/tag links (the article LIST payload omits categories/tags).
+    const [articles, blogCategories, blogTags] = await Promise.all([
+      getAllArticles(),
+      getBlogCategories().catch(() => []),
+      getBlogTags().catch(() => []),
+    ]);
+    return { articles, blogCategories, blogTags };
   } catch (error) {
     console.error('Error fetching blog data:', error);
-    return { articles: [] };
+    return { articles: [], blogCategories: [], blogTags: [] };
   }
 }
 
 export default async function BlogPage() {
-  const { articles } = await getBlogData();
+  const { articles, blogCategories, blogTags } = await getBlogData();
   const baseUrl = getBaseUrl();
   const list = Array.isArray(articles) ? articles : [];
 
@@ -132,7 +138,7 @@ export default async function BlogPage() {
       )}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       <Suspense fallback={<BlogListSkeleton />}>
-        <BlogPageClient articles={articles} />
+        <BlogPageClient articles={articles} blogCategories={blogCategories} blogTags={blogTags} />
       </Suspense>
     </>
   );

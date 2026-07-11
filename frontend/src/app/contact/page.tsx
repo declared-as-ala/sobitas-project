@@ -14,13 +14,13 @@ export const metadata: Metadata = {
     description: 'Nous contacter à Sousse : adresse, téléphone, email. Questions sur nos protéines, créatine et compléments en Tunisie.',
     type: 'website',
     url: buildCanonicalUrl('/contact'),
-    images: [{ url: '/slides/home-hero-web.webp', width: 1200, height: 630, alt: 'Contact Protéine Tunisie' }],
+    images: [{ url: '/og-banner.jpg', width: 1200, height: 630, alt: 'Contact Protéine Tunisie' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Contact – Protéine Tunisie, Sousse',
     description: 'Nous contacter à Sousse : adresse, téléphone, email.',
-    images: ['/slides/home-hero-web.webp'],
+    images: ['/og-banner.jpg'],
   },
 };
 

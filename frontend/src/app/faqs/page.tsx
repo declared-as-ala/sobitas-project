@@ -13,13 +13,13 @@ export const metadata: Metadata = {
     description: 'Réponses sur commande, livraison, paiement et produits. Tout savoir sur l’achat de compléments alimentaires en Tunisie.',
     type: 'website',
     url: buildCanonicalUrl('/faqs'),
-    images: [{ url: '/slides/home-hero-web.webp', width: 1200, height: 630, alt: 'FAQ Protéine Tunisie' }],
+    images: [{ url: '/og-banner.jpg', width: 1200, height: 630, alt: 'FAQ Protéine Tunisie' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'FAQ – Livraison, Paiement, Protéines',
     description: 'Réponses sur commande, livraison, paiement et produits en Tunisie.',
-    images: ['/slides/home-hero-web.webp'],
+    images: ['/og-banner.jpg'],
   },
 };
 

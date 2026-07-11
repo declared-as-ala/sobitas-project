@@ -20,13 +20,13 @@ export const metadata: Metadata = {
     description: PACKS_DESC,
     type: 'website',
     url: buildCanonicalUrl('/packs'),
-    images: [{ url: '/slides/home-hero-web.webp', width: 1200, height: 630, alt: PACKS_TITLE }],
+    images: [{ url: '/og-banner.jpg', width: 1200, height: 630, alt: PACKS_TITLE }],
   },
   twitter: {
     card: 'summary_large_image',
     title: PACKS_TITLE,
     description: PACKS_DESC,
-    images: ['/slides/home-hero-web.webp'],
+    images: ['/og-banner.jpg'],
   },
 };
 
