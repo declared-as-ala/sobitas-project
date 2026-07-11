@@ -137,8 +137,6 @@ const nextConfig = {
       '@radix-ui/react-select',
       '@radix-ui/react-checkbox',
       '@radix-ui/react-slider',
-      '@mui/material',
-      '@mui/icons-material',
       'motion',
       'sonner',
       'date-fns',
