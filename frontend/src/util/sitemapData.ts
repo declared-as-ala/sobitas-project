@@ -3,6 +3,7 @@ import { unstable_cache } from 'next/cache';
 import { getAllProducts, getAllArticles, getCategories, getAllBrands, getBlogCategories, getBlogTags, getAppPages, getStorageUrl } from '@/services/api';
 import type { Product, Article, Category, Brand, SubCategory, Page } from '@/types';
 import { getProductPrimarySubCategory } from '@/util/productUrl';
+import { enrichProductsWithSubcategory } from '@/util/enrichProductSubcategory';
 import { listCategorySeoSlugs } from '@/util/categorySeoContent';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
@@ -165,7 +166,15 @@ async function computeSitemapEntries(): Promise<MetadataRoute.Sitemap> {
     }
 
     if (allProducts.length > 0) {
-      const productUrls = allProducts
+      // CRITICAL: /all_products returns products with only `sous_categorie_id` (no relation), so
+      // getProductPrimarySubCategory() returned undefined for EVERY product and the filter below
+      // dropped the ENTIRE catalogue from the sitemap (0 product URLs → Google couldn't discover any
+      // product page). Rebuild the subcategory relation from the categories payload (which ships
+      // sous_categories) so all real products land in the sitemap with their canonical URL.
+      const categoriesForEnrich =
+        categories.status === 'fulfilled' && Array.isArray(categories.value) ? categories.value : [];
+      const enrichedProducts = enrichProductsWithSubcategory(allProducts, categoriesForEnrich);
+      const productUrls = enrichedProducts
         .filter((p: Product) => p.slug && (p.publier == 1 || p.publier === undefined))
         .map((p: Product) => {
           // Derive the subcategory the SAME way the canonical/link builder does
