@@ -21,11 +21,27 @@ class RedirectionResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            Forms\Components\TextInput::make('old_url')->label('Ancien URL')->required()->maxLength(500),
-            Forms\Components\TextInput::make('new_url')->label('Nouveau URL')->required()->maxLength(500),
+            Forms\Components\TextInput::make('old_url')
+                ->label('Ancien URL')
+                ->required()
+                ->maxLength(500)
+                ->helperText('Chemin de l’ancienne page, ex : /whey-gold-standard ou /shop/vieux-produit'),
             Forms\Components\Select::make('code')
-                ->options(['301' => '301 (Permanent)', '302' => '302 (Temporary)'])
-                ->default('301'),
+                ->label('Type')
+                ->options([
+                    '301' => '301 — Redirection permanente',
+                    '302' => '302 — Redirection temporaire',
+                    '410' => '410 — Page supprimée (Gone)',
+                ])
+                ->default('301')
+                ->required(),
+            Forms\Components\TextInput::make('new_url')
+                ->label('Nouveau URL')
+                ->maxLength(500)
+                ->helperText('Destination, ex : /whey-proteine. Laisser vide pour un code 410 (page supprimée).'),
+            Forms\Components\Toggle::make('is_active')
+                ->label('Actif')
+                ->default(true),
         ]);
     }
 
@@ -35,7 +51,13 @@ class RedirectionResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('old_url')->label('Ancien URL')->searchable()->limit(40),
                 Tables\Columns\TextColumn::make('new_url')->label('Nouveau URL')->searchable()->limit(40),
-                Tables\Columns\TextColumn::make('code')->badge(),
+                Tables\Columns\TextColumn::make('code')->badge()->color(fn ($state) => match ((int) $state) {
+                    301 => 'success',
+                    302 => 'warning',
+                    410 => 'danger',
+                    default => 'gray',
+                }),
+                Tables\Columns\IconColumn::make('is_active')->label('Actif')->boolean(),
             ])
             ->actions([Actions\EditAction::make(), Actions\DeleteAction::make()])
             ->bulkActions([Actions\DeleteBulkAction::make()]);

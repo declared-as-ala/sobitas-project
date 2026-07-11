@@ -496,7 +496,12 @@ class ApisController extends Controller
      */
     public function allProducts(Request $request): JsonResponse
     {
-        $query = Product::where('publier', 1)->select(self::PRODUCT_LISTING);
+        // Eager-load the subcategory (id,slug) so every product carries its canonical
+        // /{subcat}/{slug} path at the source — the frontend no longer has to reconstruct it from
+        // the categories list to avoid /shop/ 301 hops (the "Page with redirect" bucket in GSC).
+        $query = Product::where('publier', 1)
+            ->with('sousCategorie:id,slug,designation_fr,categorie_id')
+            ->select(self::PRODUCT_LISTING);
 
         if ($search = trim((string) $request->get('search', ''))) {
             $matchingBrandIds = Brand::where('designation_fr', 'like', '%' . $search . '%')->pluck('id');
@@ -1136,13 +1141,25 @@ class ApisController extends Controller
     }
 
     /**
-     * Redirections — FIXED: select columns + limit.
+     * Redirections — admin-defined 301/302/410 rules consumed by the frontend middleware.
+     * Fails open (returns []) instead of 500 if the table/columns aren't present yet, so a
+     * pre-migration deploy or schema drift can never take the storefront's middleware down.
+     * Column is `code` (what RedirectionResource writes) — the old select used `status_code`,
+     * which never existed, and was the actual cause of the 500.
      */
     public function redirections()
     {
-        return Redirection::select('id', 'old_url', 'new_url', 'status_code')
-            ->limit(500)
-            ->get();
+        try {
+            return Redirection::query()
+                ->where('is_active', 1)
+                ->select('id', 'old_url', 'new_url', 'code')
+                ->limit(500)
+                ->get();
+        } catch (\Throwable $e) {
+            Log::warning('redirections endpoint failed: '.$e->getMessage());
+
+            return response()->json([]);
+        }
     }
 
     public function newProduct()
