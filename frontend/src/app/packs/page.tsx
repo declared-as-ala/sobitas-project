@@ -1,8 +1,9 @@
 import { Metadata } from 'next';
-import { getPacks } from '@/services/api';
+import { getPacks, getCategories } from '@/services/api';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
 import { buildCollectionPageSchema, buildItemListSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
 import { buildProductUrlPath } from '@/util/productUrl';
+import { enrichProductsWithSubcategory } from '@/util/enrichProductSubcategory';
 import { PacksPageClient } from './PacksPageClient';
 
 // Refocused on bundle intent (reserve "offres/promos" wording for /offres so the two
@@ -37,7 +38,8 @@ export const revalidate = 600;
 async function getPacksData() {
   try {
     const packs = await getPacks();
-    return { packs };
+    const categories = await getCategories().catch(() => []);
+    return { packs: enrichProductsWithSubcategory(packs, categories) };
   } catch (error) {
     console.error('Error fetching packs:', error);
     return { packs: [] };

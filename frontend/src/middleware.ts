@@ -116,7 +116,12 @@ export async function middleware(request: NextRequest) {
   const wantsCrawlerView =
     isCrawlerUA(request.headers.get('user-agent')) ||
     searchParams.get(CRAWLER_PREVIEW_PARAM) === '1';
-  if (wantsCrawlerView) {
+  // CRITICAL: never run the crawler rewrite on file-like paths. Real category/product/brand slugs
+  // never contain a dot, but `/sitemap.xml` and `/robots.txt` match the single-segment regex below
+  // and isReservedRouteSlug('sitemap.xml') !== 'sitemap' → they were rewritten to
+  // /x-crawler/category/sitemap.xml → notFound() → Googlebot got a 404 for the sitemap AND robots.txt
+  // (sitemap unreadable in Search Console; robots.txt 404 = "crawl everything"). The dot guard fixes it.
+  if (wantsCrawlerView && !pathname.includes('.')) {
     const productPath = pathname.match(/^\/([^/]+)\/([^/]+)\/?$/);
     if (productPath && !isReservedRouteSlug(productPath[1])) {
       return NextResponse.rewrite(
@@ -185,7 +190,9 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * - SEO/PWA metadata files (sitemap.xml, robots.txt, sw.js, manifests) — belt-and-suspenders
+     *   so the crawler rewrite can never intercept them even if the dot-guard is ever removed.
      */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|sw.js|manifest.json|site.webmanifest).*)',
   ],
 };
