@@ -13,7 +13,7 @@ import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 import { SectionHeader } from '@/app/components/SectionHeader';
-import { Minus, Plus, ShoppingCart, Star, Shield, Heart, Share2, ZoomIn, CheckCircle2, XCircle, AlertTriangle, Loader2, Zap, X, ChevronLeft, ChevronRight, Sparkles, TrendingUp, Flame } from 'lucide-react';
+import { Minus, Plus, ShoppingCart, Star, Shield, Heart, Share2, ZoomIn, CheckCircle2, XCircle, AlertTriangle, Loader2, Zap, X, ChevronLeft, ChevronRight, Sparkles, TrendingUp, Flame, Truck, CreditCard } from 'lucide-react';
 import { useQuickOrder } from '@/contexts/QuickOrderContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import type { QuickOrderProduct } from '@/contexts/QuickOrderContext';
@@ -625,16 +625,28 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
           {/* B) COLONNE DROITE — Infos + prix + quantité + CTAs (mobile & desktop trees) */}
           <div className="lg:col-span-7 min-w-0 space-y-3 sm:space-y-4">
             {/* Mobile Layout: Image First then badges, title, etc. */}
-            <div className="lg:hidden space-y-4 sm:space-y-5">
-              {/* Badges at top (stock from API: rupture + qte + low_stock_threshold) */}
-              <div className="flex items-center gap-2 sm:gap-3 flex-wrap px-1">
-                <ProductBadges
-                  stockStatus={stockStatus}
-                  discount={discount}
-                  isNew={product.new_product === 1}
-                  isBestSeller={product.best_seller === 1}
-                  textSize="text-xs sm:text-sm"
-                />
+            <div className="lg:hidden space-y-4">
+              {/* Row 1: category eyebrow (context) + favoris/share pulled out of the buy flow */}
+              <div className="flex items-center justify-between gap-3 px-1">
+                {product.sous_categorie?.slug ? (
+                  <Link
+                    href={`/${product.sous_categorie.slug}`}
+                    className="inline-flex items-center gap-2 font-display uppercase tracking-[0.18em] text-[11px] font-semibold text-red-600 dark:text-red-400"
+                  >
+                    <span className="h-px w-4 bg-red-600 dark:bg-red-400" aria-hidden="true" />
+                    {product.sous_categorie.designation_fr}
+                  </Link>
+                ) : (
+                  <span aria-hidden="true" />
+                )}
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button variant="outline" size="icon" className="h-11 w-11 rounded-lg" onClick={() => toggleFavorite(favoriteProduct)} aria-label="Ajouter aux favoris">
+                    <Heart className={`h-5 w-5 ${isInFavorites(product.id) ? 'fill-red-600 text-red-600' : ''}`} />
+                  </Button>
+                  <Button variant="outline" size="icon" className="h-11 w-11 rounded-lg" onClick={handleShare} aria-label="Partager">
+                    <Share2 className="h-5 w-5" />
+                  </Button>
+                </div>
               </div>
               {/* Product Image - slightly smaller on mobile */}
               <div className="w-full max-w-[260px] sm:max-w-[320px] mx-auto">
@@ -711,228 +723,331 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 </p>
               </div>
 
-              {/* 2. Rating - stars + value + count (clickable → #reviews) */}
-              <button
-                type="button"
-                onClick={() => document.getElementById('reviews')?.scrollIntoView({ behavior: 'smooth' })}
-                className="group flex items-center gap-2 px-1 text-left"
-              >
-                <div className="flex items-center gap-1">
-                  {[1,2,3,4,5].map((i) => (
-                    <Star
-                      key={i}
-                      className={`h-4 w-4 sm:h-5 sm:w-5 ${i <= Math.round(rating) ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 text-gray-200 dark:fill-gray-700 dark:text-gray-700'}`}
-                    />
-                  ))}
-                </div>
-                <span className="text-sm sm:text-base text-gray-600 dark:text-gray-400 font-medium tabular-nums transition-colors group-hover:text-red-600 dark:group-hover:text-red-400">
-                  ({rating > 0 ? rating.toFixed(1) : '0'}) – {reviewCount} avis
-                </span>
-              </button>
+              {/* 2. Rating + brand */}
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-1">
+                <button
+                  type="button"
+                  onClick={() => document.getElementById('reviews')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="group flex items-center gap-1.5 text-left"
+                >
+                  <div className="flex items-center gap-1">
+                    {[1,2,3,4,5].map((i) => (
+                      <Star
+                        key={i}
+                        className={`h-4 w-4 sm:h-5 sm:w-5 ${i <= Math.round(rating) ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 text-gray-200 dark:fill-gray-700 dark:text-gray-700'}`}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-sm text-gray-600 dark:text-gray-400 font-medium tabular-nums transition-colors group-hover:text-red-600 dark:group-hover:text-red-400">
+                    ({rating > 0 ? rating.toFixed(1) : '0'}) · {reviewCount} avis
+                  </span>
+                </button>
+                {product.brand?.designation_fr && (
+                  <>
+                    <span className="text-gray-300 dark:text-gray-700" aria-hidden="true">|</span>
+                    <Link href={`/${nameToSlug(product.brand.designation_fr)}`} className="text-sm text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400">
+                      {product.brand.designation_fr}
+                    </Link>
+                  </>
+                )}
+              </div>
 
               {/* Meta Description - directly under reviews count */}
               {metaDescription && (
-                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed px-1 whitespace-pre-wrap break-words">
+                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed px-1 line-clamp-4 whitespace-pre-wrap break-words">
                   {metaDescription}
                 </p>
               )}
 
-              {/* 3. Price - current + old + savings */}
-              <div className="py-3 sm:py-4 border-y border-gray-100 dark:border-gray-800 px-1">
-                <div className="flex flex-wrap items-baseline gap-2 sm:gap-3">
-                  <span className="font-display font-bold tracking-tight tabular-nums text-3xl sm:text-4xl text-red-600 dark:text-red-400">
-                    {displayPrice} DT
-                  </span>
-                  {oldPrice && (
-                    <span className="font-display tracking-tight tabular-nums text-xl sm:text-2xl text-gray-400 dark:text-gray-500 line-through">
-                      {oldPrice} DT
+              {/* BUY CARD — price, variant, quantity grouped (main CTAs live in the sticky bar) */}
+              <div className="mx-1 rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-900/40 p-4 space-y-4">
+                {/* Price + stock/discount badges */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-baseline gap-2">
+                      <span className="font-display font-bold tracking-tight tabular-nums text-3xl sm:text-4xl text-red-600 dark:text-red-400">{displayPrice} DT</span>
+                      {oldPrice && (
+                        <span className="font-display tracking-tight tabular-nums text-lg sm:text-xl text-gray-400 dark:text-gray-500 line-through">{oldPrice} DT</span>
+                      )}
+                    </div>
+                    {oldPrice && (
+                      <p className="mt-1 text-xs font-semibold text-green-700 dark:text-green-400 tabular-nums">Vous économisez {(oldPrice - displayPrice).toFixed(0)} DT</p>
+                    )}
+                  </div>
+                  <div className="flex flex-col items-end gap-1.5 shrink-0">
+                    <ProductBadges
+                      stockStatus={stockStatus}
+                      discount={discount}
+                      isNew={product.new_product === 1}
+                      isBestSeller={product.best_seller === 1}
+                      textSize="text-xs"
+                    />
+                  </div>
+                </div>
+
+                {/* Arômes */}
+                {product.aromes && product.aromes.length > 0 && (
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Arôme</p>
+                    <div className="flex flex-wrap gap-2">
+                      {product.aromes.map((arome) => {
+                        const isSelected = selectedAromaId === arome.id;
+                        return (
+                          <Button
+                            key={arome.id}
+                            type="button"
+                            variant={isSelected ? 'default' : 'outline'}
+                            size="default"
+                            className={cn(
+                              'min-h-[44px] px-4 py-2 text-sm font-medium rounded-xl',
+                              isSelected && 'bg-red-600 hover:bg-red-700 text-white'
+                            )}
+                            onClick={() => setSelectedAromaId(arome.id)}
+                          >
+                            {arome.designation_fr}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Quantity + running total */}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">Quantité</span>
+                    <div className="flex items-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-10 w-10 min-h-[44px] min-w-[44px]"
+                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                        disabled={quantity <= 1}
+                        aria-label="Diminuer la quantité"
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                      <span className="w-10 text-center font-bold text-base tabular-nums" aria-live="polite">{quantity}</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-10 w-10 min-h-[44px] min-w-[44px]"
+                        onClick={() => setQuantity(Math.min(stockDisponible, quantity + 1))}
+                        disabled={quantity >= stockDisponible || stockDisponible <= 0}
+                        aria-label="Augmenter la quantité"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <span className="text-sm text-gray-600 dark:text-gray-400 tabular-nums">Total <span className="font-bold text-gray-900 dark:text-white">{(displayPrice * quantity).toFixed(0)} DT</span></span>
+                </div>
+              </div>
+
+              {/* Secondary meta: tags + SKU (de-emphasized, below the buy card) */}
+              {((product.tags?.length ?? 0) > 0 || product.sku || product.code_product) && (
+                <div className="px-1 flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                  {product.tags?.map((tag) => (
+                    <Link
+                      key={tag.id}
+                      href={`/shop?search=${encodeURIComponent(tag.designation_fr)}`}
+                      className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 px-2 py-0.5 hover:border-red-300 hover:text-red-600"
+                    >
+                      #{tag.designation_fr.toLowerCase()}
+                    </Link>
+                  ))}
+                  {(product.sku || product.code_product) && (
+                    <span className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 px-2 py-0.5">
+                      SKU: {product.sku || product.code_product}
                     </span>
                   )}
                 </div>
-                {oldPrice && (
-                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-2 tabular-nums">
-                    Vous économisez {(oldPrice - displayPrice).toFixed(0)} DT
-                  </p>
-                )}
-              </div>
-
-              {/* Meta: category, brand, tags, SKU — one tight row (product code hidden on detail page) */}
-              {(product.sous_categorie?.slug || product.brand?.designation_fr || (product.tags?.length ?? 0) > 0 || product.sku || product.code_product) && (
-                <div className="px-1">
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-gray-600 dark:text-gray-400">
-                    {product.sous_categorie?.slug && (
-                      <Link href={`/${product.sous_categorie.slug}`} className="text-red-600 dark:text-red-400 hover:underline">
-                        {product.sous_categorie.designation_fr}
-                      </Link>
-                    )}
-                    {product.brand?.designation_fr && (
-                      <Link href={`/${nameToSlug(product.brand.designation_fr)}`} className="text-red-600 dark:text-red-400 hover:underline">
-                        Marque: {product.brand.designation_fr}
-                      </Link>
-                    )}
-                    {product.tags?.map((tag) => (
-                      <Link
-                        key={tag.id}
-                        href={`/shop?search=${encodeURIComponent(tag.designation_fr)}`}
-                        className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 px-2 py-0.5 hover:border-red-300 hover:text-red-600"
-                      >
-                        #{tag.designation_fr.toLowerCase()}
-                      </Link>
-                    ))}
-                    {(product.sku || product.code_product) && (
-                      <span className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 px-2 py-0.5">
-                        SKU: {product.sku || product.code_product}
-                      </span>
-                    )}
-                  </div>
-                </div>
               )}
 
-              {/* Arômes — selectable when more than one (required before add to cart); large touch targets */}
-              {product.aromes && product.aromes.length > 0 && (
-                <div className="space-y-3 px-1">
-                  <label className="text-base font-semibold text-gray-900 dark:text-white">
-                    Arôme
-                  </label>
-                  <div className="flex flex-wrap gap-3">
-                    {product.aromes.map((arome) => {
-                      const isSelected = selectedAromaId === arome.id;
-                      return (
-                        <Button
-                          key={arome.id}
-                          type="button"
-                          variant={isSelected ? 'default' : 'outline'}
-                          size="default"
-                          className={cn(
-                            'min-h-[48px] px-5 py-3 text-base font-medium rounded-xl',
-                            isSelected && 'bg-red-600 hover:bg-red-700 text-white'
-                          )}
-                          onClick={() => setSelectedAromaId(arome.id)}
-                        >
-                          {arome.designation_fr}
-                        </Button>
-                      );
-                    })}
+              {/* Trust row — icons (favoris/share moved to the top action row) */}
+              <div className="mx-1 grid grid-cols-3 gap-2 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-3">
+                {[
+                  { Icon: Truck, label: 'Livraison 24–72h' },
+                  { Icon: CreditCard, label: 'Paiement à la livraison' },
+                  { Icon: Shield, label: '100% authentique' },
+                ].map(({ Icon, label }) => (
+                  <div key={label} className="flex flex-col items-center gap-1 text-center">
+                    <Icon className="h-4 w-4 text-red-600 dark:text-red-400" strokeWidth={1.75} aria-hidden="true" />
+                    <span className="text-[11px] leading-tight text-gray-500 dark:text-gray-400">{label}</span>
                   </div>
-                </div>
-              )}
-
-              {/* Quantity Selector - Mobile */}
-              <div className="space-y-3 px-1">
-                <label className="text-sm font-semibold text-gray-900 dark:text-white">
-                  Quantité
-                </label>
-                <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-                  <div className="flex items-center gap-2 border border-gray-200 dark:border-gray-800 rounded-xl p-2 min-h-[44px]">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-9 w-9 min-h-[44px] min-w-[44px]"
-                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      disabled={quantity <= 1}
-                      aria-label="Diminuer la quantité"
-                    >
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                    <span className="w-12 text-center font-bold text-lg" aria-live="polite">{quantity}</span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-9 w-9 min-h-[44px] min-w-[44px]"
-                      onClick={() => setQuantity(Math.min(stockDisponible, quantity + 1))}
-                      disabled={quantity >= stockDisponible || stockDisponible <= 0}
-                      aria-label="Augmenter la quantité"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400 min-w-0">
-                    Total: <span className="font-bold text-lg text-gray-900 dark:text-white">
-                      {(displayPrice * quantity).toFixed(0)} DT
-                    </span>
-                  </div>
-                </div>
+                ))}
               </div>
-
-              {/* Mobile: Favoris + Partager only (main CTAs are in sticky footer) */}
-              <div className="lg:hidden flex gap-3 px-1 pt-2">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="min-h-[48px] px-4 shrink-0"
-                  onClick={() => toggleFavorite(favoriteProduct)}
-                >
-                  <Heart className={`h-5 w-5 ${isInFavorites(product.id) ? 'fill-red-600 text-red-600' : ''}`} />
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="min-h-[48px] px-4 shrink-0"
-                  onClick={handleShare}
-                  aria-label="Partager (lien vers les avis)"
-                >
-                  <Share2 className="h-5 w-5" />
-                </Button>
-              </div>
-              <p className="lg:hidden text-xs text-gray-500 dark:text-gray-400 px-1">Paiement à la livraison • Livraison 24–72h • Produits authentiques</p>
 
             </div>
 
-            {/* Desktop Layout: badges → title → rating → price → category/brand → quantity → arômes → CTAs → trust */}
-            <div className="hidden lg:block space-y-4 min-w-0">
-                {/* Badges (stock from API: rupture + qte + low_stock_threshold) */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  <ProductBadges
-                    stockStatus={stockStatus}
-                    discount={discount}
-                    isNew={product.new_product === 1}
-                    isBestSeller={product.best_seller === 1}
-                    textSize="text-xs"
-                  />
+            {/* Desktop Layout: context eyebrow → title → rating/brand → lede → grouped buy card → meta */}
+            <div className="hidden lg:flex lg:flex-col gap-3.5 min-w-0">
+                {/* Row 1: category eyebrow (context) + favoris/share pulled out of the buy flow */}
+                <div className="flex items-center justify-between gap-3">
+                  {product.sous_categorie?.slug ? (
+                    <Link
+                      href={`/${product.sous_categorie.slug}`}
+                      className="inline-flex items-center gap-2 font-display uppercase tracking-[0.18em] text-[11px] font-semibold text-red-600 dark:text-red-400 hover:underline"
+                    >
+                      <span className="h-px w-4 bg-red-600 dark:bg-red-400" aria-hidden="true" />
+                      {product.sous_categorie.designation_fr}
+                    </Link>
+                  ) : (
+                    <span aria-hidden="true" />
+                  )}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button variant="outline" size="icon" className="h-9 w-9 rounded-lg" onClick={() => toggleFavorite(favoriteProduct)} aria-label="Ajouter aux favoris">
+                      <Heart className={`h-4 w-4 ${isInFavorites(product.id) ? 'fill-red-600 text-red-600' : ''}`} />
+                    </Button>
+                    <Button variant="outline" size="icon" className="h-9 w-9 rounded-lg" onClick={handleShare} aria-label="Partager">
+                      <Share2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
+
                 <h1 className="font-display uppercase tracking-tight text-2xl xl:text-3xl font-bold text-gray-900 dark:text-white leading-[0.95] line-clamp-3 break-words">
                   {product.designation_fr}
                 </h1>
-                <button
-                  type="button"
-                  onClick={() => document.getElementById('reviews')?.scrollIntoView({ behavior: 'smooth' })}
-                  className="flex items-center gap-2 text-left"
-                >
-                  <div className="flex items-center gap-0.5">
-                    {[1,2,3,4,5].map((i) => (
-                      <Star key={i} className={`h-4 w-4 ${i <= Math.round(rating) ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 dark:fill-gray-700 text-gray-200 dark:text-gray-700'}`} />
-                    ))}
-                  </div>
-                  <span className="text-sm text-gray-600 dark:text-gray-400 font-medium tabular-nums transition-colors hover:text-red-600 dark:hover:text-red-400">({rating > 0 ? rating.toFixed(1) : '0'}) – {reviewCount} avis</span>
-                </button>
-                {metaDescription && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap break-words">{metaDescription}</p>
-                )}
-                {/* Price */}
-                <div className="flex flex-wrap items-baseline gap-2">
-                  <span className="font-display font-bold tracking-tight tabular-nums text-2xl xl:text-3xl text-red-600 dark:text-red-400">{displayPrice} DT</span>
-                  {oldPrice && (
-                    <span className="font-display tracking-tight tabular-nums text-lg text-gray-400 dark:text-gray-500 line-through">{oldPrice} DT</span>
+
+                {/* Rating + brand on one line */}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <button
+                    type="button"
+                    onClick={() => document.getElementById('reviews')?.scrollIntoView({ behavior: 'smooth' })}
+                    className="flex items-center gap-1.5 text-left"
+                  >
+                    <div className="flex items-center gap-0.5">
+                      {[1,2,3,4,5].map((i) => (
+                        <Star key={i} className={`h-4 w-4 ${i <= Math.round(rating) ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 dark:fill-gray-700 text-gray-200 dark:text-gray-700'}`} />
+                      ))}
+                    </div>
+                    <span className="text-sm text-gray-600 dark:text-gray-400 font-medium tabular-nums transition-colors hover:text-red-600 dark:hover:text-red-400">({rating > 0 ? rating.toFixed(1) : '0'}) · {reviewCount} avis</span>
+                  </button>
+                  {product.brand?.designation_fr && (
+                    <>
+                      <span className="text-gray-300 dark:text-gray-700" aria-hidden="true">|</span>
+                      <Link href={`/${nameToSlug(product.brand.designation_fr)}`} className="text-sm text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400">
+                        {product.brand.designation_fr}
+                      </Link>
+                    </>
                   )}
                 </div>
-                {oldPrice && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400 tabular-nums">Vous économisez {(oldPrice - displayPrice).toFixed(0)} DT</p>
+
+                {metaDescription && (
+                  <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-3 whitespace-pre-wrap break-words">{metaDescription}</p>
                 )}
-                {/* Category + Brand/Tags/SKU — above the selectors (matches mobile reading order) */}
-                {product.sous_categorie?.slug && (
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
-                    <Link href={`/${product.sous_categorie.slug}`} className="text-red-600 dark:text-red-400 hover:underline">
-                      {product.sous_categorie.designation_fr}
-                    </Link>
+
+                {/* BUY CARD — price, variant, quantity, CTAs, trust grouped into one clean block */}
+                <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-900/40 p-5 space-y-4">
+                  {/* Price + stock/discount badges */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-baseline gap-2">
+                        <span className="font-display font-bold tracking-tight tabular-nums text-3xl xl:text-4xl text-red-600 dark:text-red-400">{displayPrice} DT</span>
+                        {oldPrice && (
+                          <span className="font-display tracking-tight tabular-nums text-lg text-gray-400 dark:text-gray-500 line-through">{oldPrice} DT</span>
+                        )}
+                      </div>
+                      {oldPrice && (
+                        <p className="mt-1 text-xs font-semibold text-green-700 dark:text-green-400 tabular-nums">Vous économisez {(oldPrice - displayPrice).toFixed(0)} DT</p>
+                      )}
+                    </div>
+                    <div className="flex flex-col items-end gap-1.5 shrink-0">
+                      <ProductBadges
+                        stockStatus={stockStatus}
+                        discount={discount}
+                        isNew={product.new_product === 1}
+                        isBestSeller={product.best_seller === 1}
+                        textSize="text-xs"
+                      />
+                    </div>
                   </div>
-                )}
-                {(product.brand?.designation_fr || (product.tags?.length ?? 0) > 0) && (
-                  <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                    {product.brand?.designation_fr && (
-                      <Link href={`/${nameToSlug(product.brand.designation_fr)}`} className="text-red-600 dark:text-red-400 hover:underline">
-                        Marque: {product.brand.designation_fr}
-                      </Link>
-                    )}
+
+                  {/* Arômes */}
+                  {product.aromes && product.aromes.length > 0 && (
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Arôme</p>
+                      <div className="flex flex-wrap gap-2">
+                        {product.aromes.map((arome) => {
+                          const isSelected = selectedAromaId === arome.id;
+                          return (
+                            <Button
+                              key={arome.id}
+                              type="button"
+                              variant={isSelected ? 'default' : 'outline'}
+                              size="default"
+                              className={cn(
+                                'min-h-[44px] px-4 py-2 text-sm font-medium rounded-xl',
+                                isSelected && 'bg-red-600 hover:bg-red-700 text-white'
+                              )}
+                              onClick={() => setSelectedAromaId(arome.id)}
+                            >
+                              {arome.designation_fr}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Quantity + running total on one row */}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-sm font-semibold text-gray-900 dark:text-white">Quantité</span>
+                      <div className="flex items-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+                        <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => setQuantity(Math.max(1, quantity - 1))} disabled={quantity <= 1} aria-label="Diminuer la quantité">
+                          <Minus className="h-4 w-4" />
+                        </Button>
+                        <span className="w-10 text-center font-semibold text-sm tabular-nums" aria-live="polite">{quantity}</span>
+                        <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => setQuantity(Math.min(stockDisponible, quantity + 1))} disabled={quantity >= stockDisponible || stockDisponible <= 0} aria-label="Augmenter la quantité">
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <span className="text-sm text-gray-600 dark:text-gray-400 tabular-nums">Total <span className="font-bold text-gray-900 dark:text-white">{(displayPrice * quantity).toFixed(0)} DT</span></span>
+                  </div>
+
+                  {/* CTAs */}
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      size="default"
+                      className="w-full min-h-[48px] h-auto py-3 text-sm bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide font-bold"
+                      onClick={handleAddToCart}
+                      disabled={stockStatus.isOutOfStock}
+                    >
+                      <ShoppingCart className="h-4 w-4 mr-2" />
+                      {stockStatus.isOutOfStock ? 'Rupture de stock' : 'Ajouter au panier'}
+                    </Button>
+                    <Button
+                      size="default"
+                      variant="outline"
+                      className="w-full min-h-[48px] h-auto py-3 text-sm bg-transparent border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 dark:text-red-400 dark:border-red-400 font-display uppercase tracking-wide font-semibold"
+                      onClick={handleQuickOrderClick}
+                      disabled={stockStatus.isOutOfStock}
+                    >
+                      <Zap className="h-4 w-4 mr-2" />
+                      Commander maintenant
+                    </Button>
+                  </div>
+
+                  {/* Trust row — icons instead of bullet text */}
+                  <div className="grid grid-cols-3 gap-2 border-t border-gray-200 dark:border-gray-800 pt-3">
+                    {[
+                      { Icon: Truck, label: 'Livraison 24–72h' },
+                      { Icon: CreditCard, label: 'Paiement à la livraison' },
+                      { Icon: Shield, label: '100% authentique' },
+                    ].map(({ Icon, label }) => (
+                      <div key={label} className="flex flex-col items-center gap-1 text-center">
+                        <Icon className="h-4 w-4 text-red-600 dark:text-red-400" strokeWidth={1.75} aria-hidden="true" />
+                        <span className="text-[11px] leading-tight text-gray-500 dark:text-gray-400">{label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Secondary meta: tags + SKU (de-emphasized, below the buy card) */}
+                {((product.tags?.length ?? 0) > 0 || product.sku || product.code_product) && (
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                     {product.tags?.map((tag) => (
                       <Link
                         key={tag.id}
@@ -949,79 +1064,6 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     )}
                   </div>
                 )}
-                {/* Quantity + Total — placed high so CTAs are visible without scroll */}
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
-                    <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => setQuantity(Math.max(1, quantity - 1))} disabled={quantity <= 1} aria-label="Diminuer la quantité">
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                    <span className="w-10 text-center font-semibold text-sm tabular-nums" aria-live="polite">{quantity}</span>
-                    <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => setQuantity(Math.min(stockDisponible, quantity + 1))} disabled={quantity >= stockDisponible || stockDisponible <= 0} aria-label="Augmenter la quantité">
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <span className="text-sm font-semibold text-gray-900 dark:text-white tabular-nums">Total: {(displayPrice * quantity).toFixed(0)} DT</span>
-                </div>
-                {/* Arômes */}
-                {product.aromes && product.aromes.length > 0 && (
-                  <div>
-                    <p className="text-base font-semibold text-gray-900 dark:text-white mb-2">
-                      Arôme
-                    </p>
-                    <div className="flex flex-wrap gap-3">
-                      {product.aromes.map((arome) => {
-                        const isSelected = selectedAromaId === arome.id;
-                        return (
-                          <Button
-                            key={arome.id}
-                            type="button"
-                            variant={isSelected ? 'default' : 'outline'}
-                            size="default"
-                            className={cn(
-                              'min-h-[48px] px-5 py-3 text-base font-medium rounded-xl',
-                              isSelected && 'bg-red-600 hover:bg-red-700 text-white'
-                            )}
-                            onClick={() => setSelectedAromaId(arome.id)}
-                          >
-                            {arome.designation_fr}
-                          </Button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-                {/* CTAs: Ajouter au panier, Commander maintenant — visible without scroll (desktop: slightly smaller) */}
-                <div className="flex flex-col gap-2">
-                  <Button
-                    size="default"
-                    className="w-full min-h-[44px] h-auto py-2.5 text-sm bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide font-bold"
-                    onClick={handleAddToCart}
-                    disabled={stockStatus.isOutOfStock}
-                  >
-                    <ShoppingCart className="h-4 w-4 mr-2" />
-                    {stockStatus.isOutOfStock ? 'Rupture de stock' : 'Ajouter au panier'}
-                  </Button>
-                  <Button
-                    size="default"
-                    variant="outline"
-                    className="w-full min-h-[44px] h-auto py-2.5 text-sm bg-transparent border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 dark:text-red-400 dark:border-red-400 font-display uppercase tracking-wide font-semibold"
-                    onClick={handleQuickOrderClick}
-                    disabled={stockStatus.isOutOfStock}
-                  >
-                    <Zap className="h-4 w-4 mr-2" />
-                    Commander maintenant
-                  </Button>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="icon" className="h-10 w-10" onClick={() => toggleFavorite(favoriteProduct)} aria-label="Favoris">
-                    <Heart className={`h-5 w-5 ${isInFavorites(product.id) ? 'fill-red-600 text-red-600' : ''}`} />
-                  </Button>
-                  <Button variant="outline" size="icon" className="h-10 w-10" onClick={handleShare} aria-label="Partager">
-                    <Share2 className="h-5 w-5" />
-                  </Button>
-                </div>
-                {/* Trust line — mirrors the mobile reassurance copy under the CTAs */}
-                <p className="text-xs text-gray-500 dark:text-gray-400">Paiement à la livraison • Livraison 24–72h • Produits authentiques</p>
               </div>
           </div>
         </div>

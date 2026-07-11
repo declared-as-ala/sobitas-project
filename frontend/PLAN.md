@@ -40,8 +40,22 @@ changes unless that is the explicit task).
 
 ## Next / backlog
 
-- Perf: reduce first-load JS (bundle analysis → more server components; split heavy client islands).
+- Perf: reduce first-load JS. Done so far: removed `motion`/framer-motion, lazy-loaded `CartDrawer`.
+  Remaining biggest lever is the ~8–12KB-gz of unused AR/EN i18n on every page — but see the i18n
+  decision below: we are **keeping** the dictionaries, so this is deferred to the server-i18n rework.
 - OG on remaining pages (about/CMS/blog-cat-tag); article `published_time`/`author` OG.
+
+### i18n / multilingual SEO (decision — 2026-07-11)
+Goal: rank in **fr / ar / en**. Decision: **keep** the AR/EN dictionaries (do NOT strip them for bundle
+size — they'll be used). The current client-side text-swap is **not** SEO-viable (Google only sees the
+server's French HTML). When enabling AR/EN, migrate to **server-rendered, locale-prefixed URLs**:
+- Locale in the **path** (`/ar/...`, `/en/...`, French at root). Prefer paths over `?l=ar` query params
+  — Google treats distinct paths as clean, separately-indexable language versions; query-param locales
+  are weaker and risk duplicate-content signals.
+- Emit **`hreflang`** alternates (`ar` / `fr` / `en` / `x-default`) on every page.
+- Set `<html lang dir>` server-side (RTL for `ar`).
+- Each locale URL must return fully server-rendered content in that language (App Router i18n routing:
+  `[locale]` segment + middleware locale detection + server dictionaries).
 
 ## Operator-only (cannot be done from code — needs dashboard access)
 
