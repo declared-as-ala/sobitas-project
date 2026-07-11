@@ -57,6 +57,30 @@ server's French HTML). When enabling AR/EN, migrate to **server-rendered, locale
 - Each locale URL must return fully server-rendered content in that language (App Router i18n routing:
   `[locale]` segment + middleware locale detection + server dictionaries).
 
+## Indexing (GSC "Why pages aren't indexed") — status 2026-07-11
+
+**Already fixed in code (verified live):**
+- Sitemap is clean — sampled URLs all return **200**, no `/shop/` fallbacks, gated against live slugs.
+- `robots.txt` correct (blocks account/checkout/cart/api/admin/x-crawler; deliberately allows faceted
+  URLs so their `noindex` can be seen and drop them).
+- Faceted URLs (`/shop?search=…`, `?brand=`) → `<meta robots="noindex, follow">`.
+- Legacy URLs 301 via middleware: `/shop/{slug}`, `/product/*`, `/products/*`, `/brand/*`,
+  `/category/*`, `/en|/ar` locale prefixes.
+- `www` → apex is a **308** (Cloudflare/NPM) — fine for SEO.
+- Product canonical always computed from subcategory; unpublished → `noindex`.
+- **NEW:** list-page product links + ItemList JSON-LD (home/offres/brand) now resolve the canonical
+  `/{subcat}/{slug}` via `enrichProductSubcategory` instead of the `/shop/{slug}` 301 → shrinks the
+  "Page with redirect" bucket and stops wasting a crawl hop.
+
+**Mostly Google-side / historical (self-heals as Google re-validates the now-clean site):**
+- *Not found (404) 889* — old/deleted product URLs Google still remembers; sitemap no longer emits them.
+- *Page with redirect 751* — legacy URLs that correctly 301; reduced further by the canonical-link fix.
+- *Crawled/Discovered – not indexed (1204/29)* — content-quality/crawl-budget; improve via internal
+  linking (brand ItemList, product cross-links) + unique copy. Largely Google's call.
+
+**Backend bug to fix (flag):** `GET /api/redirections` returns **500** and `getRedirections()` is unused.
+Fixing it would let admin-defined old→new 301s catch many of the 889 404s that DO have a new home.
+
 ## Operator-only (cannot be done from code — needs dashboard access)
 
 - **Cloudflare Cache Rule `/_next/image*` → Cache Everything** (edge-cache all product/category
