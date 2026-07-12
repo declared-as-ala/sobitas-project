@@ -6,7 +6,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
-import { Card, CardContent } from '@/app/components/ui/card';
 import { Loader2, Mail, Lock, User, Phone, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -50,8 +49,14 @@ export default function RegisterPage() {
       return;
     }
 
-    if (formData.password.length < 6) {
-      toast.error('Le mot de passe doit contenir au moins 6 caractères');
+    // Must match the backend rule (min 8, at least one letter and one digit) so the form rejects
+    // bad passwords up-front with a clear message instead of surfacing a backend 422.
+    if (
+      formData.password.length < 8 ||
+      !/[A-Za-z]/.test(formData.password) ||
+      !/[0-9]/.test(formData.password)
+    ) {
+      toast.error('Le mot de passe doit contenir au moins 8 caractères, dont une lettre et un chiffre');
       return;
     }
 
@@ -80,15 +85,13 @@ export default function RegisterPage() {
 
   return (
     <AuthShell>
-      <Card className="border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
-          <AuthCardHeader
-            showLogo
-            kicker="Rejoignez-nous"
-            title="Créer un compte"
-            subtitle="Rejoignez-nous pour profiter de nos services"
-          />
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
+      <AuthCardHeader
+        showLogo
+        kicker="Rejoignez-nous"
+        title="Créer un compte"
+        subtitle="Rejoignez-nous pour profiter de nos services"
+      />
+      <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-2">
                   <Label htmlFor="name">Nom complet</Label>
                   <div className="relative">
@@ -151,9 +154,12 @@ export default function RegisterPage() {
                       className="pl-10 h-11 rounded-xl focus-visible:ring-red-500 dark:focus-visible:ring-red-400"
                       autoComplete="new-password"
                       required
-                      minLength={6}
+                      minLength={8}
                     />
                   </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Au moins 8 caractères, dont une lettre et un chiffre.
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -169,7 +175,7 @@ export default function RegisterPage() {
                       className="pl-10 h-11 rounded-xl focus-visible:ring-red-500 dark:focus-visible:ring-red-400"
                       autoComplete="new-password"
                       required
-                      minLength={6}
+                      minLength={8}
                     />
                   </div>
                 </div>
@@ -194,19 +200,17 @@ export default function RegisterPage() {
                 </Button>
               </form>
 
-              <div className="mt-6 text-center">
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Vous avez déjà un compte ?{' '}
-                  <Link
-                    href="/login"
-                    className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-semibold"
-                  >
-                    Se connecter
-                  </Link>
-                </p>
-              </div>
-            </CardContent>
-      </Card>
+      <div className="mt-8 text-center">
+        <p className="text-sm text-gray-600 dark:text-gray-400">
+          Vous avez déjà un compte ?{' '}
+          <Link
+            href="/login"
+            className="font-semibold text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+          >
+            Se connecter
+          </Link>
+        </p>
+      </div>
     </AuthShell>
   );
 }
