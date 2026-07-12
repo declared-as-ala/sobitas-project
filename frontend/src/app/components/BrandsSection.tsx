@@ -1,9 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Button } from '@/app/components/ui/button';
 import { Skeleton } from '@/app/components/ui/skeleton';
 import { SectionHeader } from '@/app/components/SectionHeader';
 import { getAllBrands, getStorageUrl } from '@/services/api';
@@ -11,6 +9,9 @@ import type { Brand } from '@/types';
 import { useRouter } from 'next/navigation';
 import { useLoading } from '@/contexts/LoadingContext';
 import { buildBrandAlt } from '@/util/productAlt';
+
+// How many logos to show on the homepage before "Toutes les marques".
+const MAX_BRANDS = 12;
 
 // Helper to generate slug from name
 function nameToSlug(name: string): string {
@@ -23,7 +24,7 @@ function nameToSlug(name: string): string {
     .trim();
 }
 
-// Brand card — resting logo only; navigation feedback is handled by the global loader.
+// Brand tile — a clean logo-wall cell (colored logo, subtle lift on hover).
 function BrandCard({ brand, onNavigate }: { brand: Brand; onNavigate: (slug: string) => void }) {
   const [imageError, setImageError] = useState(false);
   const logoUrl = brand.logo ? getStorageUrl(brand.logo) : null;
@@ -34,21 +35,19 @@ function BrandCard({ brand, onNavigate }: { brand: Brand; onNavigate: (slug: str
       type="button"
       onClick={() => onNavigate(brandSlug)}
       aria-label={`Voir les produits ${brand.designation_fr}`}
-      className="group flex h-32 sm:h-36 w-48 sm:w-56 md:w-64 flex-shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-gray-50 p-4 sm:p-6 transition-colors hover:border-red-500 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-red-500"
+      className="group flex aspect-[3/2] items-center justify-center rounded-2xl border border-gray-100 bg-white p-4 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-red-200 hover:shadow-md dark:border-gray-800 dark:bg-gray-900 dark:hover:border-red-500/30"
     >
       {logoUrl && !imageError ? (
-        <div className="relative flex h-full w-full min-h-[80px] items-center justify-center">
-          <Image
-            src={logoUrl}
-            alt={buildBrandAlt(brand.designation_fr, brand.alt_cover)}
-            width={200}
-            height={100}
-            className="max-h-full max-w-full object-contain p-1 transition-transform duration-300 group-hover:scale-105 sm:p-2"
-            sizes="(max-width: 640px) 192px, (max-width: 768px) 224px, 256px"
-            loading="lazy"
-            onError={() => setImageError(true)}
-          />
-        </div>
+        <Image
+          src={logoUrl}
+          alt={buildBrandAlt(brand.designation_fr, brand.alt_cover)}
+          width={200}
+          height={100}
+          className="max-h-[70%] max-w-[82%] object-contain opacity-90 transition-all duration-300 group-hover:scale-105 group-hover:opacity-100"
+          sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 16vw"
+          loading="lazy"
+          onError={() => setImageError(true)}
+        />
       ) : (
         <span className="line-clamp-2 px-2 text-center text-xs sm:text-sm font-semibold text-gray-700 transition-colors group-hover:text-red-600 dark:text-gray-300 dark:group-hover:text-red-400">
           {brand.designation_fr}
@@ -61,7 +60,6 @@ function BrandCard({ brand, onNavigate }: { brand: Brand; onNavigate: (slug: str
 export function BrandsSection() {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const { setLoading, setLoadingMessage } = useLoading();
 
@@ -80,13 +78,6 @@ export function BrandsSection() {
     fetchBrands();
   }, []);
 
-  const scroll = (direction: 'left' | 'right') => {
-    const el = scrollContainerRef.current;
-    if (!el) return;
-    const amount = 300;
-    el.scrollTo({ left: el.scrollLeft + (direction === 'left' ? -amount : amount), behavior: 'smooth' });
-  };
-
   const handleBrandNavigate = async (slug: string) => {
     setLoadingMessage(
       `Chargement de ${brands.find((b) => nameToSlug(b.designation_fr) === slug)?.designation_fr || 'la marque'}...`
@@ -103,7 +94,9 @@ export function BrandsSection() {
     }
   };
 
-  // Fixed-height skeleton row while fetching — reserves the final layout, zero layout shift.
+  const gridClass = 'grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-6';
+
+  // Fixed grid skeleton while fetching — reserves the final layout, zero layout shift.
   if (isLoading) {
     return (
       <section className="py-12 sm:py-16 lg:py-20 bg-white dark:bg-gray-950">
@@ -113,9 +106,9 @@ export function BrandsSection() {
             title="Nos marques partenaires"
             subtitle="Distributeur officiel des plus grandes marques internationales."
           />
-          <div className="flex gap-4 sm:gap-6 overflow-hidden px-2" aria-hidden="true">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-32 sm:h-36 w-48 sm:w-56 md:w-64 flex-shrink-0 rounded-xl" />
+          <div className={gridClass} aria-hidden="true">
+            {Array.from({ length: MAX_BRANDS }).map((_, i) => (
+              <Skeleton key={i} className="aspect-[3/2] rounded-2xl" />
             ))}
           </div>
         </div>
@@ -134,43 +127,15 @@ export function BrandsSection() {
           kicker="Marques"
           title="Nos marques partenaires"
           subtitle="Distributeur officiel des plus grandes marques internationales."
+          viewAllHref="/brands"
+          viewAllLabel="Toutes les marques"
         />
 
-        <div className="relative">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute left-0 top-1/2 z-10 hidden h-11 w-11 -translate-y-1/2 rounded-full bg-white shadow-lg hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 md:flex"
-            onClick={() => scroll('left')}
-            aria-label="Défiler vers la gauche"
-          >
-            <ChevronLeft className="h-5 w-5" aria-hidden="true" />
-          </Button>
-
-          {/* Horizontal scroll — users swipe/drag; no auto-scroll marquee */}
-          <div
-            ref={scrollContainerRef}
-            className="flex gap-4 sm:gap-6 overflow-x-auto scroll-smooth scrollbar-hide px-2 pb-2"
-          >
-            {brands.map((brand) => (
-              <BrandCard key={brand.id} brand={brand} onNavigate={handleBrandNavigate} />
-            ))}
-          </div>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute right-0 top-1/2 z-10 hidden h-11 w-11 -translate-y-1/2 rounded-full bg-white shadow-lg hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 md:flex"
-            onClick={() => scroll('right')}
-            aria-label="Défiler vers la droite"
-          >
-            <ChevronRight className="h-5 w-5" aria-hidden="true" />
-          </Button>
+        <div className={gridClass}>
+          {brands.slice(0, MAX_BRANDS).map((brand) => (
+            <BrandCard key={brand.id} brand={brand} onNavigate={handleBrandNavigate} />
+          ))}
         </div>
-
-        <p className="mt-4 text-center text-xs text-gray-500 dark:text-gray-400 md:hidden">
-          Faites glisser pour voir plus
-        </p>
       </div>
     </section>
   );
