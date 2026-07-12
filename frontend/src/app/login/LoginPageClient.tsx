@@ -6,7 +6,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
-import { Card, CardContent } from '@/app/components/ui/card';
 import { Loader2, Mail, Lock, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -61,15 +60,13 @@ function LoginContent() {
 
   return (
     <AuthShell>
-      <Card className="border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
-          <AuthCardHeader
-            showLogo
-            kicker="Espace client"
-            title="Connexion"
-            subtitle="Connectez-vous à votre compte pour continuer"
-          />
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
+      <AuthCardHeader
+        showLogo
+        kicker="Espace client"
+        title="Connexion"
+        subtitle="Connectez-vous à votre compte pour continuer"
+      />
+      <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <div className="relative">
@@ -132,19 +129,17 @@ function LoginContent() {
                 </Button>
               </form>
 
-              <div className="mt-6 text-center">
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Vous n'avez pas de compte ?{' '}
-                  <Link
-                    href="/register"
-                    className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-semibold"
-                  >
-                    Créer un compte
-                  </Link>
-                </p>
-              </div>
-            </CardContent>
-      </Card>
+      <div className="mt-8 text-center">
+        <p className="text-sm text-gray-600 dark:text-gray-400">
+          Vous n'avez pas de compte ?{' '}
+          <Link
+            href="/register"
+            className="font-semibold text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+          >
+            Créer un compte
+          </Link>
+        </p>
+      </div>
     </AuthShell>
   );
 }

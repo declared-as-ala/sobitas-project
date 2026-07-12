@@ -140,6 +140,7 @@ export function HomePageClient({ accueil, slides, heroMobileFirst, heroDesktopFi
             products={bestSellers as any}
             showBadge
             badgeText="Top Vendu"
+            tightTop
           />
         )}
 
