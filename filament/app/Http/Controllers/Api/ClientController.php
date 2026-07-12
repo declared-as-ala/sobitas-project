@@ -91,13 +91,18 @@ class ClientController extends Controller
             'password' => ['required', 'string', 'min:8', 'regex:/[A-Za-z]/', 'regex:/[0-9]/'],
         ]);
 
-        $user = User::create([
+        // role_id is intentionally non-fillable/guarded on the User model, so `User::create([...])`
+        // silently DROPS it — and with a NOT NULL `users.role_id` column the insert throws (HTTP 500,
+        // which fully blocked signup). forceFill bypasses mass-assignment protection so role_id is part
+        // of the single INSERT while still never being accepted from client input.
+        $user = (new User())->forceFill([
             'name'     => $validated['name'],
-            'role_id'  => 2, // Always assign default customer role — never accept from client
+            'role_id'  => 2, // default customer role — always server-set, never from the client
             'phone'    => $validated['phone'],
             'email'    => $validated['email'],
             'password' => Hash::make($validated['password']),
         ]);
+        $user->save();
 
         $token = $user->createToken('authToken')->plainTextToken;
 
