@@ -7,8 +7,9 @@ import { Footer } from '@/app/components/Footer';
 import { useAuth } from '@/contexts/AuthContext';
 import { ProfileSection } from './ProfileSection';
 import { OrdersSection } from './OrdersSection';
+import { FidelitySection } from './FidelitySection';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
-import { User, Package } from 'lucide-react';
+import { User, Package, Gift } from 'lucide-react';
 import { PageHeader } from '@/app/components/PageHeader';
 import { AccountPageSkeleton } from './AccountSkeletons';
 
@@ -46,7 +47,7 @@ export default function AccountPage() {
         <PageHeader kicker="Espace client" title="Mon Compte" />
 
         <Tabs defaultValue="profile" className="w-full mt-8">
-          <TabsList className="grid w-full grid-cols-2 mb-8 h-auto p-1 rounded-xl bg-gray-100 dark:bg-gray-900 border border-gray-100 dark:border-gray-800">
+          <TabsList className="grid w-full grid-cols-3 mb-8 h-auto p-1 rounded-xl bg-gray-100 dark:bg-gray-900 border border-gray-100 dark:border-gray-800">
             <TabsTrigger
               value="profile"
               className="flex items-center justify-center gap-2 rounded-lg py-2.5 font-display uppercase tracking-wide text-sm data-[state=active]:bg-red-600 data-[state=active]:text-white data-[state=active]:shadow-sm"
@@ -61,6 +62,13 @@ export default function AccountPage() {
               <Package className="h-4 w-4" aria-hidden="true" />
               Mes Commandes
             </TabsTrigger>
+            <TabsTrigger
+              value="fidelite"
+              className="flex items-center justify-center gap-2 rounded-lg py-2.5 font-display uppercase tracking-wide text-sm data-[state=active]:bg-red-600 data-[state=active]:text-white data-[state=active]:shadow-sm"
+            >
+              <Gift className="h-4 w-4" aria-hidden="true" />
+              Fidélité
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="profile">
@@ -69,6 +77,10 @@ export default function AccountPage() {
 
           <TabsContent value="orders">
             <OrdersSection />
+          </TabsContent>
+
+          <TabsContent value="fidelite">
+            <FidelitySection />
           </TabsContent>
         </Tabs>
       </main>

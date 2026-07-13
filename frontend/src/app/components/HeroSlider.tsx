@@ -42,7 +42,7 @@ export function HeroSlider({ mobileFirst }: HeroSliderProps) {
   };
 
   const content = (
-    <div className="w-full max-w-md lg:max-w-[27rem] xl:max-w-[32rem]">
+    <div className="w-full max-w-lg lg:max-w-[34rem] xl:max-w-[40rem]">
       <span className="mb-3 block font-display text-[11px] font-semibold uppercase tracking-[0.22em] text-red-500 sm:text-xs">
         100% Authentique • Livraison partout en Tunisie
       </span>
@@ -126,21 +126,21 @@ export function HeroSlider({ mobileFirst }: HeroSliderProps) {
         aria-hidden="true"
       />
 
-      {/* DESKTOP: solid black panel with a diagonal right edge (48% at top → 40% at bottom) */}
+      {/* DESKTOP: solid black panel with a diagonal right edge (54% at top → 46% at bottom) */}
       <div
         className="absolute inset-0 hidden bg-gray-950 lg:block"
-        style={{ clipPath: 'polygon(0 0, 48% 0, 40% 100%, 0 100%)' }}
+        style={{ clipPath: 'polygon(0 0, 54% 0, 46% 100%, 0 100%)' }}
         aria-hidden="true"
       />
       {/* DESKTOP: thin red accent along the diagonal seam */}
       <div
-        className="absolute inset-y-0 left-[44.5%] hidden w-[2px] -skew-x-[13deg] bg-gradient-to-b from-transparent via-red-600 to-transparent lg:block"
+        className="absolute inset-y-0 left-[50%] hidden w-[2px] -skew-x-[13deg] bg-gradient-to-b from-transparent via-red-600 to-transparent lg:block"
         aria-hidden="true"
       />
 
       {/* CONTENT — bottom on mobile, vertically-centered in the black panel on desktop */}
       <div className="absolute inset-0 z-10 flex items-end lg:items-center">
-        <div className="mx-auto w-full max-w-7xl px-5 pb-9 sm:px-6 sm:pb-11 lg:px-8 lg:pb-0">
+        <div className="mx-auto w-full max-w-[1400px] px-5 pb-9 sm:px-6 sm:pb-11 lg:px-8 lg:pb-0">
           {content}
         </div>
       </div>

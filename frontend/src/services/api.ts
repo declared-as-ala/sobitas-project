@@ -24,6 +24,8 @@ import type {
   HomeData,
   AccueilData,
   Review,
+  PackQuote,
+  PointsHistory,
 } from '@/types';
 import type { BackendOrderPayload } from '@/lib/orderPayload';
 import { SITE_LOGO_PUBLIC_PATH } from '@/constants/branding';
@@ -1047,7 +1049,38 @@ export const getUser = async (): Promise<User> => {
 };
 
 export const getProfile = async (): Promise<User> => {
-  const response = await api.get<User>('/profil');
+  const response = await api.get('/profil');
+  // Type the payload independently of `User` — intersecting with User would
+  // collapse points_* to `number` and make the `!== ''` string guards fail tsc.
+  const data = (response.data ?? {}) as Record<string, unknown>;
+  const user: User = { ...(data as unknown as User) };
+  // Map loyalty points onto the user when the backend includes them (shared API contract).
+  const pb = data.points_balance;
+  if (pb != null && pb !== '') {
+    user.points_balance = Number(pb);
+  }
+  const pv = data.points_value_dt;
+  if (pv != null && pv !== '') {
+    user.points_value_dt = Number(pv);
+  }
+  return user;
+};
+
+/**
+ * Authoritative pack (bundle) discount quote. The server recomputes the subtotal from real
+ * product prices and applies the tier table — the client never supplies an amount.
+ * Uses the shared `api` instance so base URL / proxy / locale headers are handled. PUBLIC (no auth needed).
+ */
+export const packQuote = async (
+  items: { produit_id: number; quantite: number }[]
+): Promise<PackQuote> => {
+  const response = await api.post<PackQuote>('/pack/quote', { panier: items });
+  return response.data;
+};
+
+/** Loyalty-points balance + ledger for the authenticated user (auth:sanctum). */
+export const getPointsHistory = async (): Promise<PointsHistory> => {
+  const response = await api.get<PointsHistory>('/points/history');
   return response.data;
 };
 

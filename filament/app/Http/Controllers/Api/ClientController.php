@@ -10,6 +10,7 @@ use App\Models\Facture;
 use App\Models\FactureTva;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Services\PointsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -154,12 +155,17 @@ class ClientController extends Controller
     {
         $user = Auth::user();
 
+        // points_balance column may be absent/null on legacy users — default 0.
+        $pointsBalance = (int) ($user->points_balance ?? 0);
+
         // Never expose password hash or other sensitive fields
         return response()->json([
-            'id'    => $user->id,
-            'name'  => $user->name,
-            'email' => $user->email,
-            'phone' => $user->phone,
+            'id'              => $user->id,
+            'name'            => $user->name,
+            'email'           => $user->email,
+            'phone'           => $user->phone,
+            'points_balance'  => $pointsBalance,
+            'points_value_dt' => app(PointsService::class)->pointsToDt($pointsBalance),
         ]);
     }
 

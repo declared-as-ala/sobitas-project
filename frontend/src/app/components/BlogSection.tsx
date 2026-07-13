@@ -81,7 +81,7 @@ export function BlogSection({ articles }: BlogSectionProps) {
 
   return (
     <section className="py-12 sm:py-16 lg:py-20 bg-gray-50 dark:bg-gray-900 overflow-hidden">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeader
           kicker="Le blog"
           title="Nos derniers articles"
@@ -172,9 +172,9 @@ export function BlogSection({ articles }: BlogSectionProps) {
           </Carousel>
         </div>
 
-        <div className="mt-6 text-center sm:hidden">
+        <div className="mt-6 sm:hidden">
           <Button asChild variant="outline" className="w-full rounded-full border-red-600 text-red-600 hover:bg-red-600 hover:text-white group">
-            <Link href="/blog" className="flex items-center justify-center gap-2">
+            <Link href="/blog" className="flex items-center justify-start gap-2">
               Voir tous les articles
               <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
             </Link>

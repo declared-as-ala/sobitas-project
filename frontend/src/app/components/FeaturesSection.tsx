@@ -21,7 +21,7 @@ export function FeaturesSection() {
       <h2 id="features-heading" className="sr-only">
         Pourquoi choisir Protéine Tunisie
       </h2>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
         {/* One per row on phones (full width → titles never wrap awkwardly), 2×2 on sm, single
             row on desktop — every feature always visible (no hidden scroll content). Hairline
             dividers come from the gap-px grid background. */}

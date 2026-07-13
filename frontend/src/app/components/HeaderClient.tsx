@@ -82,6 +82,13 @@ const FALLBACK_NAV_LINKS: HeaderNavLink[] = [
   { href: '/qui-sommes-nous', label: 'QUI SOMMES NOUS', icon: 'info' },
 ];
 
+/** Always-present entry point to the pack composer, appended to whatever nav the backend ships. */
+const PACK_BUILDER_LINK: HeaderNavLink = { href: '/pack-builder', label: 'COMPOSEZ VOTRE PACK', icon: 'gift' };
+
+function withPackBuilder(links: HeaderNavLink[]): HeaderNavLink[] {
+  return links.some((link) => link.href === '/pack-builder') ? links : [...links, PACK_BUILDER_LINK];
+}
+
 const NAV_ICON_MAP: Record<string, LucideIcon> = {
   home: Home,
   'shopping-bag': ShoppingBag,
@@ -274,8 +281,8 @@ export function HeaderClient() {
     }
   }, [mobileMenuOpen, mobileProductsMenuOpen]);
 
-  const navLinks = dynamicNavigation.navbar.length > 0 ? dynamicNavigation.navbar : FALLBACK_NAV_LINKS;
-  const sidebarLinks = dynamicNavigation.sidebar.length > 0 ? dynamicNavigation.sidebar : navLinks;
+  const navLinks = withPackBuilder(dynamicNavigation.navbar.length > 0 ? dynamicNavigation.navbar : FALLBACK_NAV_LINKS);
+  const sidebarLinks = withPackBuilder(dynamicNavigation.sidebar.length > 0 ? dynamicNavigation.sidebar : navLinks);
 
   const mobileNavHidden = isMobileViewport && !mobileNavVisible;
 
@@ -290,7 +297,7 @@ export function HeaderClient() {
     >
       {/* Top Info Bar */}
       <div className="bg-gray-900 text-white border-b border-gray-800/50">
-        <div className="hidden md:flex max-w-7xl mx-auto h-7 px-4 lg:px-8 items-center justify-between text-xs font-medium">
+        <div className="hidden md:flex max-w-[1400px] mx-auto h-7 px-4 lg:px-8 items-center justify-between text-xs font-medium">
           <div className="flex items-center gap-4">
             <a href={`tel:${PHONE.replace(/\s/g, '')}`} className="flex items-center gap-1.5 hover:text-red-500 transition-colors shrink-0" aria-label={`Appeler ${PHONE}`}>
               <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -403,7 +410,7 @@ export function HeaderClient() {
         </div>
 
         <div className="hidden md:block bg-red-600 dark:bg-red-700">
-          <div className="max-w-7xl mx-auto px-4 lg:px-8">
+          <div className="max-w-[1400px] mx-auto px-4 lg:px-8">
             <div className="flex items-center justify-between h-14 gap-4">
               <Link href="/" className="flex-shrink-0" aria-label="Proteine Tunisie - Accueil">
                 <Image

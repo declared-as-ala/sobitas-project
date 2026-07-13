@@ -100,7 +100,7 @@ export function BrandsSection() {
   if (isLoading) {
     return (
       <section className="py-12 sm:py-16 lg:py-20 bg-white dark:bg-gray-950">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
           <SectionHeader
             kicker="Marques"
             title="Nos marques partenaires"
@@ -122,7 +122,7 @@ export function BrandsSection() {
 
   return (
     <section className="py-12 sm:py-16 lg:py-20 bg-white dark:bg-gray-950">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeader
           kicker="Marques"
           title="Nos marques partenaires"

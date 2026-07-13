@@ -124,7 +124,7 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
 
   return (
     <section id="ventes-flash" className="py-12 sm:py-16 lg:py-20 bg-red-50/60 dark:bg-red-950/10">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeader
           kicker="Offres limitées"
           title="Ventes flash"
@@ -149,10 +149,10 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
         </div>
 
         {/* Mobile CTA — SectionHeader's "Voir tout" link is hidden below sm */}
-        <div className="mt-10 text-center sm:hidden">
+        <div className="mt-10 sm:hidden">
           <Button
             variant="outline"
-            className="w-full min-h-[48px] rounded-xl border-2 border-red-500 text-red-600 hover:bg-red-600 hover:text-white dark:border-red-400 dark:text-red-400 dark:hover:bg-red-500 font-display uppercase tracking-wide font-semibold"
+            className="w-full min-h-[48px] justify-start rounded-xl border-2 border-red-500 text-red-600 hover:bg-red-600 hover:text-white dark:border-red-400 dark:text-red-400 dark:hover:bg-red-500 font-display uppercase tracking-wide font-semibold"
             asChild
           >
             <Link href="/offres" aria-label="Voir toutes les offres et promos">
