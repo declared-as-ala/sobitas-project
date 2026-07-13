@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Cartes Fidélité Sobitas</title>
+    <title>Cartes Fidélité Protein.tn</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     @php
         $company      = \App\Models\Coordinate::getCached();
@@ -42,8 +42,8 @@
     <style>
         /* ── Design tokens ──────────────────────────────────────────────────── */
         :root {
-            --sobitas-orange: #ff5a0a;
-            --sobitas-black:  #111214;
+            --brand-orange: #ff5a0a;
+            --brand-black:  #111214;
             --card-width:     85.60mm;
             --card-height:    54.00mm;
             --card-radius:    3.4mm;
@@ -102,7 +102,7 @@
         }
 
         /* ── Base card ─────────────────────────────────────────────────────── */
-        .sobitas-card {
+        .brand-card {
             width: 85.60mm;
             height: 54.00mm;
             border-radius: 3.4mm;
@@ -116,7 +116,7 @@
         /* ══════════════════════════════════════════════════════════════════════
            FRONT CARD
            ══════════════════════════════════════════════════════════════════ */
-        .sobitas-front { background: #fff; position: relative; overflow: hidden; }
+        .brand-front { background: #fff; position: relative; overflow: hidden; }
 
         /* Orange corner badge top-left */
         .front-top-corner {
@@ -244,7 +244,7 @@
         /* ══════════════════════════════════════════════════════════════════════
            BACK CARD
            ══════════════════════════════════════════════════════════════════ */
-        .sobitas-back { background: #fff; position: relative; overflow: hidden; }
+        .brand-back { background: #fff; position: relative; overflow: hidden; }
 
         .back-bg-decor {
             position: absolute; top: 0; left: 0; right: 0; bottom: 0;
@@ -340,7 +340,7 @@
             body { background: #fff; }
             .print-toolbar { display: none !important; }
             .sheet { margin: 0; border-radius: 0; box-shadow: none; padding: 6mm; }
-            .sobitas-card { box-shadow: none; }
+            .brand-card { box-shadow: none; }
         }
 
         /* ── DomPDF overrides (active only when $isPdf === true) ───────────── */
@@ -362,7 +362,7 @@
         .cards-grid { display: block !important; width: 100% !important; }
         .cards-grid::after { content: ""; display: table; clear: both; }
 
-        .sobitas-card {
+        .brand-card {
             width: 85.6mm !important;
             height: 54mm !important;
             border-radius: 3.4mm !important;
@@ -506,7 +506,7 @@
     {{-- ════════════════════════════════ FACE AVANT ════════════════════════════ --}}
     @if($showFront)
     <section class="sheet">
-        <div class="sheet-title">Face avant &middot; Sobitas / protein.tn</div>
+        <div class="sheet-title">Face avant &middot; Protein.tn</div>
         <div class="cards-grid">
             @foreach($chunk as $card)
                 @php
@@ -514,7 +514,7 @@
                     $barcodeSvg     = $loyaltyService->generateBarcode39Svg($card->card_number);
                     $barcodeDataUri = 'data:image/svg+xml;base64,' . base64_encode($barcodeSvg);
                 @endphp
-                <article class="sobitas-card sobitas-front">
+                <article class="brand-card brand-front">
 
                     {{-- Decorative background waves & dot mesh --}}
                     <div class="card-bg-waves" aria-hidden="true">
@@ -538,9 +538,9 @@
                     <div class="front-left-content">
                         <div class="logo-wrap">
                             @if($logoSrc)
-                                <img src="{{ $logoSrc }}" alt="SOBITAS">
+                                <img src="{{ $logoSrc }}" alt="Protein.tn">
                             @else
-                                <p class="logo-text-fallback">SOBITAS</p>
+                                <p class="logo-text-fallback">Protein.tn</p>
                             @endif
                         </div>
                         <p class="tagline">NUTRITION &amp; PERFORMANCE</p>
@@ -611,10 +611,10 @@
     {{-- ════════════════════════════════ FACE ARRIÈRE ═══════════════════════════ --}}
     @if($showBack)
     <section class="sheet">
-        <div class="sheet-title">Face arri&egrave;re &middot; Sobitas / protein.tn</div>
+        <div class="sheet-title">Face arri&egrave;re &middot; Protein.tn</div>
         <div class="cards-grid">
             @foreach($chunk as $card)
-                <article class="sobitas-card sobitas-back">
+                <article class="brand-card brand-back">
 
                     {{-- Vector background: diagonal lines + dot rectangles + orange wedge --}}
                     <div class="back-bg-decor" aria-hidden="true">
@@ -636,9 +636,9 @@
                     <div class="back-left-content">
                         <div class="back-logo-wrap">
                             @if($logoSrc)
-                                <img src="{{ $logoSrc }}" alt="SOBITAS">
+                                <img src="{{ $logoSrc }}" alt="Protein.tn">
                             @else
-                                <span class="back-logo-text">SOBITAS</span>
+                                <span class="back-logo-text">Protein.tn</span>
                             @endif
                             <div class="back-logo-underline"></div>
                         </div>

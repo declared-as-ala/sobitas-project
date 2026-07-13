@@ -12,11 +12,11 @@
             @if ($logoUrl)
                 <img
                     src="{{ $logoUrl }}"
-                    alt="{{ config('app.name', 'Sobitas') }}"
+                    alt="{{ config('app.name', 'Protein.tn') }}"
                     class="auth-logo"
                 >
             @else
-                <span class="auth-logo-text">{{ config('app.name', 'Sobitas') }}</span>
+                <span class="auth-logo-text">{{ config('app.name', 'Protein.tn') }}</span>
             @endif
         </div>
 

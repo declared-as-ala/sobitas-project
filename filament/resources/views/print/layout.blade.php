@@ -43,7 +43,7 @@
         <header class="print-header">
             <div class="print-company">
                 <img src="{{ $logoUrl }}" alt="{{ $company->abbreviation ?? 'SOBITAS' }}" class="print-logo" onerror="this.style.display='none'; var f=document.getElementById('print-logo-fallback'); if(f) f.style.display='block';">
-                <span class="print-company-name" id="print-logo-fallback" style="display:none">{{ $company->abbreviation ?? 'STE SOBITAS' }}</span>
+                <span class="print-company-name" id="print-logo-fallback" style="display:none">{{ $company->abbreviation ?? 'Protein.tn' }}</span>
                 @if ($company ?? null)
                     <div class="print-company-meta">
                         @if ($company->adresse_fr ?? null) {{ $company->adresse_fr }}<br> @endif
