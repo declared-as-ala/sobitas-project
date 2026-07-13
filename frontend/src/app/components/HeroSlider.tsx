@@ -1,40 +1,22 @@
 'use client';
 
-import React, { useState, useEffect, memo, useMemo } from 'react';
-import Image from 'next/image';
-import { ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
-import { Button } from '@/app/components/ui/button';
+import { useState } from 'react';
+import { ArrowRight, Play, ShieldCheck, Truck, MessageCircle, X } from 'lucide-react';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
-import { getStorageUrl } from '@/services/api';
 import type { Slide } from '@/types';
 import type { HeroFirstSlide } from '@/app/page';
 
-const MOBILE_BREAKPOINT_PX = 768;
-
-const fallbackSlides = [
-  {
-    id: 1,
-    titre: 'Protéines Premium',
-    description:
-      "Commencez votre journée avec l'énergie parfaite : protéines premium de qualité pour booster vos performances et atteindre vos objectifs",
-    lien: '/shop',
-    image: '/hero/webp/hero1.webp',
-  },
-];
-
 // Optimized, right-sized hero variants (pre-generated with sharp), served DIRECT-static so
-// Cloudflare edge-caches them. The Next image optimizer output was ~800ms-TTFB / Cf DYNAMIC on
-// every hit (killing LCP); these tiny AVIFs (~30KB) are edge-cached (Cf REVALIDATED).
+// Cloudflare edge-caches them. Breakpoints match the <link rel=preload> in app/page.tsx (767/768)
+// so the preloaded AVIF IS the one the browser paints → fast LCP.
 const HERO_M_AVIF = '/slides/hero-m.avif';
 const HERO_M_WEBP = '/slides/hero-m.webp';
 const HERO_D_AVIF = '/slides/hero-d.avif';
 const HERO_D_WEBP = '/slides/hero-d.webp';
 
-function resolveSlideImageUrl(path: string) {
-  if (!path) return '';
-  if (path.startsWith('/') || /^(https?:|data:|blob:)/i.test(path)) return path;
-  return getStorageUrl(path);
-}
+// Optional promo video: set NEXT_PUBLIC_HERO_VIDEO_ID to a YouTube id to make "Voir la vidéo" open a
+// player; otherwise the button gracefully scrolls to the best-sellers rail (#products).
+const VIDEO_ID = process.env.NEXT_PUBLIC_HERO_VIDEO_ID || '';
 
 interface HeroSliderProps {
   slides?: Slide[] | any[];
@@ -42,266 +24,138 @@ interface HeroSliderProps {
   desktopFirst?: HeroFirstSlide;
 }
 
-// ─── Static first-frame component ────────────────────────────────────────────
-// Renders as a native <picture> element in SSR HTML.
-// The browser picks the right image source (mobile/desktop) WITHOUT any JS.
-// This is what gets measured as LCP — it loads in parallel with the JS bundle.
-const HeroFirstPicture = memo(function HeroFirstPicture({
-  mobileFirst,
-}: {
-  mobileFirst: HeroFirstSlide;
-  desktopFirst: HeroFirstSlide;
-}) {
-  // Direct-static AVIF (edge-cached) with WebP fallback, per breakpoint. No /_next/image optimizer.
-  return (
-    <picture
-      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block' }}
-    >
-      <source type="image/avif" media="(max-width: 767px)" srcSet={HERO_M_AVIF} />
-      <source type="image/webp" media="(max-width: 767px)" srcSet={HERO_M_WEBP} />
-      <source type="image/avif" media="(min-width: 768px)" srcSet={HERO_D_AVIF} />
-      <source type="image/webp" media="(min-width: 768px)" srcSet={HERO_D_WEBP} />
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={HERO_M_WEBP}
-        alt={mobileFirst.title}
-        width={828}
-        height={1471}
-        fetchPriority="high"
-        decoding="async"
-        loading="eager"
-        className="object-cover object-center"
-        style={{ width: '100%', height: '100%' }}
-      />
-    </picture>
-  );
-});
+const TRUST = [
+  { Icon: ShieldCheck, title: 'Produits 100% Authentiques', sub: 'Garantie qualité et origine' },
+  { Icon: Truck, title: 'Livraison Rapide', sub: 'Partout en Tunisie' },
+  { Icon: MessageCircle, title: "Conseils d'Experts", sub: 'À votre écoute' },
+] as const;
 
-// ─── Non-first slides (not LCP critical) ─────────────────────────────────────
-const SlideImage = memo(
-  ({ src, alt, isFirst, className }: { src: string; alt: string; isFirst: boolean; className?: string }) => {
-    const cls = 'object-cover object-center';
-    if (!isFirst) {
-      return (
-        <Image src={src} alt={alt} fill className={className || cls} sizes="100vw" quality={75} loading="lazy" />
-      );
-    }
-    return (
-      <Image
-        src={src}
-        alt={alt}
-        fill
-        priority
-        fetchPriority="high"
-        className={className || cls}
-        sizes="100vw"
-        quality={75}
-      />
-    );
-  }
-);
-SlideImage.displayName = 'SlideImage';
+// Split hero: solid black content panel beside the athletes-and-products photo, with a red diagonal
+// accent — desktop side-by-side, mobile stacked (image banner on top, content below).
+export function HeroSlider({ mobileFirst }: HeroSliderProps) {
+  const [videoOpen, setVideoOpen] = useState(false);
+  const alt = mobileFirst?.title || 'Whey, créatine et compléments — Protéine Tunisie';
 
-// Viewport hint used after hydration; the first LCP image is selected by <picture>.
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT_PX - 1}px)`);
-    const update = () => setIsMobile(mql.matches);
-    update();
-    mql.addEventListener('change', update);
-    return () => mql.removeEventListener('change', update);
-  }, []);
-  return isMobile;
-}
-
-// ─── Main HeroSlider ──────────────────────────────────────────────────────────
-export const HeroSlider = memo(function HeroSlider({ slides, mobileFirst, desktopFirst }: HeroSliderProps) {
-  const [currentSlide, setCurrentSlide] = useState(0);
-  // firstFrameActive: true until any carousel navigation happens.
-  // While true and both hero props are set, renders <picture> (SSR-safe, no JS).
-  // After first navigation, switches to next/image for carousel slides.
-  const [firstFrameActive, setFirstFrameActive] = useState(true);
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [touchEnd, setTouchEnd] = useState<number | null>(null);
-  const isMobile = useIsMobile();
-
-  const finalSlidesToUse = useMemo(() => {
-    if (!slides || slides.length === 0) return fallbackSlides;
-    const withImage = slides.filter((s: any) => !!(s?.cover || s?.image || s?.image_path || s?.url));
-    const typeFilter = isMobile ? 'mobile' : 'web';
-    let filtered = withImage.filter((s: any) => (s.type || '').toLowerCase() === typeFilter);
-    if (filtered.length === 0) filtered = withImage;
-    if (filtered.length === 0) return fallbackSlides;
-    const sorted = [...filtered].sort((a: any, b: any) => (a.ordre ?? a.order ?? 0) - (b.ordre ?? b.order ?? 0));
-    return sorted.map((slide: any, index: number) => {
-      const imagePath = slide.cover || slide.image || slide.image_path || slide.url || '';
-      const stableId =
-        slide.id != null && slide.id !== ''
-          ? slide.id
-          : slide.ordre != null || slide.order != null
-          ? `ordre-${slide.ordre ?? slide.order}-${index}`
-          : `slide-${index}`;
-      return {
-        id: stableId,
-        titre: slide.titre || slide.title || slide.designation_fr || 'Protéines Premium',
-        description: slide.description || slide.description_fr || '',
-        lien: slide.lien || slide.link || slide.btn_link || '/shop',
-        image: imagePath ? resolveSlideImageUrl(imagePath) : '/hero/webp/hero1.webp',
-      };
-    });
-  }, [slides, isMobile]);
-
-  useEffect(() => {
-    if (currentSlide >= finalSlidesToUse.length) setCurrentSlide(0);
-  }, [finalSlidesToUse.length, currentSlide]);
-
-  useEffect(() => {
-    setCurrentSlide(0);
-  }, [isMobile]);
-
-  // Autoplay — deactivates the <picture> first-frame so carousel takes over
-  useEffect(() => {
-    if (finalSlidesToUse.length <= 1) return;
-    const timer = setInterval(() => {
-      setFirstFrameActive(false);
-      setCurrentSlide((prev) => (prev + 1) % finalSlidesToUse.length);
-    }, 5000);
-    return () => clearInterval(timer);
-  }, [finalSlidesToUse.length]);
-
-  const goToSlide = (index: number) => {
-    setFirstFrameActive(false);
-    setCurrentSlide(index);
-  };
-  const nextSlide = () => goToSlide((currentSlide + 1) % finalSlidesToUse.length);
-  const prevSlide = () => goToSlide((currentSlide - 1 + finalSlidesToUse.length) % finalSlidesToUse.length);
-
-  if (!finalSlidesToUse.length) return null;
-
-  const currentSlideData = finalSlidesToUse[currentSlide] || finalSlidesToUse[0];
-  if (!currentSlideData?.image) return null;
-  const heroHref = currentSlideData.lien || '/shop';
-
-  const minSwipeDistance = 50;
-  const onTouchStart = (e: React.TouchEvent) => { setTouchEnd(null); setTouchStart(e.targetTouches[0].clientX); };
-  const onTouchMove = (e: React.TouchEvent) => setTouchEnd(e.targetTouches[0].clientX);
-  const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-    const distance = touchStart - touchEnd;
-    if (distance > minSwipeDistance) nextSlide();
-    if (distance < -minSwipeDistance) prevSlide();
+  const onVideo = () => {
+    if (VIDEO_ID) setVideoOpen(true);
+    else document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Whether we can use the native <picture> first-frame.
-  // Both mobileFirst and desktopFirst must be provided from the server.
-  const canUseFirstPicture = firstFrameActive && currentSlide === 0 && !!mobileFirst && !!desktopFirst;
-
   return (
-    <section
-      className="relative w-full overflow-hidden bg-gray-900 h-[64dvh] min-h-[440px] sm:h-[64vh] sm:min-h-0 md:h-[70vh] md:min-h-[400px] lg:h-[460px] xl:h-[520px] 2xl:h-[560px]"
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
-      aria-label="Carrousel promotionnel"
-    >
-      <div key={currentSlide} className="absolute inset-0 transition-opacity duration-300 ease-in-out">
-        {canUseFirstPicture ? (
-          // Static <picture> — renders in SSR HTML, browser picks mobile/desktop image natively.
-          // Image starts downloading BEFORE any JavaScript runs → fast LCP.
-          <HeroFirstPicture mobileFirst={mobileFirst!} desktopFirst={desktopFirst!} />
-        ) : (
-          <SlideImage
-            src={currentSlideData.image}
-            alt={currentSlideData.titre}
-            isFirst={currentSlide === 0}
-            className="object-cover object-[68%_52%] sm:object-[62%_46%] md:object-center brightness-[0.84] contrast-[1.08] saturate-[0.92] md:brightness-100 md:contrast-100 md:saturate-100"
+    <section className="relative w-full overflow-hidden bg-gray-950" aria-label="Bannière principale">
+      <div className="grid grid-cols-1 lg:grid-cols-[46%_54%]">
+        {/* IMAGE — top banner on mobile, right panel on desktop */}
+        <div className="relative order-1 h-[34vh] min-h-[230px] w-full sm:h-[42vh] lg:order-2 lg:h-auto lg:min-h-[560px] xl:min-h-[600px]">
+          <picture className="absolute inset-0 block h-full w-full">
+            <source type="image/avif" media="(max-width: 767px)" srcSet={HERO_M_AVIF} />
+            <source type="image/webp" media="(max-width: 767px)" srcSet={HERO_M_WEBP} />
+            <source type="image/avif" media="(min-width: 768px)" srcSet={HERO_D_AVIF} />
+            <source type="image/webp" media="(min-width: 768px)" srcSet={HERO_D_WEBP} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={HERO_D_WEBP}
+              alt={alt}
+              width={1707}
+              height={960}
+              fetchPriority="high"
+              decoding="async"
+              loading="eager"
+              className="h-full w-full object-cover object-[56%_40%] lg:object-[54%_center]"
+            />
+          </picture>
+          {/* Blend the image edge into the black panel: bottom fade on mobile, left fade on desktop */}
+          <div
+            className="pointer-events-none absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/10 to-transparent lg:bg-gradient-to-r lg:from-gray-950 lg:via-gray-950/10 lg:to-transparent"
+            aria-hidden="true"
           />
-        )}
-
-        {/* Single readability gradient. Mobile: bottom-up — the image stays crisp up top and the
-            copy is legible over a clean dark floor (replaces 3 stacked layers that muddied the photo).
-            Desktop: left-anchored for the left-aligned copy. */}
-        <div
-          className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/5 md:bg-gradient-to-r md:from-black/78 md:via-black/42 md:to-transparent"
-          aria-hidden="true"
-        />
-
-        {/* Content */}
-        <div className="relative mx-auto flex h-full w-full max-w-7xl flex-col px-5 pb-11 pt-[calc(env(safe-area-inset-top)+1rem)] sm:px-6 sm:pb-14 md:justify-center md:pb-16 md:pt-0 lg:px-8">
-          {/* Left-aligned (French LTR): copy sits on the left over a left-darkened gradient.
-              Mobile drops it to the bottom floor; desktop centers it vertically on the left. */}
-          <div className="flex min-h-0 min-w-0 max-w-xl flex-1 flex-col items-start justify-end text-left md:flex-none md:justify-center lg:max-w-2xl xl:max-w-3xl">
-            <span className="mb-2 font-display uppercase tracking-[0.2em] text-[11px] sm:text-xs font-semibold text-red-400 drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]">
-              100% Authentique · Livraison partout en Tunisie
-            </span>
-            <h2 className="font-display uppercase max-w-[13ch] text-[2.4rem] font-bold leading-[0.92] tracking-tight text-white drop-shadow-[0_3px_12px_rgba(0,0,0,0.65)] sm:max-w-[14ch] sm:text-5xl md:text-5xl lg:text-6xl xl:text-7xl">
-              {currentSlideData.titre}
-            </h2>
-            {currentSlideData.description ? (
-              <p className="mt-3 max-w-[28ch] text-sm leading-relaxed text-white/92 drop-shadow-[0_2px_10px_rgba(0,0,0,0.58)] sm:mt-4 sm:max-w-[32ch] sm:text-base md:text-lg lg:text-xl">
-                {currentSlideData.description}
-              </p>
-            ) : null}
-            <div className="mt-5 flex flex-wrap gap-3 sm:mt-6 md:mt-7 md:gap-4">
-              <Button
-                size="lg"
-                className="min-h-[50px] min-w-[178px] rounded-xl bg-red-600 px-7 font-display uppercase tracking-wide text-base font-semibold text-white shadow-[0_10px_24px_rgba(220,38,38,0.35)] transition-all hover:bg-red-700 sm:min-h-[52px] sm:min-w-[190px] sm:px-8 md:min-h-[60px] md:px-10 md:text-lg lg:px-12 lg:text-xl"
-                asChild
-              >
-                <LinkWithLoading href={heroHref} aria-label="Découvrir nos produits" loadingMessage="Chargement...">
-                  Découvrir nos produits
-                </LinkWithLoading>
-              </Button>
-            </div>
-            {/* Money-back flag — one small pill (buy without risk / return within 7 days) */}
-            <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-black/25 px-3 py-1.5 text-[11px] font-medium text-white/95 backdrop-blur-sm drop-shadow-[0_1px_6px_rgba(0,0,0,0.5)] sm:mt-5 sm:text-xs">
-              <RotateCcw className="h-3.5 w-3.5 shrink-0 text-red-400" strokeWidth={2.2} aria-hidden="true" />
-              Commandez sans risque — satisfait ou remboursé sous 7 jours
-            </p>
-          </div>
+          {/* Red diagonal accent at the seam (desktop) */}
+          <div
+            className="pointer-events-none absolute inset-y-0 left-0 hidden w-[3px] -translate-x-1/2 -skew-x-12 bg-gradient-to-b from-transparent via-red-600 to-transparent lg:block"
+            aria-hidden="true"
+          />
         </div>
 
+        {/* CONTENT — below on mobile, left on desktop */}
+        <div className="relative order-2 flex flex-col justify-center bg-gray-950 px-5 py-9 sm:px-8 sm:py-12 lg:order-1 lg:px-12 lg:py-16 xl:px-16">
+          <span className="mb-3 font-display text-[11px] font-semibold uppercase tracking-[0.22em] text-red-500 sm:text-xs">
+            100% Authentique • Livraison partout en Tunisie
+          </span>
+          {/* Slogan rendered as <p> (not <h1>) — the SEO H1 "Protéine Tunisie" lives in the lede below. */}
+          <p className="font-display text-[2.75rem] font-bold uppercase leading-[0.86] tracking-tight text-white sm:text-6xl xl:text-7xl">
+            Nutrition<br />Puissance<br />
+            <span className="text-red-600">Résultats</span>
+          </p>
+          <p className="mt-5 max-w-md text-sm leading-relaxed text-gray-300 sm:text-base">
+            Découvrez notre sélection des meilleures protéines, créatines et compléments pour atteindre vos objectifs.
+          </p>
+
+          <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            <LinkWithLoading
+              href="/shop"
+              loadingMessage="Chargement..."
+              aria-label="Découvrir nos produits"
+              className="group inline-flex min-h-[52px] w-full items-center justify-center gap-2.5 rounded-lg bg-red-600 px-6 font-display text-sm font-semibold uppercase tracking-wide text-white shadow-[0_10px_24px_rgba(220,38,38,0.35)] transition-colors hover:bg-red-700 sm:w-auto sm:text-base"
+            >
+              Découvrir nos produits
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20 transition-transform group-hover:translate-x-0.5">
+                <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+              </span>
+            </LinkWithLoading>
+            <button
+              type="button"
+              onClick={onVideo}
+              className="group inline-flex min-h-[52px] w-full items-center justify-center gap-2.5 rounded-lg border border-white/15 bg-white/[0.04] px-6 font-display text-sm font-semibold uppercase tracking-wide text-white transition-colors hover:bg-white/10 sm:w-auto sm:text-base"
+            >
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-red-600">
+                <Play className="h-3 w-3 fill-white text-white" aria-hidden="true" />
+              </span>
+              Voir la vidéo
+            </button>
+          </div>
+
+          <div className="mt-9 grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-3">
+            {TRUST.map(({ Icon, title, sub }) => (
+              <div key={title} className="flex items-center gap-3">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.04]">
+                  <Icon className="h-5 w-5 text-red-500" strokeWidth={1.75} aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-bold leading-tight text-white">{title}</p>
+                  <p className="text-xs text-gray-400">{sub}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* Navigation arrows */}
-      <button
-        onClick={prevSlide}
-        className="absolute left-2 top-[58%] hidden min-h-[44px] min-w-[44px] -translate-y-1/2 items-center justify-center rounded-full bg-white/10 p-2 text-white shadow-lg backdrop-blur-md transition-all hover:bg-white/20 sm:left-4 sm:top-1/2 sm:flex sm:p-3"
-        aria-label="Slide précédent"
-        type="button"
-      >
-        <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden="true" />
-      </button>
-      <button
-        onClick={nextSlide}
-        className="absolute right-2 top-[58%] hidden min-h-[44px] min-w-[44px] -translate-y-1/2 items-center justify-center rounded-full bg-white/10 p-2 text-white shadow-lg backdrop-blur-md transition-all hover:bg-white/20 sm:right-4 sm:top-1/2 sm:flex sm:p-3"
-        aria-label="Slide suivant"
-        type="button"
-      >
-        <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden="true" />
-      </button>
-
-      {/* Dots */}
-      <div className="absolute bottom-3 sm:bottom-8 left-1/2 -translate-x-1/2 flex gap-1.5 sm:gap-3 z-10 items-center" role="tablist" aria-label="Indicateurs de diapositives">
-        {finalSlidesToUse.map((slide, index) => (
-          <button
-            key={`hero-dot-${String(slide.id)}-${index}`}
-            onClick={() => goToSlide(index)}
-            role="tab"
-            aria-selected={index === currentSlide}
-            aria-label={`Aller à la diapositive ${index + 1}`}
-            className={`rounded-full transition-all flex items-center justify-center ${
-              index === currentSlide
-                ? 'h-2 w-8 sm:h-3 sm:w-12 bg-red-600 shadow-lg opacity-100'
-                : 'h-1.5 w-1.5 sm:h-2 sm:w-2 bg-white/30 hover:bg-white/50 opacity-60'
-            }`}
-            type="button"
-          >
-            <span className="sr-only">Diapositive {index + 1}</span>
-          </button>
-        ))}
-      </div>
+      {videoOpen && VIDEO_ID && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Vidéo de présentation"
+          onClick={() => setVideoOpen(false)}
+        >
+          <div className="relative aspect-video w-full max-w-3xl" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => setVideoOpen(false)}
+              className="absolute -top-11 right-0 text-white/80 transition-colors hover:text-white"
+              aria-label="Fermer la vidéo"
+            >
+              <X className="h-7 w-7" />
+            </button>
+            <iframe
+              className="h-full w-full rounded-xl"
+              src={`https://www.youtube.com/embed/${VIDEO_ID}?autoplay=1&rel=0`}
+              title="Protéine Tunisie"
+              allow="autoplay; encrypted-media; fullscreen"
+              allowFullScreen
+            />
+          </div>
+        </div>
+      )}
     </section>
   );
-});
+}
