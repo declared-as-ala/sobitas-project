@@ -117,7 +117,7 @@ class SeedBlogArticles extends Command
 <li><strong>Digestion sensible au lactose :</strong> isolate ou hydrolysée.</li>
 </ul>
 <h2>Comment bien lire l'étiquette</h2>
-<p>Regardez la quantité de protéines <em>par dose</em> (visez 20 à 25 g), la liste des ingrédients (plus elle est courte, mieux c'est) et la marque. Chez SOBITAS, toutes nos <a href="/whey-proteine">whey protéines</a> sont 100 % authentiques, importées des grandes marques internationales.</p>
+<p>Regardez la quantité de protéines <em>par dose</em> (visez 20 à 25 g), la liste des ingrédients (plus elle est courte, mieux c'est) et la marque. Chez Protéine Tunisie, toutes nos <a href="/whey-proteine">whey protéines</a> sont 100 % authentiques, importées des grandes marques internationales.</p>
 <h2>Quand et combien en prendre ?</h2>
 <p>Un objectif simple : environ 1,6 à 2 g de protéines par kilo de poids de corps et par jour, en comptant l'alimentation. La whey sert à <em>compléter</em> ce total — typiquement après l'entraînement ou en collation. Une à deux doses par jour suffisent dans la plupart des cas.</p>
 <p>Prêt à faire votre choix ? Découvrez notre sélection de <a href="/whey-proteine">whey protéine</a> et l'ensemble de nos <a href="/shop">compléments alimentaires</a>, avec livraison rapide partout en Tunisie et paiement à la livraison.</p>

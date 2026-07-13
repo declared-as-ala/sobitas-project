@@ -1,4 +1,4 @@
-{{-- A4 Invoice print styles: SOBITAS brand orange, modern hierarchy, page-break safe --}}
+{{-- A4 Invoice print styles: Protein.tn brand orange, modern hierarchy, page-break safe --}}
 <style>
     /* Brand */
     :root {

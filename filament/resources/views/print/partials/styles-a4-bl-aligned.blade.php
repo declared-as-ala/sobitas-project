@@ -1,5 +1,5 @@
 {{--
-    Universal A4 print styles for ALL SOBITAS documents.
+    Universal A4 print styles for ALL Protein.tn documents.
     Fully self-contained — no external CDN dependencies.
     Works reliably in browser, print preview, and DomPDF.
 --}}
