@@ -81,6 +81,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(dest, adminRule.code === 302 ? 302 : 301);
   }
 
+  // Hard 410 for WordPress-era junk URLs still in Google's index (GSC "Excluded by noindex"
+  // examples from 2021–2023): /product-tag/* taxonomy pages and /cart/?remove_item=… action URLs.
+  // These never existed on this app — Gone tells Google to drop them for good.
+  if (pathname.startsWith('/product-tag/') || (pathname.startsWith('/cart') && searchParams.has('remove_item'))) {
+    return new NextResponse('Gone', { status: 410, headers: { 'Cache-Control': 'no-store' } });
+  }
+
   // /shop/:slug → resolve to /{subcat}/{slug} with real HTTP 301
   // This fires before the page renders, eliminating the __next-page-redirect meta-refresh tag.
   const shopSlug = pathname.match(/^\/shop\/([^/]+)\/?$/);
