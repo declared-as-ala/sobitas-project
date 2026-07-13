@@ -7,15 +7,15 @@ import { Footer } from '@/app/components/Footer';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { useCart } from '@/app/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { createOrder, getStorageUrl, getOrderDetails, applyCoupon, removeCoupon, getSiteLogoUrlResolved } from '@/services/api';
+import { createOrder, getStorageUrl, getOrderDetails, applyCoupon, removeCoupon, getSiteLogoUrlResolved, packQuote } from '@/services/api';
 import { buildBackendOrderPayload } from '@/lib/orderPayload';
-import type { Order } from '@/types';
+import type { Order, PackQuote } from '@/types';
 import Image from 'next/image';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
-import { ArrowLeft, ShoppingCart, Shield, Truck, CheckCircle2, Loader2, CreditCard, Wallet, Printer, List, ArrowRight, Package, Tag, X } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, Shield, Truck, CheckCircle2, Loader2, CreditCard, Wallet, Printer, List, ArrowRight, Package, Tag, X, Gift, Percent } from 'lucide-react';
 import { toast } from 'sonner';
 import { AddressSelector } from '@/app/components/AddressSelector';
 import { RadioGroup, RadioGroupItem } from '@/app/components/ui/radio-group';
@@ -27,9 +27,14 @@ import { useKeyboardOpen } from '@/hooks/useKeyboardOpen';
 
 const FREE_SHIPPING_THRESHOLD = 300;
 
+// Points economy — single source of truth is the backend PointsService; kept here as named
+// constants so the client estimate matches the server. The server total is always authoritative.
+const REDEEM_POINTS_PER_DT = 20; // 20 points = 1 DT of discount
+const MAX_REDEEM_FRACTION = 0.5; // points may cover at most 50% of the post-coupon-post-pack subtotal
+
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items, getTotalPrice, getEffectivePrice, clearCart } = useCart();
+  const { items, getTotalPrice, getEffectivePrice, clearCart, packDiscount } = useCart();
   const { user, isAuthenticated } = useAuth();
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(2);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -51,6 +56,12 @@ export default function CheckoutPage() {
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   const [couponMessage, setCouponMessage] = useState<string | null>(null);
   const [couponMessageType, setCouponMessageType] = useState<'success' | 'error' | null>(null);
+
+  // Pack (bundle) discount — authoritative quote from the server when the user opted in on /pack-builder.
+  const [packQuoteData, setPackQuoteData] = useState<PackQuote | null>(null);
+  // Loyalty points the user chooses to spend on this order.
+  const [pointsToRedeem, setPointsToRedeem] = useState(0);
+  const pointsBalance = user?.points_balance ?? 0;
 
   // Single address (livraison) selector state
   const [gouvernorat, setGouvernorat] = useState('');
@@ -139,16 +150,55 @@ export default function CheckoutPage() {
     }));
   }, [gouvernorat, delegation, localite, codePostal]);
 
+  // When the pack (bundle) discount is opted-in, fetch the authoritative quote from the server so the
+  // "Remise pack" line reflects the real tier discount (the client never computes the DT amount itself).
+  useEffect(() => {
+    let ignore = false;
+    if (!packDiscount || items.length === 0) {
+      setPackQuoteData(null);
+      return;
+    }
+    packQuote(items.map((item) => ({ produit_id: item.product.id, quantite: item.quantity })))
+      .then((quote) => { if (!ignore) setPackQuoteData(quote); })
+      .catch(() => { if (!ignore) setPackQuoteData(null); });
+    return () => { ignore = true; };
+  }, [packDiscount, items]);
+
   // Memoize price calculations to avoid recalculating on every render
   const totalPrice = useMemo(() => getTotalPrice(), [items, getTotalPrice]);
   const shippingCost = useMemo(() => 
     totalPrice >= FREE_SHIPPING_THRESHOLD ? 0 : 10, 
     [totalPrice]
   );
+  // Coupon discount in DT (HT). appliedCoupon.totals already reflects it; we reuse it for the points cap.
+  const couponDiscount = appliedCoupon?.discount_ht ?? 0;
+
+  // Pack (bundle) discount — only when the user opted in on /pack-builder AND the server quote loaded.
+  const packDiscountAmount = packDiscount && packQuoteData ? packQuoteData.discount_amount : 0;
+
+  // Post-coupon, post-pack subtotal — the base the points redemption is capped against (contract: 50%).
+  const subtotalAfterPack = useMemo(
+    () => Math.max(0, totalPrice - couponDiscount - packDiscountAmount),
+    [totalPrice, couponDiscount, packDiscountAmount]
+  );
+
+  const maxRedeemablePoints = useMemo(() => {
+    const capPoints = Math.floor(subtotalAfterPack * MAX_REDEEM_FRACTION * REDEEM_POINTS_PER_DT);
+    return Math.max(0, Math.min(pointsBalance, capPoints));
+  }, [subtotalAfterPack, pointsBalance]);
+
+  // Keep the chosen amount within the live cap (cart/coupon/pack changes can shrink it).
+  useEffect(() => {
+    setPointsToRedeem((p) => Math.min(p, maxRedeemablePoints));
+  }, [maxRedeemablePoints]);
+
+  const effectivePointsToRedeem = Math.min(pointsToRedeem, maxRedeemablePoints);
+  const pointsDiscountDt = effectivePointsToRedeem / REDEEM_POINTS_PER_DT;
+
   const finalTotal = useMemo(() => {
     const base = appliedCoupon?.totals ? appliedCoupon.totals.total_ttc : totalPrice + shippingCost;
-    return Math.max(0, base);
-  }, [totalPrice, shippingCost, appliedCoupon]);
+    return Math.max(0, base - packDiscountAmount - pointsDiscountDt);
+  }, [totalPrice, shippingCost, appliedCoupon, packDiscountAmount, pointsDiscountDt]);
 
   // Memoized handler to prevent unnecessary re-renders
   // Using a stable reference to avoid recreating the function on every render
@@ -299,6 +349,10 @@ export default function CheckoutPage() {
         })),
         user_id: user?.id,
         coupon_code: appliedCoupon?.code,
+        // Opt-in bundle discount: backend derives the DT amount from the SERVER subtotal.
+        pack_discount: packDiscount || undefined,
+        // Loyalty points to spend: backend re-validates <= balance and <= cap.
+        points_to_redeem: effectivePointsToRedeem > 0 ? effectivePointsToRedeem : undefined,
       });
 
       const response = await createOrder(orderPayload);
@@ -1133,6 +1187,90 @@ export default function CheckoutPage() {
                     )}
                   </section>
 
+                  {/* Points de fidélité (utilisateurs connectés avec un solde) */}
+                  {isAuthenticated && pointsBalance > 0 && (
+                    <section className="pt-4 border-t border-gray-200 dark:border-gray-800" aria-labelledby="checkout-points-title">
+                      <h3
+                        id="checkout-points-title"
+                        className="font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white flex items-center gap-2 mb-1"
+                      >
+                        <Gift className="h-4 w-4 text-red-600 dark:text-red-400" aria-hidden="true" />
+                        Utiliser mes points de fidélité
+                      </h3>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                        Solde : <span className="font-semibold text-gray-900 dark:text-white tabular-nums">{pointsBalance}</span> points
+                        {user?.points_value_dt != null && (
+                          <> (~{user.points_value_dt.toFixed(2)} DT)</>
+                        )}
+                        {' '}· 20 points = 1 DT
+                      </p>
+                      {maxRedeemablePoints > 0 ? (
+                        <div className="space-y-3 p-3 rounded-xl bg-red-50/50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/40">
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="range"
+                              min={0}
+                              max={maxRedeemablePoints}
+                              step={REDEEM_POINTS_PER_DT}
+                              value={effectivePointsToRedeem}
+                              onChange={(e) => setPointsToRedeem(Number(e.target.value))}
+                              className="flex-1 accent-red-600 min-h-[24px] cursor-pointer"
+                              aria-label="Points de fidélité à utiliser"
+                            />
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <Input
+                                type="number"
+                                min={0}
+                                max={maxRedeemablePoints}
+                                value={effectivePointsToRedeem}
+                                onChange={(e) => {
+                                  const raw = Math.floor(Number(e.target.value) || 0);
+                                  setPointsToRedeem(Math.max(0, Math.min(raw, maxRedeemablePoints)));
+                                }}
+                                className="w-20 h-10 text-center rounded-lg tabular-nums"
+                                aria-label="Nombre de points à utiliser"
+                              />
+                              <span className="text-xs text-gray-500 dark:text-gray-400">pts</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-gray-600 dark:text-gray-400">
+                              Remise fidélité <span className="text-xs text-gray-400">(estimée)</span>
+                            </span>
+                            <span className="font-display font-semibold tabular-nums text-green-600 dark:text-green-400">
+                              -{pointsDiscountDt.toFixed(2)} DT
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setPointsToRedeem(maxRedeemablePoints)}
+                              className="text-xs font-medium text-red-600 dark:text-red-400 hover:underline min-h-[36px]"
+                            >
+                              Utiliser le maximum ({maxRedeemablePoints} pts)
+                            </button>
+                            {effectivePointsToRedeem > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => setPointsToRedeem(0)}
+                                className="text-xs font-medium text-gray-500 dark:text-gray-400 hover:underline min-h-[36px]"
+                              >
+                                Réinitialiser
+                              </button>
+                            )}
+                          </div>
+                          <p className="text-[11px] leading-snug text-gray-400 dark:text-gray-500">
+                            Les points couvrent au maximum 50% du sous-total. Le décompte final est confirmé par le serveur.
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-400 dark:text-gray-500">
+                          Ajoutez des articles pour pouvoir utiliser vos points sur cette commande.
+                        </p>
+                      )}
+                    </section>
+                  )}
+
                   {/* Summary */}
                   <div className="border-t border-gray-100 dark:border-gray-800 pt-4 space-y-3">
                     <div className="flex justify-between items-center">
@@ -1144,6 +1282,28 @@ export default function CheckoutPage() {
                         <span className="text-gray-600 dark:text-gray-400">Remise ({appliedCoupon.code})</span>
                         <span className="font-display font-semibold tabular-nums text-green-600 dark:text-green-400">
                           -{appliedCoupon.discount_ttc.toFixed(2)} DT
+                        </span>
+                      </div>
+                    )}
+                    {packDiscountAmount > 0 && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
+                          <Percent className="h-4 w-4 text-red-600 dark:text-red-400" aria-hidden="true" />
+                          Remise pack{packQuoteData?.tier_label ? ` (${packQuoteData.tier_label})` : ''}
+                        </span>
+                        <span className="font-display font-semibold tabular-nums text-green-600 dark:text-green-400">
+                          -{packDiscountAmount.toFixed(2)} DT
+                        </span>
+                      </div>
+                    )}
+                    {pointsDiscountDt > 0 && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
+                          <Gift className="h-4 w-4 text-red-600 dark:text-red-400" aria-hidden="true" />
+                          Remise fidélité <span className="text-xs text-gray-400">(estimée)</span>
+                        </span>
+                        <span className="font-display font-semibold tabular-nums text-green-600 dark:text-green-400">
+                          -{pointsDiscountDt.toFixed(2)} DT
                         </span>
                       </div>
                     )}
@@ -1174,6 +1334,11 @@ export default function CheckoutPage() {
                         {finalTotal.toFixed(0)} DT
                       </span>
                     </div>
+                    {(packDiscountAmount > 0 || pointsDiscountDt > 0) && (
+                      <p className="text-[11px] leading-snug text-gray-400 dark:text-gray-500 text-right">
+                        Total estimé — le montant définitif est confirmé sur la page de confirmation.
+                      </p>
+                    )}
                   </div>
 
                   {/* Trust Badges — compact 3-up row */}

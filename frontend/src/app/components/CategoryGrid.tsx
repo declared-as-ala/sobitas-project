@@ -87,7 +87,7 @@ export function CategoryGrid({ categories = [] }: CategoryGridProps) {
 
   return (
     <section className="py-12 sm:py-16 lg:py-20 bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeader kicker="Par objectif" title="Catégories populaires" viewAllHref="/shop" />
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">

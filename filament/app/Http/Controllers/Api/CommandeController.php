@@ -10,9 +10,13 @@ use App\Models\CommandeDetail;
 use App\Models\Message;
 use App\Models\CouponRedemption;
 use App\Models\Product;
+use App\Models\User;
 use App\Services\ClientService;
 use App\Services\CouponService;
+use App\Services\PackDiscountService;
+use App\Services\PointsService;
 use App\Services\SmsService;
+use Laravel\Sanctum\PersonalAccessToken;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -22,6 +26,31 @@ use Illuminate\Support\Facades\Schema;
 
 class CommandeController extends Controller
 {
+    /**
+     * Resolve the authenticated User from a Sanctum bearer token WITHOUT relying
+     * on the route being behind auth:sanctum (/add_commande is a public route).
+     * Returns null for guests / invalid / expired tokens. This is the ONLY
+     * trusted identity for loyalty points — never a client-supplied user_id,
+     * which would let an attacker spend/earn on someone else's balance.
+     */
+    private function resolveTokenUser(Request $request): ?User
+    {
+        $bearer = $request->bearerToken();
+        if (! $bearer) {
+            return null;
+        }
+        $token = PersonalAccessToken::findToken($bearer);
+        if (! $token) {
+            return null;
+        }
+        if ($token->expires_at && $token->expires_at->isPast()) {
+            return null;
+        }
+        $owner = $token->tokenable;
+
+        return $owner instanceof User ? $owner : null;
+    }
+
     /**
      * Store a new commande from the frontend API.
      *
@@ -39,19 +68,26 @@ class CommandeController extends Controller
             'commande.nom'      => ['nullable', 'string', 'max:255'],
             'commande.prenom'   => ['nullable', 'string', 'max:255'],
             'commande.region'   => ['nullable', 'string', 'max:255'],
+            'commande.frais_livraison' => ['nullable', 'numeric', 'min:0'], // never trust a negative shipping fee
             'panier'            => ['required', 'array', 'min:1'],
             'panier.*.produit_id'    => ['required', 'integer', 'exists:products,id'],
             'panier.*.quantite'      => ['required', 'integer', 'min:1'],
             'panier.*.prix_unitaire' => ['nullable', 'numeric', 'min:0'], // CRIT-03: ignored; server uses DB price
             'coupon_code'       => ['nullable', 'string', 'max:64'],
+            'pack_discount'     => ['nullable', 'boolean'],   // opt-in; amount computed server-side
+            'points_to_redeem'  => ['nullable', 'integer', 'min:0'], // validated <= balance & cap
         ]);
 
         $commandeData = $request->commande;
 
+        // The authenticated token owner (or null for guests). The ONLY identity
+        // allowed to earn or spend loyalty points.
+        $authUser = $this->resolveTokenUser($request);
+
         Log::info('filament.api.add_commande.start', ['payload_keys' => array_keys($commandeData ?? [])]);
 
         $couponService = app(CouponService::class);
-        $new_facture = DB::transaction(function () use ($commandeData, $request, $couponService) {
+        $new_facture = DB::transaction(function () use ($commandeData, $request, $couponService, $authUser) {
             $new_facture = new Commande();
 
             // Use livraison fields as primary source, fallback to billing fields
@@ -69,9 +105,22 @@ class CommandeController extends Controller
             $new_facture->frais_livraison = $commandeData['frais_livraison'] ?? null;
             $new_facture->note = $commandeData['note'] ?? null;
 
-            if (! empty($commandeData['user_id'])) {
+            // ── Order attribution ───────────────────────────────────────────────
+            // A valid Sanctum token is the ONLY trusted identity. When present the
+            // order belongs to the token owner — never to a client-supplied
+            // user_id (that would be an IDOR: attaching an order, and any points
+            // side-effects, to an arbitrary account).
+            $hasClientIdColumn = Schema::hasColumn($new_facture->getTable(), 'client_id');
+            if ($authUser) {
+                $new_facture->user_id = $authUser->id;
+                if ($hasClientIdColumn) {
+                    $new_facture->client_id = $authUser->id;
+                }
+            } elseif (! empty($commandeData['user_id'])) {
+                // Legacy attribution only (guest checkout that carried an id). No
+                // loyalty points can be earned or spent on this unauthenticated path.
                 $new_facture->user_id = $commandeData['user_id'];
-                if (Schema::hasColumn($new_facture->getTable(), 'client_id')) {
+                if ($hasClientIdColumn) {
                     $new_facture->client_id = $commandeData['user_id'];
                 }
             } else {
@@ -79,7 +128,7 @@ class CommandeController extends Controller
                 if ($client) {
                     Log::info('filament.api.add_commande.client_linked', ['client_id' => $client->id]);
                     $new_facture->user_id = $client->id;
-                    if (Schema::hasColumn($new_facture->getTable(), 'client_id')) {
+                    if ($hasClientIdColumn) {
                         $new_facture->client_id = $client->id;
                     }
                 } else {
@@ -154,7 +203,9 @@ class CommandeController extends Controller
 
             // Calculate totals
             $new_facture->prix_ht = $all_price_ht;
-            $frais_livraison = (float) ($new_facture->frais_livraison ?? 0);
+            // Shipping fee is never trusted negative (validated min:0, clamped here too).
+            $frais_livraison = max(0, (float) ($new_facture->frais_livraison ?? 0));
+            $new_facture->frais_livraison = $frais_livraison;
             $discount_ht = 0.0;
             $discount_ttc = null;
 
@@ -188,12 +239,69 @@ class CommandeController extends Controller
                 }
             }
 
-            if (($request->m_remise ?? 0) > 0) {
-                $new_prix_ht = $all_price_ht - ($new_facture->remise ?? 0) - $discount_ht;
-                $new_facture->prix_ttc = $frais_livraison + $new_prix_ht;
-            } else {
-                $new_facture->prix_ttc = $all_price_ht - $discount_ht + $frais_livraison;
+            // ── Pack (bundle) discount — opt-in, amount derived server-side ──────
+            // A forged pack_discount flag can at most grant the honest tier
+            // discount the SERVER-computed subtotal already qualifies for.
+            $packDiscountHt = 0.0;
+            if ($request->boolean('pack_discount')) {
+                $packDiscountHt = app(PackDiscountService::class)->amountForSubtotal($all_price_ht);
             }
+
+            // ── Points redemption — opt-in, AUTHENTICATED token owner only ──────
+            // Order: subtotal -> coupon -> pack -> points. Points are capped at
+            // 50% of the post-coupon-post-pack HT base. Bound to the token owner
+            // ($authUser), never a client-supplied user_id (points are money).
+            // The balance row is LOCKED before we compute the discount and stays
+            // locked (same transaction) through the consume, so two concurrent
+            // checkouts cannot double-spend the same points.
+            $pointsDiscountHt = 0.0;
+            $requestedPoints = (int) $request->input('points_to_redeem', 0);
+            $baseAfter = max(0, $all_price_ht - $discount_ht - $packDiscountHt);
+
+            if ($requestedPoints > 0) {
+                if (! $authUser) {
+                    throw new \Illuminate\Http\Exceptions\HttpResponseException(
+                        response()->json(['message' => 'Veuillez vous reconnecter pour utiliser vos points de fidélité.'], 422)
+                    );
+                }
+
+                $lockedUser = User::whereKey($authUser->getKey())->lockForUpdate()->first();
+                $lockedBalance = (int) ($lockedUser->points_balance ?? 0);
+                if ($requestedPoints > $lockedBalance) {
+                    throw new \Illuminate\Http\Exceptions\HttpResponseException(
+                        response()->json(['message' => 'Points insuffisants'], 422)
+                    );
+                }
+
+                $pointsService = app(PointsService::class);
+                [$pointsConsumed, $pointsDiscountHt] = $pointsService->computeRedemption(
+                    $lockedBalance,
+                    $requestedPoints,
+                    $baseAfter
+                );
+
+                if ($pointsConsumed > 0) {
+                    // Consume from the SAME locked balance (record() re-locks the
+                    // already-locked row within this transaction → consistent).
+                    $pointsService->record(
+                        $authUser,
+                        'redeem',
+                        -$pointsConsumed,
+                        'Points utilisés sur commande ' . $new_facture->numero,
+                        $new_facture->id
+                    );
+                }
+            }
+
+            $totalDiscountHt = $discount_ht + $packDiscountHt + $pointsDiscountHt;
+
+            // remise holds the pack+points discount; coupon stays in its own snapshot fields.
+            $new_facture->remise = round($packDiscountHt + $pointsDiscountHt, 3);
+            if (Schema::hasColumn($new_facture->getTable(), 'discount_amount')) {
+                $new_facture->discount_amount = round($totalDiscountHt, 3);
+            }
+            // Floor the FINAL total at 0 (frais already clamped >= 0 above).
+            $new_facture->prix_ttc = max(0, max(0, $all_price_ht - $totalDiscountHt) + $frais_livraison);
 
             $new_facture->save();
 
@@ -214,6 +322,13 @@ class CommandeController extends Controller
         });
 
         $commande = $new_facture->fresh(['details.product']);
+
+        // NOTE: loyalty points are EARNED on delivery (when etat becomes "livree"),
+        // not at order creation — these are cash-on-delivery orders, so crediting
+        // points before the customer has paid/received would let a place-then-cancel
+        // loop farm points. See App\Observers\CommandeObserver::updated() ->
+        // PointsService::syncOnStatusChange(). Redeemed points are refunded there
+        // too if the order is later cancelled/returned.
 
         // ── Send SMS ──────────────────────────────────────────────────────────────
         try {

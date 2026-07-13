@@ -45,6 +45,13 @@ export interface BackendOrderPayload {
   m_remise?: number;
   /** Code promo (validé côté client via /coupons/apply); re-validé côté serveur */
   coupon_code?: string;
+  /**
+   * Opt-in bundle discount. When true, the backend applies the pack tier discount computed from the
+   * SERVER-side subtotal (client never supplies an amount — a forged flag grants at most the honest tier).
+   */
+  pack_discount?: boolean;
+  /** Whole loyalty points the user chooses to spend; backend validates <= balance and <= cap. */
+  points_to_redeem?: number;
 }
 
 /**
@@ -70,8 +77,10 @@ export function buildBackendOrderPayload(params: {
   user_id?: number;
   m_remise?: number;
   coupon_code?: string;
+  pack_discount?: boolean;
+  points_to_redeem?: number;
 }): BackendOrderPayload {
-  const { livraison, panier, user_id, m_remise, coupon_code } = params;
+  const { livraison, panier, user_id, m_remise, coupon_code, pack_discount, points_to_redeem } = params;
   const commande: BackendCommandeFields = {
     livraison_nom: livraison.livraison_nom,
     livraison_prenom: livraison.livraison_prenom,
@@ -111,6 +120,12 @@ export function buildBackendOrderPayload(params: {
   }
   if (coupon_code != null && coupon_code.trim() !== '') {
     payload.coupon_code = coupon_code.trim();
+  }
+  if (pack_discount) {
+    payload.pack_discount = true;
+  }
+  if (points_to_redeem != null && points_to_redeem > 0) {
+    payload.points_to_redeem = Math.floor(points_to_redeem);
   }
   return payload;
 }

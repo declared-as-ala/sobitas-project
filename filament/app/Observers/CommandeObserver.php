@@ -7,6 +7,7 @@ use App\Jobs\SendSmsJob;
 use App\Models\Commande;
 use App\Models\Message;
 use App\Models\User;
+use App\Services\PointsService;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Log;
@@ -48,6 +49,18 @@ class CommandeObserver
     {
         if (! $commande->wasChanged('etat')) {
             return;
+        }
+
+        // Loyalty points lifecycle (earn on delivery / refund+clawback on cancel).
+        // Best-effort: a points failure must never block an admin status change.
+        try {
+            app(PointsService::class)->syncOnStatusChange($commande);
+        } catch (\Throwable $e) {
+            Log::error('Loyalty status sync failed', [
+                'commande_id' => $commande->id,
+                'etat'        => $commande->etat,
+                'error'       => $e->getMessage(),
+            ]);
         }
 
         if ($commande->etat === 'annuler') {

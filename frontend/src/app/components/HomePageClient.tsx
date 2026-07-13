@@ -115,7 +115,7 @@ export function HomePageClient({ accueil, slides, heroMobileFirst, heroDesktopFi
         {/* Compact SEO strip — keeps the single H1 + whey/créatine internal links, but small so it
             doesn't eat the fold right under the hero. */}
         <section className="py-3 sm:py-4 bg-white dark:bg-gray-950" aria-label="Titre principal">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
             <h1 className="font-display uppercase tracking-tight text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">
               Protéine Tunisie
               <span className="ml-2 align-middle font-sans text-[11px] sm:text-xs font-medium normal-case tracking-normal text-red-600 dark:text-red-400">
@@ -184,7 +184,8 @@ export function HomePageClient({ accueil, slides, heroMobileFirst, heroDesktopFi
           className="py-12 sm:py-16 lg:py-20 bg-white dark:bg-gray-950 border-t border-gray-100 dark:border-gray-800"
           aria-label="Informations sur la protéine en Tunisie"
         >
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="max-w-4xl">
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-4">
               Nutrition sportive Tunisie : protéine, whey et créatine de qualité
             </h2>
@@ -216,6 +217,7 @@ export function HomePageClient({ accueil, slides, heroMobileFirst, heroDesktopFi
               protéines, <strong>whey</strong> et <strong>créatine</strong>. Commandez vos compléments en ligne en toute
               confiance sur <strong>Proteine Tunisie</strong> et rejoignez la communauté Protein.tn.
             </p>
+            </div>
           </div>
         </section>
       </main>

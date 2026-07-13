@@ -101,7 +101,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
 
   return (
     <footer id="contact" className="bg-gray-950 text-gray-300 border-t border-gray-800">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-16">
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-16">
         {/* Mobile: Premium single-column stacked layout (Nike/Gymshark style) */}
         <div className="md:hidden flex flex-col gap-8 pb-6 w-full max-w-full overflow-hidden">
           {/* 1. Logo + tagline - scaled down, premium, no crop */}
@@ -467,7 +467,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
 
       {/* Bottom Bar - Compact on mobile */}
       <div className="border-t border-gray-800/50 bg-black/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <button
               type="button"

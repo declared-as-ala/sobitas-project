@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\ApisController;
 use App\Http\Controllers\Api\ClientController;
 use App\Http\Controllers\Api\CommandeController;
 use App\Http\Controllers\Api\CouponController;
+use App\Http\Controllers\Api\PackController;
+use App\Http\Controllers\Api\PointsController;
 use App\Http\Controllers\Api\ProductFeedController;
 
 /*
@@ -88,6 +90,8 @@ Route::get('/searchProductBySubCategoryText/{slug}/{text}', [ApisController::cla
 Route::get('/commande/{id}', [CommandeController::class, 'details']);
 
 Route::post('/add_commande', [CommandeController::class, 'storeCommandeApi']);
+// Pack (bundle) tier quote — PUBLIC, server-computes discount from real prices
+Route::post('/pack/quote', [PackController::class, 'quote']);
 Route::post('/coupons/apply', [CouponController::class, 'apply']);
 Route::post('/coupons/remove', [CouponController::class, 'remove']);
 Route::post('/newsletter', [ApisController::class, 'newsLetter']);
@@ -109,6 +113,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/profil', [ClientController::class, 'profil']);
+    Route::get('/points/history', [PointsController::class, 'history']);
     Route::get('/client_commandes', [ClientController::class, 'client_commandes']);
     Route::post('/update_profile', [ClientController::class, 'update_profile']);
     Route::post('/detail_commande/{id}', [ClientController::class, 'detail_commande']);

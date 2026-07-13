@@ -112,6 +112,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshProfile = async () => {
     try {
+      // getProfile() maps points_balance + points_value_dt onto the User, so the whole
+      // profile (including the loyalty balance) is carried onto useAuth().user here.
       const profile = await getProfile();
       setUser(profile);
       localStorage.setItem('user', JSON.stringify(profile));

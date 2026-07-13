@@ -396,6 +396,52 @@ export interface User {
   avatar?: string;
   /** CRM client id when linked (Laravel `profil` / `update_profile`). */
   client_id?: number | null;
+  /** Loyalty points balance (integer). From GET /profil. */
+  points_balance?: number;
+  /** Monetary value of the balance in DT (balance / 20, 3 dp). From GET /profil. */
+  points_value_dt?: number;
+}
+
+/** Line item returned by POST /pack/quote (server-computed from real product prices). */
+export interface PackQuoteItem {
+  produit_id: number;
+  designation: string;
+  prix_unitaire: number;
+  quantite: number;
+  line_total: number;
+}
+
+/** Authoritative pack-discount quote from POST /pack/quote (bundle tiers on subtotal_ht). */
+export interface PackQuote {
+  subtotal: number;
+  /** 0, 5, 8 or 12 */
+  discount_percent: number;
+  /** DT, rounded to 3 decimals */
+  discount_amount: number;
+  /** subtotal - discount_amount */
+  total: number;
+  /** e.g. "-8%" or null */
+  tier_label: string | null;
+  next_tier: { threshold: number; percent: number; remaining: number } | null;
+  items: PackQuoteItem[];
+}
+
+/** A single loyalty-points ledger row from GET /points/history. */
+export interface PointsTransaction {
+  id: number;
+  type: 'earn' | 'redeem' | 'adjustment' | 'expiry';
+  points: number;
+  balance_after: number;
+  description: string;
+  commande_id: number | null;
+  created_at: string;
+}
+
+/** Loyalty-points history + balance from GET /points/history (auth). */
+export interface PointsHistory {
+  balance: number;
+  value_dt: number;
+  transactions: PointsTransaction[];
 }
 
 export interface LoginRequest {
