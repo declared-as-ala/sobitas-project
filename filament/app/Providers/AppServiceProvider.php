@@ -5,9 +5,11 @@ namespace App\Providers;
 use App\Filament\Widgets\TopCategoriesListWidget;
 use App\Filament\Widgets\TopRegionsWidget;
 use App\Models\Commande;
+use App\Models\Product;
 use App\Models\Review;
 use App\Models\User;
 use App\Observers\CommandeObserver;
+use App\Observers\ProductSeoObserver;
 use App\Observers\ReviewObserver;
 use App\Observers\UserObserver;
 use Filament\Facades\Filament;
@@ -56,5 +58,8 @@ class AppServiceProvider extends ServiceProvider
         Commande::observe(CommandeObserver::class);
         Review::observe(ReviewObserver::class);
         User::observe(UserObserver::class);
+
+        // Self-healing SEO: auto-fill empty meta title/description + image alt on every product save
+        Product::observe(ProductSeoObserver::class);
     }
 }

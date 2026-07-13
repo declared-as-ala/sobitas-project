@@ -23,7 +23,10 @@ const SITE_BRAND_NAME = 'Protéine Tunisie';
 const DEFAULT_RETURN_POLICY = {
   '@type': 'MerchantReturnPolicy',
   applicableCountry: 'TN',
-  returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnPeriod',
+  // MUST be "…FiniteReturnWindow" — "…FiniteReturnPeriod" is NOT a schema.org term. The invalid
+  // enum made Google discard the whole policy (GSC: 140 "invalid enum" + 156 "missing
+  // hasMerchantReturnPolicy" + the Merchant "products missing a return policy" notice).
+  returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
   merchantReturnDays: 7,
   returnMethod: 'https://schema.org/ReturnByMail',
   returnFees: 'https://schema.org/ReturnFeesCustomerPaying',
@@ -279,13 +282,21 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
   if (until) {
     offersPayload.priceValidUntil = until;
   }
+  // validFrom: stable date (product creation) — GSC "Missing field validFrom" on promo offers.
+  const createdAt = (product as { created_at?: unknown }).created_at;
+  const validFrom = typeof createdAt === 'string' ? createdAt.slice(0, 10) : '';
+  if (validFrom) offersPayload.validFrom = validFrom;
 
   const schema: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: product.designation_fr || 'Produit',
-    description: description || '',
-    image: dedupedImages.length > 0 ? dedupedImages : undefined,
+    // Never empty (GSC "Missing field description") — factual fallback from real product identity.
+    description:
+      description ||
+      `${product.designation_fr || 'Produit'} — complément alimentaire authentique disponible en Tunisie chez Protéine Tunisie (SOBITAS), livraison rapide partout en Tunisie.`,
+    // image is REQUIRED for Product rich results — last-resort brand banner beats an invalid item.
+    image: dedupedImages.length > 0 ? dedupedImages : [`${PRODUCTION_ORIGIN}/og-banner.jpg`],
     sku,
     productID: sku,
     brand: (product.schema?.brand || product.brand?.designation_fr)
@@ -327,10 +338,32 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
  * Normalize backend JSON-LD to production-safe values.
  * Prevents domain and branding leakage from legacy payloads before rendering.
  */
+
+/**
+ * Deep-clone `value` while removing every rating/review/return-policy node at ANY depth.
+ * The old shallow `...source` spread only deleted TOP-LEVEL aggregateRating/review, so a backend
+ * blob nesting them (plural `reviews`, `@graph`, `mainEntity`, review items carrying their own
+ * aggregateRating…) leaked a SECOND rating next to our re-derived one — Google's CRITICAL
+ * "Review has multiple aggregate ratings". Clean root values are re-added after sanitising.
+ */
+function deepStripRatingNodes(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(deepStripRatingNodes);
+  if (value === null || typeof value !== 'object') return value;
+  const out: Record<string, unknown> = {};
+  for (const [key, v] of Object.entries(value as Record<string, unknown>)) {
+    if (key === 'aggregateRating' || key === 'review' || key === 'reviews' || key === 'hasMerchantReturnPolicy') continue;
+    out[key] = deepStripRatingNodes(v);
+  }
+  return out;
+}
+
 export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, canonicalUrl: string): object | null {
   if (!raw || typeof raw !== 'object') return null;
 
-  const source = raw as Record<string, unknown>;
+  // Scrub rating/review/policy nodes at all depths BEFORE anything reads/spreads the blob, and
+  // drop a root @graph outright — a sanitized Product must be one entity, never a second graph.
+  const source = deepStripRatingNodes(raw) as Record<string, unknown>;
+  delete source['@graph'];
   const canonical = normalizeProductionUrl(canonicalUrl, `/shop/${product.slug || product.id}`);
   const normalizedImages = normalizeJsonLdImages(source.image ?? product.schema?.image ?? product.seo?.image ?? product.cover);
   const sku = (product.schema?.sku || product.sku || product.code_product || product.id)?.toString();
@@ -377,6 +410,9 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
   const sanitizeUntil = sanitizeUntilRaw != null && String(sanitizeUntilRaw).trim() !== ''
     ? String(sanitizeUntilRaw).trim().slice(0, 10) : '';
   if (sanitizeUntil) offers.priceValidUntil = sanitizeUntil;
+  const sanitizeCreatedAt = (product as { created_at?: unknown }).created_at;
+  const sanitizeValidFrom = typeof sanitizeCreatedAt === 'string' ? sanitizeCreatedAt.slice(0, 10) : '';
+  if (sanitizeValidFrom) offers.validFrom = sanitizeValidFrom;
 
   const sanitized: Record<string, unknown> = {
     ...source,
@@ -393,12 +429,16 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
       '@id': `${PRODUCTION_ORIGIN}/${encodeURIComponent(brandName.toLowerCase().replace(/\s+/g, '-'))}`,
       name: brandName,
     },
-    image: normalizedImages.length > 0 ? normalizedImages : undefined,
+    // image is REQUIRED for Product rich results — last-resort brand banner beats an invalid item.
+    image: normalizedImages.length > 0 ? normalizedImages : [`${PRODUCTION_ORIGIN}/og-banner.jpg`],
     description:
       stripHtml(
         product.seo?.description || product.meta_description || product.meta_description_fr || product.description_cover || product.description_fr || '',
         500
-      ) || source.description,
+      ) ||
+      (typeof source.description === 'string' && source.description.trim() ? source.description : '') ||
+      // Factual fallback so "Missing field description" can't occur (never an empty string).
+      `${product.designation_fr || 'Produit'} — complément alimentaire authentique disponible en Tunisie chez Protéine Tunisie (SOBITAS), livraison rapide partout en Tunisie.`,
     offers,
   };
 
