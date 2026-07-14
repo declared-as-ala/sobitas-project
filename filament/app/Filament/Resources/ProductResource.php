@@ -217,6 +217,10 @@ class ProductResource extends Resource
                                                     $set('qte', 1);
                                                 }
                                             }),
+                                        Forms\Components\Toggle::make('force_out_of_stock')
+                                            ->label('Forcer la rupture (indisponible)')
+                                            ->helperText("Rend le produit indisponible même si la quantité > 0. N'est PAS réinitialisé lors d'un enregistrement ou d'un import.")
+                                            ->inline(false),
                                     ]),
                                 ]),
                         ]),

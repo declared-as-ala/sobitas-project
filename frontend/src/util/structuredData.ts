@@ -38,6 +38,16 @@ const SHIPPING_DESTINATION = { '@type': 'DefinedRegion', addressCountry: 'TN' } 
 
 export type BreadcrumbItem = { name: string; url: string };
 
+/**
+ * Normalize a schema.org display name/title: trim and collapse internal whitespace runs.
+ * Backend `designation_fr` frequently carries trailing spaces (e.g. "ALL IN ISOLATE - 2.04KG
+ * BIG RAMY ") and doubled spaces, which then leak verbatim into the Product rich-result title.
+ */
+function cleanSchemaName(value: unknown, fallback: string = 'Produit'): string {
+  const s = typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : '';
+  return s || fallback;
+}
+
 /** Strip HTML tags for plain-text description (max length). */
 function stripHtml(html: string, maxLen: number = 500): string {
   if (!html) return '';
@@ -290,7 +300,7 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
   const schema: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'Product',
-    name: product.designation_fr || 'Produit',
+    name: cleanSchemaName(product.designation_fr),
     // Never empty (GSC "Missing field description") — factual fallback from real product identity.
     description:
       description ||
@@ -419,7 +429,7 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
     '@context': 'https://schema.org',
     '@type': 'Product',
     '@id': `${canonical}#product`,
-    name: product.designation_fr || source.name || 'Produit',
+    name: cleanSchemaName(product.designation_fr, cleanSchemaName(source.name)),
     url: canonical,
     mainEntityOfPage: canonical,
     sku,

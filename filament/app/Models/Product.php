@@ -15,7 +15,7 @@ class Product extends Model
     protected $fillable = [
         'designation_fr', 'slug', 'description_fr', 'faq', 'nutrition_values', 'nutrition_images', 'cover', 'alt_cover', 'description_cover',
         'images', 'prix', 'prix_ht', 'promo', 'promo_ht', 'promo_expiration_date',
-        'qte', 'low_stock_threshold', 'publier', 'rupture', 'new_product', 'best_seller', 'pack', 'note',
+        'qte', 'low_stock_threshold', 'publier', 'rupture', 'force_out_of_stock', 'new_product', 'best_seller', 'pack', 'note',
         'meta_title', 'meta_description', 'seo_schema_description', 'seo_review', 'seo_aggregate_rating',
         'seo_title', 'seo_description', 'seo_excerpt', 'seo_canonical_url', 'seo_robots_index', 'seo_robots_follow',
         'sku', 'gtin', 'mpn', 'item_condition', 'availability_override', 'price_valid_until', 'seo_image_alt',
@@ -45,6 +45,7 @@ class Product extends Model
         'low_stock_threshold' => 'integer',
         'publier' => 'boolean',
         'rupture' => 'boolean',
+        'force_out_of_stock' => 'boolean',
         'new_product' => 'boolean',
         'best_seller' => 'boolean',
         'pack' => 'boolean',
@@ -65,15 +66,20 @@ class Product extends Model
         static::saving(function (Product $product): void {
             $qte = (int) $product->qte;
             if ($qte < 0) {
-                $product->qte = 0;
                 $qte = 0;
             }
+            $product->qte = $qte;
 
-            $qte = (int) $product->qte;
-            if ($qte > 0) {
+            // A manual "hard" out-of-stock (force_out_of_stock) always wins: it lets
+            // the owner keep a product unavailable even with quantity > 0, and it
+            // SURVIVES bulk re-saves (imports / enrichment commands) that would
+            // otherwise reset rupture to in-stock. Column may be absent on older DBs
+            // (null → falsy) → behaviour is unchanged until the migration adds it.
+            if ($product->force_out_of_stock) {
+                $product->rupture = true;
+            } elseif ($qte > 0) {
                 $product->rupture = false;
             } else {
-                $product->qte = 0;
                 $product->rupture = true;
             }
         });

@@ -181,6 +181,12 @@ class CommandeController extends Controller
                 }
             }
 
+            // Keep the derived rupture flag consistent with stock: decrement() above
+            // bypasses the Product saving hook, so a product that just hit 0 would keep
+            // rupture=false ("en stock") until re-saved. Sync it now so admin + storefront
+            // + JSON-LD agree. force_out_of_stock products are already rupture=true.
+            Product::whereIn('id', $productIds)->where('qte', '<=', 0)->update(['rupture' => true]);
+
             // Add order items with server-side prices only (CRIT-03)
             $all_price_ht = 0;
             foreach ($request->panier as $panier) {
