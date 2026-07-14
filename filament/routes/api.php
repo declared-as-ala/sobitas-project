@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\CouponController;
 use App\Http\Controllers\Api\PackController;
 use App\Http\Controllers\Api\PointsController;
 use App\Http\Controllers\Api\ProductFeedController;
+use App\Http\Controllers\Api\ReviewController;
 
 /*
 |--------------------------------------------------------------------------
@@ -119,3 +120,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/detail_commande/{id}', [ClientController::class, 'detail_commande']);
     Route::post('/add_review', [ApisController::class, 'add_review']);
 });
+
+// ── Tokenized "verified purchase" review flow (PUBLIC — no login) ──────────────
+// The order_token in the emailed link proves the purchase, so COD guests (who have
+// no account) can still review. Powers the /avis/{token} page + review-request email.
+Route::get('/reviews/order/{token}', [ReviewController::class, 'orderForReview']);
+Route::post('/reviews/by-order', [ReviewController::class, 'storeByToken']);
