@@ -28,7 +28,12 @@ import { buildProductAlt } from '@/util/productAlt';
 import type { Product } from '@/types';
 
 function formatTnd(n: number): string {
-  return `${(Math.round(n * 1000) / 1000).toString().replace(/\.?0+$/, '')} DT`;
+  const s = (Math.round(n * 1000) / 1000).toString();
+  // Trim trailing zeros ONLY in the fractional part. The old /\.?0+$/ also ate the
+  // trailing zero of whole numbers (180 -> "18", 300 -> "3"), showing wrong prices
+  // to crawlers on every round-numbered product.
+  const clean = s.includes('.') ? s.replace(/0+$/, '').replace(/\.$/, '') : s;
+  return `${clean} DT`;
 }
 
 function reviewRating(r: { stars?: number; note?: number }): number {

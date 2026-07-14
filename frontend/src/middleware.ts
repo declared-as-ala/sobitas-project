@@ -88,6 +88,67 @@ export async function middleware(request: NextRequest) {
     return new NextResponse('Gone', { status: 410, headers: { 'Cache-Control': 'no-store' } });
   }
 
+  // ── WordPress/WooCommerce-era dead URL classes → hard 410 (Gone) ─────────────
+  // The store migrated off WordPress; these URL classes never exist on this Next app but
+  // linger in Google's index — and several /wp-*.php paths currently return HTTP 500 (worst
+  // case for crawl signals). 410 tells crawlers to drop them permanently. Each pattern was
+  // probed against the LIVE taxonomy and matches ONLY dead URLs, never a real route:
+  //   • /wp-*            wp-login.php, wp-admin, wp-json, wp-content, wp-includes, wp-cron.php…
+  //   • /feed, /comments/feed   RSS/Atom feeds (no feeds on this app)
+  //   • /trackback       WordPress pingback endpoint
+  //   • /tag/*, /author/*, /attachment/*   WP taxonomy / author / attachment archives
+  //   • /YYYY[/MM[/DD]]  WP date archives (e.g. /2023, /2023/01, /2023/01/15)
+  // Runs BEFORE the crawler rewrite so bots get 410 instead of a "product not found" 404.
+  // (/product-tag/* and /xmlrpc.php are already folded to /shop and / by next.config redirects.js.)
+  const isWordPressDeadPath =
+    pathname.startsWith('/wp-') ||
+    pathname === '/feed' ||
+    pathname === '/comments/feed' ||
+    pathname === '/trackback' ||
+    /^\/(tag|author|attachment)\/[^/]+\/?$/.test(pathname) ||
+    // Require at least a month segment (/YYYY/MM[/DD]) so a bare single-segment
+    // /YYYY can never collide with a numeric category/brand slug.
+    /^\/(19|20)\d{2}(?:\/\d{1,2}){1,2}\/?$/.test(pathname);
+  if (isWordPressDeadPath) {
+    return new NextResponse('Gone', { status: 410, headers: { 'Cache-Control': 'no-store' } });
+  }
+
+  // WordPress query-string artifacts on the homepage. Today they all render the homepage with
+  // HTTP 200 (?p=123, ?author=1, ?s=whey, ?m=202301, ?page_id=2, ?product_cat=…), so Google sees
+  // an unbounded set of duplicate-of-home URLs. Consolidate them. Only WP-specific param names
+  // trigger this and only on "/", so real app/tracking params (category, brand, page, search,
+  // utm_*, gclid, fbclid, __crawler…) pass through untouched.
+  if (pathname === '/') {
+    if (searchParams.has('feed')) {
+      // ?feed=rss2 etc. — feeds are gone.
+      return new NextResponse('Gone', { status: 410, headers: { 'Cache-Control': 'no-store' } });
+    }
+    if (searchParams.has('s')) {
+      // Legacy WordPress search → the real search listing, preserving the query.
+      const term = searchParams.get('s') || '';
+      const searchUrl = new URL('/shop', request.url);
+      if (term) searchUrl.searchParams.set('search', term);
+      return NextResponse.redirect(searchUrl, 301);
+    }
+    const WP_HOME_PARAMS = ['p', 'page_id', 'author', 'm', 'cat', 'product_cat', 'attachment_id', 'paged'];
+    if (WP_HOME_PARAMS.some((k) => searchParams.has(k))) {
+      // Strip the legacy param → canonical homepage (no redirect loop: "/" has none of these).
+      return NextResponse.redirect(new URL('/', request.url), 301);
+    }
+  }
+
+  // Legacy WordPress archive pagination: /{segment}/page/{n} (e.g. /shop/page/2, /proteines/page/2).
+  // These 3-segment paths have no route here — /shop/page/2 currently serves a soft meta-refresh to
+  // the homepage (HTTP 200, a duplicate). 301 to the clean base path with ?page so the pagination
+  // folds onto the real listing. No real route has "page" as a middle segment, so this only matches
+  // dead WP pagination URLs.
+  const wpPaging = pathname.match(/^\/([^/]+)\/page\/(\d+)\/?$/);
+  if (wpPaging?.[1]) {
+    const pagedUrl = new URL(`/${wpPaging[1]}`, request.url);
+    if (Number(wpPaging[2]) > 1) pagedUrl.searchParams.set('page', wpPaging[2]);
+    return NextResponse.redirect(pagedUrl, 301);
+  }
+
   // /shop/:slug → resolve to /{subcat}/{slug} with real HTTP 301
   // This fires before the page renders, eliminating the __next-page-redirect meta-refresh tag.
   const shopSlug = pathname.match(/^\/shop\/([^/]+)\/?$/);
