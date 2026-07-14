@@ -1084,6 +1084,37 @@ export const getPointsHistory = async (): Promise<PointsHistory> => {
   return response.data;
 };
 
+// ── Tokenized "verified purchase" review flow (PUBLIC — no login) ──────────────
+export interface ReviewProduct {
+  product_id: number;
+  slug: string;
+  designation: string;
+  cover?: string | null;
+  reviewed: boolean;
+}
+export interface OrderForReview {
+  numero: string;
+  prenom: string;
+  products: ReviewProduct[];
+}
+
+/** Fetch the products of an order (by its order_token) so the customer can review them without logging in. */
+export const getOrderForReview = async (token: string): Promise<OrderForReview> => {
+  const response = await api.get<OrderForReview>(`/reviews/order/${encodeURIComponent(token)}`);
+  return response.data;
+};
+
+/** Submit a verified-purchase review via the order token (no auth required). */
+export const submitReviewByToken = async (payload: {
+  order_token: string;
+  product_id: number;
+  stars: number;
+  comment: string;
+}): Promise<{ message: string; published: boolean; id: number }> => {
+  const response = await api.post('/reviews/by-order', payload);
+  return response.data;
+};
+
 export const updateProfile = async (data: Partial<User> & { password?: string }): Promise<User> => {
   const response = await api.post<User>('/update_profile', data);
   return response.data;

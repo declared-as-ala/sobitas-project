@@ -4,6 +4,7 @@ namespace App\Observers;
 
 use App\Filament\Resources\CommandeResource;
 use App\Jobs\SendSmsJob;
+use App\Mail\ReviewRequestMail;
 use App\Models\Commande;
 use App\Models\Message;
 use App\Models\User;
@@ -11,6 +12,8 @@ use App\Services\PointsService;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 
 class CommandeObserver
 {
@@ -59,6 +62,16 @@ class CommandeObserver
             Log::error('Loyalty status sync failed', [
                 'commande_id' => $commande->id,
                 'etat'        => $commande->etat,
+                'error'       => $e->getMessage(),
+            ]);
+        }
+
+        // Post-delivery review-request email (once per order, best-effort).
+        try {
+            $this->sendReviewRequestIfDelivered($commande);
+        } catch (\Throwable $e) {
+            Log::error('Review request email failed', [
+                'commande_id' => $commande->id,
                 'error'       => $e->getMessage(),
             ]);
         }
@@ -113,5 +126,37 @@ class CommandeObserver
             'commande_id' => $commande->id,
             'etat'        => $commande->etat,
         ]);
+    }
+
+    /**
+     * Send the post-delivery "leave a review" email exactly once, when an order
+     * reaches a delivered status. Guarded by config kill-switch + a
+     * review_request_sent_at marker + a valid customer email + an order_token.
+     * Synchronous send (mirrors the order-confirmation email) so it is delivered
+     * regardless of queue-worker state; the caller wraps this best-effort.
+     */
+    private function sendReviewRequestIfDelivered(Commande $commande): void
+    {
+        if (! in_array($commande->etat, PointsService::DELIVERED_STATUSES, true)) {
+            return;
+        }
+        if (! (bool) config('reviews.request_emails_enabled', true)) {
+            return;
+        }
+        if (! Schema::hasColumn('commandes', 'review_request_sent_at') || $commande->review_request_sent_at) {
+            return; // send at most once per order
+        }
+        if (empty($commande->order_token)) {
+            return; // no token -> cannot build a no-login review link
+        }
+        $email = $commande->livraison_email ?? $commande->email;
+        if (empty($email) || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return;
+        }
+
+        Mail::to($email)->send(new ReviewRequestMail($commande));
+
+        // saveQuietly so this write does not re-fire observer events.
+        $commande->forceFill(['review_request_sent_at' => now()])->saveQuietly();
     }
 }
