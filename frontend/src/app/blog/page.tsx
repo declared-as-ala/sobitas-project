@@ -4,6 +4,7 @@ import { getAllArticles, getBlogCategories, getBlogTags } from '@/services/api';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
 import { buildCollectionPageSchema, buildItemListSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
 import { decodeHtmlEntities } from '@/util/htmlEntities';
+import { loadForCache } from '@/util/loadForCache';
 import { BlogPageClient } from './BlogPageClient';
 import { BlogListSkeleton } from './BlogListSkeleton';
 
@@ -83,25 +84,35 @@ function getBlogPrevNext(path: string, search: string, page: number, totalPages:
   return { prev, next };
 }
 
-// dynamic = 'force-dynamic': page is rendered on every request (no Full Route Cache).
-// Individual fetch() calls use next:{tags:['blog']} → cached in Data Cache until
-// the admin triggers revalidateTag('blog') via POST /api/revalidate-blog.
-export const dynamic = 'force-dynamic';
+// ISR: the /blog index is cached in the Full Route Cache and re-rendered at most every
+// 5 min (was force-dynamic → a fresh RSC render + 100-article fetch on EVERY request, plus
+// a full client-side corpus re-download on mount). The article fetch uses next:{tags:['blog']}
+// so an admin edit still propagates instantly via revalidateTag('blog') (POST /api/revalidate-blog).
+export const revalidate = 300;
 
 async function getBlogData() {
-  try {
-    // Fetch the real taxonomy alongside the articles so the /blog index can render crawlable
-    // /blog/category & /blog/tag links (the article LIST payload omits categories/tags).
-    const [articles, blogCategories, blogTags] = await Promise.all([
-      getAllArticles(),
-      getBlogCategories().catch(() => []),
-      getBlogTags().catch(() => []),
-    ]);
-    return { articles, blogCategories, blogTags };
-  } catch (error) {
-    console.error('Error fetching blog data:', error);
-    return { articles: [], blogCategories: [], blogTags: [] };
-  }
+  // Articles are the PRIMARY content: getAllArticles() throws on a bad response. Wrapping in
+  // loadForCache means a transient failure (e.g. the build runner getting Cloudflare-403'd)
+  // renders empty but is NOT baked into the ISR cache — the route re-renders next request
+  // (runtime reaches the API) instead of serving an empty blog for the whole revalidate window.
+  // Taxonomy is incidental and fails soft without poisoning the cache.
+  return loadForCache(
+    async () => {
+      // Fetch the real taxonomy alongside the articles so the /blog index can render crawlable
+      // /blog/category & /blog/tag links (the article LIST payload omits categories/tags).
+      const [articles, blogCategories, blogTags] = await Promise.all([
+        getAllArticles(),
+        getBlogCategories().catch(() => []),
+        getBlogTags().catch(() => []),
+      ]);
+      return { articles, blogCategories, blogTags };
+    },
+    { articles: [], blogCategories: [], blogTags: [] } as {
+      articles: Awaited<ReturnType<typeof getAllArticles>>;
+      blogCategories: Awaited<ReturnType<typeof getBlogCategories>>;
+      blogTags: Awaited<ReturnType<typeof getBlogTags>>;
+    }
+  );
 }
 
 export default async function BlogPage() {
