@@ -23,6 +23,12 @@ export function FavorisPageClient() {
     cover: p.cover,
     prix: p.prix ?? 0,
     promo: p.promo ?? undefined,
+    // Carry the persisted promo expiry + stock so ProductCard behaves exactly as elsewhere:
+    // without promo_expiration_date, isPromoActive treats an EXPIRED promo as active and shows the
+    // promo price while checkout charges the real prix (a show-low/charge-full discrepancy);
+    // without qte, getStockDisponible falls back to 1 and caps every favorite at a single unit.
+    promo_expiration_date: p.promo_expiration_date ?? undefined,
+    qte: p.qte,
     rupture: p.rupture,
     publier: 1,
   })) as Product[];
