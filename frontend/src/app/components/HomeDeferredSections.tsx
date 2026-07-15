@@ -1,68 +1,27 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
-import type { Article } from '@/types';
+import type { Article, Brand } from '@/types';
+import { PromoBanner } from '@/app/components/PromoBanner';
+import { BlogSection } from '@/app/components/BlogSection';
+import { BrandsSection } from '@/app/components/BrandsSection';
 
-const PromoBanner = dynamic(
-  () => import('@/app/components/PromoBanner').then((mod) => ({ default: mod.PromoBanner })),
-  { ssr: false, loading: () => null }
-);
-
-const BlogSection = dynamic(
-  () => import('@/app/components/BlogSection').then((mod) => ({ default: mod.BlogSection })),
-  { ssr: false, loading: () => null }
-);
-
-const BrandsSection = dynamic(
-  () => import('@/app/components/BrandsSection').then((mod) => ({ default: mod.BrandsSection })),
-  { ssr: false, loading: () => null }
-);
-
+// PromoBanner, BlogSection and BrandsSection are now SERVER-RENDERED (static import) — they were
+// dynamic(ssr:false) + gated behind requestIdleCallback, so they were absent from the served HTML
+// (invisible to Google) and popped in ~1.2s after load, shifting the SEO block + footer down.
+// PromoBanner is a zero-JS server component; Blog/Brands ship their data as props, so SSR is a
+// straight LCP/SEO/CLS win. Only ScrollToTop (a floating button, no SEO value) stays client-only.
 const ScrollToTop = dynamic(
   () => import('@/app/components/ScrollToTop').then((mod) => ({ default: mod.ScrollToTop })),
   { ssr: false, loading: () => null }
 );
 
-function useIdleReady(timeout = 1200) {
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    const show = () => {
-      if (!cancelled) setReady(true);
-    };
-
-    if (typeof requestIdleCallback !== 'undefined') {
-      const id = requestIdleCallback(show, { timeout });
-      return () => {
-        cancelled = true;
-        cancelIdleCallback(id);
-      };
-    }
-
-    const id = window.setTimeout(show, Math.min(timeout, 400));
-    return () => {
-      cancelled = true;
-      window.clearTimeout(id);
-    };
-  }, [timeout]);
-
-  return ready;
-}
-
-export function HomeDeferredSections({ articles }: { articles: Article[] }) {
-  const ready = useIdleReady();
-
+export function HomeDeferredSections({ articles, brands }: { articles: Article[]; brands?: Brand[] }) {
   return (
     <>
-      {ready ? (
-        <>
-          <PromoBanner />
-          <BlogSection articles={articles} />
-          <BrandsSection />
-        </>
-      ) : null}
+      <PromoBanner />
+      <BlogSection articles={articles} />
+      <BrandsSection brands={brands} />
       <ScrollToTop />
     </>
   );
