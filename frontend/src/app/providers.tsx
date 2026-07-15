@@ -11,14 +11,16 @@ const ProviderTree = dynamic(
 
 type ProvidersProps = {
   children: ReactNode;
-  /** Server-fetched header nav + categories (root layout) — see services/siteChrome.server.ts */
+  /** Server-fetched header nav + categories + footer chrome (root layout) — see services/siteChrome.server.ts */
   navigation: SiteChromeValue['navigation'];
   navCategories: SiteChromeValue['categories'];
+  cmsPages: SiteChromeValue['cmsPages'];
+  coordinates: SiteChromeValue['coordinates'];
 };
 
-export function Providers({ children, navigation, navCategories }: ProvidersProps) {
+export function Providers({ children, navigation, navCategories, cmsPages, coordinates }: ProvidersProps) {
   return (
-    <ProviderTree navigation={navigation} navCategories={navCategories}>
+    <ProviderTree navigation={navigation} navCategories={navCategories} cmsPages={cmsPages} coordinates={coordinates}>
       {children}
     </ProviderTree>
   );
