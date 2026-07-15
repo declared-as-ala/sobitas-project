@@ -53,7 +53,11 @@ export function hasValidPromo(product: ProductLike): boolean {
 /** Effective unit price: promo if active, else prix/price. Used for display and cart/checkout. */
 export function getEffectivePrice(product: ProductLike): number {
   if (isPromoActive(product)) return Number(product.promo);
-  return (product as any).price ?? (product as any).prix ?? 0;
+  // Prefer the LIVE `prix` over the ad-hoc snapshot `price` (which cart/card code freezes at
+  // add-to-cart time). When a promo expires while the item sits in the cart, the frozen `price`
+  // still held the old promo amount — so the cart showed e.g. 149 DT while the backend charged
+  // the real 180 DT. `prix` first makes display match the invoice (matches getPriceDisplay/isPromoActive).
+  return (product as any).prix ?? (product as any).price ?? 0;
 }
 
 export type PriceDisplay = {

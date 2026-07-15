@@ -1,4 +1,6 @@
 import type { Product } from '@/types';
+import { getEffectivePrice } from '@/util/productPrice';
+import { isInStock } from '@/util/cartStock';
 
 /**
  * SEO fallback content for products that have no `description_fr` / `description_cover`.
@@ -23,8 +25,12 @@ export function generateProductFallbackDescription(product: Product): string {
   const flavours = (product.aromes ?? [])
     .map((a) => a?.designation_fr?.trim())
     .filter((v): v is string => Boolean(v));
-  const price = Number(product.promo && product.promo > 0 ? product.promo : product.prix);
-  const inStock = !(product.rupture === 1 || product.rupture === true || product.qte === 0);
+  // Use the shared utils so the indexable SEO text can't contradict the visible price/stock badge:
+  // getEffectivePrice honours promo_expiration_date + the promo<prix guard (the old inline check
+  // ignored expiry → baked an expired promo price into the body); isInStock handles boolean/'1'
+  // rupture and qte<=0 consistently with the badge.
+  const price = getEffectivePrice(product as never);
+  const inStock = isInStock(product as never);
 
   const sentences: string[] = [];
 

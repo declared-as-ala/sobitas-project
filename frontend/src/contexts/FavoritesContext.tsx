@@ -11,6 +11,10 @@ export interface FavoriteProduct {
   cover?: string;
   prix?: number;
   promo?: number | null;
+  // Persisted so /favoris can tell an EXPIRED promo from an active one (without it, a promo with
+  // no expiry reads as permanently active) and can gate add-to-cart on real stock.
+  promo_expiration_date?: string | null;
+  qte?: number;
   rupture?: number | boolean;
 }
 
@@ -72,7 +76,7 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
   const addFavorite = useCallback((product: FavoriteProduct) => {
     setFavoriteProducts((prev) => {
       if (prev.some((p) => p.id === product.id)) return prev;
-      const next = [...prev, { id: product.id, designation_fr: product.designation_fr, slug: product.slug, cover: product.cover, prix: product.prix, promo: product.promo, rupture: product.rupture }];
+      const next = [...prev, { id: product.id, designation_fr: product.designation_fr, slug: product.slug, cover: product.cover, prix: product.prix, promo: product.promo, promo_expiration_date: product.promo_expiration_date, qte: product.qte, rupture: product.rupture }];
       saveToStorage(next);
       return next;
     });

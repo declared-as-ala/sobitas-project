@@ -46,7 +46,7 @@ interface ProductCardProps {
   priority?: boolean;
 }
 
-function toFavoriteProduct(product: Product): { id: number; designation_fr: string; slug?: string; cover?: string; prix?: number; promo?: number | null; rupture?: number } {
+function toFavoriteProduct(product: Product): { id: number; designation_fr: string; slug?: string; cover?: string; prix?: number; promo?: number | null; promo_expiration_date?: string | null; qte?: number; rupture?: number } {
   const p = product as any;
   return {
     id: product.id,
@@ -55,6 +55,9 @@ function toFavoriteProduct(product: Product): { id: number; designation_fr: stri
     cover: product.cover,
     prix: p.prix ?? p.price ?? product.prix,
     promo: p.promo ?? undefined,
+    // Carry expiry + quantity so /favoris shows the correct promo state and real stock (see FavoriteProduct).
+    promo_expiration_date: p.promo_expiration_date ?? undefined,
+    qte: p.qte,
     rupture: p.rupture,
   };
 }
