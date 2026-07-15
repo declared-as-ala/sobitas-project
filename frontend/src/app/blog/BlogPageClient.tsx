@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Header } from '@/app/components/Header';
@@ -9,7 +9,7 @@ import { ChevronLeft, ChevronRight, FolderOpen, Tag } from 'lucide-react';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { PageHeader } from '@/app/components/PageHeader';
 import type { Article } from '@/types';
-import { getAllArticlesClient, type BlogTaxonomyItem } from '@/services/api';
+import { type BlogTaxonomyItem } from '@/services/api';
 import { BlogCard } from './BlogCard';
 
 interface BlogPageClientProps {
@@ -162,66 +162,27 @@ export function BlogPageClient({ articles, blogCategories, blogTags }: BlogPageC
   const [activeCategory, setActiveCategory] = useState('all');
   const [mounted, setMounted] = useState(false);
   const isUserAction = useRef(false);
-  // Timestamp of the last successful client re-fetch — used to skip redundant
-  // refetches on tab-refocus (only refresh if the data is older than STALE_MS).
-  const lastFetchRef = useRef(0);
 
-  // ─── Client-side re-fetch: ensures data is ALWAYS fresh ───
-  // The server component provides `articles` for the initial SSR/SEO render.
-  // On mount (client-side), we re-fetch from the API to guarantee freshness,
-  // which fixes the "deleted article reappears after F5" bug caused by
-  // Next.js server-side caching layers (Full Route Cache, Data Cache, CDN).
-  const [liveArticles, setLiveArticles] = useState<Article[]>(articles);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  // Articles come straight from the ISR server render (revalidate=300, fetch tag 'blog').
+  // We no longer re-download the whole 100-article corpus (full HTML bodies) client-side on
+  // every mount — that was a large per-visit payload with no SEO value. Freshness after an
+  // admin edit is handled server-side via revalidateTag('blog') (POST /api/revalidate-blog).
 
-  const refreshArticles = useCallback(async () => {
-    try {
-      setIsRefreshing(true);
-      const fresh = await getAllArticlesClient();
-      setLiveArticles(fresh);
-      lastFetchRef.current = Date.now();
-    } catch {
-      // Silently fall back to server-provided data
-      console.warn('[Blog] Client-side re-fetch failed, using server data');
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, []);
-
-  // Re-fetch on mount (client-side)
+  // On mount: mark hydrated and adopt the page number from the URL.
   useEffect(() => {
     setMounted(true);
-
-    // Read page from URL on initial mount
     const pageParam = searchParams.get('page');
     const urlPage = pageParam ? parseInt(pageParam, 10) : 1;
     if (!isNaN(urlPage) && urlPage >= 1) {
       setCurrentPage(urlPage);
     }
-
-    // Fetch fresh data from API (bypasses all server-side caching)
-    refreshArticles();
-
-    // Also re-fetch when user returns to this tab (handles admin edits in another
-    // tab), but only if the data is stale — avoids re-downloading the whole corpus
-    // on every focus/blur.
-    const STALE_MS = 60_000;
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && Date.now() - lastFetchRef.current > STALE_MS) {
-        refreshArticles();
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Crawlable taxonomy links (SEO) ───
   // Derive real /blog/category & /blog/tag links from the articles' own taxonomy so those
   // pages (previously orphaned → "crawled, currently not indexed") get inbound links in the
-  // SSR DOM. Sourced from the server-provided `articles` prop (not `liveArticles`) so the
-  // <a href> are present on first paint, before any client re-fetch.
+  // SSR DOM. Sourced from the server-provided `articles` prop so the <a href> are present
+  // on first paint.
   const blogCategoryLinks = useMemo(() => {
     // Prefer the dedicated /blog_categories payload (complete); fall back to the taxonomy embedded
     // in the articles (empty when the list API omits it).
@@ -258,8 +219,8 @@ export function BlogPageClient({ articles, blogCategories, blogTags }: BlogPageC
 
   // Filter by category (keyword-based)
   const filteredArticles = useMemo(() => {
-    return liveArticles.filter(a => articleMatchesCategory(a, activeCategory));
-  }, [liveArticles, activeCategory]);
+    return articles.filter(a => articleMatchesCategory(a, activeCategory));
+  }, [articles, activeCategory]);
 
   // Sort by date (latest first)
   const sortedArticles = useMemo(() => {
@@ -412,7 +373,7 @@ export function BlogPageClient({ articles, blogCategories, blogTags }: BlogPageC
           </PageHeader>
         </div>
 
-        {sortedArticles.length === 0 && !isRefreshing ? (
+        {sortedArticles.length === 0 ? (
           <div className="text-center py-16">
             <p className="text-gray-500 dark:text-gray-400">Aucun article dans cette catégorie.</p>
           </div>
