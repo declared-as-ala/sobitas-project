@@ -11,7 +11,7 @@ const VentesFlashSection = dynamic(() => import('@/app/components/VentesFlashSec
 const ProductSection = dynamic(() => import('@/app/components/ProductSection').then(m => ({ default: m.ProductSection })), { ssr: true });
 const HomeDeferredSections = dynamic(() => import('@/app/components/HomeDeferredSections').then(m => ({ default: m.HomeDeferredSections })), { ssr: true });
 
-import type { AccueilData, Product } from '@/types';
+import type { AccueilData, Brand, Product } from '@/types';
 import { getStorageUrl } from '@/services/api';
 import type { HeroFirstSlide } from '@/app/page';
 
@@ -20,6 +20,8 @@ interface HomePageClientProps {
   slides: any[];
   heroMobileFirst?: HeroFirstSlide;
   heroDesktopFirst?: HeroFirstSlide;
+  /** Server-fetched brands for the (now SSR) brands wall. */
+  brands?: Brand[];
 }
 
 /** High-intent category URLs — reinforces internal linking for rankings (créatine, whey, etc.). */
@@ -78,7 +80,7 @@ function transformProduct(product: Product) {
   };
 }
 
-export function HomePageClient({ accueil, slides, heroMobileFirst, heroDesktopFirst }: HomePageClientProps) {
+export function HomePageClient({ accueil, slides, heroMobileFirst, heroDesktopFirst, brands }: HomePageClientProps) {
   // Provide default empty structure if accueil is undefined/null
   const safeAccueil: AccueilData = accueil || {
     categories: [],
@@ -177,7 +179,7 @@ export function HomePageClient({ accueil, slides, heroMobileFirst, heroDesktopFi
         )}
 
         {/* Below the fold - idle-loaded client islands */}
-        <HomeDeferredSections articles={safeAccueil.last_articles || []} />
+        <HomeDeferredSections articles={safeAccueil.last_articles || []} brands={brands} />
 
         {/* SEO text block – visible, crawlable content near bottom of homepage */}
         <section

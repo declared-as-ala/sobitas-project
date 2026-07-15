@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { unstable_noStore as noStore } from 'next/cache';
-import { getAccueil, getCategories, getBestSellers, getNewProducts } from '@/services/api';
+import { getAccueil, getCategories, getBestSellers, getNewProducts, getAllBrands } from '@/services/api';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
 import { buildWebPageSchema, buildItemListSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
 import { buildProductUrlPath } from '@/util/productUrl';
@@ -185,7 +185,12 @@ export interface HeroFirstSlide {
 }
 
 export default async function Home() {
-  const { accueil, slides } = await getHomeData();
+  // Fetch brands alongside the home payload so the (now SSR) brands wall renders in the HTML.
+  // Incidental: a failure just falls back to BrandsSection's client fetch (no cache poisoning).
+  const [{ accueil, slides }, brands] = await Promise.all([
+    getHomeData(),
+    getAllBrands().catch(() => [] as Awaited<ReturnType<typeof getAllBrands>>),
+  ]);
 
   // Pre-compute first slide for mobile and desktop at server time.
   // These are passed as stable props so HeroSlider can render the first frame
@@ -236,6 +241,7 @@ export default async function Home() {
       <HomePageClient
         accueil={accueil}
         slides={slides}
+        brands={brands}
         heroMobileFirst={mobileFirst ?? undefined}
         heroDesktopFirst={desktopFirst ?? undefined}
       />
