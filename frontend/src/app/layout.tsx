@@ -129,6 +129,11 @@ export default async function RootLayout({
 }>) {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
   const { buildOrganizationSchema, buildLocalBusinessSchema, buildWebSiteSchema, buildSiteNavigationSchema, parseStoreRating } = await import('@/util/structuredData');
+  // Server-fetch the header nav + categories mega-menu ONCE (Next Data Cache, shared across all
+  // routes, 10-min revalidate) so the navbar is correct in the SSR HTML — no more first-paint
+  // "NOS PRODUITS" → "BOUTIQUE" label swap, and 3 fewer client API calls on every page view.
+  const { getServerNavigation, getServerNavCategories } = await import('@/services/siteChrome.server');
+  const [navigation, navCategories] = await Promise.all([getServerNavigation(), getServerNavCategories()]);
   // Store/seller rating is emitted ONLY from a real, operator-supplied aggregate (Google Business /
   // Facebook / Google Customer Reviews). Unset → no aggregateRating (never fabricated).
   const storeRating = parseStoreRating(
@@ -194,7 +199,7 @@ export default async function RootLayout({
           {`window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'G-0J0J27JZ7D', { send_page_view: false });`}
         </Script>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-          <Providers>
+          <Providers navigation={navigation} navCategories={navCategories}>
             <Suspense fallback={null}>
               <NavigationHandler />
             </Suspense>

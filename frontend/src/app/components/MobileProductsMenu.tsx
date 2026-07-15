@@ -8,6 +8,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/app/components/u
 import { Skeleton } from '@/app/components/ui/skeleton';
 import { Button } from '@/app/components/ui/button';
 import { getCategories } from '@/services/api';
+import { useSiteChrome } from '@/contexts/SiteChromeContext';
 import { Category } from '@/types';
 
 interface MobileProductsMenuProps {
@@ -19,14 +20,19 @@ export function MobileProductsMenu({ open, onOpenChange }: MobileProductsMenuPro
   const pathname = usePathname();
   const prevPathnameRef = useRef(pathname);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Server-fetched categories (root layout → SiteChromeProvider): populated without a client
+  // API call; fetch-on-mount remains only as fallback when SSR data is empty.
+  const { categories: ssrCategories } = useSiteChrome();
+  const [categories, setCategories] = useState<Category[]>(ssrCategories);
+  const [loading, setLoading] = useState(ssrCategories.length === 0);
 
   useEffect(() => {
+    if (ssrCategories.length > 0) return;
     getCategories()
       .then(setCategories)
       .catch(console.error)
       .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleClose = () => {
