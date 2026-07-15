@@ -87,6 +87,14 @@ export function QuickOrderDrawer({
   const fraisLivraison = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
   const total = appliedCoupon?.totals ? appliedCoupon.totals.total_ttc : subtotal + fraisLivraison;
   const inStock = isInStock(product);
+  // Cap quantity at the KNOWN available stock. We only cap when qte is a real positive number —
+  // when the API doesn't return qte we leave it unbounded (getStockDisponible would wrongly clamp
+  // an in-stock product to 1). The backend re-validates stock on submit regardless.
+  const rawStock = (product as { qte?: number }).qte;
+  const maxQty =
+    typeof rawStock === 'number' && Number.isFinite(rawStock) && rawStock > 0
+      ? Math.floor(rawStock)
+      : Infinity;
   const discount = priceDisplay.hasPromo && priceDisplay.oldPrice != null && priceDisplay.oldPrice > 0
     ? Math.round(((priceDisplay.oldPrice - unitPrice) / priceDisplay.oldPrice) * 100)
     : 0;
@@ -98,7 +106,12 @@ export function QuickOrderDrawer({
 
   useEffect(() => {
     if (open && product) {
-      setQuantity(Math.max(1, initialQty));
+      const stockQte = (product as { qte?: number }).qte;
+      const stock =
+        typeof stockQte === 'number' && Number.isFinite(stockQte) && stockQte > 0
+          ? Math.floor(stockQte)
+          : Infinity;
+      setQuantity(Math.min(stock, Math.max(1, initialQty)));
       setProductWithAromes(product);
       setSelectedVariantId(initialVariantId ?? product.aromes?.[0]?.id);
       setResult(null);
@@ -216,6 +229,10 @@ export function QuickOrderDrawer({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting || result) return;
+    if (!inStock) {
+      toast.error('Produit en rupture de stock.');
+      return;
+    }
     if (!validate()) return;
 
     setIsSubmitting(true);
@@ -427,13 +444,18 @@ export function QuickOrderDrawer({
                           variant="ghost"
                           size="icon"
                           className="h-11 w-11 shrink-0 rounded-lg"
-                          onClick={() => setQuantity((q) => q + 1)}
-                          disabled={!inStock}
+                          onClick={() => setQuantity((q) => Math.min(maxQty, q + 1))}
+                          disabled={!inStock || quantity >= maxQty}
                           aria-label="Augmenter la quantité"
                         >
                           <Plus className="h-4 w-4" />
                         </Button>
                       </div>
+                      {Number.isFinite(maxQty) && inStock && quantity >= maxQty && (
+                        <p className="text-xs text-amber-600 dark:text-amber-400">
+                          Stock maximum disponible atteint ({maxQty}).
+                        </p>
+                      )}
                     </div>
 
                     {/* Arôme / Variante – same level as quantity; big buttons when multiple */}
@@ -668,7 +690,7 @@ export function QuickOrderDrawer({
               <Button
                 type="submit"
                 form="quick-order-form"
-                disabled={isSubmitting || needsAromaSelection}
+                disabled={isSubmitting || needsAromaSelection || !inStock}
                 className="w-full h-12 rounded-xl text-base font-display uppercase tracking-wide font-bold bg-red-600 hover:bg-red-700 text-white focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
               >
                 {isSubmitting ? (
