@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import Link from 'next/link';
 import { Metadata } from 'next';
 import { notFound, unstable_rethrow } from 'next/navigation';
@@ -20,13 +21,17 @@ type Props = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
+// React cache() dedupes the axios call across generateMetadata + the page body: both run in the
+// same request with identical (slug, page), so without this the category listing was fetched twice.
+const loadCategory = cache((slug: string, page: number) => getArticlesByBlogCategory(slug, page, 9));
+
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { slug } = await params;
   const sp = searchParams ? await searchParams : {};
   const page = Math.max(1, parseInt(String(Array.isArray(sp.page) ? sp.page[0] : sp.page || '1'), 10) || 1);
 
   try {
-    const data = await getArticlesByBlogCategory(slug, page, 9);
+    const data = await loadCategory(slug, page);
     const total = Number(data.meta?.total);
     const countText =
       Number.isFinite(total) && total > 0 ? `${total} article${total > 1 ? 's' : ''}` : 'nos articles';
@@ -63,7 +68,7 @@ export default async function BlogCategoryPage({ params, searchParams }: Props) 
   const page = Math.max(1, parseInt(String(Array.isArray(sp.page) ? sp.page[0] : sp.page || '1'), 10) || 1);
   let data;
   try {
-    data = await getArticlesByBlogCategory(slug, page, 9);
+    data = await loadCategory(slug, page);
   } catch (e) {
     unstable_rethrow(e);
     // Only a genuine 404 is "no such category". A transient failure must rethrow, not serve
