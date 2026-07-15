@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import { getFAQs } from '@/services/api';
+import { loadForCache } from '@/util/loadForCache';
 import { buildFAQPageSchema, buildBreadcrumbListSchema, validateStructuredData } from '@/util/structuredData';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
 import { FAQsPageClient } from './FAQsPageClient';
@@ -24,13 +25,10 @@ export const metadata: Metadata = {
 };
 
 async function getFAQsData() {
-  try {
-    const faqs = await getFAQs();
-    return { faqs };
-  } catch (error) {
-    console.error('Error fetching FAQs:', error);
-    return { faqs: [] };
-  }
+  // loadForCache: if getFAQs throws (e.g. the API is unreachable during `next build`), do NOT bake
+  // an empty FAQ page — noStore() defers this render to runtime, where the backend is reachable.
+  const faqs = await loadForCache(() => getFAQs(), [] as Awaited<ReturnType<typeof getFAQs>>);
+  return { faqs };
 }
 
 export default async function FAQsPage() {

@@ -4,6 +4,7 @@ import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
 import { buildCollectionPageSchema, buildItemListSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
 import { buildProductUrlPath } from '@/util/productUrl';
 import { enrichProductsWithSubcategory } from '@/util/enrichProductSubcategory';
+import { loadForCache } from '@/util/loadForCache';
 import { PacksPageClient } from './PacksPageClient';
 
 // Refocused on bundle intent (reserve "offres/promos" wording for /offres so the two
@@ -36,14 +37,12 @@ export const metadata: Metadata = {
 export const revalidate = 600;
 
 async function getPacksData() {
-  try {
-    const packs = await getPacks();
-    const categories = await getCategories().catch(() => []);
-    return { packs: enrichProductsWithSubcategory(packs, categories) };
-  } catch (error) {
-    console.error('Error fetching packs:', error);
-    return { packs: [] };
-  }
+  // loadForCache: a failed getPacks() (e.g. API unreachable during `next build`) must NOT bake an
+  // empty packs grid — noStore() defers the render to runtime instead of caching "Aucun pack".
+  // categories is incidental (link enrichment), so it keeps failing soft without poisoning the cache.
+  const packs = await loadForCache(() => getPacks(), [] as Awaited<ReturnType<typeof getPacks>>);
+  const categories = await getCategories().catch(() => []);
+  return { packs: enrichProductsWithSubcategory(packs, categories) };
 }
 
 export default async function PacksPage() {

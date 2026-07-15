@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import { getCoordinates } from '@/services/api';
+import { loadForCache } from '@/util/loadForCache';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
 import { buildBreadcrumbListSchema } from '@/util/structuredData';
 import ContactPageClient from './ContactPageClient';
@@ -29,7 +30,9 @@ export const metadata: Metadata = {
 export const revalidate = 3600;
 
 export default async function ContactPage() {
-  const coordinates = await getCoordinates().catch(() => null);
+  // loadForCache: address / phone / map come from /coordonnees; a failed fetch during `next build`
+  // must not bake a contact page missing them — noStore() defers the render to runtime.
+  const coordinates = await loadForCache(() => getCoordinates(), null as Awaited<ReturnType<typeof getCoordinates>> | null);
   const baseUrl = getBaseUrl();
   // ContactPage referencing the sitewide LocalBusiness/Organization by @id — do NOT re-emit a
   // full LocalBusiness (layout.tsx already outputs one).

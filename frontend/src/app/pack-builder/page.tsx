@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { fetchCategoryOrSubCategory } from '@/services/api';
 import { buildCanonicalUrl } from '@/util/canonical';
+import { loadForCache } from '@/util/loadForCache';
 import type { Product } from '@/types';
 import { PackBuilderClient, type PackBuilderGroup } from './PackBuilderClient';
 
@@ -48,6 +49,13 @@ async function getGroups(): Promise<PackBuilderGroup[]> {
     })
   );
 
+  // Partial failures are tolerated (a category that 404s or is empty is simply skipped). But if EVERY
+  // category fetch rejected, that's an outage — throw so loadForCache() can avoid caching an empty
+  // builder (e.g. a 403 during `next build`) instead of baking a product-less page.
+  if (results.length > 0 && results.every((r) => r.status === 'rejected')) {
+    throw new Error('pack-builder: all category fetches failed');
+  }
+
   return results
     .filter(
       (r): r is PromiseFulfilledResult<PackBuilderGroup> =>
@@ -57,6 +65,6 @@ async function getGroups(): Promise<PackBuilderGroup[]> {
 }
 
 export default async function PackBuilderPage() {
-  const groups = await getGroups();
+  const groups = await loadForCache(() => getGroups(), [] as PackBuilderGroup[]);
   return <PackBuilderClient groups={groups} />;
 }

@@ -357,6 +357,11 @@ export const getAllProducts = async (params?: {
     };
   } catch (error) {
     console.error('[getAllProducts] API error:', error);
+    // On the server (SSR / ISR / `next build`), rethrow so the calling page can avoid caching an
+    // empty render (see loadForCache) — otherwise a build-time failure bakes an empty product list
+    // for the whole revalidate window. In the browser we keep failing soft so client-side filtering
+    // stays resilient.
+    if (typeof window === 'undefined') throw error;
     return { products: [], brands: [], categories: [] };
   }
 };

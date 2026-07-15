@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import { getAllProducts } from '@/services/api';
+import { loadForCache } from '@/util/loadForCache';
 import { hasValidPromo } from '@/util/productPrice';
 import { isInStock } from '@/util/cartStock';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
@@ -37,25 +38,23 @@ export const metadata: Metadata = {
 export const revalidate = 300;
 
 export default async function OffresPage() {
+  // loadForCache: getAllProducts() rethrows on the server, so a failed fetch (e.g. a 403 during
+  // `next build`) calls noStore() and defers to runtime instead of baking an empty promos page.
+  const { products, categories } = await loadForCache(
+    () => getAllProducts(),
+    { products: [], brands: [], categories: [] } as Awaited<ReturnType<typeof getAllProducts>>,
+  );
   let promoProducts: Product[] = [];
-  try {
-    const { products, categories } = await getAllProducts();
-    if (Array.isArray(products)) {
-      const filtered = products.filter((p: Product) => {
-        // Filter: must have valid promo AND be in stock
-        const hasPromo = hasValidPromo(p);
-        // rupture === 1 means in stock, rupture === 0 or undefined might mean out of stock
-        // Based on ProductCard logic: isInStock = rupture === 1 || rupture === undefined
-        // So we exclude products where rupture === 0 (explicitly out of stock)
-        const isInStock = (p as any).rupture !== 0;
-        return hasPromo && isInStock;
-      });
-      // Resolve subcategory so product links + ItemList URLs are canonical /{subcat}/{slug}, not the
-      // /shop/{slug} 301. No-op if the payload has no category data.
-      promoProducts = enrichProductsWithSubcategory(filtered, categories);
-    }
-  } catch (e) {
-    console.error('Error fetching products for offres:', e);
+  if (Array.isArray(products)) {
+    const filtered = products.filter((p: Product) => {
+      // Must have a valid promo AND be in stock. Exclude products explicitly out of stock
+      // (rupture === 0); undefined/1 are treated as in stock (matches ProductCard).
+      const hasPromo = hasValidPromo(p);
+      const inStock = (p as any).rupture !== 0;
+      return hasPromo && inStock;
+    });
+    // Resolve subcategory so links + ItemList URLs are canonical /{subcat}/{slug}, not the /shop/{slug} 301.
+    promoProducts = enrichProductsWithSubcategory(filtered, categories);
   }
 
   const baseUrl = getBaseUrl();

@@ -28,6 +28,7 @@ import {
   getPageBySlug,
 } from '@/services/api';
 import { ApiError } from '@/services/http';
+import { loadForCache } from '@/util/loadForCache';
 import { generateMetadata as generateCategoryMetadata } from '@/app/category/[slug]/page';
 import { PageContentClient } from '@/app/page/[slug]/PageContentClient';
 import { getCategorySeoContent } from '@/util/categorySeoContent';
@@ -210,7 +211,12 @@ export default async function CrawlerCategoryPage({ params }: PageProps) {
   // 2. Brand listing
   const brand = await findBrandBySlug(cleanSlug);
   if (brand?.id) {
-    const result = await getProductsByBrand(brand.id).catch(() => ({ products: [] as Product[] }));
+    // loadForCache: a failed getProductsByBrand() during `next build` must not bake an empty brand
+    // listing for the crawler — noStore() defers the render to runtime where the API is reachable.
+    const result = await loadForCache(
+      () => getProductsByBrand(brand.id),
+      { products: [] as Product[] } as Awaited<ReturnType<typeof getProductsByBrand>>,
+    );
     const products: Product[] = (result as { products?: Product[] }).products ?? [];
     const title = brand.designation_fr;
     const breadcrumbs: CrawlerListLink[] = [
