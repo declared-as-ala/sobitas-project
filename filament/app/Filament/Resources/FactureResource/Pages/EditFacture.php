@@ -118,10 +118,12 @@ class EditFacture extends EditRecord
     protected function afterSave(): void
     {
         $details = $this->form->getState()['details'] ?? [];
+        $touchedProductIds = [];
 
         // Restore stock for old lines
         foreach ($this->record->details as $old) {
             Product::where('id', $old->produit_id)->increment('qte', $old->qte ?? $old->quantite ?? 0);
+            $touchedProductIds[] = $old->produit_id;
         }
         $this->record->details()->delete();
 
@@ -140,7 +142,11 @@ class EditFacture extends EditRecord
                 'prix_ttc'      => $qte * $prixUnitaire,
             ]);
             Product::where('id', $row['produit_id'])->decrement('qte', $qte);
+            $touchedProductIds[] = $row['produit_id'];
         }
+
+        // Raw increment()/decrement() bypass the Product saving() hook; re-derive rupture flags.
+        Product::syncRuptureFlags($touchedProductIds);
 
         $state = $this->form->getState();
         $remise = (float) ($state['remise'] ?? 0);

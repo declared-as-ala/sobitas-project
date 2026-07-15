@@ -47,7 +47,9 @@ return [
     |
     */
 
-    'expiration' => null,
+    // Finite but generous lifetime (90 days) so a leaked token cannot live forever.
+    // 60 * 24 * 90 = 129600 minutes. Tokens older than 90 days are invalidated (acceptable).
+    'expiration' => 60 * 24 * 90,
 
     /*
     |--------------------------------------------------------------------------

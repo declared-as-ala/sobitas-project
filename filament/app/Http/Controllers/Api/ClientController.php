@@ -137,11 +137,23 @@ class ClientController extends Controller
             $user->email = $validated['email'];
         }
 
+        $passwordChanged = false;
         if (! empty($validated['password'])) {
             $user->password = Hash::make($validated['password']);
+            $passwordChanged = true;
         }
 
         $user->save();
+
+        // On a password change, revoke the user's OTHER Sanctum tokens so a leaked/stale
+        // token elsewhere cannot survive a credential rotation. Keep the current request
+        // token so the user stays logged in on THIS device.
+        if ($passwordChanged) {
+            $currentTokenId = optional($request->user()?->currentAccessToken())->id;
+            $user->tokens()
+                ->when($currentTokenId, fn ($q) => $q->where('id', '!=', $currentTokenId))
+                ->delete();
+        }
 
         return response()->json([
             'id'    => $user->id,

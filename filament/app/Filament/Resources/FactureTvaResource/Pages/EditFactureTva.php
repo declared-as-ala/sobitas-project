@@ -155,8 +155,10 @@ class EditFactureTva extends EditRecord
 
     protected function afterSave(): void
     {
+        $touchedProductIds = [];
         foreach ($this->record->details as $old) {
             Product::where('id', $old->produit_id)->increment('qte', $old->qte ?? $old->quantite ?? 0);
+            $touchedProductIds[] = $old->produit_id;
         }
         $this->record->details()->delete();
         $coordinate = \App\Models\Coordinate::getCached();
@@ -181,7 +183,11 @@ class EditFactureTva extends EditRecord
                 'prix_ttc' => $prixHt + $tvaAmount,
             ]);
             Product::where('id', $row['produit_id'])->decrement('qte', $qte);
+            $touchedProductIds[] = $row['produit_id'];
         }
+
+        // Raw increment()/decrement() bypass the Product saving() hook; re-derive rupture flags.
+        Product::syncRuptureFlags($touchedProductIds);
 
         $state = $this->form->getState();
         $remise = (float) ($state['remise'] ?? 0);

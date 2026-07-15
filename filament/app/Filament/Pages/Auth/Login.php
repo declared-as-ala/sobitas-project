@@ -8,8 +8,9 @@ class Login extends \Filament\Auth\Pages\Login
     {
         parent::mount();
 
+        // Do NOT pre-fill a real admin email — it publicly discloses a valid admin username.
         $this->form->fill([
-            'email' => 'contact@protein.tn',
+            'email' => '',
             'password' => '',
             'remember' => true,
         ]);

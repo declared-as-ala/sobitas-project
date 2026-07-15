@@ -6,12 +6,14 @@ use App\Filament\Resources\CommandeResource;
 use App\Filament\Resources\ClientResource;
 use App\Filament\Widgets\DocumentTimelineWidget;
 use App\Models\Commande;
+use App\Models\Product;
 use Filament\Actions;
 use Filament\Actions\ActionGroup;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Support\Enums\Width;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\DB;
 
 class EditCommande extends EditRecord
 {
@@ -110,24 +112,59 @@ class EditCommande extends EditRecord
     protected function afterSave(): void
     {
         $details = $this->form->getState()['details'] ?? [];
-        $this->record->details()->delete();
+
+        // GUARD: a partial/empty submit must never silently wipe a populated order.
+        // mutateFormDataBeforeFill always injects a placeholder row with a null
+        // produit_id, so we key off "are there any VALID product lines?".
+        $validRows = array_values(array_filter(
+            is_array($details) ? $details : [],
+            fn ($row) => ! empty($row['produit_id'])
+        ));
+
+        if (empty($validRows) && $this->record->details()->exists()) {
+            Notification::make()
+                ->title('Commande inchangée')
+                ->body('Aucune ligne produit valide n’a été soumise — les lignes existantes ont été conservées.')
+                ->warning()
+                ->send();
+
+            return;
+        }
 
         $prixHt = 0.0;
-        foreach ($details as $row) {
-            if (empty($row['produit_id'])) {
-                continue;
+        $touchedProductIds = [];
+
+        // Mirror EditFacture::afterSave(): restore stock for the OLD lines, then
+        // decrement for the NEW lines, inside a transaction so a mid-loop failure
+        // cannot leave order lines and stock out of sync.
+        DB::transaction(function () use ($validRows, &$prixHt, &$touchedProductIds): void {
+            // Restore stock for the old lines being removed.
+            foreach ($this->record->details as $old) {
+                Product::where('id', $old->produit_id)
+                    ->increment('qte', $old->qte ?? $old->quantite ?? 0);
+                $touchedProductIds[] = $old->produit_id;
             }
-            $qte          = (float) ($row['qte'] ?? 1);
-            $prixUnitaire = (float) ($row['prix_unitaire'] ?? 0);
-            
-            \App\Models\CommandeDetail::create([
-                'commande_id'   => $this->record->id,
-                'produit_id'    => $row['produit_id'],
-                'qte'           => $qte,
-                'prix_unitaire' => $prixUnitaire,
-            ]);
-            $prixHt += $qte * $prixUnitaire;
-        }
+            $this->record->details()->delete();
+
+            // Recreate the new lines and decrement stock for each.
+            foreach ($validRows as $row) {
+                $qte          = (float) ($row['qte'] ?? 1);
+                $prixUnitaire = (float) ($row['prix_unitaire'] ?? 0);
+
+                \App\Models\CommandeDetail::create([
+                    'commande_id'   => $this->record->id,
+                    'produit_id'    => $row['produit_id'],
+                    'qte'           => $qte,
+                    'prix_unitaire' => $prixUnitaire,
+                ]);
+                Product::where('id', $row['produit_id'])->decrement('qte', $qte);
+                $touchedProductIds[] = $row['produit_id'];
+                $prixHt += $qte * $prixUnitaire;
+            }
+
+            // Raw increment()/decrement() bypass the Product saving() hook; re-derive rupture.
+            Product::syncRuptureFlags($touchedProductIds);
+        });
 
         $frais = (float) ($this->form->getState()['frais_livraison'] ?? 0);
         $this->record->update([

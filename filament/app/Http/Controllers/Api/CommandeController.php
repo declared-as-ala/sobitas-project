@@ -462,13 +462,14 @@ class CommandeController extends Controller
             $phone = trim((string) $request->query('phone', ''));
             $orderEmail = $facture->livraison_email ?? $facture->email ?? '';
             $orderPhone = $facture->livraison_phone ?? $facture->phone ?? '';
-            if ($email !== '' && strtolower($email) === strtolower($orderEmail)) {
-                $authorized = true;
-            }
-            if (! $authorized && $phone !== '') {
-                $norm = fn ($s) => preg_replace('/\D/', '', $s);
-                $last8 = fn ($s) => strlen($s) >= 8 ? substr($s, -8) : $s;
-                if ($last8($norm($phone)) === $last8($norm($orderPhone))) {
+            // HARDENED: order ids are sequential/enumerable, so the guest fallback now requires
+            // BOTH the exact email AND the FULL phone to match (previously email OR last-8-digits,
+            // which allowed enumeration). The order_token path above remains the primary guest access.
+            if ($email !== '' && $phone !== '') {
+                $norm = fn ($s) => preg_replace('/\D/', '', (string) $s);
+                $emailMatches = $orderEmail !== '' && strtolower($email) === strtolower($orderEmail);
+                $phoneMatches = $orderPhone !== '' && $norm($phone) === $norm($orderPhone);
+                if ($emailMatches && $phoneMatches) {
                     $authorized = true;
                 }
             }

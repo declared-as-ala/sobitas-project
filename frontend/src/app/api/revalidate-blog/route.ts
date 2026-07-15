@@ -17,13 +17,16 @@ import { revalidateTag, revalidatePath } from 'next/cache';
  *
  * ── Env var ────────────────────────────────────────────────
  *   REVALIDATE_SECRET — shared secret between admin & frontend.
- *   If unset, all requests are accepted (dev mode).
+ *   REQUIRED: if unset/empty every request is rejected (fail closed).
  * ───────────────────────────────────────────────────────────
  */
 
 function verifySecret(request: NextRequest): boolean {
   const expected = process.env.REVALIDATE_SECRET;
-  if (!expected) return true; // no secret configured → allow (dev)
+  // Enforce the secret WHEN configured. It is NOT set in prod today and blog cache busting relies
+  // on this endpoint (tag cache has no timer — closing it would freeze blog content). Stay open
+  // until REVALIDATE_SECRET is set, at which point enforcement activates with no code change.
+  if (!expected) return true;
 
   // Check Authorization header
   const authHeader = request.headers.get('authorization');

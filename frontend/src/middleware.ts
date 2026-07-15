@@ -4,8 +4,35 @@ import { isCrawlerUA, CRAWLER_PREVIEW_PARAM } from '@/util/isCrawler';
 import { isReservedRouteSlug } from '@/util/productUrl';
 import { getAdminRedirect } from '@/util/adminRedirects';
 
+/**
+ * Open-redirect guard. A path derived from user input — e.g. `/en//evil.com` or `/en/\evil.com`
+ * — resolves to an OFF-ORIGIN destination when fed to `new URL(path, request.url)` (protocol-
+ * relative and backslash forms both hijack the origin), turning a redirect into a cacheable
+ * 301 open redirect. If the built destination leaves our origin, discard it and fall back to a
+ * safe same-origin path (the homepage). Fixed internal paths (/shop, /{seg}) stay untouched.
+ */
+function sameOriginOrHome(url: URL, request: NextRequest): URL {
+  if (url.origin !== request.nextUrl.origin) {
+    return new URL('/', request.url);
+  }
+  return url;
+}
+
+/**
+ * For ADMIN-configured redirects (trusted input set in Filament → Redirections): allow
+ * same-origin AND any *.protein.tn subdomain (a legitimate cross-subdomain redirect, e.g.
+ * → admin.protein.tn), but still discard an arbitrary off-site host as defense-in-depth.
+ */
+function sameOriginOrTrusted(url: URL, request: NextRequest): URL {
+  const host = url.hostname.toLowerCase();
+  if (url.origin === request.nextUrl.origin || host === 'protein.tn' || host.endsWith('.protein.tn')) {
+    return url;
+  }
+  return new URL('/', request.url);
+}
+
 function redirectPreservingQuery(request: NextRequest, path: string): NextResponse {
-  const url = new URL(path, request.url);
+  const url = sameOriginOrHome(new URL(path, request.url), request);
   request.nextUrl.searchParams.forEach((value, key) => {
     url.searchParams.append(key, value);
   });
@@ -74,7 +101,7 @@ export async function middleware(request: NextRequest) {
       // Permanently gone — tells Google to drop the URL from the index.
       return new NextResponse('Gone', { status: 410, headers: { 'Cache-Control': 'no-store' } });
     }
-    const dest = new URL(adminRule.to as string, request.url);
+    const dest = sameOriginOrTrusted(new URL(adminRule.to as string, request.url), request);
     request.nextUrl.searchParams.forEach((value, key) => {
       if (!dest.searchParams.has(key)) dest.searchParams.append(key, value);
     });
@@ -144,7 +171,8 @@ export async function middleware(request: NextRequest) {
   // dead WP pagination URLs.
   const wpPaging = pathname.match(/^\/([^/]+)\/page\/(\d+)\/?$/);
   if (wpPaging?.[1]) {
-    const pagedUrl = new URL(`/${wpPaging[1]}`, request.url);
+    // Guard against a backslash first segment (/\evil.com/page/2 → off-origin) via same-origin check.
+    const pagedUrl = sameOriginOrHome(new URL(`/${wpPaging[1]}`, request.url), request);
     if (Number(wpPaging[2]) > 1) pagedUrl.searchParams.set('page', wpPaging[2]);
     return NextResponse.redirect(pagedUrl, 301);
   }
@@ -249,8 +277,9 @@ export async function middleware(request: NextRequest) {
     const brand = searchParams.get('brand');
 
     if (category) {
-      // Redirect /shop?category=slug to /slug
-      const newUrl = new URL(`/${category}`, request.url);
+      // Redirect /shop?category=slug to /slug. Guard: `category` is a raw query param, so
+      // a value like //evil.com or \evil.com would otherwise become an off-origin 301.
+      const newUrl = sameOriginOrHome(new URL(`/${category}`, request.url), request);
       // Preserve other query params (like page)
       searchParams.forEach((value, key) => {
         if (key !== 'category') {

@@ -119,6 +119,7 @@ class CreateFactureTva extends CreateRecord
         $coordinate = Coordinate::getCached();
         $defaultTva = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 19;
         $details = $this->form->getState()['details'] ?? [];
+        $touchedProductIds = [];
         foreach ($details as $row) {
             if (empty($row['produit_id'])) {
                 continue;
@@ -139,7 +140,11 @@ class CreateFactureTva extends CreateRecord
                 'prix_ttc' => $prixTtc,
             ]);
             Product::where('id', $row['produit_id'])->decrement('qte', $qte);
+            $touchedProductIds[] = $row['produit_id'];
         }
+
+        // Raw decrement() bypasses the Product saving() hook; re-derive rupture flags.
+        Product::syncRuptureFlags($touchedProductIds);
 
         $state = $this->form->getState();
         $remise = (float) ($state['remise'] ?? 0);

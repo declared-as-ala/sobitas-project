@@ -110,10 +110,8 @@ class EditQuotation extends EditRecord
 
     protected function afterSave(): void
     {
-        // Restore old stock
-        foreach ($this->record->details as $old) {
-            Product::where('id', $old->produit_id)->increment('qte', $old->qte ?? $old->quantite ?? 0);
-        }
+        // A Devis is a non-committal QUOTE: it must NEVER change sellable stock,
+        // in either direction. Only the quote lines are re-persisted below.
         $this->record->details()->delete();
 
         // Save new lines
@@ -138,7 +136,7 @@ class EditQuotation extends EditRecord
                 'prix_ttc'      => $qte * $prixUnitaire * (1 + ($tvaPct / 100)),
                 'tva'           => $tvaPct
             ]);
-            Product::where('id', $row['produit_id'])->decrement('qte', $qte);
+            // No stock mutation: a quote does not reserve or consume stock.
         }
 
         $state = $this->form->getState();
