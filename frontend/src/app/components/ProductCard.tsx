@@ -252,19 +252,19 @@ export const ProductCard = memo(function ProductCard({
           {productData.priceDisplay.hasPromo && productData.priceDisplay.oldPrice != null ? (
             <>
               <span className={`font-display font-bold tracking-tight text-red-600 dark:text-red-400 tabular-nums ${isCompact ? 'text-lg sm:text-2xl' : 'text-lg sm:text-xl lg:text-2xl'}`}>
-                {productData.priceDisplay.finalPrice} DT
+                {productData.priceDisplay.finalPrice.toFixed(2)} DT
               </span>
               <span
                 className="font-display text-gray-400 dark:text-gray-500 line-through tabular-nums text-xs leading-snug sm:text-sm sm:leading-normal"
                 style={{ textDecorationThickness: '1.5px' }}
-                aria-label={`Prix barré: ${productData.priceDisplay.oldPrice} DT`}
+                aria-label={`Prix barré: ${productData.priceDisplay.oldPrice.toFixed(2)} DT`}
               >
-                {productData.priceDisplay.oldPrice} DT
+                {productData.priceDisplay.oldPrice.toFixed(2)} DT
               </span>
             </>
           ) : (
             <span className={`font-display font-bold tracking-tight text-gray-900 dark:text-white tabular-nums ${isCompact ? 'text-lg sm:text-2xl' : 'text-lg sm:text-xl lg:text-2xl'}`}>
-              {productData.priceDisplay.finalPrice} DT
+              {productData.priceDisplay.finalPrice.toFixed(2)} DT
             </span>
           )}
         </div>

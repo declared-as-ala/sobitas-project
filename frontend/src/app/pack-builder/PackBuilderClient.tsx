@@ -224,7 +224,7 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
                             {product.designation_fr}
                           </h3>
                           <p className="mt-1 font-display font-bold tracking-tight tabular-nums text-red-600 dark:text-red-400">
-                            {price} DT
+                            {price.toFixed(2)} DT
                           </p>
                           <div className="mt-2">
                             {qty > 0 ? (
