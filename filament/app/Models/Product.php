@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class Product extends Model
 {
@@ -83,6 +85,34 @@ class Product extends Model
                 $product->rupture = true;
             }
         });
+    }
+
+    /**
+     * Re-derive the `rupture` (out-of-stock) flag for the given product ids.
+     *
+     * Admin document pages mutate `qte` via raw query-builder decrement()/increment()
+     * calls that BYPASS the saving() hook above, leaving `rupture` stale. Call this
+     * after such mutations to keep the flag consistent.
+     *
+     * Uses a single query-builder UPDATE (fires NO model events) so it is cheap and
+     * safe to call in bulk. RESPECTS the manual hard out-of-stock override:
+     * rupture = 1 when force_out_of_stock = 1 OR qte <= 0, else 0. When the
+     * force_out_of_stock column is absent (older DBs) it falls back to qte <= 0 only.
+     */
+    public static function syncRuptureFlags(array $productIds): void
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $productIds))));
+        if (empty($ids)) {
+            return;
+        }
+
+        $case = Schema::hasColumn('products', 'force_out_of_stock')
+            ? 'CASE WHEN force_out_of_stock = 1 OR qte <= 0 THEN 1 ELSE 0 END'
+            : 'CASE WHEN qte <= 0 THEN 1 ELSE 0 END';
+
+        static::query()
+            ->whereIn('id', $ids)
+            ->update(['rupture' => DB::raw($case)]);
     }
 
     // ── Relationships ──────────────────────────────────

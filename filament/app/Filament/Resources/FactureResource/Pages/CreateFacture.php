@@ -106,6 +106,7 @@ class CreateFacture extends CreateRecord
     protected function afterCreate(): void
     {
         $details = $this->form->getState()['details'] ?? [];
+        $touchedProductIds = [];
         foreach ($details as $row) {
             if (empty($row['produit_id'])) {
                 continue;
@@ -120,7 +121,11 @@ class CreateFacture extends CreateRecord
                 'prix_ttc' => $qte * $prixUnitaire,
             ]);
             Product::where('id', $row['produit_id'])->decrement('qte', $qte);
+            $touchedProductIds[] = $row['produit_id'];
         }
+
+        // Raw decrement() bypasses the Product saving() hook; re-derive rupture flags.
+        Product::syncRuptureFlags($touchedProductIds);
 
         $state = $this->form->getState();
         $remise = (float) ($state['remise'] ?? 0);

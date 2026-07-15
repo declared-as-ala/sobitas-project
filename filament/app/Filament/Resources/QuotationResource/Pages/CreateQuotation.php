@@ -128,7 +128,7 @@ class CreateQuotation extends CreateRecord
                 'prix_unitaire' => $prixUnitaire,
                 'prix_ttc' => $prixTtc,
             ]);
-            Product::where('id', $row['produit_id'])->decrement('qte', $qte);
+            // A Devis is a non-committal QUOTE: it must NEVER change sellable stock.
         }
     }
 
