@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
-import { notFound, permanentRedirect } from 'next/navigation';
+import { notFound, permanentRedirect, unstable_rethrow } from 'next/navigation';
+import { getErrorStatus } from '@/util/errorStatus';
 import { getCategories } from '@/services/api';
 import { fetchCategoryOrSubCategory } from '@/services/api';
 import { buildCanonicalUrl, forceProteinDomain } from '@/util/canonical';
@@ -572,8 +573,14 @@ export default async function CategoryPage({ params }: PageProps) {
       );
     }
   } catch (err) {
+    // Preserve framework control-flow errors (notFound()/redirect() thrown inside the try).
+    unstable_rethrow(err);
     console.error('Category/SubCategory fetch error:', err);
-    notFound();
+    // Only a GENUINE backend 404 is a 404. A transient failure (429/5xx/timeout) must rethrow —
+    // on this ISR route a notFound() render would cache a wrong 404 for a healthy category for
+    // the whole revalidate window. The rethrow hits the error boundary and is never cached.
+    if (getErrorStatus(err) === 404) notFound();
+    throw err;
   }
 
   notFound();

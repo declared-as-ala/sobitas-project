@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { notFound, permanentRedirect } from 'next/navigation';
+import { notFound, permanentRedirect, unstable_rethrow } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { getSimilarProducts } from '@/services/api';
 import { getCachedProductDetails } from '@/services/getCachedProductDetails';
@@ -161,11 +161,13 @@ export default async function ShopProductPage({ params, searchParams }: PageProp
   try {
     product = await getCachedProductDetails(cleanSlug);
   } catch (e) {
+    unstable_rethrow(e);
     if (getErrorStatus(e) === 404) {
       // Product not found → try category redirect
       permanentRedirect(buildCategoryRedirectUrl(cleanSlug, search));
     }
-    notFound();
+    // Transient failure: rethrow instead of caching a wrong 404 on this ISR route.
+    throw e;
   }
 
   if (!product?.id) {

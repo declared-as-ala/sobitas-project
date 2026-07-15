@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, unstable_rethrow } from 'next/navigation';
+import { getErrorStatus } from '@/util/errorStatus';
 import { getPageBySlug, getStorageUrl } from '@/services/api';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
 import { buildWebPageSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
@@ -79,7 +80,11 @@ export default async function DynamicPage({ params }: PageProps) {
       </>
     );
   } catch (error) {
+    // Preserve the notFound() thrown for a genuinely missing page inside the try.
+    unstable_rethrow(error);
     console.error('Error fetching page:', error);
-    notFound();
+    // Genuine 404 → 404. Transient failure → rethrow (never cache a wrong 404 on this ISR route).
+    if (getErrorStatus(error) === 404) notFound();
+    throw error;
   }
 }
