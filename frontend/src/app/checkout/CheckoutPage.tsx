@@ -34,7 +34,7 @@ const MAX_REDEEM_FRACTION = 0.5; // points may cover at most 50% of the post-cou
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items, getTotalPrice, getEffectivePrice, clearCart, packDiscount } = useCart();
+  const { items, isLoaded, getTotalPrice, getEffectivePrice, clearCart, packDiscount } = useCart();
   const { user, isAuthenticated } = useAuth();
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(2);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -85,6 +85,10 @@ export default function CheckoutPage() {
   });
 
   useEffect(() => {
+    // Wait until the cart has rehydrated from localStorage. Without this, a hard load of /checkout
+    // (refresh, mobile tab restore, direct URL) runs this effect while items is still the initial []
+    // and kicks a buyer with a full cart back to /cart — losing the sale.
+    if (!isLoaded) return;
     // Don't redirect if order is being completed or already completed, or if we're on step 3
     if (isOrderComplete || isSubmitting || currentStep === 3) {
       return;
@@ -93,7 +97,7 @@ export default function CheckoutPage() {
       router.push('/cart');
       return;
     }
-  }, [items, router, isOrderComplete, isSubmitting, currentStep]);
+  }, [items, isLoaded, router, isOrderComplete, isSubmitting, currentStep]);
 
   /**
    * Mobile viewport: set --app-height from visualViewport so we avoid 100vh jumps
@@ -430,7 +434,10 @@ export default function CheckoutPage() {
       clearCart();
     } catch (error: any) {
       console.error('Order error:', error);
-      toast.error(error.response?.data?.message || 'Erreur lors de la commande. Veuillez réessayer.');
+      // createOrder throws a fetch-based `Error` whose message carries the backend detail (e.g.
+      // 'Stock insuffisant pour "X" (demandé: N).') — read error.message first. `error.response`
+      // is an axios shape that never exists here, so it always fell through to the generic text.
+      toast.error(error?.message || error?.response?.data?.message || 'Erreur lors de la commande. Veuillez réessayer.');
     } finally {
       setIsSubmitting(false);
     }
@@ -755,6 +762,16 @@ export default function CheckoutPage() {
 
         <Footer />
         <ScrollToTop />
+      </div>
+    );
+  }
+
+  // While the cart rehydrates from localStorage, show a light placeholder instead of null — otherwise
+  // a full cart briefly renders as "empty" and the redirect effect would fire before isLoaded.
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen min-h-[100dvh] flex items-center justify-center bg-gray-50 dark:bg-gray-950">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-red-600 border-t-transparent" role="status" aria-label="Chargement du panier" />
       </div>
     );
   }

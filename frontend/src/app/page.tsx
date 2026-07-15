@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { unstable_noStore as noStore } from 'next/cache';
 import { getAccueil, getCategories, getBestSellers, getNewProducts } from '@/services/api';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
 import { buildWebPageSchema, buildItemListSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
@@ -144,7 +145,12 @@ async function getHomeData(): Promise<{ accueil: AccueilData; slides: LocalHomeS
     };
 
     return { accueil: enriched, slides: LOCAL_HOME_SLIDES };
-  } catch {
+  } catch (err) {
+    // getAccueil rethrows on the server, so a total backend failure lands here. Do NOT let this
+    // product-less render be CACHED for the whole revalidate window (5 min on the flagship page):
+    // noStore() defers to a runtime re-render on the next request, which self-heals immediately.
+    noStore();
+    console.error('[home] accueil fetch failed — rendering fallback WITHOUT caching:', err);
     return { accueil: { ...emptyAccueil, categories: FALLBACK_CATEGORIES }, slides: LOCAL_HOME_SLIDES };
   }
 }
