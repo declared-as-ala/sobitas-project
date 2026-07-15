@@ -4,6 +4,7 @@ import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
 import { buildBreadcrumbListSchema, buildCollectionPageSchema, buildItemListSchema } from '@/util/structuredData';
 import { getProductLink } from '@/util/productUrl';
 import { enrichProductsWithSubcategory } from '@/util/enrichProductSubcategory';
+import { loadForCache } from '@/util/loadForCache';
 import { ShopPageClient } from './ShopPageClient';
 
 type ShopSearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -69,17 +70,23 @@ function getPrevNext(path: string, search: string, page: number, totalPages: num
   return { prev, next };
 }
 
-// Force dynamic rendering to ensure fresh data on every request
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+// ISR (was force-dynamic → a full whole-catalog fetch + RSC render on EVERY request; the page body
+// reads no searchParams so its output is identical per visitor, and faceting/pagination run
+// client-side in ShopPageClient). Caching the boutique shell and revalidating in the background
+// ships it instantly. Mirrors /offres (300) and /packs (600).
+export const revalidate = 300;
 
 async function getShopData() {
-  // Products are the primary content: getAllProducts rethrows on the server, so a transient failure
-  // now surfaces the error boundary (retryable) instead of the old catch-all that served Googlebot a
-  // 200 page with an EMPTY catalog + empty ItemList schema. Categories/brands are incidental facets —
-  // they fail soft so a hiccup on them doesn't blank the whole boutique.
+  // Products are the primary content. getAllProducts rethrows on the server, so we wrap it in
+  // loadForCache: a transient failure (notably the build runner getting Cloudflare-403'd) renders
+  // empty but is NOT baked into the ISR cache — the route re-renders next request instead of serving
+  // an empty catalog for the whole revalidate window (the PR #77 empty-bake risk). Categories/brands
+  // are incidental facets — they fail soft so a hiccup on them doesn't blank the whole boutique.
   const [productsResponse, categories, brands] = await Promise.all([
-    getAllProducts({ perPage: 24, page: 1 }),
+    loadForCache(
+      () => getAllProducts({ perPage: 24, page: 1 }),
+      { products: [], brands: [], categories: [] } as Awaited<ReturnType<typeof getAllProducts>>
+    ),
     getCategories().catch(() => [] as Awaited<ReturnType<typeof getCategories>>),
     getAllBrands().catch(() => [] as Awaited<ReturnType<typeof getAllBrands>>),
   ]);
