@@ -24,7 +24,10 @@ export async function generateMetadata(props: { searchParams?: ShopSearchParams 
   // Canonical carries ONLY pagination (page>1), never facets.
   const canonicalQuery = pageNum > 1 ? `?page=${pageNum}` : undefined;
   const canonical = buildCanonicalUrl(path, canonicalQuery);
-  const totalPages = await getShopTotalPages();
+  // The backend /all_products endpoint ignores per_page and returns the WHOLE catalog with no
+  // `pagination` object, so getShopTotalPages() always resolved to 1 (→ rel prev/next never emitted)
+  // while downloading the entire catalog a second time per request. Drop that fetch: totalPages = 1.
+  const totalPages = 1;
   const { prev, next } = getPrevNext(path, '', pageNum, totalPages);
 
   return {
@@ -52,16 +55,6 @@ export async function generateMetadata(props: { searchParams?: ShopSearchParams 
   };
 }
 
-async function getShopTotalPages(): Promise<number> {
-  try {
-    const r = await getAllProducts({ perPage: 12, page: 1 });
-    const total = (r as { pagination?: { total?: number } })?.pagination?.total ?? 0;
-    return Math.max(1, Math.ceil(total / 12));
-  } catch {
-    return 1;
-  }
-}
-
 function getPrevNext(path: string, search: string, page: number, totalPages: number): { prev?: string; next?: string } {
   const params = new URLSearchParams(search || '');
   const prevParams = new URLSearchParams(params);
@@ -81,27 +74,22 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 async function getShopData() {
-  try {
-    const [productsResponse, categories, brands] = await Promise.all([
-      getAllProducts({ perPage: 24, page: 1 }),
-      getCategories(),
-      getAllBrands(),
-    ]);
-    const productsData = {
-      products: productsResponse.products,
-      brands: productsResponse.brands,
-      categories: productsResponse.categories,
-      pagination: productsResponse.pagination,
-    };
-    return { productsData, categories, brands };
-  } catch (error) {
-    console.error('Error fetching shop data:', error);
-    return {
-      productsData: { products: [], brands: [], categories: [] },
-      categories: [],
-      brands: [],
-    };
-  }
+  // Products are the primary content: getAllProducts rethrows on the server, so a transient failure
+  // now surfaces the error boundary (retryable) instead of the old catch-all that served Googlebot a
+  // 200 page with an EMPTY catalog + empty ItemList schema. Categories/brands are incidental facets —
+  // they fail soft so a hiccup on them doesn't blank the whole boutique.
+  const [productsResponse, categories, brands] = await Promise.all([
+    getAllProducts({ perPage: 24, page: 1 }),
+    getCategories().catch(() => [] as Awaited<ReturnType<typeof getCategories>>),
+    getAllBrands().catch(() => [] as Awaited<ReturnType<typeof getAllBrands>>),
+  ]);
+  const productsData = {
+    products: productsResponse.products,
+    brands: productsResponse.brands,
+    categories: productsResponse.categories,
+    pagination: productsResponse.pagination,
+  };
+  return { productsData, categories, brands };
 }
 
 export default async function ShopPage() {
