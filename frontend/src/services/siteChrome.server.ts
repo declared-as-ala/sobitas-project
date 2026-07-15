@@ -1,4 +1,5 @@
-import type { Category, SiteNavigationItem } from '@/types';
+import type { Category, Coordinate, SiteNavigationItem } from '@/types';
+import { getCmsPages, getCoordinates, type CmsPage } from '@/services/api';
 
 /**
  * Server-side fetchers for the site "chrome" (header navigation + categories mega-menu),
@@ -64,6 +65,33 @@ export async function getServerNavigation(): Promise<SiteNavigation> {
     console.error('[siteChrome] navigation fetch failed (header falls back to client fetch):', e);
     return EMPTY_NAVIGATION;
   }
+}
+
+export type ServerFooterData = {
+  cmsPages: CmsPage[];
+  coordinates: Coordinate | null;
+};
+
+export const EMPTY_FOOTER: ServerFooterData = { cmsPages: [], coordinates: null };
+
+/**
+ * Footer chrome: the "Services & Ventes" CMS links + the store address/phone/map. Fetched in the
+ * root layout so they are in the SSR HTML (crawlable internal links, no post-hydration pop-in) and
+ * not re-fetched on every client navigation. Reuses the existing getCmsPages/getCoordinates (which
+ * carry their own fallbacks) and hard-catches so a failure can never throw the whole layout render.
+ */
+export async function getServerFooter(): Promise<ServerFooterData> {
+  const [cmsPages, coordinates] = await Promise.all([
+    getCmsPages().catch((e) => {
+      console.error('[siteChrome] CMS pages fetch failed (footer falls back to client fetch):', e);
+      return [] as CmsPage[];
+    }),
+    getCoordinates().catch((e) => {
+      console.error('[siteChrome] coordinates fetch failed (footer falls back to client fetch):', e);
+      return null;
+    }),
+  ]);
+  return { cmsPages, coordinates };
 }
 
 export async function getServerNavCategories(): Promise<Category[]> {

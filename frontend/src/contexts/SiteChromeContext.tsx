@@ -1,7 +1,8 @@
 'use client';
 
 import { createContext, useContext, type ReactNode } from 'react';
-import type { Category, SiteNavigationItem } from '@/types';
+import type { Category, Coordinate, SiteNavigationItem } from '@/types';
+import type { CmsPage } from '@/services/api';
 
 /**
  * Server-rendered site chrome (header navigation + categories mega-menu), fetched once in the
@@ -16,19 +17,23 @@ import type { Category, SiteNavigationItem } from '@/types';
 export type SiteChromeValue = {
   navigation: { navbar: SiteNavigationItem[]; sidebar: SiteNavigationItem[] };
   categories: Category[];
+  cmsPages: CmsPage[];
+  coordinates: Coordinate | null;
 };
 
-const EMPTY: SiteChromeValue = { navigation: { navbar: [], sidebar: [] }, categories: [] };
+const EMPTY: SiteChromeValue = { navigation: { navbar: [], sidebar: [] }, categories: [], cmsPages: [], coordinates: null };
 
 const SiteChromeContext = createContext<SiteChromeValue>(EMPTY);
 
 export function SiteChromeProvider({
   navigation,
   categories,
+  cmsPages,
+  coordinates,
   children,
 }: SiteChromeValue & { children: ReactNode }) {
   return (
-    <SiteChromeContext.Provider value={{ navigation, categories }}>
+    <SiteChromeContext.Provider value={{ navigation, categories, cmsPages, coordinates }}>
       {children}
     </SiteChromeContext.Provider>
   );

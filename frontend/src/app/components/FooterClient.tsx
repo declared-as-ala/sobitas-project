@@ -8,6 +8,7 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { subscribeNewsletter, getCmsPages, getCoordinates } from '@/services/api';
 import type { Coordinate } from '@/types';
+import { useSiteChrome } from '@/contexts/SiteChromeContext';
 import { useSiteLogos } from '@/hooks/useSiteLogos';
 import { toast } from 'sonner';
 import type { CmsPage } from '@/services/api';
@@ -24,13 +25,18 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [shouldLoadMap, setShouldLoadMap] = useState(false);
-  const [pages, setPages] = useState<CmsPage[]>(pagesProp ?? []);
-  const [coord, setCoord] = useState<Coordinate | null>(null);
+  // Server-fetched footer chrome (root layout → SiteChromeProvider): the CMS links + address are in
+  // the SSR HTML (crawlable, no post-hydration pop-in) and not re-fetched on every navigation.
+  const { cmsPages: ssrPages, coordinates: ssrCoord } = useSiteChrome();
+  const [pages, setPages] = useState<CmsPage[]>(pagesProp ?? (ssrPages.length > 0 ? ssrPages : []));
+  const [coord, setCoord] = useState<Coordinate | null>(ssrCoord);
   const mapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Fallback only: fetch client-side when the server didn't supply coordinates.
+    if (ssrCoord) return;
     getCoordinates().then(setCoord).catch(() => {});
-  }, []);
+  }, [ssrCoord]);
 
   // The /coordonnees API returns the raw Coordinate model, so use its real
   // column names (adresse_fr/adresse, phone_1, phone_2, email).
@@ -44,13 +50,18 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
   const contactPhones = [coord?.phone_1, coord?.phone_2].filter(Boolean).join(' / ') || '+216 27 612 500 / +216 73 200 169';
   const contactPhoneHref = `tel:${String(coord?.phone_1 || '+21627612500').replace(/\s/g, '')}`;
 
-  // Fetch CMS pages when not provided (e.g. when used inside Client Components)
+  // Fetch CMS pages only as a fallback: props > server (SiteChromeProvider) > client fetch.
   useEffect(() => {
     if (pagesProp && pagesProp.length > 0) {
       setPages(pagesProp);
       return;
     }
+    if (ssrPages.length > 0) {
+      setPages(ssrPages);
+      return;
+    }
     getCmsPages().then(setPages);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pagesProp]);
 
   // Show all API pages in footer

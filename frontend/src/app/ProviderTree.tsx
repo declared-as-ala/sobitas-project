@@ -13,12 +13,14 @@ type ProviderTreeProps = {
   children: ReactNode;
   navigation: SiteChromeValue['navigation'];
   navCategories: SiteChromeValue['categories'];
+  cmsPages: SiteChromeValue['cmsPages'];
+  coordinates: SiteChromeValue['coordinates'];
 };
 
-export function ProviderTree({ children, navigation, navCategories }: ProviderTreeProps) {
+export function ProviderTree({ children, navigation, navCategories, cmsPages, coordinates }: ProviderTreeProps) {
   return (
     <I18nProvider>
-      <SiteChromeProvider navigation={navigation} categories={navCategories}>
+      <SiteChromeProvider navigation={navigation} categories={navCategories} cmsPages={cmsPages} coordinates={coordinates}>
         <LoadingProvider>
           <AuthProvider>
             <CartProvider>
