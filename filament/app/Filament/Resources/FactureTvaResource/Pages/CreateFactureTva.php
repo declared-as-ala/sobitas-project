@@ -143,6 +143,9 @@ class CreateFactureTva extends CreateRecord
             $touchedProductIds[] = $row['produit_id'];
         }
 
+        // Floor any qte driven below zero by over-invoicing back to 0 before deriving rupture, so an
+        // impossible negative stock can't stick a product OUT OF STOCK. Only raises negatives to 0.
+        Product::whereIn('id', $touchedProductIds)->where('qte', '<', 0)->update(['qte' => 0]);
         // Raw decrement() bypasses the Product saving() hook; re-derive rupture flags.
         Product::syncRuptureFlags($touchedProductIds);
 

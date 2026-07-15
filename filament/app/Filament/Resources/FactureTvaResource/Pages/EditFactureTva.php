@@ -155,6 +155,24 @@ class EditFactureTva extends EditRecord
 
     protected function afterSave(): void
     {
+        // GUARD: a partial/empty submit must never restore all stock, delete every line, and
+        // re-decrement nothing (which would inflate qte and silently empty the invoice). Same guard
+        // EditCommande / EditFacture use.
+        $guardDetails = $this->form->getState()['details'] ?? [];
+        $validRows = array_values(array_filter(
+            is_array($guardDetails) ? $guardDetails : [],
+            fn ($row) => ! empty($row['produit_id'])
+        ));
+        if (empty($validRows) && $this->record->details()->exists()) {
+            Notification::make()
+                ->title('Document inchangé')
+                ->body('Aucune ligne produit valide n’a été soumise — les lignes existantes ont été conservées.')
+                ->warning()
+                ->send();
+
+            return;
+        }
+
         $touchedProductIds = [];
         foreach ($this->record->details as $old) {
             Product::where('id', $old->produit_id)->increment('qte', $old->qte ?? $old->quantite ?? 0);
@@ -186,6 +204,9 @@ class EditFactureTva extends EditRecord
             $touchedProductIds[] = $row['produit_id'];
         }
 
+        // Floor any qte driven below zero by over-invoicing back to 0 before deriving rupture, so an
+        // impossible negative stock can't stick a product OUT OF STOCK. Only raises negatives to 0.
+        Product::whereIn('id', $touchedProductIds)->where('qte', '<', 0)->update(['qte' => 0]);
         // Raw increment()/decrement() bypass the Product saving() hook; re-derive rupture flags.
         Product::syncRuptureFlags($touchedProductIds);
 

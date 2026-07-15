@@ -120,6 +120,23 @@ class EditFacture extends EditRecord
         $details = $this->form->getState()['details'] ?? [];
         $touchedProductIds = [];
 
+        // GUARD: a partial/empty submit (Livewire hydration glitch / repeater desync / double-submit)
+        // must never restore all stock, delete every line, and re-decrement nothing — that would
+        // inflate qte and silently empty the BL in one save. Same guard EditCommande already has.
+        $validRows = array_values(array_filter(
+            is_array($details) ? $details : [],
+            fn ($row) => ! empty($row['produit_id'])
+        ));
+        if (empty($validRows) && $this->record->details()->exists()) {
+            Notification::make()
+                ->title('Document inchangé')
+                ->body('Aucune ligne produit valide n’a été soumise — les lignes existantes ont été conservées.')
+                ->warning()
+                ->send();
+
+            return;
+        }
+
         // Restore stock for old lines
         foreach ($this->record->details as $old) {
             Product::where('id', $old->produit_id)->increment('qte', $old->qte ?? $old->quantite ?? 0);
@@ -145,6 +162,10 @@ class EditFacture extends EditRecord
             $touchedProductIds[] = $row['produit_id'];
         }
 
+        // Floor any qte driven below zero by over-invoicing back to 0 BEFORE deriving rupture, so an
+        // impossible negative stock can't permanently stick a product OUT OF STOCK (even a later
+        // restock onto a negative qte would stay <= 0). Only raises negatives to 0; never inflates.
+        Product::whereIn('id', $touchedProductIds)->where('qte', '<', 0)->update(['qte' => 0]);
         // Raw increment()/decrement() bypass the Product saving() hook; re-derive rupture flags.
         Product::syncRuptureFlags($touchedProductIds);
 
