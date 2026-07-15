@@ -510,7 +510,10 @@ export const getProductsByCategory = async (slug: string): Promise<{
       }
       return response.data;
     },
-    (err) => err?.response?.status !== 404 && (err?.code === 'ETIMEDOUT' || err?.code === 'ECONNRESET' || err?.code === 'ECONNABORTED' || (err?.response?.status >= 500 && err?.response?.status < 600))
+    // Retry ONLY 5xx here. Network codes (ETIMEDOUT/ECONNRESET/ECONNABORTED) are already retried by
+    // the axios interceptor; retrying them here too stacked the two layers (interceptor re-runs on a
+    // fresh config, resetting its own counter) into ~6 sequential 60s attempts on a hung backend.
+    (err) => err?.response?.status !== 404 && err?.response?.status >= 500 && err?.response?.status < 600
   );
 };
 
@@ -548,7 +551,9 @@ export const getProductsBySubCategory = async (
     },
     (err) => {
       if (err?.name === 'AbortError' || err?.code === 'ERR_CANCELED') return false;
-      return err?.response?.status !== 404 && (err?.code === 'ETIMEDOUT' || err?.code === 'ECONNRESET' || err?.code === 'ECONNABORTED' || (err?.response?.status >= 500 && err?.response?.status < 600));
+      // Retry ONLY 5xx here; the axios interceptor already handles network-code retries (see
+      // getProductsByCategory) — retrying them in both layers stacked to ~6 sequential attempts.
+      return err?.response?.status !== 404 && err?.response?.status >= 500 && err?.response?.status < 600;
     }
   );
 };
@@ -703,10 +708,12 @@ export const getArticleDetails = async (slug: string): Promise<Article> => {
   });
 
   if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error('Article not found');
-    }
-    throw new Error(`Failed to fetch article: ${response.statusText}`);
+    // Throw a status-CARRYING ApiError (mirroring getProductDetails) so getErrorStatus() can read
+    // the code. Previously this threw a plain Error with no status, so blog/[slug]'s
+    // `if (getErrorStatus(e) === 404) notFound()` never fired and a deleted article hit the generic
+    // error boundary (soft-404) instead of a real 404 — leaving the dead URL indexable in Google.
+    if (response.status === 404) throw new ApiError('Article not found', 404);
+    throw new ApiError(response.statusText || 'Failed to fetch article', response.status);
   }
 
   const data = await response.json();
