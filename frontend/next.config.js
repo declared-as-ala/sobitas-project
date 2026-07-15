@@ -121,11 +121,17 @@ const nextConfig = {
     // Requires `critters` devDependency.
     optimizeCss: true,
     // Disable the client-side Router Cache for both dynamic and static pages.
-    // This ensures navigating to /blog always fetches fresh RSC payloads from the server,
-    // preventing stale articles from appearing after admin edits/deletes.
+    // With non-zero values the browser REUSES a prefetched RSC payload for that many
+    // seconds — so a <Link> prefetched while a page's data was momentarily empty/stale
+    // (e.g. an ISR page prerendered before the backend had the data) keeps replaying that
+    // stale snapshot on soft navigation, while a hard refresh (which bypasses the Router
+    // Cache) shows the correct content. That is exactly the "click Packs → empty, refresh
+    // → products appear" bug, and it applied site-wide (shop, category, offres, blog…).
+    // 0/0 makes every navigation refetch a fresh RSC payload from the server (the route is
+    // still ISR-cached on the origin, so this stays fast), matching the intent above.
     staleTimes: {
-      dynamic: 30,
-      static: 300,
+      dynamic: 0,
+      static: 0,
     },
     optimizePackageImports: [
       'lucide-react',
