@@ -35,10 +35,12 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     const total = Number(data.meta?.total);
     const countText =
       Number.isFinite(total) && total > 0 ? `${total} article${total > 1 ? 's' : ''}` : 'nos articles';
-    const title = data.tag.seo?.title || `Blog tag ${data.tag.name} | Proteine Tunisie`;
+    // No brand suffix here: the root layout template appends `| Protéine Tunisie` once. Keeping the
+    // suffix produced `... | Proteine Tunisie | Protéine Tunisie` (brand twice, two spellings).
+    const title = data.tag.seo?.title || `Blog tag ${data.tag.name}`;
     const description =
       data.tag.seo?.description ||
-      `Explorez ${countText} associés au tag ${data.tag.name} : conseils nutrition & sport, guides et actualités sur Proteine Tunisie.`;
+      `Explorez ${countText} associés au tag ${data.tag.name} : conseils nutrition & sport, guides et actualités sur Protéine Tunisie.`;
     const canonical = data.tag.seo?.canonical_url
       ? forceProteinDomain(data.tag.seo.canonical_url)
       : buildCanonicalUrl(`/blog/tag/${data.tag.slug}${page > 1 ? `?page=${page}` : ''}`);
@@ -60,7 +62,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
       },
     };
   } catch {
-    return { title: 'Tag blog | Proteine Tunisie' };
+    return { title: 'Tag blog' };
   }
 }
 
@@ -112,7 +114,7 @@ export default async function BlogTagPage({ params, searchParams }: Props) {
   // Unique intro copy so the tag page isn't a thin, templated listing (SEO: avoids "thin content").
   const introText =
     data.tag.seo?.description?.trim() ||
-    `Tous nos articles associés au tag ${data.tag.name} : conseils nutrition & sport, astuces et guides pratiques signés Proteine Tunisie pour vous accompagner dans vos objectifs.`;
+    `Tous nos articles associés au tag ${data.tag.name} : conseils nutrition & sport, astuces et guides pratiques signés Protéine Tunisie pour vous accompagner dans vos objectifs.`;
 
   return (
     <>

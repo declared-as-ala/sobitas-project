@@ -21,7 +21,9 @@ export async function generateMetadata(): Promise<Metadata> {
     'Achetez whey, créatine, gainer, BCAA et compléments alimentaires en Tunisie chez SOBITAS (Sousse). Produits authentiques, livraison rapide à Sousse, Tunis et partout en Tunisie.';
 
   return {
-    title,
+    // absolute: the homepage title already reads as a full brand title; without this the root
+    // layout's `%s | Protéine Tunisie` template would append the brand a SECOND time (~82 chars).
+    title: { absolute: title },
     description,
     keywords:
       'protéine tunisie, whey tunisie, créatine tunisie, compléments alimentaires tunisie, vitamines tunisie, nutrition sportive tunisie, protein tunisie, protein.tn, protéine sousse, compléments alimentaires sousse, whey sousse, protéine tunis, sobitas',
