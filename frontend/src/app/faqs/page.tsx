@@ -24,6 +24,10 @@ export const metadata: Metadata = {
   },
 };
 
+// ISR: without this the axios-fetched FAQ page is fully static and never revalidates, so admin FAQ
+// edits (and the FAQPage JSON-LD) never appear until a redeploy. Matches contact/qui-sommes-nous.
+export const revalidate = 3600;
+
 async function getFAQsData() {
   // loadForCache: if getFAQs throws (e.g. the API is unreachable during `next build`), do NOT bake
   // an empty FAQ page — noStore() defers this render to runtime, where the backend is reachable.

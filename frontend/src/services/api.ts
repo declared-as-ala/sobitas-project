@@ -196,6 +196,9 @@ export const getAccueil = async (): Promise<AccueilData> => {
     };
   } catch (error) {
     console.error('[getAccueil] API error:', error);
+    // On the server, rethrow so the homepage can avoid CACHING a product-less render
+    // (see getHomeData + loadForCache). In the browser keep failing soft.
+    if (typeof window === 'undefined') throw error;
     // Return empty structure on error
     return {
       categories: [],

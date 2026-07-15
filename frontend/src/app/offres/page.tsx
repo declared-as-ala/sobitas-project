@@ -46,13 +46,11 @@ export default async function OffresPage() {
   );
   let promoProducts: Product[] = [];
   if (Array.isArray(products)) {
-    const filtered = products.filter((p: Product) => {
-      // Must have a valid promo AND be in stock. Exclude products explicitly out of stock
-      // (rupture === 0); undefined/1 are treated as in stock (matches ProductCard).
-      const hasPromo = hasValidPromo(p);
-      const inStock = (p as any).rupture !== 0;
-      return hasPromo && inStock;
-    });
+    // Valid promo AND in stock. Use the shared isInStock() — the API sends `rupture` as a BOOLEAN,
+    // so the old `rupture !== 0` was always true (true!==0 AND false!==0), letting every out-of-stock
+    // promo through onto the offers page and into its ItemList JSON-LD. isInStock handles boolean/
+    // numeric rupture and qte<=0 consistently with ProductCard and the cart.
+    const filtered = products.filter((p: Product) => hasValidPromo(p) && isInStock(p));
     // Resolve subcategory so links + ItemList URLs are canonical /{subcat}/{slug}, not the /shop/{slug} 301.
     promoProducts = enrichProductsWithSubcategory(filtered, categories);
   }

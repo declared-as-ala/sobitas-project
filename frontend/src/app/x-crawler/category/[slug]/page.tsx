@@ -29,6 +29,7 @@ import {
 } from '@/services/api';
 import { ApiError } from '@/services/http';
 import { loadForCache } from '@/util/loadForCache';
+import { getErrorStatus } from '@/util/errorStatus';
 import { generateMetadata as generateCategoryMetadata } from '@/app/category/[slug]/page';
 import { PageContentClient } from '@/app/page/[slug]/PageContentClient';
 import { getCategorySeoContent } from '@/util/categorySeoContent';
@@ -65,8 +66,12 @@ async function findBrandBySlug(slug: string): Promise<Brand | null> {
   try {
     const brands = await getAllBrands();
     return brands.find((b) => nameToSlug(b.designation_fr) === slug) ?? null;
-  } catch {
-    return null;
+  } catch (e) {
+    // A transient getAllBrands failure must NOT masquerade as "brand not found" — that falls through
+    // to notFound() and caches a 404 for the crawler on a live brand page. Only a genuine 404 means
+    // no brands; anything else propagates (5xx render error the bot retries, never a cached 404).
+    if (getErrorStatus(e) === 404) return null;
+    throw e;
   }
 }
 

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, unstable_rethrow } from 'next/navigation';
+import { getErrorStatus } from '@/util/errorStatus';
 import { getArticlesByBlogCategory } from '@/services/api';
 import { buildCanonicalUrl, forceProteinDomain } from '@/util/canonical';
 import { buildBreadcrumbListSchema, buildItemListSchema, buildCollectionPageSchema } from '@/util/structuredData';
@@ -60,7 +61,16 @@ export default async function BlogCategoryPage({ params, searchParams }: Props) 
   const { slug } = await params;
   const sp = searchParams ? await searchParams : {};
   const page = Math.max(1, parseInt(String(Array.isArray(sp.page) ? sp.page[0] : sp.page || '1'), 10) || 1);
-  const data = await getArticlesByBlogCategory(slug, page, 9).catch(() => null);
+  let data;
+  try {
+    data = await getArticlesByBlogCategory(slug, page, 9);
+  } catch (e) {
+    unstable_rethrow(e);
+    // Only a genuine 404 is "no such category". A transient failure must rethrow, not serve
+    // Googlebot a 404 for a valid blog category (which deindexes it).
+    if (getErrorStatus(e) === 404) notFound();
+    throw e;
+  }
   if (!data) notFound();
 
   const perPage = 9;
