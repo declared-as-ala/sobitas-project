@@ -44,8 +44,25 @@ export type BreadcrumbItem = { name: string; url: string };
  * BIG RAMY ") and doubled spaces, which then leak verbatim into the Product rich-result title.
  */
 function cleanSchemaName(value: unknown, fallback: string = 'Produit'): string {
-  const s = typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : '';
+  const s = typeof value === 'string'
+    ? value.replace(/<[^>]*>/g, ' ').replace(/[<>]/g, ' ').replace(/\s+/g, ' ').trim()
+    : '';
   return s || fallback;
+}
+
+/**
+ * Plain-text sanitizer for ANY string emitted into a JSON-LD
+ * <script type="application/ld+json"> block. Strips HTML tags and neutralises
+ * angle brackets so a value can never contain `</script>` and break out of the
+ * element (stored XSS — e.g. via a user-submitted review). JSON-LD text fields
+ * are plain text anyway.
+ */
+export function jsonLdText(value: unknown): string {
+  return String(value ?? '')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/[<>]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 /** Strip HTML tags for plain-text description (max length). */
@@ -208,7 +225,7 @@ function buildAggregateRatingAndReviews(product: Product): { aggregateRating?: o
     .slice(0, 3)
     .filter((r) => r.comment && String(r.comment).trim())
     .map((r) => {
-      const authorName = (r.user?.name && String(r.user.name).trim()) || 'Client';
+      const authorName = jsonLdText((r.user?.name && String(r.user.name).trim()) || 'Client') || 'Client';
       const raw = typeof r.stars === 'number' ? r.stars : typeof r.note === 'number' ? r.note : 5;
       const ratingVal = Math.max(1, Math.min(5, raw));
       return {
@@ -216,7 +233,9 @@ function buildAggregateRatingAndReviews(product: Product): { aggregateRating?: o
         author: { '@type': 'Person' as const, name: authorName },
         datePublished: r.created_at || undefined,
         reviewRating: { '@type': 'Rating' as const, ratingValue: ratingVal, bestRating: 5, worstRating: 1 },
-        reviewBody: String(r.comment).trim().slice(0, 1000),
+        // jsonLdText strips HTML/angle-brackets so a review can never contain
+        // </script> and break out of the JSON-LD <script> element (stored XSS).
+        reviewBody: jsonLdText(String(r.comment)).slice(0, 1000),
       };
     });
   if (reviewSnippets.length > 0) result.review = reviewSnippets;

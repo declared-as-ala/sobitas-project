@@ -115,7 +115,9 @@ class EnrichNutritionFromOpenFoodFacts extends Command
 
             if (! $dry) {
                 // Update only this column — never touch pricing/stock/publish.
-                $product->forceFill(['nutrition_values' => $html])->save();
+                // saveQuietly() so the Product::saving() hook does NOT fire and
+                // re-derive `rupture` from `qte` (that would flip stock on a timer).
+                $product->forceFill(['nutrition_values' => $html])->saveQuietly();
             }
 
             $filled++;

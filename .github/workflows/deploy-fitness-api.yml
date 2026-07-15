@@ -66,7 +66,7 @@ jobs:
           command_timeout: 900s
           script_stop: true
           script: |
-            set -e
+            set -eo pipefail
             APP_DIR="/root/sobitas-project"
             cd "$APP_DIR"
 
@@ -79,16 +79,35 @@ jobs:
             echo "📦 Pull latest fitness-api image..."
             docker pull ghcr.io/declared-as-ala/sobitas-fitness-api:latest
 
+            echo "🗄️  Pre-Prisma database backup (this DB is SHARED with the store — always back up first)..."
+            docker compose up -d mysql >/dev/null 2>&1 || true
+            mkdir -p /var/sobitas/backups
+            BACKUP_FILE="/var/sobitas/backups/db-pre-prisma-$(date +%Y%m%d-%H%M%S).sql.gz"
+            if docker exec sobitas-mysql sh -c 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --single-transaction --routines --triggers --databases "$MYSQL_DATABASE"' 2>/dev/null | gzip > "$BACKUP_FILE"; then
+              echo "✓ Backup written: $BACKUP_FILE ($(du -h "$BACKUP_FILE" 2>/dev/null | cut -f1))"
+            else
+              echo "❌ Pre-Prisma backup FAILED — refusing to run a schema sync against the shared DB without a backup."
+              rm -f "$BACKUP_FILE" || true
+              exit 1
+            fi
+            ls -1t /var/sobitas/backups/db-pre-prisma-*.sql.gz 2>/dev/null | tail -n +31 | xargs -r rm -f || true
+
             echo "🔄 Restart fitness-api..."
             docker compose up -d --force-recreate --no-deps fitness-api
 
-            echo "🗄️ Syncing Prisma database schema (additive only)..."
-            # Deliberately NOT using --accept-data-loss: this database is shared with the Laravel
-            # e-commerce app (users, products, etc.), which Prisma only introspects/reads for some
-            # models. Without --accept-data-loss, Prisma applies safe/additive changes (e.g. new
-            # fitness_* tables) but refuses and exits non-zero if it would drop/alter a column —
-            # forcing a human to review and run it manually if a destructive change is ever intended.
-            docker compose exec -T fitness-api npx prisma db push || echo "⚠️ Prisma db push needs manual review (see above) — not auto-applying destructive changes."
+            echo "🗄️ Syncing Prisma database schema (additive ONLY, never destructive)..."
+            # This DB is SHARED with the Laravel e-commerce store (users, products, orders…).
+            # Prisma must only ADD (e.g. new fitness_* tables). Without --accept-data-loss it
+            # refuses and exits non-zero if it would DROP/ALTER a live column. We now FAIL THE
+            # DEPLOY LOUDLY on that refusal (a human must reconcile the drift) instead of
+            # swallowing it with `|| echo`, so no destructive schema change slips through
+            # silently. NEVER add --accept-data-loss here.
+            if ! docker compose exec -T fitness-api npx prisma db push; then
+              echo "❌ Prisma db push FAILED or refused a DESTRUCTIVE change on the SHARED production DB."
+              echo "   A backup was taken above. A human must review the schema drift and reconcile it."
+              echo "   DO NOT add --accept-data-loss. Failing the deploy on purpose."
+              exit 1
+            fi
 
             echo "🧹 Cleaning unused images..."
             docker image prune -f || true
