@@ -104,7 +104,9 @@ function metadataForBrand(brand: Brand, slug: string): Metadata {
   const ogAlt = `${brand.designation_fr} — Protéine Tunisie`;
 
   return {
-    title,
+    // absolute: the brand title already ends with "| Protéine Tunisie"; without this the root
+    // layout template would append the brand a second time on these ranking-surface pages.
+    title: { absolute: title },
     description,
     alternates: { canonical },
     openGraph: {

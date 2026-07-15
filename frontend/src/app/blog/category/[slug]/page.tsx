@@ -35,10 +35,12 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     const total = Number(data.meta?.total);
     const countText =
       Number.isFinite(total) && total > 0 ? `${total} article${total > 1 ? 's' : ''}` : 'nos articles';
-    const title = data.category.seo?.title || `Blog catégorie ${data.category.name} | Proteine Tunisie`;
+    // No brand suffix here: the root layout template appends `| Protéine Tunisie` once. Keeping the
+    // suffix produced `... | Proteine Tunisie | Protéine Tunisie` (brand twice, two spellings).
+    const title = data.category.seo?.title || `Blog catégorie ${data.category.name}`;
     const description =
       data.category.seo?.description ||
-      `Découvrez ${countText} dans la catégorie ${data.category.name} : conseils nutrition & sport, guides et actualités sur Proteine Tunisie.`;
+      `Découvrez ${countText} dans la catégorie ${data.category.name} : conseils nutrition & sport, guides et actualités sur Protéine Tunisie.`;
     const canonical = data.category.seo?.canonical_url
       ? forceProteinDomain(data.category.seo.canonical_url)
       : buildCanonicalUrl(`/blog/category/${data.category.slug}${page > 1 ? `?page=${page}` : ''}`);
@@ -58,7 +60,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
       },
     };
   } catch {
-    return { title: 'Catégorie blog | Proteine Tunisie' };
+    return { title: 'Catégorie blog' };
   }
 }
 
@@ -110,7 +112,7 @@ export default async function BlogCategoryPage({ params, searchParams }: Props) 
   // Unique intro copy so the page isn't a thin, templated listing (SEO: avoids "thin content").
   const introText =
     data.category.seo?.description?.trim() ||
-    `Retrouvez tous nos articles de la catégorie ${data.category.name} : conseils nutrition & sport, guides pratiques et actualités. Des contenus rédigés par l'équipe Proteine Tunisie pour vous aider à progresser au quotidien.`;
+    `Retrouvez tous nos articles de la catégorie ${data.category.name} : conseils nutrition & sport, guides pratiques et actualités. Des contenus rédigés par l'équipe Protéine Tunisie pour vous aider à progresser au quotidien.`;
 
   return (
     <>
