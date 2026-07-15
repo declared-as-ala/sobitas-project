@@ -35,7 +35,12 @@ interface CountdownState {
 
 // Isolated memo so the 1-second interval only re-renders this compact strip, not the product list.
 const CountdownDisplay = memo(function CountdownDisplay({ expirationDate }: { expirationDate: Date }) {
-  const [countdown, setCountdown] = useState<CountdownState>({ days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: false });
+  // Start as null: computing the real remaining time needs Date.now(), which differs between the
+  // server render and the client. Initialising to zeros made SSR paint "00:00:00" (looks like the
+  // sale already ended) and then jump to the real time on hydration. Rendering a neutral "--"
+  // placeholder until the effect runs is deterministic on server + first client render (no
+  // hydration mismatch) and keeps the strip's height (no layout shift).
+  const [countdown, setCountdown] = useState<CountdownState | null>(null);
 
   useEffect(() => {
     const updateCountdown = () => {
@@ -57,14 +62,22 @@ const CountdownDisplay = memo(function CountdownDisplay({ expirationDate }: { ex
     return () => clearInterval(id);
   }, [expirationDate]);
 
-  if (countdown.isExpired) return null;
+  if (countdown?.isExpired) return null;
 
-  const units = [
-    countdown.days > 0 ? { value: countdown.days, label: 'J' } : null,
-    { value: countdown.hours, label: 'H' },
-    { value: countdown.minutes, label: 'Min' },
-    { value: countdown.seconds, label: 'Sec' },
-  ].filter(Boolean) as { value: number; label: string }[];
+  // Before the effect runs (SSR + first client render), show H/Min/Sec placeholders. Once mounted,
+  // the J unit is added only when there are whole days left.
+  const units: { value: number | null; label: string }[] = countdown
+    ? ([
+        countdown.days > 0 ? { value: countdown.days, label: 'J' } : null,
+        { value: countdown.hours, label: 'H' },
+        { value: countdown.minutes, label: 'Min' },
+        { value: countdown.seconds, label: 'Sec' },
+      ].filter(Boolean) as { value: number; label: string }[])
+    : [
+        { value: null, label: 'H' },
+        { value: null, label: 'Min' },
+        { value: null, label: 'Sec' },
+      ];
 
   return (
     <div className="inline-flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl bg-red-600 px-4 py-2.5 text-white shadow-sm">
@@ -76,7 +89,7 @@ const CountdownDisplay = memo(function CountdownDisplay({ expirationDate }: { ex
         {units.map(({ value, label }) => (
           <div key={label} className="flex min-w-[2.75rem] flex-col items-center rounded-lg bg-white/15 px-2 py-1">
             <span className="font-display text-lg font-bold leading-none tabular-nums">
-              {String(value).padStart(2, '0')}
+              {value == null ? '--' : String(value).padStart(2, '0')}
             </span>
             <span className="mt-0.5 text-[10px] uppercase tracking-wide text-white/80">{label}</span>
           </div>
