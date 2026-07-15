@@ -234,15 +234,19 @@ export default async function CategoryPage({ params }: PageProps) {
     permanentRedirect(`/${encodeURIComponent(canonicalSlug)}`);
   }
 
-  let categories: Awaited<ReturnType<typeof getCategories>> = [];
-  try {
-    categories = await getCategories();
-  } catch (e) {
+  // Start both independent fetches concurrently (was a sequential waterfall: getCategories was fully
+  // awaited before the category fetch even began). categories feeds only later related-links /
+  // breadcrumbs; the category fetch depends only on the slug. Awaiting the category promise inside
+  // the existing try preserves the notFound()/rethrow error handling.
+  const categoriesPromise = getCategories().catch((e) => {
     console.error('Error fetching categories:', e);
-  }
+    return [] as Awaited<ReturnType<typeof getCategories>>;
+  });
+  const categoryPromise = fetchCategoryOrSubCategory(canonicalSlug);
+  const categories = await categoriesPromise;
 
   try {
-    const { type, data } = await fetchCategoryOrSubCategory(canonicalSlug);
+    const { type, data } = await categoryPromise;
 
     if (type === 'subcategory') {
       const sub = data as {

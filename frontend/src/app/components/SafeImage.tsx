@@ -167,7 +167,7 @@ export function SafeImage({
           sizes={sizes}
           priority={priority}
           loading={priority ? undefined : 'lazy'}
-          unoptimized
+          unoptimized={typeof finalSrc === 'string' && finalSrc.startsWith('data:')}
           onLoad={handleLoad}
           onError={handleError}
         />
