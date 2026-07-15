@@ -104,11 +104,18 @@ interface VentesFlashSectionProps {
 }
 
 export const VentesFlashSection = memo(function VentesFlashSection({ products }: VentesFlashSectionProps) {
+  // Gate the countdown block on a STABLE value — whether any promo has an expiration date at all —
+  // NOT on `> Date.now()`. Under ISR the page is baked minutes before hydration; a Date.now()
+  // comparison in render could keep the block on the server but drop it on the client (or vice-versa)
+  // when a promo expires inside the cache window → React hydration mismatch + a torn-down block.
+  // The parent already filters ventes_flash to future promos, and CountdownDisplay resolves the
+  // actual time (and returns null once expired) client-side after mount.
   const earliestExpiration = useMemo(() => {
     const validDates = products
       .map(p => p.promo_expiration_date)
-      .filter((d): d is string => !!d && new Date(d).getTime() > Date.now())
-      .map(d => new Date(d).getTime());
+      .filter((d): d is string => !!d)
+      .map(d => new Date(d).getTime())
+      .filter(t => !Number.isNaN(t));
     if (validDates.length === 0) return null;
     return new Date(Math.min(...validDates));
   }, [products]);
