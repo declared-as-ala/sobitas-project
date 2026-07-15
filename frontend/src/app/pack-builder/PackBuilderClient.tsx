@@ -301,7 +301,7 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
                             <span className="tabular-nums text-gray-400">{qty}×</span> {product.designation_fr}
                           </span>
                           <span className="shrink-0 font-display font-semibold tabular-nums text-gray-900 dark:text-white">
-                            {(getEffectivePrice(product as never) * qty).toFixed(0)} DT
+                            {(getEffectivePrice(product as never) * qty).toFixed(2)} DT
                           </span>
                         </li>
                       ))}
@@ -312,7 +312,7 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-gray-600 dark:text-gray-400">Sous-total</span>
                       <span className="font-display font-semibold tabular-nums text-gray-900 dark:text-white">
-                        {subtotal.toFixed(0)} DT
+                        {subtotal.toFixed(2)} DT
                       </span>
                     </div>
                     {discountAmount > 0 && (
@@ -332,7 +332,7 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
                         {quoteLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-gray-400" aria-hidden="true" />}
                       </span>
                       <span className="font-display font-bold tracking-tight tabular-nums text-2xl text-red-600 dark:text-red-400">
-                        {total.toFixed(0)} DT
+                        {total.toFixed(2)} DT
                       </span>
                     </div>
                   </div>
@@ -342,7 +342,7 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
                     <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50/60 dark:bg-red-950/20 border border-red-100 dark:border-red-900/40">
                       <TrendingUp className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5 shrink-0" aria-hidden="true" />
                       <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                        Ajoutez {nextTier.remaining.toFixed(0)} DT pour obtenir -{nextTier.percent}%
+                        Ajoutez {nextTier.remaining.toFixed(2)} DT pour obtenir -{nextTier.percent}%
                       </p>
                     </div>
                   )}

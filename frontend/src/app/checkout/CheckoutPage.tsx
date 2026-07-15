@@ -1114,7 +1114,7 @@ export default function CheckoutPage() {
                                 Qté: {item.quantity}
                               </p>
                               <p className="text-sm font-display font-bold tracking-tight tabular-nums text-red-600 dark:text-red-400">
-                                {(price * item.quantity).toFixed(0)} DT
+                                {(price * item.quantity).toFixed(2)} DT
                               </p>
                             </div>
                           </div>
@@ -1292,7 +1292,7 @@ export default function CheckoutPage() {
                   <div className="border-t border-gray-100 dark:border-gray-800 pt-4 space-y-3">
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600 dark:text-gray-400">Sous-total</span>
-                      <span className="font-display font-semibold tabular-nums text-gray-900 dark:text-white">{totalPrice.toFixed(0)} DT</span>
+                      <span className="font-display font-semibold tabular-nums text-gray-900 dark:text-white">{totalPrice.toFixed(2)} DT</span>
                     </div>
                     {appliedCoupon && appliedCoupon.discount_ht > 0 && (
                       <div className="flex justify-between items-center">
@@ -1341,14 +1341,14 @@ export default function CheckoutPage() {
                       <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-950/20 rounded-xl border border-red-100 dark:border-red-900/50">
                         <Truck className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5 shrink-0" aria-hidden="true" />
                         <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                          Ajoutez {(FREE_SHIPPING_THRESHOLD - totalPrice).toFixed(0)} DT pour la livraison gratuite !
+                          Ajoutez {(FREE_SHIPPING_THRESHOLD - totalPrice).toFixed(2)} DT pour la livraison gratuite !
                         </p>
                       </div>
                     )}
                     <div className="border-t border-gray-100 dark:border-gray-800 pt-3 flex justify-between items-baseline">
                       <span className="font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white">Total</span>
                       <span className="font-display font-bold tracking-tight tabular-nums text-2xl text-red-600 dark:text-red-400">
-                        {finalTotal.toFixed(0)} DT
+                        {finalTotal.toFixed(2)} DT
                       </span>
                     </div>
                     {(packDiscountAmount > 0 || pointsDiscountDt > 0) && (
