@@ -260,16 +260,13 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Add no-cache headers for blog pages to ensure fresh content
+  // NOTE: we deliberately no longer force no-store on /blog. Mutating response headers on this
+  // passthrough NextResponse.next() pinned every /blog response to HTTP 200 — so notFound() for a
+  // deleted article or a bad blog category/tag rendered the not-found page as a SOFT-404 (200 body),
+  // and it also defeated the ISR (revalidate 300/3600) edge/browser caching those routes were
+  // converted to. Blog freshness is handled server-side by ISR + revalidateTag('blog')
+  // (POST /api/revalidate-blog); the blog HTML documents cache normally.
   const response = NextResponse.next();
-  
-  if (pathname.startsWith('/blog')) {
-    // Force no-cache for blog pages (HTML and API responses)
-    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-    response.headers.set('Pragma', 'no-cache');
-    response.headers.set('Expires', '0');
-    response.headers.set('Surrogate-Control', 'no-store');
-  }
 
   // Redirect old query-based category URLs to new clean URLs
   if (pathname === '/shop') {
