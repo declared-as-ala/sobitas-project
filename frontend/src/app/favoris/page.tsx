@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import { FavorisPageClient } from './FavorisPageClient';
 
 export const metadata: Metadata = {
-  title: 'Favoris | Proteine Tunisie',
+  title: 'Favoris',
   description: 'Vos produits favoris – Proteine Tunisie',
   // Personal wishlist — must not be indexed. This was the only private page with no
   // protection on EITHER layer (no robots meta AND not in robots.txt), so it must stay

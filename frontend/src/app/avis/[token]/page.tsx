@@ -3,7 +3,7 @@ import AvisClient from './AvisClient';
 
 // Private, per-order review link — never indexed.
 export const metadata: Metadata = {
-  title: 'Donnez votre avis — Protéine Tunisie',
+  title: 'Donnez votre avis',
   description: 'Notez les produits de votre commande.',
   robots: { index: false, follow: false },
 };
