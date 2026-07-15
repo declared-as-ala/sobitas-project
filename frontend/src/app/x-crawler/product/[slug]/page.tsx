@@ -21,7 +21,8 @@
  */
 
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, unstable_rethrow } from 'next/navigation';
+import { getErrorStatus } from '@/util/errorStatus';
 import { getSimilarProducts } from '@/services/api';
 import { getCachedProductDetails } from '@/services/getCachedProductDetails';
 import { CrawlerProductView } from '@/app/components/crawler/CrawlerProductView';
@@ -74,8 +75,12 @@ export default async function CrawlerProductPage({ params }: PageProps) {
   let product: Product | null = null;
   try {
     product = await getCachedProductDetails(cleanSlug);
-  } catch {
-    notFound();
+  } catch (e) {
+    unstable_rethrow(e);
+    // Genuine 404 → 404 for the bot. Transient failure → rethrow so this ISR route never
+    // caches a wrong 404 for a healthy product (Googlebot seeing 404s deindexes pages!).
+    if (getErrorStatus(e) === 404) notFound();
+    throw e;
   }
   if (!product?.id || !getProductPrimarySubCategory(product)?.slug) {
     // Not a resolvable canonical product — let the bot fall through to a 404 rather

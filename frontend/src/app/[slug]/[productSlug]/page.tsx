@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { notFound, permanentRedirect } from 'next/navigation';
+import { notFound, permanentRedirect, unstable_rethrow } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { getSimilarProducts } from '@/services/api';
 import { getCachedProductDetails } from '@/services/getCachedProductDetails';
@@ -176,11 +176,15 @@ export default async function NewProductPage({ params }: PageProps) {
   try {
     product = await getCachedProductDetails(cleanProductSlug);
   } catch (e) {
+    unstable_rethrow(e);
     if (getErrorStatus(e) === 404) {
       // Product not found - redirect to legacy shop URL
       permanentRedirect(`/shop/${cleanProductSlug}`);
     }
-    notFound();
+    // Transient failure (429/5xx/timeout): rethrow. This ISR route (revalidate 300) would
+    // otherwise CACHE a wrong 404 for a healthy product — the worst affichage bug possible
+    // on a commerce page. The error boundary renders instead and is never cached.
+    throw e;
   }
 
   if (!product?.id) {

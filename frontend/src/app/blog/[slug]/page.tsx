@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, unstable_rethrow } from 'next/navigation';
+import { getErrorStatus } from '@/util/errorStatus';
 import { getArticleDetails, getLatestArticles } from '@/services/api';
 import { getStorageUrl } from '@/services/api';
 import { buildCanonicalUrl, forceProteinDomain } from '@/util/canonical';
@@ -85,9 +86,10 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   const { slug } = await params;
   
   try {
+    // relatedArticles is incidental — its failure must not 404 the article itself.
     const [article, relatedArticles] = await Promise.all([
       getArticleDetails(slug),
-      getLatestArticles(),
+      getLatestArticles().catch(() => [] as Awaited<ReturnType<typeof getLatestArticles>>),
     ]);
 
     if (!article) {
@@ -117,7 +119,12 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
       </>
     );
   } catch (error) {
+    // Preserve the notFound() thrown for a genuinely missing article inside the try.
+    unstable_rethrow(error);
     console.error('Error fetching article:', error);
-    notFound();
+    // Genuine backend 404 → real 404. Transient failure → rethrow so this ISR route doesn't
+    // cache a wrong 404 for a healthy article for the whole revalidate window (1h here).
+    if (getErrorStatus(error) === 404) notFound();
+    throw error;
   }
 }
