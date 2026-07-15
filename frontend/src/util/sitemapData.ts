@@ -18,6 +18,7 @@ const STATIC_PAGES_SET = new Set([
   `${BASE_URL}/qui-sommes-nous`,
   `${BASE_URL}/contact`,
   `${BASE_URL}/faqs`,
+  `${BASE_URL}/proteine-sousse`,
 ]);
 
 const staticPages: MetadataRoute.Sitemap = [
@@ -30,6 +31,9 @@ const staticPages: MetadataRoute.Sitemap = [
   { url: `${BASE_URL}/qui-sommes-nous`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.7 },
   { url: `${BASE_URL}/contact`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.8 },
   { url: `${BASE_URL}/faqs`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.7 },
+  // Local SEO landing page ("protéine Sousse"): indexable + self-canonical but was orphaned —
+  // absent from the sitemap and with no internal links, so it could not be discovered/indexed.
+  { url: `${BASE_URL}/proteine-sousse`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.8 },
 ];
 
 function getLastModified(item: { updated_at?: string; created_at?: string }): Date {
