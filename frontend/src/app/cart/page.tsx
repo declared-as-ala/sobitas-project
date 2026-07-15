@@ -242,7 +242,7 @@ export default function CartPage() {
                             {productName}
                           </h3>
                           <p className="text-sm text-red-600 dark:text-red-400 font-display font-bold tracking-tight tabular-nums mt-1">
-                            {displayPrice.toFixed(0)} DT
+                            {displayPrice.toFixed(2)} DT
                             {item.quantity > 1 && (
                               <span className="text-gray-500 dark:text-gray-400 font-normal ml-1">
                                 × {item.quantity}
@@ -279,7 +279,7 @@ export default function CartPage() {
 
                           <div className="flex items-center gap-1 ml-auto">
                             <span className="text-sm sm:text-base font-display font-bold tracking-tight text-gray-900 dark:text-white tabular-nums">
-                              {(displayPrice * item.quantity).toFixed(0)} DT
+                              {(displayPrice * item.quantity).toFixed(2)} DT
                             </span>
                             <button
                               type="button"
@@ -319,7 +319,7 @@ export default function CartPage() {
                           Livraison gratuite à 300 DT
                         </span>
                         <span className="text-xs sm:text-sm font-display font-bold tabular-nums text-red-600 dark:text-red-400">
-                          {remainingForFreeShipping.toFixed(0)} DT restants
+                          {remainingForFreeShipping.toFixed(2)} DT restants
                         </span>
                       </div>
                       <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -335,7 +335,7 @@ export default function CartPage() {
                 <div className="p-4 sm:p-5 lg:p-6 space-y-2">
                   <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
                     <span>Sous-total</span>
-                    <span className="font-display font-semibold text-gray-900 dark:text-white tabular-nums">{totalPrice.toFixed(0)} DT</span>
+                    <span className="font-display font-semibold text-gray-900 dark:text-white tabular-nums">{totalPrice.toFixed(2)} DT</span>
                   </div>
                   <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
                     <span>Livraison</span>
@@ -363,7 +363,7 @@ export default function CartPage() {
                 <div className="flex justify-between items-baseline">
                   <span className="font-display uppercase tracking-tight text-base text-gray-900 dark:text-white">Total</span>
                   <span className="font-display font-bold tracking-tight text-xl sm:text-2xl text-red-600 dark:text-red-400 tabular-nums">
-                    {finalTotal.toFixed(0)} DT
+                    {finalTotal.toFixed(2)} DT
                   </span>
                 </div>
                 <Button
@@ -404,7 +404,7 @@ export default function CartPage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-4">
             <div className="flex-1 min-w-0">
               <p className="text-xs text-gray-500 dark:text-gray-400">Total</p>
-              <p className="font-display font-bold tracking-tight text-lg text-red-600 dark:text-red-400 tabular-nums">{finalTotal.toFixed(0)} DT</p>
+              <p className="font-display font-bold tracking-tight text-lg text-red-600 dark:text-red-400 tabular-nums">{finalTotal.toFixed(2)} DT</p>
             </div>
             <Button
               size="lg"

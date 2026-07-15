@@ -289,7 +289,7 @@ export function QuickOrderDrawer({
     }
   };
 
-  const summaryLine = `${product.designation_fr} × ${quantity} — ${total.toFixed(0)} DT · Livraison 24–72h`;
+  const summaryLine = `${product.designation_fr} × ${quantity} — ${total.toFixed(2)} DT · Livraison 24–72h`;
 
   return (
     <DialogPrimitive.Root open={internalOpen} onOpenChange={handleOpenChange}>
@@ -640,7 +640,7 @@ export function QuickOrderDrawer({
               <div className="space-y-2 mb-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600 dark:text-gray-400">Sous-total</span>
-                  <span className="font-medium text-gray-900 dark:text-white">{subtotal.toFixed(0)} DT</span>
+                  <span className="font-medium text-gray-900 dark:text-white">{subtotal.toFixed(2)} DT</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600 dark:text-gray-400">Expédition</span>
@@ -656,10 +656,10 @@ export function QuickOrderDrawer({
                 )}
                 <div className="flex justify-between text-base font-bold pt-2 border-t border-gray-200 dark:border-gray-700">
                   <span className="font-display uppercase tracking-wide text-gray-900 dark:text-white">Total</span>
-                  <span className="font-display font-bold tracking-tight tabular-nums text-red-600 dark:text-red-400">{total.toFixed(0)} DT</span>
+                  <span className="font-display font-bold tracking-tight tabular-nums text-red-600 dark:text-red-400">{total.toFixed(2)} DT</span>
                 </div>
                 {subtotal < FREE_SHIPPING_THRESHOLD && fraisLivraison > 0 && !appliedCoupon?.free_shipping && (
-                  <p className="text-xs text-green-700 dark:text-green-300">Ajoutez {(FREE_SHIPPING_THRESHOLD - subtotal).toFixed(0)} DT pour la livraison gratuite</p>
+                  <p className="text-xs text-green-700 dark:text-green-300">Ajoutez {(FREE_SHIPPING_THRESHOLD - subtotal).toFixed(2)} DT pour la livraison gratuite</p>
                 )}
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-500 mb-3">

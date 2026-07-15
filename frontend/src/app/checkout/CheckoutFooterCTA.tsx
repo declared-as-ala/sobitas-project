@@ -46,7 +46,7 @@ export function CheckoutFooterCTA({
         <div className="flex items-center justify-between gap-3 mb-3">
           <div className="min-w-0">
             <p className="text-[13px] text-gray-500 dark:text-gray-400">Total</p>
-            <p className="font-display font-bold tracking-tight tabular-nums text-xl text-gray-900 dark:text-white truncate">{finalTotal.toFixed(0)} DT</p>
+            <p className="font-display font-bold tracking-tight tabular-nums text-xl text-gray-900 dark:text-white truncate">{finalTotal.toFixed(2)} DT</p>
           </div>
           <Sheet open={mobileSummaryOpen} onOpenChange={onMobileSummaryOpenChange}>
             <SheetTrigger asChild>
@@ -74,7 +74,7 @@ export function CheckoutFooterCTA({
                         )}
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2">{productName}</p>
-                          <p className="text-xs text-gray-500">Qté: {item.quantity} · {(price * item.quantity).toFixed(0)} DT</p>
+                          <p className="text-xs text-gray-500">Qté: {item.quantity} · {(price * item.quantity).toFixed(2)} DT</p>
                         </div>
                       </div>
                     );
@@ -83,7 +83,7 @@ export function CheckoutFooterCTA({
                 <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600 dark:text-gray-400">Sous-total</span>
-                    <span className="font-medium text-gray-900 dark:text-white">{totalPrice.toFixed(0)} DT</span>
+                    <span className="font-medium text-gray-900 dark:text-white">{totalPrice.toFixed(2)} DT</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600 dark:text-gray-400">Expédition</span>
@@ -93,7 +93,7 @@ export function CheckoutFooterCTA({
                   </div>
                   <div className="flex justify-between items-baseline pt-2 border-t border-gray-100 dark:border-gray-800">
                     <span className="font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white">Total</span>
-                    <span className="font-display font-bold tracking-tight tabular-nums text-lg text-red-600 dark:text-red-400">{finalTotal.toFixed(0)} DT</span>
+                    <span className="font-display font-bold tracking-tight tabular-nums text-lg text-red-600 dark:text-red-400">{finalTotal.toFixed(2)} DT</span>
                   </div>
                 </div>
               </div>

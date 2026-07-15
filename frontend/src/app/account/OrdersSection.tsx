@@ -119,7 +119,7 @@ export function OrdersSection() {
                   {order.region}
                 </p>
                 <p className="font-display font-bold tracking-tight tabular-nums text-2xl text-red-600 dark:text-red-400">
-                  {order.prix_ttc?.toFixed(0) || 0} DT
+                  {order.prix_ttc?.toFixed(2) || 0} DT
                 </p>
               </div>
               <Button

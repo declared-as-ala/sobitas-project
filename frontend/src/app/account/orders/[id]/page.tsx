@@ -145,7 +145,7 @@ export default function OrderDetailPage() {
                         </div>
                         <div className="text-right shrink-0">
                           <p className="font-display font-bold tracking-tight tabular-nums text-gray-900 dark:text-white">
-                            {(detail.prix_ttc || detail.prix_ht || 0).toFixed(0)} DT
+                            {(detail.prix_ttc || detail.prix_ht || 0).toFixed(2)} DT
                           </p>
                         </div>
                       </div>
@@ -165,7 +165,7 @@ export default function OrderDetailPage() {
               <CardContent className="pt-6 space-y-4">
                 <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
                   <span>Sous-total</span>
-                  <span className="font-display font-semibold tabular-nums text-gray-900 dark:text-white">{order.prix_ht?.toFixed(0) || 0} DT</span>
+                  <span className="font-display font-semibold tabular-nums text-gray-900 dark:text-white">{order.prix_ht?.toFixed(2) || 0} DT</span>
                 </div>
                 {order.frais_livraison && (
                   <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
@@ -176,7 +176,7 @@ export default function OrderDetailPage() {
                 <div className="border-t border-gray-100 dark:border-gray-800 pt-4 flex justify-between items-baseline">
                   <span className="font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white">Total</span>
                   <span className="font-display font-bold tracking-tight tabular-nums text-lg text-red-600 dark:text-red-400">
-                    {order.prix_ttc?.toFixed(0) || 0} DT
+                    {order.prix_ttc?.toFixed(2) || 0} DT
                   </span>
                 </div>
               </CardContent>

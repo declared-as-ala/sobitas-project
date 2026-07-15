@@ -781,7 +781,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       )}
                     </div>
                     {oldPrice && (
-                      <p className="mt-1 text-xs font-semibold text-green-700 dark:text-green-400 tabular-nums">Vous économisez {(oldPrice - displayPrice).toFixed(0)} DT</p>
+                      <p className="mt-1 text-xs font-semibold text-green-700 dark:text-green-400 tabular-nums">Vous économisez {(oldPrice - displayPrice).toFixed(2)} DT</p>
                     )}
                   </div>
                   <div className="flex flex-col items-end gap-1.5 shrink-0">
@@ -850,7 +850,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       </Button>
                     </div>
                   </div>
-                  <span className="text-sm text-gray-600 dark:text-gray-400 tabular-nums">Total <span className="font-bold text-gray-900 dark:text-white">{(displayPrice * quantity).toFixed(0)} DT</span></span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400 tabular-nums">Total <span className="font-bold text-gray-900 dark:text-white">{(displayPrice * quantity).toFixed(2)} DT</span></span>
                 </div>
               </div>
 
@@ -946,7 +946,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                         )}
                       </div>
                       {oldPrice && (
-                        <p className="mt-1 text-xs font-semibold text-green-700 dark:text-green-400 tabular-nums">Vous économisez {(oldPrice - displayPrice).toFixed(0)} DT</p>
+                        <p className="mt-1 text-xs font-semibold text-green-700 dark:text-green-400 tabular-nums">Vous économisez {(oldPrice - displayPrice).toFixed(2)} DT</p>
                       )}
                     </div>
                     <div className="flex flex-col items-end gap-1.5 shrink-0">
@@ -1001,7 +1001,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                         </Button>
                       </div>
                     </div>
-                    <span className="text-sm text-gray-600 dark:text-gray-400 tabular-nums">Total <span className="font-bold text-gray-900 dark:text-white">{(displayPrice * quantity).toFixed(0)} DT</span></span>
+                    <span className="text-sm text-gray-600 dark:text-gray-400 tabular-nums">Total <span className="font-bold text-gray-900 dark:text-white">{(displayPrice * quantity).toFixed(2)} DT</span></span>
                   </div>
 
                   {/* CTAs */}
@@ -1504,7 +1504,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
             <div className="flex flex-col leading-tight shrink-0">
               <span className="text-[10px] font-display uppercase tracking-wide text-gray-500 dark:text-gray-400">Total</span>
               <span className="font-display font-bold tracking-tight tabular-nums text-lg text-red-600 dark:text-red-400">
-                {(displayPrice * quantity).toFixed(0)} DT
+                {(displayPrice * quantity).toFixed(2)} DT
               </span>
             </div>
             <Button
