@@ -7,6 +7,7 @@ import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { ChevronDown, ArrowRight } from 'lucide-react';
 import { Skeleton } from '@/app/components/ui/skeleton';
 import { getCategories } from '@/services/api';
+import { useSiteChrome } from '@/contexts/SiteChromeContext';
 import { Category } from '@/types';
 
 type ProductsDropdownProps = {
@@ -28,7 +29,10 @@ export function ProductsDropdown({
   const [isOpen, setIsOpen] = useState(false);
   const [dropdownTop, setDropdownTop] = useState(0);
   const [mounted, setMounted] = useState(false);
-  const [categories, setCategories] = useState<Category[]>([]);
+  // Server-fetched categories (root layout → SiteChromeProvider): the mega-menu is populated
+  // without a client API call; fetch-on-mount remains only as fallback when SSR data is empty.
+  const { categories: ssrCategories } = useSiteChrome();
+  const [categories, setCategories] = useState<Category[]>(ssrCategories);
 
   const triggerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -38,7 +42,10 @@ export function ProductsDropdown({
 
   useEffect(() => {
     setMounted(true);
-    getCategories().then(setCategories).catch(console.error);
+    if (ssrCategories.length === 0) {
+      getCategories().then(setCategories).catch(console.error);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const scheduleClose = useCallback(() => {

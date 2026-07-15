@@ -46,6 +46,7 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/app/components/ui/sheet';
 import { cn } from '@/app/components/ui/utils';
 import { getNavigationItems } from '@/services/api';
+import { useSiteChrome } from '@/contexts/SiteChromeContext';
 import { useSiteLogos } from '@/hooks/useSiteLogos';
 import type { SiteNavigationItem } from '@/types';
 import { LanguageSwitcher } from './LanguageSwitcher';
@@ -190,10 +191,16 @@ export function HeaderClient() {
   const lastScrollYRef = useRef(0);
   const tickingRef = useRef(false);
   const { theme, setTheme } = useTheme();
+  // Server-fetched nav (root layout → SiteChromeProvider): the real labels are in the SSR HTML,
+  // so there is no first-paint "NOS PRODUITS" → "BOUTIQUE" swap anymore.
+  const { navigation: ssrNavigation } = useSiteChrome();
   const [dynamicNavigation, setDynamicNavigation] = useState<{
     navbar: HeaderNavLink[];
     sidebar: HeaderNavLink[];
-  }>({ navbar: [], sidebar: [] });
+  }>(() => ({
+    navbar: normalizeNavigationItems(ssrNavigation.navbar),
+    sidebar: normalizeNavigationItems(ssrNavigation.sidebar),
+  }));
 
   useEffect(() => {
     const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);
@@ -219,6 +226,8 @@ export function HeaderClient() {
   const cartItemsCount = getTotalItems();
 
   useEffect(() => {
+    // Fallback only: when the server fetch failed (empty SSR nav), fetch client-side as before.
+    if (ssrNavigation.navbar.length > 0 || ssrNavigation.sidebar.length > 0) return;
     let active = true;
 
     getNavigationItems().then((items) => {
@@ -232,6 +241,7 @@ export function HeaderClient() {
     return () => {
       active = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const onScroll = useCallback(() => {
