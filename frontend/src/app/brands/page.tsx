@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import BrandsPageClient from './BrandsPageClient';
 import { getAllBrands } from '@/services/api';
+import { loadForCache } from '@/util/loadForCache';
 import { buildBreadcrumbListSchema, buildCollectionPageSchema, buildItemListSchema } from '@/util/structuredData';
 
 // ISR: the brand list changes rarely, so cache the server-rendered page.
@@ -53,7 +54,9 @@ export default async function BrandsPage() {
   // Fetch server-side so the brand list (and its links) is in the initial HTML.
   // Previously the client fetched brands on mount, so crawlers saw an empty
   // "Chargement des marques…" shell — the /brands page was effectively unindexable.
-  const initialBrands = await getAllBrands().catch(() => []);
+  // loadForCache: a failed getAllBrands() (e.g. during `next build`) must not bake an empty brand
+  // grid (which made /brands unindexable) — noStore() defers the render to runtime instead.
+  const initialBrands = await loadForCache(() => getAllBrands(), [] as Awaited<ReturnType<typeof getAllBrands>>);
   const breadcrumbSchema = buildBreadcrumbListSchema(
     [
       { name: 'Accueil', url: '/' },

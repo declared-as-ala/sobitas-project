@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import { getPageBySlug, getCoordinates } from '@/services/api';
+import { loadForCache } from '@/util/loadForCache';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
 import { buildBreadcrumbListSchema } from '@/util/structuredData';
 import AboutPageClient from './AboutPageClient';
@@ -15,8 +16,10 @@ export const metadata: Metadata = {
 export const revalidate = 3600;
 
 export default async function QuiSommesNousPage() {
+  // loadForCache on the CMS body (primary content): a failed fetch during `next build` must not bake
+  // a bodyless About page — noStore() defers to runtime. Coordinates are incidental (fail soft).
   const [page, coordinates] = await Promise.all([
-    getPageBySlug('qui-sommes-nous').catch(() => null),
+    loadForCache(() => getPageBySlug('qui-sommes-nous'), null as Awaited<ReturnType<typeof getPageBySlug>> | null),
     getCoordinates().catch(() => null),
   ]);
 
