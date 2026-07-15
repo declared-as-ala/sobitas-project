@@ -118,14 +118,14 @@ function SearchResults({
                 if (pd.hasPromo && pd.oldPrice != null) {
                   return (
                     <>
-                      <span className="line-through">{pd.oldPrice} DT</span>
+                      <span className="line-through">{pd.oldPrice.toFixed(2)} DT</span>
                       <span className="ml-1.5 font-medium text-red-600 dark:text-red-400">
-                        {pd.finalPrice} DT
+                        {pd.finalPrice.toFixed(2)} DT
                       </span>
                     </>
                   );
                 }
-                return <>{pd.finalPrice} DT</>;
+                return <>{pd.finalPrice.toFixed(2)} DT</>;
               })()}
             </p>
           </div>
@@ -412,9 +412,6 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
           autoComplete="off"
           className="w-full pl-10 pr-10 h-11 rounded-xl border-0 bg-white text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-red-300 focus-visible:ring-2 focus-visible:ring-red-300"
           aria-label="Rechercher un produit"
-          aria-expanded={isPopoverOpen}
-          aria-haspopup="listbox"
-          role="combobox"
         />
         {query && (
           <Button
@@ -433,7 +430,6 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
       {isPopoverOpen && showResults && (
         <div
           className="absolute left-0 right-0 top-full mt-1 z-50 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-lg p-3 max-h-[400px] overflow-y-auto"
-          role="listbox"
           onMouseDown={(e) => e.preventDefault()}
         >
           <SearchResults

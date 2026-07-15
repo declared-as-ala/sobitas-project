@@ -161,7 +161,7 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
             <div className="flex flex-col gap-1 w-full">
               <div className="flex items-baseline gap-2 sm:gap-3 flex-wrap">
                 <span className="font-display font-bold tracking-tight text-red-600 dark:text-red-400 tabular-nums text-xl sm:text-2xl md:text-3xl">
-                  {productData.priceDisplay.finalPrice} DT
+                  {productData.priceDisplay.finalPrice.toFixed(2)} DT
                 </span>
                 {productData.discount > 0 && (
                   <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 font-display font-bold tabular-nums text-[10px] sm:text-xs whitespace-nowrap">
@@ -172,14 +172,14 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
               <span
                 className="font-display text-gray-400 dark:text-gray-500 line-through tabular-nums text-sm sm:text-base"
                 style={{ textDecorationThickness: '2px' }}
-                aria-label={`Prix barré: ${productData.priceDisplay.oldPrice} DT`}
+                aria-label={`Prix barré: ${productData.priceDisplay.oldPrice.toFixed(2)} DT`}
               >
-                {productData.priceDisplay.oldPrice} DT
+                {productData.priceDisplay.oldPrice.toFixed(2)} DT
               </span>
             </div>
           ) : (
             <span className="font-display font-bold tracking-tight text-gray-900 dark:text-white tabular-nums text-xl sm:text-2xl md:text-3xl">
-              {productData.priceDisplay.finalPrice} DT
+              {productData.priceDisplay.finalPrice.toFixed(2)} DT
             </span>
           )}
         </div>
