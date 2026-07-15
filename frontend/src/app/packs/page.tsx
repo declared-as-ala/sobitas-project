@@ -40,8 +40,13 @@ async function getPacksData() {
   // loadForCache: a failed getPacks() (e.g. API unreachable during `next build`) must NOT bake an
   // empty packs grid — noStore() defers the render to runtime instead of caching "Aucun pack".
   // categories is incidental (link enrichment), so it keeps failing soft without poisoning the cache.
-  const packs = await loadForCache(() => getPacks(), [] as Awaited<ReturnType<typeof getPacks>>);
-  const categories = await getCategories().catch(() => []);
+  // Run the two independent fetches concurrently (was sequential: packs fully awaited before
+  // categories began). loadForCache still fires noStore() if getPacks rejects, regardless of the
+  // Promise.all, and categories keeps its soft .catch.
+  const [packs, categories] = await Promise.all([
+    loadForCache(() => getPacks(), [] as Awaited<ReturnType<typeof getPacks>>),
+    getCategories().catch(() => []),
+  ]);
   return { packs: enrichProductsWithSubcategory(packs, categories) };
 }
 
