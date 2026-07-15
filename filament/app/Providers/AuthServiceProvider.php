@@ -32,7 +32,11 @@ class AuthServiceProvider extends ServiceProvider
             try {
                 return $user->canAccessPanel(Filament::getPanel('admin'));
             } catch (\Throwable $e) {
-                return true;
+                // FAIL CLOSED: on any error, deny admin access rather than grant it.
+                // (Previously returned true — a fail-open authorization hole.)
+                \Illuminate\Support\Facades\Log::warning('accessFilament gate error — denying', ['error' => $e->getMessage()]);
+
+                return false;
             }
         });
     }

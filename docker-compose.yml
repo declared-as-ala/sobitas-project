@@ -24,7 +24,12 @@ services:
       MYSQL_USER: ${MYSQL_USER:-laravel}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-secret}
     ports:
-      - "3307:3306"
+      # Bind to localhost ONLY — the DB must never be reachable from the public
+      # internet. The app connects over the internal Docker network (mysql:3306);
+      # for admin access use an SSH tunnel to 127.0.0.1:3307. (Takes effect the
+      # next time the mysql container is recreated.) Also: set strong, unique
+      # MYSQL_ROOT_PASSWORD / MYSQL_PASSWORD in the VPS .env — never the defaults.
+      - "127.0.0.1:3307:3306"
     volumes:
       - mysql-data:/var/lib/mysql
     networks:

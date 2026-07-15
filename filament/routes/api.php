@@ -103,8 +103,8 @@ Route::post('/send_mail', [ApisController::class, 'send_email'])->middleware(['a
 // Google Merchant Center & Meta Catalog feed (public, cached 30 min)
 Route::middleware(['cache.api:1800', 'cache.headers.api:1800'])->get('/merchant-feed', [ProductFeedController::class, 'feed']);
 
-// Auth — register is rate-limited strictly to prevent account spam
-Route::post('/login', [ClientController::class, 'login']);
+// Auth — login + register throttled to blunt credential-stuffing / account spam
+Route::middleware('throttle:10,1')->post('/login', [ClientController::class, 'login']);
 Route::middleware('throttle:5,1')->post('/register', [ClientController::class, 'register']);
 
 // ── Authenticated Routes ──────────────────────────────

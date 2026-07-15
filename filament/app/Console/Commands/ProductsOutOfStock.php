@@ -13,7 +13,7 @@ class ProductsOutOfStock extends Command
      *
      * @var string
      */
-    protected $signature = 'products:out-of-stock';
+    protected $signature = 'products:out-of-stock {--force : Skip the confirmation prompt (required for non-interactive runs)}';
 
     /**
      * The console command description.
@@ -24,10 +24,27 @@ class ProductsOutOfStock extends Command
 
     /**
      * Execute the console command.
+     *
+     * DESTRUCTIVE: overwrites the real qte of every in-stock product to 0. Guarded
+     * behind an explicit confirmation / --force so it can NEVER run accidentally
+     * (a bare run of this previously wiped the whole catalogue's quantities).
      */
     public function handle()
     {
+        $count = (int) DB::table('products')->where('qte', '>', 0)->count();
+
+        if (! $this->option('force')) {
+            $this->warn("⚠  DESTRUCTIVE: this sets {$count} in-stock products to qte=0 / rupture=1 and OVERWRITES their real quantities (not reversible).");
+            // In a non-interactive context (cron/CI) confirm() returns the default (false) → aborts.
+            if (! $this->confirm('Are you absolutely sure you want to zero the stock of all products?', false)) {
+                $this->info('Aborted — no changes made. (Use --force to run non-interactively.)');
+
+                return Command::SUCCESS;
+            }
+        }
+
         $this->info('Début de la mise à jour des produits "hors stock"...');
+        Log::warning("Command products:out-of-stock STARTED — will zero qte for {$count} products.");
 
         try {
             DB::beginTransaction();
