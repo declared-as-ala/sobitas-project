@@ -18,7 +18,7 @@ return new class extends Migration
     {
         if (Schema::hasTable('products') && ! Schema::hasColumn('products', 'force_out_of_stock')) {
             Schema::table('products', function (Blueprint $table) {
-                $table->boolean('force_out_of_stock')->default(false)->after('rupture');
+                $table->boolean('force_out_of_stock')->default(false);
             });
         }
     }
