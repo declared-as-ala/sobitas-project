@@ -323,7 +323,7 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
     // Never empty (GSC "Missing field description") — factual fallback from real product identity.
     description:
       description ||
-      `${product.designation_fr || 'Produit'} — complément alimentaire authentique disponible en Tunisie chez Protéine Tunisie (SOBITAS), livraison rapide partout en Tunisie.`,
+      `${product.designation_fr || 'Produit'} — complément alimentaire authentique disponible en Tunisie chez Protéine Tunisie, livraison rapide partout en Tunisie.`,
     // image is REQUIRED for Product rich results — last-resort brand banner beats an invalid item.
     image: dedupedImages.length > 0 ? dedupedImages : [`${PRODUCTION_ORIGIN}/og-banner.jpg`],
     sku,
@@ -467,7 +467,7 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
       ) ||
       (typeof source.description === 'string' && source.description.trim() ? source.description : '') ||
       // Factual fallback so "Missing field description" can't occur (never an empty string).
-      `${product.designation_fr || 'Produit'} — complément alimentaire authentique disponible en Tunisie chez Protéine Tunisie (SOBITAS), livraison rapide partout en Tunisie.`,
+      `${product.designation_fr || 'Produit'} — complément alimentaire authentique disponible en Tunisie chez Protéine Tunisie, livraison rapide partout en Tunisie.`,
     offers,
   };
 
