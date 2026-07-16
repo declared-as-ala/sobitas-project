@@ -5,10 +5,29 @@ import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
 import { buildBreadcrumbListSchema } from '@/util/structuredData';
 import AboutPageClient from './AboutPageClient';
 
+const ABOUT_TITLE = 'À propos | Protéine Tunisie';
+const ABOUT_DESCRIPTION =
+  'Proteine Tunisie, distributeur de compléments alimentaires et matériel de sport à Sousse. Protéines, whey, créatine depuis des années en Tunisie.';
+
 export const metadata: Metadata = {
-  title: { absolute: 'À propos | Protéine Tunisie' },
-  description: 'Proteine Tunisie, distributeur de compléments alimentaires et matériel de sport à Sousse. Protéines, whey, créatine depuis des années en Tunisie.',
+  title: { absolute: ABOUT_TITLE },
+  description: ABOUT_DESCRIPTION,
   alternates: { canonical: buildCanonicalUrl('/qui-sommes-nous') },
+  openGraph: {
+    title: { absolute: ABOUT_TITLE },
+    description: ABOUT_DESCRIPTION,
+    url: buildCanonicalUrl('/qui-sommes-nous'),
+    type: 'website',
+    siteName: 'Protéine Tunisie',
+    locale: 'fr_FR',
+    images: [{ url: '/og-banner.jpg', width: 1200, height: 630, alt: 'À propos — Protéine Tunisie' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'À propos — Protéine Tunisie',
+    description: ABOUT_DESCRIPTION,
+    images: ['/og-banner.jpg'],
+  },
 };
 
 // ISR so the "À propos" CMS body is server-rendered (previously fetched in a client useEffect,

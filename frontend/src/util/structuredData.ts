@@ -205,7 +205,26 @@ function buildAggregateRatingAndReviews(product: Product): { aggregateRating?: o
     const star = typeof r.stars === 'number' ? r.stars : typeof r.note === 'number' ? r.note : NaN;
     return Number.isFinite(star) && star >= 1 && star <= 5;
   });
-  if (reviews.length === 0) return {};
+  if (reviews.length === 0) {
+    // Fallback: the backend may provide a precomputed aggregate (rating_value/review_count)
+    // even when the full reviews[] array is not in this particular payload (e.g. list endpoints).
+    // Use it so the star rating never silently drops off the SERP. Never fabricated — only real
+    // approved-review aggregates coming from the API.
+    const rv = (product.schema as { rating_value?: unknown } | undefined)?.rating_value;
+    const rc = (product.schema as { review_count?: unknown } | undefined)?.review_count;
+    if (typeof rv === 'number' && rv >= 1 && rv <= 5 && typeof rc === 'number' && rc >= 1) {
+      return {
+        aggregateRating: {
+          '@type': 'AggregateRating',
+          ratingValue: String(Math.round(rv * 10) / 10),
+          bestRating: 5,
+          worstRating: 1,
+          reviewCount: Math.floor(rc),
+        },
+      };
+    }
+    return {};
+  }
 
   const sum = reviews.reduce((s, r) => {
     const v = typeof r.stars === 'number' ? r.stars : typeof r.note === 'number' ? r.note : 0;
