@@ -2,6 +2,7 @@
 
 namespace App\Observers;
 
+use App\Models\Product;
 use App\Models\Review;
 use App\Models\User;
 use Filament\Notifications\Notification;
@@ -33,6 +34,21 @@ class ReviewObserver
                 ->body($body)
                 ->info()
                 ->sendToDatabase($user);
+        }
+    }
+
+    /**
+     * When a review is approved/published (publier -> 1), the product's aggregateRating (stars)
+     * changes — refresh that product's page so the new stars appear on the live PDP within seconds.
+     */
+    public function saved(Review $review): void
+    {
+        if (! $review->wasChanged('publier') || (int) $review->publier !== 1) {
+            return;
+        }
+        $product = $review->product ?? Product::find($review->product_id);
+        if ($product) {
+            app(\App\Services\Seo\SeoNotifier::class)->productChanged($product);
         }
     }
 }
