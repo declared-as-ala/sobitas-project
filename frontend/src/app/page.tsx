@@ -16,9 +16,9 @@ export const revalidate = 300;
 
 export async function generateMetadata(): Promise<Metadata> {
   const canonical = buildCanonicalUrl('/');
-  const title = 'Protéine Tunisie | Whey, Créatine & Compléments – SOBITAS Sousse';
+  const title = 'Protéine Tunisie | Whey, Créatine & Compléments – Protein.tn Sousse';
   const description =
-    'Achetez whey, créatine, gainer, BCAA et compléments alimentaires en Tunisie chez SOBITAS (Sousse). Produits authentiques, livraison rapide à Sousse, Tunis et partout en Tunisie.';
+    'Achetez whey, créatine, gainer, BCAA et compléments alimentaires en Tunisie chez Protein.tn (Sousse). Produits authentiques, livraison rapide à Sousse, Tunis et partout en Tunisie.';
 
   return {
     // absolute: the homepage title already reads as a full brand title; without this the root
@@ -26,7 +26,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: { absolute: title },
     description,
     keywords:
-      'protéine tunisie, whey tunisie, créatine tunisie, compléments alimentaires tunisie, vitamines tunisie, nutrition sportive tunisie, protein tunisie, protein.tn, protéine sousse, compléments alimentaires sousse, whey sousse, protéine tunis, sobitas',
+      'protéine tunisie, whey tunisie, créatine tunisie, compléments alimentaires tunisie, vitamines tunisie, nutrition sportive tunisie, protein tunisie, protein.tn, protéine sousse, compléments alimentaires sousse, whey sousse, protéine tunis',
     alternates: { canonical },
     openGraph: {
       title,

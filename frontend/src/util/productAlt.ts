@@ -46,8 +46,8 @@ export function buildProductAlt(product: AltProductLike, opts?: { name?: string;
  */
 export function buildBrandAlt(brandName: string | null | undefined, fallbackAlt?: string | null): string {
   const name = clean(brandName) || clean(fallbackAlt);
-  if (!name) return 'Logo de marque de compléments — SOBITAS Tunisie';
-  return `${name} — marque de compléments alimentaires en Tunisie | SOBITAS`;
+  if (!name) return 'Logo de marque de compléments — Protein.tn Tunisie';
+  return `${name} — marque de compléments alimentaires en Tunisie | Protein.tn`;
 }
 
 /**
@@ -55,6 +55,6 @@ export function buildBrandAlt(brandName: string | null | undefined, fallbackAlt?
  */
 export function buildCategoryAlt(categoryName: string | null | undefined): string {
   const name = clean(categoryName);
-  if (!name) return 'Catégorie de compléments — SOBITAS Tunisie';
-  return `${name} — acheter en Tunisie | SOBITAS`;
+  if (!name) return 'Catégorie de compléments — Protein.tn Tunisie';
+  return `${name} — acheter en Tunisie | Protein.tn`;
 }

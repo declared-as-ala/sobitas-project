@@ -14,15 +14,15 @@ import {
 
 // Evergreen local landing page — no backend dependency, so it always renders (a resilient,
 // fully server-rendered target for the under-served "protéine Sousse" local keyword cluster).
-const TITLE = 'Protéine à Sousse | Whey, Créatine & Compléments — SOBITAS';
+const TITLE = 'Protéine à Sousse | Whey, Créatine & Compléments — Protein.tn';
 const DESCRIPTION =
-  'Achetez vos protéines, whey, créatine et compléments alimentaires à Sousse chez SOBITAS. Produits 100% authentiques, magasin à Sousse, livraison à Sousse, Tunis et partout en Tunisie — paiement à la livraison.';
+  'Achetez vos protéines, whey, créatine et compléments alimentaires à Sousse chez Protein.tn. Produits 100% authentiques, magasin à Sousse, livraison à Sousse, Tunis et partout en Tunisie — paiement à la livraison.';
 
 export const metadata: Metadata = {
   title: { absolute: TITLE },
   description: DESCRIPTION,
   keywords:
-    'protéine sousse, whey sousse, créatine sousse, compléments alimentaires sousse, magasin protéine sousse, nutrition sportive sousse, sobitas sousse, protéine tunisie, whey tunisie',
+    'protéine sousse, whey sousse, créatine sousse, compléments alimentaires sousse, magasin protéine sousse, nutrition sportive sousse, protein.tn sousse, protéine tunisie, whey tunisie',
   alternates: { canonical: buildCanonicalUrl('/proteine-sousse') },
   openGraph: {
     title: TITLE,
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     type: 'website',
     siteName: 'Protéine Tunisie',
     locale: 'fr_FR',
-    images: [{ url: '/og-banner.jpg', width: 1200, height: 630, alt: 'Protéine à Sousse — SOBITAS' }],
+    images: [{ url: '/og-banner.jpg', width: 1200, height: 630, alt: 'Protéine à Sousse — Protein.tn' }],
   },
   twitter: {
     card: 'summary_large_image',
@@ -55,7 +55,7 @@ const FAQ: Array<{ question: string; answer: string }> = [
   {
     question: 'Où acheter de la protéine à Sousse ?',
     answer:
-      'SOBITAS (protein.tn) est spécialisé dans les protéines et compléments alimentaires à Sousse. Vous pouvez commander en ligne sur protein.tn et être livré à Sousse en 24 à 72 heures, ou nous contacter directement pour vos conseils et votre commande.',
+      'Protein.tn est spécialisé dans les protéines et compléments alimentaires à Sousse. Vous pouvez commander en ligne sur protein.tn et être livré à Sousse en 24 à 72 heures, ou nous contacter directement pour vos conseils et votre commande.',
   },
   {
     question: 'Vos produits sont-ils 100% authentiques ?',
@@ -118,7 +118,7 @@ export default function ProteineSoussePage() {
               Protéine à Sousse — Whey, Créatine & Compléments
             </h1>
             <p className="mt-4 max-w-2xl text-base leading-relaxed text-gray-600 dark:text-gray-300 sm:text-lg">
-              SOBITAS est votre spécialiste des <strong>protéines et compléments alimentaires à Sousse</strong>.
+              Protein.tn est votre spécialiste des <strong>protéines et compléments alimentaires à Sousse</strong>.
               Whey, créatine, gainers, BCAA et matériel de sport — 100% authentiques, au meilleur prix, avec
               livraison rapide à Sousse et partout en Tunisie.
             </p>
@@ -170,7 +170,7 @@ export default function ProteineSoussePage() {
           <div className="mt-4 space-y-4 text-base leading-relaxed text-gray-600 dark:text-gray-300">
             <p>
               À Sousse, trouver de la <strong>vraie</strong> protéine à un prix juste n’est pas toujours simple.
-              SOBITAS s’est construit une réputation locale sur trois promesses simples : des produits
+              Protein.tn s’est construit une réputation locale sur trois promesses simples : des produits
               authentiques, des conseils honnêtes et une livraison fiable. Que vous cherchiez votre première
               boîte de whey, de la créatine monohydrate pour progresser en force, ou un gainer pour la prise de
               masse, vous commandez ici en quelques minutes.

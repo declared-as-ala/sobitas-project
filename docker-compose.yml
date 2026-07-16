@@ -95,7 +95,7 @@ services:
       MAIL_PORT: "587"
       MAIL_ENCRYPTION: tls
       MAIL_FROM_ADDRESS: nachdit.customers@gmail.com
-      MAIL_FROM_NAME: Sobitas
+      MAIL_FROM_NAME: Protein.tn
     networks:
       - sobitas-net
     expose:
@@ -146,7 +146,7 @@ services:
       MAIL_PORT: "587"
       MAIL_ENCRYPTION: tls
       MAIL_FROM_ADDRESS: nachdit.customers@gmail.com
-      MAIL_FROM_NAME: Sobitas
+      MAIL_FROM_NAME: Protein.tn
     command: >
       php artisan queue:work redis
       --sleep=3
