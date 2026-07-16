@@ -73,20 +73,32 @@ class CreateCommande extends CreateRecord
     {
         $details = $this->form->getState()['details'] ?? [];
         $prixHt = 0.0;
+        $touchedProductIds = [];
         foreach ($details as $row) {
             if (empty($row['produit_id'])) {
                 continue;
             }
             $qte          = (float) ($row['qte'] ?? 1);
             $prixUnitaire = (float) ($row['prix_unitaire'] ?? 0);
-            
+
             \App\Models\CommandeDetail::create([
                 'commande_id'   => $this->record->id,
                 'produit_id'    => $row['produit_id'],
                 'qte'           => $qte,
                 'prix_unitaire' => $prixUnitaire,
             ]);
+            // A hand-entered admin order is a real sale: decrement stock, exactly like the website
+            // API and the BL/invoice pages. Without this, EditCommande's restore-on-edit (which
+            // assumes create decremented) was phantom and inflated qte.
+            \App\Models\Product::where('id', $row['produit_id'])->decrement('qte', $qte);
+            $touchedProductIds[] = $row['produit_id'];
             $prixHt += $qte * $prixUnitaire;
+        }
+
+        if (! empty($touchedProductIds)) {
+            // Raw decrement() bypasses the Product saving() hook; floor negatives then re-derive rupture.
+            \App\Models\Product::whereIn('id', $touchedProductIds)->where('qte', '<', 0)->update(['qte' => 0]);
+            \App\Models\Product::syncRuptureFlags($touchedProductIds);
         }
 
         $frais = (float) ($this->form->getState()['frais_livraison'] ?? 0);

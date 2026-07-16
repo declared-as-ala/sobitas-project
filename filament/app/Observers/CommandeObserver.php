@@ -7,10 +7,12 @@ use App\Jobs\SendSmsJob;
 use App\Mail\ReviewRequestMail;
 use App\Models\Commande;
 use App\Models\Message;
+use App\Models\Product;
 use App\Models\User;
 use App\Services\PointsService;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
@@ -77,6 +79,8 @@ class CommandeObserver
         }
 
         if ($commande->etat === 'annuler') {
+            $this->restoreStockForCancelledOrder($commande);
+
             return;
         }
 
@@ -135,6 +139,42 @@ class CommandeObserver
      * Synchronous send (mirrors the order-confirmation email) so it is delivered
      * regardless of queue-worker state; the caller wraps this best-effort.
      */
+    /**
+     * Give stock back exactly once when an order is cancelled (etat -> 'annuler'). Guarded by the
+     * stock_restored_at marker so a re-save while already cancelled can never restore twice.
+     * Best-effort: a restore failure must never block the admin status change.
+     */
+    private function restoreStockForCancelledOrder(Commande $commande): void
+    {
+        if (! Schema::hasColumn('commandes', 'stock_restored_at') || $commande->stock_restored_at) {
+            return;
+        }
+
+        try {
+            DB::transaction(function () use ($commande): void {
+                $commande->loadMissing('details');
+                $ids = [];
+                foreach ($commande->details as $line) {
+                    $q = (float) ($line->qte ?? 0);
+                    if ($q <= 0) {
+                        continue;
+                    }
+                    Product::where('id', $line->produit_id)->increment('qte', $q);
+                    $ids[] = $line->produit_id;
+                }
+                if (! empty($ids)) {
+                    Product::syncRuptureFlags($ids);
+                }
+                $commande->forceFill(['stock_restored_at' => now()])->saveQuietly();
+            });
+        } catch (\Throwable $e) {
+            Log::error('Stock restore on order cancel failed', [
+                'commande_id' => $commande->id,
+                'error'       => $e->getMessage(),
+            ]);
+        }
+    }
+
     private function sendReviewRequestIfDelivered(Commande $commande): void
     {
         if (! in_array($commande->etat, PointsService::DELIVERED_STATUSES, true)) {
