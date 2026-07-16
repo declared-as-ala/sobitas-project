@@ -22,7 +22,7 @@ class Commande extends Model
         'livraison_adresse1', 'livraison_adresse2', 'sms_sent',
         'delivered_at', 'refund_amount', 'discount_amount', 'payment_method', 'is_returning_customer',
         'coupon_id', 'coupon_code_snapshot', 'coupon_type_snapshot', 'coupon_value_snapshot',
-        'discount_ht', 'discount_ttc',
+        'discount_ht', 'discount_ttc', 'stock_restored_at',
     ];
 
     protected $casts = [
@@ -37,7 +37,44 @@ class Commande extends Model
         'sms_sent' => 'boolean',
         'is_returning_customer' => 'boolean',
         'delivered_at' => 'datetime',
+        'stock_restored_at' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        // Give stock back when an order is DELETED (unless a prior cancel already restored it —
+        // guarded by stock_restored_at so cancel-then-delete can't restore twice). Hooked on the
+        // Commande (parent), NOT CommandeDetail, because EditCommande already restores per line on
+        // edit; a detail-level hook would double-restore. Best-effort: never block the delete.
+        static::deleting(function (Commande $commande): void {
+            if (! \Illuminate\Support\Facades\Schema::hasColumn('commandes', 'stock_restored_at')
+                || $commande->stock_restored_at) {
+                return;
+            }
+            try {
+                \Illuminate\Support\Facades\DB::transaction(function () use ($commande): void {
+                    $commande->loadMissing('details');
+                    $ids = [];
+                    foreach ($commande->details as $line) {
+                        $q = (float) ($line->qte ?? 0);
+                        if ($q <= 0) {
+                            continue;
+                        }
+                        Product::where('id', $line->produit_id)->increment('qte', $q);
+                        $ids[] = $line->produit_id;
+                    }
+                    if (! empty($ids)) {
+                        Product::syncRuptureFlags($ids);
+                    }
+                });
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('Stock restore on order delete failed', [
+                    'commande_id' => $commande->id,
+                    'error'       => $e->getMessage(),
+                ]);
+            }
+        });
+    }
 
     // ── Status Labels (single source of truth) ────────────
 
