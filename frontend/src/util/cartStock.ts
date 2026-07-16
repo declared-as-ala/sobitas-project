@@ -11,6 +11,7 @@ export interface ProductLike {
   quantityInStock?: number;
   availableStock?: number;
   rupture?: number | boolean;
+  force_out_of_stock?: number | boolean;
   low_stock_threshold?: number;
 }
 
@@ -19,8 +20,10 @@ export interface CartItemLike {
   quantity: number;
 }
 
-/** True when API says "out of stock" (rupture === true, 1, or "1"). */
+/** True when API says "out of stock": the hard force_out_of_stock override, or rupture === true/1/"1". */
 export function isRupture(product: ProductLike): boolean {
+  const f = (product as any).force_out_of_stock;
+  if (f === true || f === 1 || f === '1') return true;
   const r = (product as any).rupture;
   return r === true || r === 1 || r === '1';
 }
