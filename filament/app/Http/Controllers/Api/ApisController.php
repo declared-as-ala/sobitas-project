@@ -340,10 +340,12 @@ class ApisController extends Controller
             ->select([
                 'id', 'sort_order', 'cover', 'slug', 'designation_fr',
                 'sitemap_include', 'sitemap_priority', 'sitemap_changefreq', 'robots_index', 'seo_enabled',
+                'updated_at', 'created_at',
             ])
             ->with(['sousCategories' => fn ($q) => $q->select(
                 'id', 'sort_order', 'slug', 'designation_fr', 'categorie_id',
                 'sitemap_include', 'sitemap_priority', 'sitemap_changefreq', 'robots_index', 'seo_enabled',
+                'updated_at', 'created_at',
             )->orderBy('sort_order')->orderBy('id')])
             ->orderBy('id')
             ->paginate($perPage);
@@ -368,10 +370,12 @@ class ApisController extends Controller
             ->select([
                 'id', 'sort_order', 'cover', 'slug', 'designation_fr',
                 'sitemap_include', 'sitemap_priority', 'sitemap_changefreq', 'robots_index', 'seo_enabled',
+                'updated_at', 'created_at',
             ])
             ->with(['sousCategories' => fn ($q) => $q->select(
                 'id', 'sort_order', 'slug', 'designation_fr', 'categorie_id',
                 'sitemap_include', 'sitemap_priority', 'sitemap_changefreq', 'robots_index', 'seo_enabled',
+                'updated_at', 'created_at',
             )->orderBy('sort_order')->orderBy('id')])
             ->orderBy('sort_order')
             ->orderBy('id')
@@ -888,7 +892,7 @@ class ApisController extends Controller
     {
         $perPage = $this->resolvePerPage($request);
 
-        $brands = Brand::select('id', 'logo', 'designation_fr', 'alt_cover')
+        $brands = Brand::select('id', 'logo', 'designation_fr', 'alt_cover', 'updated_at', 'created_at')
             ->orderBy('designation_fr')
             ->paginate($perPage);
 

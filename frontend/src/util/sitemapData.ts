@@ -239,7 +239,7 @@ async function computeSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             seenUrls.add(url);
             sitemapEntries.push({
               url,
-              lastModified: new Date(),
+              lastModified: getLastModified(category as ItemWithDates),
               changeFrequency: normalizeSitemapChangefreq(category.sitemap_changefreq ?? undefined),
               priority: clampPriority(category.sitemap_priority ?? undefined, 0.85),
             });
@@ -310,7 +310,7 @@ async function computeSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             seenUrls.add(url);
             sitemapEntries.push({
               url,
-              lastModified: new Date(),
+              lastModified: getLastModified(brand as ItemWithDates),
               changeFrequency: 'weekly' as const,
               priority: 0.75,
             });
