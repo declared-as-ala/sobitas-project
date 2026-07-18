@@ -43,7 +43,9 @@ export function PacksPageClient({ packs }: PacksPageClientProps) {
                 variant="compact"
                 imageContext="packs"
                 showDescription
-                priority={idx < 4}
+                // Mobile-first: 2-col grid on phones → only 2 cards above the fold. Eager-loading
+                // 4 made the off-screen ones compete with the LCP image on mobile.
+                priority={idx < 2}
               />
             ))}
           </ProductGrid>

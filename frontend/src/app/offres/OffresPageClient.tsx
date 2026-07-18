@@ -81,7 +81,9 @@ export function OffresPageClient({ products }: OffresPageClientProps) {
                   key={product.id}
                   product={product as any}
                   variant="compact"
-                  priority={idx < 4}
+                  // Mobile-first: 2-col grid on phones → only 2 cards above the fold. Eager-loading
+                  // 4 made the off-screen ones compete with the LCP image on mobile.
+                  priority={idx < 2}
                 />
               ))}
             </ProductGrid>

@@ -1449,7 +1449,11 @@ function ShopContent({
                       product={product}
                       variant="compact"
                       imageContext="packs"
-                      priority={idx < 4}
+                      // Mobile-first: the shop grid is 2-col on phones (81% of traffic), so only
+                      // the first 2 cards are above the fold. Eager-loading 4 made cards 3–4
+                      // (off-screen on mobile) compete with the LCP image. Prioritize just the
+                      // first 2; the rest lazy-load (still prompt near the desktop fold).
+                      priority={idx < 2}
                     />
                   ))}
                 </ProductGrid>
