@@ -58,4 +58,19 @@ return [
         'revalidate_secret' => env('REVALIDATE_SECRET', 'c3f8316bd2ab7f577f093d1ac33005e3c561060921578c0c'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | AI provider (Groq — OpenAI-compatible) for content moderation
+    |--------------------------------------------------------------------------
+    | Reuses the SAME GROQ_API_KEY the fitness-api already runs on (it is loaded
+    | into this container via `env_file: .env` in docker-compose). No new vendor
+    | and — as long as that key is in the VPS .env — no extra config to turn on.
+    | Every consumer degrades gracefully: with no key, AI features simply no-op.
+    */
+    'ai' => [
+        'groq_key'   => env('GROQ_API_KEY'),
+        'groq_model' => env('GROQ_MODEL', 'llama-3.3-70b-versatile'),
+        'timeout'    => (int) env('AI_TIMEOUT', 12),
+    ],
+
 ];

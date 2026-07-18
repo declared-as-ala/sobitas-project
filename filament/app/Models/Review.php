@@ -14,6 +14,8 @@ class Review extends Model
     protected $casts = [
         'note' => 'integer',
         'publier' => 'integer',
+        'ai_moderation' => 'array',
+        'ai_checked_at' => 'datetime',
     ];
 
     public function user(): BelongsTo
