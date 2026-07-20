@@ -86,7 +86,7 @@ export const FlashProductCard = memo(function FlashProductCard({ product }: Flas
   }, [productData.priceDisplay.hasPromo, productData.discount]);
 
   return (
-    <article className="group relative flex flex-col h-full w-full overflow-hidden rounded-xl lg:rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm transition-shadow duration-300 [@media(hover:hover)]:hover:shadow-xl">
+    <article className="group relative flex flex-col h-full w-full overflow-hidden rounded-xl lg:rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm transition-shadow duration-200 [@media(hover:hover)]:hover:shadow-md">
       {/* Image Container - Fixed height to prevent layout shift */}
       <div className="relative aspect-square w-full flex-shrink-0 overflow-hidden bg-gray-50 dark:bg-gray-900 rounded-t-xl lg:rounded-t-2xl">
         <LinkWithLoading

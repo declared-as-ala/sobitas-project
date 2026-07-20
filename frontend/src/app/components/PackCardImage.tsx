@@ -7,6 +7,7 @@ import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 
 import { cn } from '@/app/components/ui/utils';
 import type { ProductImageMode } from '@/util/productImagePresentation';
+import { productImageFrame } from '@/util/productCardFrame';
 import { buildProductUrlPath } from '@/util/productUrl';
 import type { Product } from '@/types';
 
@@ -42,12 +43,12 @@ export function PackCardImage({
 
   const isContain = mode === 'contain';
 
+  // Geometry comes from the shared source of truth so ProductCardSkeleton reserves an identical
+  // box — see util/productCardFrame.ts. Never inline these dimensions again.
   const wrapperClasses = cn(
     'relative w-full flex-shrink-0 overflow-hidden rounded-t-xl lg:rounded-t-2xl',
-    isContain
-      ? // Fixed frame + object-contain: full packshot visible; taller on narrow 2-col grids, wider on sm+.
-        'aspect-[4/5] sm:aspect-[3/2] w-full bg-gray-50 dark:bg-gray-900'
-      : 'h-[220px] sm:h-[240px] lg:h-[260px] xl:h-[280px] bg-gray-50 dark:bg-gray-900'
+    'bg-gray-50 dark:bg-gray-900',
+    productImageFrame(mode)
   );
 
   const imageClasses = cn(
