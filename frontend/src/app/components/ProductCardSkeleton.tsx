@@ -1,21 +1,25 @@
 import { Skeleton } from '@/app/components/ui/skeleton';
+import { cn } from '@/app/components/ui/utils';
+import { productImageFrame } from '@/util/productCardFrame';
+import type { ProductImageMode } from '@/util/productImagePresentation';
 
 /**
- * Loading placeholder that mirrors ProductCard's real layout (image, 2-line title,
- * price, add-to-cart button) so swapping skeleton → card causes zero layout shift.
- * The image box matches PackCardImage's contain-mode frame (aspect-[4/5] on narrow
- * 2-col grids, aspect-[3/2] from sm+) so the skeleton→card swap doesn't shift layout.
- * Pair with <ProductGrid> for lists.
+ * Loading placeholder mirroring ProductCard's real layout (image, 2-line title, price,
+ * add-to-cart) so the skeleton→card swap causes zero layout shift.
+ *
+ * The image box comes from the SHARED frame definition (util/productCardFrame.ts) rather than a
+ * second hardcoded copy — the two had already drifted, leaving cover-mode cards shifting on load.
+ * Surface treatment must stay in lockstep with ProductCard's root element.
  */
-export function ProductCardSkeleton() {
+export function ProductCardSkeleton({ mode = 'contain' }: { mode?: ProductImageMode }) {
   return (
-    <div className="flex flex-col h-full w-full overflow-hidden rounded-xl lg:rounded-2xl bg-white dark:bg-gray-800 shadow-[0_2px_12px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.35)]">
-      <Skeleton className="aspect-[4/5] sm:aspect-[3/2] w-full rounded-none" />
+    <div className="flex h-full w-full flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 lg:rounded-2xl">
+      <Skeleton className={cn('w-full rounded-none', productImageFrame(mode))} />
       <div className="flex flex-1 flex-col gap-2 px-3 py-3 sm:gap-2.5 sm:px-4 sm:py-4">
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-3/4" />
         <Skeleton className="mt-auto h-6 w-24" />
-        <div className="mt-1 border-t border-gray-100 pt-2.5 dark:border-gray-700 sm:pt-3">
+        <div className="mt-1 border-t border-gray-100 pt-2.5 dark:border-gray-800 sm:pt-3">
           <Skeleton className="h-11 w-full rounded-lg sm:rounded-xl" />
         </div>
       </div>

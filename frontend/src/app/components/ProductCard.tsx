@@ -152,14 +152,17 @@ export const ProductCard = memo(function ProductCard({
 
   return (
     <article
+      /* Editorial Minimal surface: a hairline border + restrained shadow, replacing the arbitrary
+         shadow stack (DESIGN_SYSTEM §3 asks for exactly this and the old values predated it).
+         MUST stay identical to ProductCardSkeleton's root or the swap shifts layout. */
       className={[
         'group flex flex-col h-full w-full min-w-0 overflow-hidden',
         'rounded-xl lg:rounded-2xl',
-        'bg-white dark:bg-gray-800',
-        'border-0',
-        'shadow-[0_2px_12px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.35)]',
-        'transition-all duration-300 ease-out',
-        '[@media(hover:hover)]:hover:shadow-[0_8px_30px_rgba(0,0,0,0.16)] [@media(hover:hover)]:dark:hover:shadow-[0_12px_40px_rgba(0,0,0,0.5)] [@media(hover:hover)]:hover:-translate-y-1',
+        'bg-white dark:bg-gray-900',
+        'border border-gray-100 dark:border-gray-800',
+        'shadow-sm',
+        'transition-shadow duration-200 ease-out',
+        '[@media(hover:hover)]:hover:shadow-md',
       ].join(' ')}
     >
       <div className="relative">
@@ -180,7 +183,10 @@ export const ProductCard = memo(function ProductCard({
         <button
           type="button"
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(toFavoriteProduct(product)); }}
-          className="absolute top-2 right-2 sm:top-2.5 sm:right-2.5 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/90 dark:bg-gray-700/95 shadow-sm backdrop-blur-sm hover:bg-white dark:hover:bg-gray-700 transition-all hover:scale-110 pointer-events-auto"
+          /* Dropped `backdrop-blur-sm` and `hover:scale-110`: DESIGN_SYSTEM §3 bans decorative
+             backdrop-blur and §4 asks for quiet hovers. A blur here also forces an extra
+             compositing layer on every card in the grid, for no visual gain over a solid chip. */
+          className="absolute top-2 right-2 sm:top-2.5 sm:right-2.5 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/95 dark:bg-gray-800 shadow-sm hover:bg-white dark:hover:bg-gray-700 transition-colors pointer-events-auto"
           aria-label={favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
         >
           <Heart className={`h-4 w-4 ${favorite ? 'fill-red-500 text-red-500' : 'text-gray-600 dark:text-gray-300'}`} />
@@ -203,18 +209,18 @@ export const ProductCard = memo(function ProductCard({
           {!isCompact && (
             <>
               {productData.isInStock && showBadge && badgeText && (
-                <span className="inline-flex items-center rounded-md bg-white/95 dark:bg-gray-900/90 text-gray-900 dark:text-white font-display font-semibold uppercase tracking-wide text-[10px] sm:text-xs px-2 py-0.5 shadow-sm ring-1 ring-gray-900/10 dark:ring-white/10 backdrop-blur-sm">
+                <span className="inline-flex items-center rounded-md bg-white/95 dark:bg-gray-900/90 text-gray-900 dark:text-white font-display font-semibold uppercase tracking-wide text-[10px] sm:text-xs px-2 py-0.5 shadow-sm ring-1 ring-gray-900/10 dark:ring-white/10">
                   {badgeText}
                 </span>
               )}
               {productData.isInStock && !productData.priceDisplay.hasPromo && !showBadge && productData.isNew && (
-                <span className="inline-flex items-center gap-1 rounded-md bg-white/95 dark:bg-gray-900/90 text-gray-900 dark:text-white font-display font-semibold uppercase tracking-wide text-[10px] sm:text-xs px-2 py-0.5 shadow-sm ring-1 ring-gray-900/10 dark:ring-white/10 backdrop-blur-sm">
+                <span className="inline-flex items-center gap-1 rounded-md bg-white/95 dark:bg-gray-900/90 text-gray-900 dark:text-white font-display font-semibold uppercase tracking-wide text-[10px] sm:text-xs px-2 py-0.5 shadow-sm ring-1 ring-gray-900/10 dark:ring-white/10">
                   <Sparkles className="h-3 w-3 shrink-0 text-red-600 dark:text-red-400" aria-hidden="true" />
                   Nouveau
                 </span>
               )}
               {productData.isInStock && !productData.priceDisplay.hasPromo && !showBadge && productData.isBestSeller && (
-                <span className="inline-flex items-center gap-1 rounded-md bg-white/95 dark:bg-gray-900/90 text-gray-900 dark:text-white font-display font-semibold uppercase tracking-wide text-[10px] sm:text-xs px-2 py-0.5 shadow-sm ring-1 ring-gray-900/10 dark:ring-white/10 backdrop-blur-sm">
+                <span className="inline-flex items-center gap-1 rounded-md bg-white/95 dark:bg-gray-900/90 text-gray-900 dark:text-white font-display font-semibold uppercase tracking-wide text-[10px] sm:text-xs px-2 py-0.5 shadow-sm ring-1 ring-gray-900/10 dark:ring-white/10">
                   <TrendingUp className="h-3 w-3 shrink-0 text-red-600 dark:text-red-400" aria-hidden="true" />
                   Top vendu
                 </span>
