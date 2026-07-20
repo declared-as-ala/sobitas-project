@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { HeroSlider } from '@/app/components/HeroSlider';
+import { Hero } from '@/app/components/Hero';
 import { Header } from '@/app/components/Header';
 import { Footer } from '@/app/components/Footer';
 
@@ -13,13 +13,12 @@ const HomeDeferredSections = dynamic(() => import('@/app/components/HomeDeferred
 
 import type { AccueilData, Brand, Product } from '@/types';
 import { getStorageUrl } from '@/services/api';
-import type { HeroFirstSlide } from '@/app/page';
+import type { HeroSlide } from '@/util/heroImage';
 
 interface HomePageClientProps {
   accueil: AccueilData | null | undefined;
-  slides: any[];
-  heroMobileFirst?: HeroFirstSlide;
-  heroDesktopFirst?: HeroFirstSlide;
+  /** Admin-managed hero slides (empty = hero uses its built-in static image). */
+  heroSlides: HeroSlide[];
   /** Server-fetched brands for the (now SSR) brands wall. */
   brands?: Brand[];
 }
@@ -80,7 +79,7 @@ function transformProduct(product: Product) {
   };
 }
 
-export function HomePageClient({ accueil, slides, heroMobileFirst, heroDesktopFirst, brands }: HomePageClientProps) {
+export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientProps) {
   // Provide default empty structure if accueil is undefined/null
   const safeAccueil: AccueilData = accueil || {
     categories: [],
@@ -111,7 +110,7 @@ export function HomePageClient({ accueil, slides, heroMobileFirst, heroDesktopFi
 
       <main>
         {/* Above the fold - Critical content - Hero must render first */}
-        <HeroSlider slides={slides} mobileFirst={heroMobileFirst} desktopFirst={heroDesktopFirst} />
+        <Hero slides={heroSlides} fallbackAlt="Whey, créatine et compléments — Protéine Tunisie" />
         {/* SEO: single visible H1 for main query "proteine tunisie" + internal link creatine.
             Left-aligned lede inside the rail so it does not read as a second hero title. */}
         {/* Compact SEO strip — keeps the single H1 + whey/créatine internal links, but small so it

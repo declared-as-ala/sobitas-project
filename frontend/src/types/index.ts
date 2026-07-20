@@ -170,16 +170,11 @@ export interface Review {
   created_at?: string;
 }
 
-// Slide Types (backend: type = 'mobile' | 'web' controls which device shows the slide)
-export interface Slide {
-  id: number;
-  type?: 'mobile' | 'web';
-  titre?: string;
-  description?: string;
-  image?: string;
-  lien?: string;
-  ordre?: number;
-}
+// Slide types removed. This interface described columns (`titre`/`image`/`lien`) that never
+// matched what /slides actually returns (`title`/`cover`/`link`), which is why the old homepage
+// code papered over it with an `any` multi-key probe and sorted by an `ordre` field the API did
+// not send. The wire format now lives in ONE place, next to its fetcher: `ServerSlide` in
+// services/siteChrome.server.ts, with the render-side shape as `HeroSlide` in util/heroImage.ts.
 
 // Article/Blog Types
 export interface Article {
