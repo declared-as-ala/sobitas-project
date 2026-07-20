@@ -20,7 +20,39 @@ const SITE_BRAND_NAME = 'Protéine Tunisie';
  * warning "Your products are missing a return policy". These terms must match the human-readable
  * policy page at /page/politique-de-remboursement.
  */
-const DEFAULT_RETURN_POLICY = {
+/**
+ * schema.org enum unions. Typing the policy against these turns an invalid term into a
+ * BUILD error instead of a silent Search Console "Invalid enum value" warning — this class
+ * of typo has now cost us twice: `MerchantReturnFiniteReturnPeriod` (140 products) and
+ * `ReturnFeesCustomerPaying` (214 products). Never inline a raw schema.org enum string:
+ * add it to the union below so the compiler checks it.
+ */
+type ReturnPolicyCategoryEnum =
+  | 'https://schema.org/MerchantReturnFiniteReturnWindow'
+  | 'https://schema.org/MerchantReturnNotPermitted'
+  | 'https://schema.org/MerchantReturnUnlimitedWindow'
+  | 'https://schema.org/MerchantReturnUnspecified';
+
+type ReturnMethodEnum =
+  | 'https://schema.org/ReturnAtKiosk'
+  | 'https://schema.org/ReturnByMail'
+  | 'https://schema.org/ReturnInStore';
+
+type ReturnFeesEnum =
+  | 'https://schema.org/FreeReturn'
+  | 'https://schema.org/OriginalShippingFees'
+  | 'https://schema.org/RestockingFees'
+  | 'https://schema.org/ReturnFeesCustomerResponsibility'
+  | 'https://schema.org/ReturnShippingFees';
+
+const DEFAULT_RETURN_POLICY: {
+  '@type': 'MerchantReturnPolicy';
+  applicableCountry: string;
+  returnPolicyCategory: ReturnPolicyCategoryEnum;
+  merchantReturnDays: number;
+  returnMethod: ReturnMethodEnum;
+  returnFees: ReturnFeesEnum;
+} = {
   '@type': 'MerchantReturnPolicy',
   applicableCountry: 'TN',
   // MUST be "…FiniteReturnWindow" — "…FiniteReturnPeriod" is NOT a schema.org term. The invalid
@@ -29,8 +61,24 @@ const DEFAULT_RETURN_POLICY = {
   returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
   merchantReturnDays: 7,
   returnMethod: 'https://schema.org/ReturnByMail',
-  returnFees: 'https://schema.org/ReturnFeesCustomerPaying',
-} as const;
+  // "…CustomerResponsibility" is the schema.org term for "customer pays return shipping".
+  // "…CustomerPaying" does NOT exist — it triggered GSC "Invalid enum value in field
+  // returnFees" on 214 products, costing them merchant-listing features.
+  returnFees: 'https://schema.org/ReturnFeesCustomerResponsibility',
+};
+
+/**
+ * Google wants a price horizon on every Offer (GSC: "Either validThrough or priceValidUntil
+ * should be specified" — 210 products). A promo uses its REAL expiry; everything else gets a
+ * rolling one-year horizon. Safe because every PDP is ISR (revalidate 300) and is re-rendered
+ * immediately on any price change (SeoNotifier), so this date can never drift into the past —
+ * a past priceValidUntil makes Google treat the offer as expired and drop the price entirely.
+ */
+function defaultPriceValidUntil(): string {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() + 1);
+  return d.toISOString().slice(0, 10);
+}
 
 /** Shipping destination is required by Google alongside shippingRate/deliveryTime. */
 const SHIPPING_DESTINATION = { '@type': 'DefinedRegion', addressCountry: 'TN' } as const;
@@ -327,9 +375,8 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
     ?? product.price_valid_until
     ?? (hasValidPromo(product) ? product.promo_expiration_date : undefined);
   const until = untilRaw != null && String(untilRaw).trim() !== '' ? String(untilRaw).trim().slice(0, 10) : '';
-  if (until) {
-    offersPayload.priceValidUntil = until;
-  }
+  // Always emit a horizon: the promo's real expiry when there is one, else a rolling year.
+  offersPayload.priceValidUntil = until || defaultPriceValidUntil();
   // validFrom: stable date (product creation) — GSC "Missing field validFrom" on promo offers.
   const createdAt = (product as { created_at?: unknown }).created_at;
   const validFrom = typeof createdAt === 'string' ? createdAt.slice(0, 10) : '';
@@ -457,7 +504,7 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
     ?? (hasValidPromo(product) ? product.promo_expiration_date : undefined);
   const sanitizeUntil = sanitizeUntilRaw != null && String(sanitizeUntilRaw).trim() !== ''
     ? String(sanitizeUntilRaw).trim().slice(0, 10) : '';
-  if (sanitizeUntil) offers.priceValidUntil = sanitizeUntil;
+  offers.priceValidUntil = sanitizeUntil || defaultPriceValidUntil();
   const sanitizeCreatedAt = (product as { created_at?: unknown }).created_at;
   const sanitizeValidFrom = typeof sanitizeCreatedAt === 'string' ? sanitizeCreatedAt.slice(0, 10) : '';
   if (sanitizeValidFrom) offers.validFrom = sanitizeValidFrom;
