@@ -40,6 +40,7 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class ApisController extends Controller
 {
@@ -394,10 +395,24 @@ class ApisController extends Controller
 
         // Query all columns to avoid column name mismatches
         // Handle both possible column names: titre/title, lien/link
-        $slides = Slide::orderBy('id')->paginate($perPage);
+        //
+        // The is_active filter and ordre sort are guarded on Schema::hasColumn because the
+        // Filament backend and the Next.js frontend deploy from SEPARATE workflows: this
+        // controller can go live before the migration that adds those columns has run.
+        // Without the guard that window is a hard 500 on the homepage's slide fetch.
+        $hasActiveFlag = Schema::hasColumn('slides', 'is_active');
+        $hasOrdre      = Schema::hasColumn('slides', 'ordre');
 
+        $slides = Slide::query()
+            ->when($hasActiveFlag, fn ($q) => $q->where('is_active', true))
+            ->when($hasOrdre, fn ($q) => $q->orderBy('ordre'))
+            ->orderBy('id')
+            ->paginate($perPage);
+
+        // Both crops need a media-library lookup — the mobile variant is a real image, not a
+        // derivative of the desktop one, so it needs its own width/height for the <picture>.
         $libraryPaths = $slides->getCollection()
-            ->pluck('image')
+            ->flatMap(fn ($slide) => [$slide->image, $slide->image_mobile ?? null])
             ->map(fn ($img) => ImagePath::normalize($img))
             ->filter()
             ->unique()
@@ -420,13 +435,33 @@ class ApisController extends Controller
             // consumer produces the same absolute URL regardless of where this runs.
             $norm = ImagePath::normalize($slide->image);
 
+            // Only advertise a mobile crop that actually exists on disk. Emitting a path to a
+            // missing file would give the hero <picture> a 404 source with no fallback, whereas
+            // null makes it cleanly reuse the desktop image. `null` fallback (not the placeholder)
+            // is deliberate — a placeholder image would be worse than no mobile crop at all.
+            // Cheap behind the 5-min route cache; normalizeExisting also swallows disk errors.
+            $normMobile = ImagePath::normalizeExisting($slide->image_mobile ?? null, 'public', null);
+
             return [
-                'id'           => $slide->id,
-                'cover'        => $norm,
-                'title'        => $title,
-                'link'         => $link,
-                'type'         => $slide->type ?? 'web',
-                'image_media'  => $norm ? ($libraryByPath[$norm] ?? null) : null,
+                'id'    => $slide->id,
+                'cover' => $norm,
+                'title' => $title,
+                'link'  => $link,
+                'type'  => $slide->type ?? 'web',
+
+                // Optional phone crop. Null means "reuse the desktop image" — the frontend
+                // <picture> falls back rather than rendering a broken source.
+                'cover_mobile'      => $normMobile,
+                'image_media'       => $norm ? ($libraryByPath[$norm] ?? null) : null,
+                'image_mobile_media' => $normMobile ? ($libraryByPath[$normMobile] ?? null) : null,
+
+                // Editorial overlay text. Rendered as real HTML by the hero (never baked into
+                // the image) so it reflows, indexes and is announced by screen readers.
+                'subtitle'  => $slide->sous_titre ?? null,
+                'cta_label' => $slide->cta_label ?? null,
+                'alt'       => $slide->alt ?? null,
+                'ordre'     => (int) ($slide->ordre ?? 0),
+                'is_active' => (bool) ($slide->is_active ?? true),
             ];
         });
 

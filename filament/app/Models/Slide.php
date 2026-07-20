@@ -16,6 +16,27 @@ class Slide extends Model
         'updated_at',
     ];
 
+    protected $casts = [
+        'is_active' => 'boolean',
+        'ordre'     => 'integer',
+    ];
+
+    /**
+     * `type` is a retained legacy column (web|mobile) whose form field was removed when slides
+     * moved to one-row-per-slide. Nothing writes it any more, and it is a pre-Laravel column
+     * whose definition is not in any migration — if it is NOT NULL with no default, MySQL
+     * strict mode (config/database.php: 'strict' => true) would throw SQLSTATE[HY000] 1364 on
+     * every insert and no slide could be created from the admin again.
+     *
+     * Defaulting it on the model is schema-agnostic: it costs nothing if the column is
+     * nullable, and prevents a fatal if it is not. Applies only to new instances, so existing
+     * rows are untouched. Safer than an ALTER, since `->change()` in Laravel 11+ rewrites the
+     * whole column definition and the original type/length here is unknown.
+     */
+    protected $attributes = [
+        'type' => 'web',
+    ];
+
     /**
      * Get the image URL attribute.
      * Normalizes full URLs to relative paths and generates correct storage URL.
@@ -47,16 +68,27 @@ class Slide extends Model
      */
     public function setImageAttribute($value): void
     {
-        if ($value && filter_var($value, FILTER_VALIDATE_URL)) {
-            // Extract relative path from full URL
-            $path = parse_url($value, PHP_URL_PATH);
-            $path = ltrim($path, '/');
-            if (str_starts_with($path, 'storage/')) {
-                $path = substr($path, 8); // Remove 'storage/' prefix
-            }
-            $this->attributes['image'] = $path;
-        } else {
-            $this->attributes['image'] = $value;
+        $this->attributes['image'] = self::toRelativePath($value);
+    }
+
+    /**
+     * Same normalization for the optional mobile crop — without this, a full URL pasted
+     * into image_mobile would be stored verbatim and the <picture> source would break.
+     */
+    public function setImageMobileAttribute($value): void
+    {
+        $this->attributes['image_mobile'] = self::toRelativePath($value);
+    }
+
+    /** Strip a full URL (and any leading storage/ prefix) down to a relative disk path. */
+    private static function toRelativePath($value): ?string
+    {
+        if (! $value || ! filter_var($value, FILTER_VALIDATE_URL)) {
+            return $value;
         }
+
+        $path = ltrim((string) parse_url($value, PHP_URL_PATH), '/');
+
+        return str_starts_with($path, 'storage/') ? substr($path, 8) : $path;
     }
 }
