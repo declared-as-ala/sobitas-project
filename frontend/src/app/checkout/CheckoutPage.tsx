@@ -477,9 +477,9 @@ export default function CheckoutPage() {
               body { margin: 0; padding: 0; font-family: Arial, sans-serif; color: #000; background: #fff; }
             }
             body { margin: 0; padding: 20px; font-family: Arial, sans-serif; color: #1f2937; background: #fff; line-height: 1.6; }
-            .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 3px solid #dc2626; }
+            .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 3px solid #E01B24; }
             .logo { height: 60px; width: auto; }
-            .order-number { font-size: 24px; font-weight: bold; color: #dc2626; margin-bottom: 5px; }
+            .order-number { font-size: 24px; font-weight: bold; color: #E01B24; margin-bottom: 5px; }
             .confirmation-message { text-align: center; margin: 30px 0; padding: 20px; background: #f0fdf4; border: 2px solid #22c55e; border-radius: 8px; }
             .section { margin: 30px 0; }
             .section-title { font-size: 20px; font-weight: bold; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #e5e7eb; }

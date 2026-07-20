@@ -1,5 +1,8 @@
 @import '../styles/fonts.css';
 @import '../styles/theme.css';
+/* Imported AFTER theme.css so the brand tokens can never be clobbered by the
+   (currently broken) shadcn variables. See the header comment in tokens.css. */
+@import '../styles/tokens.css';
 
 @tailwind base;
 @tailwind components;
@@ -205,15 +208,22 @@ html[dir="rtl"] [data-i18n-ltr] {
   unicode-bidi: isolate;
 }
 
-/* Reduce animations on mobile for better performance */
+/* Reduce animations on mobile for better performance.
+ *
+ * SCOPED with :not([data-motion]) — this rule is `!important` and applies to `*`, so it
+ * silently clamps every transition a new component declares (a 300ms slider ease becomes
+ * 200ms, a translate-based header hide gets truncated). Deleting it is risky: it was added
+ * for real mobile perf reasons and hundreds of components rely on it. Opting out per
+ * component via `data-motion` is additive and changes no existing behaviour — nothing in
+ * the codebase carries that attribute today. */
 @media (max-width: 768px) {
-  * {
+  *:not([data-motion]) {
     animation-duration: 0.2s !important;
     transition-duration: 0.2s !important;
   }
-  
+
   /* Disable heavy transforms on mobile */
-  .group-hover\:scale-110 {
+  .group-hover\:scale-110:not([data-motion]) {
     transform: none !important;
   }
 }

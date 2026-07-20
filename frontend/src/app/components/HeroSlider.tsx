@@ -60,7 +60,7 @@ export function HeroSlider({ mobileFirst }: HeroSliderProps) {
           href="/shop"
           loadingMessage="Chargement..."
           aria-label="Découvrir nos produits"
-          className="group inline-flex min-h-[52px] w-full items-center justify-center gap-2.5 rounded-lg bg-red-600 px-6 font-display text-sm font-semibold uppercase tracking-wide text-white shadow-[0_10px_24px_rgba(220,38,38,0.35)] transition-colors hover:bg-red-700 sm:w-auto sm:text-base"
+          className="group inline-flex min-h-[52px] w-full items-center justify-center gap-2.5 rounded-lg bg-red-600 px-6 font-display text-sm font-semibold uppercase tracking-wide text-white shadow-[0_10px_24px_rgba(224,27,36,0.35)] transition-colors hover:bg-red-700 sm:w-auto sm:text-base"
         >
           Découvrir nos produits
           <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20 transition-transform group-hover:translate-x-0.5">
