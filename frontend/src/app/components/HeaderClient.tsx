@@ -343,7 +343,10 @@ export function HeaderClient() {
       {/* Main Header */}
       <header
         className={cn(
-          'bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm',
+          // dark:bg-gray-950 matches both inner bars and the page canvas; it was gray-900 here,
+          // which left the mobile bar a different shade from the desktop one in dark mode.
+          // One hairline divider for the whole header, no drop shadow (§3: flat surfaces).
+          'bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800',
           'transition-all duration-300 ease-out'
         )}
       >
@@ -419,16 +422,21 @@ export function HeaderClient() {
           </div>
         </div>
 
-        <div className="hidden md:block bg-red-600 dark:bg-red-700">
+        {/* Editorial Minimal: the desktop bar was a solid red slab with the logo forced white via
+            `brightness-0 invert`. Red is the ONE accent (DESIGN_SYSTEM §2) — spending it on a
+            full-width band leaves nothing for it to mean, and the inverted logo is a workaround
+            for a background that should not have been red. White surface, ink logo, red reserved
+            for the cart/favourites badges and hover states. */}
+        <div className="hidden md:block bg-white dark:bg-gray-950">
           <div className="max-w-[1400px] mx-auto px-4 lg:px-8">
-            <div className="flex items-center justify-between h-14 gap-4">
+            <div className="flex items-center justify-between h-16 gap-4">
               <Link href="/" className="flex-shrink-0" aria-label="Proteine Tunisie - Accueil">
                 <Image
                   src={headerLogoUrl}
                   alt="Proteine Tunisie"
                   width={200}
                   height={70}
-                  className="h-9 lg:h-11 xl:h-12 w-auto object-contain brightness-0 invert"
+                  className="h-9 lg:h-11 xl:h-12 w-auto object-contain dark:brightness-0 dark:invert"
                   priority
                 />
               </Link>
@@ -442,7 +450,7 @@ export function HeaderClient() {
                     <DropdownMenuTrigger asChild>
                       <Button
                         variant="ghost"
-                        className="h-10 px-4 text-white hover:bg-red-700 dark:hover:bg-red-800 gap-2 font-medium"
+                        className="h-10 px-4 text-gray-800 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 gap-2 font-medium"
                         aria-label="Mon compte"
                       >
                         <User className="h-5 w-5" />
@@ -480,7 +488,7 @@ export function HeaderClient() {
                   </DropdownMenu>
                 ) : (
                   <Button
-                    className="h-10 px-4 text-white hover:bg-red-700 dark:hover:bg-red-800 gap-2 font-medium"
+                    className="h-10 px-4 text-gray-800 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 gap-2 font-medium"
                     variant="ghost"
                     asChild
                   >
@@ -495,7 +503,7 @@ export function HeaderClient() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-10 w-10 text-white hover:bg-red-700 dark:hover:bg-red-800 transition-all shrink-0"
+                  className="h-10 w-10 text-gray-800 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors shrink-0"
                   onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                   aria-label="Changer le thème"
                 >
@@ -506,12 +514,12 @@ export function HeaderClient() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="relative h-10 w-10 text-white hover:bg-red-700 dark:hover:bg-red-800 transition-all shrink-0"
+                      className="relative h-10 w-10 text-gray-800 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-red-600 dark:hover:text-red-400 transition-colors shrink-0"
                     aria-label={favoritesCount > 0 ? `Favoris - ${favoritesCount} produits` : 'Favoris'}
                   >
                     <Heart className="h-6 w-6" />
                     {favoritesCount > 0 && (
-                      <span className="absolute -top-1 -right-1 min-w-[20px] h-[20px] flex items-center justify-center bg-white text-red-600 text-xs font-bold rounded-full border-2 border-red-600">
+                      <span className="absolute -top-1 -right-1 min-w-[20px] h-[20px] flex items-center justify-center bg-red-600 text-white text-xs font-bold rounded-full ring-2 ring-white dark:ring-gray-950">
                         {favoritesCount > 99 ? '99+' : favoritesCount}
                       </span>
                     )}
@@ -520,13 +528,13 @@ export function HeaderClient() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="relative h-10 w-10 text-white hover:bg-red-700 dark:hover:bg-red-800 transition-all shrink-0"
+                    className="relative h-10 w-10 text-gray-800 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-red-600 dark:hover:text-red-400 transition-colors shrink-0"
                   onClick={() => setCartDrawerOpen(true)}
                   aria-label={cartItemsCount > 0 ? `Panier - ${cartItemsCount} articles` : 'Panier'}
                 >
                   <ShoppingCart className="h-6 w-6" />
                   {cartItemsCount > 0 && (
-                    <span className="absolute -top-1 -right-1 min-w-[20px] h-[20px] flex items-center justify-center bg-white text-red-600 text-xs font-bold rounded-full border-2 border-red-600">
+                    <span className="absolute -top-1 -right-1 min-w-[20px] h-[20px] flex items-center justify-center bg-red-600 text-white text-xs font-bold rounded-full ring-2 ring-white dark:ring-gray-950">
                       {cartItemsCount > 99 ? '99+' : cartItemsCount}
                     </span>
                   )}
@@ -536,8 +544,10 @@ export function HeaderClient() {
           </div>
         </div>
 
+        {/* The bar above is now white, so the old `border-t` would draw a hairline in the middle of
+            one continuous white surface. The header's single dividing line lives on <header>. */}
         <nav
-          className="hidden md:block bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="hidden md:block bg-white dark:bg-gray-950 border-t border-gray-100 dark:border-gray-900 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           aria-label="Navigation principale"
         >
           <div className="flex w-max mx-auto items-center gap-4 lg:gap-6 xl:gap-8 px-4 py-2">
@@ -553,7 +563,9 @@ export function HeaderClient() {
                 <NavigationLink
                   key={`${link.href}-${link.label}`}
                   item={link}
-                  className="inline-flex items-center gap-1.5 font-display uppercase tracking-wide text-sm font-semibold text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-400 transition-colors whitespace-nowrap py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                  /* Quiet hover: colour change only. The boxed grey hover fought the calm surface
+                     and made a row of eight items read as eight buttons. */
+                  className="inline-flex items-center gap-1.5 font-display uppercase tracking-wide text-sm font-semibold text-gray-700 dark:text-gray-200 hover:text-red-600 dark:hover:text-red-400 transition-colors whitespace-nowrap py-1.5 px-1"
                 >
                   <NavigationIcon name={link.icon} className="h-4 w-4" />
                   <span>{translateLegacy(link.label)}</span>
