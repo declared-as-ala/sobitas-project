@@ -94,6 +94,58 @@ export async function getServerFooter(): Promise<ServerFooterData> {
   return { cmsPages, coordinates };
 }
 
+/**
+ * Homepage hero slides, admin-managed via Filament (Paramètres du site → Slides).
+ *
+ * Server-fetched for the same reason as the nav: the first slide is the mobile LCP element and
+ * must be in the SSR HTML with a matching <link rel="preload">, which is impossible from a
+ * client fetch. The backend already filters is_active and sorts by ordre, so this trusts the
+ * order it receives.
+ *
+ * A failure (or an empty list) returns [] and the hero falls back to its built-in static image —
+ * see buildHeroImageSet. That keeps the CI-build case safe too, where the public API 403s.
+ */
+export type ServerSlide = {
+  id: number | string;
+  cover: string | null;
+  cover_mobile: string | null;
+  title: string | null;
+  subtitle: string | null;
+  cta_label: string | null;
+  link: string | null;
+  alt: string | null;
+};
+
+export async function getServerSlides(): Promise<ServerSlide[]> {
+  try {
+    const res = await fetch(`${SERVER_API_BASE}/slides`, {
+      headers: { Accept: 'application/json' },
+      next: { revalidate: 300, tags: ['slides'] },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const raw = await res.json();
+    const list: any[] = Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
+
+    return list
+      .filter((s) => s && (s.cover || s.image))
+      .map((s) => ({
+        id: s.id,
+        // `cover`/`image` and `link`/`lien` are both accepted: the API maps the legacy column
+        // names, but this keeps working if either side is deployed first.
+        cover: s.cover ?? s.image ?? null,
+        cover_mobile: s.cover_mobile ?? s.image_mobile ?? null,
+        title: s.title ?? s.titre ?? null,
+        subtitle: s.subtitle ?? s.sous_titre ?? null,
+        cta_label: s.cta_label ?? null,
+        link: s.link ?? s.lien ?? null,
+        alt: s.alt ?? null,
+      }));
+  } catch (e) {
+    console.error('[siteChrome] slides fetch failed (hero falls back to its static image):', e);
+    return [];
+  }
+}
+
 export async function getServerNavCategories(): Promise<Category[]> {
   try {
     const res = await fetch(`${SERVER_API_BASE}/categories`, {

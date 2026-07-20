@@ -229,22 +229,10 @@ export const getCategories = async (
   return Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
 };
 
-/** Slides — same `api` instance as `/accueil` so nginx `/api-proxy` and auth headers stay consistent. */
-export const getSlides = async (): Promise<any[]> => {
-  try {
-    const response = await api.get('/slides', { timeout: 15000 });
-    const raw = response.data?.data ?? response.data;
-    const list = Array.isArray(raw) ? raw : [];
-    return list.map((slide: any) => ({
-      ...slide,
-      image: slide?.image || slide?.cover,
-      cover: slide?.cover || slide?.image,
-    }));
-  } catch (error) {
-    console.error('[getSlides] API error:', error);
-    return [];
-  }
-};
+// getSlides() removed — it had zero call sites for the entire life of the file. Hero slides are
+// now fetched server-side by getServerSlides() in services/siteChrome.server.ts, which is the
+// only correct place: the first slide is the mobile LCP element and must be in the SSR HTML
+// alongside a matching <link rel="preload">, which a client-side fetch can never produce.
 
 // CMS pages for footer (Services & Ventes) from admin.protein.tn
 export interface CmsPage {

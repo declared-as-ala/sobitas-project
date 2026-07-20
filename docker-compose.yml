@@ -241,10 +241,16 @@ services:
       STORAGE_BACKEND_URL: http://backend-nginx-v2/storage
     ports:
       - "3001:3000"
+    volumes:
+      # Persist Next's optimized-image cache across deploys. Without it the cache is wiped every
+      # release and the first visitor to each image pays a full upstream fetch + sharp transcode
+      # — on the homepage that lands directly on the LCP element.
+      - frontend-image-cache:/app/.next/cache/images
     networks:
       - sobitas-net
 
 volumes:
+  frontend-image-cache:
   mysql-data:
   redis-data:
   backend-v2-public:

@@ -1,6 +1,8 @@
 import { Metadata } from 'next';
 import { unstable_noStore as noStore } from 'next/cache';
-import { getAccueil, getCategories, getBestSellers, getNewProducts, getAllBrands } from '@/services/api';
+import { getAccueil, getCategories, getBestSellers, getNewProducts, getAllBrands, getStorageUrl } from '@/services/api';
+import { getServerSlides } from '@/services/siteChrome.server';
+import { buildHeroImageSet, type HeroSlide } from '@/util/heroImage';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
 import { buildWebPageSchema, buildItemListSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
 import { buildProductUrlPath } from '@/util/productUrl';
@@ -75,39 +77,7 @@ const FALLBACK_CATEGORIES = [
   { id: 6, slug: 'equipement', designation_fr: 'ÉQUIPEMENT', cover: 'categories/8ba629b9-88b9-42a8-b4e2-3c4fb703a177.webp' },
 ] as unknown as AccueilData['categories'];
 
-type LocalHomeSlide = {
-  id: string;
-  cover: string;
-  title: string;
-  link: string;
-  type: 'mobile' | 'web';
-  ordre: number;
-};
-
-const LOCAL_HOME_SLIDES: LocalHomeSlide[] = [
-  {
-    id: 'home-hero-mobile',
-    // Was '/slides/mobile.png' (2.26 MB). Use the optimized WebP that already exists in the
-    // same folder (~116 KB) — this is the mobile LCP image, so the ~20× size cut is a
-    // direct Largest-Contentful-Paint win on the device that drives 81% of clicks.
-    cover: '/slides/home-hero-mobile.webp',
-    title: 'Protéines Premium',
-    link: '/shop',
-    type: 'mobile',
-    ordre: 1,
-  },
-  {
-    id: 'home-hero-web',
-    // Was '/slides/web.png' (2.26 MB) → optimized WebP (~135 KB).
-    cover: '/slides/home-hero-web.webp',
-    title: 'Protéines Premium',
-    link: '/shop',
-    type: 'web',
-    ordre: 1,
-  },
-];
-
-async function getHomeData(): Promise<{ accueil: AccueilData; slides: LocalHomeSlide[] }> {
+async function getHomeData(): Promise<{ accueil: AccueilData }> {
   try {
     const accueil = await getAccueil();
 
@@ -146,60 +116,51 @@ async function getHomeData(): Promise<{ accueil: AccueilData; slides: LocalHomeS
       ventes_flash: enrichProductsWithSubcategory(accueil.ventes_flash, categories),
     };
 
-    return { accueil: enriched, slides: LOCAL_HOME_SLIDES };
+    return { accueil: enriched };
   } catch (err) {
     // getAccueil rethrows on the server, so a total backend failure lands here. Do NOT let this
     // product-less render be CACHED for the whole revalidate window (5 min on the flagship page):
     // noStore() defers to a runtime re-render on the next request, which self-heals immediately.
     noStore();
     console.error('[home] accueil fetch failed — rendering fallback WITHOUT caching:', err);
-    return { accueil: { ...emptyAccueil, categories: FALLBACK_CATEGORIES }, slides: LOCAL_HOME_SLIDES };
+    return { accueil: { ...emptyAccueil, categories: FALLBACK_CATEGORIES } };
   }
 }
 
-function getSlideData(slide: any): { imageUrl: string; title: string } | null {
-  if (!slide) return null;
-  const p = slide.cover || slide.image || slide.image_path || slide.url;
-  if (!p) return null;
-  return {
-    imageUrl: p,
-    title: slide.titre || slide.title || slide.designation_fr || 'Protéines Premium',
-  };
-}
-
-function getFirstSlideByType(slides: any[], type: 'mobile' | 'web') {
-  const filtered = slides.filter(
-    (s: any) => s && (s.cover || s.image || s.image_path || s.url) && (s.type || '').toLowerCase() === type
-  );
-  const sorted = [...filtered].sort((a: any, b: any) => (a.ordre ?? a.order ?? 0) - (b.ordre ?? b.order ?? 0));
-  return getSlideData(sorted[0] ?? null);
-}
-
-function getFirstSlideAnyType(slides: any[]) {
-  const withImage = slides.filter((s: any) => s && (s.cover || s.image || s.image_path || s.url));
-  const sorted = [...withImage].sort((a: any, b: any) => (a.ordre ?? a.order ?? 0) - (b.ordre ?? b.order ?? 0));
-  return getSlideData(sorted[0] ?? null);
-}
-
-export interface HeroFirstSlide {
-  imageUrl: string;
-  title: string;
-}
+/** Alt text for a slide that has none — keeps the LCP image described for SEO and screen readers. */
+const HERO_FALLBACK_ALT = 'Whey, créatine et compléments — Protéine Tunisie';
 
 export default async function Home() {
   // Fetch brands alongside the home payload so the (now SSR) brands wall renders in the HTML.
   // Incidental: a failure just falls back to BrandsSection's client fetch (no cache poisoning).
-  const [{ accueil, slides }, brands] = await Promise.all([
+  const [{ accueil }, brands, serverSlides] = await Promise.all([
     getHomeData(),
     getAllBrands().catch(() => [] as Awaited<ReturnType<typeof getAllBrands>>),
+    getServerSlides(),
   ]);
 
-  // Pre-compute first slide for mobile and desktop at server time.
-  // These are passed as stable props so HeroSlider can render the first frame
-  // as a native <picture> element in SSR HTML — no JS execution required to
-  // show the hero image. This is the key fix for LCP 6.5s on mobile.
-  const mobileFirst = getFirstSlideByType(slides, 'mobile') ?? getFirstSlideAnyType(slides);
-  const desktopFirst = getFirstSlideByType(slides, 'web') ?? getFirstSlideAnyType(slides);
+  // Admin-managed hero slides (Filament → Paramètres du site → Slides). The backend already
+  // filters is_active and sorts by ordre. An empty list is normal and safe: the hero falls back
+  // to its built-in static image, which is exactly what shipped before.
+  const heroSlides: HeroSlide[] = serverSlides
+    .filter((s) => s.cover)
+    .map((s) => ({
+      id: s.id,
+      imageUrl: getStorageUrl(s.cover as string),
+      // No cache-bust param: it would change the URL on every render, breaking both the
+      // preload↔paint match and the optimizer's 30-day cache.
+      imageMobileUrl: s.cover_mobile ? getStorageUrl(s.cover_mobile) : null,
+      title: s.title,
+      subtitle: s.subtitle,
+      ctaLabel: s.cta_label,
+      href: s.link,
+      alt: s.alt,
+    }));
+
+  // The LCP preload is derived from the SAME builder the hero renders with, so the preloaded
+  // URL and the painted URL can never drift apart (see util/heroImage.ts). Only the first slide
+  // produces preloads.
+  const heroPreload = buildHeroImageSet(heroSlides[0] ?? null, true, HERO_FALLBACK_ALT).preload;
 
   // Homepage JSON-LD: WebPage (this page) + BreadcrumbList (root) + ItemList of the featured
   // products so the flagship URL isn't schema-less. Built from the server `accueil` payload so
@@ -237,16 +198,20 @@ export default async function Home() {
       {itemListSchema && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }} />
       )}
-      {/* LCP hero preloads — direct-static AVIF (edge-cached), media-specific per breakpoint */}
-      <link rel="preload" as="image" href="/slides/hero-m.avif" type="image/avif" media="(max-width: 767px)" fetchPriority="high" />
-      <link rel="preload" as="image" href="/slides/hero-d.avif" type="image/avif" media="(min-width: 768px)" fetchPriority="high" />
-      <HomePageClient
-        accueil={accueil}
-        slides={slides}
-        brands={brands}
-        heroMobileFirst={mobileFirst ?? undefined}
-        heroDesktopFirst={desktopFirst ?? undefined}
-      />
+      {/* LCP hero preloads, media-specific per breakpoint. Generated by buildHeroImageSet so
+          they always match the <picture> the hero paints — never hand-maintain these. */}
+      {heroPreload.map((p) => (
+        <link
+          key={p.href}
+          rel="preload"
+          as="image"
+          href={p.href}
+          {...(p.type ? { type: p.type } : {})}
+          media={p.media}
+          fetchPriority="high"
+        />
+      ))}
+      <HomePageClient accueil={accueil} heroSlides={heroSlides} brands={brands} />
     </>
   );
 }

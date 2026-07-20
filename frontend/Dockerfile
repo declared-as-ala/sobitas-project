@@ -33,12 +33,27 @@ WORKDIR /app
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
+# Create the runtime user BEFORE the COPYs so the tree can be chowned to it.
+#
+# WHY THIS ORDER MATTERS: previously the COPYs ran as root and created a root-owned /app/.next,
+# with `USER nextjs` (uid 1001) applied afterwards. Next's image optimizer writes its cache to
+# <distDir>/cache/images (i.e. /app/.next/cache/images) and, when that mkdir/write fails, it
+# logs "Failed to write image to cache" and serves the response anyway. There is no in-memory
+# fallback for a self-hosted standalone server. The result was a permanently cold cache: EVERY
+# /_next/image request re-fetched the upstream file and re-ran a full sharp transcode, for every
+# optimized image on the site — product grids included, not just the hero.
+RUN addgroup --system --gid 1001 nodejs \
+ && adduser --system --uid 1001 nextjs
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Must come AFTER the COPYs: `COPY ... /app/.next/standalone ./` recreates /app/.next and would
+# otherwise reset ownership. Pre-creating the dir also lets a mounted named volume inherit the
+# correct ownership on first creation.
+RUN mkdir -p /app/.next/cache/images && chown -R nextjs:nodejs /app/.next
+
 USER nextjs
 
 EXPOSE 3000

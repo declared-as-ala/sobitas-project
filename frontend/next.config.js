@@ -31,7 +31,11 @@ const nextConfig = {
       { protocol: 'http', hostname: 'localhost' },
       { protocol: 'http', hostname: '127.0.0.1' },
     ],
-    deviceSizes: [480, 640, 750, 828, 1080, 1200],
+    // 1920 is required by the full-bleed hero (see util/heroImage.ts DESKTOP_WIDTH); the
+    // optimizer rejects any width not listed here. It does not inflate product-grid images:
+    // those declare small `sizes` (≤16vw at desktop), so the browser still picks a small
+    // candidate — only genuinely full-width slots ever resolve to 1920.
+    deviceSizes: [480, 640, 750, 828, 1080, 1200, 1920],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     minimumCacheTTL: 2592000, // 30 days
     qualities: [25, 50, 70, 75, 80, 85, 90, 95, 100],
