@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Noto_Sans_Arabic, Oswald } from "next/font/google";
 import { Suspense } from "react";
 import Script from "next/script";
@@ -122,6 +122,28 @@ export const metadata: Metadata = {
   },
 };
 
+/**
+ * Site-wide viewport. `viewportFit: 'cover'` is what makes `env(safe-area-inset-*)`
+ * resolve to real values on notched devices — without it the insets are always 0px.
+ *
+ * Every fixed-bottom element in the app (cart CTA, checkout CTA, PDP add-to-cart bar and
+ * its skeleton twin, install banner, ScrollToTop, WhatsApp FAB) is ALREADY written against
+ * `env(safe-area-inset-bottom)`, so this activates padding they were built to expect and
+ * lets their backgrounds bleed to the physical screen edge instead of stopping short.
+ * It is also a hard prerequisite for the mobile tab bar.
+ *
+ * `maximumScale: 5` is kept from the previous per-page viewport — never set it to 1,
+ * that blocks pinch-zoom and is an accessibility failure.
+ */
+export function generateViewport(): Viewport {
+  return {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 5,
+    viewportFit: 'cover',
+  };
+}
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -162,7 +184,9 @@ export default async function RootLayout({
               `try{var l=localStorage.getItem('${LOCALE_STORAGE_KEY}');if(l==='fr'||l==='en'||l==='ar'){document.documentElement.lang=l;document.documentElement.dir=l==='ar'?'rtl':'ltr';document.documentElement.dataset.locale=l}}catch(e){}`,
           }}
         />
-        <meta name="theme-color" content="#dc2626" />
+        {/* Brand red — must stay in sync with --c-brand in styles/tokens.css.
+            This tints the mobile browser chrome, so a stale value here is very visible. */}
+        <meta name="theme-color" content="#E01B24" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />

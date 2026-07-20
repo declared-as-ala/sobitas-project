@@ -49,9 +49,9 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export function generateViewport() {
-  return { width: 'device-width', initialScale: 1, maximumScale: 5 };
-}
+// generateViewport intentionally removed — app/layout.tsx now defines the site-wide viewport
+// with the same width/initialScale/maximumScale PLUS `viewportFit: 'cover'` (required for
+// env(safe-area-inset-*) to resolve on notched devices). Re-declaring it here would shadow that.
 
 const emptyAccueil: AccueilData = {
   categories: [],

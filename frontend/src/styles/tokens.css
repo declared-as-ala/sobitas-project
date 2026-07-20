@@ -1,0 +1,70 @@
+/**
+ * protein.tn design tokens — "Editorial Minimal" (DESIGN_SYSTEM.md v3)
+ *
+ * WHY THIS FILE IS SEPARATE FROM theme.css
+ * theme.css holds the shadcn variables, and those are currently BROKEN: tailwind.config.ts
+ * wraps them as `hsl(var(--x))` while theme.css defines them as hex/oklch, so `hsl(#ffffff)`
+ * is invalid CSS and every semantic shadcn utility (`bg-background`, `text-foreground`,
+ * `bg-primary`, `border-border`) is a silent no-op site-wide. That is why the codebase
+ * hardcodes `bg-white` / `bg-red-600` everywhere. Repairing it would restyle all 47 shadcn
+ * components at once (the default <Button> would jump from transparent to near-black), so it
+ * is deliberately deferred to its own PR with a full visual pass.
+ *
+ * This file is a PARALLEL, working token namespace. It is imported AFTER theme.css so it can
+ * never be clobbered, and it touches none of the shadcn vars.
+ *
+ * Values are space-separated RGB triplets so Tailwind's `<alpha-value>` works
+ * (`bg-brand/10`, `text-ink-1/70`, ...). That is the correct Tailwind v3 pattern.
+ */
+
+:root {
+  /* ---- Brand accent -------------------------------------------------------
+   * Red is the ONLY accent. brand-600 is the accent; everything else is a ramp.
+   * The ramp is luminance-matched to Tailwind's stock red scale (600 lands at
+   * relative luminance 0.1676, same as #dc2626) so every existing contrast ratio
+   * is preserved — the change is pure hue/saturation, never brightness.
+   * To re-tune the whole site's accent, change these lines and nothing else. */
+  --c-brand: 224 27 36; /* #E01B24 */
+  --c-brand-hover: 188 19 27; /* #BC131B */
+
+  /* ---- Surfaces (theme-switchable) ---------------------------------------- */
+  --c-canvas: 255 255 255; /* page background */
+  --c-elevated: 255 255 255; /* cards, sheets, dropdowns */
+  --c-sunken: 247 246 244; /* warm sand — alternating section bands */
+  --c-hairline: 232 229 225; /* the ONLY border colour in Editorial Minimal */
+
+  /* ---- Ink (theme-switchable) ---------------------------------------------
+   * Near-neutral with a whisper of warmth. Deliberately LOW warmth: hundreds of
+   * legacy cool `gray-*` utilities are still in the codebase, and a fully warm
+   * stone-like neutral sitting next to cool gray-500 (#6b7280) reads as a bug.
+   * Warmth can increase once `gray-*` is fully migrated. */
+  --c-ink-1: 10 10 11; /* #0A0A0B — headings, primary text */
+  --c-ink-2: 87 87 94; /* #57575E — body copy */
+  --c-ink-3: 120 120 127; /* #78787F — meta, captions, placeholders */
+
+  /* ---- Mobile tab bar -----------------------------------------------------
+   * ONE knob that every fixed-bottom element (body offset, WhatsApp FAB,
+   * ScrollToTop, cart CTA, PDP add-to-cart bar and its skeleton twin) offsets
+   * against. Setting it to 0px is a complete kill switch for the bottom tab bar
+   * — no code revert needed.
+   *
+   * Stays 0px until the MobileTabBar component actually ships; turning it on
+   * before then would open a dead 56px gap at the bottom of every mobile page.
+   * That PR adds:  @media (max-width: 767px) { :root { --tabbar-h: 56px } } */
+  --tabbar-h: 0px;
+}
+
+.dark {
+  /* Lighter, less saturated accent so red stays legible on dark surfaces. */
+  --c-brand: 248 113 113; /* #F87171 */
+  --c-brand-hover: 252 165 165; /* #FCA5A5 */
+
+  --c-canvas: 10 10 11;
+  --c-elevated: 20 20 22;
+  --c-sunken: 16 16 18;
+  --c-hairline: 38 38 42;
+
+  --c-ink-1: 245 244 242;
+  --c-ink-2: 190 190 196;
+  --c-ink-3: 150 150 157;
+}

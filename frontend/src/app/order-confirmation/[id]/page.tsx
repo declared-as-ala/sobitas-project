@@ -120,7 +120,7 @@ export default function OrderConfirmationPage() {
               align-items: center;
               margin-bottom: 30px;
               padding-bottom: 20px;
-              border-bottom: 3px solid #dc2626;
+              border-bottom: 3px solid #E01B24;
             }
             .logo {
               height: 60px;
@@ -132,7 +132,7 @@ export default function OrderConfirmationPage() {
             .order-number {
               font-size: 24px;
               font-weight: bold;
-              color: #dc2626;
+              color: #E01B24;
               margin-bottom: 5px;
             }
             .order-date {
@@ -208,7 +208,7 @@ export default function OrderConfirmationPage() {
             .summary-total {
               font-size: 20px;
               font-weight: bold;
-              color: #dc2626;
+              color: #E01B24;
               padding-top: 10px;
               border-top: 2px solid #e5e7eb;
             }
