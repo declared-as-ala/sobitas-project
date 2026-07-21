@@ -19,16 +19,19 @@
   }
 
   /* ------------------------------------------------------------------
-     Archivo width axis (wdth 62.5–125). Tailwind v3 ships no font-stretch
+     Archivo width axis (wdth 62.5–125). Tailwind v3 ships no width
      utilities, so the two registers of the display face are named here.
 
-     `font-stretch` (not `font-variation-settings`) on purpose: it is the
-     high-level property, so it composes with `font-weight` instead of
-     replacing the whole variation tuple the way a raw `wdth` setting does.
+     These OVERRIDE the compressed default that `.font-display` sets in
+     @layer base — utilities outrank base in Tailwind's cascade, so no
+     !important is needed.
+
+     All width declarations in this file use `font-variation-settings`,
+     never `font-stretch`. The two properties do not cascade against one
+     another predictably (variation-settings wins regardless of source
+     order), so mixing them would make the override silently unreliable.
+     Setting only the wdth axis leaves wght under `font-weight`.
      ------------------------------------------------------------------ */
-  /* Must use the SAME property as the `.font-display` base rule above — mixing font-stretch and
-     font-variation-settings does not cascade against each other predictably (variation-settings
-     wins regardless of order), so both sides speak font-variation-settings. */
   .font-compressed {
     font-variation-settings: "wdth" 82;
   }
