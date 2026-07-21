@@ -19,25 +19,31 @@
   }
 
   /* ------------------------------------------------------------------
-     Archivo width axis (wdth 62.5–125). Tailwind v3 ships no font-stretch
+     Archivo width axis (wdth 62.5–125). Tailwind v3 ships no width
      utilities, so the two registers of the display face are named here.
 
-     `font-stretch` (not `font-variation-settings`) on purpose: it is the
-     high-level property, so it composes with `font-weight` instead of
-     replacing the whole variation tuple the way a raw `wdth` setting does.
+     These OVERRIDE the compressed default that `.font-display` sets in
+     @layer base — utilities outrank base in Tailwind's cascade, so no
+     !important is needed.
+
+     All width declarations in this file use `font-variation-settings`,
+     never `font-stretch`. The two properties do not cascade against one
+     another predictably (variation-settings wins regardless of source
+     order), so mixing them would make the override silently unreliable.
+     Setting only the wdth axis leaves wght under `font-weight`.
      ------------------------------------------------------------------ */
   .font-compressed {
-    font-stretch: 82%;
+    font-variation-settings: "wdth" 82;
   }
   .font-extended {
-    font-stretch: 112%;
+    font-variation-settings: "wdth" 112;
   }
 
   /* The editorial kicker: small, wide, letterspaced, above a headline.
      Repeated verbatim on every section, so it is one class, not six copies. */
   .pt-kicker {
     font-family: var(--font-display), var(--font-inter), system-ui, sans-serif;
-    font-stretch: 112%;
+    font-variation-settings: "wdth" 112;
     font-weight: 600;
     font-size: 0.6875rem;
     line-height: 1;
@@ -49,6 +55,25 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+  }
+
+  /**
+   * `font-display` MEANS COMPRESSED. All 300 usages across 56 files were written against Oswald,
+   * which is a condensed face by construction — nothing ever had to ask for compression. Archivo
+   * is a normal-width grotesque, so swapping the family silently widened every heading, price,
+   * badge and countdown on the site. Restoring the intent centrally is the only reliable fix;
+   * hand-editing 300 call sites guarantees stragglers, and the two I found live (`/shop` h1 and
+   * the homepage h1) prove it.
+   *
+   * Declared in @layer base ON PURPOSE. Tailwind orders base BELOW utilities, so `.font-extended`
+   * and `.font-compressed` (both in @layer utilities) override this without needing !important or
+   * a specificity hack — the cascade does the work.
+   *
+   * `font-variation-settings` rather than `font-stretch` so it composes with `font-weight`:
+   * setting only the wdth axis leaves wght under font-weight's control.
+   */
+  .font-display {
+    font-variation-settings: "wdth" 82;
   }
 
   html {
