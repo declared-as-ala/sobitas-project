@@ -1,10 +1,10 @@
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { Hero } from '@/app/components/Hero';
+import { CategoryRail } from '@/app/components/CategoryRail';
 
 // Below-fold sections: defer JS evaluation until after first paint
 const FeaturesSection = dynamic(() => import('@/app/components/FeaturesSection').then(m => ({ default: m.FeaturesSection })), { ssr: true });
-const CategoryGrid = dynamic(() => import('@/app/components/CategoryGrid').then(m => ({ default: m.CategoryGrid })), { ssr: true });
 const VentesFlashSection = dynamic(() => import('@/app/components/VentesFlashSection').then(m => ({ default: m.VentesFlashSection })), { ssr: true });
 const ProductSection = dynamic(() => import('@/app/components/ProductSection').then(m => ({ default: m.ProductSection })), { ssr: true });
 const HomeDeferredSections = dynamic(() => import('@/app/components/HomeDeferredSections').then(m => ({ default: m.HomeDeferredSections })), { ssr: true });
@@ -103,7 +103,14 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
     .map(transformProduct);
 
   return (
-    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-white dark:bg-gray-950">
+    /* overflow-x-clip, NOT overflow-x-hidden. `hidden` makes this div a scroll container (a
+       `hidden` axis forces the other axis from `visible` to `auto`), and because it wraps the
+       whole page every `animation-timeline: view()` inside it bound to THIS element — which has
+       no scroll range, so the timeline was inactive and every section reveal silently did
+       nothing. Verified in Chrome: the ancestor chain reported `DIV ox=hidden oy=auto` as the
+       nearest scroll container. `clip` clips identically without creating a scroller.
+       Old-Safari safety net is unchanged: body still carries `overflow-x: hidden`. */
+    <div className="min-h-screen w-full max-w-full overflow-x-clip bg-white dark:bg-gray-950">
 
       <main>
         {/* Above the fold - Critical content - Hero must render first */}
@@ -128,50 +135,72 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
             </p>
           </div>
         </section>
+
+        {/* Immediate shopping paths, one tap from the fold. Sits after the hero rather than above
+            it so the LCP element stays first — see the note in CategoryRail.tsx. */}
+        <CategoryRail categories={safeAccueil.categories || []} />
+
         {/* Best-sellers FIRST — shoppers reach the most-sold products immediately after the hero,
             then the "what we do" trust band, then the rest of the rails. */}
         {(safeAccueil.best_sellers?.length ?? 0) > 0 && (
-          <ProductSection
-            id="products"
-            kicker="Best-sellers"
-            title="Les plus vendus"
-            products={bestSellers as any}
-            showBadge
-            badgeText="Top Vendu"
-            tightTop
-          />
+          <div className="pt-reveal" data-motion>
+            <ProductSection
+              id="products"
+              kicker="Best-sellers"
+              title="Les plus vendus"
+              products={bestSellers as any}
+              showBadge
+              badgeText="Top Vendu"
+              tightTop
+            />
+          </div>
         )}
 
         {/* "Ce que nous faisons" / trust badges — after the flagship products */}
-        <FeaturesSection />
+        <div className="pt-reveal" data-motion>
+          <FeaturesSection />
+        </div>
 
         {(safeAccueil.new_product?.length ?? 0) > 0 && (
-          <ProductSection
-            kicker="Nouveautés"
-            title="Nouveaux produits"
-            products={newProducts as any}
-            showBadge
-            badgeText="New"
-          />
+          <div className="pt-reveal" data-motion>
+            <ProductSection
+              kicker="Nouveautés"
+              title="Nouveaux produits"
+              products={newProducts as any}
+              showBadge
+              badgeText="New"
+            />
+          </div>
         )}
 
         {flashSales.length > 0 && (
-          <VentesFlashSection products={flashSales as any} />
+          <div className="pt-reveal" data-motion>
+            <VentesFlashSection products={flashSales as any} />
+          </div>
         )}
 
-        {/* Browse by goal — moved below the product rails */}
-        <CategoryGrid categories={safeAccueil.categories || []} />
+        {/* CategoryGrid used to sit here. It is gone because CategoryRail above renders the SAME
+            six categories from the same array with the same hrefs — the page showed one identical
+            set of categories twice in one scroll, which reads as a bug rather than as navigation.
+            The rail wins: it is higher up, it is a server component (no client JS), and it does
+            not need a scrim over the photography.
+
+            This leaves CategoryGrid.tsx with NO consumers anywhere in src/. It is kept rather than
+            deleted because the category landing pages are the next phase and it is the natural
+            block for them — but it is dead code today, so do not assume it is exercised. */}
 
         {(safeAccueil.packs?.length ?? 0) > 0 && (
-          <ProductSection
-            id="packs"
-            kicker="Économisez"
-            title="Nos packs"
-            products={packs as any}
-            viewAllHref="/packs"
-            viewAllLabel="Voir tous les packs"
-            imageContext="packs"
-          />
+          <div className="pt-reveal" data-motion>
+            <ProductSection
+              id="packs"
+              kicker="Économisez"
+              title="Nos packs"
+              products={packs as any}
+              viewAllHref="/packs"
+              viewAllLabel="Voir tous les packs"
+              imageContext="packs"
+            />
+          </div>
         )}
 
         {/* Below the fold - idle-loaded client islands */}

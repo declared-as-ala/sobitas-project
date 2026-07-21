@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Noto_Sans_Arabic, Oswald } from "next/font/google";
+import { Inter, Noto_Sans_Arabic, Archivo } from "next/font/google";
 import { Suspense } from "react";
 import Script from "next/script";
 import { cn } from "@/app/components/ui/utils";
@@ -35,14 +35,48 @@ const notoArabic = Noto_Sans_Arabic({
   preload: false,
 });
 
-// Athletic condensed display face for headings/prices/badges/countdowns (body stays Inter).
-// Only 2 weights + latin-ext (French diacritics) to protect the mobile LCP budget.
-const oswald = Oswald({
-  subsets: ["latin", "latin-ext"],
-  weight: ["600", "700"],
+/**
+ * Display face for headings/prices/badges/countdowns (body stays Inter).
+ *
+ * Archivo, not Oswald. Oswald is the default "athletic condensed" — it is on thousands of gym
+ * and supplement sites, so it reads as a category cliché rather than as us. Archivo is a
+ * grotesque with a real WIDTH axis (62.5–125) alongside weight, which buys two typographic
+ * registers from ONE variable file:
+ *   - headlines set tight/condensed (`font-stretch: 82%`) for athletic compression
+ *   - kickers and nav set wide + letterspaced (`font-stretch: 112%`) for the editorial feel
+ * Oswald could only ever do the first, which is why every section on the site looked the same
+ * weight and the same width.
+ *
+ * PAYLOAD — measured, not assumed. A 2-axis variable font is NOT free: with `subsets: ["latin",
+ * "latin-ext"]` Archivo contributed 176 kB of PRELOADED font against Oswald's 40 kB. Narrowing to
+ * `latin` halves that, and costs nothing: every French diacritic (é è ê à ç ù û î ô, and œ at
+ * U+0152-0153) is inside Google's `latin` range: U+0000-00FF plus those pairs. `latin-ext` is
+ * Eastern-European coverage this storefront never renders.
+ *
+ * Note precisely what `subsets` does: it controls which subsets are PRELOADED, not which files
+ * are emitted. next/font still writes a woff2 per subset into .next/static/media; the others are
+ * simply never fetched. The 176 -> 90 kB figure is preloaded bytes, which is the number that
+ * affects the critical path.
+ *
+ * NOT PRELOADED — and this is a net win over the Oswald it replaces, which WAS preloaded.
+ * Measured on fonts.googleapis.com: Archivo latin is 34.9 kB with the weight axis alone and
+ * 90.1 kB with the width axis added, so the design costs +55 kB. Putting that on the critical
+ * path would be indefensible on a mobile-first Tunisian storefront. It does not belong there
+ * anyway: the LCP element is the hero IMAGE, so preloading a display face only makes it compete
+ * with the LCP resource for bandwidth. Dropping the preload removes Oswald's 40 kB from the
+ * critical path and buys the width axis for free.
+ *
+ * The swap is safe against CLS specifically because the hero copy is absolutely positioned
+ * inside a FIXED-height hero frame (see Hero.tsx), so re-flowing that text cannot move anything.
+ * Section headings further down do re-flow slightly, but they are outside the viewport at load
+ * and CLS only scores shifts that are actually on screen.
+ */
+const archivo = Archivo({
+  subsets: ["latin"],
+  axes: ["wdth"],
   display: "swap",
   variable: "--font-display",
-  preload: true,
+  preload: false,
   adjustFontFallback: true,
   fallback: ["var(--font-inter)", "system-ui", "sans-serif"],
 });
@@ -173,7 +207,7 @@ export default async function RootLayout({
   const siteNavigationSchema = buildSiteNavigationSchema(baseUrl);
 
   return (
-    <html lang="fr" suppressHydrationWarning data-scroll-behavior="smooth" className={`${inter.variable} ${notoArabic.variable} ${oswald.variable}`}>
+    <html lang="fr" suppressHydrationWarning data-scroll-behavior="smooth" className={`${inter.variable} ${notoArabic.variable} ${archivo.variable}`}>
       <head>
         {/* Anti-FOUC: set lang/dir from the persisted locale BEFORE first paint. Must read the
             same key I18nProvider writes (LOCALE_STORAGE_KEY = 'sobitas-locale'); it previously

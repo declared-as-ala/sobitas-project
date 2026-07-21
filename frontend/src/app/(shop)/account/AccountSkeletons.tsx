@@ -1,6 +1,6 @@
 import { Skeleton } from '@/app/components/ui/skeleton';
 
-/** Kicker + Oswald title placeholder that mirrors <PageHeader>. */
+/** Kicker + display-face title placeholder that mirrors <PageHeader>. */
 function PageHeaderSkeleton() {
   return (
     <div className="space-y-3">

@@ -80,7 +80,7 @@ interface AuthCardHeaderProps {
   subtitle?: ReactNode;
 }
 
-/** Kicker + Oswald title header for an auth form (left-aligned, no card chrome). */
+/** Kicker + display-face title header for an auth form (left-aligned, no card chrome). */
 export function AuthCardHeader({ showLogo = false, kicker, title, subtitle }: AuthCardHeaderProps) {
   const { headerLogoUrl } = useSiteLogos();
   return (

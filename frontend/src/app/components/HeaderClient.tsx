@@ -429,14 +429,17 @@ export function HeaderClient() {
             for the cart/favourites badges and hover states. */}
         <div className="hidden md:block bg-white dark:bg-gray-950">
           <div className="max-w-[1400px] mx-auto px-4 lg:px-8">
-            <div className="flex items-center justify-between h-16 gap-4">
+            {/* h-16 -> h-[58px]. With the nav row below it the header owned ~142px of every
+                desktop viewport before a single product was visible. Tightening the main bar and
+                the nav row brings the stack to ~116px — a full product-card row further up. */}
+            <div className="flex items-center justify-between h-[58px] gap-5">
               <Link href="/" className="flex-shrink-0" aria-label="Proteine Tunisie - Accueil">
                 <Image
                   src={headerLogoUrl}
                   alt="Proteine Tunisie"
                   width={200}
                   height={70}
-                  className="h-9 lg:h-11 xl:h-12 w-auto object-contain dark:brightness-0 dark:invert"
+                  className="h-8 lg:h-9 xl:h-10 w-auto object-contain dark:brightness-0 dark:invert"
                   priority
                 />
               </Link>
@@ -550,7 +553,7 @@ export function HeaderClient() {
           className="hidden md:block bg-white dark:bg-gray-950 border-t border-gray-100 dark:border-gray-900 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           aria-label="Navigation principale"
         >
-          <div className="flex w-max mx-auto items-center gap-4 lg:gap-6 xl:gap-8 px-4 py-2">
+          <div className="flex w-max mx-auto items-center gap-5 lg:gap-7 xl:gap-9 px-4 h-[42px]">
             {navLinks.map((link) => (
               isProductsNavLink(link) ? (
                 <ProductsDropdown
@@ -565,7 +568,17 @@ export function HeaderClient() {
                   item={link}
                   /* Quiet hover: colour change only. The boxed grey hover fought the calm surface
                      and made a row of eight items read as eight buttons. */
-                  className="inline-flex items-center gap-1.5 font-display uppercase tracking-wide text-sm font-semibold text-gray-700 dark:text-gray-200 hover:text-red-600 dark:hover:text-red-400 transition-colors whitespace-nowrap py-1.5 px-1"
+                  /* font-sans (Inter), NOT the display face — and deliberately so, for two
+                     measured reasons. (1) Archivo is no longer preloaded, and the nav is above
+                     the fold on EVERY page, so using it here would guarantee a visible width
+                     shift when the font swaps in; Inter is already preloaded, so there is no
+                     FOUT at all. (2) Archivo at wdth 112% plus 0.13em tracking made this row
+                     materially wider, and it lives in an `overflow-x-auto` + `mx-auto`
+                     container where overflow to the LEFT is unreachable by scrolling.
+                     At 12px uppercase with open tracking the two faces are nearly
+                     indistinguishable anyway, so this costs the design almost nothing.
+                     Keep in lockstep with the ProductsDropdown trigger. */
+                  className="inline-flex items-center gap-1.5 font-sans uppercase tracking-[0.11em] text-[12px] font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-950 dark:hover:text-white transition-colors whitespace-nowrap h-full px-0.5"
                 >
                   <NavigationIcon name={link.icon} className="h-4 w-4" />
                   <span>{translateLegacy(link.label)}</span>

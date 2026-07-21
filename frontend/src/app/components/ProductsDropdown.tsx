@@ -187,7 +187,11 @@ export function ProductsDropdown({
     >
       <LinkWithLoading
         href={href}
-        className="font-display uppercase tracking-wide text-sm font-semibold text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-400 transition-colors flex items-center gap-1 whitespace-nowrap py-1 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+        /* Must stay in lockstep with the sibling nav links in HeaderClient.tsx — this is the one
+           nav item that renders through a different component, so it silently kept the old type
+           system (14px, gray-900, boxed grey hover) while the other seven were restyled, making
+           the most important link in the row look bigger and darker than its neighbours. */
+        className="font-sans uppercase tracking-[0.11em] text-[12px] font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-950 dark:hover:text-white transition-colors flex items-center gap-1 whitespace-nowrap h-full px-0.5"
         loadingMessage="Chargement de la boutique..."
         onMouseEnter={prefetchShop}
         {...targetProps}
