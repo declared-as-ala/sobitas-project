@@ -1,0 +1,52 @@
+'use client';
+
+import { useEffect } from 'react';
+import Link from 'next/link';
+import { Button } from '@/app/components/ui/button';
+import { CategorySkeleton } from '@/app/components/ProductsSkeleton';
+import { AlertCircle, Home, RefreshCw, ShoppingBag } from 'lucide-react';
+
+export default function ShopSlugError({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  useEffect(() => {
+    console.error('[ShopSlugError]', error?.message || error);
+  }, [error]);
+
+  return (
+    <>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
+        {/* Banner erreur (non plein écran) */}
+        <div className="mb-6 p-4 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-red-700 dark:text-red-300">
+            <AlertCircle className="h-5 w-5 shrink-0" />
+            <span className="text-sm font-medium">Problème réseau. Réessayez ou consultez la boutique.</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={reset} size="sm" className="gap-2 bg-red-600 hover:bg-red-700 text-white">
+              <RefreshCw className="h-4 w-4" />
+              Réessayer
+            </Button>
+            <Button asChild variant="outline" size="sm" className="gap-2">
+              <Link href="/shop">
+                <ShoppingBag className="h-4 w-4" />
+                Boutique
+              </Link>
+            </Button>
+            <Button asChild variant="ghost" size="sm" className="gap-2">
+              <Link href="/">
+                <Home className="h-4 w-4" />
+                Accueil
+              </Link>
+            </Button>
+          </div>
+        </div>
+        <CategorySkeleton />
+      </main>
+    </>
+  );
+}

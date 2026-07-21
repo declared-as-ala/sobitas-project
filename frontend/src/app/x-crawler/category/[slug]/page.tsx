@@ -30,8 +30,8 @@ import {
 import { ApiError } from '@/services/http';
 import { loadForCache } from '@/util/loadForCache';
 import { getErrorStatus } from '@/util/errorStatus';
-import { generateMetadata as generateCategoryMetadata } from '@/app/category/[slug]/page';
-import { PageContentClient } from '@/app/page/[slug]/PageContentClient';
+import { generateMetadata as generateCategoryMetadata } from '@/app/(shop)/category/[slug]/page';
+import { PageContentClient } from '@/app/(shop)/page/[slug]/PageContentClient';
 import { getCategorySeoContent } from '@/util/categorySeoContent';
 import { mergeCategorySeo } from '@/util/resolveCategorySeo';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';

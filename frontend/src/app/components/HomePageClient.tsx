@@ -1,8 +1,6 @@
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { Hero } from '@/app/components/Hero';
-import { Header } from '@/app/components/Header';
-import { Footer } from '@/app/components/Footer';
 
 // Below-fold sections: defer JS evaluation until after first paint
 const FeaturesSection = dynamic(() => import('@/app/components/FeaturesSection').then(m => ({ default: m.FeaturesSection })), { ssr: true });
@@ -106,7 +104,6 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
 
   return (
     <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-white dark:bg-gray-950">
-      <Header />
 
       <main>
         {/* Above the fold - Critical content - Hero must render first */}
@@ -223,7 +220,6 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
         </section>
       </main>
 
-      <Footer />
     </div>
   );
 }
