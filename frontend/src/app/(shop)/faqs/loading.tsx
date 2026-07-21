@@ -1,13 +1,9 @@
-import { Header } from '@/app/components/Header';
-import { Footer } from '@/app/components/Footer';
 import { Skeleton } from '@/app/components/ui/skeleton';
 
 // Layout-matching skeleton for /faqs — mirrors FAQsPageClient (centered header + accordion card).
 export default function FAQsLoading() {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
-      <Header />
-
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
         <div className="flex flex-col items-center text-center mb-10 sm:mb-12">
           <Skeleton className="mb-5 h-14 w-14 rounded-xl" />
@@ -28,8 +24,6 @@ export default function FAQsLoading() {
           ))}
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 }

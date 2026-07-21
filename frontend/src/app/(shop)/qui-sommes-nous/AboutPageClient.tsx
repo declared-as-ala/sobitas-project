@@ -1,8 +1,6 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { Header } from '@/app/components/Header';
-import { Footer } from '@/app/components/Footer';
 import { PageHeader } from '@/app/components/PageHeader';
 import {
   Check, MapPin, Truck, Shield, Award, Users, Star,
@@ -149,9 +147,7 @@ export default function AboutPageClient({
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
-      <Header />
-
-      <main>
+<main>
         {/* ── Hero ── */}
         <section className="border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-950">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 md:py-20">
@@ -385,9 +381,7 @@ export default function AboutPageClient({
           </div>
         </section>
       </main>
-
-      <Footer />
-      <ScrollToTop />
+<ScrollToTop />
     </div>
   );
 }

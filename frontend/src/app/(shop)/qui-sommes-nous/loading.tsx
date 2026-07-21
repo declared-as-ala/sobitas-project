@@ -1,13 +1,9 @@
-import { Header } from '@/app/components/Header';
-import { Footer } from '@/app/components/Footer';
 import { Skeleton } from '@/app/components/ui/skeleton';
 
 // Layout-matching skeleton for /qui-sommes-nous — mirrors AboutPageClient (hero + stat tiles + prose cards).
 export default function AboutLoading() {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
-      <Header />
-
       <main>
         {/* Hero */}
         <section className="border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-950">
@@ -65,8 +61,6 @@ export default function AboutLoading() {
           </div>
         </section>
       </main>
-
-      <Footer />
     </div>
   );
 }
