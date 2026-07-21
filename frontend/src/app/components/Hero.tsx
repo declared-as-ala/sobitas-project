@@ -86,16 +86,18 @@ function HeroPicture({ set, eager }: { set: HeroImageSet; eager: boolean }) {
 }
 
 function HeroCopy({ slide, showTrust }: { slide: HeroSlide | null; showTrust: boolean }) {
-  // Fallback rule, applied consistently to title/subtitle (it previously differed per field, so
-  // an image-only slide rendered the built-in headline as though the admin had written it, and a
-  // multi-slide track repeated that same headline on every untitled slide):
-  //   • no slide at all (nothing published yet) → show the built-in copy, i.e. today's homepage
-  //   • a real slide → show only what the admin actually wrote; blank means image-only
-  // The CTA is the exception: a hero with no action is a conversion hole, so it always renders,
-  // using the built-in label/target when unset.
-  const isPlaceholder = slide === null;
+  // Every field falls back to the built-in copy when the admin leaves it blank.
+  //
+  // An earlier version rendered nothing for an untitled slide ("blank = image speaks alone").
+  // In practice that left the live hero as a bare CTA floating on a photo — it read as broken,
+  // not as a deliberate choice, because the existing slide predates these fields and has none
+  // of them filled in. A headline is also the one piece of hero copy Google and screen readers
+  // can actually use, so defaulting to real text beats defaulting to silence.
+  //
+  // A slide whose artwork already contains its own headline can be handled later with an
+  // explicit "masquer le texte" toggle — an intentional switch, not an empty field.
   const title = slide?.title?.trim() || null;
-  const subtitle = slide?.subtitle?.trim() || null;
+  const subtitle = slide?.subtitle?.trim() || DEFAULT_SUBTITLE;
   const ctaLabel = slide?.ctaLabel?.trim() || DEFAULT_CTA;
   const href = normalizeHref(slide?.href) || DEFAULT_HREF;
 
@@ -103,24 +105,20 @@ function HeroCopy({ slide, showTrust }: { slide: HeroSlide | null; showTrust: bo
     <div className="w-full max-w-lg lg:max-w-[34rem] xl:max-w-[40rem]">
       {/* Slogan is a <p>, never an <h1>: the page's single H1 ("Protéine Tunisie") lives in the
           SEO strip below, and a rotating slider headline must not become the document heading. */}
-      {(title || isPlaceholder) && (
-        <p className="font-display text-[2.6rem] font-bold uppercase leading-[0.85] tracking-tight text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.5)] sm:text-6xl lg:text-[4rem] xl:text-7xl">
-          {title
-            ? title
-            : DEFAULT_TITLE_LINES.map((line, i) => (
-                <span key={line} className={i === DEFAULT_TITLE_LINES.length - 1 ? 'text-red-600' : undefined}>
-                  {line}
-                  {i < DEFAULT_TITLE_LINES.length - 1 && <br />}
-                </span>
-              ))}
-        </p>
-      )}
+      <p className="font-display text-[2.6rem] font-bold uppercase leading-[0.85] tracking-tight text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.5)] sm:text-6xl lg:text-[4rem] xl:text-7xl">
+        {title
+          ? title
+          : DEFAULT_TITLE_LINES.map((line, i) => (
+              <span key={line} className={i === DEFAULT_TITLE_LINES.length - 1 ? 'text-red-600' : undefined}>
+                {line}
+                {i < DEFAULT_TITLE_LINES.length - 1 && <br />}
+              </span>
+            ))}
+      </p>
 
-      {(subtitle || isPlaceholder) && (
-        <p className="mt-4 max-w-md text-sm leading-relaxed text-gray-200 drop-shadow-[0_1px_8px_rgba(0,0,0,0.6)] sm:mt-5 sm:text-base">
-          {subtitle || DEFAULT_SUBTITLE}
-        </p>
-      )}
+      <p className="mt-4 max-w-md text-sm leading-relaxed text-gray-200 drop-shadow-[0_1px_8px_rgba(0,0,0,0.6)] sm:mt-5 sm:text-base">
+        {subtitle}
+      </p>
 
       <div className="mt-6 sm:mt-7">
         <LinkWithLoading

@@ -4,10 +4,20 @@ import typography from "@tailwindcss/typography"
 
 const config: Config = {
   darkMode: ["class"],
-  content: [
-    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
-  ],
+  /**
+   * Scan ALL of src, not just app/ and pages/.
+   *
+   * This previously listed only ./src/pages and ./src/app, so any Tailwind class defined
+   * outside those two directories was silently purged from the CSS — no build error, no
+   * warning, just a missing rule. That is exactly what broke the product cards: the shared
+   * image-frame constants live in src/util/productCardFrame.ts, so `aspect-[4/5]` never made
+   * it into the stylesheet, the image box collapsed to zero height and the title overlapped
+   * the badges.
+   *
+   * Keep this glob broad. Narrowing it re-arms the same trap for src/util, src/contexts,
+   * src/hooks and src/lib, which all legitimately hold className strings.
+   */
+  content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
   theme: {
     extend: {
       fontFamily: {
