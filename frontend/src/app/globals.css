@@ -17,6 +17,33 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
+  /* ------------------------------------------------------------------
+     Archivo width axis (wdth 62.5–125). Tailwind v3 ships no font-stretch
+     utilities, so the two registers of the display face are named here.
+
+     `font-stretch` (not `font-variation-settings`) on purpose: it is the
+     high-level property, so it composes with `font-weight` instead of
+     replacing the whole variation tuple the way a raw `wdth` setting does.
+     ------------------------------------------------------------------ */
+  .font-compressed {
+    font-stretch: 82%;
+  }
+  .font-extended {
+    font-stretch: 112%;
+  }
+
+  /* The editorial kicker: small, wide, letterspaced, above a headline.
+     Repeated verbatim on every section, so it is one class, not six copies. */
+  .pt-kicker {
+    font-family: var(--font-display), var(--font-inter), system-ui, sans-serif;
+    font-stretch: 112%;
+    font-weight: 600;
+    font-size: 0.6875rem;
+    line-height: 1;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+  }
 }
 
 @layer base {
@@ -46,7 +73,18 @@
     font-size: var(--text-base);
     line-height: var(--leading-relaxed);
     font-feature-settings: "kern" 1, "liga" 1;
+    /* `hidden` first as the fallback, then `clip` — browsers that don't know `clip`
+       (Safari < 16) drop the second declaration and keep the first, so the horizontal-overflow
+       armor is never weaker than it was.
+
+       Why `clip` matters: `overflow-x: hidden` makes body a SCROLL CONTAINER (per CSS Overflow 3,
+       a `hidden` axis computes the other axis from `visible` to `auto`). Body has no height
+       constraint, so its scroll range is zero — and every `animation-timeline: view()` inside it
+       binds to that dead scroller and never advances. `clip` clips identically but explicitly
+       does NOT create a scroll container, so view() resolves past body to the root scroller.
+       This is what makes the scroll-driven motion layer below work at all. */
     overflow-x: hidden;
+    overflow-x: clip;
     width: 100%;
     max-width: 100%;
     position: relative;
@@ -245,6 +283,135 @@ html[dir="rtl"] [data-i18n-ltr] {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+
+  /* Duration is IGNORED for a scroll-driven animation — progress comes from the timeline, not
+     from time — so the block above does nothing to them. Detaching the timeline drops the
+     element back to its resting style.
+
+     SCOPED TO OUR OWN CLASSES, NEVER `*`. Applying `animation-timeline: none` universally is
+     actively dangerous: an animation with a null timeline has an unresolved current time and an
+     idle play state, so it never fires `animationstart`/`animationend`. Radix (dialog, sheet,
+     dropdown, drawer) unmounts on `animationend` — under a universal rule a reduced-motion user
+     opens the cart drawer or the mobile menu and it can never close. */
+  .pt-reveal,
+  .pt-hero-art,
+  .pt-hero-copy,
+  .pt-hero-progress {
+    animation-timeline: none !important;
+    animation-range: normal !important;
+    animation-name: none !important;
+  }
+}
+
+/* ==========================================================================
+   SCROLL-DRIVEN MOTION LAYER
+   ==========================================================================
+   Zero JavaScript. `animation-timeline` runs on the compositor, so none of this costs main-thread
+   time — it cannot regress TBT or INP the way an IntersectionObserver or a scroll listener would.
+   That is the whole reason it was chosen over a JS animation library.
+
+   Four gates, all deliberate:
+     1. @supports  — Chrome/Edge 115+, Safari 26+. Everyone else gets the static layout, which is
+                     the design as it stands today. Nothing degrades.
+     2. min-width  — desktop only, as specified. Mobile keeps its untouched paint path.
+     3. reduced-motion: no-preference — belt and braces with the block above.
+     4. [data-motion] on every animated element — opts out of the `!important` duration clamp in
+                     the mobile block above, which would otherwise force a *time* onto a
+                     progress-driven animation and snap it to its end keyframe.
+
+   SAFE-FAIL RULE: the section reveal animates TRANSFORM ONLY — it never touches opacity. An
+   earlier version faded 0.55 -> 1 and had two distinct ways to strand content visibly dimmed:
+   a degenerate timeline parks the element at progress 0 forever, and `fill: both` holds a
+   partially-scrolled element at partial progress if the user never scrolls further (which is
+   exactly what happens to a section already half in view at first paint on a tall monitor).
+   With transform only, every one of those failure modes degrades to "sits 28px lower than
+   intended" — invisible to a user, and impossible to mistake for a broken page.
+   ========================================================================== */
+
+@keyframes pt-rise {
+  from {
+    transform: translate3d(0, 28px, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* The hero "focus" move: as the page scrolls away the artwork drifts up at HALF the scroll rate
+   and swells slightly, so the banner reads as a deep plane behind the content rather than a flat
+   picture that leaves with everything else. Transform + opacity only — both compositor
+   properties, so this never triggers layout or paint. */
+/* GEOMETRY CONSTRAINT: a centre-origin scale of S buys (S-1)/2 of headroom on each edge, and the
+   upward translate must stay inside it or the artwork's bottom edge lifts off the frame and a bar
+   of bare bg-gray-950 appears under the banner. 1.18 buys 9%; translating 7% leaves 2% of margin.
+   If you increase the translate here, increase the scale to match. */
+@keyframes pt-hero-drift {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(0, -7%, 0) scale(1.18);
+  }
+}
+
+/* Hero copy leaves faster than the artwork. The rate difference is what the eye reads as depth. */
+@keyframes pt-hero-copy {
+  0%,
+  38% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(0, -56px, 0);
+  }
+}
+
+/* A red progress hairline that fills as the hero is consumed — the "focus" cue, and the one
+   place the accent gets to move. */
+@keyframes pt-hero-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@supports (animation-timeline: view()) {
+  @media (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
+    /* Section reveal. `entry 8% → cover 32%` finishes well before the element is centred, so the
+       page never feels like it is waiting for content to catch up with the scroll. */
+    .pt-reveal[data-motion] {
+      animation: pt-rise linear both;
+      animation-timeline: view();
+      animation-range: entry 8% cover 32%;
+    }
+
+    /* Hero layers ride `scroll(root)`, not `view()`. The hero sits at the top of the document, so
+       root-scroll progress over an absolute range is exact and independent of the element's own
+       box — no dependence on how tall the hero happens to render. */
+    .pt-hero-art[data-motion] {
+      animation: pt-hero-drift linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 760px;
+      will-change: transform;
+    }
+
+    .pt-hero-copy[data-motion] {
+      animation: pt-hero-copy linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 620px;
+      will-change: transform, opacity;
+    }
+
+    .pt-hero-progress[data-motion] {
+      animation: pt-hero-progress linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 620px;
+      transform-origin: left center;
+    }
   }
 }
 

@@ -193,7 +193,7 @@ export const ProductCard = memo(function ProductCard({
         </button>
 
         {/* Badges – top-left. One-accent discipline: red = promo only; meta badges are clean
-            white chips with a small red icon. All in the Oswald display face, uppercase. */}
+            white chips with a small red icon. All in the Archivo display face, uppercase. */}
         <div className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 z-10 flex flex-col items-start gap-1 sm:gap-1.5 pointer-events-none">
           {!productData.isInStock && (
             <span className="inline-flex items-center rounded-md bg-gray-900 text-white font-display font-semibold uppercase tracking-wide text-[10px] sm:text-xs px-2 py-0.5 shadow-sm">

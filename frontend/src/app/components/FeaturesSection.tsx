@@ -2,7 +2,7 @@ import { Truck, ShieldCheck, CreditCard, Headphones } from 'lucide-react';
 
 // Slim flat trust strip. Replaced the previous "premium SaaS" block (glassmorphism cards,
 // gradient orbs, per-card spring physics and bespoke animated SVGs — all framer-motion) with a
-// lean, athletic row: monoline red lucide icons + Oswald uppercase labels + thin dividers.
+// lean, athletic row: monoline red lucide icons + Archivo uppercase labels + thin dividers.
 // Server component (no 'use client') — zero JS for this section.
 
 const features = [

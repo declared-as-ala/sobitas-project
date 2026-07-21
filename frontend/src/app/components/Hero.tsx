@@ -57,7 +57,13 @@ interface HeroProps {
 
 function HeroPicture({ set, eager }: { set: HeroImageSet; eager: boolean }) {
   return (
-    <picture className="absolute inset-0 block h-full w-full">
+    /* pt-hero-art drives the scroll parallax (globals.css). Its FROM keyframe is the identity
+       transform, so at scroll offset 0 — the moment LCP is measured — this element is
+       geometrically identical to the un-animated version. The animation cannot move the LCP
+       paint; it only takes effect once the user has begun scrolling.
+       `data-motion` opts out of the global mobile duration clamp, which would otherwise force a
+       time onto a progress-driven animation and snap it to its end keyframe. */
+    <picture className="pt-hero-art absolute inset-0 block h-full w-full" data-motion>
       {set.sources.map((source) => (
         <source
           key={`${source.media}-${source.type ?? 'auto'}`}
@@ -105,7 +111,10 @@ function HeroCopy({ slide, showTrust }: { slide: HeroSlide | null; showTrust: bo
     <div className="w-full max-w-lg lg:max-w-[34rem] xl:max-w-[40rem]">
       {/* Slogan is a <p>, never an <h1>: the page's single H1 ("Protéine Tunisie") lives in the
           SEO strip below, and a rotating slider headline must not become the document heading. */}
-      <p className="font-display text-[2.6rem] font-bold uppercase leading-[0.85] tracking-tight text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.5)] sm:text-6xl lg:text-[4rem] xl:text-7xl">
+      {/* font-compressed drives Archivo's width axis to 82%. Oswald was condensed by design, so
+          it never needed this; Archivo is a normal-width grotesque and would set the headline far
+          too wide without it. This is where the athletic compression now comes from. */}
+      <p className="font-display font-compressed text-[2.7rem] font-extrabold uppercase leading-[0.86] tracking-[-0.015em] text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.5)] sm:text-6xl lg:text-[4.25rem] xl:text-[5rem]">
         {title
           ? title
           : DEFAULT_TITLE_LINES.map((line, i) => (
@@ -125,7 +134,7 @@ function HeroCopy({ slide, showTrust }: { slide: HeroSlide | null; showTrust: bo
           href={href}
           loadingMessage="Chargement..."
           aria-label={ctaLabel}
-          className="group inline-flex min-h-[52px] w-full items-center justify-center gap-2.5 rounded-lg bg-red-600 px-6 font-display text-sm font-semibold uppercase tracking-wide text-white shadow-[0_10px_24px_rgba(224,27,36,0.35)] transition-colors hover:bg-red-700 sm:w-auto sm:text-base"
+          className="group inline-flex min-h-[54px] w-full items-center justify-center gap-2.5 rounded-full bg-red-600 px-8 font-display font-extended text-sm font-bold uppercase tracking-[0.08em] text-white shadow-[0_10px_30px_rgba(224,27,36,0.4)] transition-[transform,background-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:bg-red-700 hover:shadow-[0_14px_36px_rgba(224,27,36,0.5)] sm:w-auto sm:text-base"
         >
           {ctaLabel}
           <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20 transition-transform group-hover:translate-x-0.5">
@@ -184,9 +193,29 @@ function HeroSlideFrame({
       />
 
       <div className="absolute inset-0 z-10 flex items-end lg:items-center">
-        <div className="mx-auto w-full max-w-[1400px] px-5 pb-9 sm:px-6 sm:pb-11 lg:px-8 lg:pb-0">
+        <div
+          className="pt-hero-copy mx-auto w-full max-w-[1400px] px-5 pb-9 sm:px-6 sm:pb-11 lg:px-8 lg:pb-0"
+          data-motion
+        >
           <HeroCopy slide={slide} showTrust={showTrust} />
         </div>
+      </div>
+
+      {/* Scroll-progress hairline pinned to the bottom of the banner. This is the "focus" cue:
+          the one moving thing in the accent colour, so the eye is drawn to the ad banner as it is
+          scrolled through. scaleX only — a compositor property, so it costs nothing per frame.
+          Purely decorative, hence aria-hidden. */}
+      <div
+        className="absolute inset-x-0 bottom-0 z-20 hidden h-[3px] overflow-hidden bg-white/10 lg:block"
+        aria-hidden="true"
+      >
+        {/* `scale-x-0` is the RESTING state, and that is the whole point. The fill comes only from
+            the scroll animation. Without it the resting style was `w-full bg-red-600` — i.e. the
+            100%-COMPLETE state — so every browser without scroll-driven animations (Safari,
+            Firefox) and every reduced-motion user saw a permanent solid red bar welded across the
+            bottom of the banner instead of a progress indicator. Degrading to an invisible bar is
+            correct; degrading to a finished one is not. */}
+        <div className="pt-hero-progress h-full w-full origin-left scale-x-0 bg-red-600" data-motion />
       </div>
     </>
   );

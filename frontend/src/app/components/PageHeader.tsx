@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 interface PageHeaderProps {
   /** Small red uppercase eyebrow above the title (e.g. "Boutique"). */
   kicker?: string;
-  /** The page H1. Rendered in condensed Oswald, uppercase. */
+  /** The page H1. Rendered in the condensed display face (Archivo at wdth 82%), uppercase. */
   title: string;
   /** Optional supporting line under the title. */
   subtitle?: string;
@@ -17,7 +17,7 @@ interface PageHeaderProps {
 
 /**
  * The interior-page counterpart to {@link SectionHeader} — the design-system anchor for the top of
- * every non-home page (shop, category, blog, content, account…). Red Oswald kicker + condensed
+ * every non-home page (shop, category, blog, content, account…). Red display kicker + condensed
  * uppercase title, one accent, flat. Keeps page tops visually identical across the site.
  */
 export function PageHeader({

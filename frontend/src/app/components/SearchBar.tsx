@@ -386,9 +386,9 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
     );
   }
 
-  // Desktop: inline input with popover dropdown (lives in the red header bar)
+  // Desktop: inline input with popover dropdown (the header bar is white now, not red)
   return (
-    <div className={cn('relative flex-1 max-w-2xl', className)}>
+    <div className={cn('relative flex-1 max-w-xl', className)}>
       <form onSubmit={handleSubmit} className="relative">
         <Search
           className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none z-10"
@@ -410,7 +410,16 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
             setTimeout(() => setIsPopoverOpen(false), 150);
           }}
           autoComplete="off"
-          className="w-full pl-10 pr-10 h-11 rounded-xl border-0 bg-white text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-red-300 focus-visible:ring-2 focus-visible:ring-red-300"
+          /* This field was `bg-white border-0`, which only worked while the desktop header bar was
+             a red slab. Once that bar became white the input was white-on-white with no border —
+             a search box you could not see.
+
+             The boundary is carried by an ALWAYS-VISIBLE border, not by fill contrast. Relying on
+             fill is what broke it the first time and what broke the first attempt at this fix:
+             `bg-gray-100 dark:bg-gray-900` inside a `dark:bg-gray-950` bar is #111827 on #030712,
+             a 1.14:1 ratio — invisible. A hairline works in both themes regardless of how the bar
+             behind it is coloured later. */
+          className="w-full pl-11 pr-10 h-11 rounded-full border border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-500 transition-colors focus:border-red-400 focus:bg-white focus:ring-2 focus:ring-red-500/25 focus-visible:border-red-400 focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-red-500/25 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-400 dark:focus:border-red-500 dark:focus:bg-gray-800"
           aria-label="Rechercher un produit"
         />
         {query && (
