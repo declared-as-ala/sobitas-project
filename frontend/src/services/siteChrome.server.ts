@@ -116,17 +116,46 @@ export type ServerSlide = {
   alt: string | null;
 };
 
-export async function getServerSlides(): Promise<ServerSlide[]> {
-  try {
-    const res = await fetch(`${SERVER_API_BASE}/slides`, {
+export type ServerSlidesResult = {
+  slides: ServerSlide[];
+  /**
+   * True when the fetch itself failed (network, non-2xx), as opposed to succeeding with no
+   * active slides. The caller uses this to avoid CACHING a hero that fell back to its static
+   * image — see the noStore() call in app/page.tsx. An empty-but-successful result is a
+   * legitimate state (the owner has published nothing) and must stay cacheable.
+   */
+  failed: boolean;
+};
+
+/**
+ * Public base, used only as a build-time fallback. At runtime SERVER_API_BASE is the internal
+ * Docker host (no Cloudflare hop, so it is always preferred); during `next build` on CI that
+ * hostname does not resolve, and without a second attempt the homepage would be prerendered
+ * with no slides and serve the fallback hero for the whole revalidate window after each deploy.
+ */
+const PUBLIC_API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'https://admin.protein.tn/api').replace(/\/$/, '');
+
+export async function getServerSlides(): Promise<ServerSlidesResult> {
+  const fetchSlides = (base: string) =>
+    fetch(`${base}/slides`, {
       headers: { Accept: 'application/json' },
       next: { revalidate: 300, tags: ['slides'] },
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+  try {
+    let res = await fetchSlides(SERVER_API_BASE).catch(() => null);
+
+    // Internal DNS unavailable (CI build) → retry over the public URL rather than baking a
+    // slide-less homepage.
+    if ((!res || !res.ok) && PUBLIC_API_BASE !== SERVER_API_BASE) {
+      res = await fetchSlides(PUBLIC_API_BASE).catch(() => null);
+    }
+
+    if (!res || !res.ok) throw new Error(`HTTP ${res?.status ?? 'unreachable'}`);
     const raw = await res.json();
     const list: any[] = Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
 
-    return list
+    const slides = list
       .filter((s) => s && (s.cover || s.image))
       .map((s) => ({
         id: s.id,
@@ -140,9 +169,11 @@ export async function getServerSlides(): Promise<ServerSlide[]> {
         link: s.link ?? s.lien ?? null,
         alt: s.alt ?? null,
       }));
+
+    return { slides, failed: false };
   } catch (e) {
     console.error('[siteChrome] slides fetch failed (hero falls back to its static image):', e);
-    return [];
+    return { slides: [], failed: true };
   }
 }
 
