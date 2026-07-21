@@ -1,8 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { Header } from '@/app/components/Header';
-import { Footer } from '@/app/components/Footer';
 import { PageHeader } from '@/app/components/PageHeader';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
@@ -46,9 +44,7 @@ export default function ContactPageClient({
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
-      <Header />
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+<main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
         <div className="mb-10 sm:mb-12">
           <PageHeader
             align="center"
@@ -227,9 +223,7 @@ export default function ContactPageClient({
           </div>
         </div>
       </main>
-
-      <Footer />
-      <ScrollToTop />
+<ScrollToTop />
     </div>
   );
 }

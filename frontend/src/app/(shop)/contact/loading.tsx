@@ -1,13 +1,9 @@
-import { Header } from '@/app/components/Header';
-import { Footer } from '@/app/components/Footer';
 import { Skeleton } from '@/app/components/ui/skeleton';
 
 // Layout-matching skeleton for /contact — mirrors ContactPageClient (info card + form card).
 export default function ContactLoading() {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
-      <Header />
-
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
         <div className="mb-10 sm:mb-12 flex flex-col items-center text-center">
           <Skeleton className="mb-3 h-3 w-20 rounded" />
@@ -55,8 +51,6 @@ export default function ContactLoading() {
           </div>
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 }
