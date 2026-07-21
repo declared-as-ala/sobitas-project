@@ -1,7 +1,5 @@
 'use client';
 
-import { Header } from '@/app/components/Header';
-import { Footer } from '@/app/components/Footer';
 import { cn } from '@/app/components/ui/utils';
 
 function SkeletonLine({ className }: { className?: string }) {
@@ -20,7 +18,6 @@ function SkeletonLine({ className }: { className?: string }) {
 export function ProductDetailSkeleton() {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
-      <Header />
 
       <main className="w-full mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl py-3 sm:py-6 lg:py-12 pb-40 sm:pb-44 lg:pb-12">
         {/* Breadcrumb */}
@@ -139,7 +136,6 @@ export function ProductDetailSkeleton() {
         </div>
       </div>
 
-      <Footer />
     </div>
   );
 }
