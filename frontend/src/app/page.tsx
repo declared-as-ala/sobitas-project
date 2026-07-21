@@ -142,7 +142,16 @@ export default async function Home() {
   // Admin-managed hero slides (Filament → Paramètres du site → Slides). The backend already
   // filters is_active and sorts by ordre. An empty list is normal and safe: the hero falls back
   // to its built-in static image, which is exactly what shipped before.
-  const heroSlides: HeroSlide[] = serverSlides
+  //
+  // A FAILED fetch is different, and must not be cached. The CI builder cannot reach the backend
+  // (ENOTFOUND backend-nginx-v2), so without this the homepage is prerendered with the fallback
+  // hero and — because a freshly built page counts as fresh — ISR serves that stale fallback for
+  // the full 5-minute window after every deploy, hiding the owner's slide. noStore() drops this
+  // render from the cache so the very next request re-renders against the reachable backend.
+  // Same guard getHomeData() already applies to the /accueil payload.
+  if (serverSlides.failed) noStore();
+
+  const heroSlides: HeroSlide[] = serverSlides.slides
     .filter((s) => s.cover)
     .map((s) => ({
       id: s.id,
