@@ -30,7 +30,7 @@ export function WhatsAppFab() {
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Commander ou poser une question sur WhatsApp"
-      className="fixed right-4 bottom-6 z-40 max-md:[body[data-install-banner]_&]:bottom-24 flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg shadow-black/25 ring-1 ring-black/5 transition-all hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#25D366] motion-reduce:transition-none sm:right-6 sm:bottom-6"
+      className="fixed right-4 bottom-[calc(1.5rem+var(--tabbar-h))] z-40 max-md:[body[data-install-banner]_&]:bottom-[calc(6rem+var(--tabbar-h))] flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg shadow-black/25 ring-1 ring-black/5 transition-all hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#25D366] motion-reduce:transition-none sm:right-6 sm:bottom-[calc(1.5rem+var(--tabbar-h))]"
       style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
     >
       <svg viewBox="0 0 24 24" width="30" height="30" fill="currentColor" aria-hidden="true">

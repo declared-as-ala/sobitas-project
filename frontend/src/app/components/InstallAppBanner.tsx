@@ -132,7 +132,7 @@ export function InstallAppBanner() {
           transition: 'transform 0.45s cubic-bezier(0.32,0.72,0,1)',
           paddingBottom: 'max(0.625rem, env(safe-area-inset-bottom))',
         }}
-        className="fixed bottom-0 left-0 right-0 z-[9999] flex items-center gap-2.5 px-3 py-2.5 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] md:hidden"
+        className="fixed bottom-tabbar left-0 right-0 z-[9999] flex items-center gap-2.5 px-3 py-2.5 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] md:hidden"
       >
         {/* App icon */}
         <div className="relative h-11 w-11 shrink-0 rounded-xl overflow-hidden border border-gray-100 dark:border-gray-700 shadow">

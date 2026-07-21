@@ -126,7 +126,7 @@ export function ProductDetailSkeleton() {
 
       {/* Sticky CTAs placeholder (mobile) — matches ProductDetailClient fixed bottom bar */}
       <div
-        className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 p-2.5 sm:p-3 z-50"
+        className="lg:hidden fixed bottom-tabbar left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 p-2.5 sm:p-3 z-50"
         style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}
       >
         <div className="w-full mx-auto px-4 sm:px-6 max-w-7xl flex flex-col gap-2 sm:gap-3">

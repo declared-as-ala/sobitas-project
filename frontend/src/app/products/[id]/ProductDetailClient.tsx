@@ -1496,7 +1496,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
 
       {/* Sticky CTAs (Mobile): compact — Total inline with primary CTA, secondary below */}
       <div
-        className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 px-3 pt-2 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] z-50"
+        className="lg:hidden fixed bottom-tabbar left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 px-3 pt-2 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] z-50"
         style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom, 0px))' }}
       >
         <div className="w-full mx-auto max-w-7xl flex flex-col gap-2">

@@ -26,7 +26,7 @@ export function ScrollToTop() {
   return (
     <div
       className={cn(
-        'fixed right-4 sm:right-6 bottom-24 max-md:[body[data-install-banner]_&]:bottom-40 z-[45] transition-all duration-200 motion-reduce:transition-none',
+        'fixed right-4 sm:right-6 bottom-[calc(6rem+var(--tabbar-h))] max-md:[body[data-install-banner]_&]:bottom-[calc(10rem+var(--tabbar-h))] z-[45] transition-all duration-200 motion-reduce:transition-none',
         isVisible ? 'opacity-100 translate-y-0' : 'pointer-events-none opacity-0 translate-y-2'
       )}
       style={{ marginBottom: 'env(safe-area-inset-bottom)' }}

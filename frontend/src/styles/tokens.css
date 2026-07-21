@@ -48,9 +48,7 @@
    * against. Setting it to 0px is a complete kill switch for the bottom tab bar
    * — no code revert needed.
    *
-   * Stays 0px until the MobileTabBar component actually ships; turning it on
-   * before then would open a dead 56px gap at the bottom of every mobile page.
-   * That PR adds:  @media (max-width: 767px) { :root { --tabbar-h: 56px } } */
+   * Desktop keeps 0px — the bar is md:hidden. */
   --tabbar-h: 0px;
 }
 
@@ -67,4 +65,13 @@
   --c-ink-1: 245 244 242;
   --c-ink-2: 190 190 196;
   --c-ink-3: 150 150 157;
+}
+
+/* MobileTabBar is `md:hidden`, so its footprint exists only below 768px. Matches the
+   `h-14` (56px) grid in MobileTabBar.tsx — the safe-area inset is added separately by
+   each consumer, since the bar itself already pads for it. */
+@media (max-width: 767px) {
+  :root {
+    --tabbar-h: 56px;
+  }
 }

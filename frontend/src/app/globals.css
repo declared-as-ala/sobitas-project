@@ -32,6 +32,15 @@
     font-size: var(--font-size);
   }
 
+  /* Reserve the mobile tab bar's height so the last row of content and the footer are never
+     hidden behind it. Driven by --tabbar-h (styles/tokens.css), which is 0px above 767px and
+     is the single knob that also switches the bar off entirely. */
+  @media (max-width: 767px) {
+    body {
+      padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+    }
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-size: var(--text-base);
