@@ -11,6 +11,7 @@ import { NavigationHandler } from "@/app/components/NavigationHandler";
 import { DeferredToaster } from "@/app/components/DeferredToaster";
 import { InstallAppBanner } from "@/app/components/InstallAppBanner";
 import { WhatsAppFab } from "@/app/components/WhatsAppFab";
+import { MobileTabBar } from "@/app/components/MobileTabBar";
 import { LOCALE_STORAGE_KEY } from "@/i18n";
 
 const inter = Inter({
@@ -236,6 +237,8 @@ export default async function RootLayout({
             <DeferredToaster />
             <InstallAppBanner />
             <WhatsAppFab />
+            {/* Mounted once here, not per page, so it never remounts on navigation. */}
+            <MobileTabBar />
           </Providers>
         </ThemeProvider>
       </body>
