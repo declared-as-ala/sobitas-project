@@ -21,9 +21,32 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-configure intl \
     && docker-php-ext-install pdo_mysql gd zip opcache exif bcmath intl \
-    && pecl install redis \
-    && docker-php-ext-enable redis \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# php-redis, pinned and installed WITHOUT the PECL registry.
+#
+# `pecl install redis` resolves through pecl.php.net at build time, which made every backend
+# deploy hostage to that registry's uptime — it returned HTTP 504 on channel.xml and blocked two
+# consecutive production deploys. Building the pinned source tarball from GitHub removes the
+# registry from the critical path entirely and makes the build reproducible: an unpinned
+# `pecl install` silently picks up whatever version is newest at build time.
+#
+# PECL is kept as a fallback for the case where the GitHub tarball is unreachable, so this is
+# strictly more robust than before rather than a swap of one single point of failure for another.
+ENV PHPREDIS_VERSION=6.1.0
+RUN set -eux; \
+    if curl -fsSL --retry 3 --retry-delay 2 \
+        "https://github.com/phpredis/phpredis/archive/refs/tags/${PHPREDIS_VERSION}.tar.gz" \
+        -o /tmp/phpredis.tar.gz; then \
+      mkdir -p /usr/src/php/ext/redis; \
+      tar -xzf /tmp/phpredis.tar.gz -C /usr/src/php/ext/redis --strip-components=1; \
+      docker-php-ext-install redis; \
+      rm -rf /tmp/phpredis.tar.gz /usr/src/php/ext/redis; \
+    else \
+      echo "GitHub tarball unreachable — falling back to PECL"; \
+      pecl install redis && docker-php-ext-enable redis; \
+    fi; \
+    php -m | grep -qx redis
 
 # Install Node.js 20.x for asset building
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
