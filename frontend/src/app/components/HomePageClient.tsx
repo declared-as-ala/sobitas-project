@@ -121,7 +121,7 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
             doesn't eat the fold right under the hero. */}
         <section className="py-3 sm:py-4 bg-white dark:bg-gray-950" aria-label="Titre principal">
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
-            <h1 className="font-display uppercase tracking-tight text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">
+            <h1 className="font-display font-compressed uppercase tracking-tight text-lg sm:text-2xl font-extrabold text-gray-950 dark:text-white">
               Protéine Tunisie
               <span className="ml-2 align-middle font-sans text-[11px] sm:text-xs font-medium normal-case tracking-normal text-red-600 dark:text-red-400">
                 Nutrition sportive · Tunisie

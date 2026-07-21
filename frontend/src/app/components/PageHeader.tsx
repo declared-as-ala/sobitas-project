@@ -35,7 +35,7 @@ export function PageHeader({
     <header className={centered ? 'text-center' : ''}>
       {kicker && (
         <span
-          className={`inline-flex items-center gap-2 mb-2 font-display uppercase tracking-[0.2em] text-[11px] sm:text-xs font-semibold text-red-600 dark:text-red-400 ${
+          className={`pt-kicker inline-flex items-center gap-2 mb-2 text-red-600 dark:text-red-400 ${
             centered ? 'justify-center' : ''
           }`}
         >
@@ -43,7 +43,7 @@ export function PageHeader({
           {kicker}
         </span>
       )}
-      <Title className="font-display uppercase tracking-tight leading-[0.95] font-bold text-gray-900 dark:text-white text-3xl sm:text-4xl lg:text-5xl">
+      <Title className="font-display font-compressed uppercase tracking-tight leading-[0.95] font-extrabold text-gray-950 dark:text-white text-3xl sm:text-4xl lg:text-5xl">
         {title}
       </Title>
       {subtitle && (
