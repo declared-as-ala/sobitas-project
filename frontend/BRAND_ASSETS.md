@@ -29,29 +29,40 @@ responsive, translatable and indexable — an image with text in it breaks all t
 
 ## 1. Hero slides — highest priority
 
-Uploaded in admin under **Slides**. Each slide takes a desktop image, a mobile image, and the text
-fields (Titre, Sous-titre, Texte du bouton, Lien).
+**The image IS the slide.** The site no longer prints its own headline over your banner. Whatever
+you design — product shot, price, promo text — is shown exactly as uploaded, whole. Design the
+complete banner; bake any wording you want directly into the artwork.
 
-| | Size | Composition |
-|---|---|---|
-| Desktop | **2400 × 1000** | Subject **right of centre**. Keep the **left 40% calm** — the headline sits there. |
-| Mobile | **1200 × 1500** (4:5) | Subject in the **upper 55%**. Keep the lower 45% calm. |
+Uploaded in admin under **Slides**. Each slide takes a desktop image, a mobile image, and four
+optional text fields.
 
-The calm zone is not optional. The site lays a dark gradient over that side for legibility; if the
-subject is there, the gradient eats it.
+| | Size | Ratio | Notes |
+|---|---|---|---|
+| Desktop | **2400 × 1000** | 12:5 | The frame matches this ratio, so the whole banner shows with almost no crop. Export at this exact size. |
+| Mobile | **1200 × 1500** | 4:5 | A **separate portrait** banner — do not reuse the desktop one, it will crop hard. |
 
-**Prompt — desktop:**
+### The text fields are optional — and here is exactly what they do
+
+- **Leave Titre / Sous-titre / Texte du bouton BLANK** → the banner shows as a pure image, no
+  overlay, no darkening. This is the recommended mode when your artwork already has its own text
+  (like the ANABOLIC WHEY 80 banner). **Still fill "Lien"** so tapping the banner opens the right
+  page.
+- **Fill them** → a small caption + button appears in the **bottom-LEFT** corner over a light
+  shadow. Only the bottom-left darkens (never the right side, so a price baked bottom-right stays
+  clean). Use this for a plain lifestyle photo that needs a line of text. Keep the bottom-left of
+  such a photo calm.
+
+**Prompt (only if you want an AI photo rather than a designed banner) — desktop:**
 ```
-Athletic man mid-workout in a dark industrial gym, shot from the right side of frame,
-left third of the image empty dark negative space. Single warm key light from camera
-right, cool neutral shadows, deep charcoal background. A red weight plate visible on
-the floor as the only red object. Photographic, 85mm, shallow depth of field, natural
-skin tones, no text, no logos, no watermark. Wide cinematic crop 2400x1000.
+Athletic man mid-workout in a dark industrial gym, centred composition, deep charcoal
+background. Single warm key light from camera right, cool neutral shadows. A red weight
+plate visible on the floor as the only red object. Photographic, 85mm, shallow depth of
+field, natural skin tones, no text, no logos, no watermark. Wide cinematic crop 2400x1000.
 ```
 
 **Prompt — mobile:** same sentence, ending:
 ```
-...Vertical 4:5 crop, subject in the upper half, lower half empty dark floor.
+...Vertical 4:5 crop, subject in the upper two-thirds, lower third calmer floor. 1200x1500.
 ```
 
 Swap the subject per slide — a woman lifting, a shaker being filled, a protein tub held in hand —
@@ -96,8 +107,9 @@ recognisable tub misrepresents what is behind the link.
 
 ## Uploading
 
-Hero slides: admin → **Slides** → new slide → upload desktop + mobile, fill Titre / Sous-titre /
-Texte du bouton / Lien, set Ordre, tick Actif.
+Hero slides: admin → **Slides** → new slide → upload desktop + mobile, set **Lien** (where the
+banner links), set Ordre, tick Actif. Leave Titre / Sous-titre / Texte du bouton **blank** for a
+pure-image banner; fill them only if you want a small caption in the bottom-left corner.
 
 Category covers: admin → **Catégories** → edit → replace the cover image.
 
