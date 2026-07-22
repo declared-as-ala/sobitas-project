@@ -101,11 +101,13 @@ function HeroCaption({ slide }: { slide: HeroSlide | null }) {
   return (
     <div className="absolute inset-0 z-10 flex items-end">
       {/* Scrim anchored to the BOTTOM-LEFT only (darkest at the caption's corner, transparent by
-          ~45% toward the top-right). A full-width bottom scrim would darken the right side of a
+          ~55% toward the top-right). A full-width bottom scrim would darken the right side of a
           designed banner — exactly where owners bake their price ("259 DT") — so the legibility
-          wash is kept off the artwork. No backdrop-blur (§3). */}
+          wash is kept off the artwork. Strengthened (from/72→85, via/12→28) so the caption title,
+          which sits highest where the scrim is weakest, keeps ~4.5:1 against a light photo. No
+          backdrop-blur (§3). */}
       <div
-        className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-black/72 via-black/12 via-45% to-transparent"
+        className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-black/85 via-black/28 via-55% to-transparent"
         aria-hidden="true"
       />
       <div className="relative px-4 pb-5 sm:px-8 sm:pb-8 lg:px-12 lg:pb-10">
@@ -139,16 +141,34 @@ function HeroSlideFrame({
   slide,
   eager,
   fallbackAlt,
+  position,
 }: {
   slide: HeroSlide | null;
   eager: boolean;
   fallbackAlt: string;
+  /** 1-based index + total, passed only in the multi-slide slider so links get distinct names. */
+  position?: { index: number; total: number };
 }) {
   const set = buildHeroImageSet(slide, eager, fallbackAlt);
   // A commerce hero should always be tappable; default to the shop when the admin left the link
   // blank. The banner is one big link, so the caption's button is a <span> (no nested anchors).
   const href = normalizeHref(slide?.href) || '/shop';
-  const linkLabel = slide?.title?.trim() || slide?.alt?.trim() || fallbackAlt;
+
+  const hasCaption = Boolean(slide?.title?.trim() || slide?.subtitle?.trim() || slide?.ctaLabel?.trim());
+  // aria-label is set ONLY for an image-only banner. When a caption is present its visible text —
+  // crucially the CTA ("Acheter") — must FORM the link's accessible name, or a voice-control user
+  // saying "click Acheter" matches nothing (WCAG 2.5.3, Label-in-Name, Level A). Leaving aria-label
+  // off lets the DOM content (img alt + caption) name the link, so the visible CTA is included.
+  //
+  // For image-only slides the name comes from a label; when several such slides sit in the slider
+  // they would otherwise share one identical name (the fallback), so append the position — this
+  // makes each link's purpose distinguishable (WCAG 2.4.4).
+  const baseLabel = slide?.title?.trim() || slide?.alt?.trim() || fallbackAlt;
+  const ariaLabel = hasCaption
+    ? undefined
+    : position && position.total > 1
+      ? `${baseLabel} — diapositive ${position.index} sur ${position.total}`
+      : baseLabel;
 
   return (
     <div
@@ -160,7 +180,7 @@ function HeroSlideFrame({
     >
       <LinkWithLoading
         href={href}
-        aria-label={linkLabel}
+        {...(ariaLabel ? { 'aria-label': ariaLabel } : {})}
         loadingMessage="Chargement..."
         className="absolute inset-0 block"
       >
@@ -208,7 +228,12 @@ export function Hero({ slides, fallbackAlt }: HeroProps) {
             >
               {/* Only slide 1 is eager + preloaded; the rest lazy-load so they never compete with
                   the LCP image for bandwidth. */}
-              <HeroSlideFrame slide={slide} eager={index === 0} fallbackAlt={fallbackAlt} />
+              <HeroSlideFrame
+                slide={slide}
+                eager={index === 0}
+                fallbackAlt={fallbackAlt}
+                position={{ index: index + 1, total: slides.length }}
+              />
             </div>
           ))}
         </div>

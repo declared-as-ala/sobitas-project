@@ -302,6 +302,14 @@ html[dir="rtl"] [data-i18n-ltr] {
 
 /* Respect user's motion preferences */
 @media (prefers-reduced-motion: reduce) {
+  /* Kill smooth scrolling too. `html` carries `scroll-behavior: smooth` (and the hero track adds
+     `scroll-smooth`), so activating a dot — an <a href="#hero-slide-N"> — animates a scroll for a
+     user who asked for no motion. `auto` makes it an instant jump. WCAG 2.3.3. */
+  html,
+  .scroll-smooth {
+    scroll-behavior: auto !important;
+  }
+
   *,
   *::before,
   *::after {
