@@ -320,9 +320,7 @@ html[dir="rtl"] [data-i18n-ltr] {
      dropdown, drawer) unmounts on `animationend` — under a universal rule a reduced-motion user
      opens the cart drawer or the mobile menu and it can never close. */
   .pt-reveal,
-  .pt-hero-art,
-  .pt-hero-copy,
-  .pt-hero-progress {
+  .pt-hero-art {
     animation-timeline: none !important;
     animation-range: normal !important;
     animation-name: none !important;
@@ -380,30 +378,6 @@ html[dir="rtl"] [data-i18n-ltr] {
   }
 }
 
-/* Hero copy leaves faster than the artwork. The rate difference is what the eye reads as depth. */
-@keyframes pt-hero-copy {
-  0%,
-  38% {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-  }
-  100% {
-    opacity: 0;
-    transform: translate3d(0, -56px, 0);
-  }
-}
-
-/* A red progress hairline that fills as the hero is consumed — the "focus" cue, and the one
-   place the accent gets to move. */
-@keyframes pt-hero-progress {
-  from {
-    transform: scaleX(0);
-  }
-  to {
-    transform: scaleX(1);
-  }
-}
-
 @supports (animation-timeline: view()) {
   @media (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
     /* Section reveal. `entry 8% → cover 32%` finishes well before the element is centred, so the
@@ -422,20 +396,6 @@ html[dir="rtl"] [data-i18n-ltr] {
       animation-timeline: scroll(root);
       animation-range: 0 760px;
       will-change: transform;
-    }
-
-    .pt-hero-copy[data-motion] {
-      animation: pt-hero-copy linear both;
-      animation-timeline: scroll(root);
-      animation-range: 0 620px;
-      will-change: transform, opacity;
-    }
-
-    .pt-hero-progress[data-motion] {
-      animation: pt-hero-progress linear both;
-      animation-timeline: scroll(root);
-      animation-range: 0 620px;
-      transform-origin: left center;
     }
   }
 }
