@@ -388,7 +388,7 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
 
   // Desktop: inline input with popover dropdown (the header bar is white now, not red)
   return (
-    <div className={cn('relative flex-1 max-w-xl', className)}>
+    <div className={cn('relative flex-1 max-w-2xl', className)}>
       <form onSubmit={handleSubmit} className="relative">
         <Search
           className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none z-10"
@@ -419,15 +419,23 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
              `bg-gray-100 dark:bg-gray-900` inside a `dark:bg-gray-950` bar is #111827 on #030712,
              a 1.14:1 ratio — invisible. A hairline works in both themes regardless of how the bar
              behind it is coloured later. */
-          className="w-full pl-11 pr-10 h-11 rounded-full border border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-500 transition-colors focus:border-red-400 focus:bg-white focus:ring-2 focus:ring-red-500/25 focus-visible:border-red-400 focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-red-500/25 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-400 dark:focus:border-red-500 dark:focus:bg-gray-800"
+          className="w-full pl-11 pr-24 h-12 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 transition-colors focus:border-[#FF5A00]/40 focus:bg-white focus:ring-2 focus:ring-[#FF5A00]/20 focus-visible:border-[#FF5A00]/40 focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-[#FF5A00]/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-400 dark:focus:border-[#FF5A00]/50 dark:focus:bg-gray-800"
           aria-label="Rechercher un produit"
         />
+        {/* Orange search button (GPT header). */}
+        <button
+          type="submit"
+          className="absolute right-1.5 top-1/2 flex h-9 w-11 -translate-y-1/2 items-center justify-center rounded-lg bg-[#FF5A00] text-white shadow-sm transition-colors hover:bg-[#E85200]"
+          aria-label="Rechercher"
+        >
+          <Search className="h-[18px] w-[18px]" aria-hidden />
+        </button>
         {query && (
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+            className="absolute right-14 top-1/2 -translate-y-1/2 h-7 w-7"
             onClick={handleClear}
             aria-label="Effacer la recherche"
           >

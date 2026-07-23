@@ -298,7 +298,7 @@ export function HeaderClient() {
 
   return (
     <div
-      className="sticky top-0 z-50 w-full transition-transform duration-300 ease-out"
+      className="font-poppins sticky top-0 z-50 w-full transition-transform duration-300 ease-out"
       style={
         mobileNavHidden
           ? { transform: 'translateY(-100%)' }
@@ -311,7 +311,7 @@ export function HeaderClient() {
           scroll-down via the sticky root's translateY). */}
       <div
         className={cn(
-          'bg-gray-900 text-white border-b border-gray-800/50 overflow-hidden transition-all duration-300 ease-out',
+          'bg-[#111827] text-white border-b border-white/5 overflow-hidden transition-[max-height,height,opacity,transform] duration-200 ease-out',
           scrolled ? 'md:max-h-0 md:opacity-0 md:border-b-0' : 'md:max-h-12 md:opacity-100'
         )}
       >
@@ -355,13 +355,13 @@ export function HeaderClient() {
           // which left the mobile bar a different shade from the desktop one in dark mode.
           // One hairline divider for the whole header, no drop shadow (§3: flat surfaces).
           'bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800',
-          'transition-all duration-300 ease-out'
+          'transition-[max-height,height,opacity,transform] duration-200 ease-out'
         )}
       >
         <div className="md:hidden">
           <div
             className={cn(
-              'flex items-center justify-between w-full px-4 gap-1 transition-all duration-300',
+              'flex items-center justify-between w-full px-4 gap-1 transition-[max-height,height,opacity,transform] duration-200',
               scrolled ? 'h-11 py-1.5' : 'h-12 py-2'
             )}
           >
@@ -374,7 +374,7 @@ export function HeaderClient() {
                 alt="Proteine Tunisie"
                 width={140}
                 height={48}
-                className="h-8 min-h-[32px] w-auto max-w-full object-contain object-left drop-shadow-sm transition-all duration-300"
+                className="h-8 min-h-[32px] w-auto max-w-full object-contain object-left drop-shadow-sm transition-[max-height,height,opacity,transform] duration-200"
                 style={{ width: 'auto', height: 'auto' }}
                 loading="eager"
               />
@@ -443,7 +443,7 @@ export function HeaderClient() {
             {/* h-16 -> h-[58px], and shrinks again to h-12 once scrolled (the compact state). */}
             <div
               className={cn(
-                'flex items-center justify-between gap-5 transition-all duration-300 ease-out',
+                'flex items-center justify-between gap-5 transition-[max-height,height,opacity,transform] duration-200 ease-out',
                 scrolled ? 'h-12' : 'h-[58px]'
               )}
             >
@@ -458,7 +458,7 @@ export function HeaderClient() {
                   width={200}
                   height={70}
                   className={cn(
-                    'w-auto object-contain transition-all duration-300 ease-out dark:brightness-0 dark:invert',
+                    'w-auto object-contain transition-[max-height,height,opacity,transform] duration-200 ease-out dark:brightness-0 dark:invert',
                     scrolled ? 'h-7 lg:h-8' : 'h-8 lg:h-9 xl:h-10'
                   )}
                 />
@@ -571,7 +571,7 @@ export function HeaderClient() {
             one continuous white surface. The header's single dividing line lives on <header>. */}
         <nav
           className={cn(
-            'hidden md:block bg-white dark:bg-gray-950 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden transition-all duration-300 ease-out',
+            'hidden md:block bg-white dark:bg-gray-950 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden transition-[max-height,height,opacity,transform] duration-200 ease-out',
             // Collapses in the compact state so the scrolled header is just the main bar. Search +
             // cart + account stay reachable there; nav returns on scroll back to top.
             scrolled
