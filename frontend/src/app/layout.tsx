@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Noto_Sans_Arabic, Archivo } from "next/font/google";
+import { Inter, Noto_Sans_Arabic, Archivo, Poppins } from "next/font/google";
 import { Suspense } from "react";
 import Script from "next/script";
 import { cn } from "@/app/components/ui/utils";
@@ -82,6 +82,18 @@ const archivo = Archivo({
   variable: "--font-display",
   preload: false,
   adjustFontFallback: true,
+  fallback: ["var(--font-inter)", "system-ui", "sans-serif"],
+});
+
+// Poppins — the typeface of the new GPT-designed product card. Scoped to the card for now (used
+// via the `font-poppins` utility), not preloaded (below-the-fold, and the body stays Inter under
+// the "card-first" rollout). Will widen to the rest of the site as more prototypes land.
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+  variable: "--font-poppins",
+  preload: false,
   fallback: ["var(--font-inter)", "system-ui", "sans-serif"],
 });
 
@@ -211,7 +223,7 @@ export default async function RootLayout({
   const siteNavigationSchema = buildSiteNavigationSchema(baseUrl);
 
   return (
-    <html lang="fr" suppressHydrationWarning data-scroll-behavior="smooth" className={`${inter.variable} ${notoArabic.variable} ${archivo.variable}`}>
+    <html lang="fr" suppressHydrationWarning data-scroll-behavior="smooth" className={`${inter.variable} ${notoArabic.variable} ${archivo.variable} ${poppins.variable}`}>
       <head>
         {/* Anti-FOUC: set lang/dir from the persisted locale BEFORE first paint. Must read the
             same key I18nProvider writes (LOCALE_STORAGE_KEY = 'sobitas-locale'); it previously

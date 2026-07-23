@@ -1,7 +1,7 @@
 'use client';
 
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
-import { ShoppingCart, Heart, Flame, Sparkles, TrendingUp } from 'lucide-react';
+import { ShoppingCart, Heart, Flame, Star, BadgeCheck, CircleCheck, Truck, Shield } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { PackCardImage } from '@/app/components/PackCardImage';
 import type { Product as ApiProduct } from '@/types';
@@ -44,6 +44,9 @@ interface ProductCardProps {
   imageContext?: 'default' | 'packs';
   /** Above-the-fold cards: paint immediately (no entrance fade) + eager-load the image for a faster LCP. */
   priority?: boolean;
+  /** Resolved brand name (e.g. "MUSCLETECH"). The grid payload only carries brand_id; the caller
+   *  resolves it against the brands list. Omitted when unavailable → the brand row is hidden. */
+  brandName?: string;
 }
 
 function toFavoriteProduct(product: Product): { id: number; designation_fr: string; slug?: string; cover?: string; prix?: number; promo?: number | null; promo_expiration_date?: string | null; qte?: number; rupture?: number } {
@@ -71,6 +74,7 @@ export const ProductCard = memo(function ProductCard({
   hideCountdown = false,
   imageContext = 'default',
   priority = false,
+  brandName,
 }: ProductCardProps) {
   const { locale } = useI18n();
   const { addToCart, getCartQty } = useCart();
@@ -94,6 +98,20 @@ export const ProductCard = memo(function ProductCard({
         : 0;
     const isNew = product.new_product === 1;
     const isBestSeller = product.best_seller === 1;
+    // Absolute savings (price − promo) for the "Économisez X DT" pill.
+    const savings =
+      priceDisplay.hasPromo && priceDisplay.oldPrice != null
+        ? Math.max(0, priceDisplay.oldPrice - priceDisplay.finalPrice)
+        : 0;
+    // Rating: `note` is the numeric average (0–5). It is NULL for grid products site-wide today,
+    // so we NEVER invent a number — the card shows the real review COUNT and only prints a rating
+    // value if the backend actually provides one.
+    const ratingRaw = Number((product as any).note);
+    const rating = Number.isFinite(ratingRaw) && ratingRaw > 0 ? ratingRaw : null;
+    const reviewCountRaw = Number(
+      (product as any).review_count ?? (product as any).reviews_count ?? (product as any).avis_count,
+    );
+    const reviewCount = Number.isFinite(reviewCountRaw) && reviewCountRaw > 0 ? reviewCountRaw : 0;
     const imagePresentation = getProductImagePresentation({
       ...(product as any),
       image,
@@ -108,6 +126,9 @@ export const ProductCard = memo(function ProductCard({
       description,
       priceDisplay,
       discount,
+      savings,
+      rating,
+      reviewCount,
       isNew,
       isBestSeller,
       isInStock: isInStock(product as any),
@@ -148,23 +169,18 @@ export const ProductCard = memo(function ProductCard({
     doAddToCart(product as any, firstAroma);
   }, [productData.isInStock, stockDisponible, inCartQty, product, doAddToCart]);
 
-  const isCompact = variant === 'compact';
+  void variant;
+  void showDescription;
+  void hideCountdown;
+
+  // Brand from the explicit prop, else a brandName the caller injected onto the product object.
+  const brand = brandName || ((product as any).brandName as string | undefined);
+  const inStock = productData.isInStock && stockDisponible > 0;
 
   return (
-    <article
-      /* Editorial Minimal surface: a hairline border + restrained shadow, replacing the arbitrary
-         shadow stack (DESIGN_SYSTEM §3 asks for exactly this and the old values predated it).
-         MUST stay identical to ProductCardSkeleton's root or the swap shifts layout. */
-      className={[
-        'group flex flex-col h-full w-full min-w-0 overflow-hidden',
-        'rounded-xl lg:rounded-2xl',
-        'bg-white dark:bg-gray-900',
-        'border border-gray-100 dark:border-gray-800',
-        'shadow-sm',
-        'transition-shadow duration-200 ease-out',
-        '[@media(hover:hover)]:hover:shadow-md',
-      ].join(' ')}
-    >
+    // GPT product-card design. Poppins + #FF5A00 accent, scoped to the card (card-first rollout).
+    // MUST stay geometrically in lockstep with ProductCardSkeleton or the swap shifts layout.
+    <article className="group font-poppins flex h-full w-full min-w-0 flex-col overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-sm transition-shadow duration-200 ease-out [@media(hover:hover)]:hover:shadow-lg dark:border-gray-800 dark:bg-gray-900">
       <div className="relative">
         <PackCardImage
           imageSrc={productData.image}
@@ -177,126 +193,125 @@ export const ProductCard = memo(function ProductCard({
           scale={productData.imagePresentation.scale}
           product={product as any}
           priority={priority}
+          surface="dark"
         />
 
-        {/* Favoris – top-right */}
+        {/* Favourite — white circle, top-right */}
         <button
           type="button"
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(toFavoriteProduct(product)); }}
-          /* Dropped `backdrop-blur-sm` and `hover:scale-110`: DESIGN_SYSTEM §3 bans decorative
-             backdrop-blur and §4 asks for quiet hovers. A blur here also forces an extra
-             compositing layer on every card in the grid, for no visual gain over a solid chip. */
-          /* 36px (was 44px, ~25% of a 173px card) so the chip stops dominating the packshot.
-             Aligned to the same top-2.5/right-2.5 inset as the badges on the left. */
-          className="absolute top-2.5 right-2.5 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 dark:bg-gray-800 shadow-sm ring-1 ring-black/5 dark:ring-white/10 hover:bg-white dark:hover:bg-gray-700 transition-colors pointer-events-auto"
+          className="pointer-events-auto absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-md ring-1 ring-black/5 transition-transform hover:scale-105 dark:bg-gray-800 dark:ring-white/10"
           aria-label={favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
         >
-          <Heart className={`h-[18px] w-[18px] ${favorite ? 'fill-red-500 text-red-500' : 'text-gray-600 dark:text-gray-300'}`} />
+          <Heart className={`h-[18px] w-[18px] ${favorite ? 'fill-[#FF5A00] text-[#FF5A00]' : 'text-[#6B7280] dark:text-gray-300'}`} />
         </button>
 
-        {/* Badges – top-left. One-accent discipline: red = promo only; meta badges are clean
-            white chips with a small red icon. All in the Archivo display face, uppercase. */}
-        <div className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 z-10 flex flex-col items-start gap-1 sm:gap-1.5 pointer-events-none">
-          {!productData.isInStock && (
-            <span className="inline-flex items-center rounded-md bg-gray-900 text-white font-display font-semibold uppercase tracking-wide text-[10px] sm:text-xs px-2 py-0.5 shadow-sm">
+        {/* Badges — top-left. Discount = the #FF5A00 accent; "TOP VENTE" = dark ink chip. */}
+        <div className="pointer-events-none absolute left-3 top-3 z-10 flex flex-col items-start gap-1.5">
+          {!inStock && (
+            <span className="inline-flex items-center rounded-lg bg-[#111827] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white shadow-sm">
               Rupture
             </span>
           )}
-          {productData.isInStock && productData.priceDisplay.hasPromo && productData.discount > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-md bg-red-600 text-white font-display font-bold tabular-nums tracking-wide text-[10px] sm:text-xs px-2 py-0.5 shadow-sm">
+          {inStock && productData.priceDisplay.hasPromo && productData.discount > 0 && (
+            <span className="inline-flex items-center gap-1 rounded-lg bg-[#FF5A00] px-2.5 py-1 text-[11px] font-bold tabular-nums tracking-wide text-white shadow-sm">
               <Flame className="h-3 w-3 shrink-0" aria-hidden="true" />
               -{productData.discount}%
             </span>
           )}
-          {!isCompact && (
-            <>
-              {productData.isInStock && showBadge && badgeText && (
-                <span className="inline-flex items-center rounded-md bg-white/95 dark:bg-gray-900/90 text-gray-900 dark:text-white font-display font-semibold uppercase tracking-wide text-[10px] sm:text-xs px-2 py-0.5 shadow-sm ring-1 ring-gray-900/10 dark:ring-white/10">
-                  {badgeText}
-                </span>
-              )}
-              {productData.isInStock && !productData.priceDisplay.hasPromo && !showBadge && productData.isNew && (
-                <span className="inline-flex items-center gap-1 rounded-md bg-white/95 dark:bg-gray-900/90 text-gray-900 dark:text-white font-display font-semibold uppercase tracking-wide text-[10px] sm:text-xs px-2 py-0.5 shadow-sm ring-1 ring-gray-900/10 dark:ring-white/10">
-                  <Sparkles className="h-3 w-3 shrink-0 text-red-600 dark:text-red-400" aria-hidden="true" />
-                  Nouveau
-                </span>
-              )}
-              {productData.isInStock && !productData.priceDisplay.hasPromo && !showBadge && productData.isBestSeller && (
-                <span className="inline-flex items-center gap-1 rounded-md bg-white/95 dark:bg-gray-900/90 text-gray-900 dark:text-white font-display font-semibold uppercase tracking-wide text-[10px] sm:text-xs px-2 py-0.5 shadow-sm ring-1 ring-gray-900/10 dark:ring-white/10">
-                  <TrendingUp className="h-3 w-3 shrink-0 text-red-600 dark:text-red-400" aria-hidden="true" />
-                  Top vendu
-                </span>
-              )}
-            </>
+          {inStock && (productData.isBestSeller || (showBadge && badgeText)) && (
+            <span className="inline-flex items-center gap-1 rounded-lg bg-[#111827] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white shadow-sm">
+              <Star className="h-3 w-3 shrink-0 fill-[#FFB020] text-[#FFB020]" aria-hidden="true" />
+              {badgeText || 'Top vente'}
+            </span>
           )}
         </div>
-
       </div>
 
-      {/* Content – clean padding, no top gap since image is flush */}
-      <div className="flex flex-col flex-1 min-h-0 min-w-0 px-3 py-3 sm:px-4 sm:py-4 gap-2 sm:gap-2.5">
-        <LinkWithLoading
-          href={buildProductUrlPath(product as any)}
-          className="block min-w-0"
-          loadingMessage="Chargement"
-        >
+      {/* Body */}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 px-4 py-4">
+        {/* Brand + verified — only when the name resolved (grid payload carries brand_id only). */}
+        {brand && (
+          <div className="flex min-w-0 items-center gap-1">
+            <span className="truncate text-[11px] font-semibold uppercase tracking-wide text-[#FF5A00]">{brand}</span>
+            <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-[#FF5A00]" aria-label="Marque authentique" />
+          </div>
+        )}
+
+        <LinkWithLoading href={buildProductUrlPath(product as any)} className="block min-w-0" loadingMessage="Chargement">
           <h3
             title={productData.name}
-            /* text-[13px] (was text-xs/12px, the "squeezed" size) and a reserved 2-line height so
-               1-line and 2-line names occupy the same box — no jitter vs the skeleton, no ragged
-               grid rows. */
-            className={`font-bold text-gray-900 dark:text-white leading-snug overflow-hidden transition-colors [@media(hover:hover)]:hover:text-red-600 dark:[@media(hover:hover)]:hover:text-red-400 line-clamp-2 min-h-[2.5rem]
-              ${isCompact ? 'text-[13px] sm:text-base' : 'text-[13px] sm:text-sm lg:text-[15px] sm:min-h-[2.6rem]'}`}
+            className="line-clamp-2 min-h-[2.75rem] text-[15px] font-bold leading-snug text-[#111827] transition-colors [@media(hover:hover)]:group-hover:text-[#FF5A00] dark:text-white"
           >
             {productData.name}
           </h3>
         </LinkWithLoading>
 
-        {showDescription && productData.description && (
-          <p className="text-xs sm:text-[13px] text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed min-h-[2.5rem]">
-            {productData.description}
-          </p>
+        {/* Rating. Numeric average only if the backend actually provides `note` (null in the grid
+            today) — never fabricated. The review COUNT is real. */}
+        {productData.reviewCount > 0 && (
+          <div className="flex items-center gap-1.5 text-[12px] text-[#6B7280]">
+            <Star className="h-3.5 w-3.5 shrink-0 fill-[#FFB020] text-[#FFB020]" aria-hidden="true" />
+            {productData.rating != null && (
+              <span className="font-semibold text-[#111827] dark:text-white">{productData.rating.toFixed(1)}</span>
+            )}
+            <span>({productData.reviewCount} avis)</span>
+          </div>
         )}
 
-        {/* Price. flex-NOWRAP + baseline: at ~150px content width the struck old price used to
-            wrap to a second line on every promo card (a jagged 2-line block). Current price is
-            slightly smaller on mobile (text-base) and the old price is text-[11px] so both sit on
-            one line. */}
-        <div className="mt-auto flex flex-nowrap items-baseline gap-1.5 min-w-0">
-          {productData.priceDisplay.hasPromo && productData.priceDisplay.oldPrice != null ? (
-            <>
-              <span className={`font-display font-bold tracking-tight text-red-600 dark:text-red-400 tabular-nums whitespace-nowrap ${isCompact ? 'text-lg sm:text-2xl' : 'text-base sm:text-xl lg:text-2xl'}`}>
-                {productData.priceDisplay.finalPrice.toFixed(2)} DT
-              </span>
+        {/* Price + struck + savings */}
+        <div className="flex flex-col gap-1">
+          <div className="flex flex-nowrap items-baseline gap-2">
+            <span className="whitespace-nowrap text-2xl font-bold tabular-nums text-[#FF5A00]">
+              {Math.round(productData.priceDisplay.finalPrice)} DT
+            </span>
+            {productData.priceDisplay.hasPromo && productData.priceDisplay.oldPrice != null && (
               <span
-                className="font-display text-gray-400 dark:text-gray-500 line-through tabular-nums whitespace-nowrap text-[11px] leading-none sm:text-sm"
-                style={{ textDecorationThickness: '1.5px' }}
+                className="whitespace-nowrap text-sm text-[#6B7280] line-through tabular-nums"
                 aria-label={`Prix barré: ${productData.priceDisplay.oldPrice.toFixed(2)} DT`}
               >
-                {productData.priceDisplay.oldPrice.toFixed(2)} DT
+                {Math.round(productData.priceDisplay.oldPrice)} DT
               </span>
-            </>
-          ) : (
-            <span className={`font-display font-bold tracking-tight text-gray-900 dark:text-white tabular-nums whitespace-nowrap ${isCompact ? 'text-lg sm:text-2xl' : 'text-base sm:text-xl lg:text-2xl'}`}>
-              {productData.priceDisplay.finalPrice.toFixed(2)} DT
+            )}
+          </div>
+          {productData.savings > 0 && (
+            <span className="inline-flex w-fit items-center rounded-md bg-[#FF5A00]/10 px-2 py-0.5 text-[11px] font-semibold text-[#FF5A00]">
+              Économisez {Math.round(productData.savings)} DT
             </span>
           )}
         </div>
 
-        {/* CTA – single responsive add-to-cart button */}
-        <div className="flex-shrink-0 pt-2.5 sm:pt-3 mt-1 border-t border-gray-100 dark:border-gray-700">
+        {/* Trust chips — En stock is per-product; delivery + payment are site-wide constants. */}
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] font-medium text-[#6B7280]">
+          <span className="inline-flex items-center gap-1">
+            <CircleCheck className={`h-3.5 w-3.5 shrink-0 ${inStock ? 'text-[#22C55E]' : 'text-[#6B7280]'}`} aria-hidden="true" />
+            {inStock ? 'En stock' : 'Rupture'}
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <Truck className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            24–48h
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <Shield className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            Paiement à la livraison
+          </span>
+        </div>
+
+        {/* CTA */}
+        <div className="mt-auto pt-1">
           <Button
             size="sm"
-            /* whitespace-nowrap: the label used to wrap to "Ajouter au / panier" (two lines) on
-               narrow cards, which also grew the button taller than the skeleton reserved. One line
-               now; the mobile label is shortened to "Ajouter" so it always fits ~2-col width. */
-            className={`flex w-full min-h-[44px] items-center justify-center gap-1.5 rounded-lg sm:rounded-xl px-2 sm:px-3 py-2.5 font-semibold text-xs sm:text-sm leading-none whitespace-nowrap active:scale-[0.98] transition-all duration-150 select-none ${productData.isInStock && canAddMore ? 'bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg' : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed text-white'}`}
+            className={`flex w-full min-h-[46px] items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold leading-none whitespace-nowrap transition-all duration-150 active:scale-[0.98] ${
+              inStock && canAddMore
+                ? 'bg-[#FF5A00] text-white shadow-md hover:bg-[#E85200] hover:shadow-lg'
+                : 'cursor-not-allowed bg-[#E5E7EB] text-[#6B7280] dark:bg-gray-700 dark:text-gray-400'
+            }`}
             onClick={handleAddToCart}
-            disabled={isAdding || !productData.isInStock || !canAddMore}
-            aria-label={!canAddMore && productData.isInStock ? 'Stock maximum atteint' : `Ajouter ${productData.name} au panier`}
+            disabled={isAdding || !inStock || !canAddMore}
+            aria-label={!canAddMore && inStock ? 'Stock maximum atteint' : `Ajouter ${productData.name} au panier`}
           >
             <ShoppingCart className="size-4 shrink-0" aria-hidden="true" />
-            {!productData.isInStock || stockDisponible <= 0 ? (
+            {!inStock ? (
               <span className="truncate">Rupture de stock</span>
             ) : !canAddMore ? (
               <span className="truncate">Stock max</span>
@@ -304,6 +319,7 @@ export const ProductCard = memo(function ProductCard({
               <span className="truncate">Ajouté !</span>
             ) : (
               <>
+                {/* Short label on the narrow 2-col grid so it never truncates to "Ajouter au …". */}
                 <span className="truncate sm:hidden">Ajouter</span>
                 <span className="hidden truncate sm:inline">Ajouter au panier</span>
               </>

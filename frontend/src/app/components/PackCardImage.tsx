@@ -24,6 +24,9 @@ interface PackCardImageProps {
   product?: Product;
   /** Eager-load this image (above-the-fold cards) to speed up LCP. */
   priority?: boolean;
+  /** Image-frame background. 'dark' = the GPT card's dark gradient (product pops); 'light' keeps
+   *  the previous white surface. */
+  surface?: 'light' | 'dark';
 }
 
 export function PackCardImage({
@@ -37,11 +40,13 @@ export function PackCardImage({
   scale = 1,
   product,
   priority = false,
+  surface = 'light',
 }: PackCardImageProps) {
   const [hasError, setHasError] = useState(false);
   const productHref = product ? buildProductUrlPath(product) : `/shop/${encodeURIComponent(slug || String(productId))}`;
 
   const isContain = mode === 'contain';
+  const isDark = surface === 'dark';
 
   // Geometry comes from the shared source of truth so ProductCardSkeleton reserves an identical
   // box — see util/productCardFrame.ts. Never inline these dimensions again.
@@ -50,8 +55,11 @@ export function PackCardImage({
   // gray-50 while the body was white, drawing a visible two-tone seam across every card in light
   // mode. One surface, no seam.
   const wrapperClasses = cn(
-    'relative w-full flex-shrink-0 overflow-hidden rounded-t-xl lg:rounded-t-2xl',
-    'bg-white dark:bg-gray-900',
+    'relative w-full flex-shrink-0 overflow-hidden rounded-t-2xl',
+    // 'dark' = the GPT card's diagonal charcoal gradient so packshots pop; 'light' = white.
+    isDark
+      ? 'bg-gradient-to-br from-[#1b1f2a] to-[#0e1118]'
+      : 'bg-white dark:bg-gray-900',
     productImageFrame(mode)
   );
 
@@ -94,10 +102,10 @@ export function PackCardImage({
           </span>
         ) : (
           <div
-            className="size-full flex items-center justify-center bg-white dark:bg-gray-900"
+            className={cn('size-full flex items-center justify-center', isDark ? 'bg-transparent' : 'bg-white dark:bg-gray-900')}
             aria-hidden="true"
           >
-            <ShoppingCart className="h-12 w-12 text-gray-300 dark:text-gray-600" />
+            <ShoppingCart className={cn('h-12 w-12', isDark ? 'text-white/25' : 'text-gray-300 dark:text-gray-600')} />
           </div>
         )}
       </LinkWithLoading>

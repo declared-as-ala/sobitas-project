@@ -4,28 +4,33 @@ import { productImageFrame } from '@/util/productCardFrame';
 import type { ProductImageMode } from '@/util/productImagePresentation';
 
 /**
- * Loading placeholder mirroring ProductCard's real layout (image, 2-line title, price,
- * add-to-cart) so the skeleton→card swap causes zero layout shift.
+ * Loading placeholder mirroring the GPT ProductCard layout (image, title, rating, price + savings,
+ * trust chips, add-to-cart) so the skeleton→card swap causes minimal layout shift.
  *
- * The image box comes from the SHARED frame definition (util/productCardFrame.ts) rather than a
- * second hardcoded copy — the two had already drifted, leaving cover-mode cards shifting on load.
- * Surface treatment must stay in lockstep with ProductCard's root element.
+ * The image box comes from the SHARED frame definition (util/productCardFrame.ts). Surface treatment
+ * (border/radius/padding/gaps) must stay in lockstep with ProductCard's root.
+ *
+ * Note: the BRAND row is intentionally NOT reserved — brand names are resolved only on the homepage
+ * (which does not render this skeleton), while the pages that DO show it (shop/favoris/packs) pass
+ * no brand, so their cards have no brand row either.
  */
 export function ProductCardSkeleton({ mode = 'contain' }: { mode?: ProductImageMode }) {
   return (
-    <div className="flex h-full w-full min-w-0 flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 lg:rounded-2xl">
+    <div className="flex h-full w-full min-w-0 flex-col overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
       <Skeleton className={cn('w-full rounded-none', productImageFrame(mode))} />
-      <div className="flex flex-1 flex-col gap-2 px-3 py-3 sm:gap-2.5 sm:px-4 sm:py-4">
-        {/* Title: two lines reserving ~40px, matching the card's min-h-[2.5rem] title box (now on
-            BOTH the compact and non-compact branches). */}
+      <div className="flex flex-1 flex-col gap-2 px-4 py-4">
+        {/* Title: two lines ≈ 44px, matching the card's min-h-[2.75rem] title box. */}
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-3/4" />
-        {/* h-7 (28px) matches the compact price line-box (text-lg) these skeletons swap to on
-            shop / favoris / packs — h-6 was a 4px under-reserve. */}
-        <Skeleton className="mt-auto h-7 w-24" />
-        <div className="mt-1 border-t border-gray-100 pt-2.5 dark:border-gray-800 sm:pt-3">
-          <Skeleton className="h-11 w-full rounded-lg sm:rounded-xl" />
-        </div>
+        {/* Rating row */}
+        <Skeleton className="h-3.5 w-24" />
+        {/* Price + savings pill */}
+        <Skeleton className="h-7 w-28" />
+        <Skeleton className="h-4 w-32" />
+        {/* Trust chips */}
+        <Skeleton className="h-3.5 w-full" />
+        {/* CTA */}
+        <Skeleton className="mt-auto h-[46px] w-full rounded-xl" />
       </div>
     </div>
   );
