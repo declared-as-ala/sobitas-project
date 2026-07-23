@@ -180,7 +180,7 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
         </div>
 
         {/* Shared grid rhythm — matches ProductGrid (2 → 3 → 4, no orphan rows) */}
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 lg:gap-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 lg:gap-6">
           {products.map((product) => (
             <div key={product.id} className="w-full min-w-0">
               <ProductCard product={product as any} showBadge badgeText="Flash" />

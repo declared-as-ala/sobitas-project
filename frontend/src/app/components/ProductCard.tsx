@@ -193,7 +193,6 @@ export const ProductCard = memo(function ProductCard({
           scale={productData.imagePresentation.scale}
           product={product as any}
           priority={priority}
-          surface="dark"
         />
 
         {/* Favourite — white circle, top-right */}
@@ -318,11 +317,7 @@ export const ProductCard = memo(function ProductCard({
             ) : isAdding ? (
               <span className="truncate">Ajouté !</span>
             ) : (
-              <>
-                {/* Short label on the narrow 2-col grid so it never truncates to "Ajouter au …". */}
-                <span className="truncate sm:hidden">Ajouter</span>
-                <span className="hidden truncate sm:inline">Ajouter au panier</span>
-              </>
+              <span className="truncate">Ajouter au panier</span>
             )}
           </Button>
         </div>
