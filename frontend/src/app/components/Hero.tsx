@@ -173,7 +173,11 @@ function HeroSlideFrame({
       href={href}
       {...(ariaLabel ? { 'aria-label': ariaLabel } : {})}
       loadingMessage="Chargement..."
-      className="group absolute inset-0 block bg-gray-950"
+      /* ring-INSET, not an outline: the frame is overflow-hidden (+ contain: layout paint during
+         the pin), which clips a normal focus outline drawn at/outside the border box. An inset ring
+         paints inside the box, so the keyboard focus indicator on this primary banner link stays
+         visible (WCAG 2.4.7). */
+      className="group absolute inset-0 block bg-gray-950 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-white"
     >
       <HeroPicture set={set} eager={eager} />
       <HeroCaption slide={slide} />
@@ -247,18 +251,22 @@ export function Hero({ slides, fallbackAlt }: HeroProps) {
             </div>
 
             {/* Dots overlaid at the bottom of the pinned frame so they stay visible during the
-                takeover (they can't sit "below" a pinned element). */}
-            <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center gap-2">
-              {slides.map((slide, index) => (
-                <a
-                  key={slide.id}
-                  href={`#hero-slide-${index + 1}`}
-                  aria-label={`Aller à la diapositive ${index + 1}`}
-                  className="pointer-events-auto flex h-8 w-7 items-center justify-center"
-                >
-                  <span className="h-1.5 w-6 rounded-full bg-white/50 transition-colors hover:bg-white" />
-                </a>
-              ))}
+                takeover (they can't sit "below" a pinned element). The row sits on a small
+                translucent-dark pill so the white dots keep ≥3:1 contrast even over a light banner
+                (WCAG 1.4.11) — the banners can be light at bottom-centre by design. */}
+            <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center">
+              <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-black/30 px-2.5 py-1.5">
+                {slides.map((slide, index) => (
+                  <a
+                    key={slide.id}
+                    href={`#hero-slide-${index + 1}`}
+                    aria-label={`Aller à la diapositive ${index + 1}`}
+                    className="flex h-5 w-6 items-center justify-center"
+                  >
+                    <span className="h-1.5 w-6 rounded-full bg-white/90 transition-colors hover:bg-white" />
+                  </a>
+                ))}
+              </div>
             </div>
           </div>
         </div>

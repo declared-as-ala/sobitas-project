@@ -396,29 +396,38 @@ html[dir="rtl"] [data-i18n-ltr] {
     /* The pin: a tall track buys the scroll distance, the stage sticks to the top so the hero
        does not move while it transforms. `justify-center` keeps the growing frame centred
        horizontally; `items-start` anchors it to the top so at rest the banner sits just under the
-       header (not floating in the middle of the viewport). */
-    .pt-pin-track {
-      min-height: 210vh;
-    }
-    .pt-pin-stage {
-      position: sticky;
-      top: 0;
-      height: 100vh;
-      overflow: hidden;
-      display: flex;
-      align-items: flex-start;
-      justify-content: center;
-    }
-    /* The animated frame. Range starts at ~120px (roughly when the stage finishes scrolling up to
-       top:0 and pins) so the growth happens PINNED, not while the banner is still rising; it
-       completes at 760px, well before the pin releases at ~110vh, giving a beat of full-screen
-       hero before the page scrolls on. */
-    .pt-pin-frame[data-motion] {
-      animation: pt-pin-grow linear both;
-      animation-timeline: scroll(root);
-      animation-range: 120px 760px;
-      contain: layout paint;
-      will-change: width, height;
+       header (not floating in the middle of the viewport).
+
+       GATED ON min-height TOO. The growth completes at a fixed 760px root offset while the pin
+       only lasts (210vh − 100vh) = 110vh of scroll; on a SHORT desktop window (height ≲ 600px)
+       110vh < 760px, so the stage would un-pin before the takeover finishes AND the base 560px
+       frame would clip the dots below a &lt;600px viewport. Requiring ≥720px tall means the pin
+       always outlasts the 760px growth and the 560px frame fits; shorter windows fall back to the
+       plain contained hero. */
+    @media (min-height: 720px) {
+      .pt-pin-track {
+        min-height: 210vh;
+      }
+      .pt-pin-stage {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow: hidden;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+      }
+      /* The animated frame. Range starts at ~120px (roughly when the stage finishes scrolling up
+         to top:0 and pins) so the growth happens PINNED, not while the banner is still rising; it
+         completes at 760px, comfortably before the pin releases at 110vh (≥792px when ≥720px
+         tall), giving a beat of full-screen hero before the page scrolls on. */
+      .pt-pin-frame[data-motion] {
+        animation: pt-pin-grow linear both;
+        animation-timeline: scroll(root);
+        animation-range: 120px 760px;
+        contain: layout paint;
+        will-change: width, height;
+      }
     }
   }
 }
