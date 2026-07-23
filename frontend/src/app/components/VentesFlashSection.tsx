@@ -91,7 +91,10 @@ const CountdownDisplay = memo(function CountdownDisplay({ expirationDate }: { ex
       </span>
       <div className="flex items-center gap-1 sm:gap-1.5">
         {units.map(({ value, label }) => (
-          <div key={label} className="flex min-w-[2.5rem] flex-col items-center rounded-lg bg-white/15 px-1.5 py-1 sm:min-w-[2.75rem] sm:px-2">
+          // bg-black/15 not white/15: a translucent-white chip over the orange pill lifted the
+          // effective background to a light orange, dropping white digits to ~3.9:1. Darkening the
+          // chip instead keeps white ≥4.5:1.
+          <div key={label} className="flex min-w-[2.5rem] flex-col items-center rounded-lg bg-black/15 px-1.5 py-1 sm:min-w-[2.75rem] sm:px-2">
             <span className="font-display text-base font-bold leading-none tabular-nums sm:text-lg">
               {value == null ? '--' : String(value).padStart(2, '0')}
             </span>

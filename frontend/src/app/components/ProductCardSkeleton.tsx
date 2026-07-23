@@ -16,10 +16,13 @@ export function ProductCardSkeleton({ mode = 'contain' }: { mode?: ProductImageM
     <div className="flex h-full w-full min-w-0 flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 lg:rounded-2xl">
       <Skeleton className={cn('w-full rounded-none', productImageFrame(mode))} />
       <div className="flex flex-1 flex-col gap-2 px-3 py-3 sm:gap-2.5 sm:px-4 sm:py-4">
-        {/* Title: two lines reserving ~40px, matching the card's min-h-[2.5rem] title box. */}
+        {/* Title: two lines reserving ~40px, matching the card's min-h-[2.5rem] title box (now on
+            BOTH the compact and non-compact branches). */}
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-3/4" />
-        <Skeleton className="mt-auto h-6 w-24" />
+        {/* h-7 (28px) matches the compact price line-box (text-lg) these skeletons swap to on
+            shop / favoris / packs — h-6 was a 4px under-reserve. */}
+        <Skeleton className="mt-auto h-7 w-24" />
         <div className="mt-1 border-t border-gray-100 pt-2.5 dark:border-gray-800 sm:pt-3">
           <Skeleton className="h-11 w-full rounded-lg sm:rounded-xl" />
         </div>

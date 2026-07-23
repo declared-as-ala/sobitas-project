@@ -245,8 +245,8 @@ export const ProductCard = memo(function ProductCard({
             /* text-[13px] (was text-xs/12px, the "squeezed" size) and a reserved 2-line height so
                1-line and 2-line names occupy the same box — no jitter vs the skeleton, no ragged
                grid rows. */
-            className={`font-bold text-gray-900 dark:text-white leading-snug overflow-hidden transition-colors [@media(hover:hover)]:hover:text-red-600 dark:[@media(hover:hover)]:hover:text-red-400 line-clamp-2
-              ${isCompact ? 'text-[13px] sm:text-base' : 'text-[13px] sm:text-sm lg:text-[15px] min-h-[2.5rem] sm:min-h-[2.6rem]'}`}
+            className={`font-bold text-gray-900 dark:text-white leading-snug overflow-hidden transition-colors [@media(hover:hover)]:hover:text-red-600 dark:[@media(hover:hover)]:hover:text-red-400 line-clamp-2 min-h-[2.5rem]
+              ${isCompact ? 'text-[13px] sm:text-base' : 'text-[13px] sm:text-sm lg:text-[15px] sm:min-h-[2.6rem]'}`}
           >
             {productData.name}
           </h3>
