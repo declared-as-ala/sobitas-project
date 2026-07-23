@@ -63,6 +63,7 @@ function transformProduct(product: Product) {
     promo: product.promo,
     promo_expiration_date: product.promo_expiration_date,
     cover: product.cover,
+    brand_id: (product as any).brand_id,
     new_product: product.new_product,
     best_seller: product.best_seller,
     note: product.note,
@@ -88,9 +89,17 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
     best_sellers: [],
   };
 
-  const newProducts = (safeAccueil.new_product || []).slice(0, 8).map(transformProduct);
-  const bestSellers = (safeAccueil.best_sellers || []).slice(0, 4).map(transformProduct);
-  const packs = (safeAccueil.packs || []).slice(0, 4).map(transformProduct);
+  // Resolve brand names once: the grid payload carries only brand_id, but the brands list is
+  // already fetched and passed in. Cards read `brandName` off the product (see ProductCard).
+  const brandMap = new Map((brands || []).map((b) => [b.id, b.designation_fr]));
+  const withBrand = <T extends { brand_id?: number }>(p: T): T & { brandName?: string } => ({
+    ...p,
+    brandName: p.brand_id != null ? brandMap.get(p.brand_id) : undefined,
+  });
+
+  const newProducts = (safeAccueil.new_product || []).slice(0, 8).map(transformProduct).map(withBrand);
+  const bestSellers = (safeAccueil.best_sellers || []).slice(0, 4).map(transformProduct).map(withBrand);
+  const packs = (safeAccueil.packs || []).slice(0, 4).map(transformProduct).map(withBrand);
   // Ventes flash: only products with promo + future promo_expiration_date (match backend logic)
   const now = Date.now();
   const flashSales = (safeAccueil.ventes_flash || [])
@@ -100,7 +109,8 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
       const exp = new Date(p.promo_expiration_date).getTime();
       return !isNaN(exp) && exp > now;
     })
-    .map(transformProduct);
+    .map(transformProduct)
+    .map(withBrand);
 
   return (
     /* overflow-x-clip, NOT overflow-x-hidden. `hidden` makes this div a scroll container (a

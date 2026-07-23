@@ -39,6 +39,13 @@ const config: Config = {
           "system-ui",
           "sans-serif",
         ],
+        // Poppins — the GPT product-card typeface. Scoped via `font-poppins` (card-first rollout).
+        poppins: [
+          "var(--font-poppins)",
+          "var(--font-inter)",
+          "system-ui",
+          "sans-serif",
+        ],
       },
       fontSize: {
         /** Page / section titles */
