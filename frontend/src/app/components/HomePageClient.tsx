@@ -113,6 +113,14 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
     <div className="min-h-screen w-full max-w-full overflow-x-clip bg-white dark:bg-gray-950">
 
       <main>
+        {/* The page's single <h1>, visually hidden. The owner asked for no copy strip under the
+            hero, but the document still needs ONE h1 and it should come before the section h2s for
+            a correct outline. sr-only keeps the "Protéine Tunisie" query in the h1 for SEO/screen
+            readers without putting a heading back on screen. */}
+        <h1 className="sr-only">
+          Protéine Tunisie — whey, créatine et compléments de nutrition sportive, livraison partout
+          en Tunisie
+        </h1>
         {/* Above the fold - Critical content - Hero must render first */}
         <Hero slides={heroSlides} fallbackAlt="Whey, créatine et compléments — Protéine Tunisie" />
 
@@ -195,12 +203,11 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
         >
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl">
-            {/* The page's SINGLE <h1>. Relocated here from the old top strip so "Acheter par
-                objectif" can sit directly under the hero; it still carries the primary
-                "Protéine Tunisie" query in crawlable body copy. Exactly one h1 per page. */}
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-4">
-              Protéine Tunisie — nutrition sportive : whey, créatine &amp; compléments
-            </h1>
+            {/* h2, not h1 — the page's single h1 is the visually-hidden one at the top of <main>,
+                so this crawlable block leads with a keyword-rich h2. */}
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-4">
+              Nutrition sportive Tunisie : protéine, whey et créatine de qualité
+            </h2>
             <nav aria-label="Catégories compléments populaires" className="mb-6 flex flex-wrap gap-2 sm:gap-3">
               {PRIORITY_SHOP_CATEGORY_LINKS.map(({ href, label }) => (
                 <Link

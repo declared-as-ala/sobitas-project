@@ -225,7 +225,7 @@ export default async function RootLayout({
         />
         {/* Brand orange — must stay in sync with --c-brand in styles/tokens.css.
             This tints the mobile browser chrome, so a stale value here is very visible. */}
-        <meta name="theme-color" content="#DA3E06" />
+        <meta name="theme-color" content="#D53B04" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />

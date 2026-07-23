@@ -63,10 +63,11 @@ const config: Config = {
          * TWO WORKING SHADES:
          *   500 = #F8480C — the EXACT logo orange, for graphical accents (badges, icons, the
          *         kicker rule). Bright; not for white body text on top.
-         *   600 = #DA3E06 — the ACTION shade (buttons, price, links). Deepened just enough that
-         *         white text on it and this-colour text on white both clear WCAG AA 4.5:1
-         *         (≈4.5:1), which the raw logo orange (≈3.7:1) does not. This mirrors the old red
-         *         ramp's 600 contrast, so no existing pairing regresses.
+         *   600 = #D53B04 — the ACTION shade (buttons, price, links). Deepened from the logo
+         *         orange so white-on-600 AND 600-on-white both clear WCAG AA 4.5:1 (measured
+         *         4.69:1). An earlier value #DA3E06 sat at 4.49 — a hair under, which automated
+         *         audits flag — so it was darkened one step. The raw logo orange (#F8480C, 500)
+         *         is ≈3.5:1 on white and is for GRAPHICAL accents only, never white body text.
          *
          * Static hex (not CSS vars) on purpose: existing code writes its own dark variants
          * (`text-red-600 dark:text-red-400`), so the ramp must NOT auto-flip per theme.
@@ -78,7 +79,7 @@ const config: Config = {
           300: "#FF9E64",
           400: "#FB7333",
           500: "#F8480C",
-          600: "#DA3E06",
+          600: "#D53B04",
           700: "#B63304",
           800: "#92290A",
           900: "#78250E",
@@ -94,7 +95,7 @@ const config: Config = {
           300: "#FF9E64",
           400: "#FB7333",
           500: "#F8480C",
-          600: "#DA3E06",
+          600: "#D53B04",
           700: "#B63304",
           800: "#92290A",
           900: "#78250E",

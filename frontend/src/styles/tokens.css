@@ -20,10 +20,10 @@
 :root {
   /* ---- Brand accent -------------------------------------------------------
    * Orange is the ONLY accent, matched to the Protein.tn logo (#F8480C).
-   * brand-600 (#DA3E06) is the ACTION shade — deepened from the raw logo orange so
-   * white text on it clears WCAG AA 4.5:1. To re-tune the whole site's accent,
-   * change these two lines (and the `red`/`brand` hex ramp in tailwind.config.ts). */
-  --c-brand: 218 62 6; /* #DA3E06 */
+   * brand-600 (#D53B04) is the ACTION shade — deepened from the raw logo orange so
+   * white-on-it clears WCAG AA 4.5:1 (measured 4.69:1). To re-tune the whole site's
+   * accent, change these two lines (and the `red`/`brand` hex ramp in tailwind.config.ts). */
+  --c-brand: 213 59 4; /* #D53B04 */
   --c-brand-hover: 182 51 4; /* #B63304 */
 
   /* ---- Surfaces (theme-switchable) ---------------------------------------- */

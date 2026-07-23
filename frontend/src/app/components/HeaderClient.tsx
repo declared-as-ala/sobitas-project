@@ -578,6 +578,12 @@ export function HeaderClient() {
               ? 'md:max-h-0 md:opacity-0 md:border-t-0'
               : 'md:max-h-16 md:opacity-100 border-t border-gray-100 dark:border-gray-900'
           )}
+          /* `inert` when collapsed: max-h-0 + opacity-0 still leaves the links display:block, so
+             without this a keyboard user could Tab into an invisible, off-screen nav (and the
+             ProductsDropdown trigger anchored to a 0-height box). inert removes the whole subtree
+             from the tab order AND the accessibility tree — aria-hidden alone would not drop it
+             from focus. Undefined (not false) so the attribute is absent when expanded. */
+          {...(scrolled ? { inert: true } : {})}
           aria-label="Navigation principale"
         >
           <div className="flex w-max mx-auto items-center gap-5 lg:gap-7 xl:gap-9 px-4 h-[42px]">
