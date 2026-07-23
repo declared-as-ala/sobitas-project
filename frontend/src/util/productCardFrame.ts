@@ -16,9 +16,11 @@ import type { ProductImageMode } from '@/util/productImagePresentation';
  * client boundary along with it.
  */
 export const PRODUCT_IMAGE_FRAME: Record<ProductImageMode, string> = {
-  // Fixed aspect + object-contain: the whole packshot stays visible. Taller on narrow 2-col
-  // grids, wider from sm+.
-  contain: 'aspect-[4/5] sm:aspect-[3/2]',
+  // SQUARE for object-contain. Supplement packshots (tubs, bottles) are roughly square, so a 4:5
+  // portrait frame left big empty top/bottom margins that read as "dirty / half-empty". A square
+  // frame hugs the product, is consistent at every breakpoint, and is the standard e-commerce
+  // packshot box. The whole packshot still stays visible (object-contain).
+  contain: 'aspect-square',
   cover: 'h-[220px] sm:h-[240px] lg:h-[260px] xl:h-[280px]',
   'cover-zoom': 'h-[220px] sm:h-[240px] lg:h-[260px] xl:h-[280px]',
 };

@@ -186,10 +186,12 @@ export const ProductCard = memo(function ProductCard({
           /* Dropped `backdrop-blur-sm` and `hover:scale-110`: DESIGN_SYSTEM §3 bans decorative
              backdrop-blur and §4 asks for quiet hovers. A blur here also forces an extra
              compositing layer on every card in the grid, for no visual gain over a solid chip. */
-          className="absolute top-2 right-2 sm:top-2.5 sm:right-2.5 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/95 dark:bg-gray-800 shadow-sm hover:bg-white dark:hover:bg-gray-700 transition-colors pointer-events-auto"
+          /* 36px (was 44px, ~25% of a 173px card) so the chip stops dominating the packshot.
+             Aligned to the same top-2.5/right-2.5 inset as the badges on the left. */
+          className="absolute top-2.5 right-2.5 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 dark:bg-gray-800 shadow-sm ring-1 ring-black/5 dark:ring-white/10 hover:bg-white dark:hover:bg-gray-700 transition-colors pointer-events-auto"
           aria-label={favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
         >
-          <Heart className={`h-4 w-4 ${favorite ? 'fill-red-500 text-red-500' : 'text-gray-600 dark:text-gray-300'}`} />
+          <Heart className={`h-[18px] w-[18px] ${favorite ? 'fill-red-500 text-red-500' : 'text-gray-600 dark:text-gray-300'}`} />
         </button>
 
         {/* Badges – top-left. One-accent discipline: red = promo only; meta badges are clean
@@ -240,8 +242,11 @@ export const ProductCard = memo(function ProductCard({
         >
           <h3
             title={productData.name}
+            /* text-[13px] (was text-xs/12px, the "squeezed" size) and a reserved 2-line height so
+               1-line and 2-line names occupy the same box — no jitter vs the skeleton, no ragged
+               grid rows. */
             className={`font-bold text-gray-900 dark:text-white leading-snug overflow-hidden transition-colors [@media(hover:hover)]:hover:text-red-600 dark:[@media(hover:hover)]:hover:text-red-400 line-clamp-2
-              ${isCompact ? 'text-xs sm:text-base' : 'text-xs sm:text-sm lg:text-[15px]'}`}
+              ${isCompact ? 'text-[13px] sm:text-base' : 'text-[13px] sm:text-sm lg:text-[15px] min-h-[2.5rem] sm:min-h-[2.6rem]'}`}
           >
             {productData.name}
           </h3>
@@ -253,15 +258,18 @@ export const ProductCard = memo(function ProductCard({
           </p>
         )}
 
-        {/* Price – clean layout with prominent current price and subtle old price */}
-        <div className="flex flex-wrap items-center gap-2 mt-auto">
+        {/* Price. flex-NOWRAP + baseline: at ~150px content width the struck old price used to
+            wrap to a second line on every promo card (a jagged 2-line block). Current price is
+            slightly smaller on mobile (text-base) and the old price is text-[11px] so both sit on
+            one line. */}
+        <div className="mt-auto flex flex-nowrap items-baseline gap-1.5 min-w-0">
           {productData.priceDisplay.hasPromo && productData.priceDisplay.oldPrice != null ? (
             <>
-              <span className={`font-display font-bold tracking-tight text-red-600 dark:text-red-400 tabular-nums ${isCompact ? 'text-lg sm:text-2xl' : 'text-lg sm:text-xl lg:text-2xl'}`}>
+              <span className={`font-display font-bold tracking-tight text-red-600 dark:text-red-400 tabular-nums whitespace-nowrap ${isCompact ? 'text-lg sm:text-2xl' : 'text-base sm:text-xl lg:text-2xl'}`}>
                 {productData.priceDisplay.finalPrice.toFixed(2)} DT
               </span>
               <span
-                className="font-display text-gray-400 dark:text-gray-500 line-through tabular-nums text-xs leading-snug sm:text-sm sm:leading-normal"
+                className="font-display text-gray-400 dark:text-gray-500 line-through tabular-nums whitespace-nowrap text-[11px] leading-none sm:text-sm"
                 style={{ textDecorationThickness: '1.5px' }}
                 aria-label={`Prix barré: ${productData.priceDisplay.oldPrice.toFixed(2)} DT`}
               >
@@ -269,7 +277,7 @@ export const ProductCard = memo(function ProductCard({
               </span>
             </>
           ) : (
-            <span className={`font-display font-bold tracking-tight text-gray-900 dark:text-white tabular-nums ${isCompact ? 'text-lg sm:text-2xl' : 'text-lg sm:text-xl lg:text-2xl'}`}>
+            <span className={`font-display font-bold tracking-tight text-gray-900 dark:text-white tabular-nums whitespace-nowrap ${isCompact ? 'text-lg sm:text-2xl' : 'text-base sm:text-xl lg:text-2xl'}`}>
               {productData.priceDisplay.finalPrice.toFixed(2)} DT
             </span>
           )}
@@ -279,15 +287,27 @@ export const ProductCard = memo(function ProductCard({
         <div className="flex-shrink-0 pt-2.5 sm:pt-3 mt-1 border-t border-gray-100 dark:border-gray-700">
           <Button
             size="sm"
-            className={`flex w-full min-h-[44px] h-auto items-center justify-center gap-1.5 rounded-lg sm:rounded-xl px-2 sm:px-3 py-2 sm:py-2.5 font-semibold text-xs sm:text-sm leading-snug whitespace-normal active:scale-[0.98] transition-all duration-150 select-none ${productData.isInStock && canAddMore ? 'bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg' : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed text-white'}`}
+            /* whitespace-nowrap: the label used to wrap to "Ajouter au / panier" (two lines) on
+               narrow cards, which also grew the button taller than the skeleton reserved. One line
+               now; the mobile label is shortened to "Ajouter" so it always fits ~2-col width. */
+            className={`flex w-full min-h-[44px] items-center justify-center gap-1.5 rounded-lg sm:rounded-xl px-2 sm:px-3 py-2.5 font-semibold text-xs sm:text-sm leading-none whitespace-nowrap active:scale-[0.98] transition-all duration-150 select-none ${productData.isInStock && canAddMore ? 'bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg' : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed text-white'}`}
             onClick={handleAddToCart}
             disabled={isAdding || !productData.isInStock || !canAddMore}
             aria-label={!canAddMore && productData.isInStock ? 'Stock maximum atteint' : `Ajouter ${productData.name} au panier`}
           >
             <ShoppingCart className="size-4 shrink-0" aria-hidden="true" />
-            <span className="text-center leading-snug line-clamp-2 break-words">
-              {!productData.isInStock || stockDisponible <= 0 ? 'Rupture de stock' : !canAddMore ? 'Stock max' : isAdding ? 'Ajouté !' : 'Ajouter au panier'}
-            </span>
+            {!productData.isInStock || stockDisponible <= 0 ? (
+              <span className="truncate">Rupture de stock</span>
+            ) : !canAddMore ? (
+              <span className="truncate">Stock max</span>
+            ) : isAdding ? (
+              <span className="truncate">Ajouté !</span>
+            ) : (
+              <>
+                <span className="truncate sm:hidden">Ajouter</span>
+                <span className="hidden truncate sm:inline">Ajouter au panier</span>
+              </>
+            )}
           </Button>
         </div>
       </div>

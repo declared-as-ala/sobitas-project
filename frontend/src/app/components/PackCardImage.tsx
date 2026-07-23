@@ -45,16 +45,20 @@ export function PackCardImage({
 
   // Geometry comes from the shared source of truth so ProductCardSkeleton reserves an identical
   // box — see util/productCardFrame.ts. Never inline these dimensions again.
+  //
+  // Background is WHITE to match the card body (ProductCard root is bg-white). It used to be
+  // gray-50 while the body was white, drawing a visible two-tone seam across every card in light
+  // mode. One surface, no seam.
   const wrapperClasses = cn(
     'relative w-full flex-shrink-0 overflow-hidden rounded-t-xl lg:rounded-t-2xl',
-    'bg-gray-50 dark:bg-gray-900',
+    'bg-white dark:bg-gray-900',
     productImageFrame(mode)
   );
 
   const imageClasses = cn(
     'transition-transform duration-300 ease-out',
     isContain
-      ? 'object-contain object-center [@media(hover:hover)]:group-hover:scale-[1.02]'
+      ? 'object-contain object-center [@media(hover:hover)]:group-hover:scale-[1.04]'
       : 'object-cover [@media(hover:hover)]:group-hover:scale-[1.06]'
   );
 
@@ -62,34 +66,38 @@ export function PackCardImage({
     <div className={wrapperClasses}>
       <LinkWithLoading
         href={productHref}
-        className={cn(
-          'relative size-full',
-          isContain ? 'flex items-center justify-center p-2.5 sm:p-3 md:p-3.5' : 'block'
-        )}
+        className="absolute inset-0 block"
         aria-label={`Voir ${productName}`}
         loadingMessage="Chargement"
       >
         {imageSrc && !hasError ? (
-          <Image
-            src={imageSrc}
-            alt={imageAlt || productName}
-            fill
-            className={imageClasses}
-            style={{
-              objectPosition: isContain ? 'center center' : objectPosition,
-              transform: !isContain && scale > 1 ? `scale(${scale})` : undefined,
-            }}
-            {...(priority ? { priority: true, fetchPriority: 'high' as const } : { loading: 'lazy' as const })}
-            sizes="(max-width: 640px) 46vw, (max-width: 768px) 32vw, (max-width: 1024px) 26vw, (max-width: 1280px) 20vw, 16vw"
-            quality={75}
-            onError={() => setHasError(true)}
-          />
+          // The padded box: `absolute inset-[9%]` for contain gives the packshot real, uniform
+          // breathing room. This is a POSITIONED, SIZED element, so the Image `fill` (which sets
+          // inline `inset:0`) fills THIS inset box — the old approach put padding on the link and
+          // it was silently ignored, because fill's containing block was the padding box, so the
+          // packshot went edge-to-edge. Cover mode fills the whole frame (inset-0).
+          <span className={cn('absolute block', isContain ? 'inset-[9%]' : 'inset-0')}>
+            <Image
+              src={imageSrc}
+              alt={imageAlt || productName}
+              fill
+              className={imageClasses}
+              style={{
+                objectPosition: isContain ? 'center center' : objectPosition,
+                transform: !isContain && scale > 1 ? `scale(${scale})` : undefined,
+              }}
+              {...(priority ? { priority: true, fetchPriority: 'high' as const } : { loading: 'lazy' as const })}
+              sizes="(max-width: 640px) 46vw, (max-width: 768px) 32vw, (max-width: 1024px) 26vw, (max-width: 1280px) 20vw, 16vw"
+              quality={75}
+              onError={() => setHasError(true)}
+            />
+          </span>
         ) : (
           <div
-            className="size-full flex items-center justify-center bg-gray-200/60 dark:bg-gray-700/60"
+            className="size-full flex items-center justify-center bg-white dark:bg-gray-900"
             aria-hidden="true"
           >
-            <ShoppingCart className="h-12 w-12 text-gray-400" />
+            <ShoppingCart className="h-12 w-12 text-gray-300 dark:text-gray-600" />
           </div>
         )}
       </LinkWithLoading>
