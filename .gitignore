@@ -31,3 +31,4 @@ branch_structure.json
 *.sql
 protein_db_backup.sql
 db/mysql-protein.sql
+frontend/*.stackdump

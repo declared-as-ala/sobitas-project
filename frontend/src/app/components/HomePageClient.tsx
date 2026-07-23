@@ -113,31 +113,21 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
     <div className="min-h-screen w-full max-w-full overflow-x-clip bg-white dark:bg-gray-950">
 
       <main>
+        {/* The page's single <h1>, visually hidden. The owner asked for no copy strip under the
+            hero, but the document still needs ONE h1 and it should come before the section h2s for
+            a correct outline. sr-only keeps the "Protéine Tunisie" query in the h1 for SEO/screen
+            readers without putting a heading back on screen. */}
+        <h1 className="sr-only">
+          Protéine Tunisie — whey, créatine et compléments de nutrition sportive, livraison partout
+          en Tunisie
+        </h1>
         {/* Above the fold - Critical content - Hero must render first */}
         <Hero slides={heroSlides} fallbackAlt="Whey, créatine et compléments — Protéine Tunisie" />
-        {/* SEO: single visible H1 for main query "proteine tunisie" + internal link creatine.
-            Left-aligned lede inside the rail so it does not read as a second hero title. */}
-        {/* Compact SEO strip — keeps the single H1 + whey/créatine internal links, but small so it
-            doesn't eat the fold right under the hero. */}
-        <section className="py-3 sm:py-4 bg-white dark:bg-gray-950" aria-label="Titre principal">
-          <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
-            <h1 className="font-display font-compressed uppercase tracking-tight text-lg sm:text-2xl font-extrabold text-gray-950 dark:text-white">
-              Protéine Tunisie
-              <span className="ml-2 align-middle font-sans text-[11px] sm:text-xs font-medium normal-case tracking-normal text-red-600 dark:text-red-400">
-                Nutrition sportive · Tunisie
-              </span>
-            </h1>
-            <p className="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-              <Link href="/proteine-whey" className="text-red-600 dark:text-red-400 hover:underline font-medium">Whey protein</Link>
-              {', '}
-              <Link href="/creatine" className="text-red-600 dark:text-red-400 hover:underline font-medium">créatine</Link>
-              {' '}et compléments — livraison rapide partout en Tunisie.
-            </p>
-          </div>
-        </section>
 
-        {/* Immediate shopping paths, one tap from the fold. Sits after the hero rather than above
-            it so the LCP element stays first — see the note in CategoryRail.tsx. */}
+        {/* CategoryRail sits DIRECTLY under the hero (owner request): shopping paths one tap from
+            the fold, no copy strip in between. The page's single <h1> used to live in that strip;
+            it now lives in the crawlable SEO block near the bottom (still exactly one h1, still
+            carrying the "Protéine Tunisie" query), so removing the strip costs no ranking signal. */}
         <CategoryRail categories={safeAccueil.categories || []} />
 
         {/* Best-sellers FIRST — shoppers reach the most-sold products immediately after the hero,
@@ -213,6 +203,8 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
         >
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl">
+            {/* h2, not h1 — the page's single h1 is the visually-hidden one at the top of <main>,
+                so this crawlable block leads with a keyword-rich h2. */}
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-4">
               Nutrition sportive Tunisie : protéine, whey et créatine de qualité
             </h2>

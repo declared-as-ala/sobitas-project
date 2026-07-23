@@ -52,47 +52,54 @@ const config: Config = {
       },
       colors: {
         /**
-         * BRAND RED — the one accent (DESIGN_SYSTEM.md v3 §2).
+         * BRAND ORANGE — the one accent, matched to the Protein.tn logo (#F8480C).
          *
-         * `red` is deliberately OVERRIDDEN rather than left alone. ~40 files already say
-         * `bg-red-600` / `text-red-400`, and re-pointing the palette re-skins every one of
-         * them at once with zero file churn and no half-migrated period. The ramp is
-         * luminance-matched to Tailwind's stock red (600 sits at relative luminance 0.1676,
-         * identical to #dc2626), so every existing contrast ratio is preserved — this is a
-         * pure hue shift, not a brightness change.
+         * The palette KEY stays `red` on purpose. ~40 files and ~300 call sites already say
+         * `bg-red-600` / `text-red-400`; re-pointing the VALUES re-skins every one of them at
+         * once with zero file churn and no half-migrated period. (Yes, the utility is named
+         * "red" while rendering orange — that is the intentional cost of a zero-churn re-skin;
+         * new code should prefer the semantic `brand` tokens below.)
+         *
+         * TWO WORKING SHADES:
+         *   500 = #F8480C — the EXACT logo orange, for graphical accents (badges, icons, the
+         *         kicker rule). Bright; not for white body text on top.
+         *   600 = #D53B04 — the ACTION shade (buttons, price, links). Deepened from the logo
+         *         orange so white-on-600 AND 600-on-white both clear WCAG AA 4.5:1 (measured
+         *         4.69:1). An earlier value #DA3E06 sat at 4.49 — a hair under, which automated
+         *         audits flag — so it was darkened one step. The raw logo orange (#F8480C, 500)
+         *         is ≈3.5:1 on white and is for GRAPHICAL accents only, never white body text.
          *
          * Static hex (not CSS vars) on purpose: existing code writes its own dark variants
          * (`text-red-600 dark:text-red-400`), so the ramp must NOT auto-flip per theme.
-         * New code should prefer the theme-aware `brand` / `brand-hover` below.
          */
         red: {
-          50: "#FFF1F1",
-          100: "#FFDFDF",
-          200: "#FFC6C6",
-          300: "#FF9D9D",
-          400: "#FA6B6B",
-          500: "#F03B3F",
-          600: "#E01B24",
-          700: "#BC131B",
-          800: "#9A1419",
-          900: "#7F171B",
-          950: "#450809",
+          50: "#FFF3ED",
+          100: "#FFE4D3",
+          200: "#FFC6A4",
+          300: "#FF9E64",
+          400: "#FB7333",
+          500: "#F8480C",
+          600: "#D53B04",
+          700: "#B63304",
+          800: "#92290A",
+          900: "#78250E",
+          950: "#421105",
         },
         /** Same ramp, brand-named, for new code. DEFAULT/hover are theme-aware. */
         brand: {
           DEFAULT: "rgb(var(--c-brand) / <alpha-value>)",
           hover: "rgb(var(--c-brand-hover) / <alpha-value>)",
-          50: "#FFF1F1",
-          100: "#FFDFDF",
-          200: "#FFC6C6",
-          300: "#FF9D9D",
-          400: "#FA6B6B",
-          500: "#F03B3F",
-          600: "#E01B24",
-          700: "#BC131B",
-          800: "#9A1419",
-          900: "#7F171B",
-          950: "#450809",
+          50: "#FFF3ED",
+          100: "#FFE4D3",
+          200: "#FFC6A4",
+          300: "#FF9E64",
+          400: "#FB7333",
+          500: "#F8480C",
+          600: "#D53B04",
+          700: "#B63304",
+          800: "#92290A",
+          900: "#78250E",
+          950: "#421105",
         },
         /** Theme-aware surfaces + ink. Prefer these over bg-white / text-gray-900. */
         canvas: "rgb(var(--c-canvas) / <alpha-value>)",

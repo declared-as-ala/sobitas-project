@@ -91,7 +91,7 @@ const CountdownDisplay = memo(function CountdownDisplay({ expirationDate }: { ex
             <span className="font-display text-lg font-bold leading-none tabular-nums">
               {value == null ? '--' : String(value).padStart(2, '0')}
             </span>
-            <span className="mt-0.5 text-[10px] uppercase tracking-wide text-white/80">{label}</span>
+            <span className="mt-0.5 text-[10px] uppercase tracking-wide text-white">{label}</span>
           </div>
         ))}
       </div>

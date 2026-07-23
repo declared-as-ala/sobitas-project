@@ -15,7 +15,11 @@ import { MobileTabBar } from "@/app/components/MobileTabBar";
 import { LOCALE_STORAGE_KEY } from "@/i18n";
 
 const inter = Inter({
-  subsets: ["latin", "latin-ext"],
+  // `latin` only: every French diacritic (é è ê à ç ù û î ô, œ at U+0152-0153) is in Google's
+  // `latin` range. `latin-ext` is Eastern-European coverage this French/Arabic storefront never
+  // renders, and it was extra preloaded Inter bytes competing with the hero LCP. Same call made
+  // for Archivo.
+  subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   display: "swap",
   preload: true,
@@ -219,9 +223,9 @@ export default async function RootLayout({
               `try{var l=localStorage.getItem('${LOCALE_STORAGE_KEY}');if(l==='fr'||l==='en'||l==='ar'){document.documentElement.lang=l;document.documentElement.dir=l==='ar'?'rtl':'ltr';document.documentElement.dataset.locale=l}}catch(e){}`,
           }}
         />
-        {/* Brand red — must stay in sync with --c-brand in styles/tokens.css.
+        {/* Brand orange — must stay in sync with --c-brand in styles/tokens.css.
             This tints the mobile browser chrome, so a stale value here is very visible. */}
-        <meta name="theme-color" content="#E01B24" />
+        <meta name="theme-color" content="#D53B04" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -239,8 +243,9 @@ export default async function RootLayout({
         {/* Preconnect GTM/GA so the lazyOnload scripts resolve faster when they fire */}
         <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
         <link rel="dns-prefetch" href="https://www.google-analytics.com" />
-        {/* Hint for API proxy used on first navigation */}
-        <link rel="preconnect" href={baseUrl} crossOrigin="anonymous" />
+        {/* (Removed a self-origin `preconnect` to baseUrl: the document is already on that origin,
+            so it only opened a second, unused CORS socket that same-origin subresources can't
+            reuse — pure overhead on the critical path.) */}
 
         {/* Structured data: Organization + LocalBusiness + WebSite for SEO (Tunisia local & rich results) */}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }} />
