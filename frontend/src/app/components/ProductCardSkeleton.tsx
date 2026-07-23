@@ -13,9 +13,10 @@ import type { ProductImageMode } from '@/util/productImagePresentation';
  */
 export function ProductCardSkeleton({ mode = 'contain' }: { mode?: ProductImageMode }) {
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 lg:rounded-2xl">
+    <div className="flex h-full w-full min-w-0 flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 lg:rounded-2xl">
       <Skeleton className={cn('w-full rounded-none', productImageFrame(mode))} />
       <div className="flex flex-1 flex-col gap-2 px-3 py-3 sm:gap-2.5 sm:px-4 sm:py-4">
+        {/* Title: two lines reserving ~40px, matching the card's min-h-[2.5rem] title box. */}
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-3/4" />
         <Skeleton className="mt-auto h-6 w-24" />

@@ -2,10 +2,14 @@
 
 import { memo, useMemo, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { FlashProductCard } from './FlashProductCard';
+// ProductCard, not the old FlashProductCard: that fork had drifted into a buggy near-duplicate
+// (no i18n localisation, no shared image presentation, ignored aroma variants, and rendered the
+// discount twice). Reusing ProductCard fixes all of that and gives flash cards the same polished
+// square image + no-cramping treatment as every other rail. The promo -%\ badge already renders
+// from ProductCard's own price logic.
+import { ProductCard } from './ProductCard';
 import { Button } from '@/app/components/ui/button';
-import { SectionHeader } from '@/app/components/SectionHeader';
-import { ArrowRight, Clock } from 'lucide-react';
+import { ArrowRight, Clock, Flame } from 'lucide-react';
 
 interface FlashProduct {
   id: number;
@@ -80,15 +84,15 @@ const CountdownDisplay = memo(function CountdownDisplay({ expirationDate }: { ex
       ];
 
   return (
-    <div className="inline-flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl bg-red-600 px-4 py-2.5 text-white shadow-sm">
-      <span className="inline-flex items-center gap-1.5 font-display uppercase tracking-wide text-xs font-semibold">
+    <div className="inline-flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl bg-red-600 px-3.5 py-2 text-white shadow-sm sm:px-4 sm:py-2.5">
+      <span className="inline-flex items-center gap-1.5 font-display uppercase tracking-wide text-[11px] font-semibold sm:text-xs">
         <Clock className="h-4 w-4" aria-hidden="true" />
         Se termine dans
       </span>
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1 sm:gap-1.5">
         {units.map(({ value, label }) => (
-          <div key={label} className="flex min-w-[2.75rem] flex-col items-center rounded-lg bg-white/15 px-2 py-1">
-            <span className="font-display text-lg font-bold leading-none tabular-nums">
+          <div key={label} className="flex min-w-[2.5rem] flex-col items-center rounded-lg bg-white/15 px-1.5 py-1 sm:min-w-[2.75rem] sm:px-2">
+            <span className="font-display text-base font-bold leading-none tabular-nums sm:text-lg">
               {value == null ? '--' : String(value).padStart(2, '0')}
             </span>
             <span className="mt-0.5 text-[10px] uppercase tracking-wide text-white">{label}</span>
@@ -143,41 +147,53 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
       : 'Réductions exceptionnelles sur nos meilleurs produits — pour une durée limitée.';
 
   return (
-    <section id="ventes-flash" className="py-12 sm:py-16 lg:py-20 bg-red-50/60 dark:bg-red-950/10">
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
-        <SectionHeader
-          kicker="Offres limitées"
-          title="Ventes flash"
-          subtitle={subtitle}
-          viewAllHref="/offres"
-          viewAllLabel="Voir toutes les offres"
-        />
-
-        {earliestExpiration && (
-          <div className="mb-8 sm:mb-10">
-            <CountdownDisplay expirationDate={earliestExpiration} />
+    // White surface (not a red tint): the tint pushed the small kicker text below AA contrast, and
+    // the section reads as distinctive from the plain rails via its own bold header + the orange
+    // top rule + the live countdown — not via a background wash.
+    <section
+      id="ventes-flash"
+      className="border-t-2 border-red-600 bg-white py-12 dark:bg-gray-950 sm:py-16 lg:py-20"
+    >
+      <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8">
+        {/* Distinctive flash header: flame + compressed title on the left, live countdown on the
+            right (drops below the title on phones). All copy on white ⇒ clean AA contrast. */}
+        <div className="mb-8 flex flex-col gap-5 sm:mb-10 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0">
+            <span className="pt-kicker mb-3 inline-flex items-center gap-2 text-red-600 dark:text-red-400">
+              <Flame className="h-4 w-4" aria-hidden="true" />
+              Offres limitées
+            </span>
+            <h2 className="font-display font-compressed text-[2rem] font-extrabold uppercase leading-[0.92] tracking-[-0.015em] text-gray-950 dark:text-white sm:text-[2.75rem] lg:text-[3.25rem]">
+              Ventes flash
+            </h2>
+            <p className="mt-2 max-w-xl text-sm text-gray-600 dark:text-gray-400 sm:text-base">{subtitle}</p>
           </div>
-        )}
+
+          {earliestExpiration && (
+            <div className="shrink-0">
+              <CountdownDisplay expirationDate={earliestExpiration} />
+            </div>
+          )}
+        </div>
 
         {/* Shared grid rhythm — matches ProductGrid (2 → 3 → 4, no orphan rows) */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 lg:gap-6">
           {products.map((product) => (
             <div key={product.id} className="w-full min-w-0">
-              <FlashProductCard product={product} />
+              <ProductCard product={product as any} showBadge badgeText="Flash" />
             </div>
           ))}
         </div>
 
-        {/* Mobile CTA — SectionHeader's "Voir tout" link is hidden below sm */}
-        <div className="mt-10 sm:hidden">
+        <div className="mt-10 flex justify-center">
           <Button
             variant="outline"
-            className="w-full min-h-[48px] justify-start rounded-xl border-2 border-red-500 text-red-600 hover:bg-red-600 hover:text-white dark:border-red-400 dark:text-red-400 dark:hover:bg-red-500 font-display uppercase tracking-wide font-semibold"
+            className="min-h-[48px] w-full justify-center rounded-full border-2 border-red-600 px-6 font-display font-extended uppercase tracking-wide font-semibold text-red-600 hover:bg-red-600 hover:text-white dark:border-red-400 dark:text-red-400 dark:hover:bg-red-500 sm:w-auto"
             asChild
           >
             <Link href="/offres" aria-label="Voir toutes les offres et promos">
               Voir toutes les offres
-              <ArrowRight className="h-5 w-5 ml-2" aria-hidden="true" />
+              <ArrowRight className="ml-2 h-5 w-5" aria-hidden="true" />
             </Link>
           </Button>
         </div>
