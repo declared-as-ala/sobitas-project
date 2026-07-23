@@ -54,11 +54,7 @@ interface HeroProps {
 
 function HeroPicture({ set, eager }: { set: HeroImageSet; eager: boolean }) {
   return (
-    /* pt-hero-art drives the desktop scroll parallax (globals.css). Its FROM keyframe is the
-       identity transform, so at scroll 0 — when LCP is measured — this element is geometrically
-       identical to the un-animated version; the drift only begins once the user scrolls. It can
-       never move the LCP paint. `data-motion` opts out of the global mobile duration clamp. */
-    <picture className="pt-hero-art absolute inset-0 block h-full w-full" data-motion>
+    <picture className="absolute inset-0 block h-full w-full">
       {set.sources.map((source) => (
         <source
           key={`${source.media}-${source.type ?? 'auto'}`}
@@ -170,42 +166,47 @@ function HeroSlideFrame({
       ? `${baseLabel} — diapositive ${position.index} sur ${position.total}`
       : baseLabel;
 
+  // HeroSlideFrame now FILLS its parent (the pin frame or a slider cell) rather than self-sizing —
+  // the size lives on the pin frame so the takeover animation can grow one element.
   return (
-    <div
-      /* Phones: 4:5 portrait, ratio-matched so the artwork shows whole (box height known from
-         width before load ⇒ zero CLS). From md up: a FIXED height, not an aspect box — the
-         desktop scroll-expand animates the frame's WIDTH toward full-bleed, and a fixed height
-         means that width change never reflows the page below (aspect-ratio would grow the height
-         with the width and shove everything down every scroll frame).
-         pt-hero-square flattens the corners as it expands; data-motion opts out of the mobile
-         duration clamp. Both are inert until the desktop scroll timeline in globals.css runs. */
-      className="pt-hero-square group relative w-full overflow-hidden bg-gray-950 aspect-[4/5] sm:rounded-3xl md:aspect-auto md:h-[540px] lg:h-[560px]"
-      data-motion
+    <LinkWithLoading
+      href={href}
+      {...(ariaLabel ? { 'aria-label': ariaLabel } : {})}
+      loadingMessage="Chargement..."
+      className="group absolute inset-0 block bg-gray-950"
     >
-      <LinkWithLoading
-        href={href}
-        {...(ariaLabel ? { 'aria-label': ariaLabel } : {})}
-        loadingMessage="Chargement..."
-        className="absolute inset-0 block"
-      >
-        <HeroPicture set={set} eager={eager} />
-        <HeroCaption slide={slide} />
-      </LinkWithLoading>
-    </div>
+      <HeroPicture set={set} eager={eager} />
+      <HeroCaption slide={slide} />
+    </LinkWithLoading>
   );
 }
 
+// Base sizing for the banner "frame". Phones: full-bleed 4:5 (flush under the header). sm+: a
+// contained rounded card. md+: a fixed height (so the desktop takeover animates size without the
+// height depending on the image). The pin frame is `relative` so the absolutely-filled
+// HeroSlideFrame inside has a containing block.
+const FRAME_BASE =
+  'pt-pin-frame relative w-full overflow-hidden bg-gray-950 aspect-[4/5] sm:mx-auto sm:w-[min(1340px,calc(100%-4rem))] sm:rounded-3xl md:aspect-auto md:h-[540px] lg:h-[560px]';
+
 export function Hero({ slides, fallbackAlt }: HeroProps) {
-  // No slides, or exactly one: render flat. No track, no controls.
-  // Section has NO top padding on phones — the banner is flush against the header (owner request),
-  // and picks up breathing room only from sm up where the hero becomes a contained card.
+  /**
+   * THE SCROLL TAKEOVER (desktop).
+   * `.pt-pin-track` gives the section extra scroll height; `.pt-pin-stage` is `position: sticky`
+   * so the hero PINS to the top and does not scroll away; and `.pt-pin-frame` grows from the
+   * contained card to the full viewport as the user scrolls through the pinned range — then the
+   * track ends, the pin releases and the page scrolls on to the rest of the site. All of that is
+   * gated to capable desktop browsers (globals.css `@supports`); phones, Safari/Firefox and
+   * reduced-motion users get the plain contained hero (the track/pin styles simply don't apply).
+   */
   if (slides.length <= 1) {
     return (
       <section aria-label="Bannière principale" className="bg-white dark:bg-gray-950 sm:pt-4">
-        {/* pt-hero-expand widens this container from max-w-[1400px] to full-bleed as the user
-            scrolls (desktop only; see globals.css). Fixed-height frame ⇒ no reflow below. */}
-        <div className="pt-hero-expand mx-auto max-w-[1400px] sm:px-6 lg:px-8" data-motion>
-          <HeroSlideFrame slide={slides[0] ?? null} eager fallbackAlt={fallbackAlt} />
+        <div className="pt-pin-track">
+          <div className="pt-pin-stage">
+            <div className={FRAME_BASE} data-motion>
+              <HeroSlideFrame slide={slides[0] ?? null} eager fallbackAlt={fallbackAlt} />
+            </div>
+          </div>
         </div>
       </section>
     );
@@ -217,49 +218,49 @@ export function Hero({ slides, fallbackAlt }: HeroProps) {
       aria-roledescription="carrousel"
       className="bg-white dark:bg-gray-950 sm:pt-4"
     >
-      <div className="pt-hero-expand mx-auto max-w-[1400px] sm:px-6 lg:px-8" data-motion>
-        {/* tabIndex makes the track focusable so keyboard users can scroll it with arrow keys —
-            without it, slides 2+ are reachable by touch swipe only. gap shows a sliver of the
-            next banner as a scroll affordance. */}
-        <div
-          tabIndex={0}
-          className="scrollbar-hide flex w-full snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth sm:gap-4"
-        >
-          {slides.map((slide, index) => (
+      <div className="pt-pin-track">
+        <div className="pt-pin-stage">
+          {/* The pin frame IS the slider viewport; it grows in the takeover. Slides live in a
+              horizontal scroll-snap track that fills it, so swipe/dots still work at any size. */}
+          <div className={FRAME_BASE} data-motion>
             <div
-              key={slide.id}
-              id={`hero-slide-${index + 1}`}
-              className="w-full shrink-0 snap-center snap-always"
-              role="group"
-              aria-roledescription="diapositive"
-              aria-label={`Diapositive ${index + 1} sur ${slides.length}`}
+              tabIndex={0}
+              className="scrollbar-hide flex h-full w-full snap-x snap-mandatory overflow-x-auto scroll-smooth"
             >
-              {/* Only slide 1 is eager + preloaded; the rest lazy-load so they never compete with
-                  the LCP image for bandwidth. */}
-              <HeroSlideFrame
-                slide={slide}
-                eager={index === 0}
-                fallbackAlt={fallbackAlt}
-                position={{ index: index + 1, total: slides.length }}
-              />
+              {slides.map((slide, index) => (
+                <div
+                  key={slide.id}
+                  id={`hero-slide-${index + 1}`}
+                  className="relative h-full w-full shrink-0 snap-center snap-always"
+                  role="group"
+                  aria-roledescription="diapositive"
+                  aria-label={`Diapositive ${index + 1} sur ${slides.length}`}
+                >
+                  <HeroSlideFrame
+                    slide={slide}
+                    eager={index === 0}
+                    fallbackAlt={fallbackAlt}
+                    position={{ index: index + 1, total: slides.length }}
+                  />
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
 
-        {/* Dots sit BELOW the banner, in the page's own whitespace, not over the artwork — keeping
-            the image-first surface clean. Plain <a href="#id"> scrolls the nearest scroll ancestor
-            (the track), so this needs zero JavaScript and stays in a server component. */}
-        <div className="mt-3 flex justify-center gap-2">
-          {slides.map((slide, index) => (
-            <a
-              key={slide.id}
-              href={`#hero-slide-${index + 1}`}
-              aria-label={`Aller à la diapositive ${index + 1}`}
-              className="flex h-8 w-7 items-center justify-center"
-            >
-              <span className="h-1.5 w-6 rounded-full bg-gray-300 transition-colors hover:bg-red-600 dark:bg-gray-700 dark:hover:bg-red-500" />
-            </a>
-          ))}
+            {/* Dots overlaid at the bottom of the pinned frame so they stay visible during the
+                takeover (they can't sit "below" a pinned element). */}
+            <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center gap-2">
+              {slides.map((slide, index) => (
+                <a
+                  key={slide.id}
+                  href={`#hero-slide-${index + 1}`}
+                  aria-label={`Aller à la diapositive ${index + 1}`}
+                  className="pointer-events-auto flex h-8 w-7 items-center justify-center"
+                >
+                  <span className="h-1.5 w-6 rounded-full bg-white/50 transition-colors hover:bg-white" />
+                </a>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </section>

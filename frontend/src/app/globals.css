@@ -328,9 +328,7 @@ html[dir="rtl"] [data-i18n-ltr] {
      dropdown, drawer) unmounts on `animationend` — under a universal rule a reduced-motion user
      opens the cart drawer or the mobile menu and it can never close. */
   .pt-reveal,
-  .pt-hero-art,
-  .pt-hero-expand,
-  .pt-hero-square {
+  .pt-pin-frame {
     animation-timeline: none !important;
     animation-range: normal !important;
     animation-name: none !important;
@@ -371,38 +369,16 @@ html[dir="rtl"] [data-i18n-ltr] {
   }
 }
 
-/* The hero "focus" move: as the page scrolls away the artwork drifts up at HALF the scroll rate
-   and swells slightly, so the banner reads as a deep plane behind the content rather than a flat
-   picture that leaves with everything else. Transform + opacity only — both compositor
-   properties, so this never triggers layout or paint. */
-/* GEOMETRY CONSTRAINT: a centre-origin scale of S buys (S-1)/2 of headroom on each edge, and the
-   upward translate must stay inside it or the artwork's bottom edge lifts off the frame and a bar
-   of bare bg-gray-950 appears under the banner. 1.18 buys 9%; translating 7% leaves 2% of margin.
-   If you increase the translate here, increase the scale to match. */
-@keyframes pt-hero-drift {
-  from {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
+/* THE SCROLL "TAKEOVER" (desktop). The banner PINS to the top and grows from the contained card
+   to the full viewport as the user scrolls through the pinned range; then the pin releases and the
+   page scrolls on. `to`-only keyframe ⇒ interpolates from the frame's own base size
+   (w-[min(1340px,…)] / lg:h-[560px] / rounded-3xl). Width+height are layout properties, but this
+   is ONE element, `contain: layout paint` isolates it, and it is desktop-only + scroll-driven (no
+   JS handler), so it stays smooth. */
+@keyframes pt-pin-grow {
   to {
-    transform: translate3d(0, -7%, 0) scale(1.18);
-  }
-}
-
-/* THE SCROLL "TAKEOVER" (desktop): as the user scrolls the first ~260px, the contained hero
-   widens from max-w-[1400px] to the full viewport and its corners flatten — the banner takes over
-   the screen while the header compacts (HeaderClient handles its own shrink on the same scroll).
-   The frame is a FIXED height on desktop, so animating max-width/padding here never changes the
-   hero's height and never reflows the page below it. `to`-only keyframes interpolate from each
-   element's own base value (1400px / lg:px-8 / rounded-3xl). */
-@keyframes pt-hero-widen {
-  to {
-    max-width: 100vw;
-    padding-left: 0;
-    padding-right: 0;
-  }
-}
-@keyframes pt-hero-flatten {
-  to {
+    width: 100vw;
+    height: 100vh;
     border-radius: 0;
   }
 }
@@ -417,26 +393,32 @@ html[dir="rtl"] [data-i18n-ltr] {
       animation-range: entry 8% cover 32%;
     }
 
-    /* Hero layers ride `scroll(root)`, not `view()`. The hero sits at the top of the document, so
-       root-scroll progress over an absolute range is exact and independent of the element's own
-       box — no dependence on how tall the hero happens to render. */
-    .pt-hero-art[data-motion] {
-      animation: pt-hero-drift linear both;
-      animation-timeline: scroll(root);
-      animation-range: 0 760px;
-      will-change: transform;
+    /* The pin: a tall track buys the scroll distance, the stage sticks to the top so the hero
+       does not move while it transforms. `justify-center` keeps the growing frame centred
+       horizontally; `items-start` anchors it to the top so at rest the banner sits just under the
+       header (not floating in the middle of the viewport). */
+    .pt-pin-track {
+      min-height: 210vh;
     }
-
-    /* The takeover. Container widens, frame flattens — same 0→260px range so they move together. */
-    .pt-hero-expand[data-motion] {
-      animation: pt-hero-widen linear both;
-      animation-timeline: scroll(root);
-      animation-range: 0 260px;
+    .pt-pin-stage {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
     }
-    .pt-hero-square[data-motion] {
-      animation: pt-hero-flatten linear both;
+    /* The animated frame. Range starts at ~120px (roughly when the stage finishes scrolling up to
+       top:0 and pins) so the growth happens PINNED, not while the banner is still rising; it
+       completes at 760px, well before the pin releases at ~110vh, giving a beat of full-screen
+       hero before the page scrolls on. */
+    .pt-pin-frame[data-motion] {
+      animation: pt-pin-grow linear both;
       animation-timeline: scroll(root);
-      animation-range: 0 260px;
+      animation-range: 120px 760px;
+      contain: layout paint;
+      will-change: width, height;
     }
   }
 }
