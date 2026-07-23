@@ -305,8 +305,16 @@ export function HeaderClient() {
           : undefined
       }
     >
-      {/* Top Info Bar */}
-      <div className="bg-gray-900 text-white border-b border-gray-800/50">
+      {/* Top Info Bar — collapses on desktop once scrolled (the compact "takeover" state, in step
+          with the hero widening). max-height + opacity animate cleanly; overflow-hidden clips the
+          content as it closes. Mobile is untouched here (the whole header already slides away on
+          scroll-down via the sticky root's translateY). */}
+      <div
+        className={cn(
+          'bg-gray-900 text-white border-b border-gray-800/50 overflow-hidden transition-all duration-300 ease-out',
+          scrolled ? 'md:max-h-0 md:opacity-0 md:border-b-0' : 'md:max-h-12 md:opacity-100'
+        )}
+      >
         <div className="hidden md:flex max-w-[1400px] mx-auto h-7 px-4 lg:px-8 items-center justify-between text-xs font-medium">
           <div className="flex items-center gap-4">
             <a href={`tel:${PHONE.replace(/\s/g, '')}`} className="flex items-center gap-1.5 hover:text-red-500 transition-colors shrink-0" aria-label={`Appeler ${PHONE}`}>
@@ -358,6 +366,9 @@ export function HeaderClient() {
             )}
           >
             <Link href="/" className="flex items-center justify-start flex-1 min-w-0 max-w-[11rem] sm:max-w-[12rem] -ml-1" aria-label="Proteine Tunisie - Accueil">
+              {/* No `priority` — see the desktop logo note. The mobile logo preload was racing the
+                  hero LCP image on phones. It stays eager (in the initial viewport) without a
+                  fetchpriority=high preload. */}
               <Image
                 src={headerLogoUrl}
                 alt="Proteine Tunisie"
@@ -365,7 +376,7 @@ export function HeaderClient() {
                 height={48}
                 className="h-8 min-h-[32px] w-auto max-w-full object-contain object-left drop-shadow-sm transition-all duration-300"
                 style={{ width: 'auto', height: 'auto' }}
-                priority
+                loading="eager"
               />
             </Link>
 
@@ -429,18 +440,27 @@ export function HeaderClient() {
             for the cart/favourites badges and hover states. */}
         <div className="hidden md:block bg-white dark:bg-gray-950">
           <div className="max-w-[1400px] mx-auto px-4 lg:px-8">
-            {/* h-16 -> h-[58px]. With the nav row below it the header owned ~142px of every
-                desktop viewport before a single product was visible. Tightening the main bar and
-                the nav row brings the stack to ~116px — a full product-card row further up. */}
-            <div className="flex items-center justify-between h-[58px] gap-5">
+            {/* h-16 -> h-[58px], and shrinks again to h-12 once scrolled (the compact state). */}
+            <div
+              className={cn(
+                'flex items-center justify-between gap-5 transition-all duration-300 ease-out',
+                scrolled ? 'h-12' : 'h-[58px]'
+              )}
+            >
               <Link href="/" className="flex-shrink-0" aria-label="Proteine Tunisie - Accueil">
+                {/* Logo is NOT `priority`: next/image priority injects a fetchpriority=high preload
+                    that ignores the responsive `hidden`/`md:block` split, so a phone was preloading
+                    BOTH logo variants in a race with the hero LCP image. The logo is small and in
+                    the always-visible sticky header — eager in-viewport loading is enough. */}
                 <Image
                   src={headerLogoUrl}
                   alt="Proteine Tunisie"
                   width={200}
                   height={70}
-                  className="h-8 lg:h-9 xl:h-10 w-auto object-contain dark:brightness-0 dark:invert"
-                  priority
+                  className={cn(
+                    'w-auto object-contain transition-all duration-300 ease-out dark:brightness-0 dark:invert',
+                    scrolled ? 'h-7 lg:h-8' : 'h-8 lg:h-9 xl:h-10'
+                  )}
                 />
               </Link>
 
@@ -550,7 +570,14 @@ export function HeaderClient() {
         {/* The bar above is now white, so the old `border-t` would draw a hairline in the middle of
             one continuous white surface. The header's single dividing line lives on <header>. */}
         <nav
-          className="hidden md:block bg-white dark:bg-gray-950 border-t border-gray-100 dark:border-gray-900 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className={cn(
+            'hidden md:block bg-white dark:bg-gray-950 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden transition-all duration-300 ease-out',
+            // Collapses in the compact state so the scrolled header is just the main bar. Search +
+            // cart + account stay reachable there; nav returns on scroll back to top.
+            scrolled
+              ? 'md:max-h-0 md:opacity-0 md:border-t-0'
+              : 'md:max-h-16 md:opacity-100 border-t border-gray-100 dark:border-gray-900'
+          )}
           aria-label="Navigation principale"
         >
           <div className="flex w-max mx-auto items-center gap-5 lg:gap-7 xl:gap-9 px-4 h-[42px]">

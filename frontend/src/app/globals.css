@@ -328,7 +328,9 @@ html[dir="rtl"] [data-i18n-ltr] {
      dropdown, drawer) unmounts on `animationend` — under a universal rule a reduced-motion user
      opens the cart drawer or the mobile menu and it can never close. */
   .pt-reveal,
-  .pt-hero-art {
+  .pt-hero-art,
+  .pt-hero-expand,
+  .pt-hero-square {
     animation-timeline: none !important;
     animation-range: normal !important;
     animation-name: none !important;
@@ -386,6 +388,25 @@ html[dir="rtl"] [data-i18n-ltr] {
   }
 }
 
+/* THE SCROLL "TAKEOVER" (desktop): as the user scrolls the first ~260px, the contained hero
+   widens from max-w-[1400px] to the full viewport and its corners flatten — the banner takes over
+   the screen while the header compacts (HeaderClient handles its own shrink on the same scroll).
+   The frame is a FIXED height on desktop, so animating max-width/padding here never changes the
+   hero's height and never reflows the page below it. `to`-only keyframes interpolate from each
+   element's own base value (1400px / lg:px-8 / rounded-3xl). */
+@keyframes pt-hero-widen {
+  to {
+    max-width: 100vw;
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+@keyframes pt-hero-flatten {
+  to {
+    border-radius: 0;
+  }
+}
+
 @supports (animation-timeline: view()) {
   @media (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
     /* Section reveal. `entry 8% → cover 32%` finishes well before the element is centred, so the
@@ -404,6 +425,18 @@ html[dir="rtl"] [data-i18n-ltr] {
       animation-timeline: scroll(root);
       animation-range: 0 760px;
       will-change: transform;
+    }
+
+    /* The takeover. Container widens, frame flattens — same 0→260px range so they move together. */
+    .pt-hero-expand[data-motion] {
+      animation: pt-hero-widen linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 260px;
+    }
+    .pt-hero-square[data-motion] {
+      animation: pt-hero-flatten linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 260px;
     }
   }
 }

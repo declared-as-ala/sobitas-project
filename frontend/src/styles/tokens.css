@@ -19,13 +19,12 @@
 
 :root {
   /* ---- Brand accent -------------------------------------------------------
-   * Red is the ONLY accent. brand-600 is the accent; everything else is a ramp.
-   * The ramp is luminance-matched to Tailwind's stock red scale (600 lands at
-   * relative luminance 0.1676, same as #dc2626) so every existing contrast ratio
-   * is preserved — the change is pure hue/saturation, never brightness.
-   * To re-tune the whole site's accent, change these lines and nothing else. */
-  --c-brand: 224 27 36; /* #E01B24 */
-  --c-brand-hover: 188 19 27; /* #BC131B */
+   * Orange is the ONLY accent, matched to the Protein.tn logo (#F8480C).
+   * brand-600 (#DA3E06) is the ACTION shade — deepened from the raw logo orange so
+   * white text on it clears WCAG AA 4.5:1. To re-tune the whole site's accent,
+   * change these two lines (and the `red`/`brand` hex ramp in tailwind.config.ts). */
+  --c-brand: 218 62 6; /* #DA3E06 */
+  --c-brand-hover: 182 51 4; /* #B63304 */
 
   /* ---- Surfaces (theme-switchable) ---------------------------------------- */
   --c-canvas: 255 255 255; /* page background */
@@ -53,9 +52,9 @@
 }
 
 .dark {
-  /* Lighter, less saturated accent so red stays legible on dark surfaces. */
-  --c-brand: 248 113 113; /* #F87171 */
-  --c-brand-hover: 252 165 165; /* #FCA5A5 */
+  /* Lighter, warmer accent so the orange stays legible on dark surfaces. */
+  --c-brand: 255 138 76; /* #FF8A4C */
+  --c-brand-hover: 255 168 119; /* #FFA877 */
 
   --c-canvas: 10 10 11;
   --c-elevated: 20 20 22;

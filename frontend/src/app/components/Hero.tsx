@@ -123,7 +123,7 @@ function HeroCaption({ slide }: { slide: HeroSlide | null }) {
             </p>
           )}
           {ctaLabel && (
-            <span className="mt-3 inline-flex min-h-[44px] items-center gap-2 rounded-full bg-red-600 px-5 font-display font-extended text-xs font-bold uppercase tracking-[0.08em] text-white shadow-[0_10px_26px_rgba(224,27,36,0.42)] transition-colors group-hover:bg-red-700 sm:mt-4 sm:text-sm">
+            <span className="mt-3 inline-flex min-h-[44px] items-center gap-2 rounded-full bg-red-600 px-5 font-display font-extended text-xs font-bold uppercase tracking-[0.08em] text-white shadow-[0_10px_26px_rgba(218,62,6,0.42)] transition-colors group-hover:bg-red-700 sm:mt-4 sm:text-sm">
               {ctaLabel}
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/20 transition-transform group-hover:translate-x-0.5">
                 <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
@@ -172,11 +172,15 @@ function HeroSlideFrame({
 
   return (
     <div
-      /* Ratio-matched frame: 4:5 on phones (portrait crop), 12:5 from md up (the banner spec).
-         Because the ratio matches the uploaded artwork, object-cover shows it almost whole.
-         Fixed ratio ⇒ the box height is known from its width before the image loads ⇒ zero CLS.
-         Full-bleed on phones, contained + rounded from sm up (ESN). */
-      className="group relative w-full overflow-hidden bg-gray-950 aspect-[4/5] sm:rounded-3xl md:aspect-[12/5]"
+      /* Phones: 4:5 portrait, ratio-matched so the artwork shows whole (box height known from
+         width before load ⇒ zero CLS). From md up: a FIXED height, not an aspect box — the
+         desktop scroll-expand animates the frame's WIDTH toward full-bleed, and a fixed height
+         means that width change never reflows the page below (aspect-ratio would grow the height
+         with the width and shove everything down every scroll frame).
+         pt-hero-square flattens the corners as it expands; data-motion opts out of the mobile
+         duration clamp. Both are inert until the desktop scroll timeline in globals.css runs. */
+      className="pt-hero-square group relative w-full overflow-hidden bg-gray-950 aspect-[4/5] sm:rounded-3xl md:aspect-auto md:h-[540px] lg:h-[560px]"
+      data-motion
     >
       <LinkWithLoading
         href={href}
@@ -193,10 +197,14 @@ function HeroSlideFrame({
 
 export function Hero({ slides, fallbackAlt }: HeroProps) {
   // No slides, or exactly one: render flat. No track, no controls.
+  // Section has NO top padding on phones — the banner is flush against the header (owner request),
+  // and picks up breathing room only from sm up where the hero becomes a contained card.
   if (slides.length <= 1) {
     return (
-      <section aria-label="Bannière principale" className="bg-white pt-2 dark:bg-gray-950 sm:pt-4">
-        <div className="mx-auto max-w-[1400px] sm:px-6 lg:px-8">
+      <section aria-label="Bannière principale" className="bg-white dark:bg-gray-950 sm:pt-4">
+        {/* pt-hero-expand widens this container from max-w-[1400px] to full-bleed as the user
+            scrolls (desktop only; see globals.css). Fixed-height frame ⇒ no reflow below. */}
+        <div className="pt-hero-expand mx-auto max-w-[1400px] sm:px-6 lg:px-8" data-motion>
           <HeroSlideFrame slide={slides[0] ?? null} eager fallbackAlt={fallbackAlt} />
         </div>
       </section>
@@ -207,9 +215,9 @@ export function Hero({ slides, fallbackAlt }: HeroProps) {
     <section
       aria-label="Bannière principale"
       aria-roledescription="carrousel"
-      className="bg-white pt-2 dark:bg-gray-950 sm:pt-4"
+      className="bg-white dark:bg-gray-950 sm:pt-4"
     >
-      <div className="mx-auto max-w-[1400px] sm:px-6 lg:px-8">
+      <div className="pt-hero-expand mx-auto max-w-[1400px] sm:px-6 lg:px-8" data-motion>
         {/* tabIndex makes the track focusable so keyboard users can scroll it with arrow keys —
             without it, slides 2+ are reachable by touch swipe only. gap shows a sliver of the
             next banner as a scroll affordance. */}
