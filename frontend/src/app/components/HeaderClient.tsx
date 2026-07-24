@@ -379,9 +379,15 @@ export function HeaderClient() {
                 />
               </Link>
 
-              <SearchBar variant="desktop" className="min-w-0" />
+              {/* Search grows to fill the WHOLE middle (flex-1) so the icon cluster is pushed flush
+                  to the right edge. Without this wrapper the search capped at max-w-2xl and the
+                  leftover space fell after the icons (default justify-start), stranding them mid-row.
+                  The field itself stays capped at max-w-2xl and left-aligned inside the wrapper. */}
+              <div className="flex flex-1 min-w-0 justify-start">
+                <SearchBar variant="desktop" className="w-full" />
+              </div>
 
-              <div className="flex items-center gap-1 flex-shrink-0">
+              <div className="flex items-center gap-1.5 flex-shrink-0">
                 {MULTILOCALE_ENABLED && <LanguageSwitcher />}
 
                 {/* Compte — icon + french label. Keeps the auth dropdown when signed in. */}
