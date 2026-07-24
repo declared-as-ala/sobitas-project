@@ -327,11 +327,34 @@ html[dir="rtl"] [data-i18n-ltr] {
      idle play state, so it never fires `animationstart`/`animationend`. Radix (dialog, sheet,
      dropdown, drawer) unmounts on `animationend` — under a universal rule a reduced-motion user
      opens the cart drawer or the mobile menu and it can never close. */
-  .pt-reveal,
-  .pt-pin-frame {
+  .pt-reveal {
     animation-timeline: none !important;
     animation-range: normal !important;
     animation-name: none !important;
+  }
+}
+
+/* ==========================================================================
+   FULL-BLEED HERO HEIGHT
+   ==========================================================================
+   The homepage hero fills the whole space AVAILABLE between the sticky header and the fixed mobile
+   tab bar on first paint (owner request), so the entire banner is visible with nothing cropped by
+   the chrome. Height = 100svh − header stack − tab bar − safe-area:
+     header stack  mobile  : utility h-9 (36) + main h-14 (56)                    = 92px
+     header stack  >=768px : utility h-9 (36) + main h-[72px] (72) + nav h-12 (48) = 156px
+     --tabbar-h            : 56px below 768px, 0px above (styles/tokens.css) — the shared knob every
+                             fixed-bottom element subtracts against, so the hero clears the tab bar.
+   `svh` (small viewport height) keeps the mobile URL bar from covering the hero and avoids resize
+   jank on scroll. The plain `vh` line is a fallback for browsers without `svh`/`env()`; where they
+   are supported the second declaration wins. Keep the header numbers in sync with HeaderClient.tsx. */
+.pt-hero {
+  height: calc(100vh - 92px - var(--tabbar-h));
+  height: calc(100svh - 92px - var(--tabbar-h) - env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 768px) {
+  .pt-hero {
+    height: calc(100vh - 156px - var(--tabbar-h));
+    height: calc(100svh - 156px - var(--tabbar-h) - env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -369,27 +392,10 @@ html[dir="rtl"] [data-i18n-ltr] {
   }
 }
 
-/* THE SCROLL "TAKEOVER" (desktop). The banner PINS to the top and grows from the contained card
-   to the full viewport as the user scrolls through the pinned range; then the pin releases and the
-   page scrolls on. `to`-only keyframe ⇒ interpolates from the frame's own base size
-   (w-[min(1340px,…)] / lg:h-[560px] / rounded-3xl). Width+height are layout properties, but this
-   is ONE element, `contain: layout paint` isolates it, and it is desktop-only + scroll-driven (no
-   JS handler), so it stays smooth. */
-/* TRANSFORM, not width/height. Animating width/height is a LAYOUT property change recalculated
-   on the main thread every scroll frame — that was the scroll lag. `transform: scale` runs on the
-   compositor, so the takeover is now smooth. The frame is sized to the full viewport and merely
-   scaled DOWN at rest, so scaling to 1 fills the screen with zero layout work. */
-@keyframes pt-pin-grow {
-  from {
-    transform: scale(0.72);
-    border-radius: 28px;
-  }
-  to {
-    transform: scale(1);
-    border-radius: 0;
-  }
-}
-
+/* The hero scroll "takeover" (a pinned frame that grew from a contained card to full-bleed) was
+   removed when the hero became full-bleed + full-height from the start — there is nothing left to
+   grow into, and the pin/track machinery was the source of the earlier scroll lag. Only the
+   section-reveal below survives on the scroll-driven layer. */
 @supports (animation-timeline: view()) {
   @media (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
     /* Section reveal. `entry 8% → cover 32%` finishes well before the element is centred, so the
@@ -398,45 +404,6 @@ html[dir="rtl"] [data-i18n-ltr] {
       animation: pt-rise linear both;
       animation-timeline: view();
       animation-range: entry 8% cover 32%;
-    }
-
-    /* The pin: a tall track buys the scroll distance, the stage sticks to the top so the hero
-       does not move while it transforms. `justify-center` keeps the growing frame centred
-       horizontally; `items-start` anchors it to the top so at rest the banner sits just under the
-       header (not floating in the middle of the viewport).
-
-       GATED ON min-height TOO. The growth completes at a fixed 760px root offset while the pin
-       only lasts (210vh − 100vh) = 110vh of scroll; on a SHORT desktop window (height ≲ 600px)
-       110vh < 760px, so the stage would un-pin before the takeover finishes AND the base 560px
-       frame would clip the dots below a &lt;600px viewport. Requiring ≥720px tall means the pin
-       always outlasts the 760px growth and the 560px frame fits; shorter windows fall back to the
-       plain contained hero. */
-    @media (min-height: 720px) {
-      .pt-pin-track {
-        min-height: 210vh;
-      }
-      .pt-pin-stage {
-        position: sticky;
-        top: 0;
-        height: 100vh;
-        overflow: hidden;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-      /* The frame fills the viewport and is scaled DOWN at rest (via the keyframe `from`), then
-         scaled to 1 as the user scrolls the pinned range. Pure transform ⇒ compositor ⇒ smooth.
-         Range starts at ~120px (after the stage pins to top:0) and completes at 760px, before the
-         pin releases at 110vh, so there is a beat of full-screen hero before the page scrolls on. */
-      .pt-pin-frame[data-motion] {
-        width: 100%;
-        height: 100%;
-        transform-origin: center center;
-        will-change: transform;
-        animation: pt-pin-grow linear both;
-        animation-timeline: scroll(root);
-        animation-range: 120px 760px;
-      }
     }
   }
 }
