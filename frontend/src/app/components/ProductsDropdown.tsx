@@ -2,9 +2,10 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
-import { ChevronDown, ArrowRight } from 'lucide-react';
+import { ChevronDown, ArrowRight, ShoppingBag } from 'lucide-react';
+import { cn } from '@/app/components/ui/utils';
 import { Skeleton } from '@/app/components/ui/skeleton';
 import { getCategories } from '@/services/api';
 import { useSiteChrome } from '@/contexts/SiteChromeContext';
@@ -26,6 +27,10 @@ export function ProductsDropdown({
   opensNewTab = false,
 }: ProductsDropdownProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  // Active when on the shop route (or any of its sub-paths), so BOUTIQUE lights up like the other
+  // nav items when the user is browsing products.
+  const active = pathname === href || (href !== '/' && pathname.startsWith(`${href}/`));
   const [isOpen, setIsOpen] = useState(false);
   const [dropdownTop, setDropdownTop] = useState(0);
   const [mounted, setMounted] = useState(false);
@@ -181,23 +186,28 @@ export function ProductsDropdown({
   return (
     <div
       ref={triggerRef}
-      className="relative"
+      className="relative h-full flex items-center"
       onMouseEnter={() => { hoverTrigger.current = true; open(); }}
       onMouseLeave={() => { hoverTrigger.current = false; scheduleClose(); }}
     >
       <LinkWithLoading
         href={href}
-        /* Must stay in lockstep with the sibling nav links in HeaderClient.tsx — this is the one
-           nav item that renders through a different component, so it silently kept the old type
-           system (14px, gray-900, boxed grey hover) while the other seven were restyled, making
-           the most important link in the row look bigger and darker than its neighbours. */
-        className="font-sans uppercase tracking-[0.11em] text-[12px] font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-950 dark:hover:text-white transition-colors flex items-center gap-1 whitespace-nowrap h-full px-0.5"
+        /* In lockstep with the sibling nav links in HeaderClient.tsx (icon + label, 14px, ink
+           #111827, orange #FF5A00 hover/active + 2px underline) — this is the one nav item that
+           renders through a different component, so it has to mirror their styling by hand. */
+        className={cn(
+          'relative inline-flex items-center gap-1.5 h-full text-[14px] font-semibold whitespace-nowrap transition-colors',
+          active ? 'text-[#FF5A00]' : 'text-[#111827] dark:text-gray-200 hover:text-[#FF5A00]'
+        )}
         loadingMessage="Chargement de la boutique..."
         onMouseEnter={prefetchShop}
+        {...(active ? { 'aria-current': 'page' as const } : {})}
         {...targetProps}
       >
-        {label}
+        <ShoppingBag className="h-4 w-4" aria-hidden />
+        <span>{label}</span>
         <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+        {active && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#FF5A00]" aria-hidden />}
       </LinkWithLoading>
 
       {mounted && typeof window !== 'undefined' && dropdownContent &&
