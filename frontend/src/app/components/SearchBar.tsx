@@ -388,7 +388,7 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
 
   // Desktop: inline input with popover dropdown (the header bar is white now, not red)
   return (
-    <div className={cn('relative flex-1 max-w-2xl', className)}>
+    <div className={cn('relative flex-1', className)}>
       <form onSubmit={handleSubmit} className="relative">
         <Search
           className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none z-10"
