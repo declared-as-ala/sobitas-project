@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   ShoppingCart,
   User,
@@ -57,10 +57,6 @@ import { MULTILOCALE_ENABLED } from '@/i18n';
 // it — this keeps its `vaul` drawer chunk out of every page's first-load JS.
 const CartDrawer = dynamic(() => import('./CartDrawer').then((m) => ({ default: m.CartDrawer })), { ssr: false });
 
-const SCROLL_THRESHOLD = 24;
-const MOBILE_NAV_SCROLL_THRESHOLD = 20;
-const MOBILE_NAV_SCROLL_DELTA = 12;
-const MOBILE_BREAKPOINT = 768;
 const PHONE = '+216 27 612 500';
 const PHONE_FIXE = '+216 73 200 169';
 const MAPS_URL = 'https://maps.app.goo.gl/w2ytnYAKSZDmjznh6';
@@ -154,25 +150,29 @@ function NavigationLink({
   className,
   children,
   onClick,
+  ariaCurrent,
 }: {
   item: HeaderNavLink;
   className: string;
   children?: ReactNode;
   onClick?: () => void;
+  /** 'page' on the active nav item so assistive tech announces the current page. */
+  ariaCurrent?: 'page';
 }) {
   const content = children ?? item.label;
   const targetProps = item.opensNewTab ? { target: '_blank', rel: 'noopener noreferrer' } : {};
+  const currentProps = ariaCurrent ? { 'aria-current': ariaCurrent } : {};
 
   if (isExternalHref(item.href)) {
     return (
-      <a href={item.href} className={className} onClick={onClick} {...targetProps}>
+      <a href={item.href} className={className} onClick={onClick} {...targetProps} {...currentProps}>
         {content}
       </a>
     );
   }
 
   return (
-    <Link href={item.href} className={className} onClick={onClick} {...targetProps}>
+    <Link href={item.href} className={className} onClick={onClick} {...targetProps} {...currentProps}>
       {content}
     </Link>
   );
@@ -182,14 +182,9 @@ export function HeaderClient() {
   const { translateLegacy } = useI18n();
   const { headerLogoUrl } = useSiteLogos();
   const router = useRouter();
+  const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileProductsMenuOpen, setMobileProductsMenuOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-  const [mobileNavVisible, setMobileNavVisible] = useState(true);
-  const [isMobileViewport, setIsMobileViewport] = useState(false);
-  const isMobileViewportRef = useRef(false);
-  const lastScrollYRef = useRef(0);
-  const tickingRef = useRef(false);
   const { theme, setTheme } = useTheme();
   // Server-fetched nav (root layout → SiteChromeProvider): the real labels are in the SSR HTML,
   // so there is no first-paint "NOS PRODUITS" → "BOUTIQUE" swap anymore.
@@ -202,24 +197,6 @@ export function HeaderClient() {
     sidebar: normalizeNavigationItems(ssrNavigation.sidebar),
   }));
 
-  useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);
-    const syncViewport = () => {
-      const mobile = mql.matches;
-      isMobileViewportRef.current = mobile;
-      setIsMobileViewport(mobile);
-
-      const y = Math.max(0, window.scrollY);
-      lastScrollYRef.current = y;
-      setScrolled(y > SCROLL_THRESHOLD);
-      if (mobile) setMobileNavVisible(y <= MOBILE_NAV_SCROLL_THRESHOLD);
-      else setMobileNavVisible(true);
-    };
-
-    syncViewport();
-    mql.addEventListener('change', syncViewport);
-    return () => mql.removeEventListener('change', syncViewport);
-  }, []);
   const { getTotalItems, cartDrawerOpen, setCartDrawerOpen } = useCart();
   const { count: favoritesCount } = useFavorites();
   const { isAuthenticated, user, logout } = useAuth();
@@ -244,39 +221,6 @@ export function HeaderClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const onScroll = useCallback(() => {
-    const currentScrollY = Math.max(0, (typeof window === 'undefined' ? 0 : window.scrollY));
-    const last = lastScrollYRef.current;
-    setScrolled(currentScrollY > SCROLL_THRESHOLD);
-
-    if (!isMobileViewportRef.current) {
-      lastScrollYRef.current = currentScrollY;
-      return;
-    }
-
-    if (currentScrollY <= MOBILE_NAV_SCROLL_THRESHOLD) {
-      setMobileNavVisible(true);
-    } else if (currentScrollY > last + MOBILE_NAV_SCROLL_DELTA) {
-      setMobileNavVisible(false);
-    } else if (currentScrollY < last - MOBILE_NAV_SCROLL_DELTA) {
-      setMobileNavVisible(true);
-    }
-    lastScrollYRef.current = currentScrollY;
-  }, []);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (tickingRef.current) return;
-      tickingRef.current = true;
-      requestAnimationFrame(() => {
-        onScroll();
-        tickingRef.current = false;
-      });
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [onScroll]);
-
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
   useEffect(() => {
@@ -294,35 +238,30 @@ export function HeaderClient() {
   const navLinks = withPackBuilder(dynamicNavigation.navbar.length > 0 ? dynamicNavigation.navbar : FALLBACK_NAV_LINKS);
   const sidebarLinks = withPackBuilder(dynamicNavigation.sidebar.length > 0 ? dynamicNavigation.sidebar : navLinks);
 
-  const mobileNavHidden = isMobileViewport && !mobileNavVisible;
+  const packBuilderLink = navLinks.find((link) => link.href === '/pack-builder');
+
+  const isActiveNav = (href: string) => (href === '/' ? pathname === '/' : pathname === href);
 
   return (
-    <div
-      className="font-poppins sticky top-0 z-50 w-full transition-transform duration-300 ease-out"
-      style={
-        mobileNavHidden
-          ? { transform: 'translateY(-100%)' }
-          : undefined
-      }
-    >
-      {/* Top Info Bar — collapses on desktop once scrolled (the compact "takeover" state, in step
-          with the hero widening). max-height + opacity animate cleanly; overflow-hidden clips the
-          content as it closes. Mobile is untouched here (the whole header already slides away on
-          scroll-down via the sticky root's translateY). */}
-      <div
-        className={cn(
-          'bg-[#111827] text-white border-b border-white/5 overflow-hidden transition-[max-height,height,opacity,transform] duration-200 ease-out',
-          scrolled ? 'md:max-h-0 md:opacity-0 md:border-b-0' : 'md:max-h-12 md:opacity-100'
-        )}
-      >
-        <div className="hidden md:flex max-w-[1400px] mx-auto h-7 px-4 lg:px-8 items-center justify-between text-xs font-medium">
-          <div className="flex items-center gap-4">
-            <a href={`tel:${PHONE.replace(/\s/g, '')}`} className="flex items-center gap-1.5 hover:text-red-500 transition-colors shrink-0" aria-label={`Appeler ${PHONE}`}>
+    // A FRAGMENT, not a wrapper <div>. `position: sticky` only holds while the element's PARENT box
+    // is in view — if the sticky <header> lived inside a short wrapper div (just utility+header),
+    // it would un-stick and scroll away the moment you passed that ~160px box. Returning a fragment
+    // makes the sticky <header> a direct child of the tall page-flow container, so it sticks for
+    // the whole page. The utility bar sits before it and scrolls away on its own.
+    <>
+      {/* Utility bar — deliberately OUTSIDE the sticky wrapper so it simply scrolls off the top of
+          the page under its own weight. No JS, no state, no max-height animation: this is what
+          removes the old two-state "lag" where the `scrolled` boolean flipped back and forth at a
+          single threshold. Only the main bar + nav below are sticky. */}
+      <div className="font-poppins bg-[#111827] text-white">
+        <div className="hidden md:flex max-w-[1400px] mx-auto h-9 px-4 lg:px-8 items-center justify-between text-xs">
+          <div className="flex items-center gap-3">
+            <a href={`tel:${PHONE.replace(/\s/g, '')}`} className="flex items-center gap-1.5 hover:text-[#FF5A00] transition-colors shrink-0" aria-label={`Appeler ${PHONE}`}>
               <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden />
               <span>{PHONE}</span>
             </a>
-            <span className="text-gray-600">|</span>
-            <a href={`tel:${PHONE_FIXE.replace(/\s/g, '')}`} className="flex items-center gap-1.5 hover:text-red-500 transition-colors shrink-0" aria-label={`Appeler ${PHONE_FIXE}`}>
+            <span className="text-[#6B7280]">|</span>
+            <a href={`tel:${PHONE_FIXE.replace(/\s/g, '')}`} className="flex items-center gap-1.5 hover:text-[#FF5A00] transition-colors shrink-0" aria-label={`Appeler ${PHONE_FIXE}`}>
               <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden />
               <span>{PHONE_FIXE}</span>
             </a>
@@ -331,41 +270,41 @@ export function HeaderClient() {
             href={MAPS_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 hover:text-red-500 transition-colors shrink-0"
+            className="flex items-center gap-1.5 hover:text-[#FF5A00] transition-colors shrink-0"
             aria-label="Notre localisation"
           >
             <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
             <span>Notre localisation</span>
           </a>
-          <span className="flex items-center gap-1.5 shrink-0 text-gray-300">
-            <Truck className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            {DELIVERY_MSG}
+          <span className="flex items-center gap-1.5 shrink-0">
+            <Truck className="h-3.5 w-3.5 shrink-0 text-[#22C55E]" aria-hidden />
+            <span>{DELIVERY_MSG}</span>
           </span>
         </div>
-        <div className="md:hidden flex h-7 px-4 items-center justify-center text-[11px] font-medium text-gray-200">
-          <Truck className="h-3.5 w-3.5 mr-1.5 shrink-0" aria-hidden />
+        <div className="md:hidden flex h-9 px-4 items-center justify-center text-[11px] text-gray-200">
+          <Truck className="h-3.5 w-3.5 mr-1.5 shrink-0 text-[#22C55E]" aria-hidden />
           <span className="min-w-0 truncate">{DELIVERY_MSG}</span>
         </div>
       </div>
 
-      {/* Main Header */}
-      <header
-        className={cn(
-          // dark:bg-gray-950 matches both inner bars and the page canvas; it was gray-900 here,
-          // which left the mobile bar a different shade from the desktop one in dark mode.
-          // One hairline divider for the whole header, no drop shadow (§3: flat surfaces).
-          'bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800',
-          'transition-[max-height,height,opacity,transform] duration-200 ease-out'
-        )}
-      >
+      {/* Sticky header = main bar + nav row only. Pure-CSS `sticky top-0`; no scroll listener, no
+          collapse — nothing to jitter. z-50 keeps it above page content and the hero pin. */}
+      <header className="font-poppins sticky top-0 z-50 w-full bg-white dark:bg-gray-950 border-b border-[#E5E7EB] dark:border-gray-800">
+        {/* MOBILE main bar */}
         <div className="md:hidden">
-          <div
-            className={cn(
-              'flex items-center justify-between w-full px-4 gap-1 transition-[max-height,height,opacity,transform] duration-200',
-              scrolled ? 'h-11 py-1.5' : 'h-12 py-2'
-            )}
-          >
-            <Link href="/" className="flex items-center justify-start flex-1 min-w-0 max-w-[11rem] sm:max-w-[12rem] -ml-1" aria-label="Proteine Tunisie - Accueil">
+          <div className="flex items-center justify-between w-full px-4 gap-1 h-14 py-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-11 w-11 min-h-11 min-w-11 flex-shrink-0 rounded-xl -ml-1 hover:bg-[#F5F6F8] dark:hover:bg-gray-800 transition-colors"
+              onClick={() => setMobileMenuOpen(true)}
+              aria-label="Menu"
+              aria-expanded={mobileMenuOpen}
+            >
+              <Menu className="h-6 w-6" aria-hidden />
+            </Button>
+
+            <Link href="/" className="flex items-center justify-center flex-1 min-w-0" aria-label="Proteine Tunisie - Accueil">
               {/* No `priority` — see the desktop logo note. The mobile logo preload was racing the
                   hero LCP image on phones. It stays eager (in the initial viewport) without a
                   fetchpriority=high preload. */}
@@ -374,7 +313,7 @@ export function HeaderClient() {
                 alt="Proteine Tunisie"
                 width={140}
                 height={48}
-                className="h-8 min-h-[32px] w-auto max-w-full object-contain object-left drop-shadow-sm transition-[max-height,height,opacity,transform] duration-200"
+                className="h-8 min-h-[32px] w-auto max-w-full object-contain drop-shadow-sm"
                 style={{ width: 'auto', height: 'auto' }}
                 loading="eager"
               />
@@ -385,13 +324,13 @@ export function HeaderClient() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="relative h-11 w-11 min-h-11 min-w-11 flex-shrink-0 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+                className="relative h-11 w-11 min-h-11 min-w-11 flex-shrink-0 rounded-xl hover:bg-[#F5F6F8] dark:hover:bg-gray-800 transition-colors"
                 onClick={() => setCartDrawerOpen(true)}
                 aria-label={cartItemsCount > 0 ? `Panier - ${cartItemsCount} article${cartItemsCount > 1 ? 's' : ''}` : 'Panier'}
               >
                 <ShoppingCart className="h-6 w-6" aria-hidden />
                 {cartItemsCount > 0 && (
-                  <span className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-red-600 text-white text-caption font-bold leading-none rounded-full">
+                  <span className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-[#FF5A00] text-white text-caption font-bold leading-none rounded-full">
                     {cartItemsCount > 99 ? '99+' : cartItemsCount}
                   </span>
                 )}
@@ -401,7 +340,7 @@ export function HeaderClient() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-11 w-11 min-h-11 min-w-11 flex-shrink-0 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+                  className="h-11 w-11 min-h-11 min-w-11 flex-shrink-0 rounded-xl -mr-1 hover:bg-[#F5F6F8] dark:hover:bg-gray-800 transition-colors"
                   onClick={() => router.push('/account')}
                   aria-label="Mon compte"
                 >
@@ -411,42 +350,21 @@ export function HeaderClient() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-11 w-11 min-h-11 min-w-11 flex-shrink-0 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+                  className="h-11 w-11 min-h-11 min-w-11 flex-shrink-0 rounded-xl -mr-1 hover:bg-[#F5F6F8] dark:hover:bg-gray-800 transition-colors"
                   onClick={() => router.push('/login')}
                   aria-label="Connexion"
                 >
                   <User className="h-6 w-6" aria-hidden />
                 </Button>
               )}
-
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-11 w-11 min-h-11 min-w-11 flex-shrink-0 rounded-xl -mr-1 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                onClick={() => setMobileMenuOpen(true)}
-                aria-label="Menu"
-                aria-expanded={mobileMenuOpen}
-              >
-                <Menu className="h-6 w-6" aria-hidden />
-              </Button>
             </div>
           </div>
         </div>
 
-        {/* Editorial Minimal: the desktop bar was a solid red slab with the logo forced white via
-            `brightness-0 invert`. Red is the ONE accent (DESIGN_SYSTEM §2) — spending it on a
-            full-width band leaves nothing for it to mean, and the inverted logo is a workaround
-            for a background that should not have been red. White surface, ink logo, red reserved
-            for the cart/favourites badges and hover states. */}
+        {/* DESKTOP main bar: white surface, orange logo, wide search, ghost icon buttons. */}
         <div className="hidden md:block bg-white dark:bg-gray-950">
           <div className="max-w-[1400px] mx-auto px-4 lg:px-8">
-            {/* h-16 -> h-[58px], and shrinks again to h-12 once scrolled (the compact state). */}
-            <div
-              className={cn(
-                'flex items-center justify-between gap-5 transition-[max-height,height,opacity,transform] duration-200 ease-out',
-                scrolled ? 'h-12' : 'h-[58px]'
-              )}
-            >
+            <div className="flex items-center gap-6 h-[72px]">
               <Link href="/" className="flex-shrink-0" aria-label="Proteine Tunisie - Accueil">
                 {/* Logo is NOT `priority`: next/image priority injects a fetchpriority=high preload
                     that ignores the responsive `hidden`/`md:block` split, so a phone was preloading
@@ -457,29 +375,27 @@ export function HeaderClient() {
                   alt="Proteine Tunisie"
                   width={200}
                   height={70}
-                  className={cn(
-                    'w-auto object-contain transition-[max-height,height,opacity,transform] duration-200 ease-out dark:brightness-0 dark:invert',
-                    scrolled ? 'h-7 lg:h-8' : 'h-8 lg:h-9 xl:h-10'
-                  )}
+                  className="h-9 lg:h-10 w-auto object-contain dark:brightness-0 dark:invert"
                 />
               </Link>
 
-              <SearchBar variant="desktop" className="mx-4 min-w-0" />
+              <SearchBar variant="desktop" className="min-w-0" />
 
-              <div className="flex items-center gap-3 flex-shrink-0">
+              <div className="flex items-center gap-1 flex-shrink-0">
                 {MULTILOCALE_ENABLED && <LanguageSwitcher />}
+
+                {/* Compte — icon + french label. Keeps the auth dropdown when signed in. */}
                 {isAuthenticated ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        className="h-10 px-4 text-gray-800 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 gap-2 font-medium"
+                      <button
+                        type="button"
+                        className="flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-lg text-[#111827] dark:text-gray-100 hover:bg-[#F5F6F8] dark:hover:bg-gray-800 transition-colors"
                         aria-label="Mon compte"
                       >
-                        <User className="h-5 w-5" />
-                        <span className="hidden lg:inline">{user?.name || 'Mon compte'}</span>
-                        <span className="lg:hidden">Compte</span>
-                      </Button>
+                        <User className="h-5 w-5" aria-hidden />
+                        <span className="text-[11px] font-medium leading-none">Compte</span>
+                      </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
                       align="end"
@@ -510,114 +426,121 @@ export function HeaderClient() {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 ) : (
-                  <Button
-                    className="h-10 px-4 text-gray-800 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 gap-2 font-medium"
-                    variant="ghost"
-                    asChild
+                  <Link
+                    href="/login"
+                    className="flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-lg text-[#111827] dark:text-gray-100 hover:bg-[#F5F6F8] dark:hover:bg-gray-800 transition-colors"
+                    aria-label="Connexion"
                   >
-                    <Link href="/login">
-                      <User className="h-5 w-5" />
-                      <span className="hidden lg:inline">Connexion</span>
-                      <span className="lg:hidden">Connexion</span>
-                    </Link>
-                  </Button>
+                    <User className="h-5 w-5" aria-hidden />
+                    <span className="text-[11px] font-medium leading-none">Compte</span>
+                  </Link>
                 )}
 
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-10 w-10 text-gray-800 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors shrink-0"
+                {/* Theme toggle — icon only. */}
+                <button
+                  type="button"
+                  className="h-10 w-10 flex items-center justify-center rounded-lg text-[#111827] dark:text-gray-100 hover:bg-[#F5F6F8] dark:hover:bg-gray-800 transition-colors shrink-0"
                   onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                   aria-label="Changer le thème"
                 >
-                  {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-                </Button>
+                  {theme === 'dark' ? <Sun className="h-5 w-5" aria-hidden /> : <Moon className="h-5 w-5" aria-hidden />}
+                </button>
 
-                <Link href="/favoris">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                      className="relative h-10 w-10 text-gray-800 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-red-600 dark:hover:text-red-400 transition-colors shrink-0"
-                    aria-label={favoritesCount > 0 ? `Favoris - ${favoritesCount} produits` : 'Favoris'}
-                  >
-                    <Heart className="h-6 w-6" />
-                    {favoritesCount > 0 && (
-                      <span className="absolute -top-1 -right-1 min-w-[20px] h-[20px] flex items-center justify-center bg-red-600 text-white text-xs font-bold rounded-full ring-2 ring-white dark:ring-gray-950">
-                        {favoritesCount > 99 ? '99+' : favoritesCount}
-                      </span>
-                    )}
-                  </Button>
+                {/* Favoris — icon only, keeps its count badge. */}
+                <Link
+                  href="/favoris"
+                  className="relative h-10 w-10 flex items-center justify-center rounded-lg text-[#111827] dark:text-gray-100 hover:bg-[#F5F6F8] dark:hover:bg-gray-800 transition-colors shrink-0"
+                  aria-label={favoritesCount > 0 ? `Favoris - ${favoritesCount} produits` : 'Favoris'}
+                >
+                  <Heart className="h-5 w-5" aria-hidden />
+                  {favoritesCount > 0 && (
+                    <span className="absolute top-0.5 right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-[#FF5A00] text-white text-[10px] font-bold leading-none rounded-full ring-2 ring-white dark:ring-gray-950">
+                      {favoritesCount > 99 ? '99+' : favoritesCount}
+                    </span>
+                  )}
                 </Link>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                    className="relative h-10 w-10 text-gray-800 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-red-600 dark:hover:text-red-400 transition-colors shrink-0"
+
+                {/* Panier — icon + french label + count badge. */}
+                <button
+                  type="button"
+                  className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-lg text-[#111827] dark:text-gray-100 hover:bg-[#F5F6F8] dark:hover:bg-gray-800 transition-colors shrink-0"
                   onClick={() => setCartDrawerOpen(true)}
                   aria-label={cartItemsCount > 0 ? `Panier - ${cartItemsCount} articles` : 'Panier'}
                 >
-                  <ShoppingCart className="h-6 w-6" />
-                  {cartItemsCount > 0 && (
-                    <span className="absolute -top-1 -right-1 min-w-[20px] h-[20px] flex items-center justify-center bg-red-600 text-white text-xs font-bold rounded-full ring-2 ring-white dark:ring-gray-950">
-                      {cartItemsCount > 99 ? '99+' : cartItemsCount}
-                    </span>
-                  )}
-                </Button>
+                  <span className="relative">
+                    <ShoppingCart className="h-5 w-5" aria-hidden />
+                    {cartItemsCount > 0 && (
+                      <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-[#FF5A00] text-white text-[10px] font-bold leading-none rounded-full ring-2 ring-white dark:ring-gray-950">
+                        {cartItemsCount > 99 ? '99+' : cartItemsCount}
+                      </span>
+                    )}
+                  </span>
+                  <span className="text-[11px] font-medium leading-none">Panier</span>
+                </button>
               </div>
             </div>
           </div>
         </div>
 
-        {/* The bar above is now white, so the old `border-t` would draw a hairline in the middle of
-            one continuous white surface. The header's single dividing line lives on <header>. */}
+        {/* DESKTOP nav row — icon + label; active item is #FF5A00 with a 2px underline; the
+            pack-builder entry renders as an orange button pinned to the right. */}
         <nav
-          className={cn(
-            'hidden md:block bg-white dark:bg-gray-950 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden transition-[max-height,height,opacity,transform] duration-200 ease-out',
-            // Collapses in the compact state so the scrolled header is just the main bar. Search +
-            // cart + account stay reachable there; nav returns on scroll back to top.
-            scrolled
-              ? 'md:max-h-0 md:opacity-0 md:border-t-0'
-              : 'md:max-h-16 md:opacity-100 border-t border-gray-100 dark:border-gray-900'
-          )}
-          /* `inert` when collapsed: max-h-0 + opacity-0 still leaves the links display:block, so
-             without this a keyboard user could Tab into an invisible, off-screen nav (and the
-             ProductsDropdown trigger anchored to a 0-height box). inert removes the whole subtree
-             from the tab order AND the accessibility tree — aria-hidden alone would not drop it
-             from focus. Undefined (not false) so the attribute is absent when expanded. */
-          {...(scrolled ? { inert: true } : {})}
+          className="hidden md:block bg-white dark:bg-gray-950 border-t border-[#E5E7EB] dark:border-gray-800"
           aria-label="Navigation principale"
         >
-          <div className="flex w-max mx-auto items-center gap-5 lg:gap-7 xl:gap-9 px-4 h-[42px]">
-            {navLinks.map((link) => (
-              isProductsNavLink(link) ? (
-                <ProductsDropdown
-                  key={`${link.href}-${link.label}`}
-                  label={translateLegacy(link.label)}
-                  href={link.href}
-                  opensNewTab={link.opensNewTab}
-                />
-              ) : (
+          <div className="max-w-[1400px] mx-auto px-4 lg:px-8">
+            <div className="flex items-center gap-4 h-12">
+              {/* The nav items scroll horizontally WITHIN this container (flex-1 min-w-0 +
+                  overflow-x-auto) so a long nav can never overflow the page and force a body-level
+                  horizontal scrollbar on tablet/small-laptop widths. The orange pack CTA is a
+                  shrink-0 sibling OUTSIDE the scroller, so it stays pinned to the right at all
+                  widths (matching the mockup). */}
+              <div className="scrollbar-hide flex flex-1 min-w-0 items-center gap-5 lg:gap-7 xl:gap-9 h-full overflow-x-auto overflow-y-hidden">
+                {navLinks.map((link) => {
+                  if (link.href === '/pack-builder') return null;
+                  if (isProductsNavLink(link)) {
+                    return (
+                      <ProductsDropdown
+                        key={`${link.href}-${link.label}`}
+                        label={translateLegacy(link.label)}
+                        href={link.href}
+                        opensNewTab={link.opensNewTab}
+                      />
+                    );
+                  }
+                  const active = isActiveNav(link.href);
+                  return (
+                    <NavigationLink
+                      key={`${link.href}-${link.label}`}
+                      item={link}
+                      ariaCurrent={active ? 'page' : undefined}
+                      className={cn(
+                        'relative inline-flex items-center gap-1.5 h-full text-[14px] font-semibold whitespace-nowrap transition-colors',
+                        active
+                          ? 'text-[#FF5A00]'
+                          : 'text-[#111827] dark:text-gray-200 hover:text-[#FF5A00]'
+                      )}
+                    >
+                      <NavigationIcon name={link.icon} className="h-4 w-4" />
+                      <span>{translateLegacy(link.label)}</span>
+                      {active && (
+                        <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#FF5A00]" aria-hidden />
+                      )}
+                    </NavigationLink>
+                  );
+                })}
+              </div>
+
+              {packBuilderLink && (
                 <NavigationLink
-                  key={`${link.href}-${link.label}`}
-                  item={link}
-                  /* Quiet hover: colour change only. The boxed grey hover fought the calm surface
-                     and made a row of eight items read as eight buttons. */
-                  /* font-sans (Inter), NOT the display face — and deliberately so, for two
-                     measured reasons. (1) Archivo is no longer preloaded, and the nav is above
-                     the fold on EVERY page, so using it here would guarantee a visible width
-                     shift when the font swaps in; Inter is already preloaded, so there is no
-                     FOUT at all. (2) Archivo at wdth 112% plus 0.13em tracking made this row
-                     materially wider, and it lives in an `overflow-x-auto` + `mx-auto`
-                     container where overflow to the LEFT is unreachable by scrolling.
-                     At 12px uppercase with open tracking the two faces are nearly
-                     indistinguishable anyway, so this costs the design almost nothing.
-                     Keep in lockstep with the ProductsDropdown trigger. */
-                  className="inline-flex items-center gap-1.5 font-sans uppercase tracking-[0.11em] text-[12px] font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-950 dark:hover:text-white transition-colors whitespace-nowrap h-full px-0.5"
+                  item={packBuilderLink}
+                  className="shrink-0 inline-flex items-center gap-2 rounded-lg bg-[#FF5A00] px-4 py-2 text-[14px] font-semibold text-white hover:bg-[#E85200] transition-colors whitespace-nowrap"
                 >
-                  <NavigationIcon name={link.icon} className="h-4 w-4" />
-                  <span>{translateLegacy(link.label)}</span>
+                  <Gift className="h-4 w-4" aria-hidden />
+                  <span>{translateLegacy(packBuilderLink.label)}</span>
                 </NavigationLink>
-              )
-            ))}
+              )}
+            </div>
           </div>
         </nav>
       </header>
@@ -765,6 +688,6 @@ export function HeaderClient() {
 
       <CartDrawer open={cartDrawerOpen} onOpenChange={setCartDrawerOpen} />
       <MobileProductsMenu open={mobileProductsMenuOpen} onOpenChange={setMobileProductsMenuOpen} />
-    </div>
+    </>
   );
 }

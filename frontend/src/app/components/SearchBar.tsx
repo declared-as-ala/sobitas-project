@@ -18,7 +18,7 @@ import { buildProductUrlPath } from '@/util/productUrl';
 import type { Product } from '@/types';
 import { cn } from '@/app/components/ui/utils';
 
-const PLACEHOLDER = 'Rechercher un produit...';
+const PLACEHOLDER = 'Rechercher un produit, une marque...';
 const DEBOUNCE_MS = 300;
 const MAX_SUGGESTIONS = 6;
 
