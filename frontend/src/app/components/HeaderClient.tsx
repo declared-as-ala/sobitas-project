@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode, type FormEvent } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
@@ -16,6 +16,8 @@ import {
   MapPin,
   Truck,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Heart,
   Home,
   ShoppingBag,
@@ -26,13 +28,16 @@ import {
   Star,
   Tag,
   Gift,
+  Search,
+  Shield,
+  Lock,
+  X,
   type LucideIcon,
 } from 'lucide-react';
 import { SearchBar } from './SearchBar';
 import { Button } from '@/app/components/ui/button';
 import { useTheme } from 'next-themes';
 import { ProductsDropdown } from './ProductsDropdown';
-import { MobileProductsMenu } from './MobileProductsMenu';
 import { useCart } from '@/app/contexts/CartContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -43,7 +48,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/app/components/ui/dropdown-menu';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/app/components/ui/sheet';
+import { Sheet, SheetContent, SheetClose, SheetTitle } from '@/app/components/ui/sheet';
 import { cn } from '@/app/components/ui/utils';
 import { getNavigationItems } from '@/services/api';
 import { useSiteChrome } from '@/contexts/SiteChromeContext';
@@ -184,11 +189,12 @@ export function HeaderClient() {
   const router = useRouter();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [mobileProductsMenuOpen, setMobileProductsMenuOpen] = useState(false);
+  const [productsOpen, setProductsOpen] = useState(false);
+  const [sidebarQuery, setSidebarQuery] = useState('');
   const { theme, setTheme } = useTheme();
   // Server-fetched nav (root layout → SiteChromeProvider): the real labels are in the SSR HTML,
   // so there is no first-paint "NOS PRODUITS" → "BOUTIQUE" swap anymore.
-  const { navigation: ssrNavigation } = useSiteChrome();
+  const { navigation: ssrNavigation, categories: ssrCategories } = useSiteChrome();
   const [dynamicNavigation, setDynamicNavigation] = useState<{
     navbar: HeaderNavLink[];
     sidebar: HeaderNavLink[];
@@ -223,17 +229,14 @@ export function HeaderClient() {
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
-  useEffect(() => {
-    if (mobileProductsMenuOpen && mobileMenuOpen) {
-      setMobileMenuOpen(false);
-    }
-  }, [mobileProductsMenuOpen, mobileMenuOpen]);
-
-  useEffect(() => {
-    if (mobileMenuOpen && mobileProductsMenuOpen) {
-      setMobileProductsMenuOpen(false);
-    }
-  }, [mobileMenuOpen, mobileProductsMenuOpen]);
+  const handleSidebarSearch = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const q = sidebarQuery.trim();
+    if (!q) return;
+    router.push(`/shop?search=${encodeURIComponent(q)}`);
+    closeMobileMenu();
+    setSidebarQuery('');
+  };
 
   const navLinks = withPackBuilder(dynamicNavigation.navbar.length > 0 ? dynamicNavigation.navbar : FALLBACK_NAV_LINKS);
   const sidebarLinks = withPackBuilder(dynamicNavigation.sidebar.length > 0 ? dynamicNavigation.sidebar : navLinks);
@@ -554,146 +557,288 @@ export function HeaderClient() {
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
         <SheetContent
           side="right"
-          className="w-[85vw] max-w-[320px] p-0 flex flex-col rounded-l-2xl overflow-hidden"
+          showCloseButton={false}
+          className="font-poppins w-[85vw] max-w-[340px] p-0 rounded-l-2xl overflow-hidden bg-white dark:bg-gray-900"
         >
-          <SheetHeader className="px-5 py-4 border-b border-gray-200 dark:border-gray-800 shrink-0">
-            <SheetTitle className="sr-only">Menu</SheetTitle>
-            <Link href="/" onClick={closeMobileMenu} className="block max-w-[120px]">
-              <Image
-                src={headerLogoUrl}
-                alt="Proteine Tunisie"
-                width={120}
-                height={38}
-                className="h-8 w-auto object-contain"
-              />
-            </Link>
-          </SheetHeader>
-
-          <div className="flex-1 overflow-y-auto py-4 flex flex-col [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <div className="px-4 pb-4">
-              <h3 className="font-display uppercase tracking-[0.2em] text-[11px] font-semibold text-red-600 dark:text-red-400 px-3 mb-2">Navigation</h3>
-              <nav className="space-y-0.5">
-                {sidebarLinks.map((link) => (
-                  isProductsNavLink(link) ? (
-                    <button
-                      key={`${link.href}-${link.label}`}
-                      onClick={() => {
-                        closeMobileMenu();
-                        setTimeout(() => setMobileProductsMenuOpen(true), 150);
-                      }}
-                      className="w-full text-left min-h-[48px] py-3 px-3 font-display uppercase tracking-wide text-[15px] font-semibold leading-snug text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-red-600 dark:hover:text-red-500 rounded-xl transition-colors -mx-1 flex items-center justify-between"
-                    >
-                      <span>{translateLegacy(link.label)}</span>
-                      <ChevronRight className="h-4 w-4 text-gray-400" />
-                    </button>
-                  ) : (
-                    <NavigationLink
-                      key={`${link.href}-${link.label}`}
-                      item={link}
-                      onClick={closeMobileMenu}
-                      className="flex items-center gap-3 min-h-[48px] py-3 px-3 font-display uppercase tracking-wide text-[15px] font-semibold leading-snug text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-red-600 dark:hover:text-red-500 rounded-xl transition-colors -mx-1"
-                    >
-                      <NavigationIcon name={link.icon} className="h-5 w-5 shrink-0 text-red-500" />
-                      <span>{translateLegacy(link.label)}</span>
-                    </NavigationLink>
-                  )
-                ))}
-              </nav>
-            </div>
-
-            <div className="mt-auto pt-4 px-4 border-t border-gray-200 dark:border-gray-800 space-y-0.5">
-              {MULTILOCALE_ENABLED && <LanguageSwitcher mobile />}
-              <Button
-                variant="ghost"
-                className="w-full justify-start h-12 rounded-xl text-base font-medium leading-snug -mx-1"
-                onClick={() => { setCartDrawerOpen(true); closeMobileMenu(); }}
-              >
-                <ShoppingCart className="h-5 w-5 mr-3 shrink-0" />
-                Panier{cartItemsCount > 0 ? ` (${cartItemsCount})` : ''}
-              </Button>
-              <Link href="/favoris" onClick={closeMobileMenu}>
-                <Button variant="ghost" className="w-full justify-start h-12 rounded-xl text-base font-medium leading-snug -mx-1">
-                  <Heart className={`h-5 w-5 mr-3 shrink-0 ${favoritesCount > 0 ? 'fill-red-600 text-red-600' : ''}`} />
-                  Favoris{favoritesCount > 0 ? ` (${favoritesCount})` : ''}
-                </Button>
+          <div className="flex h-full min-h-0 flex-col">
+            {/* 1 — HEADER: logo + close */}
+            <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-[#E5E7EB] dark:border-gray-800 shrink-0">
+              <SheetTitle className="sr-only">Menu</SheetTitle>
+              <Link href="/" onClick={closeMobileMenu} className="block" aria-label="Proteine Tunisie - Accueil">
+                <Image
+                  src={headerLogoUrl}
+                  alt="Proteine Tunisie"
+                  width={130}
+                  height={40}
+                  className="h-8 w-auto object-contain"
+                />
               </Link>
-              {isAuthenticated ? (
-                <>
-                  <Link href="/account" onClick={closeMobileMenu}>
-                    <Button variant="ghost" className="w-full justify-start h-12 rounded-xl text-base font-medium leading-snug -mx-1">
-                      <User className="h-5 w-5 mr-3 shrink-0" />
-                      Mon Compte
-                    </Button>
-                  </Link>
-                  <Link href="/account/orders" onClick={closeMobileMenu}>
-                    <Button variant="ghost" className="w-full justify-start h-12 rounded-xl text-base font-medium leading-snug -mx-1">
-                      <Package className="h-5 w-5 mr-3 shrink-0" />
-                      Mes Commandes
-                    </Button>
-                  </Link>
-                  <Button variant="ghost" className="w-full justify-start h-12 rounded-xl text-base font-medium leading-snug text-red-600 -mx-1" onClick={() => { logout(); closeMobileMenu(); }}>
-                    Déconnexion
-                  </Button>
-                </>
-              ) : (
-                <Link href="/login" onClick={closeMobileMenu}>
-                  <Button variant="ghost" className="w-full justify-start h-12 rounded-xl text-base font-medium leading-snug -mx-1">
-                    <User className="h-5 w-5 mr-3 shrink-0" />
-                    Connexion
-                  </Button>
-                </Link>
-              )}
-              <Button
-                variant="ghost"
-                className="w-full justify-start h-12 rounded-xl text-base font-medium leading-snug -mx-1"
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              <SheetClose
+                className="flex h-9 w-9 items-center justify-center rounded-xl text-[#6B7280] hover:bg-[#F5F6F8] hover:text-[#111827] dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white transition-colors"
+                aria-label="Fermer le menu"
               >
-                {theme === 'dark' ? <Sun className="h-5 w-5 mr-3 shrink-0" /> : <Moon className="h-5 w-5 mr-3 shrink-0" />}
-                {theme === 'dark' ? 'Mode clair' : 'Mode sombre'}
-              </Button>
+                <X className="h-5 w-5" aria-hidden />
+              </SheetClose>
             </div>
 
-            <div className="px-4 pt-4 pb-4 space-y-2 border-t border-gray-200 dark:border-gray-800 mt-4">
-              <a
-                href={`tel:${PHONE.replace(/\s/g, '')}`}
-                onClick={closeMobileMenu}
-                className="flex items-center gap-3 py-3 text-base font-medium leading-snug text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-500 transition-colors"
-                aria-label={`Appeler ${PHONE}`}
-              >
-                <Phone className="h-5 w-5 text-red-500 shrink-0" aria-hidden />
-                {PHONE}
-              </a>
-              <a
-                href={`tel:${PHONE_FIXE.replace(/\s/g, '')}`}
-                onClick={closeMobileMenu}
-                className="flex items-center gap-3 py-3 text-base font-medium leading-snug text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-500 transition-colors"
-                aria-label={`Appeler ${PHONE_FIXE}`}
-              >
-                <Phone className="h-5 w-5 text-red-500 shrink-0" aria-hidden />
-                {PHONE_FIXE}
-              </a>
-              <a
-                href={MAPS_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={closeMobileMenu}
-                className="flex items-center gap-3 py-3 text-base font-medium leading-snug text-gray-900 dark:text-white hover:text-red-600 dark:hover:text-red-500 transition-colors"
-                aria-label="Notre localisation"
-              >
-                <MapPin className="h-5 w-5 text-red-500 shrink-0" aria-hidden />
-                Notre localisation
-              </a>
-              <p className="flex items-center gap-3 py-2 text-sm text-gray-500 dark:text-gray-400">
-                <Truck className="h-4 w-4 text-red-500 shrink-0" aria-hidden />
-                {DELIVERY_MSG}
-              </p>
+            {/* 2 — SEARCH */}
+            <form onSubmit={handleSidebarSearch} role="search" className="shrink-0 px-4 pt-4 pb-2">
+              <div className="relative flex items-center">
+                <Search className="pointer-events-none absolute left-3 h-4 w-4 text-[#6B7280]" aria-hidden />
+                <input
+                  type="text"
+                  inputMode="search"
+                  autoComplete="off"
+                  value={sidebarQuery}
+                  onChange={(e) => setSidebarQuery(e.target.value)}
+                  placeholder="Rechercher un produit..."
+                  aria-label="Rechercher un produit"
+                  className="w-full min-h-[44px] rounded-xl border border-[#E5E7EB] bg-[#F5F6F8] pl-9 pr-11 text-[14px] text-[#111827] placeholder:text-[#6B7280] transition-colors focus:border-[#FF5A00] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#FF5A00]/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-400 dark:focus:bg-gray-900"
+                />
+                <button
+                  type="submit"
+                  aria-label="Rechercher"
+                  className="absolute right-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-[#6B7280] transition-colors hover:bg-white hover:text-[#FF5A00] dark:hover:bg-gray-700"
+                >
+                  <Search className="h-4 w-4" aria-hidden />
+                </button>
+              </div>
+            </form>
+
+            {/* SCROLLABLE MIDDLE — nav list scrolls above the pinned trust chips */}
+            <div className="flex-1 min-h-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {/* 3 + 4 — NAVIGATION */}
+              <div className="px-4 pt-2 pb-2">
+                <h3 className="px-1 mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#FF5A00]">
+                  Navigation
+                </h3>
+                <nav className="space-y-1">
+                  {sidebarLinks.map((link) => {
+                    if (link.href === '/pack-builder') return null;
+
+                    if (isProductsNavLink(link)) {
+                      const shopActive = isActiveNav(link.href);
+                      const hasCategories = ssrCategories.length > 0;
+                      return (
+                        <div key={`${link.href}-${link.label}`}>
+                          <button
+                            type="button"
+                            aria-expanded={hasCategories ? productsOpen : undefined}
+                            onClick={() => {
+                              if (!hasCategories) {
+                                router.push('/shop');
+                                closeMobileMenu();
+                                return;
+                              }
+                              setProductsOpen((v) => !v);
+                            }}
+                            className={cn(
+                              'flex w-full items-center gap-3 min-h-[48px] px-3 rounded-xl text-[15px] font-semibold transition-colors',
+                              shopActive
+                                ? 'bg-[#FF5A00]/10 text-[#FF5A00]'
+                                : 'text-[#111827] hover:bg-[#F5F6F8] dark:text-gray-100 dark:hover:bg-gray-800'
+                            )}
+                          >
+                            <NavigationIcon
+                              name={link.icon}
+                              className={cn('h-5 w-5 shrink-0', shopActive ? 'text-[#FF5A00]' : 'text-[#6B7280]')}
+                            />
+                            <span className="flex-1 text-left">{translateLegacy(link.label)}</span>
+                            {!hasCategories ? (
+                              <ChevronRight className="h-4 w-4 shrink-0 text-[#6B7280]" aria-hidden />
+                            ) : productsOpen ? (
+                              <ChevronUp className="h-4 w-4 shrink-0 text-[#6B7280]" aria-hidden />
+                            ) : (
+                              <ChevronDown className="h-4 w-4 shrink-0 text-[#6B7280]" aria-hidden />
+                            )}
+                          </button>
+
+                          {hasCategories && (
+                            <div
+                              className={cn(
+                                'grid transition-[grid-template-rows] duration-300 ease-out',
+                                productsOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+                              )}
+                            >
+                              <div className="overflow-hidden">
+                                <ul className="mt-1 space-y-0.5 pb-1">
+                                  {ssrCategories.map((cat) => {
+                                    const catHref = `/${cat.slug}`;
+                                    const catActive = pathname === catHref;
+                                    return (
+                                      <li key={cat.id}>
+                                        <Link
+                                          href={catHref}
+                                          onClick={closeMobileMenu}
+                                          aria-current={catActive ? 'page' : undefined}
+                                          className={cn(
+                                            'flex items-center gap-2 min-h-[40px] pl-12 pr-3 rounded-xl text-[14px] transition-colors',
+                                            catActive
+                                              ? 'font-semibold text-[#FF5A00]'
+                                              : 'text-[#111827] hover:bg-[#F5F6F8] dark:text-gray-300 dark:hover:bg-gray-800'
+                                          )}
+                                        >
+                                          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#FF5A00]" aria-hidden />
+                                          <span className="min-w-0 flex-1 truncate">{cat.designation_fr}</span>
+                                          <ChevronRight className="h-4 w-4 shrink-0 text-gray-400" aria-hidden />
+                                        </Link>
+                                      </li>
+                                    );
+                                  })}
+                                </ul>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+
+                    const active = isActiveNav(link.href);
+                    return (
+                      <NavigationLink
+                        key={`${link.href}-${link.label}`}
+                        item={link}
+                        onClick={closeMobileMenu}
+                        ariaCurrent={active ? 'page' : undefined}
+                        className={cn(
+                          'flex items-center gap-3 min-h-[48px] px-3 rounded-xl text-[15px] font-semibold transition-colors',
+                          active
+                            ? 'bg-[#FF5A00]/10 text-[#FF5A00]'
+                            : 'text-[#111827] hover:bg-[#F5F6F8] dark:text-gray-100 dark:hover:bg-gray-800'
+                        )}
+                      >
+                        <NavigationIcon
+                          name={link.icon}
+                          className={cn('h-5 w-5 shrink-0', active ? 'text-[#FF5A00]' : 'text-[#6B7280]')}
+                        />
+                        <span>{translateLegacy(link.label)}</span>
+                      </NavigationLink>
+                    );
+                  })}
+                </nav>
+              </div>
+
+              {/* 5 — divider */}
+              <div className="mx-4 border-t border-[#E5E7EB] dark:border-gray-800" />
+
+              {/* 6 — PACK CTA */}
+              {packBuilderLink && (
+                <div className="px-4 py-3">
+                  <NavigationLink
+                    item={packBuilderLink}
+                    onClick={closeMobileMenu}
+                    className="flex h-12 items-center justify-between rounded-xl bg-[#FF5A00] px-4 text-[15px] font-semibold text-white transition-colors hover:bg-[#E85200]"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Gift className="h-5 w-5 shrink-0" aria-hidden />
+                      <span>{translateLegacy(packBuilderLink.label)}</span>
+                    </span>
+                    <ChevronRight className="h-5 w-5 shrink-0" aria-hidden />
+                  </NavigationLink>
+                </div>
+              )}
+
+              {/* 7 — divider */}
+              <div className="mx-4 border-t border-[#E5E7EB] dark:border-gray-800" />
+
+              {/* 8 — UTILITY ITEMS */}
+              <div className="px-4 py-3 space-y-1">
+                <button
+                  type="button"
+                  onClick={() => { setCartDrawerOpen(true); closeMobileMenu(); }}
+                  className="flex w-full items-center gap-3 min-h-[44px] px-3 rounded-xl text-[15px] font-medium text-[#111827] transition-colors hover:bg-[#F5F6F8] dark:text-gray-100 dark:hover:bg-gray-800"
+                >
+                  <ShoppingCart className="h-5 w-5 shrink-0 text-[#6B7280]" aria-hidden />
+                  <span className="flex-1 text-left">Panier</span>
+                  {cartItemsCount > 0 && (
+                    <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#FF5A00] px-1 text-[11px] font-bold text-white">
+                      {cartItemsCount > 99 ? '99+' : cartItemsCount}
+                    </span>
+                  )}
+                </button>
+
+                <Link
+                  href="/favoris"
+                  onClick={closeMobileMenu}
+                  className="flex w-full items-center gap-3 min-h-[44px] px-3 rounded-xl text-[15px] font-medium text-[#111827] transition-colors hover:bg-[#F5F6F8] dark:text-gray-100 dark:hover:bg-gray-800"
+                >
+                  <Heart
+                    className={cn('h-5 w-5 shrink-0', favoritesCount > 0 ? 'fill-[#FF5A00] text-[#FF5A00]' : 'text-[#6B7280]')}
+                    aria-hidden
+                  />
+                  <span className="flex-1">Favoris</span>
+                  {favoritesCount > 0 && (
+                    <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#FF5A00] px-1 text-[11px] font-bold text-white">
+                      {favoritesCount > 99 ? '99+' : favoritesCount}
+                    </span>
+                  )}
+                </Link>
+
+                {isAuthenticated ? (
+                  <>
+                    <Link
+                      href="/account"
+                      onClick={closeMobileMenu}
+                      className="flex w-full items-center gap-3 min-h-[44px] px-3 rounded-xl text-[15px] font-medium text-[#111827] transition-colors hover:bg-[#F5F6F8] dark:text-gray-100 dark:hover:bg-gray-800"
+                    >
+                      <User className="h-5 w-5 shrink-0 text-[#6B7280]" aria-hidden />
+                      <span>Mon compte</span>
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => { logout(); closeMobileMenu(); }}
+                      className="flex w-full items-center gap-3 min-h-[44px] px-3 rounded-xl text-[14px] font-medium text-[#6B7280] transition-colors hover:bg-[#F5F6F8] hover:text-[#111827] dark:hover:bg-gray-800 dark:hover:text-white"
+                    >
+                      <span className="pl-8">Déconnexion</span>
+                    </button>
+                  </>
+                ) : (
+                  <Link
+                    href="/login"
+                    onClick={closeMobileMenu}
+                    className="flex w-full items-center gap-3 min-h-[44px] px-3 rounded-xl text-[15px] font-medium text-[#111827] transition-colors hover:bg-[#F5F6F8] dark:text-gray-100 dark:hover:bg-gray-800"
+                  >
+                    <User className="h-5 w-5 shrink-0 text-[#6B7280]" aria-hidden />
+                    <span>Connexion</span>
+                  </Link>
+                )}
+              </div>
+            </div>
+
+            {/* 9 — TRUST CHIPS (pinned to bottom, always visible) */}
+            <div className="mt-auto shrink-0 border-t border-[#E5E7EB] dark:border-gray-800 px-4 pt-3 pb-4">
+              <div className="grid grid-cols-3 gap-2">
+                <div className="flex flex-col gap-1 rounded-lg bg-[#F5F6F8] dark:bg-gray-800 px-2.5 py-2">
+                  <Truck className="h-4 w-4 shrink-0 text-[#22C55E]" aria-hidden />
+                  <span className="text-[11px] leading-tight text-[#111827] dark:text-gray-200">
+                    Livraison rapide
+                    <br />
+                    24–48h
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1 rounded-lg bg-[#F5F6F8] dark:bg-gray-800 px-2.5 py-2">
+                  <Shield className="h-4 w-4 shrink-0 text-[#111827] dark:text-gray-200" aria-hidden />
+                  <span className="text-[11px] leading-tight text-[#111827] dark:text-gray-200">
+                    Paiement à
+                    <br />
+                    la livraison
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1 rounded-lg bg-[#F5F6F8] dark:bg-gray-800 px-2.5 py-2">
+                  <Lock className="h-4 w-4 shrink-0 text-[#111827] dark:text-gray-200" aria-hidden />
+                  <span className="text-[11px] leading-tight text-[#111827] dark:text-gray-200">
+                    Paiement
+                    <br />
+                    100% sécurisé
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </SheetContent>
       </Sheet>
 
       <CartDrawer open={cartDrawerOpen} onOpenChange={setCartDrawerOpen} />
-      <MobileProductsMenu open={mobileProductsMenuOpen} onOpenChange={setMobileProductsMenuOpen} />
     </>
   );
 }
