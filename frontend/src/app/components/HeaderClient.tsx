@@ -50,7 +50,7 @@ import {
 } from '@/app/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetClose, SheetTitle } from '@/app/components/ui/sheet';
 import { cn } from '@/app/components/ui/utils';
-import { getNavigationItems } from '@/services/api';
+import { getNavigationItems, getCategories } from '@/services/api';
 import { useSiteChrome } from '@/contexts/SiteChromeContext';
 import { useSiteLogos } from '@/hooks/useSiteLogos';
 import type { SiteNavigationItem } from '@/types';
@@ -195,6 +195,16 @@ export function HeaderClient() {
   // Server-fetched nav (root layout → SiteChromeProvider): the real labels are in the SSR HTML,
   // so there is no first-paint "NOS PRODUITS" → "BOUTIQUE" swap anymore.
   const { navigation: ssrNavigation, categories: ssrCategories } = useSiteChrome();
+  // The mobile Boutique accordion needs categories, but useSiteChrome().categories is empty at
+  // runtime (the server-chrome fetch doesn't populate it). Mirror the desktop ProductsDropdown:
+  // seed from SSR, then client-fetch as a fallback so the accordion always has data to expand.
+  const [sidebarCategories, setSidebarCategories] = useState(ssrCategories);
+  useEffect(() => {
+    if (ssrCategories.length === 0) {
+      getCategories().then((cats) => { if (Array.isArray(cats)) setSidebarCategories(cats); }).catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [dynamicNavigation, setDynamicNavigation] = useState<{
     navbar: HeaderNavLink[];
     sidebar: HeaderNavLink[];
@@ -618,7 +628,7 @@ export function HeaderClient() {
 
                     if (isProductsNavLink(link)) {
                       const shopActive = isActiveNav(link.href);
-                      const hasCategories = ssrCategories.length > 0;
+                      const hasCategories = sidebarCategories.length > 0;
                       return (
                         <div key={`${link.href}-${link.label}`}>
                           <button
@@ -662,7 +672,7 @@ export function HeaderClient() {
                             >
                               <div className="overflow-hidden">
                                 <ul className="mt-1 space-y-0.5 pb-1">
-                                  {ssrCategories.map((cat) => {
+                                  {sidebarCategories.map((cat) => {
                                     const catHref = `/${cat.slug}`;
                                     const catActive = pathname === catHref;
                                     return (
