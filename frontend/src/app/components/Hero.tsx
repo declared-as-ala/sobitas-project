@@ -103,7 +103,10 @@ function HeroCaption({ slide }: { slide: HeroSlide | null }) {
 
   return (
     <div className="absolute inset-0 z-10 flex items-end">
-      <div className="w-full px-5 pb-9 sm:px-10 sm:pb-14 lg:px-16 lg:pb-20">
+      {/* Extra bottom padding on mobile (pb-20) lifts the CTA clear of the slider indicator, which
+          is pinned to the bottom-centre — otherwise the two stack on a phone. Desktop has room, so
+          it keeps its tighter bottom padding. */}
+      <div className="w-full px-5 pb-20 sm:px-10 sm:pb-14 lg:px-16 lg:pb-20">
         <div className="max-w-2xl">
           {title && (
             <p className="font-display font-compressed text-3xl font-extrabold uppercase leading-[0.95] tracking-tight text-white [text-shadow:0_2px_20px_rgba(0,0,0,0.55)] sm:text-5xl lg:text-6xl">

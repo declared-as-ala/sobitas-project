@@ -12,8 +12,6 @@ interface HeroSliderIndicatorProps {
   trackId?: string;
   /** Optional autoplay dwell in ms. Omit = manual only (no autoplay, no progress line). */
   autoplayMs?: number;
-  /** Tiny "n/N" counter, shown on mobile only for legibility when ticks get small. */
-  showCounter?: boolean;
 }
 
 /**
@@ -40,7 +38,6 @@ export function HeroSliderIndicator({
   count,
   trackId = 'hero-track',
   autoplayMs,
-  showCounter = true,
 }: HeroSliderIndicatorProps) {
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -185,12 +182,6 @@ export function HeroSliderIndicator({
           aria-hidden="true"
           className="pointer-events-none absolute left-1/2 top-1/2 h-8 w-full -translate-x-1/2 -translate-y-1/2 rounded-full bg-black/45"
         />
-
-        {showCounter && (
-          <span className="relative z-10 min-w-[2.25rem] pl-1 text-center text-xs font-semibold tabular-nums text-white sm:hidden">
-            {active + 1}/{count}
-          </span>
-        )}
 
         {Array.from({ length: count }).map((_, i) => {
           const isActive = i === active;
