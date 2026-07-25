@@ -1,5 +1,6 @@
 import { ArrowRight } from 'lucide-react';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
+import { HeroSliderIndicator } from '@/app/components/HeroSliderIndicator';
 import { buildHeroImageSet, type HeroSlide, type HeroImageSet } from '@/util/heroImage';
 
 /**
@@ -197,6 +198,7 @@ export function Hero({ slides, fallbackAlt }: HeroProps) {
           it, so swipe/dots work at any size with no carousel JS on the LCP path. */}
       <div className={FRAME_BASE}>
         <div
+          id="hero-track"
           tabIndex={0}
           className="scrollbar-hide flex h-full w-full snap-x snap-mandatory overflow-x-auto scroll-smooth"
         >
@@ -219,24 +221,10 @@ export function Hero({ slides, fallbackAlt }: HeroProps) {
           ))}
         </div>
 
-        {/* Dots overlaid near the bottom so they stay visible over a full-bleed banner. The row sits
-            on a small translucent-dark pill so white dots keep ≥3:1 contrast even over a light
-            banner (WCAG 1.4.11). This is the ONLY dark element and it is a tiny UI chip, not a wash
-            over the artwork. */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-6 z-20 flex justify-center sm:bottom-8">
-          <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-black/30 px-2.5 py-1.5">
-            {slides.map((slide, index) => (
-              <a
-                key={slide.id}
-                href={`#hero-slide-${index + 1}`}
-                aria-label={`Aller à la diapositive ${index + 1}`}
-                className="flex h-5 w-6 items-center justify-center"
-              >
-                <span className="h-1.5 w-6 rounded-full bg-white/90 transition-colors hover:bg-white" />
-              </a>
-            ))}
-          </div>
-        </div>
+        {/* State indicator (client island): active-slide ticks with click/keyboard nav + autoplay.
+            It observes #hero-track by scroll position, so a manual swipe keeps it in sync. Centered
+            at the bottom so it clears the bottom-left caption CTA and the bottom-right FAB stack. */}
+        <HeroSliderIndicator count={slides.length} autoplayMs={6500} />
       </div>
     </section>
   );
