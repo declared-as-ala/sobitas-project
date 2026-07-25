@@ -196,8 +196,11 @@ export function ProductsDropdown({
            #111827, orange #FF5A00 hover/active + 2px underline) — this is the one nav item that
            renders through a different component, so it has to mirror their styling by hand. */
         className={cn(
-          'relative inline-flex items-center gap-1.5 h-full text-[14px] font-semibold whitespace-nowrap transition-colors',
-          active ? 'text-[#FF5A00]' : 'text-[#111827] dark:text-gray-200 hover:text-[#FF5A00]'
+          // Mirrors the sibling nav links' shared underline vocabulary (HeaderClient.tsx): a 2px
+          // accent bar that wipes in on hover and stays pinned when active. Desktop-only row, so the
+          // 300ms after: transition is never hit by the mobile 0.2s clamp.
+          'group relative inline-flex items-center gap-1.5 h-full text-[14px] font-semibold whitespace-nowrap transition-colors duration-200 after:pointer-events-none after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-[#FF5A00] after:origin-left after:scale-x-0 after:transition-transform after:duration-300 after:ease-out hover:after:scale-x-100',
+          active ? 'text-[#FF5A00] after:scale-x-100' : 'text-[#111827] dark:text-gray-200 hover:text-[#FF5A00]'
         )}
         loadingMessage="Chargement de la boutique..."
         onMouseEnter={prefetchShop}
@@ -207,7 +210,6 @@ export function ProductsDropdown({
         <ShoppingBag className="h-4 w-4" aria-hidden />
         <span>{label}</span>
         <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
-        {active && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#FF5A00]" aria-hidden />}
       </LinkWithLoading>
 
       {mounted && typeof window !== 'undefined' && dropdownContent &&

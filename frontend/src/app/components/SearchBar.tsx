@@ -419,13 +419,13 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
              `bg-gray-100 dark:bg-gray-900` inside a `dark:bg-gray-950` bar is #111827 on #030712,
              a 1.14:1 ratio — invisible. A hairline works in both themes regardless of how the bar
              behind it is coloured later. */
-          className="w-full pl-11 pr-24 h-12 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 transition-colors focus:border-[#FF5A00]/40 focus:bg-white focus:ring-2 focus:ring-[#FF5A00]/20 focus-visible:border-[#FF5A00]/40 focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-[#FF5A00]/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-400 dark:focus:border-[#FF5A00]/50 dark:focus:bg-gray-800"
+          className="w-full pl-11 pr-24 h-12 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 shadow-[inset_0_1px_2px_rgba(17,24,39,0.04)] transition-[background-color,border-color,box-shadow] duration-200 hover:border-gray-300 focus:border-[#FF5A00]/50 focus:bg-white focus:ring-4 focus:ring-[#FF5A00]/10 focus-visible:border-[#FF5A00]/50 focus-visible:bg-white focus-visible:ring-4 focus-visible:ring-[#FF5A00]/10 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-400 dark:hover:border-gray-600 dark:focus:border-[#FF5A00]/50 dark:focus:bg-gray-800"
           aria-label="Rechercher un produit"
         />
         {/* Orange search button (GPT header). */}
         <button
           type="submit"
-          className="absolute right-1.5 top-1/2 flex h-9 w-11 -translate-y-1/2 items-center justify-center rounded-lg bg-[#FF5A00] text-white shadow-sm transition-colors hover:bg-[#E85200]"
+          className="absolute right-1.5 top-1/2 flex h-9 w-11 -translate-y-1/2 items-center justify-center rounded-lg bg-[#FF5A00] text-white shadow-sm transition-all duration-150 hover:bg-[#E85200] hover:shadow-md active:scale-95"
           aria-label="Rechercher"
         >
           <Search className="h-[18px] w-[18px]" aria-hidden />

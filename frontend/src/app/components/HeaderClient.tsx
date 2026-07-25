@@ -266,14 +266,14 @@ export function HeaderClient() {
           the page under its own weight. No JS, no state, no max-height animation: this is what
           removes the old two-state "lag" where the `scrolled` boolean flipped back and forth at a
           single threshold. Only the main bar + nav below are sticky. */}
-      <div className="font-poppins bg-[#111827] text-white">
+      <div className="font-poppins bg-[#111827] text-gray-300">
         <div className="hidden md:flex max-w-[1400px] mx-auto h-9 px-4 lg:px-8 items-center justify-between text-xs">
           <div className="flex items-center gap-3">
             <a href={`tel:${PHONE.replace(/\s/g, '')}`} className="flex items-center gap-1.5 hover:text-[#FF5A00] transition-colors shrink-0" aria-label={`Appeler ${PHONE}`}>
               <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden />
               <span>{PHONE}</span>
             </a>
-            <span className="text-[#6B7280]">|</span>
+            <span className="text-white/20">|</span>
             <a href={`tel:${PHONE_FIXE.replace(/\s/g, '')}`} className="flex items-center gap-1.5 hover:text-[#FF5A00] transition-colors shrink-0" aria-label={`Appeler ${PHONE_FIXE}`}>
               <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden />
               <span>{PHONE_FIXE}</span>
@@ -294,7 +294,7 @@ export function HeaderClient() {
             <span>{DELIVERY_MSG}</span>
           </span>
         </div>
-        <div className="md:hidden flex h-9 px-4 items-center justify-center text-[11px] text-gray-200">
+        <div className="md:hidden flex h-9 px-4 items-center justify-center text-[11px] text-gray-300">
           <Truck className="h-3.5 w-3.5 mr-1.5 shrink-0 text-[#22C55E]" aria-hidden />
           <span className="min-w-0 truncate">{DELIVERY_MSG}</span>
         </div>
@@ -302,22 +302,12 @@ export function HeaderClient() {
 
       {/* Sticky header = main bar + nav row only. Pure-CSS `sticky top-0`; no scroll listener, no
           collapse — nothing to jitter. z-50 keeps it above page content and the hero pin. */}
-      <header className="font-poppins sticky top-0 z-50 w-full bg-white dark:bg-gray-950 border-b border-[#E5E7EB] dark:border-gray-800">
-        {/* MOBILE main bar */}
+      <header className="font-poppins sticky top-0 z-50 w-full bg-white dark:bg-gray-950 border-b border-[#EAECEF] dark:border-gray-800 shadow-[0_1px_0_rgba(17,24,39,0.04),0_4px_16px_-12px_rgba(17,24,39,0.12)] dark:shadow-[0_4px_16px_-12px_rgba(0,0,0,0.5)]">
+        {/* MOBILE main bar — logo LEFT, action cluster RIGHT ending in the burger (owner request:
+            burger on the right; it opens the 100%-width sidebar). */}
         <div className="md:hidden">
-          <div className="flex items-center justify-between w-full px-4 gap-1 h-14 py-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-11 w-11 min-h-11 min-w-11 flex-shrink-0 rounded-xl -ml-1 hover:bg-[#F5F6F8] dark:hover:bg-gray-800 transition-colors"
-              onClick={() => setMobileMenuOpen(true)}
-              aria-label="Menu"
-              aria-expanded={mobileMenuOpen}
-            >
-              <Menu className="h-6 w-6" aria-hidden />
-            </Button>
-
-            <Link href="/" className="flex items-center justify-center flex-1 min-w-0" aria-label="Proteine Tunisie - Accueil">
+          <div className="flex items-center justify-between w-full px-4 gap-2 h-14 py-2">
+            <Link href="/" className="flex items-center flex-shrink-0" aria-label="Proteine Tunisie - Accueil">
               {/* No `priority` — see the desktop logo note. The mobile logo preload was racing the
                   hero LCP image on phones. It stays eager (in the initial viewport) without a
                   fetchpriority=high preload. */}
@@ -326,7 +316,7 @@ export function HeaderClient() {
                 alt="Proteine Tunisie"
                 width={140}
                 height={48}
-                className="h-8 min-h-[32px] w-auto max-w-full object-contain drop-shadow-sm"
+                className="h-8 min-h-[32px] w-auto max-w-[150px] object-contain"
                 style={{ width: 'auto', height: 'auto' }}
                 loading="eager"
               />
@@ -334,26 +324,12 @@ export function HeaderClient() {
 
             <div className="flex items-center gap-0.5 flex-shrink-0">
               <SearchBar variant="mobile" />
-              <Button
-                variant="ghost"
-                size="icon"
-                className="relative h-11 w-11 min-h-11 min-w-11 flex-shrink-0 rounded-xl hover:bg-[#F5F6F8] dark:hover:bg-gray-800 transition-colors"
-                onClick={() => setCartDrawerOpen(true)}
-                aria-label={cartItemsCount > 0 ? `Panier - ${cartItemsCount} article${cartItemsCount > 1 ? 's' : ''}` : 'Panier'}
-              >
-                <ShoppingCart className="h-6 w-6" aria-hidden />
-                {cartItemsCount > 0 && (
-                  <span className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-[#FF5A00] text-white text-caption font-bold leading-none rounded-full">
-                    {cartItemsCount > 99 ? '99+' : cartItemsCount}
-                  </span>
-                )}
-              </Button>
 
               {isAuthenticated ? (
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-11 w-11 min-h-11 min-w-11 flex-shrink-0 rounded-xl -mr-1 hover:bg-[#F5F6F8] dark:hover:bg-gray-800 transition-colors"
+                  className="h-11 w-11 min-h-11 min-w-11 flex-shrink-0 rounded-xl hover:bg-[#111827]/[0.04] dark:hover:bg-white/5 transition-[background-color,transform] duration-200 active:scale-95"
                   onClick={() => router.push('/account')}
                   aria-label="Mon compte"
                 >
@@ -363,13 +339,40 @@ export function HeaderClient() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-11 w-11 min-h-11 min-w-11 flex-shrink-0 rounded-xl -mr-1 hover:bg-[#F5F6F8] dark:hover:bg-gray-800 transition-colors"
+                  className="h-11 w-11 min-h-11 min-w-11 flex-shrink-0 rounded-xl hover:bg-[#111827]/[0.04] dark:hover:bg-white/5 transition-[background-color,transform] duration-200 active:scale-95"
                   onClick={() => router.push('/login')}
                   aria-label="Connexion"
                 >
                   <User className="h-6 w-6" aria-hidden />
                 </Button>
               )}
+
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative h-11 w-11 min-h-11 min-w-11 flex-shrink-0 rounded-xl hover:bg-[#111827]/[0.04] dark:hover:bg-white/5 transition-[background-color,transform] duration-200 active:scale-95"
+                onClick={() => setCartDrawerOpen(true)}
+                aria-label={cartItemsCount > 0 ? `Panier - ${cartItemsCount} article${cartItemsCount > 1 ? 's' : ''}` : 'Panier'}
+              >
+                <ShoppingCart className="h-6 w-6" aria-hidden />
+                {cartItemsCount > 0 && (
+                  <span className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-[#FF5A00] text-white text-caption font-bold leading-none rounded-full ring-2 ring-white dark:ring-gray-950">
+                    {cartItemsCount > 99 ? '99+' : cartItemsCount}
+                  </span>
+                )}
+              </Button>
+
+              {/* Burger — far right */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-11 w-11 min-h-11 min-w-11 flex-shrink-0 rounded-xl -mr-1 hover:bg-[#111827]/[0.04] dark:hover:bg-white/5 transition-[background-color,transform] duration-200 active:scale-95"
+                onClick={() => setMobileMenuOpen(true)}
+                aria-label="Menu"
+                aria-expanded={mobileMenuOpen}
+              >
+                <Menu className="h-6 w-6" aria-hidden />
+              </Button>
             </div>
           </div>
         </div>
@@ -378,7 +381,7 @@ export function HeaderClient() {
         <div className="hidden md:block bg-white dark:bg-gray-950">
           <div className="max-w-[1400px] mx-auto px-4 lg:px-8">
             <div className="flex items-center gap-6 h-[72px]">
-              <Link href="/" className="flex-shrink-0" aria-label="Proteine Tunisie - Accueil">
+              <Link href="/" className="flex-shrink-0 transition-opacity duration-200 hover:opacity-80" aria-label="Proteine Tunisie - Accueil">
                 {/* Logo is NOT `priority`: next/image priority injects a fetchpriority=high preload
                     that ignores the responsive `hidden`/`md:block` split, so a phone was preloading
                     BOTH logo variants in a race with the hero LCP image. The logo is small and in
@@ -409,11 +412,11 @@ export function HeaderClient() {
                     <DropdownMenuTrigger asChild>
                       <button
                         type="button"
-                        className="flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-lg text-[#111827] dark:text-gray-100 hover:bg-[#F5F6F8] dark:hover:bg-gray-800 transition-colors"
+                        className="flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-lg text-[#111827] dark:text-gray-100 hover:bg-[#111827]/[0.04] dark:hover:bg-white/5 transition-[background-color,transform] duration-200 active:scale-95"
                         aria-label="Mon compte"
                       >
                         <User className="h-5 w-5" aria-hidden />
-                        <span className="text-[11px] font-medium leading-none">Compte</span>
+                        <span className="text-[11px] font-medium leading-none tracking-wide">Compte</span>
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
@@ -447,18 +450,18 @@ export function HeaderClient() {
                 ) : (
                   <Link
                     href="/login"
-                    className="flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-lg text-[#111827] dark:text-gray-100 hover:bg-[#F5F6F8] dark:hover:bg-gray-800 transition-colors"
+                    className="flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-lg text-[#111827] dark:text-gray-100 hover:bg-[#111827]/[0.04] dark:hover:bg-white/5 transition-[background-color,transform] duration-200 active:scale-95"
                     aria-label="Connexion"
                   >
                     <User className="h-5 w-5" aria-hidden />
-                    <span className="text-[11px] font-medium leading-none">Compte</span>
+                    <span className="text-[11px] font-medium leading-none tracking-wide">Compte</span>
                   </Link>
                 )}
 
                 {/* Theme toggle — icon only. */}
                 <button
                   type="button"
-                  className="h-10 w-10 flex items-center justify-center rounded-lg text-[#111827] dark:text-gray-100 hover:bg-[#F5F6F8] dark:hover:bg-gray-800 transition-colors shrink-0"
+                  className="h-10 w-10 flex items-center justify-center rounded-lg text-[#111827] dark:text-gray-100 hover:bg-[#111827]/[0.04] dark:hover:bg-white/5 transition-[background-color,transform] duration-200 active:scale-95 shrink-0"
                   onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                   aria-label="Changer le thème"
                 >
@@ -468,7 +471,7 @@ export function HeaderClient() {
                 {/* Favoris — icon only, keeps its count badge. */}
                 <Link
                   href="/favoris"
-                  className="relative h-10 w-10 flex items-center justify-center rounded-lg text-[#111827] dark:text-gray-100 hover:bg-[#F5F6F8] dark:hover:bg-gray-800 transition-colors shrink-0"
+                  className="relative h-10 w-10 flex items-center justify-center rounded-lg text-[#111827] dark:text-gray-100 hover:bg-[#111827]/[0.04] dark:hover:bg-white/5 transition-[background-color,transform] duration-200 active:scale-95 shrink-0"
                   aria-label={favoritesCount > 0 ? `Favoris - ${favoritesCount} produits` : 'Favoris'}
                 >
                   <Heart className="h-5 w-5" aria-hidden />
@@ -482,7 +485,7 @@ export function HeaderClient() {
                 {/* Panier — icon + french label + count badge. */}
                 <button
                   type="button"
-                  className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-lg text-[#111827] dark:text-gray-100 hover:bg-[#F5F6F8] dark:hover:bg-gray-800 transition-colors shrink-0"
+                  className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-lg text-[#111827] dark:text-gray-100 hover:bg-[#111827]/[0.04] dark:hover:bg-white/5 transition-[background-color,transform] duration-200 active:scale-95 shrink-0"
                   onClick={() => setCartDrawerOpen(true)}
                   aria-label={cartItemsCount > 0 ? `Panier - ${cartItemsCount} articles` : 'Panier'}
                 >
@@ -494,7 +497,7 @@ export function HeaderClient() {
                       </span>
                     )}
                   </span>
-                  <span className="text-[11px] font-medium leading-none">Panier</span>
+                  <span className="text-[11px] font-medium leading-none tracking-wide">Panier</span>
                 </button>
               </div>
             </div>
@@ -504,7 +507,7 @@ export function HeaderClient() {
         {/* DESKTOP nav row — icon + label; active item is #FF5A00 with a 2px underline; the
             pack-builder entry renders as an orange button pinned to the right. */}
         <nav
-          className="hidden md:block bg-white dark:bg-gray-950 border-t border-[#E5E7EB] dark:border-gray-800"
+          className="hidden md:block bg-white dark:bg-gray-950 border-t border-[#EAECEF] dark:border-gray-800"
           aria-label="Navigation principale"
         >
           <div className="max-w-[1400px] mx-auto px-4 lg:px-8">
@@ -534,17 +537,17 @@ export function HeaderClient() {
                       item={link}
                       ariaCurrent={active ? 'page' : undefined}
                       className={cn(
-                        'relative inline-flex items-center gap-1.5 h-full text-[14px] font-semibold whitespace-nowrap transition-colors',
+                        // Shared underline vocabulary: a 2px accent bar that wipes in from the left on
+                        // hover and stays pinned open when active. `after:` on this desktop-only row
+                        // (hidden md:block) so its 300ms is never hit by the mobile 0.2s clamp.
+                        'group relative inline-flex items-center gap-1.5 h-full text-[14px] font-semibold whitespace-nowrap transition-colors duration-200 after:pointer-events-none after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-[#FF5A00] after:origin-left after:scale-x-0 after:transition-transform after:duration-300 after:ease-out hover:after:scale-x-100',
                         active
-                          ? 'text-[#FF5A00]'
+                          ? 'text-[#FF5A00] after:scale-x-100'
                           : 'text-[#111827] dark:text-gray-200 hover:text-[#FF5A00]'
                       )}
                     >
                       <NavigationIcon name={link.icon} className="h-4 w-4" />
                       <span>{translateLegacy(link.label)}</span>
-                      {active && (
-                        <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#FF5A00]" aria-hidden />
-                      )}
                     </NavigationLink>
                   );
                 })}
@@ -553,7 +556,7 @@ export function HeaderClient() {
               {packBuilderLink && (
                 <NavigationLink
                   item={packBuilderLink}
-                  className="shrink-0 inline-flex items-center gap-2 rounded-lg bg-[#FF5A00] px-4 py-2 text-[14px] font-semibold text-white hover:bg-[#E85200] transition-colors whitespace-nowrap"
+                  className="shrink-0 inline-flex items-center gap-2 rounded-lg bg-[#FF5A00] px-4 py-2 text-[14px] font-semibold text-white shadow-[0_2px_8px_rgba(255,90,0,0.25)] transition-all duration-200 hover:bg-[#E85200] hover:shadow-[0_4px_12px_rgba(255,90,0,0.35)] active:scale-[0.98] whitespace-nowrap"
                 >
                   <Gift className="h-4 w-4" aria-hidden />
                   <span>{translateLegacy(packBuilderLink.label)}</span>
@@ -568,7 +571,10 @@ export function HeaderClient() {
         <SheetContent
           side="right"
           showCloseButton={false}
-          className="font-poppins w-[85vw] max-w-[340px] p-0 rounded-l-2xl overflow-hidden bg-white dark:bg-gray-900"
+          /* 100% width (owner request). `!w-full !max-w-none` overrides the Sheet primitive's
+             `w-3/4 sm:max-w-sm` at every width with important so the panel is truly full-bleed even
+             at 640–767px; no rounded left edge since there is no visible left seam. */
+          className="font-poppins !w-full !max-w-none p-0 overflow-hidden bg-white dark:bg-gray-900"
         >
           <div className="flex h-full min-h-0 flex-col">
             {/* 1 — HEADER: logo + close */}
