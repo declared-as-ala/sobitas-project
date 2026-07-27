@@ -50,8 +50,8 @@ const STATIC_HERO = {
   mobileWebp: '/slides/hero-m.webp',
   desktopAvif: '/slides/hero-d.avif',
   desktopWebp: '/slides/hero-d.webp',
-  width: 1707,
-  height: 960,
+  width: 1672,
+  height: 941,
 } as const;
 
 export type HeroSlide = {
