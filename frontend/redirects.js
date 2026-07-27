@@ -122,7 +122,11 @@ function buildRedirects() {
     p('/gainers-riches-en-proteines', '/gainers-proteines'),
     p('/gainers-haute-energie', '/gainers-proteines'),
     p('/carbohydrates', '/glucides'),
-    p('/materiel-de-musculation', '/musculation'),
+    // NOTE: 'materiel-de-musculation' is NOT a legacy alias — it is the real, current live
+    // subcategory slug (Équipement → Matériel de musculation). A rule redirecting it to
+    // /musculation used to live here; combined with the admin-managed /musculation →
+    // /materiel-de-musculation redirect (Filament → Redirections), it formed an infinite
+    // 301/308 loop on the real page. Never re-add a rule that redirects this slug away.
     p('/ceinture-de-musculation', '/musculation'),
     p('/gants-de-musculation-et-fitness', '/musculation'),
     p('/bandes-de-soutien-musculaire', '/musculation'),
