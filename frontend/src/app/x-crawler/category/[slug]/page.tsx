@@ -20,7 +20,7 @@
  */
 
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import {
   fetchCategoryOrSubCategory,
   getAllBrands,
@@ -274,6 +274,20 @@ export default async function CrawlerCategoryPage({ params }: PageProps) {
         <PageContentClient page={page} />
       </>
     );
+  }
+
+  /**
+   * LEGACY NUMERIC SUFFIX on a listing slug (/creatine-2, /vitamines-2, /whey-isolate-5 …).
+   * Recovered HERE as well as in app/(shop)/[slug]/page.tsx because middleware rewrites bot
+   * traffic for /{slug} to this crawler view — so the (shop) recovery never runs for Googlebot,
+   * which is precisely the visitor these Search Console 404s come from.
+   *
+   * Runs ONLY after category, subcategory, brand and CMS-page resolution have all failed, so a
+   * real slug ending in a number is served above and never redirected.
+   */
+  const baseSlug = cleanSlug.replace(/-\d+$/, '');
+  if (baseSlug && baseSlug !== cleanSlug) {
+    permanentRedirect(`/${baseSlug}`);
   }
 
   notFound();

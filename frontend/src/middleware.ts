@@ -57,34 +57,64 @@ function slugifyName(name: string): string {
     .trim();
 }
 
-/** Resolve /shop/:slug → /{subcat}/{slug} or /{slug} via backend API. Returns null on failure. */
-async function resolveShopSlug(slug: string): Promise<string | null> {
-  const apiBase =
-    process.env.API_BACKEND_URL ||
-    process.env.NEXT_PUBLIC_API_URL?.replace('/api-proxy', '') ||
-    'https://admin.protein.tn/api';
+const API_BASE =
+  process.env.API_BACKEND_URL ||
+  process.env.NEXT_PUBLIC_API_URL?.replace('/api-proxy', '') ||
+  'https://admin.protein.tn/api';
+
+/** Look a product up by slug. Returns its canonical path, `false` for a clean 404, null on error. */
+async function lookupProduct(slug: string): Promise<string | null | false> {
   try {
-    const res = await fetch(`${apiBase}/product_details/${encodeURIComponent(slug)}`, {
+    const res = await fetch(`${API_BASE}/product_details/${encodeURIComponent(slug)}`, {
       next: { revalidate: 3600 },
       headers: { Accept: 'application/json' },
       signal: AbortSignal.timeout(1500),
     });
-    if (!res.ok) {
-      // 404 → might be a category slug like /shop/omega-3
-      if (res.status === 404) return `/${slug}`;
-      return null;
-    }
+    if (res.status === 404) return false;
+    if (!res.ok) return null;
     const product = await res.json();
     const subSlug: string | undefined =
       product?.sous_categorie?.slug ||
       product?.sousCategorie?.slug ||
       product?.sous_categorie_slug;
-    if (subSlug) return `/${subSlug}/${slug}`;
-    // Product exists but no subcategory — redirect to /shop is wrong; keep on /shop
-    return null;
+    return subSlug ? `/${subSlug}/${slug}` : null;
   } catch {
     return null;
   }
+}
+
+/**
+ * Resolve /shop/:slug → /{subcat}/{slug} or /{slug}. Returns null to fall through to the page.
+ *
+ * LEGACY NUMERIC SUFFIX (the biggest single source of GSC "Not found (404)").
+ * The old site emitted hundreds of URLs with an index appended to the slug —
+ * /shop/xtend-bcaa-420g-0, /creatine/creatine-real-pharm-300g-11, /musculation/leg-press-machine-46.
+ * The previous code answered a product-API 404 by unconditionally redirecting to `/{slug}`, which
+ * turned every one of those into a 301 **into a 404** — strictly worse than a plain 404, because
+ * Google follows the hop and still finds nothing, and the redirect is cacheable.
+ *
+ * Order matters and is deliberate: the FULL slug is always tried first, so real slugs that simply
+ * end in a number (omega-3, bcaa-8-1-1-400g-real-pharm, iso-100-dymatize-2-3kg) resolve normally
+ * and are never stripped. Only when the full slug is genuinely unknown do we retry without the
+ * trailing `-N`, which lands the legacy URL on the real product in ONE hop.
+ */
+async function resolveShopSlug(slug: string): Promise<string | null> {
+  const direct = await lookupProduct(slug);
+  if (typeof direct === 'string') return direct;
+  if (direct === null) return null; // API error — let the page decide, never guess
+
+  // Genuine 404 for the full slug. If it carries a legacy numeric suffix, retry the base slug.
+  const base = slug.replace(/-\d+$/, '');
+  if (base && base !== slug) {
+    const stripped = await lookupProduct(base);
+    if (typeof stripped === 'string') return stripped;
+    // Not a product either — the base is most likely a category/brand slug (/creatine-2 → /creatine).
+    if (stripped === false) return `/${base}`;
+    return null;
+  }
+
+  // No numeric suffix: the slug may be a category served at /{slug} (e.g. /shop/omega-3).
+  return `/${slug}`;
 }
 
 export async function middleware(request: NextRequest) {

@@ -21,7 +21,7 @@
  */
 
 import type { Metadata } from 'next';
-import { notFound, unstable_rethrow } from 'next/navigation';
+import { notFound, permanentRedirect, unstable_rethrow } from 'next/navigation';
 import { getErrorStatus } from '@/util/errorStatus';
 import { getSimilarProducts } from '@/services/api';
 import { getCachedProductDetails } from '@/services/getCachedProductDetails';
@@ -79,7 +79,31 @@ export default async function CrawlerProductPage({ params }: PageProps) {
     unstable_rethrow(e);
     // Genuine 404 → 404 for the bot. Transient failure → rethrow so this ISR route never
     // caches a wrong 404 for a healthy product (Googlebot seeing 404s deindexes pages!).
-    if (getErrorStatus(e) === 404) notFound();
+    if (getErrorStatus(e) === 404) {
+      /**
+       * LEGACY NUMERIC SUFFIX — recovered HERE because this is the route Googlebot actually
+       * reaches: middleware REWRITES /{subcat}/{slug} to this crawler view for bot UAs, so the
+       * equivalent recovery in app/(shop)/[slug]/[productSlug]/page.tsx never runs for a crawler.
+       * The old site emitted product URLs with a list index appended
+       * (/creatine/creatine-real-pharm-300g-11); retrying without the trailing -N sends the bot
+       * to the live product in ONE 301 instead of serving it a 404.
+       *
+       * Only reached after the FULL slug already 404'd, so real slugs ending in a number are
+       * resolved normally above and never rewritten.
+       */
+      const baseSlug = cleanSlug.replace(/-\d+$/, '');
+      if (baseSlug && baseSlug !== cleanSlug) {
+        let fallback: Product | null = null;
+        try {
+          fallback = await getCachedProductDetails(baseSlug);
+        } catch (retryError) {
+          unstable_rethrow(retryError);
+          fallback = null;
+        }
+        if (fallback?.id) permanentRedirect(buildProductCanonicalUrl(fallback));
+      }
+      notFound();
+    }
     throw e;
   }
   if (!product?.id || !getProductPrimarySubCategory(product)?.slug) {

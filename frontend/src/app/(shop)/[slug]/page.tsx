@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import CategoryPage, { generateMetadata as generateCategoryMetadata } from '@/app/(shop)/category/[slug]/page';
 import { PageContentClient } from '@/app/(shop)/page/[slug]/PageContentClient';
 import { ShopPageClient } from '@/app/(shop)/shop/ShopPageClient';
@@ -234,6 +234,21 @@ export default async function RootSlugPage({ params }: RootSlugPageProps) {
         <PageContentClient page={page} />
       </>
     );
+  }
+
+  /**
+   * LEGACY NUMERIC SUFFIX on a listing slug (/creatine-2, /vitamines-2, /whey-isolate-5, …).
+   * The old site paginated/duplicated category, subcategory and brand URLs by appending an index.
+   * Every one of them is a hard 404 today (56 of them in the current Search Console export).
+   *
+   * This runs ONLY after category, subcategory, brand and CMS-page resolution have all failed, so
+   * a real slug that happens to end in a number (omega-3, whey-80-2kg) is resolved above and never
+   * reaches here. Sending the dead URL to its base listing in one 301 recovers the link equity
+   * instead of dropping it.
+   */
+  const baseSlug = cleanSlug.replace(/-\d+$/, '');
+  if (baseSlug && baseSlug !== cleanSlug) {
+    permanentRedirect(`/${baseSlug}`);
   }
 
   notFound();
