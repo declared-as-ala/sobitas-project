@@ -41,18 +41,13 @@ class ProductSeoDefaults
 
         $changed = false;
 
-        if (trim((string) $product->meta_title) === '') {
-            // Mirrors the storefront's CTR template so DB + frontend fallback agree.
-            $product->meta_title = mb_substr("{$withBrand} – Prix Tunisie & Livraison Rapide | Protéine Tunisie", 0, 255);
+        if (trim((string) $product->meta_title) === '' || self::isLegacyTitle($product, $withBrand)) {
+            $product->meta_title = self::buildTitle($name);
             $changed = true;
         }
 
-        if (trim((string) $product->meta_description) === '') {
-            $product->meta_description = mb_substr(
-                "Achetez {$withBrand} en Tunisie au meilleur prix. Produit 100% authentique, livraison rapide 24-72h à Sousse, Tunis et partout en Tunisie, paiement à la livraison.",
-                0,
-                500
-            );
+        if (trim((string) $product->meta_description) === '' || self::isLegacyDescription($product, $withBrand)) {
+            $product->meta_description = mb_substr(self::buildDescription($name, $product), 0, 500);
             $changed = true;
         }
 
@@ -65,5 +60,105 @@ class ProductSeoDefaults
         }
 
         return $changed;
+    }
+
+    /**
+     * Title, built to survive Google's ~60-character truncation.
+     *
+     * The previous template was "{name} – {brand} – Prix Tunisie & Livraison Rapide | Protéine
+     * Tunisie": 88 characters for a typical product, so everything from "Prix" onwards was cut
+     * off in the SERP. The geo token "Tunisie" — the exact thing these pages need to rank for —
+     * was never actually visible. The suffix is now short enough to survive, and the brand is
+     * dropped from the title when the name alone already fills the budget (it stays in the
+     * description and in the H1 either way).
+     */
+    private static function buildTitle(string $name): string
+    {
+        $short = $name . ' – Prix Tunisie | Protein.tn';
+        if (mb_strlen($short) <= 65) {
+            return mb_substr($short, 0, 255);
+        }
+
+        return mb_substr($name . ' – Prix Tunisie', 0, 255);
+    }
+
+    /**
+     * Description including the product's own CATEGORY.
+     *
+     * Every one of the 303 products previously carried a byte-identical description. Boilerplate
+     * repeated across a whole catalogue gives Google nothing to distinguish one page from another,
+     * and it wastes the one place we can naturally state the category term people actually search
+     * ("créatine", "whey protéine", "mass gainer"). Naming the category makes each description
+     * distinct AND puts the head keyword on the product page that sits under it.
+     */
+    private static function buildDescription(string $name, Product $product): string
+    {
+        $category = trim((string) ($product->sousCategorie?->designation_fr ?? ''));
+
+        // The category clause is skipped when the name already contains the term — repeating
+        // "Créatine" in "CREATINE MONOHYDRATE OSTROVIT — Créatine en Tunisie" is stuffing, not
+        // information.
+        $lead = $category !== '' && ! str_contains(mb_strtolower($name), mb_strtolower($category))
+            ? "{$name} — {$category} en Tunisie."
+            : "{$name} — en vente en Tunisie.";
+
+        // Built from whole sentences and fitted by DROPPING trailing ones, never by cutting.
+        // A hard character trim produced "… Produit 100%." — a sentence severed at its most
+        // meaningless point, which looks broken in the SERP and reads as a truncated promise.
+        // Short sentences on purpose: fitting works by dropping whole ones, so finer granularity
+        // fills the ~155 char budget instead of leaving 30 characters unused because the next
+        // clause was one word too long.
+        return self::fitSentences([
+            $lead,
+            'Livraison 24-72h partout en Tunisie.',
+            'Paiement à la livraison.',
+            'Produit 100% authentique.',
+        ], 155);
+    }
+
+    /**
+     * Join as many leading sentences as fit within $limit. The first is always kept (trimmed on a
+     * word boundary if it alone is too long), so the result is never empty.
+     *
+     * @param  list<string>  $sentences
+     */
+    private static function fitSentences(array $sentences, int $limit): string
+    {
+        $out = array_shift($sentences) ?? '';
+        if (mb_strlen($out) > $limit) {
+            $cut = mb_substr($out, 0, $limit - 1);
+            $space = mb_strrpos($cut, ' ');
+
+            return rtrim($space ? mb_substr($cut, 0, $space) : $cut, " ,.;–—") . '.';
+        }
+
+        foreach ($sentences as $sentence) {
+            if (mb_strlen($out) + 1 + mb_strlen($sentence) > $limit) {
+                break;
+            }
+            $out .= ' ' . $sentence;
+        }
+
+        return $out;
+    }
+
+    /**
+     * Was this value written by the PREVIOUS version of this class rather than by a human?
+     *
+     * The backfill in #158 stamped an auto-generated title/description onto 279 products. Those
+     * are ours to improve; anything a person typed is not. Matching the old template exactly is
+     * the only honest way to tell the two apart after the fact — if it differs by a single
+     * character, we treat it as authored and leave it alone.
+     */
+    private static function isLegacyTitle(Product $product, string $withBrand): bool
+    {
+        return trim((string) $product->meta_title)
+            === "{$withBrand} – Prix Tunisie & Livraison Rapide | Protéine Tunisie";
+    }
+
+    private static function isLegacyDescription(Product $product, string $withBrand): bool
+    {
+        return trim((string) $product->meta_description)
+            === "Achetez {$withBrand} en Tunisie au meilleur prix. Produit 100% authentique, livraison rapide 24-72h à Sousse, Tunis et partout en Tunisie, paiement à la livraison.";
     }
 }
