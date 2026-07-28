@@ -40,7 +40,7 @@ import { getCategorySeoContent } from '@/util/categorySeoContent';
 import { mergeCategorySeo } from '@/util/resolveCategorySeo';
 import { buildCanonicalUrl, getBaseUrl, resolveCanonicalUrl } from '@/util/canonical';
 import { isReservedRouteSlug, getProductLink } from '@/util/productUrl';
-import { buildBreadcrumbListSchema, buildCollectionPageSchema, buildItemListSchema, buildWebPageSchema } from '@/util/structuredData';
+import { buildBreadcrumbListSchema, buildCollectionPageSchema, buildFAQPageSchemaFromQA, buildItemListSchema, buildWebPageSchema } from '@/util/structuredData';
 import { sanitizeProductHtml } from '@/util/sanitizeProductHtml';
 import { CrawlerCategoryView, type CrawlerListLink } from '@/app/components/crawler/CrawlerCategoryView';
 import type { Brand, Page, Product } from '@/types';
@@ -203,15 +203,26 @@ export default async function CrawlerCategoryPage({ params }: PageProps) {
     const itemListSchema = productListItems.length > 0
       ? buildItemListSchema(productListItems, baseUrl, { name: title })
       : null;
+    // FAQPage was emitted on the human page only, so the rich-result eligibility never reached
+    // the crawler — Google saw zero FAQ markup on these pages. Safe to emit here because the same
+    // Q&A is now rendered as visible text in CrawlerCategoryView; FAQ schema without matching
+    // on-page content is a structured-data violation, not a shortcut.
+    const faqs = merged.faqs ?? [];
+    const faqSchema = faqs.length ? buildFAQPageSchemaFromQA(faqs) : null;
 
     return (
       <>
         {ldScript(breadcrumbSchema, 'bc')}
         {ldScript(collectionSchema, 'cp')}
         {itemListSchema && ldScript(itemListSchema, 'il')}
+        {faqSchema && ldScript(faqSchema, 'faq')}
         <CrawlerCategoryView
           title={title}
           introHtml={introHtml}
+          howToChooseTitle={merged.howToChooseTitle?.trim() || null}
+          howToChooseBody={merged.howToChooseBody?.trim() ? sanitizeProductHtml(merged.howToChooseBody) : null}
+          longBottomHtml={merged.longBottomHtml?.trim() ? sanitizeProductHtml(merged.longBottomHtml) : null}
+          faqs={faqs}
           breadcrumbs={breadcrumbs}
           products={products}
           subCategories={subCats}

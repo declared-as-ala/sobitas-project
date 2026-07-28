@@ -23,6 +23,10 @@ export type CrawlerListLink = { name: string; url: string };
 export function CrawlerCategoryView({
   title,
   introHtml,
+  howToChooseTitle = null,
+  howToChooseBody = null,
+  longBottomHtml = null,
+  faqs = [],
   breadcrumbs,
   products,
   subCategories = [],
@@ -31,6 +35,12 @@ export function CrawlerCategoryView({
 }: {
   title: string;
   introHtml?: string | null;
+  /** Buying guide + FAQ, mirroring the human category page. Omitting these handed Googlebot
+   *  roughly a tenth of the page's real content — see the note at the render site below. */
+  howToChooseTitle?: string | null;
+  howToChooseBody?: string | null;
+  longBottomHtml?: string | null;
+  faqs?: Array<{ question: string; answer: string }>;
   breadcrumbs: CrawlerListLink[];
   products: Product[];
   subCategories?: CrawlerListLink[];
@@ -78,6 +88,50 @@ export function CrawlerCategoryView({
             className="prose prose-sm max-w-none"
             dangerouslySetInnerHTML={{ __html: introHtml }}
           />
+        </section>
+      )}
+
+      {/* "Comment choisir…" guide.
+          Previously omitted, and with it most of the page. Measured before this change, the
+          human /creatine rendered 1,605 words while the crawler view handed Googlebot 173 — the
+          editorial guide, the buying advice and every FAQ were dropped, so Google judged the
+          category on ~11% of its content. For a page whose whole job is to rank for
+          "créatine tunisie", that was the single biggest thing holding it back. It is also a
+          content-parity break: dynamic rendering is only defensible while both views say the
+          same thing. */}
+      {howToChooseTitle && howToChooseBody && (
+        <section aria-label="Guide d'achat" className="my-6">
+          <h2 className="text-lg font-semibold">{howToChooseTitle}</h2>
+          <div
+            className="prose prose-sm mt-2 max-w-none"
+            dangerouslySetInnerHTML={{ __html: howToChooseBody }}
+          />
+        </section>
+      )}
+
+      {longBottomHtml && (
+        <section aria-label="Informations complémentaires" className="my-6">
+          <div
+            className="prose prose-sm max-w-none"
+            dangerouslySetInnerHTML={{ __html: longBottomHtml }}
+          />
+        </section>
+      )}
+
+      {/* FAQ as real text. The FAQPage JSON-LD is emitted by the route, but the schema is only
+          valid when the same Q&A is visible in the HTML — so it must live here, not only in the
+          structured data. */}
+      {faqs.length > 0 && (
+        <section aria-label="Questions fréquentes" className="my-6">
+          <h2 className="text-lg font-semibold">Questions fréquentes</h2>
+          <dl className="mt-2">
+            {faqs.map((f, i) => (
+              <div key={`${f.question}-${i}`} className="mt-3">
+                <dt className="font-semibold">{f.question}</dt>
+                <dd className="prose prose-sm max-w-none">{f.answer}</dd>
+              </div>
+            ))}
+          </dl>
         </section>
       )}
 
