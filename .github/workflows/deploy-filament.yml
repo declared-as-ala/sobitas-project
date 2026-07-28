@@ -145,6 +145,9 @@ jobs:
             echo "🔄 Recreating queue worker with latest image..."
             docker compose -f "$COMPOSE_FILE" up -d --force-recreate --no-deps backend-v2-queue
 
+            echo "⏰ Recreating scheduler with latest image..."
+            docker compose -f "$COMPOSE_FILE" up -d --force-recreate --no-deps backend-v2-scheduler
+
             echo "📋 Final status:"
             docker compose -f "$COMPOSE_FILE" ps
 
@@ -233,6 +236,9 @@ jobs:
 
             echo "🔄 Recreating queue worker with latest image..."
             docker compose -f "$COMPOSE_FILE" up -d --force-recreate --no-deps backend-v2-queue
+
+            echo "⏰ Recreating scheduler with latest image..."
+            docker compose -f "$COMPOSE_FILE" up -d --force-recreate --no-deps backend-v2-scheduler
 
             echo "📋 Final status:"
             docker compose -f "$COMPOSE_FILE" ps
