@@ -63,6 +63,26 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # Ship docker-compose.yml to the VPS before deploying.
+      #
+      # Nothing ever synced it. The server's copy is whatever was last placed there by hand, and
+      # the repo checkout at /root/sobitas-project cannot self-update — the fitness-api workflow
+      # runs `git pull` in the same directory and logs "⚠️ git pull warning" every time.
+      #
+      # The result was silent: adding the `backend-v2-scheduler` service to this file did nothing,
+      # and the deploy printed `no such service: backend-v2-scheduler` while still reporting
+      # success. Any future service, port or env change to compose would have failed the same way.
+      - name: Sync docker-compose.yml to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: ${{ secrets.VPS_PORT }}
+          source: docker-compose.yml
+          target: /root/sobitas-project
+          overwrite: true
+
       - name: Deploy to VPS (attempt 1)
         id: deploy_attempt_1
         continue-on-error: true
