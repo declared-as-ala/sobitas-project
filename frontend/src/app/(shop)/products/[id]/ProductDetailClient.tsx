@@ -27,6 +27,7 @@ import {
   getProductStockStatus,
 } from '@/util/cartStock';
 import { cn } from '@/app/components/ui/utils';
+import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
 
 export type BreadcrumbItem = { name: string; url: string };
 
@@ -39,15 +40,6 @@ interface ProductDetailClientProps {
   breadcrumbItems?: BreadcrumbItem[];
 }
 
-function nameToSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .trim();
-}
 
 /**
  * Stock / promo / "Nouveau" / "Top Vendu" badges.

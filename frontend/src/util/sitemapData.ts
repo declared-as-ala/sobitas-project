@@ -5,6 +5,7 @@ import type { Product, Article, Category, Brand, SubCategory, Page } from '@/typ
 import { getProductPrimarySubCategory } from '@/util/productUrl';
 import { enrichProductsWithSubcategory } from '@/util/enrichProductSubcategory';
 import { listCategorySeoSlugs } from '@/util/categorySeoContent';
+import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
 
@@ -54,15 +55,6 @@ function toSitemapImage(path?: string | null): string | undefined {
   return raw;
 }
 
-function nameToSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .trim();
-}
 
 interface ItemWithDates {
   updated_at?: string;

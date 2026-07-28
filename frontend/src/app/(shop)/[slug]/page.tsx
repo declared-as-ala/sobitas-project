@@ -19,6 +19,7 @@ import { isReservedRouteSlug, buildProductUrlPath } from '@/util/productUrl';
 import { enrichProductsWithSubcategory } from '@/util/enrichProductSubcategory';
 import { buildCollectionPageSchema, buildItemListSchema, buildBreadcrumbListSchema, buildWebPageSchema } from '@/util/structuredData';
 import type { Brand, Page } from '@/types';
+import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
 
 export type RootSlugPageProps = {
   params: Promise<{ slug: string }>;
@@ -38,15 +39,6 @@ function isNotFoundError(error: unknown): boolean {
   return maybeAxios?.response?.status === 404 || maybeAxios?.status === 404;
 }
 
-function nameToSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .trim();
-}
 
 async function hasCategoryOrSubCategory(slug: string): Promise<boolean> {
   try {

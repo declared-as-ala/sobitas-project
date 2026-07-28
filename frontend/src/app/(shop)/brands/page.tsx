@@ -3,22 +3,13 @@ import BrandsPageClient from './BrandsPageClient';
 import { getAllBrands } from '@/services/api';
 import { loadForCache } from '@/util/loadForCache';
 import { buildBreadcrumbListSchema, buildCollectionPageSchema, buildItemListSchema } from '@/util/structuredData';
+import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
 
 // ISR: the brand list changes rarely, so cache the server-rendered page.
 export const revalidate = 3600;
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
 
-// Mirror BrandsPageClient's nameToSlug so ItemList URLs equal the rendered brand card hrefs.
-function nameToSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .trim();
-}
 
 export const metadata: Metadata = {
   title: { absolute: 'Marques — Compléments Alimentaires | Protéine Tunisie' },

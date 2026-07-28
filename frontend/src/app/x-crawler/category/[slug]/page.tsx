@@ -44,6 +44,7 @@ import { buildBreadcrumbListSchema, buildCollectionPageSchema, buildItemListSche
 import { sanitizeProductHtml } from '@/util/sanitizeProductHtml';
 import { CrawlerCategoryView, type CrawlerListLink } from '@/app/components/crawler/CrawlerCategoryView';
 import type { Brand, Page, Product } from '@/types';
+import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
 
 // Own ISR cache namespace, keyed by /x-crawler/category/{slug}.
 export const revalidate = 300;
@@ -56,15 +57,6 @@ function isNotFoundError(error: unknown): boolean {
   return maybe?.response?.status === 404 || maybe?.status === 404;
 }
 
-function nameToSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .trim();
-}
 
 async function findBrandBySlug(slug: string): Promise<Brand | null> {
   try {

@@ -8,20 +8,11 @@ import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { getAllBrands, getStorageUrl } from '@/services/api';
 import type { Brand } from '@/types';
 import { buildBrandAlt } from '@/util/productAlt';
+import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
 
 // How many logos to show on the homepage before "Toutes les marques".
 const MAX_BRANDS = 12;
 
-// Helper to generate slug from name
-function nameToSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '') // Remove accents
-    .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric with hyphens
-    .replace(/^-+|-+$/g, '') // Remove leading/trailing hyphens
-    .trim();
-}
 
 // Brand tile — a clean logo-wall cell (colored logo, subtle lift on hover).
 // A real <a> (LinkWithLoading) so it is a crawlable internal link from the homepage and supports
