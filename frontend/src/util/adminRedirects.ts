@@ -56,7 +56,22 @@ async function fetchRules(): Promise<Map<string, RedirectRule>> {
     const res = await fetch(`${apiBase()}/redirections`, {
       headers: { Accept: 'application/json' },
       signal: AbortSignal.timeout(1500),
-      cache: 'no-store',
+      /**
+       * `next: { revalidate }` rather than `cache: 'no-store'`.
+       *
+       * Next treats a no-store fetch as a dynamic signal and opts the ENTIRE calling route out of
+       * static generation. This module is reached from resolveCanonicalUrl(), which every
+       * indexable page calls to emit its canonical — so a no-store here made every category,
+       * product and brand page dynamic. Measured after the http.ts cache fix: `/` cached
+       * (x-nextjs-cache: HIT) while /creatine and every product still returned
+       * `Cache-Control: private, no-cache, no-store`, because they were still going through here.
+       *
+       * Caching is safe: these are admin-managed redirect rules that change a few times a year,
+       * this module already keeps its own in-process cache with a TTL, and middleware — where a
+       * stale rule would actually matter — reads the same data through that in-process path
+       * rather than relying on the Data Cache.
+       */
+      next: { revalidate: 300, tags: ['admin-redirects'] },
     });
     if (!res.ok) return map;
     const rows = await res.json();

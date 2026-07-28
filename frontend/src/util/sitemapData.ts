@@ -144,6 +144,31 @@ async function computeSitemapEntries(): Promise<SectionedSitemapEntry[]> {
   // root URL for a slug that 404s (e.g. /whey-protein) or 301s (e.g. /mass-gainer).
   const liveCategorySlugs = new Set<string>();
 
+  /**
+   * Which brands and subcategories actually HAVE products.
+   *
+   * A listing page with zero products is an empty page: a heading, a breadcrumb, and nothing to
+   * buy. Google reads that as a soft 404, and submitting it in the sitemap asserts it is worth
+   * indexing. An audit found 13 of 55 brands (API, MYPROTEIN, MONSTER, MUTANT…) and 6 of 41
+   * subcategories with no products at all, every one of them submitted.
+   *
+   * Populated from the catalogue crawl below, so it self-corrects: the day a brand gets its first
+   * product the page reappears in the sitemap with no intervention.
+   */
+  const brandIdsWithProducts = new Set<number>();
+  const subCategorySlugsWithProducts = new Set<string>();
+
+  /**
+   * Slugs that have an editorial content file. A subcategory with no products but a real guide is
+   * still worth indexing on its own merits, so it is exempt from the empty-listing rule above.
+   * Loaded up front because that rule runs before the "double insurance" block that also uses it.
+   */
+  const contentFileSlugs = new Set<string>(
+    (await listCategorySeoSlugs().catch(() => [] as string[]))
+      .map((s) => String(s ?? '').trim().toLowerCase())
+      .filter(Boolean)
+  );
+
   // Add static pages with dedup
   for (const entry of staticPages) {
     const encoded = encodeSitemapUrl(entry.url);
@@ -201,6 +226,16 @@ async function computeSitemapEntries(): Promise<SectionedSitemapEntry[]> {
       const categoriesForEnrich =
         categories.status === 'fulfilled' && Array.isArray(categories.value) ? categories.value : [];
       const enrichedProducts = enrichProductsWithSubcategory(allProducts, categoriesForEnrich);
+
+      // Record which listings have something to show, so empty ones can be left out below.
+      for (const p of enrichedProducts) {
+        if (!(p.publier == 1 || p.publier === undefined)) continue;
+        const brandId = Number((p as { brand_id?: unknown }).brand_id);
+        if (Number.isFinite(brandId) && brandId > 0) brandIdsWithProducts.add(brandId);
+        const subSlug = getProductPrimarySubCategory(p)?.slug;
+        if (subSlug) subCategorySlugsWithProducts.add(subSlug.toLowerCase());
+      }
+
       const productUrls = enrichedProducts
         .filter((p: Product) => p.slug && (p.publier == 1 || p.publier === undefined))
         .map((p: Product) => {
@@ -272,6 +307,15 @@ async function computeSitemapEntries(): Promise<SectionedSitemapEntry[]> {
             ) {
               return;
             }
+            // Empty listing = soft 404. Skip a subcategory with no products UNLESS it has an
+            // editorial content file, in which case the page still says something useful and is
+            // worth indexing on its own merits. 6 of 41 subcategories currently have no products.
+            if (
+              !subCategorySlugsWithProducts.has(subCategory.slug.toLowerCase()) &&
+              !contentFileSlugs.has(subCategory.slug.toLowerCase())
+            ) {
+              return;
+            }
             const url = `${BASE_URL}/${encodeURIComponent(subCategory.slug)}`;
             if (!seenUrls.has(url)) {
               seenUrls.add(url);
@@ -323,7 +367,10 @@ async function computeSitemapEntries(): Promise<SectionedSitemapEntry[]> {
   try {
     if (brands.status === 'fulfilled' && Array.isArray(brands.value) && brands.value.length > 0) {
       brands.value.forEach((brand: Brand) => {
-        if (brand.id && brand.designation_fr) {
+        // A brand page with no products is a heading and nothing to buy — a soft 404, and there
+        // is no editorial fallback for brands. 13 of 55 brands (API, MYPROTEIN, MONSTER, MUTANT…)
+        // were being submitted empty. Self-correcting: the day a brand gets a product it returns.
+        if (brand.id && brand.designation_fr && brandIdsWithProducts.has(Number(brand.id))) {
           const url = `${BASE_URL}/${nameToSlug(brand.designation_fr)}`;
           if (!seenUrls.has(url)) {
             seenUrls.add(url);
