@@ -114,6 +114,13 @@ export function isReservedRouteSlug(slug: string): boolean {
     'page',
     'proteine-sousse',
     'qui-sommes-nous',
+    // Missing here meant middleware rewrote /pack-builder to /x-crawler/category/pack-builder,
+    // which resolves category → brand → CMS page, found none, and served Googlebot a 404 +
+    // noindex for a page that returns 200 to every human. Verified live before the fix:
+    //   bot   → 404, robots: noindex, no canonical
+    //   human → 200, "Composez votre pack — Protéine Tunisie"
+    // scripts/check-reserved-routes.mjs now fails the build if this list drifts from app/ again.
+    'pack-builder',
     'api',
     'admin',
     '_next',

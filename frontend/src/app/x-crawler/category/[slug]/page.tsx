@@ -45,6 +45,7 @@ import { sanitizeProductHtml } from '@/util/sanitizeProductHtml';
 import { CrawlerCategoryView, type CrawlerListLink } from '@/app/components/crawler/CrawlerCategoryView';
 import type { Brand, Page, Product } from '@/types';
 import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
+import { buildBrandMetaTitle, buildBrandMetaDescription } from '@/util/brandMeta';
 
 // Own ISR cache namespace, keyed by /x-crawler/category/{slug}.
 export const revalidate = 300;
@@ -104,10 +105,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const brand = await findBrandBySlug(cleanSlug);
     if (brand) {
       const canonical = buildCanonicalUrl(`/${encodeURIComponent(cleanSlug)}`);
-      const title = `${brand.designation_fr} - Protéines & Compléments Tunisie | Protéine Tunisie`;
+      // Shared with the human /{slug} route: same URL must not have two different titles.
+      const title = buildBrandMetaTitle(brand.designation_fr);
       return {
         title: { absolute: title },
-        description: `Découvrez tous les produits ${brand.designation_fr} en Tunisie. Qualité premium, livraison rapide.`,
+        description: buildBrandMetaDescription(brand.designation_fr),
         alternates: { canonical },
         robots: { index: true, follow: true },
       };
