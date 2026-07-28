@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Support\StorefrontUrl;
 use App\Filament\Support\ImagePath;
 use App\Models\Article;
 use App\Support\MediaLibrary\MediaLibraryPayload;
@@ -32,7 +33,7 @@ class ArticleDetailResource extends JsonResource
         $coverNorm = ImagePath::normalize($this->cover);
         $coverMedia = $coverNorm ? ($libraryByPath[$coverNorm] ?? null) : null;
 
-        $frontendBase = rtrim((string) config('app.frontend_url', config('app.url', 'https://protein.tn')), '/');
+        $frontendBase = StorefrontUrl::base();
         $shopSlugs = is_array($this->related_shop_category_slugs ?? null) ? $this->related_shop_category_slugs : [];
         $relatedShopCategories = [];
         foreach ($shopSlugs as $slug) {
