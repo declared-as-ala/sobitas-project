@@ -727,7 +727,30 @@ export function buildLocalBusinessSchema(baseUrl: string): object {
     // hasMap lets Google tie this markup to that exact profile rather than inferring from the
     // address string, which is what disambiguates a business on a street with several units.
     hasMap: 'https://maps.app.goo.gl/w2ytnYAKSZDmjznh6',
-    areaServed: { '@type': 'Country', name: 'Tunisia' },
+    /**
+     * The 24 Tunisian governorates the shop actually delivers to, not just "Tunisia".
+     *
+     * This is the honest way to signal national local relevance. The tempting alternative —
+     * generating /proteine-tunis, /proteine-sfax, /proteine-nabeul … from one template with the
+     * city name swapped — is a textbook doorway-page pattern: near-duplicate pages funnelling to
+     * the same destination, for a business with a single physical store in Sousse. Google treats
+     * that as spam, and having just removed fabricated review markup to avoid a manual action it
+     * would be absurd to introduce a different one.
+     *
+     * /proteine-sousse stays because there IS a shop in Sousse and the page has 759 words of
+     * genuinely local content. Any future city page has to earn its place the same way.
+     *
+     * Source: AramexService::normalizeCity — the canonical governorate list the shipping
+     * integration itself uses, so this claim is backed by where orders can actually be sent.
+     */
+    areaServed: [
+      { '@type': 'Country', name: 'Tunisia' },
+      ...[
+        'Tunis', 'Ariana', 'Ben Arous', 'Manouba', 'Nabeul', 'Zaghouan', 'Bizerte', 'Béja',
+        'Jendouba', 'Le Kef', 'Siliana', 'Sousse', 'Monastir', 'Mahdia', 'Sfax', 'Kairouan',
+        'Kasserine', 'Sidi Bouzid', 'Gabès', 'Medenine', 'Tataouine', 'Gafsa', 'Tozeur', 'Kébili',
+      ].map((name) => ({ '@type': 'AdministrativeArea', name })),
+    ],
     priceRange: '$$',
     currenciesAccepted: 'TND',
     paymentAccepted: 'Cash on delivery, Bank transfer',
