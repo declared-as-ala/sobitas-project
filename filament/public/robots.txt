@@ -1,5 +1,29 @@
-# admin.protein.tn is the Filament admin + API host — it must never be indexed.
-# (The empty "Disallow:" here previously meant ALLOW-ALL, inviting Google to index the
-# backend/API as a second copy of the catalogue.)
+# admin.protein.tn is the Filament admin + API host. Its PAGES must never be indexed — a bare
+# "Disallow:" here once meant allow-all and invited Google to index the backend/API as a second
+# copy of the catalogue.
+#
+# BUT every product photo on the storefront is served from THIS host
+# (https://admin.protein.tn/storage/produits/*.webp). "Disallow: /" therefore also forbade
+# Googlebot-Image from fetching any product image at all — the <img src>, the Product JSON-LD
+# "image", and every <image:loc> in the image sitemap point here. That is not "ranking poorly" in
+# Google Images, it is being structurally ineligible: the crawler is refused the file. It is why
+# competitors show up in image search for our own products and we never do.
+#
+# The Allow rules below re-open ONLY the public media directories. Google applies the MOST SPECIFIC
+# (longest) matching rule, so "Allow: /storage/" wins over "Disallow: /" for an image URL while
+# every admin route, API endpoint and login page stays disallowed.
+#
+# Do NOT "tidy" this back to a bare Disallow: / — that silently kills image search again.
 User-agent: *
 Disallow: /
+Allow: /storage/
+
+# Stated explicitly for the image crawlers so the intent survives any future edit to the block
+# above: a user-agent group is matched on its own, it does not inherit the "*" rules.
+User-agent: Googlebot-Image
+Disallow: /
+Allow: /storage/
+
+User-agent: Bingbot
+Disallow: /
+Allow: /storage/

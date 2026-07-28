@@ -34,6 +34,7 @@ import {
 } from '@/util/structuredData';
 import { buildProductCanonicalUrl, getProductBreadcrumbs, getProductPrimarySubCategory } from '@/util/productUrl';
 import { htmlToText } from '@/util/sanitizeProductHtml';
+import { buildShopProductSocialMetadata } from '@/util/productSeo';
 import type { Product } from '@/types';
 
 export const revalidate = 300;
@@ -61,6 +62,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       // Canonical points at the REAL product URL, never /x-crawler/*.
       alternates: { canonical, languages: { 'fr-TN': canonical, 'x-default': canonical } },
       robots: { index: true, follow: true },
+      // Product photo as og:image, identical to the human route. Without this the route emitted no
+      // openGraph at all, so the root layout's site-wide banner (og-banner.jpg) was inherited —
+      // and since middleware rewrites bots here, GOOGLE saw the generic banner on every product
+      // page while a browser saw the product. og:image is a candidate image signal, and a crawler
+      // view that describes a different image than the page it stands in for is not parity.
+      ...buildShopProductSocialMetadata({ product, title, description, canonicalUrl: canonical }),
     };
   } catch (e) {
     unstable_rethrow(e);
