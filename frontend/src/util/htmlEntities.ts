@@ -31,6 +31,29 @@ function safeFromCodePoint(cp: number): string {
   }
 }
 
+/**
+ * Drop headings that contain no text.
+ *
+ * Two blog articles ship an empty `<h1></h1>` inside their CMS body, so the rendered page has TWO
+ * h1 elements: the real article title from the template, plus an empty one. An empty heading says
+ * nothing to a reader or a screen reader, and a second h1 splits the page's topical signal for no
+ * gain. Whitespace, &nbsp; and empty inline wrappers (<span>, <strong>, <br>) all count as empty.
+ */
+export function stripEmptyHeadings(html: string | null | undefined): string {
+  if (!html) return '';
+  return String(html).replace(
+    /<(h[1-6])\b[^>]*>([\s\S]*?)<\/\1>/gi,
+    (whole, _tag: string, inner: string) => {
+      const text = inner
+        .replace(/<[^>]*>/g, '')
+        .replace(/&nbsp;|&#160;|&#xa0;/gi, ' ')
+        .replace(/\s+/g, '')
+        .trim();
+      return text === '' ? '' : whole;
+    },
+  );
+}
+
 /** Decode HTML entities to plain Unicode text. Returns '' for null/undefined. */
 export function decodeHtmlEntities(input: string | null | undefined): string {
   if (!input) return '';

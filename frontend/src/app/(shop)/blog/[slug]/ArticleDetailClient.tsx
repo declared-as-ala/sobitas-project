@@ -9,6 +9,7 @@ import { ArrowLeft, Calendar, Clock, Share2, Sparkles, FolderOpen, Tag } from 'l
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import type { Article, BlogTagSummary } from '@/types';
 import { getStorageUrl } from '@/services/api';
+import { stripEmptyHeadings } from '@/util/htmlEntities';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useMemo, useState, useEffect, useRef } from 'react';
@@ -301,7 +302,7 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
                 {contentBefore && (
                   <div
                     className={articleBodyProseClass}
-                    dangerouslySetInnerHTML={{ __html: decodeHtmlEntities(contentBefore) }}
+                    dangerouslySetInnerHTML={{ __html: stripEmptyHeadings(decodeHtmlEntities(contentBefore)) }}
                   />
                 )}
                 <BlogRecommendedProducts
@@ -314,7 +315,7 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
                 {contentAfter && (
                   <div
                     className={articleBodyProseClass}
-                    dangerouslySetInnerHTML={{ __html: decodeHtmlEntities(contentAfter) }}
+                    dangerouslySetInnerHTML={{ __html: stripEmptyHeadings(decodeHtmlEntities(contentAfter)) }}
                   />
                 )}
               </div>

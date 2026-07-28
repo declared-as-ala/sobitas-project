@@ -16,6 +16,7 @@ use App\Models\Review;
 use App\Models\SousCategory;
 use App\Models\User;
 use App\Observers\CommandeObserver;
+use App\Observers\PageSeoObserver;
 use App\Observers\ProductSeoObserver;
 use App\Observers\ReviewObserver;
 use App\Observers\SitemapTouchObserver;
@@ -69,6 +70,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Self-healing SEO: auto-fill empty meta title/description + image alt on every product save
         Product::observe(ProductSeoObserver::class);
+        // Same contract for CMS pages — /proteine-tunisie shipped with NULL meta title and
+        // description, so the site's best long-form content had the worst search packaging.
+        Page::observe(PageSeoObserver::class);
 
         // Keep /sitemap.xml current. Products already refresh it through ProductSeoObserver, but
         // every OTHER content type that appears in the sitemap used to leave it stale for up to an
