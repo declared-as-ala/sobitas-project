@@ -23,6 +23,9 @@ interface PageContentClientProps {
 export function PageContentClient({ page }: PageContentClientProps) {
   const hasContent = page.body || page.excerpt;
   const imageUrl = page.image ? getStorageUrl(page.image) : null;
+  // Does the admin-authored body open with its own <h1>? If so this template must not add a
+  // second one — see the note on the title element below.
+  const bodyHasOwnH1 = /<h1[\s>]/i.test(String(page.body ?? ''));
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-white">
@@ -65,10 +68,28 @@ export function PageContentClient({ page }: PageContentClientProps) {
             Page
           </span>
 
-          {/* Title */}
-          <h1 className="font-display uppercase tracking-tight leading-[0.95] font-bold text-3xl sm:text-4xl lg:text-5xl mb-4 sm:mb-5 text-gray-900 dark:text-white">
-            {page.title}
-          </h1>
+          {/* Title.
+              Rendered as <h1> ONLY when the CMS body has no <h1> of its own. Several pages are
+              long-form guides whose body opens with its own heading, so this template emitted a
+              SECOND h1 — /proteine-tunisie, the page that should own the "protéine tunisie" query,
+              was shipping:
+                 h1: "Proteine Tunisie"                                        (this element)
+                 h1: "Protéine Tunisie : Guide complet pour bien choisir…"     (the body)
+              Two h1s split the topical signal, and the weaker, unaccented one came first. When the
+              author has written a heading, theirs is the better one and this becomes a <p> that
+              keeps the visual design identical. */}
+          {bodyHasOwnH1 ? (
+            <p
+              className="font-display uppercase tracking-tight leading-[0.95] font-bold text-3xl sm:text-4xl lg:text-5xl mb-4 sm:mb-5 text-gray-900 dark:text-white"
+              aria-hidden="true"
+            >
+              {page.title}
+            </p>
+          ) : (
+            <h1 className="font-display uppercase tracking-tight leading-[0.95] font-bold text-3xl sm:text-4xl lg:text-5xl mb-4 sm:mb-5 text-gray-900 dark:text-white">
+              {page.title}
+            </h1>
+          )}
 
           {/* Excerpt */}
           {page.excerpt && (
