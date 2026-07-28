@@ -241,13 +241,49 @@ final class ProductSchemaBuilder
         }
     }
 
+    /**
+     * Reviews eligible to appear in STRUCTURED DATA — i.e. reviews we can attest to.
+     *
+     * "Published" is not the same as "real", and on this catalogue the difference is total. An
+     * audit of the live API found every sampled product carrying ~200 published reviews with
+     * verified = 0 and commande_id = NULL on every single row, drawn from a shared pool: a
+     * lateral-pulldown machine and a shoulder press share 72 byte-identical comments, and the
+     * shoulder press carries "Vanilla طعمها هايل" ("the vanilla tastes great"). Those reviews were
+     * seeded, not written by customers, and this builder was feeding them to Google as
+     * AggregateRating 4.6 / reviewCount 203.
+     *
+     * Publishing review rich results that are not genuine customer reviews is a Google spam policy
+     * violation and risks a manual action against the whole domain — a far larger downside than
+     * any star-rating uplift. So structured data now requires evidence the review came from a real
+     * purchase: `verified = 1`, or a `commande_id` linking it to an order.
+     *
+     * This does NOT hide anything from shoppers: the site still renders whatever the admin has
+     * published. It only stops us ASSERTING those ratings to search engines.
+     *
+     * Once the review-request flow (BackfillReviewRequests + the post-delivery email) starts
+     * producing genuine verified reviews, they satisfy this gate automatically and the stars come
+     * back on their own — earned rather than asserted.
+     */
     private function publishedReviews(Product $product): \Illuminate\Support\Collection
     {
         $rel = $product->relationLoaded('reviews')
             ? $product->reviews
             : $product->reviews()->where('publier', 1)->get();
 
-        return $rel->filter(fn ($r) => $r instanceof Review && (int) ($r->publier ?? 0) === 1)->values();
+        return $rel
+            ->filter(fn ($r) => $r instanceof Review && (int) ($r->publier ?? 0) === 1)
+            ->filter(fn (Review $r) => self::isAttestedPurchase($r))
+            ->values();
+    }
+
+    /** True when the review is tied to a real order, the only evidence we have that it is genuine. */
+    public static function isAttestedPurchase(Review $review): bool
+    {
+        if ((int) ($review->verified ?? 0) === 1) {
+            return true;
+        }
+
+        return ($review->commande_id ?? null) !== null;
     }
 
     private function reviewStarValue(Review $review): int

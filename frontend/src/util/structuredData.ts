@@ -246,31 +246,48 @@ export function buildProductSchema(product: Product, baseUrl: string): object | 
  * buildProductJsonLd and sanitizeBackendProductJsonLd so the human PDP and the crawler/bot view
  * carry the same stars (the sanitize path used to silently drop them).
  */
+/**
+ * Is there evidence this review came from a real purchase?
+ *
+ * Mirrors ProductSchemaBuilder::isAttestedPurchase() on the backend — both paths build Product
+ * structured data independently, so both must apply the same gate or the crawler view and the
+ * human view disagree (a recurring failure mode in this codebase).
+ */
+export function isAttestedPurchase(review: Review): boolean {
+  if (review.verified === 1 || review.verified === true) return true;
+  return review.commande_id !== null && review.commande_id !== undefined;
+}
+
 function buildAggregateRatingAndReviews(product: Product): { aggregateRating?: object; review?: object[] } {
   const reviewsRaw = product.reviews ?? (product as { avis?: Review[] }).avis ?? [];
   const reviews = (reviewsRaw as Review[]).filter((r) => {
     if (r.publier !== undefined && r.publier !== 1) return false;
+    // ATTESTED PURCHASES ONLY. "Published" is not "genuine": a live audit found every sampled
+    // product carrying ~200 published reviews with verified = 0 and commande_id = null on every
+    // row, drawn from a shared pool — a shoulder-press machine and a lateral pulldown share 72
+    // byte-identical comments, and the shoulder press is reviewed with "Vanilla طعمها هايل".
+    // Asserting those to Google as AggregateRating is a spam-policy violation that risks a manual
+    // action on the whole domain. The site still SHOWS whatever the admin publishes; we simply
+    // stop claiming it in structured data without evidence of a real order.
+    if (!isAttestedPurchase(r)) return false;
     const star = typeof r.stars === 'number' ? r.stars : typeof r.note === 'number' ? r.note : NaN;
     return Number.isFinite(star) && star >= 1 && star <= 5;
   });
   if (reviews.length === 0) {
-    // Fallback: the backend may provide a precomputed aggregate (rating_value/review_count)
-    // even when the full reviews[] array is not in this particular payload (e.g. list endpoints).
-    // Use it so the star rating never silently drops off the SERP. Never fabricated — only real
-    // approved-review aggregates coming from the API.
-    const rv = (product.schema as { rating_value?: unknown } | undefined)?.rating_value;
-    const rc = (product.schema as { review_count?: unknown } | undefined)?.review_count;
-    if (typeof rv === 'number' && rv >= 1 && rv <= 5 && typeof rc === 'number' && rc >= 1) {
-      return {
-        aggregateRating: {
-          '@type': 'AggregateRating',
-          ratingValue: String(Math.round(rv * 10) / 10),
-          bestRating: 5,
-          worstRating: 1,
-          reviewCount: Math.floor(rc),
-        },
-      };
-    }
+    // The precomputed `schema.rating_value` / `review_count` fallback that used to live here has
+    // been REMOVED, not merely gated.
+    //
+    // It existed so a list-endpoint payload without a full reviews[] array would still show stars.
+    // But it is computed backend-side from the same review rows, so while the seeded backlog
+    // exists it reproduces exactly the fabricated aggregate this change is meant to stop — and it
+    // would have kept emitting 4.6/203 even after the filter above rejected every review. The
+    // frontend and backend also deploy separately, so a gate here that trusts a backend field
+    // leaves a window where the old value is still served.
+    //
+    // Consequence, stated plainly: star ratings disappear from product rich results until genuine
+    // verified reviews exist. That is the correct outcome — we cannot attest to the current ones.
+    // They return automatically once the post-delivery review flow produces reviews carrying
+    // verified = 1 or a commande_id, because those satisfy the filter above.
     return {};
   }
 
