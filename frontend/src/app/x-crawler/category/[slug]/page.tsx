@@ -30,6 +30,7 @@ import {
   getCachedCategoryOrSubCategory as fetchCategoryOrSubCategory,
   getCachedAllBrands as getAllBrands,
   getCachedPageBySlug as getPageBySlug,
+  getCachedProductsByBrand,
 } from '@/services/getCachedProductDetails';
 import { ApiError } from '@/services/http';
 import { loadForCache } from '@/util/loadForCache';
@@ -108,11 +109,33 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       const canonical = buildCanonicalUrl(`/${encodeURIComponent(cleanSlug)}`);
       // Shared with the human /{slug} route: same URL must not have two different titles.
       const title = buildBrandMetaTitle(brand.designation_fr);
+
+      /**
+       * A brand with NO products is a heading, a breadcrumb and nothing to buy. Google reads that
+       * as a soft 404, and asking it to index one is asking for a thin-content signal against the
+       * whole site. 13 of 55 brands are currently in that state (API, MYPROTEIN, MONSTER,
+       * MUTANT, BSN…). They are already out of the sitemap; this stops the ones Google has
+       * already discovered from staying indexed.
+       *
+       * Self-correcting and deliberately not a redirect or a 404: the page still resolves for
+       * anyone who follows a link, and the day the brand gets its first product it becomes
+       * indexable again with no intervention. Cached fetch, so this costs no extra API call.
+       */
+      let brandProductCount = 0;
+      try {
+        const listing = await getCachedProductsByBrand(brand.id);
+        brandProductCount = (listing?.products ?? []).length;
+      } catch {
+        // Never let a transient listing failure flip a healthy brand to noindex — assume it has
+        // products and stay indexable. A wrong noindex is far more expensive than a wrong index.
+        brandProductCount = 1;
+      }
+
       return {
         title: { absolute: title },
         description: buildBrandMetaDescription(brand.designation_fr),
         alternates: { canonical },
-        robots: { index: true, follow: true },
+        robots: { index: brandProductCount > 0, follow: true },
       };
     }
     const page = await findPageBySlug(cleanSlug);

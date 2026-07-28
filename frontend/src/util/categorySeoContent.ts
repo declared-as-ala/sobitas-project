@@ -105,7 +105,27 @@ export async function getCategorySeoContent(slug: string): Promise<Partial<Categ
       metaDescription: typeof data.metaDescription === 'string' ? data.metaDescription.trim() || undefined : undefined,
       ogImage: typeof data.ogImage === 'string' ? data.ogImage.trim() || undefined : undefined,
     };
-  } catch {
+  } catch (error) {
+    /**
+     * A MISSING file is normal — most categories have no content file, and that is not an error.
+     * A file that EXISTS but fails to parse is a different thing entirely, and swallowing both
+     * identically is how twelve category guides went missing without anyone noticing.
+     *
+     * Those twelve files had one unescaped quote each (`class=\"…leading-relaxed">`, the closing
+     * quote never escaped), so JSON.parse threw and this catch turned "your content is corrupt"
+     * into "this category has no content". materiel-de-musculation, glucides, proteines-en-poudre
+     * and every equipment category shipped with no intro, no buying guide and no FAQ, while a
+     * perfectly good guide sat in the repo unreadable — for however long the files had been broken.
+     *
+     * ENOENT stays silent. Anything else is now loud.
+     */
+    const code = (error as NodeJS.ErrnoException)?.code;
+    if (code !== 'ENOENT') {
+      console.error(
+        `[categorySeoContent] "${slug}" has a content file that could NOT be read or parsed — ` +
+          `the category will render with no editorial content: ${(error as Error)?.message ?? error}`
+      );
+    }
     return null;
   }
 }

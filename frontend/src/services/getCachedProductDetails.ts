@@ -6,6 +6,7 @@ import {
   getArticleDetails,
   getPageBySlug,
   getAllBrands,
+  getProductsByBrand,
 } from '@/services/api';
 
 /**
@@ -39,3 +40,12 @@ export const getCachedCategoryOrSubCategory = cache((slug: string) => fetchCateg
 export const getCachedArticleDetails = cache((slug: string) => getArticleDetails(slug));
 export const getCachedPageBySlug = cache((slug: string) => getPageBySlug(slug));
 export const getCachedAllBrands = cache(() => getAllBrands());
+
+/**
+ * Brand product listing, deduped per request.
+ *
+ * Needed by `generateMetadata` as well as the page body: a brand with zero products is a heading
+ * and nothing to buy, which Google reads as a soft 404, so the metadata has to know the count to
+ * decide `noindex`. Without cache() that would be a second identical API call on every brand page.
+ */
+export const getCachedProductsByBrand = cache((brandId: number) => getProductsByBrand(brandId));
