@@ -351,15 +351,18 @@ export function HeaderClient() {
       {/* Sticky header = main bar + nav row only. Pure-CSS `sticky top-0`; no scroll listener, no
           collapse — nothing to jitter. z-50 keeps it above page content and the hero pin. */}
       <header className="font-poppins sticky top-0 z-50 w-full bg-white dark:bg-gray-950 border-b border-[#EAECEF] dark:border-gray-800 shadow-[0_1px_0_rgba(17,24,39,0.04),0_4px_16px_-12px_rgba(17,24,39,0.12)] dark:shadow-[0_4px_16px_-12px_rgba(0,0,0,0.5)]">
-        {/* MOBILE main bar — logo LEFT, action cluster RIGHT ending in the burger (owner request:
-            burger on the right; it opens the 100%-width sidebar). */}
+        {/* MOBILE main bar — logo LEFT, then SEARCH + BURGER only (owner request). Compte and
+            Panier used to live here too; they were removed because MobileTabBar already carries
+            both, one thumb-tap away at the bottom of every screen. Duplicating them up here cost
+            two extra 44px targets on a 320px phone and squeezed the logo for nothing. The burger
+            stays on the right; it opens the 100%-width sidebar, which still lists Panier /
+            Favoris / Compte for anyone who looks for them at the top. */}
         <div className="md:hidden">
           <div className="flex items-center justify-between w-full px-3 min-[380px]:px-4 gap-2 h-14 py-2">
-            {/* min-w-0 + shrink: the LOGO is what gives way on a narrow phone. Without it the row's
-                intrinsic width (logo + 4×44px buttons + padding) exceeded a 320px viewport and the
-                last item — the burger — was pushed outside the screen and clipped, so the menu could
-                not be opened at all. The icon cluster stays shrink-0 so every control keeps its
-                44px tap target. */}
+            {/* min-w-0 + shrink: the LOGO is what gives way on a narrow phone. With only two
+                controls left this is no longer tight, but the rule stays — it is what guarantees
+                the burger can never be pushed off-screen and made unreachable. The icon cluster
+                stays shrink-0 so every control keeps its 44px tap target. */}
             <Link
               href="/"
               className="flex min-w-0 shrink items-center overflow-hidden"
@@ -382,43 +385,6 @@ export function HeaderClient() {
 
             <div className="flex items-center gap-0.5 flex-shrink-0">
               <SearchBar variant="mobile" />
-
-              {isAuthenticated ? (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-11 w-11 min-h-11 min-w-11 flex-shrink-0 rounded-xl hover:bg-[#111827]/[0.04] dark:hover:bg-white/5 transition-[background-color,transform] duration-200 active:scale-95"
-                  onClick={() => router.push('/account')}
-                  aria-label="Mon compte"
-                >
-                  <User className="h-6 w-6" aria-hidden />
-                </Button>
-              ) : (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-11 w-11 min-h-11 min-w-11 flex-shrink-0 rounded-xl hover:bg-[#111827]/[0.04] dark:hover:bg-white/5 transition-[background-color,transform] duration-200 active:scale-95"
-                  onClick={() => router.push('/login')}
-                  aria-label="Connexion"
-                >
-                  <User className="h-6 w-6" aria-hidden />
-                </Button>
-              )}
-
-              <Button
-                variant="ghost"
-                size="icon"
-                className="relative h-11 w-11 min-h-11 min-w-11 flex-shrink-0 rounded-xl hover:bg-[#111827]/[0.04] dark:hover:bg-white/5 transition-[background-color,transform] duration-200 active:scale-95"
-                onClick={() => setCartDrawerOpen(true)}
-                aria-label={cartItemsCount > 0 ? `Panier - ${cartItemsCount} article${cartItemsCount > 1 ? 's' : ''}` : 'Panier'}
-              >
-                <ShoppingCart className="h-6 w-6" aria-hidden />
-                {cartItemsCount > 0 && (
-                  <span className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-[#FF5A00] text-white text-caption font-bold leading-none rounded-full ring-2 ring-white dark:ring-gray-950">
-                    {cartItemsCount > 99 ? '99+' : cartItemsCount}
-                  </span>
-                )}
-              </Button>
 
               {/* Burger — far right */}
               <Button
