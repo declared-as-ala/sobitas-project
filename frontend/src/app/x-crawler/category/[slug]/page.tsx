@@ -46,6 +46,7 @@ import { CrawlerCategoryView, type CrawlerListLink } from '@/app/components/craw
 import type { Brand, Page, Product } from '@/types';
 import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
 import { buildBrandMetaTitle, buildBrandMetaDescription } from '@/util/brandMeta';
+import { buildBrandIntroHtml } from '@/util/brandIntro';
 
 // Own ISR cache namespace, keyed by /x-crawler/category/{slug}.
 export const revalidate = 300;
@@ -186,11 +187,28 @@ export default async function CrawlerCategoryPage({ params }: PageProps) {
           .map((sc) => ({ name: sc.designation_fr as string, url: `/${sc.slug}` }))
       : [];
 
+    // Parent category in the trail for a SUBcategory. Without it the crawler breadcrumb jumped
+    // Accueil > Boutique > Créatine, losing the only structural link from a subcategory up to its
+    // parent — 41 of 47 category pages were handing Googlebot ZERO links to any other category.
+    const parentCat = isSub
+      ? (data as { category?: { slug?: string; designation_fr?: string } }).category
+      : undefined;
     const breadcrumbs: CrawlerListLink[] = [
       { name: 'Accueil', url: '/' },
       { name: 'Boutique', url: '/shop' },
+      ...(parentCat?.slug && parentCat?.designation_fr
+        ? [{ name: parentCat.designation_fr, url: `/${parentCat.slug}` }]
+        : []),
       { name: title, url: `/${cleanSlug}` },
     ];
+
+    // Related categories — the same list the human page renders. The prop already existed on
+    // CrawlerCategoryView and was simply never passed, so topical link equity stopped dead at the
+    // crawler boundary.
+    const relatedCategories: CrawlerListLink[] = (merged.relatedCategorySlugs ?? [])
+      .map((s) => String(s ?? '').trim())
+      .filter((s) => s && s.toLowerCase() !== cleanSlug.toLowerCase())
+      .map((s) => ({ name: s.replace(/-/g, ' '), url: `/${s}` }));
     const productListItems = products
       .filter((p) => p && p.designation_fr)
       .map((p) => ({ name: p.designation_fr as string, url: getProductLink(p) }))
@@ -226,6 +244,7 @@ export default async function CrawlerCategoryPage({ params }: PageProps) {
           breadcrumbs={breadcrumbs}
           products={products}
           subCategories={subCats}
+          relatedCategories={relatedCategories}
           kind={isSub ? 'subcategory' : 'category'}
         />
       </>
@@ -269,6 +288,11 @@ export default async function CrawlerCategoryPage({ params }: PageProps) {
         {itemListSchema && ldScript(itemListSchema, 'il')}
         <CrawlerCategoryView
           title={title}
+          // Factual intro from the brand's own catalogue. These 55 pages were a median of 39
+          // words for Googlebot — an H1, a breadcrumb and a bare product list — which is the thin,
+          // near-identical "scaled content" pattern Google discounts, on exactly the brand+geo
+          // queries ("dymatize tunisie") they exist to win.
+          introHtml={buildBrandIntroHtml(title, products)}
           breadcrumbs={breadcrumbs}
           products={products}
           kind="brand"

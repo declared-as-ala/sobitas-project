@@ -59,7 +59,22 @@ export type ApiFetchOptions = {
   headers?: Record<string, string>;
   /** Skip dedupe (e.g. for POST) */
   skipDedupe?: boolean;
+  /**
+   * Data Cache lifetime in seconds for a GET, or `false` to opt out and always hit the origin.
+   * Defaults to DEFAULT_GET_REVALIDATE. See the note on doFetch for why this exists.
+   */
+  revalidate?: number | false;
 };
+
+/**
+ * Default Data Cache lifetime for catalogue GETs.
+ *
+ * Chosen to sit under the route-level `export const revalidate` values already declared across the
+ * app (300s on product/crawler routes, 600s on listings), so this never holds data longer than a
+ * page was already willing to serve it. On-demand revalidation still fires immediately on an admin
+ * save via SeoNotifier, so a price or stock change is not waiting this out.
+ */
+const DEFAULT_GET_REVALIDATE = 300;
 
 export class ApiError extends Error {
   constructor(
@@ -77,7 +92,33 @@ async function doFetch<T>(
   options: ApiFetchOptions,
   attempt: number
 ): Promise<T> {
-  const { signal, method = 'GET', body, headers = {} } = options;
+  const { signal, method = 'GET', body, headers = {}, revalidate } = options;
+
+  /**
+   * CACHE POLICY — this single line used to be `cache: 'no-store'` for every request, and it was
+   * the most expensive line in the codebase.
+   *
+   * Next.js treats a `no-store` fetch as a dynamic signal: patch-fetch.js calls
+   * markCurrentScopeAsDynamic() for it, which opts the WHOLE route out of static generation. Since
+   * every storefront page renders through this function, every page became dynamic — measured
+   * live, every HTML document returned `Cache-Control: private, no-cache, no-store` with
+   * `cf-cache-status: DYNAMIC` and no `x-nextjs-cache` header. The `export const revalidate = 300`
+   * declarations on those routes were dead letters, and Cloudflare cached 0% of pages. The split
+   * was exactly diagnostic: routes that call this function were dynamic, routes that do not
+   * (/login, /cart, /proteine-sousse) returned `x-nextjs-cache: HIT` as intended.
+   *
+   * Now: GETs participate in the Data Cache so ISR works, and anything that must not be cached
+   * opts out explicitly.
+   *
+   * NEVER CACHED, regardless of `revalidate`:
+   *   - non-GET (mutations: login, orders, reviews)
+   *   - any request carrying an Authorization header, which is per-user by definition; caching one
+   *     user's response and serving it to another would be a data leak, not a performance win.
+   */
+  const isGet = method === 'GET';
+  const hasAuth = Object.keys(headers).some((h) => h.toLowerCase() === 'authorization');
+  const cacheable = isGet && !hasAuth && revalidate !== false;
+
   const res = await fetch(url, {
     method,
     headers: {
@@ -87,7 +128,9 @@ async function doFetch<T>(
     },
     body: body != null ? JSON.stringify(body) : undefined,
     signal,
-    cache: 'no-store',
+    ...(cacheable
+      ? { next: { revalidate: typeof revalidate === 'number' ? revalidate : DEFAULT_GET_REVALIDATE } }
+      : { cache: 'no-store' as const }),
   });
 
   if (res.status === 429 && attempt < MAX_429_RETRIES) {

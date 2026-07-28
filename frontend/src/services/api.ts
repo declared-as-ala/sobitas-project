@@ -380,7 +380,11 @@ export const getProductDetails = async (slug: string, cacheBust?: boolean): Prom
     ? `product_details/${encodeURIComponent(cleanSlug)}?t=${Date.now()}`
     : `product_details/${encodeURIComponent(cleanSlug)}`;
   try {
-    const data = await apiFetch<Product>(path);
+    // Shorter Data Cache window than the 300s default: this payload carries PRICE and STOCK, and
+    // stock decrements from orders go through a query-builder decrement with no model event, so
+    // they never fire on-demand revalidation. 60s bounds how long a sold-out product can still
+    // read as available. `cacheBust` callers already append ?t= and get a distinct cache entry.
+    const data = await apiFetch<Product>(path, { revalidate: cacheBust ? false : 60 });
     if (!data || !(data as any).id) throw new ApiError('Product not found', 404);
     const raw = data as Product & { avis?: Review[] };
     if (Array.isArray(raw.avis) && !Array.isArray(raw.reviews)) {
