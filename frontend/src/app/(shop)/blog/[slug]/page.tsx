@@ -1,7 +1,10 @@
 import { Metadata } from 'next';
 import { notFound, unstable_rethrow } from 'next/navigation';
 import { getErrorStatus } from '@/util/errorStatus';
-import { getArticleDetails, getLatestArticles } from '@/services/api';
+import { getLatestArticles } from '@/services/api';
+// Request-scoped cache: generateMetadata + the page body used to issue TWO separate
+// article_details calls, doubling 429 pressure and letting metadata fail while the body succeeded.
+import { getCachedArticleDetails as getArticleDetails } from '@/services/getCachedProductDetails';
 import { getStorageUrl } from '@/services/api';
 import { resolveCanonicalUrl } from '@/util/canonical';
 import { buildArticleSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
@@ -78,10 +81,20 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       },
     };
   } catch (error) {
-    return {
-      title: 'Article | Blog Protéine Tunisie',
-      description: 'Découvrez nos articles sur la nutrition et le sport',
-    };
+    unstable_rethrow(error);
+    // Genuine 404: the page body below calls notFound() and Next serves a real 404. Mark the
+    // interim metadata noindex so the shell is never indexable.
+    if (getErrorStatus(error) === 404) {
+      return {
+        title: 'Article introuvable | Blog Protéine Tunisie',
+        robots: { index: false, follow: false },
+      };
+    }
+    // TRANSIENT (429/5xx/network). Swallowing it here is what emitted a cacheable HTTP 200 with
+    // the generic title "Article | Blog Protéine Tunisie" and NO canonical while the article
+    // body rendered fine — the duplicate, canonical-less shell measured under crawl load.
+    // Rethrow so Next returns an uncached 5xx (revalidate=3600 would otherwise pin it an hour).
+    throw error;
   }
 }
 

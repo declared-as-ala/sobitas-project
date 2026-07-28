@@ -3,7 +3,16 @@ import { notFound, permanentRedirect } from 'next/navigation';
 import CategoryPage, { generateMetadata as generateCategoryMetadata } from '@/app/(shop)/category/[slug]/page';
 import { PageContentClient } from '@/app/(shop)/page/[slug]/PageContentClient';
 import { ShopPageClient } from '@/app/(shop)/shop/ShopPageClient';
-import { fetchCategoryOrSubCategory, getAllBrands, getCategories, getPageBySlug, getProductsByBrand, getStorageUrl } from '@/services/api';
+import { getCategories, getProductsByBrand, getStorageUrl } from '@/services/api';
+// Request-scoped cache. This route probes category -> brand -> CMS page in generateMetadata AND
+// again in the page body — up to SIX separate API calls per request, the biggest single
+// amplifier against the shared per-IP bucket, and six independent chances for metadata to fail
+// while the body succeeded (200 + generic title + no canonical).
+import {
+  getCachedCategoryOrSubCategory as fetchCategoryOrSubCategory,
+  getCachedAllBrands as getAllBrands,
+  getCachedPageBySlug as getPageBySlug,
+} from '@/services/getCachedProductDetails';
 import { ApiError } from '@/services/http';
 import { getBaseUrl, forceProteinDomain, resolveCanonicalUrl } from '@/util/canonical';
 import { isReservedRouteSlug, buildProductUrlPath } from '@/util/productUrl';
@@ -149,7 +158,9 @@ export async function generateMetadata({ params }: RootSlugPageProps): Promise<M
     return metadataForPage(page, cleanSlug);
   }
 
-  return { title: 'Page introuvable | Proteine Tunisie' };
+  // Nothing resolved. The page body below either 301s a legacy -N slug or notFound()s, so this
+  // metadata only ever decorates a shell — never let that shell be indexable.
+  return { title: 'Page introuvable | Proteine Tunisie', robots: { index: false, follow: false } };
 }
 
 export default async function RootSlugPage({ params }: RootSlugPageProps) {

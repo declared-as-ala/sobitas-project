@@ -253,8 +253,10 @@ function buildRedirects() {
     p('/shop/platinum-fish-oil-100-caps/', '/shop'),
     p('/shop/proteines/isolat-de-whey', '/whey-isolate'),
     p('/shop/proteines/proteine-whey', '/whey-isolate'),
-    p('/shop/proteines/whey-isolate/iso-100-2-3-kg-dymatize', '/shop'),
-    p('/shop/proteines/whey-isolate/iso-100-2-3-kg-dymatize/', '/shop'),
+    // NOTE: /shop/{cat}/{subcat}/{product} is handled by the nested-shop resolver in
+    // src/middleware.ts, which resolves the LAST segment to the real product (one 301) or
+    // returns 410. Do NOT re-add 4-segment /shop rules here — next.config redirects run BEFORE
+    // middleware, so they shadow the resolver and dump the URL on /shop instead.
     p('/shop/the-shadow-270g', '/shop'),
     p('/shop/the-shadow-270g/', '/shop'),
     p('/shop/xtend-bcaa-420g', '/bcaa/xtend-bcaa-420g'),

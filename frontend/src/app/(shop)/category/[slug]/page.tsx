@@ -2,7 +2,10 @@ import { Metadata } from 'next';
 import { notFound, permanentRedirect, unstable_rethrow } from 'next/navigation';
 import { getErrorStatus } from '@/util/errorStatus';
 import { getCategories } from '@/services/api';
-import { fetchCategoryOrSubCategory } from '@/services/api';
+// Request-scoped cache: generateMetadata and the page body below both need this category, and
+// two separate calls could fail independently (metadata 429 + body OK = 200, generic title,
+// no canonical — the exact shell measured under crawl load).
+import { getCachedCategoryOrSubCategory as fetchCategoryOrSubCategory } from '@/services/getCachedProductDetails';
 import { resolveCanonicalUrl } from '@/util/canonical';
 import {
   buildBreadcrumbListSchema,
@@ -215,8 +218,23 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         ...(twitterImg && { images: [twitterImg] }),
       },
     };
-  } catch {
-    return { title: 'Catégorie | Proteine Tunisie' };
+  } catch (e) {
+    unstable_rethrow(e);
+    // Genuine 404: the page body's own resolution calls notFound() and Next serves a real 404.
+    // Describe it as noindex so the interim shell can never be indexed on the way there.
+    if (getErrorStatus(e) === 404) {
+      return {
+        title: 'Catégorie introuvable | Proteine Tunisie',
+        robots: { index: false, follow: false },
+      };
+    }
+    // TRANSIENT (429 from the shared per-IP bucket, 5xx, timeout). This catch is THE
+    // degraded-render bug: /{slug} AND /x-crawler/category/{slug} both delegate their metadata
+    // here, so one throttled call emitted HTTP 200 with the generic title
+    // "Catégorie | Proteine Tunisie" and NO canonical, while the page body — a SEPARATE API
+    // call — rendered the real product grid. Googlebot indexed a duplicate, canonical-less page.
+    // Rethrow instead: Next answers with a 5xx it never caches and the crawler simply retries.
+    throw e;
   }
 }
 

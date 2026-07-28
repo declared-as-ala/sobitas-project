@@ -20,13 +20,17 @@
  */
 
 import type { Metadata } from 'next';
-import { notFound, permanentRedirect } from 'next/navigation';
+import { notFound, permanentRedirect, unstable_rethrow } from 'next/navigation';
+import { getProductsByBrand } from '@/services/api';
+// Request-scoped cache. A single bot request used to resolve the same category up to THREE times
+// (hasCategoryOrSubCategory here, generateCategoryMetadata's own fetch, then the page body) and
+// look up brands/CMS pages twice — all separate HTTP calls against the shared per-IP bucket,
+// and all able to fail independently of one another.
 import {
-  fetchCategoryOrSubCategory,
-  getAllBrands,
-  getProductsByBrand,
-  getPageBySlug,
-} from '@/services/api';
+  getCachedCategoryOrSubCategory as fetchCategoryOrSubCategory,
+  getCachedAllBrands as getAllBrands,
+  getCachedPageBySlug as getPageBySlug,
+} from '@/services/getCachedProductDetails';
 import { ApiError } from '@/services/http';
 import { loadForCache } from '@/util/loadForCache';
 import { getErrorStatus } from '@/util/errorStatus';
@@ -34,7 +38,7 @@ import { generateMetadata as generateCategoryMetadata } from '@/app/(shop)/categ
 import { PageContentClient } from '@/app/(shop)/page/[slug]/PageContentClient';
 import { getCategorySeoContent } from '@/util/categorySeoContent';
 import { mergeCategorySeo } from '@/util/resolveCategorySeo';
-import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
+import { buildCanonicalUrl, getBaseUrl, resolveCanonicalUrl } from '@/util/canonical';
 import { isReservedRouteSlug, getProductLink } from '@/util/productUrl';
 import { buildBreadcrumbListSchema, buildCollectionPageSchema, buildItemListSchema, buildWebPageSchema } from '@/util/structuredData';
 import { sanitizeProductHtml } from '@/util/sanitizeProductHtml';
@@ -118,7 +122,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     }
     const page = await findPageBySlug(cleanSlug);
     if (page) {
-      const canonical = page.canonical_url?.trim() || buildCanonicalUrl(`/${encodeURIComponent(cleanSlug)}`);
+      // Bots are rewritten here by middleware, so this route — NOT the human /{slug} route — is what
+      // Googlebot's canonical actually comes from. Emitting page.canonical_url raw is why 4 CMS pages
+      // told Google that sobitas.tn owns their content while a browser saw the correct self canonical.
+      const canonical = await resolveCanonicalUrl(page.canonical_url, `/${encodeURIComponent(cleanSlug)}`);
       const description = (page.meta_description ?? page.excerpt ?? '')
         .replace(/<[^>]*>/g, ' ')
         .replace(/\s+/g, ' ')
@@ -131,9 +138,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         robots: { index: page.robots_index ?? true, follow: page.robots_follow ?? true },
       };
     }
-  } catch {
-    /* fall through to noindex */
+  } catch (e) {
+    unstable_rethrow(e);
+    // hasCategoryOrSubCategory / findBrandBySlug / findPageBySlug above already convert a GENUINE
+    // 404 into false/null, so anything landing here is TRANSIENT (429 from the shared per-IP
+    // bucket, 5xx, timeout). The old `/* fall through to noindex */` therefore served Googlebot —
+    // the only visitor this route has — a 200 carrying robots:noindex and no canonical for a LIVE
+    // category. Rethrow: an uncached 5xx is retried by the crawler; a noindex is obeyed by it.
+    throw e;
   }
+  // Genuinely unresolvable slug: the page body below redirects (legacy -N suffix) or notFound()s.
   return { robots: { index: false, follow: true } };
 }
 
@@ -218,9 +232,13 @@ export default async function CrawlerCategoryPage({ params }: PageProps) {
   if (brand?.id) {
     // loadForCache: a failed getProductsByBrand() during `next build` must not bake an empty brand
     // listing for the crawler — noStore() defers the render to runtime where the API is reachable.
+    // rethrow: on a route whose ONLY visitor is a crawler, noStore() is not enough. It keeps the
+    // empty render out of the Full Route Cache but still hands Googlebot a 200 with an empty
+    // product list — a soft-404 it records immediately. A 5xx is retried; an empty 200 is not.
     const result = await loadForCache(
       () => getProductsByBrand(brand.id),
       { products: [] as Product[] } as Awaited<ReturnType<typeof getProductsByBrand>>,
+      { rethrow: true },
     );
     const products: Product[] = (result as { products?: Product[] }).products ?? [];
     const title = brand.designation_fr;
@@ -259,7 +277,9 @@ export default async function CrawlerCategoryPage({ params }: PageProps) {
   //    /{slug} CMS branch (both feed the crawler the same structured data).
   const page = await findPageBySlug(cleanSlug);
   if (page) {
-    const canonical = page.canonical_url?.trim() || buildCanonicalUrl(`/${encodeURIComponent(cleanSlug)}`);
+    // Same guard as generateMetadata above — the WebPage @id and <link rel="canonical"> in the
+    // bot-facing HTML must never disagree.
+    const canonical = await resolveCanonicalUrl(page.canonical_url, `/${encodeURIComponent(cleanSlug)}`);
     const rawDesc = page.meta_description ?? page.excerpt ?? '';
     const description = rawDesc ? String(rawDesc).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300) : undefined;
     const webPageSchema = buildWebPageSchema(page.title || 'Page', canonical, baseUrl, { description });

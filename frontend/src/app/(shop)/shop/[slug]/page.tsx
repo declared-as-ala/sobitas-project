@@ -137,12 +137,16 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
       };
     }
   } catch (e) {
+    unstable_rethrow(e);
     if (getErrorStatus(e) === 404) {
       permanentRedirect(buildCategoryRedirectUrl(cleanSlug, search));
     }
-    return { title: 'Produit | Protéine Tunisie' };
+    // TRANSIENT: rethrow so a throttled backend yields an uncached 5xx, not a 200 titled
+    // "Produit | Protéine Tunisie" with no canonical. Matches the page body, which already rethrows.
+    throw e;
   }
-  return { title: 'Produit | Protéine Tunisie' };
+  // Reached only when the API returned a body with no id — unresolvable, never indexable.
+  return { title: 'Produit | Protéine Tunisie', robots: { index: false, follow: false } };
 }
 
 /** Product detail page – legacy URL /shop/:slug. 
@@ -198,10 +202,10 @@ export default async function ShopProductPage({ params, searchParams }: PageProp
   
   // Use new canonical URL even for legacy display (edge case products)
   const newCanonicalUrl = buildProductCanonicalUrl(safeProduct);
-  const canonicalUrl = ensureProductionDomain(
-    safeProduct.seo?.canonical_url?.trim() || newCanonicalUrl,
-    buildProductUrlPath(safeProduct)
-  );
+  // C3 policy, already enforced on the canonical /{subcat}/{slug} route: the product canonical is
+  // ALWAYS computed from the live subcategory, never from products.seo_canonical_url — those rows
+  // still hold pre-migration /shop/... and sobitas.tn values that 301 or 404 today.
+  const canonicalUrl = ensureProductionDomain(newCanonicalUrl, buildProductUrlPath(safeProduct));
   const apiLd = safeProduct.json_ld_product;
   const productSchema =
     apiLd != null && typeof apiLd === 'object' && Object.keys(apiLd).length > 0
