@@ -4,7 +4,7 @@ import { Metadata } from 'next';
 import { notFound, unstable_rethrow } from 'next/navigation';
 import { getErrorStatus } from '@/util/errorStatus';
 import { getArticlesByBlogTag } from '@/services/api';
-import { buildCanonicalUrl, forceProteinDomain } from '@/util/canonical';
+import { resolveCanonicalUrl } from '@/util/canonical';
 import { buildBreadcrumbListSchema, buildItemListSchema, buildCollectionPageSchema } from '@/util/structuredData';
 import { blogHref } from '@/util/blogSlug';
 import { ChevronRight, ArrowLeft } from 'lucide-react';
@@ -39,9 +39,12 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     const description =
       data.tag.seo?.description ||
       `Explorez ${countText} associés au tag ${data.tag.name} : conseils nutrition & sport, guides et actualités sur Protéine Tunisie.`;
-    const canonical = data.tag.seo?.canonical_url
-      ? forceProteinDomain(data.tag.seo.canonical_url)
-      : buildCanonicalUrl(`/blog/tag/${data.tag.slug}${page > 1 ? `?page=${page}` : ''}`);
+    // Was untrimmed: a whitespace-only admin value ('   ') is truthy and became the canonical.
+    const canonical = await resolveCanonicalUrl(
+      data.tag.seo?.canonical_url,
+      `/blog/tag/${data.tag.slug}`,
+      page > 1 ? `?page=${page}` : undefined
+    );
     return {
       title,
       description,

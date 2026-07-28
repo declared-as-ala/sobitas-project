@@ -4,7 +4,7 @@ import { Metadata } from 'next';
 import { notFound, unstable_rethrow } from 'next/navigation';
 import { getErrorStatus } from '@/util/errorStatus';
 import { getArticlesByBlogCategory } from '@/services/api';
-import { buildCanonicalUrl, forceProteinDomain } from '@/util/canonical';
+import { resolveCanonicalUrl } from '@/util/canonical';
 import { buildBreadcrumbListSchema, buildItemListSchema, buildCollectionPageSchema } from '@/util/structuredData';
 import { blogHref } from '@/util/blogSlug';
 import { ChevronRight, ArrowLeft } from 'lucide-react';
@@ -39,9 +39,13 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     const description =
       data.category.seo?.description ||
       `Découvrez ${countText} dans la catégorie ${data.category.name} : conseils nutrition & sport, guides et actualités sur Protéine Tunisie.`;
-    const canonical = data.category.seo?.canonical_url
-      ? forceProteinDomain(data.category.seo.canonical_url)
-      : buildCanonicalUrl(`/blog/category/${data.category.slug}${page > 1 ? `?page=${page}` : ''}`);
+    // Was untrimmed: a whitespace-only admin value ('   ') is truthy and became the canonical.
+    // The guard trims, validates the host and rejects dead/redirecting targets.
+    const canonical = await resolveCanonicalUrl(
+      data.category.seo?.canonical_url,
+      `/blog/category/${data.category.slug}`,
+      page > 1 ? `?page=${page}` : undefined
+    );
     return {
       title,
       description,

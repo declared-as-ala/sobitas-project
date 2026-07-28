@@ -23,13 +23,25 @@ import { unstable_noStore as noStore } from 'next/cache';
  *
  * Server components only — noStore() throws on the client.
  */
-export async function loadForCache<T>(fetcher: () => Promise<T>, fallback: T): Promise<T> {
+/**
+ * `rethrow: true` — for surfaces where an empty render is worse than an error, above all the
+ * bot-only /x-crawler/* routes. noStore() only stops the empty page being CACHED; the current
+ * request still returns HTTP 200 with placeholder content, which Googlebot happily records as
+ * a thin/soft-404 page. Rethrowing produces an uncached 5xx that a crawler simply retries.
+ * Default stays `false`, so every existing call site keeps its current soft-fail behaviour.
+ */
+export async function loadForCache<T>(
+  fetcher: () => Promise<T>,
+  fallback: T,
+  options: { rethrow?: boolean } = {}
+): Promise<T> {
   try {
     return await fetcher();
   } catch (err) {
     // Do NOT cache this failed render — let the route re-render on the next request.
     noStore();
     console.error('[loadForCache] primary content fetch failed — this render will not be cached:', err);
+    if (options.rethrow) throw err;
     return fallback;
   }
 }

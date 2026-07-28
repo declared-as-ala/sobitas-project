@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import { notFound, unstable_rethrow } from 'next/navigation';
 import { getErrorStatus } from '@/util/errorStatus';
 import { getPageBySlug, getStorageUrl } from '@/services/api';
-import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
+import { getBaseUrl, resolveCanonicalUrl } from '@/util/canonical';
 import { buildWebPageSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
 import { PageContentClient } from './PageContentClient';
 
@@ -27,7 +27,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   try {
     const page = await getPageBySlug(apiSlug);
-    const canonical = page.canonical_url?.trim() || buildCanonicalUrl(`/${encodeURIComponent(page.slug || apiSlug)}`);
+    // Guarded: a CMS canonical_url pointing at a dead or redirecting path falls back to self.
+    const canonical = await resolveCanonicalUrl(page.canonical_url, `/${encodeURIComponent(page.slug || apiSlug)}`);
     const description = page.meta_description ?? page.excerpt ?? `Decouvrez ${page.title} sur Proteine Tunisie`;
     const ogImage = page.og_image ? getStorageUrl(page.og_image) : undefined;
 
@@ -64,7 +65,8 @@ export default async function DynamicPage({ params }: PageProps) {
     const page = await getPageBySlug(apiSlug);
     if (!page) notFound();
     const baseUrl = getBaseUrl();
-    const canonical = page.canonical_url?.trim() || buildCanonicalUrl(`/${encodeURIComponent(page.slug || apiSlug)}`);
+    // Guarded, and identical to the value generateMetadata emits — JSON-LD @id must not diverge.
+    const canonical = await resolveCanonicalUrl(page.canonical_url, `/${encodeURIComponent(page.slug || apiSlug)}`);
     const rawDesc = page.meta_description ?? page.excerpt ?? '';
     const description = rawDesc ? String(rawDesc).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300) : undefined;
     const webPageSchema = buildWebPageSchema(page.title || 'Page', canonical, baseUrl, { description });

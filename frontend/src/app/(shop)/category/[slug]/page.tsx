@@ -3,7 +3,7 @@ import { notFound, permanentRedirect, unstable_rethrow } from 'next/navigation';
 import { getErrorStatus } from '@/util/errorStatus';
 import { getCategories } from '@/services/api';
 import { fetchCategoryOrSubCategory } from '@/services/api';
-import { buildCanonicalUrl, forceProteinDomain } from '@/util/canonical';
+import { resolveCanonicalUrl } from '@/util/canonical';
 import {
   buildBreadcrumbListSchema,
   buildCollectionPageSchema,
@@ -177,10 +177,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         ? merged.metaDescription
         : (merged.intro?.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160) ||
             generateTunisiaMetaDescription(apiTitle || canonicalSlug, tunisiaKeywords));
-    const canonicalUrl =
-      merged.canonicalUrl && merged.canonicalUrl.length > 0
-        ? forceProteinDomain(merged.canonicalUrl)
-        : buildCanonicalUrl(`/${encodeURIComponent(canonicalSlug)}`);
+    // merged.canonicalUrl is sous_categories.canonical_url / categs.canonical_url — free text.
+    // forceProteinDomain only normalised the HOST, so it accepted '/musculation' verbatim even
+    // though the admin redirect table 301s /musculation straight back to this page. The guard
+    // catches that and falls back to the (always-live) self canonical.
+    const canonicalUrl = await resolveCanonicalUrl(merged.canonicalUrl, `/${encodeURIComponent(canonicalSlug)}`);
     const descTrimmed = description.slice(0, 155);
     const ogImageRaw = merged.ogImage || undefined;
     const ogImage = ogImageRaw && /^https?:\/\//i.test(ogImageRaw) && !/\s/.test(ogImageRaw) ? ogImageRaw : undefined;

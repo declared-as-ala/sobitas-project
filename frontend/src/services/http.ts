@@ -11,8 +11,37 @@ function getApiBase(): string {
 }
 const API_BASE = getApiBase();
 
-const MAX_429_RETRIES = 2;
-const RETRY_DELAYS_MS = [400, 900];
+// The Laravel API rate-limits per IP and the ENTIRE SSR fleet shares ONE VPS IP, so under
+// crawl load the bucket empties and stays empty for the rest of the 60-second FIXED window.
+// Retrying after 400/900ms therefore almost never landed in a refilled window: the call
+// failed, the route degraded to a generic-title / no-canonical shell, and Googlebot indexed
+// that shell. Back off long enough to actually cross a window edge.
+const MAX_429_RETRIES = 3;
+const RETRY_DELAYS_MS = [800, 2500, 6000];
+
+/** Transient upstream failures worth another try on an idempotent GET. */
+const RETRYABLE_5XX = new Set([502, 503, 504]);
+const MAX_5XX_RETRIES = 2;
+const RETRY_5XX_DELAYS_MS = [500, 1500];
+
+/**
+ * Never sleep longer than this on a server-sent Retry-After. Laravel may send up to 60s;
+ * Node's global fetch has NO timeout, so an unbounded sleep here would pin an SSR render
+ * open for a full minute and risk tripping the reverse proxy's read timeout.
+ */
+const MAX_RETRY_AFTER_MS = 8_000;
+
+/**
+ * Laravel's ThrottleRequests always sets `Retry-After: <seconds>` on a 429. It is the only
+ * value that actually knows when the window resets — obeying it beats every guess we make.
+ */
+function retryAfterMs(res: Response): number | null {
+  const raw = res.headers.get('retry-after');
+  if (!raw) return null;
+  const secs = Number(raw.trim());
+  if (!Number.isFinite(secs) || secs <= 0) return null;
+  return Math.min(secs * 1000, MAX_RETRY_AFTER_MS);
+}
 
 function jitter(ms: number): number {
   return Math.floor(ms * (0.8 + Math.random() * 0.4));
@@ -62,7 +91,17 @@ async function doFetch<T>(
   });
 
   if (res.status === 429 && attempt < MAX_429_RETRIES) {
-    const delay = jitter(RETRY_DELAYS_MS[attempt] ?? 900);
+    const delay = retryAfterMs(res) ?? jitter(RETRY_DELAYS_MS[attempt] ?? 6000);
+    await new Promise((r) => setTimeout(r, delay));
+    return doFetch<T>(url, options, attempt + 1);
+  }
+
+  // A GET is idempotent, so 502/503/504 is safe to retry. Without this, one blip from the
+  // reverse proxy surfaced in a page's catch block and degraded the render into a 200 shell.
+  // NOTE: `attempt` is shared with the 429 path on purpose — a request that already burned
+  // retries on 429 does not get a fresh 5xx budget, which bounds total latency.
+  if (method === 'GET' && RETRYABLE_5XX.has(res.status) && attempt < MAX_5XX_RETRIES) {
+    const delay = retryAfterMs(res) ?? jitter(RETRY_5XX_DELAYS_MS[attempt] ?? 1500);
     await new Promise((r) => setTimeout(r, delay));
     return doFetch<T>(url, options, attempt + 1);
   }

@@ -685,15 +685,41 @@ export const getAllArticles = async (): Promise<Article[]> => {
   return Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : (data.articles || []));
 };
 
+const ARTICLE_RETRY_DELAYS_MS = [800, 2500, 6000];
+
+/**
+ * Deliberately on raw `fetch`, NOT apiFetch: `next: { tags: ['blog'] }` is what
+ * POST /api/revalidate-blog purges, and apiFetch's `cache: 'no-store'` would drop the tag.
+ * The side effect was that this call had NO 429 handling whatsoever while every other server
+ * data path had some — so blog articles were the first casualty of the shared per-IP bucket
+ * and the source of the observed generic "Article | Blog Protéine Tunisie" title with no
+ * canonical. Retry here, honouring the Retry-After Laravel sends. A genuine 404 is NOT
+ * transient and still falls straight through to the ApiError below on the first attempt.
+ */
 export const getArticleDetails = async (slug: string): Promise<Article> => {
-  const response = await fetch(`${API_URL}/article_details/${slug}`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    },
-    next: { tags: ['blog'] },
-  });
+  let response!: Response;
+  for (let attempt = 0; ; attempt++) {
+    response = await fetch(`${API_URL}/article_details/${slug}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      next: { tags: ['blog'] },
+    });
+    const transient =
+      response.status === 429 ||
+      response.status === 502 ||
+      response.status === 503 ||
+      response.status === 504;
+    if (!transient || attempt >= ARTICLE_RETRY_DELAYS_MS.length) break;
+    const retryAfter = Number(response.headers.get('retry-after'));
+    const delay =
+      Number.isFinite(retryAfter) && retryAfter > 0
+        ? Math.min(retryAfter * 1000, 8_000)
+        : Math.floor(ARTICLE_RETRY_DELAYS_MS[attempt]! * (0.8 + Math.random() * 0.4));
+    await new Promise((r) => setTimeout(r, delay));
+  }
 
   if (!response.ok) {
     // Throw a status-CARRYING ApiError (mirroring getProductDetails) so getErrorStatus() can read

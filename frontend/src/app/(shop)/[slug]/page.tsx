@@ -5,7 +5,7 @@ import { PageContentClient } from '@/app/(shop)/page/[slug]/PageContentClient';
 import { ShopPageClient } from '@/app/(shop)/shop/ShopPageClient';
 import { fetchCategoryOrSubCategory, getAllBrands, getCategories, getPageBySlug, getProductsByBrand, getStorageUrl } from '@/services/api';
 import { ApiError } from '@/services/http';
-import { buildCanonicalUrl, getBaseUrl, forceProteinDomain } from '@/util/canonical';
+import { getBaseUrl, forceProteinDomain, resolveCanonicalUrl } from '@/util/canonical';
 import { isReservedRouteSlug, buildProductUrlPath } from '@/util/productUrl';
 import { enrichProductsWithSubcategory } from '@/util/enrichProductSubcategory';
 import { buildCollectionPageSchema, buildItemListSchema, buildBreadcrumbListSchema, buildWebPageSchema } from '@/util/structuredData';
@@ -63,13 +63,16 @@ async function findPageBySlug(slug: string): Promise<Page | null> {
   }
 }
 
-function metadataForPage(page: Page, slug: string): Metadata {
+async function metadataForPage(page: Page, slug: string): Promise<Metadata> {
   const title = page.meta_title?.trim() || page.title || 'Page | Proteine Tunisie';
   const description =
     page.meta_description?.trim() ||
     page.excerpt?.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() ||
     `Decouvrez ${page.title} sur Proteine Tunisie`;
-  const canonical = page.canonical_url?.trim() || buildCanonicalUrl(`/${encodeURIComponent(slug)}`);
+  // NEVER emit page.canonical_url raw: it is free-text admin input and two live rows point at a
+  // 404 (/proteine-whey-old) and at a URL that 301s back here (/musculation). The guard honours a
+  // sane override and falls back to the self canonical for anything it can prove is dead.
+  const canonical = await resolveCanonicalUrl(page.canonical_url, `/${encodeURIComponent(slug)}`);
   const ogImage = page.og_image ? getStorageUrl(page.og_image) : undefined;
 
   return {
@@ -219,7 +222,9 @@ export default async function RootSlugPage({ params }: RootSlugPageProps) {
     // CMS page: emit WebPage + Breadcrumb so this branch has parity with the dedicated
     // /page/[slug] route (which already does). Canonical mirrors metadataForPage above.
     const baseUrl = getBaseUrl();
-    const canonical = page.canonical_url?.trim() || buildCanonicalUrl(`/${encodeURIComponent(cleanSlug)}`);
+    // Same guard as metadataForPage above — the WebPage @id and the <link rel="canonical"> must
+    // never disagree, so both go through resolveCanonicalUrl.
+    const canonical = await resolveCanonicalUrl(page.canonical_url, `/${encodeURIComponent(cleanSlug)}`);
     const rawDesc = page.meta_description ?? page.excerpt ?? '';
     const description = rawDesc ? String(rawDesc).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300) : undefined;
     const webPageSchema = buildWebPageSchema(page.title || 'Page', canonical, baseUrl, { description });

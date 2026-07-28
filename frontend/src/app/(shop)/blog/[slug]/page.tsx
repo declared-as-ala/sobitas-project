@@ -3,7 +3,7 @@ import { notFound, unstable_rethrow } from 'next/navigation';
 import { getErrorStatus } from '@/util/errorStatus';
 import { getArticleDetails, getLatestArticles } from '@/services/api';
 import { getStorageUrl } from '@/services/api';
-import { buildCanonicalUrl, forceProteinDomain } from '@/util/canonical';
+import { resolveCanonicalUrl } from '@/util/canonical';
 import { buildArticleSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
 import { blogHref } from '@/util/blogSlug';
 import { BlogSeoBlock } from '@/app/(shop)/blog/BlogSeoBlock';
@@ -44,9 +44,12 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       description ||
       `Découvrez ${article.designation_fr} sur le blog Protéine Tunisie — conseils nutrition et sport`;
 
-    const canonicalUrl = article.seo?.canonical_url?.trim()
-      ? forceProteinDomain(article.seo.canonical_url.trim())
-      : buildCanonicalUrl(`/blog/${encodeURIComponent(article.slug || slug)}`);
+    // forceProteinDomain only normalised the HOST — an off-domain host, a dead path or an
+    // unparseable value passed through untouched. The guard validates the whole URL.
+    const canonicalUrl = await resolveCanonicalUrl(
+      article.seo?.canonical_url,
+      `/blog/${encodeURIComponent(article.slug || slug)}`
+    );
     const title = article.seo?.title || article.seo_title || article.meta_title || article.designation_fr || 'Blog';
     const descriptionWithTunisia = metaDescription.includes('Tunisie') ? metaDescription : `${metaDescription} Conseils nutrition sportive Tunisie — Protéine Tunisie.`;
     const twitterImage = article.seo?.twitter?.image || imageUrl || '';
