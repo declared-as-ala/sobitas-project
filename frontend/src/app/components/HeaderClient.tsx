@@ -354,18 +354,28 @@ export function HeaderClient() {
         {/* MOBILE main bar — logo LEFT, action cluster RIGHT ending in the burger (owner request:
             burger on the right; it opens the 100%-width sidebar). */}
         <div className="md:hidden">
-          <div className="flex items-center justify-between w-full px-4 gap-2 h-14 py-2">
-            <Link href="/" className="flex items-center flex-shrink-0" aria-label="Proteine Tunisie - Accueil">
+          <div className="flex items-center justify-between w-full px-3 min-[380px]:px-4 gap-2 h-14 py-2">
+            {/* min-w-0 + shrink: the LOGO is what gives way on a narrow phone. Without it the row's
+                intrinsic width (logo + 4×44px buttons + padding) exceeded a 320px viewport and the
+                last item — the burger — was pushed outside the screen and clipped, so the menu could
+                not be opened at all. The icon cluster stays shrink-0 so every control keeps its
+                44px tap target. */}
+            <Link
+              href="/"
+              className="flex min-w-0 shrink items-center overflow-hidden"
+              aria-label="Proteine Tunisie - Accueil"
+            >
               {/* No `priority` — see the desktop logo note. The mobile logo preload was racing the
                   hero LCP image on phones. It stays eager (in the initial viewport) without a
-                  fetchpriority=high preload. */}
+                  fetchpriority=high preload.
+                  Sized by CLASS only: the old inline `height:auto` overrode `h-8`, so the logo
+                  rendered at its intrinsic ~150px width and ate the space the burger needed. */}
               <Image
                 src={headerLogoUrl}
                 alt="Proteine Tunisie"
                 width={140}
                 height={48}
-                className="h-8 min-h-[32px] w-auto max-w-[150px] object-contain"
-                style={{ width: 'auto', height: 'auto' }}
+                className="h-8 w-auto max-w-full object-contain object-left"
                 loading="eager"
               />
             </Link>
