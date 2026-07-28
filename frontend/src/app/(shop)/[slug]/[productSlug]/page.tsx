@@ -148,11 +148,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       ...buildShopProductSocialMetadata({ product, title, description, canonicalUrl }),
     };
   } catch (e) {
+    unstable_rethrow(e);
     if (getErrorStatus(e) === 404) {
       // Product not found - try legacy shop URL redirect
       permanentRedirect(`/shop/${cleanProductSlug}`);
     }
-    return { title: 'Produit | Protéine Tunisie' };
+    // TRANSIENT (429/5xx/timeout). Returning generic metadata here produced the canonical-less
+    // "Produit | Protéine Tunisie" shell on the site's primary indexable surface. The page body
+    // below already rethrows transient failures for exactly this reason — metadata must match,
+    // otherwise the two disagree and a throttled request yields a 200 with a wrong title.
+    throw e;
   }
 }
 
@@ -200,8 +205,25 @@ export default async function NewProductPage({ params }: PageProps) {
         }
         if (fallback?.id) permanentRedirect(buildProductCanonicalUrl(fallback));
       }
-      // Product not found - redirect to legacy shop URL
-      permanentRedirect(`/shop/${cleanProductSlug}`);
+      /**
+       * DEAD END, not a detour. We are here only because the API gave a DEFINITIVE 404 for the
+       * full slug (and, for a legacy -N slug, for the base slug too). The old fallback redirected
+       * to /shop/{slug} — but middleware then re-runs the exact same lookup there
+       * (resolveShopSlug → lookupProduct → 404 → no numeric suffix → `/{slug}`) and 301s again,
+       * producing a 308 → 301 → 404 THREE-hop chain for every genuinely deleted product (~150
+       * URLs in the GSC "Not found" export). Google attributes the final 404 to the original URL
+       * regardless, so the extra hops only burn crawl budget.
+       *
+       * Go directly to the single destination that chain could ever reach: the root listing path.
+       * Same outcome, one hop — it still resolves when the segment is really a category/brand/CMS
+       * slug (/proteines/whey-isolate → /whey-isolate) and returns a clean hard 404 when it is not.
+       * To upgrade that terminal 404 to a 410 for a confirmed-deleted product, add the canonical
+       * path to Filament → Redirections with code 410: middleware checks that in-process map FIRST
+       * (util/adminRedirects.ts, ~1 backend hit per 5 min per worker), so it costs no extra
+       * request on the hot path and needs no guessing here.
+       */
+      const rootSlug = baseSlug && baseSlug !== cleanProductSlug ? baseSlug : cleanProductSlug;
+      permanentRedirect(`/${encodeURIComponent(rootSlug)}`);
     }
     // Transient failure (429/5xx/timeout): rethrow. This ISR route (revalidate 300) would
     // otherwise CACHE a wrong 404 for a healthy product — the worst affichage bug possible

@@ -62,8 +62,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       alternates: { canonical, languages: { 'fr-TN': canonical, 'x-default': canonical } },
       robots: { index: true, follow: true },
     };
-  } catch {
-    return { robots: { index: false, follow: true } };
+  } catch (e) {
+    unstable_rethrow(e);
+    // Genuine 404: the page body below either 301s a legacy -N slug or notFound()s. noindex is
+    // the right interim answer there.
+    if (getErrorStatus(e) === 404) return { robots: { index: false, follow: true } };
+    // TRANSIENT: never let a throttled backend be the reason we hand Googlebot a noindex for a
+    // LIVE product on the only route it is served. Rethrow -> uncached 5xx, which it retries.
+    throw e;
   }
 }
 

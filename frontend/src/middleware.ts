@@ -120,6 +120,36 @@ async function resolveShopSlug(slug: string): Promise<string | null> {
 export async function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
 
+  // ── Machine endpoint crawled as a page → 410 (Gone) ─────────────────────
+  // /api-proxy is not, and never was, a page: next.config.js rewrites `/api-proxy/:path*` to the
+  // Laravel API, and path-to-regexp lets `:path*` match ZERO segments, so the bare path silently
+  // proxies to the API root instead of 404ing cleanly. It is in the GSC "Not found (404)" export;
+  // 410 tells Google to drop it for good.
+  //
+  // DELIBERATELY NOT /api. `/api` looks like a machine path but is the BRAND PAGE for the brand
+  // "API" (brands id=5) — the sitemap lists it between /activlab and /applied-nutrition. It 404s
+  // today only because the static `app/api/` segment shadows the dynamic `(shop)/[slug]` route.
+  // 410ing it would permanently delete a real brand listing. Tracked separately as a brand-slug
+  // collision fix; leaving the existing 404 here is a no-op, not a regression.
+  //
+  // EXACT equality only — `/api-proxy/accueil` cannot match, and the `config.matcher` below
+  // already excludes the `api-proxy/` prefix so this file never runs for a real endpoint. Must
+  // stay ABOVE any await: Next.js runs middleware BEFORE next.config rewrites, which is the only
+  // reason a 410 can beat the /api-proxy proxy.
+  if (pathname === '/api-proxy') {
+    return new NextResponse('Gone', { status: 410, headers: { 'Cache-Control': 'no-store' } });
+  }
+
+  // Widening the matcher from the bare `api` prefix to `api/` means middleware now RUNS for the
+  // bare `/api`, which it never did before. Left alone, the crawler rewrite further down would
+  // send Googlebot to /x-crawler/category/api — where the "API" brand resolves and returns 200 —
+  // while a browser still got the 404 from the shadowed `app/api/` segment. Serving bots a
+  // different status than users is cloaking, so hold /api at exactly its current behaviour until
+  // the brand-slug collision is fixed for BOTH audiences at once.
+  if (pathname === '/api') {
+    return NextResponse.next();
+  }
+
   // ── Admin-defined redirects (301 / 302 / 410) ───────────────────────────
   // Managed in Filament → "Redirections", served from /api/redirections, cached in-process
   // (~1 backend hit per 5 min) and fail-open. Runs FIRST so the store owner can retire any dead
@@ -194,6 +224,19 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // ── Sitelinks-searchbox template leaked into the index → 410 ────────────
+  // The SearchAction markup that published this urlTemplate is ALREADY GONE (see the note on
+  // buildWebSiteSchema in util/structuredData.ts), so nothing is still emitting it — this only
+  // drains the stale index entries: /shop?search=%7Bsearch_term_string%7D and the /search?q=
+  // form in the GSC export. A param value containing BRACES can never be a real query: every
+  // search URL this app builds comes from URLSearchParams over a user term, so the literal
+  // placeholder is provably invalid and permanently so. Path-agnostic on purpose (one rule,
+  // both URL shapes); it only ever inspects `q`/`search`, so no path is otherwise affected.
+  const templatedTerm = searchParams.get('q') ?? searchParams.get('search');
+  if (templatedTerm && /^\{search_term_string\}$/i.test(templatedTerm.trim())) {
+    return new NextResponse('Gone', { status: 410, headers: { 'Cache-Control': 'no-store' } });
+  }
+
   // Legacy WordPress archive pagination: /{segment}/page/{n} (e.g. /shop/page/2, /proteines/page/2).
   // These 3-segment paths have no route here — /shop/page/2 currently serves a soft meta-refresh to
   // the homepage (HTTP 200, a duplicate). 301 to the clean base path with ?page so the pagination
@@ -214,6 +257,29 @@ export async function middleware(request: NextRequest) {
     const canonical = await resolveShopSlug(shopSlug[1]);
     if (canonical) return redirectPreservingQuery(request, canonical);
     // If API is unreachable, fall through to the page (it handles it too)
+  }
+
+  // ── WordPress nested shop paths: /shop/{cat}/{subcat}/{product}[/reviews] ──
+  // WHY THIS CAN NEVER MATCH A LIVE URL: this is a FOUR-segment path, and the deepest real /shop
+  // route in the app router is THREE segments — app/(shop)/shop/[slug]/page.tsx,
+  // shop/[slug]/reviews/page.tsx and shop/[slug]/[subcategory]/page.tsx. There is no 4-segment
+  // route anywhere, so every path this regex matches is a hard 404 today.
+  // WooCommerce always put the PRODUCT in the last segment, so resolve that segment with the same
+  // resolver resolveShopSlug uses:
+  //   • product found      → ONE 301 to its canonical /{subcat}/{slug} (link equity kept)
+  //   • definitive API 404 → 410, the URL class is permanently gone with WordPress
+  //   • API error (null)   → fall through; never guess while the backend is unhealthy
+  // NOTE: /shop/{a}/{b}/reviews resolves its last segment as "reviews" and will 410 rather than
+  // 404. Both are terminal and neither is a live route (the real reviews route is 3 segments).
+  const wpNestedShop = pathname.match(/^\/shop\/[^/]+\/[^/]+\/([^/]+?)(?:\/reviews)?\/?$/);
+  if (wpNestedShop?.[1]) {
+    let lastSegment = wpNestedShop[1];
+    try { lastSegment = decodeURIComponent(lastSegment); } catch { /* keep raw */ }
+    const nested = await lookupProduct(lastSegment);
+    if (typeof nested === 'string') return redirectPreservingQuery(request, nested);
+    if (nested === false) {
+      return new NextResponse('Gone', { status: 410, headers: { 'Cache-Control': 'no-store' } });
+    }
   }
 
   // Legacy locale-prefixed URLs (old i18n scheme): /en/... , /ar/... → strip the prefix.
@@ -340,6 +406,13 @@ export const config = {
      * - SEO/PWA metadata files (sitemap.xml, robots.txt, sw.js, manifests) — belt-and-suspenders
      *   so the crawler rewrite can never intercept them even if the dot-guard is ever removed.
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|sw.js|manifest.json|site.webmanifest).*)',
+    /*
+     * Exclusions are BOUNDARY-AWARE (`api/`, `api-proxy/`), not bare prefixes. The old `api`
+     * prefix also swallowed `/api-proxy*`, and it hid the page-less parents `/api` and
+     * `/api-proxy` — both of which appear in the GSC "Not found" export — from middleware,
+     * making it impossible to give them a terminal 410. Real endpoints under `api/` and
+     * `api-proxy/` are still excluded outright, so no request that carries data is affected.
+     */
+    '/((?!api/|api-proxy/|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|sw.js|manifest.json|site.webmanifest).*)',
   ],
 };

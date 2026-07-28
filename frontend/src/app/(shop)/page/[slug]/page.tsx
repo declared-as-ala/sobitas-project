@@ -1,7 +1,9 @@
 import { Metadata } from 'next';
 import { notFound, unstable_rethrow } from 'next/navigation';
 import { getErrorStatus } from '@/util/errorStatus';
-import { getPageBySlug, getStorageUrl } from '@/services/api';
+import { getStorageUrl } from '@/services/api';
+// Request-scoped cache: generateMetadata + the page body issued two separate page/{slug} calls.
+import { getCachedPageBySlug as getPageBySlug } from '@/services/getCachedProductDetails';
 import { getBaseUrl, resolveCanonicalUrl } from '@/util/canonical';
 import { buildWebPageSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
 import { PageContentClient } from './PageContentClient';
@@ -49,11 +51,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         ...(ogImage ? { images: [{ url: ogImage }] } : {}),
       },
     };
-  } catch {
-    return {
-      title: 'Page | Proteine Tunisie',
-      description: 'Decouvrez notre page sur Proteine Tunisie',
-    };
+  } catch (e) {
+    unstable_rethrow(e);
+    // Genuine 404: the page body below calls notFound(); keep the interim shell out of the index.
+    if (getErrorStatus(e) === 404) {
+      return { title: 'Page introuvable | Proteine Tunisie', robots: { index: false, follow: false } };
+    }
+    // TRANSIENT: rethrow. revalidate=3600 here, so a swallowed 429 pinned a generic,
+    // canonical-less shell for a full hour. The page body already rethrows — metadata must agree.
+    throw e;
   }
 }
 
