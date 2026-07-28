@@ -110,6 +110,45 @@ services:
       # php-fpm writes here; nginx reads the same host directory via its own mount.
       - /var/sobitas/uploads:/var/www/html/storage/app/public
 
+  # Laravel task scheduler.
+  #
+  # This service did not exist before 2026-07-28. routes/console.php had defined scheduled SEO
+  # commands for a long time, but nothing was executing them — no cron on the host, no
+  # schedule:work process — so every one of them had never run. A schedule with no runner fails
+  # silently, which is exactly the class of problem the SEO watchdog it now runs exists to catch.
+  #
+  # `schedule:work` is used rather than a host crontab so the schedule ships with the image and
+  # cannot drift from the code that defines it.
+  backend-v2-scheduler:
+    image: ghcr.io/declared-as-ala/sobitas-backend-v2:latest
+    container_name: sobitas-backend-v2-scheduler
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: ${MYSQL_DATABASE:-protein_db}
+      DB_USERNAME: ${MYSQL_USER:-laravel}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-secret}
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_URL: https://admin.protein.tn
+      CACHE_DRIVER: redis
+      SESSION_DRIVER: redis
+      QUEUE_CONNECTION: redis
+    command: php artisan schedule:work
+    networks:
+      - sobitas-net
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - /var/sobitas/uploads:/var/www/html/storage/app/public
+
   backend-v2-queue:
     image: ghcr.io/declared-as-ala/sobitas-backend-v2:latest
     container_name: sobitas-backend-v2-queue
