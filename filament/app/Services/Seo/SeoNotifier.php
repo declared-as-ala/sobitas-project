@@ -44,6 +44,40 @@ class SeoNotifier
     }
 
     /**
+     * Bust ONLY the cached sitemap. For content that has no single indexable page of its own, or
+     * whose page cache does not need touching — categories, subcategories, brands, articles, CMS
+     * pages — the thing that must refresh is /sitemap.xml, so its <lastmod> and URL set follow the
+     * catalogue instead of lagging up to an hour behind.
+     *
+     * Before this, ONLY a product save refreshed the sitemap. Renaming a category, publishing an
+     * article or adding a brand left the sitemap stale until the 1h TTL expired — the sitemap was
+     * "automatic" for one content type out of six.
+     *
+     * Fire-and-forget after the response, and swallowing every failure: an admin save must never
+     * fail because the storefront was slow.
+     */
+    public function sitemapChanged(): void
+    {
+        $internal = rtrim((string) config('services.frontend.internal_url'), '/');
+        if ($internal === '') {
+            return; // not configured — no-op
+        }
+        $secret = (string) config('services.frontend.revalidate_secret');
+
+        dispatch(static function () use ($internal, $secret): void {
+            try {
+                $request = Http::connectTimeout(2)->timeout(4);
+                if ($secret !== '') {
+                    $request = $request->withToken($secret);
+                }
+                $request->post($internal . '/api/revalidate?tag=sitemap');
+            } catch (\Throwable $e) {
+                Log::warning('SeoNotifier sitemap refresh failed', ['error' => $e->getMessage()]);
+            }
+        })->afterResponse();
+    }
+
+    /**
      * Resolve the revalidation context (target URLs + secret) for a product, or
      * null when the product has no indexable path or the frontend is unconfigured.
      *

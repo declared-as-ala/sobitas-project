@@ -67,13 +67,21 @@ class ApisController extends Controller
         'id', 'slug', 'designation_fr', 'cover', 'new_product', 'best_seller', 'note',
         'alt_cover', 'description_cover', 'prix', 'pack', 'promo', 'promo_expiration_date',
         'qte', 'rupture', 'brand_id', 'sous_categorie_id', 'meta_title', 'meta_description', 'seo_title', 'seo_description',
+        // Timestamps power <lastmod> in the sitemap. Without them the frontend fell back to
+        // `new Date()`, so EVERY product claimed to have been modified at the moment of the fetch —
+        // Google discounts a lastmod it can prove is untrustworthy, which wasted the signal
+        // entirely. Two extra columns, real change dates.
+        'created_at', 'updated_at',
     ];
 
     // Article list columns — exclude description_fr (can be huge HTML); blog_type only if migrated
     private function articleListSelectColumns(): array
     {
         $base = ['id', 'slug', 'designation_fr', 'cover', 'publier', 'created_at'];
-        $base = ['id', 'slug', 'designation_fr', 'cover', 'publier', 'meta_title', 'meta_description_fr', 'seo_title', 'seo_description', 'created_at'];
+        // 'updated_at' is appended LAST on purpose: the array_splice below inserts blog_type at
+        // index 9 (just before created_at), so adding anything ahead of that would shift it.
+        // Like products, articles need a real change date for the sitemap's <lastmod>.
+        $base = ['id', 'slug', 'designation_fr', 'cover', 'publier', 'meta_title', 'meta_description_fr', 'seo_title', 'seo_description', 'created_at', 'updated_at'];
         if (Article::hasBlogTypeColumn()) {
             array_splice($base, 9, 0, ['blog_type']);
         }

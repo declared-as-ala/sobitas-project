@@ -4,13 +4,21 @@ namespace App\Providers;
 
 use App\Filament\Widgets\TopCategoriesListWidget;
 use App\Filament\Widgets\TopRegionsWidget;
+use App\Models\Article;
+use App\Models\BlogCategory;
+use App\Models\BlogTag;
+use App\Models\Brand;
+use App\Models\Categ;
 use App\Models\Commande;
+use App\Models\Page;
 use App\Models\Product;
 use App\Models\Review;
+use App\Models\SousCategory;
 use App\Models\User;
 use App\Observers\CommandeObserver;
 use App\Observers\ProductSeoObserver;
 use App\Observers\ReviewObserver;
+use App\Observers\SitemapTouchObserver;
 use App\Observers\UserObserver;
 use Filament\Facades\Filament;
 use Illuminate\Auth\Notifications\ResetPassword;
@@ -61,5 +69,14 @@ class AppServiceProvider extends ServiceProvider
 
         // Self-healing SEO: auto-fill empty meta title/description + image alt on every product save
         Product::observe(ProductSeoObserver::class);
+
+        // Keep /sitemap.xml current. Products already refresh it through ProductSeoObserver, but
+        // every OTHER content type that appears in the sitemap used to leave it stale for up to an
+        // hour after a change. Each of these models owns URLs in the sitemap, so each must bust it.
+        foreach ([Categ::class, SousCategory::class, Brand::class, Article::class, Page::class, BlogCategory::class, BlogTag::class] as $sitemapModel) {
+            if (class_exists($sitemapModel)) {
+                $sitemapModel::observe(SitemapTouchObserver::class);
+            }
+        }
     }
 }

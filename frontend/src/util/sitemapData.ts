@@ -9,6 +9,16 @@ import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
 
+/**
+ * Which child sitemap an entry belongs to. /sitemap.xml is a sitemap INDEX pointing at one file
+ * per section, so Search Console reports coverage per content type ("42 of 303 products indexed")
+ * instead of one opaque number for the whole site — that is the entire point of splitting it.
+ */
+export type SitemapSection = 'static' | 'listings' | 'products' | 'blog' | 'pages';
+
+/** A sitemap entry plus the section it belongs to. `section` is stripped before XML is emitted. */
+export type SectionedSitemapEntry = MetadataRoute.Sitemap[number] & { section: SitemapSection };
+
 const STATIC_PAGES_SET = new Set([
   `${BASE_URL}/`,
   `${BASE_URL}/shop`,
@@ -20,27 +30,42 @@ const STATIC_PAGES_SET = new Set([
   `${BASE_URL}/contact`,
   `${BASE_URL}/faqs`,
   `${BASE_URL}/proteine-sousse`,
+  `${BASE_URL}/pack-builder`,
 ]);
 
 const staticPages: MetadataRoute.Sitemap = [
-  { url: BASE_URL, lastModified: new Date(), changeFrequency: 'daily', priority: 0.95 },
-  { url: `${BASE_URL}/shop`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.95 },
-  { url: `${BASE_URL}/packs`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
-  { url: `${BASE_URL}/offres`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
-  { url: `${BASE_URL}/brands`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.8 },
-  { url: `${BASE_URL}/blog`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.85 },
-  { url: `${BASE_URL}/qui-sommes-nous`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.7 },
-  { url: `${BASE_URL}/contact`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.8 },
-  { url: `${BASE_URL}/faqs`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.7 },
+  { url: BASE_URL, changeFrequency: 'daily', priority: 0.95 },
+  { url: `${BASE_URL}/shop`, changeFrequency: 'daily', priority: 0.95 },
+  { url: `${BASE_URL}/packs`, changeFrequency: 'daily', priority: 0.9 },
+  { url: `${BASE_URL}/offres`, changeFrequency: 'daily', priority: 0.9 },
+  { url: `${BASE_URL}/brands`, changeFrequency: 'weekly', priority: 0.8 },
+  { url: `${BASE_URL}/blog`, changeFrequency: 'daily', priority: 0.85 },
+  { url: `${BASE_URL}/qui-sommes-nous`, changeFrequency: 'monthly', priority: 0.7 },
+  { url: `${BASE_URL}/contact`, changeFrequency: 'monthly', priority: 0.8 },
+  { url: `${BASE_URL}/faqs`, changeFrequency: 'monthly', priority: 0.7 },
   // Local SEO landing page ("protéine Sousse"): indexable + self-canonical but was orphaned —
   // absent from the sitemap and with no internal links, so it could not be discovered/indexed.
-  { url: `${BASE_URL}/proteine-sousse`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.8 },
+  { url: `${BASE_URL}/proteine-sousse`, changeFrequency: 'monthly', priority: 0.8 },
+  // Pack Builder: a real indexable tool page (200 + self-canonical + index,follow) that was
+  // orphaned from the sitemap. It also spent time answering 404 to Googlebot only — a reserved-route
+  // bug fixed in PR #152 — so it has never actually been crawlable. Submitting it now.
+  { url: `${BASE_URL}/pack-builder`, changeFrequency: 'weekly', priority: 0.7 },
 ];
 
-function getLastModified(item: { updated_at?: string; created_at?: string }): Date {
-  if (item.updated_at) return new Date(item.updated_at);
-  if (item.created_at) return new Date(item.created_at);
-  return new Date();
+/**
+ * Real change date, or undefined when the record carries none.
+ *
+ * It previously fell back to "now". Combined with the products API not selecting its
+ * timestamps at all, that made EVERY product advertise <lastmod> = the moment of the fetch — so
+ * the whole sitemap looked freshly rewritten on every crawl. Google discounts a lastmod it can
+ * show is unreliable, so the signal was not just useless but actively spent. Omitting the element
+ * is the honest option: Google falls back to its own change detection for that URL only.
+ */
+function getLastModified(item: { updated_at?: string; created_at?: string }): Date | undefined {
+  const raw = item.updated_at || item.created_at;
+  if (!raw) return undefined;
+  const parsed = new Date(raw);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 }
 
 /**
@@ -110,10 +135,10 @@ function encodeSitemapUrl(url: string): string {
   }
 }
 
-/** Returns sitemap entries for XML. Used by app/sitemap.ts (Next.js metadata file → /sitemap.xml as application/xml). */
-async function computeSitemapEntries(): Promise<MetadataRoute.Sitemap> {
+/** Returns every sitemap entry, each tagged with the child sitemap it belongs to. */
+async function computeSitemapEntries(): Promise<SectionedSitemapEntry[]> {
   const seenUrls = new Set<string>();
-  const sitemapEntries: MetadataRoute.Sitemap = [];
+  const sitemapEntries: SectionedSitemapEntry[] = [];
   // Lowercased slugs of categories/subcategories that actually exist in the backend.
   // Used to gate the "double insurance" content-file block below so we never emit a
   // root URL for a slug that 404s (e.g. /whey-protein) or 301s (e.g. /mass-gainer).
@@ -124,7 +149,7 @@ async function computeSitemapEntries(): Promise<MetadataRoute.Sitemap> {
     const encoded = encodeSitemapUrl(entry.url);
     if (!seenUrls.has(encoded)) {
       seenUrls.add(encoded);
-      sitemapEntries.push({ ...entry, url: encoded });
+      sitemapEntries.push({ ...entry, url: encoded, section: 'static' });
     }
   }
 
@@ -203,7 +228,7 @@ async function computeSitemapEntries(): Promise<MetadataRoute.Sitemap> {
         const encoded = encodeSitemapUrl(entry.url);
         if (!seenUrls.has(encoded)) {
           seenUrls.add(encoded);
-          sitemapEntries.push({ ...entry, url: encoded });
+          sitemapEntries.push({ ...entry, url: encoded, section: 'products' });
         }
       }
     }
@@ -234,6 +259,7 @@ async function computeSitemapEntries(): Promise<MetadataRoute.Sitemap> {
               lastModified: getLastModified(category as ItemWithDates),
               changeFrequency: normalizeSitemapChangefreq(category.sitemap_changefreq ?? undefined),
               priority: clampPriority(category.sitemap_priority ?? undefined, 0.85),
+              section: 'listings',
             });
           }
         }
@@ -254,6 +280,7 @@ async function computeSitemapEntries(): Promise<MetadataRoute.Sitemap> {
                 lastModified: getLastModified(subCategory as ItemWithDates),
                 changeFrequency: normalizeSitemapChangefreq(subCategory.sitemap_changefreq ?? undefined),
                 priority: clampPriority(subCategory.sitemap_priority ?? undefined, 0.8),
+                section: 'listings',
               });
             }
           });
@@ -282,9 +309,9 @@ async function computeSitemapEntries(): Promise<MetadataRoute.Sitemap> {
           seenUrls.add(url);
           sitemapEntries.push({
             url,
-            lastModified: new Date(),
             changeFrequency: 'weekly',
             priority: 0.8,
+            section: 'listings',
           });
         }
       });
@@ -305,6 +332,7 @@ async function computeSitemapEntries(): Promise<MetadataRoute.Sitemap> {
               lastModified: getLastModified(brand as ItemWithDates),
               changeFrequency: 'weekly' as const,
               priority: 0.75,
+              section: 'listings',
             });
           }
         }
@@ -333,6 +361,7 @@ async function computeSitemapEntries(): Promise<MetadataRoute.Sitemap> {
               lastModified: getLastModified(page as ItemWithDates),
               changeFrequency: 'monthly' as const,
               priority: 0.55,
+              section: 'pages',
             });
           }
         });
@@ -353,6 +382,7 @@ async function computeSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             lastModified: getLastModified(a as ItemWithDates),
             changeFrequency: 'monthly' as const,
             priority: 0.6,
+            section: 'blog' as const,
             ...(coverImg ? { images: [coverImg] } : {}),
           };
         });
@@ -376,9 +406,9 @@ async function computeSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             seenUrls.add(url);
             sitemapEntries.push({
               url,
-              lastModified: new Date(),
               changeFrequency: 'weekly' as const,
               priority: 0.55,
+              section: 'blog',
             });
           }
         }
@@ -401,9 +431,9 @@ async function computeSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             seenUrls.add(url);
             sitemapEntries.push({
               url,
-              lastModified: new Date(),
               changeFrequency: 'weekly' as const,
               priority: 0.5,
+              section: 'blog',
             });
           }
         }
@@ -428,3 +458,14 @@ export const getSitemapEntries = unstable_cache(
   ['sitemap-entries'],
   { revalidate: 3600, tags: ['sitemap'] }
 );
+
+/**
+ * Entries for ONE section. Every child sitemap calls this, and they all share the single cached
+ * crawl above — so a crawler pulling all seven files costs one catalogue crawl, not seven.
+ */
+export async function getSitemapEntriesForSection(
+  section: SitemapSection
+): Promise<SectionedSitemapEntry[]> {
+  const all = await getSitemapEntries();
+  return all.filter((entry) => entry.section === section);
+}
