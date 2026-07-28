@@ -705,11 +705,28 @@ export function buildLocalBusinessSchema(baseUrl: string): object {
       postalCode: '4000',
       addressCountry: 'TN',
     },
+    /**
+     * Coordinates taken from the store's own Google Business Profile pin, not estimated.
+     *
+     * These previously read 35.8256 / 10.6369 — measured 1,325 metres from the actual shop. For a
+     * local business that gap is the difference between appearing in the map pack for a nearby
+     * search and being ranked as a competitor's neighbour.
+     *
+     * Source of truth: the Maps short link in HeaderClient.tsx resolves to
+     *   .../place/PROTÉINE+TUNISIE+–+SOBITAS.../@35.8363493,10.630565,17z/...
+     *   !1s0x1302131b30e891b1:0x51dae0f25849b20c
+     * and the footer's embed iframe carries the same place id with !3d35.8363715!2d10.6306134
+     * (~3 m apart, the same pin). Both references point at ONE listing, so there is no duplicate
+     * Google Business Profile despite the two different URL formats.
+     */
     geo: {
       '@type': 'GeoCoordinates',
-      latitude: 35.8256,
-      longitude: 10.6369,
+      latitude: 35.8363493,
+      longitude: 10.630565,
     },
+    // hasMap lets Google tie this markup to that exact profile rather than inferring from the
+    // address string, which is what disambiguates a business on a street with several units.
+    hasMap: 'https://maps.app.goo.gl/w2ytnYAKSZDmjznh6',
     areaServed: { '@type': 'Country', name: 'Tunisia' },
     priceRange: '$$',
     currenciesAccepted: 'TND',
