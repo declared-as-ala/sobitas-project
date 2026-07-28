@@ -49,11 +49,15 @@ import {
   DropdownMenuTrigger,
 } from '@/app/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetClose, SheetTitle } from '@/app/components/ui/sheet';
+import { Skeleton } from '@/app/components/ui/skeleton';
 import { cn } from '@/app/components/ui/utils';
-import { getNavigationItems, getCategories } from '@/services/api';
+import { getNavigationItems, getCategories, searchProducts, getStorageUrl } from '@/services/api';
+import { useDebounce } from '@/util/debounce';
+import { getPriceDisplay } from '@/util/productPrice';
+import { buildProductUrlPath } from '@/util/productUrl';
 import { useSiteChrome } from '@/contexts/SiteChromeContext';
 import { useSiteLogos } from '@/hooks/useSiteLogos';
-import type { SiteNavigationItem } from '@/types';
+import type { SiteNavigationItem, Product } from '@/types';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { useI18n } from '@/i18n/I18nProvider';
 import { MULTILOCALE_ENABLED } from '@/i18n';
@@ -191,6 +195,11 @@ export function HeaderClient() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [productsOpen, setProductsOpen] = useState(false);
   const [sidebarQuery, setSidebarQuery] = useState('');
+  /** Second level of the sidebar accordion: which category has its sub-categories open (one at a
+   *  time, so the list never becomes an unreadable wall on a phone). */
+  const [openCategoryId, setOpenCategoryId] = useState<number | null>(null);
+  const [sidebarResults, setSidebarResults] = useState<Product[]>([]);
+  const [sidebarSearching, setSidebarSearching] = useState(false);
   const { theme, setTheme } = useTheme();
   // Server-fetched nav (root layout → SiteChromeProvider): the real labels are in the SSR HTML,
   // so there is no first-paint "NOS PRODUITS" → "BOUTIQUE" swap anymore.
@@ -237,7 +246,14 @@ export function HeaderClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const closeMobileMenu = () => setMobileMenuOpen(false);
+  const closeMobileMenu = () => {
+    setMobileMenuOpen(false);
+    // Reset the drawer to its resting state so the next open starts from the nav, not from a stale
+    // search result list or a half-expanded accordion.
+    setSidebarQuery('');
+    setSidebarResults([]);
+    setOpenCategoryId(null);
+  };
 
   const handleSidebarSearch = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -245,8 +261,34 @@ export function HeaderClient() {
     if (!q) return;
     router.push(`/shop?search=${encodeURIComponent(q)}`);
     closeMobileMenu();
-    setSidebarQuery('');
   };
+
+  // Live sidebar search — same pipeline as the desktop bar (debounce → searchProducts), so results
+  // appear as you type instead of only on submit. Only runs while the drawer is actually open.
+  const debouncedSidebarQuery = useDebounce(sidebarQuery, 300);
+  useEffect(() => {
+    const q = debouncedSidebarQuery.trim();
+    if (!mobileMenuOpen || !q) {
+      setSidebarResults([]);
+      setSidebarSearching(false);
+      return;
+    }
+    let active = true;
+    setSidebarSearching(true);
+    searchProducts(q)
+      .then(({ products }) => {
+        if (active) setSidebarResults(Array.isArray(products) ? products : []);
+      })
+      .catch(() => {
+        if (active) setSidebarResults([]);
+      })
+      .finally(() => {
+        if (active) setSidebarSearching(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [debouncedSidebarQuery, mobileMenuOpen]);
 
   const navLinks = withPackBuilder(dynamicNavigation.navbar.length > 0 ? dynamicNavigation.navbar : FALLBACK_NAV_LINKS);
   const sidebarLinks = withPackBuilder(dynamicNavigation.sidebar.length > 0 ? dynamicNavigation.sidebar : navLinks);
@@ -254,6 +296,12 @@ export function HeaderClient() {
   const packBuilderLink = navLinks.find((link) => link.href === '/pack-builder');
 
   const isActiveNav = (href: string) => (href === '/' ? pathname === '/' : pathname === href);
+
+  // While the shopper is typing, the drawer's scrollable middle shows results instead of the nav.
+  const showSidebarSearch = sidebarQuery.trim().length > 0;
+  // True between a keystroke and the debounce firing — keeps the skeleton up so results never flash
+  // stale matches for the previous query.
+  const sidebarSearchPending = sidebarQuery.trim() !== debouncedSidebarQuery.trim();
 
   return (
     // A FRAGMENT, not a wrapper <div>. `position: sticky` only holds while the element's PARENT box
@@ -611,18 +659,130 @@ export function HeaderClient() {
                   aria-label="Rechercher un produit"
                   className="w-full min-h-[44px] rounded-xl border border-[#E5E7EB] bg-[#F5F6F8] pl-9 pr-11 text-[14px] text-[#111827] placeholder:text-[#6B7280] transition-colors focus:border-[#FF5A00] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#FF5A00]/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-400 dark:focus:bg-gray-900"
                 />
-                <button
-                  type="submit"
-                  aria-label="Rechercher"
-                  className="absolute right-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-[#6B7280] transition-colors hover:bg-white hover:text-[#FF5A00] dark:hover:bg-gray-700"
-                >
-                  <Search className="h-4 w-4" aria-hidden />
-                </button>
+                {showSidebarSearch ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSidebarQuery('');
+                      setSidebarResults([]);
+                    }}
+                    aria-label="Effacer la recherche"
+                    className="absolute right-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-[#6B7280] transition-colors hover:bg-white hover:text-[#FF5A00] dark:hover:bg-gray-700"
+                  >
+                    <X className="h-4 w-4" aria-hidden />
+                  </button>
+                ) : (
+                  <button
+                    type="submit"
+                    aria-label="Rechercher"
+                    className="absolute right-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-[#6B7280] transition-colors hover:bg-white hover:text-[#FF5A00] dark:hover:bg-gray-700"
+                  >
+                    <Search className="h-4 w-4" aria-hidden />
+                  </button>
+                )}
               </div>
             </form>
 
-            {/* SCROLLABLE MIDDLE — nav list scrolls above the pinned trust chips */}
+            {/* SCROLLABLE MIDDLE — live search results while typing, otherwise the nav list. Both
+                scroll above the pinned trust chips. */}
             <div className="flex-1 min-h-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {showSidebarSearch ? (
+                <div className="px-4 pt-2 pb-4">
+                  {sidebarSearching || sidebarSearchPending ? (
+                    <div className="space-y-1" role="status" aria-label="Recherche en cours">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <div key={i} className="flex items-center gap-3 rounded-xl p-2">
+                          <Skeleton className="h-12 w-12 shrink-0 rounded-lg" />
+                          <div className="min-w-0 flex-1 space-y-2">
+                            <Skeleton className="h-3.5 w-2/3" />
+                            <Skeleton className="h-3 w-1/3" />
+                          </div>
+                        </div>
+                      ))}
+                      <span className="sr-only">Recherche en cours…</span>
+                    </div>
+                  ) : sidebarResults.length === 0 ? (
+                    <div className="py-12 text-center">
+                      <Search className="mx-auto h-8 w-8 text-[#D1D5DB] dark:text-gray-600" aria-hidden />
+                      <p className="mt-3 text-[14px] font-semibold text-[#111827] dark:text-gray-100">
+                        Aucun produit trouvé
+                      </p>
+                      <p className="mt-1 px-4 text-[13px] leading-snug text-[#6B7280] dark:text-gray-400">
+                        Rien ne correspond à «&nbsp;{sidebarQuery.trim()}&nbsp;». Essayez d&apos;autres termes.
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="px-1 pb-2 text-[12px] font-semibold uppercase tracking-wide text-[#FF5A00]">
+                        {sidebarResults.length} résultat{sidebarResults.length > 1 ? 's' : ''}
+                      </p>
+                      <ul className="space-y-0.5">
+                        {sidebarResults.map((product) => {
+                          const pd = getPriceDisplay(product);
+                          return (
+                            <li key={product.id}>
+                              <Link
+                                href={buildProductUrlPath(product)}
+                                onClick={closeMobileMenu}
+                                className="flex items-center gap-3 rounded-xl p-2 transition-colors hover:bg-[#F5F6F8] dark:hover:bg-gray-800"
+                              >
+                                <span className="relative block h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-[#F5F6F8] dark:bg-gray-800">
+                                  {product.cover ? (
+                                    <Image
+                                      src={getStorageUrl(product.cover)}
+                                      alt=""
+                                      fill
+                                      className="object-contain"
+                                      sizes="48px"
+                                      unoptimized
+                                    />
+                                  ) : null}
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                  <span className="block truncate text-[14px] font-medium text-[#111827] dark:text-gray-100">
+                                    {product.designation_fr}
+                                  </span>
+                                  <span className="mt-0.5 block text-[13px]">
+                                    {pd.hasPromo && pd.oldPrice != null ? (
+                                      <>
+                                        <span className="text-[#6B7280] line-through dark:text-gray-500">
+                                          {pd.oldPrice.toFixed(2)} DT
+                                        </span>
+                                        <span className="ml-1.5 font-semibold text-[#FF5A00]">
+                                          {pd.finalPrice.toFixed(2)} DT
+                                        </span>
+                                      </>
+                                    ) : (
+                                      <span className="font-semibold text-[#111827] dark:text-gray-200">
+                                        {pd.finalPrice.toFixed(2)} DT
+                                      </span>
+                                    )}
+                                  </span>
+                                </span>
+                                <ChevronRight className="h-4 w-4 shrink-0 text-gray-400" aria-hidden />
+                              </Link>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const q = sidebarQuery.trim();
+                          if (!q) return;
+                          router.push(`/shop?search=${encodeURIComponent(q)}`);
+                          closeMobileMenu();
+                        }}
+                        className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#FF5A00] text-[15px] font-semibold text-white transition-colors hover:bg-[#E85200]"
+                      >
+                        <span>Voir tous les résultats ({sidebarResults.length})</span>
+                        <ChevronRight className="h-4 w-4 shrink-0" aria-hidden />
+                      </button>
+                    </>
+                  )}
+                </div>
+              ) : (
+              <>
               {/* 3 + 4 — NAVIGATION */}
               <div className="px-4 pt-2 pb-2">
                 <h3 className="px-1 mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#FF5A00]">
@@ -646,6 +806,9 @@ export function HeaderClient() {
                                 closeMobileMenu();
                                 return;
                               }
+                              // Collapsing the whole section also collapses whichever category was
+                              // expanded, so reopening starts from a clean list.
+                              if (productsOpen) setOpenCategoryId(null);
                               setProductsOpen((v) => !v);
                             }}
                             className={cn(
@@ -681,23 +844,108 @@ export function HeaderClient() {
                                   {sidebarCategories.map((cat) => {
                                     const catHref = `/${cat.slug}`;
                                     const catActive = pathname === catHref;
+                                    const subs = cat.sous_categories ?? [];
+                                    const catOpen = openCategoryId === cat.id;
+
+                                    // Leaf category (no sub-categories): a plain link, as before.
+                                    if (subs.length === 0) {
+                                      return (
+                                        <li key={cat.id}>
+                                          <Link
+                                            href={catHref}
+                                            onClick={closeMobileMenu}
+                                            aria-current={catActive ? 'page' : undefined}
+                                            className={cn(
+                                              'flex items-center gap-2 min-h-[44px] pl-12 pr-3 rounded-xl text-[14px] transition-colors',
+                                              catActive
+                                                ? 'font-semibold text-[#FF5A00]'
+                                                : 'text-[#111827] hover:bg-[#F5F6F8] dark:text-gray-300 dark:hover:bg-gray-800'
+                                            )}
+                                          >
+                                            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#FF5A00]" aria-hidden />
+                                            <span className="min-w-0 flex-1 truncate">{cat.designation_fr}</span>
+                                            <ChevronRight className="h-4 w-4 shrink-0 text-gray-400" aria-hidden />
+                                          </Link>
+                                        </li>
+                                      );
+                                    }
+
+                                    // Has sub-categories → the row EXPANDS a third level instead of
+                                    // navigating (owner request: tapping PROTÉINES should reveal its
+                                    // sub-categories, like the desktop mega-menu). A "Tout voir" entry
+                                    // inside keeps the category page itself one tap away.
                                     return (
                                       <li key={cat.id}>
-                                        <Link
-                                          href={catHref}
-                                          onClick={closeMobileMenu}
-                                          aria-current={catActive ? 'page' : undefined}
+                                        <button
+                                          type="button"
+                                          aria-expanded={catOpen}
+                                          onClick={() =>
+                                            setOpenCategoryId((prev) => (prev === cat.id ? null : cat.id))
+                                          }
                                           className={cn(
-                                            'flex items-center gap-2 min-h-[40px] pl-12 pr-3 rounded-xl text-[14px] transition-colors',
-                                            catActive
+                                            'flex w-full items-center gap-2 min-h-[44px] pl-12 pr-3 rounded-xl text-left text-[14px] transition-colors',
+                                            catActive || catOpen
                                               ? 'font-semibold text-[#FF5A00]'
                                               : 'text-[#111827] hover:bg-[#F5F6F8] dark:text-gray-300 dark:hover:bg-gray-800'
                                           )}
                                         >
                                           <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#FF5A00]" aria-hidden />
                                           <span className="min-w-0 flex-1 truncate">{cat.designation_fr}</span>
-                                          <ChevronRight className="h-4 w-4 shrink-0 text-gray-400" aria-hidden />
-                                        </Link>
+                                          {catOpen ? (
+                                            <ChevronUp className="h-4 w-4 shrink-0 text-[#FF5A00]" aria-hidden />
+                                          ) : (
+                                            <ChevronDown className="h-4 w-4 shrink-0 text-gray-400" aria-hidden />
+                                          )}
+                                        </button>
+
+                                        <div
+                                          className={cn(
+                                            'grid transition-[grid-template-rows] duration-300 ease-out',
+                                            catOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+                                          )}
+                                        >
+                                          <div className="overflow-hidden">
+                                            <ul className="space-y-0.5 py-0.5">
+                                              <li>
+                                                <Link
+                                                  href={catHref}
+                                                  onClick={closeMobileMenu}
+                                                  className="flex items-center gap-2 min-h-[40px] rounded-xl pl-[4.5rem] pr-3 text-[13px] font-semibold text-[#FF5A00] transition-colors hover:bg-[#F5F6F8] dark:hover:bg-gray-800"
+                                                >
+                                                  <span className="min-w-0 flex-1 truncate">Tout voir</span>
+                                                  <ChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                                                </Link>
+                                              </li>
+                                              {subs.map((sub) => {
+                                                const subHref = `/${sub.slug}`;
+                                                const subActive = pathname === subHref;
+                                                return (
+                                                  <li key={sub.id}>
+                                                    <Link
+                                                      href={subHref}
+                                                      onClick={closeMobileMenu}
+                                                      aria-current={subActive ? 'page' : undefined}
+                                                      className={cn(
+                                                        'flex items-center gap-2 min-h-[40px] rounded-xl pl-[4.5rem] pr-3 text-[13px] transition-colors',
+                                                        subActive
+                                                          ? 'font-semibold text-[#FF5A00]'
+                                                          : 'text-[#4B5563] hover:bg-[#F5F6F8] dark:text-gray-400 dark:hover:bg-gray-800'
+                                                      )}
+                                                    >
+                                                      <span
+                                                        className="h-px w-2.5 shrink-0 bg-gray-300 dark:bg-gray-600"
+                                                        aria-hidden
+                                                      />
+                                                      <span className="min-w-0 flex-1 truncate">
+                                                        {sub.designation_fr}
+                                                      </span>
+                                                    </Link>
+                                                  </li>
+                                                );
+                                              })}
+                                            </ul>
+                                          </div>
+                                        </div>
                                       </li>
                                     );
                                   })}
@@ -819,6 +1067,8 @@ export function HeaderClient() {
                   </Link>
                 )}
               </div>
+              </>
+              )}
             </div>
 
             {/* 9 — TRUST CHIPS (pinned to bottom, always visible) */}
