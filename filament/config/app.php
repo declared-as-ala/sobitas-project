@@ -183,6 +183,34 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | API Rate Limiting
+    |--------------------------------------------------------------------------
+    |
+    | Consumed by App\Providers\RouteServiceProvider::configureRateLimiting().
+    | Declared HERE and not with env() inside the provider on purpose: the Docker
+    | entrypoint runs `php artisan config:cache`, and once a config cache exists
+    | Laravel stops booting the Dotenv loader — env() calls made outside config
+    | files then return null in production.
+    |
+    | read   GET/HEAD per minute, keyed by user id or IP. 600/min = 10 req/s.
+    |        The Next.js renderer calls this API from ONE VPS IP for the whole
+    |        storefront, so the old flat 60/min capped the entire site at roughly
+    |        one page render per second. These routes are cheap (most sit behind
+    |        cache.api in routes/api.php) and idempotent.
+    | write  POST/PUT/PATCH/DELETE per minute. UNCHANGED at 60 — orders, coupons,
+    |        contact and newsletter keep exactly today's ceiling. /login and
+    |        /register keep their own route-level throttle:10,1 / throttle:5,1
+    |        on top of this.
+    |
+    */
+
+    'api_rate_limit' => [
+        'read' => (int) env('API_RATE_LIMIT_READ', 600),
+        'write' => (int) env('API_RATE_LIMIT_WRITE', 60),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Encryption Key
     |--------------------------------------------------------------------------
     |
