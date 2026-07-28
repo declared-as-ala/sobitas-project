@@ -178,6 +178,28 @@ export default async function NewProductPage({ params }: PageProps) {
   } catch (e) {
     unstable_rethrow(e);
     if (getErrorStatus(e) === 404) {
+      /**
+       * LEGACY NUMERIC SUFFIX — the single largest source of GSC "Not found (404)".
+       * The old site emitted hundreds of product URLs with a list index appended to the slug
+       * (/creatine/creatine-real-pharm-300g-11, /musculation/leg-press-machine-46). Falling
+       * straight through to /shop/{slug} turned each one into a 2-hop chain that still ended in
+       * a 404. Retry the slug WITHOUT the trailing -N first: when the base product exists we can
+       * send the legacy URL to its canonical page in a single 301.
+       *
+       * Only reached AFTER the full slug has already 404'd, so real slugs that merely end in a
+       * number (omega-3, iso-whey-zero-2-27-kg) resolve normally and never hit this path.
+       */
+      const baseSlug = cleanProductSlug.replace(/-\d+$/, '');
+      if (baseSlug && baseSlug !== cleanProductSlug) {
+        let fallback: Product | null = null;
+        try {
+          fallback = await getCachedProductDetails(baseSlug);
+        } catch (retryError) {
+          unstable_rethrow(retryError);
+          fallback = null;
+        }
+        if (fallback?.id) permanentRedirect(buildProductCanonicalUrl(fallback));
+      }
       // Product not found - redirect to legacy shop URL
       permanentRedirect(`/shop/${cleanProductSlug}`);
     }
