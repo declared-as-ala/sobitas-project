@@ -82,9 +82,19 @@ class ProductDetailResource extends JsonResource
             return $lib;
         }
 
-        $designation = trim((string) ($this->designation_fr ?? ''));
-
-        return $designation !== '' ? $designation : null;
+        // Deliberately NULL rather than falling back to designation_fr.
+        //
+        // The storefront treats a non-empty seo.image_alt as an ADMIN-AUTHORED alt and returns it
+        // verbatim (util/productAlt.ts: "an admin-authored alt always wins"). Returning the bare
+        // product name here therefore looked like a deliberate choice and permanently suppressed
+        // buildProductAlt's richer "Name — Brand — Tunisie" text — for the 279 of 303 products
+        // whose alt_cover is empty, i.e. almost the whole catalogue. Googlebot was served
+        // alt="CREATINE MONOHYDRATE OSTROVIT- 500GR": no brand, no locality, on the single
+        // strongest ranking signal Google Images has.
+        //
+        // Null lets the storefront's builder own the fallback, in ONE place. Anything genuinely
+        // authored — seo_image_alt, alt_cover, the media library's alt_text — still wins above.
+        return null;
     }
 
     private function resolveCanonicalProductUrl(): string
