@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server';
 import { isCrawlerUA, CRAWLER_PREVIEW_PARAM } from '@/util/isCrawler';
 import { isReservedRouteSlug } from '@/util/productUrl';
 import { getAdminRedirect } from '@/util/adminRedirects';
+import { brandSlugRedirectTarget } from '@/util/brandSlug';
 
 /**
  * Open-redirect guard. A path derived from user input — e.g. `/en//evil.com` or `/en/\evil.com`
@@ -140,14 +141,20 @@ export async function middleware(request: NextRequest) {
     return new NextResponse('Gone', { status: 410, headers: { 'Cache-Control': 'no-store' } });
   }
 
-  // Widening the matcher from the bare `api` prefix to `api/` means middleware now RUNS for the
-  // bare `/api`, which it never did before. Left alone, the crawler rewrite further down would
-  // send Googlebot to /x-crawler/category/api — where the "API" brand resolves and returns 200 —
-  // while a browser still got the 404 from the shadowed `app/api/` segment. Serving bots a
-  // different status than users is cloaking, so hold /api at exactly its current behaviour until
-  // the brand-slug collision is fixed for BOTH audiences at once.
-  if (pathname === '/api') {
-    return NextResponse.next();
+  // ── Brand slug shadowed by a real route segment → 301 to the served slug ──
+  // `/api` LOOKS like a machine path but is the brand page for the brand "API" (brands id=5) —
+  // sitemap.xml lists it between /activlab and /applied-nutrition. It 404s only because the static
+  // `app/api/` segment beats the dynamic `(shop)/[slug]` route, so the brand can never render
+  // there no matter what the page does. util/brandSlug.ts now serves that brand at /marque-api;
+  // this sends the shadowed URL there in ONE hop.
+  //
+  // Must run BEFORE the crawler rewrite below, so Googlebot and a browser get the same 301. If it
+  // ran after, bots would be rewritten to /x-crawler/category/api (where the brand resolves and
+  // returns 200) while users still got the 404 — the same status for the same URL is the whole
+  // point. Exact equality only: `/api/revalidate` and friends are already excluded by the matcher.
+  const shadowedBrand = pathname === '/api' ? brandSlugRedirectTarget('api') : null;
+  if (shadowedBrand) {
+    return redirectPreservingQuery(request, `/${shadowedBrand}`);
   }
 
   // ── Admin-defined redirects (301 / 302 / 410) ───────────────────────────

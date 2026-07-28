@@ -14,16 +14,8 @@ import { getAllBrands, getStorageUrl } from '@/services/api';
 import type { Brand } from '@/types';
 import { LoadingSpinner } from '@/app/components/LoadingSpinner';
 import { buildBrandAlt } from '@/util/productAlt';
+import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
 
-function nameToSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .trim();
-}
 
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 

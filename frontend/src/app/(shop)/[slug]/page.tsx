@@ -19,6 +19,8 @@ import { isReservedRouteSlug, buildProductUrlPath } from '@/util/productUrl';
 import { enrichProductsWithSubcategory } from '@/util/enrichProductSubcategory';
 import { buildCollectionPageSchema, buildItemListSchema, buildBreadcrumbListSchema, buildWebPageSchema } from '@/util/structuredData';
 import type { Brand, Page } from '@/types';
+import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
+import { buildBrandMetaTitle, buildBrandMetaDescription } from '@/util/brandMeta';
 
 export type RootSlugPageProps = {
   params: Promise<{ slug: string }>;
@@ -38,15 +40,6 @@ function isNotFoundError(error: unknown): boolean {
   return maybeAxios?.response?.status === 404 || maybeAxios?.status === 404;
 }
 
-function nameToSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .trim();
-}
 
 async function hasCategoryOrSubCategory(slug: string): Promise<boolean> {
   try {
@@ -110,8 +103,10 @@ function metadataForBrand(brand: Brand, slug: string): Metadata {
   const canonical = forceProteinDomain(`${baseUrl}/${slug}`);
   // Accented + consistent with the page's own JSON-LD/CollectionPage ("Protéine", not "Proteine"),
   // so the <title>/description no longer mismatch the structured data on the same page.
-  const title = `${brand.designation_fr} — Protéines & Compléments en Tunisie | Protéine Tunisie`;
-  const description = `Découvrez tous les produits ${brand.designation_fr} en Tunisie : qualité premium, produits 100% authentiques, livraison rapide.`;
+  // Shared with the crawler route, which serves this same URL to bots — the two had drifted to
+  // different titles ("-" vs "—", "Compléments Tunisie" vs "Compléments en Tunisie").
+  const title = buildBrandMetaTitle(brand.designation_fr);
+  const description = buildBrandMetaDescription(brand.designation_fr);
   const ogImage = '/slides/home-hero-web.webp';
   const ogAlt = `${brand.designation_fr} — Protéine Tunisie`;
 
@@ -191,7 +186,7 @@ export default async function RootSlugPage({ params }: RootSlugPageProps) {
     // a bare BreadcrumbList was emitted, so brand pages (a primary ranking surface) were nearly
     // schema-less; the ItemList also gives Google the product URLs for internal-link discovery.
     const baseUrl = getBaseUrl();
-    const brandTitle = `${brand.designation_fr} — Protéines & Compléments en Tunisie | Protéine Tunisie`;
+    const brandTitle = buildBrandMetaTitle(brand.designation_fr);
     const brandDesc = `Tous les produits ${brand.designation_fr} en Tunisie : qualité premium, produits authentiques, livraison rapide partout dans le pays.`;
     const breadcrumbSchema = buildBreadcrumbListSchema(
       [
