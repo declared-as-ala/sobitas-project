@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Support\StorefrontUrl;
 use App\Filament\Support\ImagePath;
 use App\Models\Product;
 use App\Services\Seo\ProductSchemaBuilder;
@@ -93,7 +94,7 @@ class ProductDetailResource extends JsonResource
             return $custom;
         }
 
-        $frontend = rtrim((string) config('app.frontend_url', ''), '/');
+        $frontend = StorefrontUrl::base();
         $slug = trim((string) ($this->slug ?? ''));
 
         return $slug !== '' ? "{$frontend}/shop/{$slug}" : $frontend.'/shop';

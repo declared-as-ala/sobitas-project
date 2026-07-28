@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Support\StorefrontUrl;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ProductDetailResource;
 use App\Http\Resources\ArticleDetailResource;
@@ -140,7 +141,9 @@ class ApisController extends Controller
 
     private function pagePayload(Page $page): array
     {
-        $frontendBase = rtrim((string) config('app.frontend_url', config('app.url')), '/');
+        // Forced to the protein.tn apex. Reading the env directly is what made every CMS page
+        // synthesise "https://sobitas.tn/{slug}" as its canonical — see StorefrontUrl.
+        $frontendBase = StorefrontUrl::base();
         $slug = trim((string) $page->slug);
         $canonical = trim((string) ($page->canonical_url ?? ''));
 
@@ -629,7 +632,7 @@ class ApisController extends Controller
         $this->normalizeCollectionImages($brands, 'logo');
         $category->cover = ImagePath::normalize($category->cover);
 
-        $frontendBase = (string) config('app.frontend_url', config('app.url'));
+        $frontendBase = StorefrontUrl::base();
 
         return response()->json(array_merge(
             [
@@ -707,7 +710,7 @@ class ApisController extends Controller
             return response()->json(['error' => 'Sous-catégorie introuvable'], 404);
         }
 
-        $frontendBase = (string) config('app.frontend_url', config('app.url'));
+        $frontendBase = StorefrontUrl::base();
         $seo = CategorySeoEnvelope::forSousCategory($sous_category, $frontendBase);
         $breadcrumb = [
             ['name' => 'Accueil', 'url' => $frontendBase.'/'],
