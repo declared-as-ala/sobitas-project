@@ -2,17 +2,15 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import Image from 'next/image';
-import { Search, X, ArrowRight } from 'lucide-react';
+import { Search, X, ArrowRight, ArrowLeft, ChevronRight, TrendingUp } from 'lucide-react';
 import { Input } from '@/app/components/ui/input';
 import { Button } from '@/app/components/ui/button';
 import { Skeleton } from '@/app/components/ui/skeleton';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/app/components/ui/sheet';
 import { useDebounce } from '@/util/debounce';
-import { searchProducts } from '@/services/api';
-import { getStorageUrl, isStorageImageUrl } from '@/services/api';
+import { searchProducts, getStorageUrl } from '@/services/api';
 import { getPriceDisplay } from '@/util/productPrice';
 import { buildProductUrlPath } from '@/util/productUrl';
 import type { Product } from '@/types';
@@ -21,6 +19,13 @@ import { cn } from '@/app/components/ui/utils';
 const PLACEHOLDER = 'Rechercher un produit, une marque...';
 const DEBOUNCE_MS = 300;
 const MAX_SUGGESTIONS = 6;
+
+/**
+ * Resting state for the mobile overlay. Static on purpose — a "top searches" endpoint does not
+ * exist, and inventing a fetch here would put a network round-trip in front of a screen whose
+ * entire job is to accept a keystroke. These are entry points into the catalogue, not analytics.
+ */
+const POPULAR_SEARCHES = ['Whey', 'Créatine', 'Mass gainer', 'BCAA', 'Pre-workout', 'Oméga 3'];
 
 interface SearchBarProps {
   /** Desktop: show full input. Mobile: show icon that opens sheet */
@@ -51,33 +56,38 @@ function SearchResults({
   if (isLoading || isPending) {
     return (
       <div className="space-y-1" role="status" aria-label="Recherche en cours">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-3 rounded-lg p-2">
-            <Skeleton className="h-12 w-12 shrink-0 rounded-md" />
+        {Array.from({ length: showAllScrollable ? 5 : 4 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-3 rounded-xl p-2">
+            <Skeleton className="h-12 w-12 shrink-0 rounded-lg" />
             <div className="min-w-0 flex-1 space-y-2">
               <Skeleton className="h-3.5 w-2/3" />
               <Skeleton className="h-3 w-1/3" />
             </div>
           </div>
         ))}
-        <span className="sr-only">Recherche en cours...</span>
+        <span className="sr-only">Recherche en cours…</span>
       </div>
     );
   }
 
   if (!query.trim()) {
     return (
-      <div className="py-6 text-center text-sm text-muted-foreground">
-        Tapez pour rechercher des protéines, gainers, compléments...
-      </div>
+      <p className="px-1 py-6 text-center text-[13px] leading-snug text-[#6B7280] dark:text-gray-400">
+        Tapez pour rechercher des protéines, gainers, compléments…
+      </p>
     );
   }
 
   if (products.length === 0) {
     return (
-      <div className="py-6 text-center text-sm text-muted-foreground">
-        <p>Aucun produit trouvé pour &quot;{query}&quot;</p>
-        <p className="mt-1 text-xs">Essayez d&apos;autres termes</p>
+      <div className="py-10 text-center">
+        <Search className="mx-auto h-8 w-8 text-[#D1D5DB] dark:text-gray-600" aria-hidden />
+        <p className="mt-3 text-[14px] font-semibold text-[#111827] dark:text-gray-100">
+          Aucun produit trouvé
+        </p>
+        <p className="mt-1 px-6 text-[13px] leading-snug text-[#6B7280] dark:text-gray-400">
+          Rien ne correspond à «&nbsp;{query.trim()}&nbsp;». Essayez d&apos;autres termes.
+        </p>
       </div>
     );
   }
@@ -85,69 +95,73 @@ function SearchResults({
   const listProducts = showAllScrollable ? products : products.slice(0, MAX_SUGGESTIONS);
 
   const resultList = (
-    <div className={cn('space-y-1', showAllScrollable && 'pb-2')}>
+    <div className="space-y-0.5">
       {listProducts.map((product) => (
         <LinkWithLoading
           key={product.id}
           href={buildProductUrlPath(product)}
           onClick={onProductClick}
-          className="flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800 focus:bg-gray-100 dark:focus:bg-gray-800 focus:outline-none"
+          className="flex items-center gap-3 rounded-xl p-2 transition-colors hover:bg-[#F5F6F8] focus:bg-[#F5F6F8] focus:outline-none dark:hover:bg-gray-800 dark:focus:bg-gray-800"
           loadingMessage="Chargement"
         >
-          <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-md bg-muted">
+          {/* object-CONTAIN, not cover. Supplement covers are studio shots of a tub on white with
+              its own margin; cover crops the lid and the label off a 48px square. */}
+          <span className="relative block h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-[#F5F6F8] dark:bg-gray-800">
             {product.cover ? (
               <Image
                 src={getStorageUrl(product.cover)}
-                alt={product.designation_fr}
+                alt=""
                 fill
-                className="object-cover"
+                className="object-contain"
                 sizes="48px"
                 unoptimized
               />
-            ) : (
-              <div className="h-full w-full bg-muted-foreground/20" aria-hidden />
-            )}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-foreground">
+            ) : null}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[14px] font-medium text-[#111827] dark:text-gray-100">
               {product.designation_fr}
-            </p>
-            <p className="text-xs text-muted-foreground">
+            </span>
+            <span className="mt-0.5 block text-[13px]">
               {(() => {
                 const pd = getPriceDisplay(product);
                 if (pd.hasPromo && pd.oldPrice != null) {
                   return (
                     <>
-                      <span className="line-through">{pd.oldPrice.toFixed(2)} DT</span>
-                      <span className="ml-1.5 font-medium text-red-600 dark:text-red-400">
+                      <span className="text-[#6B7280] line-through dark:text-gray-500">
+                        {pd.oldPrice.toFixed(2)} DT
+                      </span>
+                      <span className="ml-1.5 font-semibold text-[#FF5A00]">
                         {pd.finalPrice.toFixed(2)} DT
                       </span>
                     </>
                   );
                 }
-                return <>{pd.finalPrice.toFixed(2)} DT</>;
+                return (
+                  <span className="font-semibold text-[#111827] dark:text-gray-200">
+                    {pd.finalPrice.toFixed(2)} DT
+                  </span>
+                );
               })()}
-            </p>
-          </div>
-          <ArrowRight className="h-4 w-4 flex-shrink-0 text-muted-foreground" aria-hidden />
+            </span>
+          </span>
+          <ChevronRight className="h-4 w-4 shrink-0 text-gray-400" aria-hidden />
         </LinkWithLoading>
       ))}
     </div>
   );
 
+  // Mobile overlay: every match, counted, and the PARENT is the scroll container. It used to nest
+  // its own `overflow-y-auto` inside the sheet's — two scrollers on one axis, so a flick could
+  // move the inner list while the outer one stayed put.
   if (showAllScrollable) {
     return (
-      <div className="h-full min-h-0 flex flex-col">
-        <p className="text-xs text-muted-foreground mb-2 shrink-0">
+      <>
+        <p className="px-1 pb-2 text-[12px] font-semibold uppercase tracking-wide text-[#FF5A00]">
           {products.length} résultat{products.length !== 1 ? 's' : ''}
         </p>
-        <div
-          className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden -mx-1 px-1"
-          style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
-        >
-          {resultList}
-        </div>
-      </div>
+        {resultList}
+      </>
     );
   }
 
@@ -156,12 +170,12 @@ function SearchResults({
       {resultList}
       <Button
         variant="ghost"
-        className="w-full justify-center gap-2 border-t pt-3 mt-2"
+        className="mt-2 w-full justify-center gap-2 border-t border-[#E5E7EB] pt-3 text-[13px] font-semibold text-[#FF5A00] hover:bg-[#F5F6F8] hover:text-[#E85200] dark:border-gray-800 dark:hover:bg-gray-800"
         onClick={onViewAll}
         asChild
       >
-        <LinkWithLoading 
-          href={`/shop?search=${encodeURIComponent(query.trim())}`} 
+        <LinkWithLoading
+          href={`/shop?search=${encodeURIComponent(query.trim())}`}
           onClick={onProductClick}
           loadingMessage="Chargement des résultats..."
         >
@@ -297,9 +311,14 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
             <Search className="h-6 w-6" />
           </Button>
         </SheetTrigger>
+        {/* `font-poppins` and the #111827 / #6B7280 / #E5E7EB / #F5F6F8 / #FF5A00 palette below are
+            not new values — they are the header's vocabulary, lifted verbatim from the burger
+            drawer in HeaderClient. The two panels are now the only things the mobile top bar can
+            open, so they read as one surface: same hairline, same 44px rounded-xl field, same
+            orange kicker, same result row. */}
         <SheetContent
           side="top"
-          className="h-[100dvh] overflow-hidden flex flex-col rounded-none sm:rounded-b-2xl bg-white dark:bg-gray-950 border-none p-0 [&>button]:hidden"
+          className="font-poppins h-[100dvh] overflow-hidden flex flex-col rounded-none bg-white dark:bg-gray-950 border-none p-0 [&>button]:hidden"
           style={mobileSheetHeight != null ? { height: `${mobileSheetHeight}px`, maxHeight: `${mobileSheetHeight}px` } : undefined}
         >
           <SheetHeader className="sr-only">
@@ -307,75 +326,120 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
           </SheetHeader>
 
           <div className="flex flex-col h-full min-h-0 overflow-hidden">
-            {/* Header / Search Input Area */}
-            <div className="px-4 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3 shrink-0 bg-white dark:bg-gray-950">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="-ml-2 h-10 w-10 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                onClick={() => setIsOpen(false)}
+            {/* HEADER — back + field, on a hairline. Mirrors the drawer's own header row. */}
+            <div className="flex shrink-0 items-center gap-2 border-b border-[#E5E7EB] bg-white px-3 py-3 dark:border-gray-800 dark:bg-gray-950">
+              <button
                 type="button"
+                onClick={() => setIsOpen(false)}
+                aria-label="Fermer la recherche"
+                className="flex h-11 w-11 min-h-11 min-w-11 shrink-0 items-center justify-center rounded-xl text-[#6B7280] transition-colors hover:bg-[#F5F6F8] hover:text-[#111827] dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
               >
-                <ArrowRight className="h-6 w-6 rotate-180 text-gray-500" />
-              </Button>
-              <form onSubmit={handleSubmit} className="flex-1 relative group">
-                <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none group-focus-within:text-red-500 transition-colors" aria-hidden />
-                  <Input
+                {/* A real ArrowLeft. This was `ArrowRight` + `rotate-180` — same pixels, but the
+                    transform is dead weight and the JSX lied about what it drew. */}
+                <ArrowLeft className="h-5 w-5" aria-hidden />
+              </button>
+
+              <form onSubmit={handleSubmit} role="search" className="min-w-0 flex-1">
+                <div className="relative flex items-center">
+                  <Search className="pointer-events-none absolute left-3 h-4 w-4 text-[#6B7280]" aria-hidden />
+                  {/* A raw <input>, not the shadcn <Input>. That primitive's base classes are
+                      `border-input bg-background … focus-visible:ring-offset-2`, and the first two
+                      are silent no-ops (DESIGN_SYSTEM §11) while the offset ring fought the focus
+                      ring below. Identical markup to the drawer's field. */}
+                  <input
                     ref={inputRef}
-                    type="text" // Use text instead of search to fully disable browser-native X buttons across all OS
-                    inputMode="search" // Still tells mobile OS to show search keyboard
+                    type="text" // not `search`: kills the browser-native X across every OS
+                    inputMode="search" // still asks mobile keyboards for the search layout
                     placeholder="Que recherchez-vous ?"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     autoComplete="off"
                     autoFocus
-                    className="w-full pl-11 pr-11 h-12 text-base rounded-full bg-gray-100 dark:bg-gray-900 border-none focus:ring-2 focus:ring-red-500/20 focus:bg-white dark:focus:bg-gray-800 transition-all font-medium py-0"
                     aria-label="Rechercher un produit"
+                    /* pl-10, not the drawer's pl-9: this field is ~90px wider, and at that width
+                       the caret rendered flush against the magnifier. */
+                    className="w-full min-h-[44px] rounded-xl border border-[#E5E7EB] bg-[#F5F6F8] pl-10 pr-11 text-[14px] text-[#111827] placeholder:text-[#6B7280] transition-colors focus:border-[#FF5A00] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#FF5A00]/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-400 dark:focus:bg-gray-900"
                   />
-                  {query && (
-                    <Button
+                  {query ? (
+                    <button
                       type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-1.5 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 active:scale-90 transition-transform"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        handleClear();
-                      }}
+                      onClick={handleClear}
                       aria-label="Effacer la recherche"
+                      className="absolute right-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-[#6B7280] transition-colors hover:bg-white hover:text-[#FF5A00] dark:hover:bg-gray-700"
                     >
-                      <X className="h-5 w-5" />
-                    </Button>
+                      <X className="h-4 w-4" aria-hidden />
+                    </button>
+                  ) : (
+                    <button
+                      type="submit"
+                      aria-label="Rechercher"
+                      className="absolute right-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-[#6B7280] transition-colors hover:bg-white hover:text-[#FF5A00] dark:hover:bg-gray-700"
+                    >
+                      <Search className="h-4 w-4" aria-hidden />
+                    </button>
                   )}
                 </div>
               </form>
             </div>
 
-            {/* Results Area – scrollable above keyboard; min-h-0 so flex shrinks when viewport shrinks */}
+            {/* BODY — the single scroll container. min-h-0 so it shrinks when the keyboard opens
+                and the results stay reachable above it. */}
             <div
-              className="flex-1 overflow-y-auto overflow-x-hidden p-4 min-h-0 bg-gray-50/50 dark:bg-gray-950 overscroll-contain"
+              className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain bg-white px-4 py-3 dark:bg-gray-950"
               style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
             >
-              <SearchResults
-                query={query}
-                debouncedQuery={debouncedQuery}
-                products={products}
-                isLoading={isLoading}
-                onProductClick={handleProductClick}
-                onViewAll={handleViewAll}
-                showAllScrollable
-              />
+              {query.trim() ? (
+                <SearchResults
+                  query={query}
+                  debouncedQuery={debouncedQuery}
+                  products={products}
+                  isLoading={isLoading}
+                  onProductClick={handleProductClick}
+                  showAllScrollable
+                />
+              ) : (
+                /* RESTING STATE. The screen used to be one line of grey text under an empty field —
+                   a dead end that asked the shopper to already know what they wanted. These chips
+                   make it a starting point, and each one is a real query typed into the same
+                   field, so there is no second code path to keep in sync. */
+                <div className="pt-2">
+                  <h3 className="px-1 text-[12px] font-semibold uppercase tracking-wide text-[#FF5A00]">
+                    Recherches populaires
+                  </h3>
+                  <ul className="mt-3 flex flex-wrap gap-2">
+                    {POPULAR_SEARCHES.map((term) => (
+                      <li key={term}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setQuery(term);
+                            inputRef.current?.focus();
+                          }}
+                          className="flex min-h-11 items-center gap-1.5 rounded-xl border border-[#E5E7EB] bg-[#F5F6F8] px-3.5 text-[13px] font-medium text-[#111827] transition-colors hover:border-[#FF5A00] hover:text-[#FF5A00] dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:border-[#FF5A00]"
+                        >
+                          <TrendingUp className="h-3.5 w-3.5 shrink-0 text-[#6B7280]" aria-hidden />
+                          {term}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-6 px-1 text-[13px] leading-snug text-[#6B7280] dark:text-gray-400">
+                    Cherchez un produit, une marque ou un objectif — protéines, gainers, compléments.
+                  </p>
+                </div>
+              )}
             </div>
 
-            {/* Bottom Action (optional, only show if query exists) */}
-            {query && (
-              <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shrink-0 safe-area-pb">
+            {/* FOOTER CTA — only once there is something to see all of. pb composes the safe-area
+                inset into the padding; the old `safe-area-pb` class is not defined anywhere in the
+                codebase, so on a notched phone this button sat under the home indicator. */}
+            {query.trim() && (
+              <div className="shrink-0 border-t border-[#E5E7EB] bg-white px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] dark:border-gray-800 dark:bg-gray-950">
                 <Button
                   onClick={handleSubmit}
-                  className="w-full h-12 rounded-xl text-base font-display uppercase tracking-wide font-semibold bg-red-600 hover:bg-red-700 text-white shadow-sm"
+                  className="h-12 w-full rounded-xl bg-[#FF5A00] text-[15px] font-semibold text-white transition-colors hover:bg-[#E85200]"
                 >
-                  <Search className="h-5 w-5 mr-2" />
+                  <Search className="mr-2 h-5 w-5" aria-hidden />
                   Voir tous les résultats
                 </Button>
               </div>
