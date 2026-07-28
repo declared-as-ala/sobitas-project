@@ -162,6 +162,14 @@ export interface Review {
   note?: number;
   comment?: string;
   publier?: number;
+  /**
+   * Evidence the review came from a real purchase. Structured data requires one of these — see
+   * buildAggregateRatingAndReviews in util/structuredData.ts. "Published" is not the same as
+   * "genuine": the catalogue carries a large seeded review backlog with verified = 0 and
+   * commande_id = null on every row.
+   */
+  verified?: number | boolean;
+  commande_id?: number | null;
   user?: {
     id: number;
     name: string;
