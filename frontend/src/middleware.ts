@@ -420,6 +420,9 @@ export const config = {
      * making it impossible to give them a terminal 410. Real endpoints under `api/` and
      * `api-proxy/` are still excluded outright, so no request that carries data is affected.
      */
-    '/((?!api/|api-proxy/|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|sw.js|manifest.json|site.webmanifest).*)',
+    // `sitemaps/` covers the child sitemaps behind the /sitemap.xml index (/sitemaps/products-0.xml
+    // and friends). They are machine paths like sitemap.xml itself, and without this every crawler
+    // fetch of one paid for an admin-redirect lookup that can never match.
+    '/((?!api/|api-proxy/|_next/static|_next/image|favicon.ico|sitemap.xml|sitemaps/|robots.txt|sw.js|manifest.json|site.webmanifest).*)',
   ],
 };

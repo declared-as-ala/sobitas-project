@@ -371,14 +371,19 @@ export function HeaderClient() {
               {/* No `priority` — see the desktop logo note. The mobile logo preload was racing the
                   hero LCP image on phones. It stays eager (in the initial viewport) without a
                   fetchpriority=high preload.
-                  Sized by CLASS only: the old inline `height:auto` overrode `h-8`, so the logo
-                  rendered at its intrinsic ~150px width and ate the space the burger needed. */}
+                  Sized by CLASS only: the old inline `height:auto` overrode the height class, so the
+                  logo rendered at its intrinsic ~150px width and ate the space the burger needed.
+                  h-10 (40px) rather than the old h-8: dropping Compte and Panier from this bar
+                  freed the room, and 40px is exactly the row's content box (h-14 minus py-2), so
+                  the logo grows into space that already existed instead of making the bar taller.
+                  At this height the mark is ~117px wide — still comfortable at 320px next to the
+                  two 44px controls. */}
               <Image
                 src={headerLogoUrl}
                 alt="Proteine Tunisie"
                 width={140}
                 height={48}
-                className="h-8 w-auto max-w-full object-contain object-left"
+                className="h-10 w-auto max-w-full object-contain object-left"
                 loading="eager"
               />
             </Link>
