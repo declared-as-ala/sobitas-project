@@ -7,6 +7,7 @@ import { getLatestArticles } from '@/services/api';
 import { getCachedArticleDetails as getArticleDetails } from '@/services/getCachedProductDetails';
 import { getStorageUrl } from '@/services/api';
 import { resolveCanonicalUrl } from '@/util/canonical';
+import { resolveArticleLanguage } from '@/util/articleLanguage';
 import { buildArticleSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
 import { blogHref } from '@/util/blogSlug';
 import { BlogSeoBlock } from '@/app/(shop)/blog/BlogSeoBlock';
@@ -53,6 +54,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       article.seo?.canonical_url,
       `/blog/${encodeURIComponent(article.slug || slug)}`
     );
+    const articleLanguage = resolveArticleLanguage(article);
     const title = article.seo?.title || article.seo_title || article.meta_title || article.designation_fr || 'Blog';
     const descriptionWithTunisia = metaDescription.includes('Tunisie') ? metaDescription : `${metaDescription} Conseils nutrition sportive Tunisie — Protéine Tunisie.`;
     const twitterImage = article.seo?.twitter?.image || imageUrl || '';
@@ -65,6 +67,11 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       },
       alternates: {
         canonical: canonicalUrl,
+        // Declare the language this article is ACTUALLY written in. 31 of 100 posts are Arabic and
+        // were all announced as French, which asks Google to judge Arabic prose against French
+        // queries. resolveArticleLanguage prefers the CMS content_lang column and falls back to
+        // script detection, because that column is NULL on every Arabic article.
+        languages: { [articleLanguage.code]: canonicalUrl },
       },
       openGraph: {
         title: article.seo?.open_graph?.title || title,
@@ -72,6 +79,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
         images: imageUrl ? [imageUrl] : ['/og-banner.jpg'],
         type: 'article',
         url: canonicalUrl,
+        locale: articleLanguage.ogLocale,
       },
       twitter: {
         card: (article.seo?.twitter?.card as 'summary' | 'summary_large_image') || article.twitter_card as 'summary' | 'summary_large_image' || 'summary_large_image',

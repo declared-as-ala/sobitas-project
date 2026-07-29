@@ -10,6 +10,7 @@ import { ScrollToTop } from '@/app/components/ScrollToTop';
 import type { Article, BlogTagSummary } from '@/types';
 import { getStorageUrl } from '@/services/api';
 import { stripEmptyHeadings } from '@/util/htmlEntities';
+import { resolveArticleLanguage } from '@/util/articleLanguage';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useMemo, useState, useEffect, useRef } from 'react';
@@ -124,13 +125,20 @@ const articleBodyProseClass =
   'prose-code:text-red-600 dark:prose-code:text-red-400 ' +
   'prose-pre:bg-gray-100 dark:prose-pre:bg-gray-800';
 
-/** Resolved `dir` for the article body (explicit CMS value, or auto from `content_lang`). */
+/**
+ * Resolved `dir` for the article body: explicit CMS value, then `content_lang`, then detection.
+ *
+ * The detection fallback matters because `content_lang` is NULL on every article in the CMS — so
+ * the language branch below could never fire, and all 31 Arabic articles rendered LTR with no
+ * `dir` attribute at all. Right-to-left prose laid out left-to-right is broken for a reader and
+ * for a screen reader, independently of any search consideration.
+ */
 function resolveArticleBodyDir(article: Article): 'ltr' | 'rtl' | undefined {
   const raw = (article.content_text_direction ?? 'auto').toString().toLowerCase();
   if (raw === 'rtl' || raw === 'ltr') {
     return raw;
   }
-  const lang = (article.content_lang ?? '').toString().toLowerCase();
+  const lang = (article.content_lang ?? resolveArticleLanguage(article).code).toString().toLowerCase();
   if (
     lang.startsWith('ar') ||
     lang.startsWith('he') ||
@@ -296,7 +304,7 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
               <div
                 ref={contentRef}
                 dir={resolveArticleBodyDir(article)}
-                lang={article.content_lang?.trim() ? article.content_lang.trim() : undefined}
+                lang={article.content_lang?.trim() ? article.content_lang.trim() : resolveArticleLanguage(article).code}
                 className="article-body-root min-w-0 [dir=rtl]:text-right"
               >
                 {contentBefore && (
