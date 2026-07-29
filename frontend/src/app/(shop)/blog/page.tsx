@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import Link from 'next/link';
 import { Suspense } from 'react';
 import { getAllArticles, getBlogCategories, getBlogTags } from '@/services/api';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
@@ -151,6 +152,45 @@ export default async function BlogPage() {
       <Suspense fallback={<BlogListSkeleton />}>
         <BlogPageClient articles={articles} blogCategories={blogCategories} blogTags={blogTags} />
       </Suspense>
+
+      {/*
+        Server-rendered archive index.
+
+        BlogPageClient paginates in the browser with <button onClick>, so the SSR HTML only ever
+        contains the first page: measured live, /blog gave Googlebot 9 unique article links out of
+        100 articles, and /blog?page=2 returned the same 9. The other 91 articles had NO internal
+        anchor pointing at them from anywhere on the site — they were reachable only via the
+        sitemap, which is discovery without any link equity or crawl priority.
+
+        This is a real, visible archive list rather than hidden markup or a duplicate paginated
+        surface: every article gets one honest internal link, it needs no extra fetch (the server
+        component already has the full list for the JSON-LD above), and it stays correct as the
+        blog grows. Deliberately NOT hidden — cloaked link farms are exactly what this site has
+        just finished cleaning up.
+      */}
+      {list.length > 0 && (
+        <nav aria-label="Tous les articles" className="mx-auto w-full max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
+          <h2 className="font-display text-lg font-semibold text-gray-900 dark:text-white">
+            Tous les articles ({list.length})
+          </h2>
+          <ul className="mt-4 grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
+            {list.map((a: { designation_fr?: string; slug?: string }) => {
+              const slug = (a.slug ?? '').trim();
+              if (!slug) return null;
+              return (
+                <li key={slug} className="text-sm leading-snug">
+                  <Link
+                    href={`/blog/${encodeURIComponent(slug)}`}
+                    className="text-gray-600 underline-offset-2 hover:text-red-600 hover:underline dark:text-gray-400 dark:hover:text-red-400"
+                  >
+                    {decodeHtmlEntities(a.designation_fr || slug)}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+      )}
     </>
   );
 }
