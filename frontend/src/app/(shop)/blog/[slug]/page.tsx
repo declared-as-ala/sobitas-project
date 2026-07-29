@@ -144,3 +144,16 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     throw error;
   }
 }
+
+
+/**
+ * Opt this route into the Full Route Cache. See the long note in app/(shop)/[slug]/page.tsx —
+ * Next only registers a dynamic segment in prerenderManifest.dynamicRoutes when the route exports
+ * generateStaticParams, and without that entry `export const revalidate` is inert and every
+ * request re-renders. An EMPTY array is sufficient: on-demand ISR then covers every path.
+ * Deliberately NOT enumerating the catalogue — `next build` runs in CI where Cloudflare 403s the
+ * runner, so a fetched list would come back empty or partial and bake bad pages.
+ */
+export function generateStaticParams(): { slug: string }[] {
+  return [];
+}
