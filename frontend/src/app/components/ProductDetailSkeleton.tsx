@@ -123,8 +123,9 @@ export function ProductDetailSkeleton() {
 
       {/* Sticky CTAs placeholder (mobile) — matches ProductDetailClient fixed bottom bar */}
       <div
-        className="lg:hidden fixed bottom-tabbar left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 p-2.5 sm:p-3 z-50"
-        style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}
+        className="lg:hidden fixed bottom-tabbar left-0 right-0 bg-white dark:bg-gray-950 border-t border-gray-100 dark:border-gray-800 p-2.5 sm:p-3 z-sticky-cta"
+        // Kept in lockstep with the real bar in ProductDetailClient — any drift here is CLS.
+        style={{ paddingBottom: 'calc(var(--tabbar-raise) + 0.5rem)' }}
       >
         <div className="w-full mx-auto px-4 sm:px-6 max-w-7xl flex flex-col gap-2 sm:gap-3">
           <div className="flex items-center justify-between gap-2">

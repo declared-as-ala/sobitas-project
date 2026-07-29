@@ -49,6 +49,12 @@
    *
    * Desktop keeps 0px — the bar is md:hidden. */
   --tabbar-h: 0px;
+
+  /* How far the raised Boutique tile protrudes ABOVE the bar's top edge.
+   * 52px tile + 4px gap + 10px label + 6px pad = 72px, minus the 56px row = 16px.
+   * Any bar that stacks on top of the tab bar pads its content by this much, so the
+   * tile can overlap that bar's surface without ever covering a control. */
+  --tabbar-raise: 0px;
 }
 
 .dark {
@@ -66,11 +72,16 @@
   --c-ink-3: 150 150 157;
 }
 
-/* MobileTabBar is `md:hidden`, so its footprint exists only below 768px. Matches the
-   `h-14` (56px) grid in MobileTabBar.tsx — the safe-area inset is added separately by
-   each consumer, since the bar itself already pads for it. */
+/* MobileTabBar is `md:hidden`, so its footprint exists only below 768px.
+   `h-14` (56px) matches the grid in MobileTabBar.tsx.
+
+   The safe-area inset is folded IN here rather than left to each consumer. The old comment
+   said consumers added it themselves — none of them did. The bar's real footprint is
+   56px + inset, so on a notched iPhone every `bottom-tabbar` element sat ~34px too low and
+   overlapped the bar's own icons. One token, correct everywhere. */
 @media (max-width: 767px) {
   :root {
-    --tabbar-h: 56px;
+    --tabbar-h: calc(56px + env(safe-area-inset-bottom, 0px));
+    --tabbar-raise: 16px;
   }
 }

@@ -391,8 +391,10 @@ export default function CartPage() {
 
         {/* Sticky bottom bar - mobile/tablet only: Total + CTA */}
         <div
-          className="fixed bottom-tabbar left-0 right-0 z-40 lg:hidden bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.3)]"
-          style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
+          // Was z-40 — a TIE with the tab bar, so which one won depended on DOM order rather
+          // than intent. Now explicitly below it.
+          className="fixed bottom-tabbar left-0 right-0 z-sticky-cta lg:hidden bg-white dark:bg-gray-950 border-t border-gray-100 dark:border-gray-800 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.3)]"
+          style={{ paddingBottom: 'calc(var(--tabbar-raise) + 0.75rem)' }}
         >
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-4">
             <div className="flex-1 min-w-0">

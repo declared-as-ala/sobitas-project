@@ -1485,8 +1485,13 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
 
       {/* Sticky CTAs (Mobile): compact — Total inline with primary CTA, secondary below */}
       <div
-        className="lg:hidden fixed bottom-tabbar left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 px-3 pt-2 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] z-50"
-        style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom, 0px))' }}
+        className="lg:hidden fixed bottom-tabbar left-0 right-0 bg-white dark:bg-gray-950 border-t border-gray-100 dark:border-gray-800 px-3 pt-2 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] z-sticky-cta"
+        // Was z-50 — above the tab bar — so this bar painted over the raised Boutique tile on
+        // every product page. Now below it, with `--tabbar-raise` of bottom padding so the tile
+        // overlaps this surface and never these buttons. dark:bg-gray-950 matches the tab bar so
+        // the tile's ring cut-out blends instead of showing a halo.
+        // The safe-area inset moved into --tabbar-h itself; padding for it here would double it.
+        style={{ paddingBottom: 'calc(var(--tabbar-raise) + 0.5rem)' }}
       >
         <div className="w-full mx-auto max-w-7xl flex flex-col gap-2">
           <div className="flex items-center gap-3">
