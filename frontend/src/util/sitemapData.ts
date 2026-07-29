@@ -286,7 +286,7 @@ async function computeSitemapEntries(): Promise<SectionedSitemapEntry[]> {
           category.sitemap_include !== false &&
           category.robots_index !== false;
         if (catIdx) {
-          const url = `${BASE_URL}/${encodeURIComponent(category.slug)}`;
+          const url = `${BASE_URL}/${encodeURIComponent(category.slug.toLowerCase())}`;
           if (!seenUrls.has(url)) {
             seenUrls.add(url);
             sitemapEntries.push({
@@ -316,7 +316,7 @@ async function computeSitemapEntries(): Promise<SectionedSitemapEntry[]> {
             ) {
               return;
             }
-            const url = `${BASE_URL}/${encodeURIComponent(subCategory.slug)}`;
+            const url = `${BASE_URL}/${encodeURIComponent(subCategory.slug.toLowerCase())}`;
             if (!seenUrls.has(url)) {
               seenUrls.add(url);
               sitemapEntries.push({
