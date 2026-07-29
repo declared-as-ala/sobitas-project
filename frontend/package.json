@@ -6,6 +6,7 @@
     "dev": "cross-env NODE_ENV=development NODE_OPTIONS=--no-deprecation next dev",
     "prebuild": "node scripts/check-reserved-routes.mjs",
     "build": "cross-env NODE_OPTIONS=--no-deprecation next build",
+    "postbuild": "node scripts/assert-no-dev-bundle.mjs",
     "start": "cross-env NODE_OPTIONS=--no-deprecation next start",
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx --max-warnings 999",
     "typecheck": "node scripts/ensure-next-types.mjs && tsc --noEmit",

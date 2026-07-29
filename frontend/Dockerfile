@@ -26,7 +26,13 @@ ENV NEXT_PUBLIC_STORAGE_URL=$NEXT_PUBLIC_STORAGE_URL
 ENV API_BACKEND_URL=$API_BACKEND_URL
 ENV STORAGE_BACKEND_URL=$STORAGE_BACKEND_URL
 ENV NODE_OPTIONS=--no-deprecation
-RUN npx next build
+# `npm run build`, NOT `npx next build`.
+#
+# The npm script carries the prebuild and postbuild hooks; calling next directly skips both. That
+# meant scripts/check-reserved-routes.mjs — written specifically to fail the build when a top-level
+# route is missing from isReservedRouteSlug — has never once run in the build that actually ships.
+# A guard that only runs on a developer's laptop is not a guard.
+RUN npm run build
 
 FROM base AS runner
 WORKDIR /app
