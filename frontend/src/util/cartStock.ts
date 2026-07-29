@@ -29,13 +29,29 @@ export function isRupture(product: ProductLike): boolean {
 }
 
 /**
- * Whether the product is in stock. Single source of truth: not rupture AND qte > 0.
- * If qte is not provided by the API (undefined/null), rely only on the rupture flag.
+ * Does this payload carry ANY stock information at all?
+ *
+ * Some list endpoints used to select none of the stock columns, so the object simply had no idea
+ * whether the product was available. That is a THIRD state, and pretending otherwise is what made
+ * the grid and the product page contradict each other: isInStock() answered "yes" for a payload
+ * with no data, while getProductStockStatus() answered "out of stock" for the same payload — the
+ * two defaults failed in opposite directions. Now the absence is named, and callers decide
+ * explicitly rather than inheriting whichever guess their helper happened to make.
+ */
+export function hasStockData(product: ProductLike): boolean {
+  return (
+    product.qte != null ||
+    (product as ProductLike & { rupture?: unknown }).rupture != null ||
+    (product as ProductLike & { force_out_of_stock?: unknown }).force_out_of_stock != null
+  );
+}
+
+/**
+ * Whether the product is in stock. Thin wrapper over getProductStockStatus so there is exactly
+ * one implementation of "is this available" in the app — see the note there.
  */
 export function isInStock(product: ProductLike): boolean {
-  if (isRupture(product)) return false;
-  if (product.qte == null) return true; // qte not provided (e.g. similar products endpoint), rely on rupture flag only
-  return Number(product.qte) > 0;
+  return !getProductStockStatus(product).isOutOfStock;
 }
 
 /**
@@ -58,27 +74,44 @@ export interface ProductStockStatus {
   qte: number;
   isOutOfStock: boolean;
   isLowStock: boolean;
+  /** True when the payload carried no stock fields — the answer is genuinely unknown. */
+  isUnknown: boolean;
   stockLabel: 'Rupture de stock' | 'Stock faible' | 'En stock';
 }
 
 /**
- * Single source of truth for product detail page: badge, CTAs, add-to-cart.
- * - Rupture de stock: rupture === true/1/"1" OR qte <= 0
- * - Stock faible: in stock AND qte <= low_stock_threshold (default 0 = no low-stock label)
- * - En stock: otherwise
+ * SINGLE SOURCE OF TRUTH for availability, everywhere: product cards, the detail page, the cart,
+ * the quick-order drawer. Every surface must call this, so a product cannot read "En stock" in a
+ * grid and "Rupture de stock" on its own page — which it did, on most of the catalogue.
+ *
+ *   - Rupture de stock : force_out_of_stock, or rupture, or a known qte <= 0
+ *   - Stock faible     : in stock AND qte <= low_stock_threshold (threshold 0 disables the label)
+ *   - En stock         : otherwise
+ *
+ * WHY qte IS TESTED FOR PRESENCE, NOT COERCED. This used to read `Number(product.qte ?? 0)`, so a
+ * payload with no qte scored 0 and was declared out of stock. Combined with the old isInStock(),
+ * which declared the very same payload IN stock, the grid and the detail page disagreed by
+ * construction. Missing data is now `isUnknown` and asserts nothing; callers hide the badge rather
+ * than invent an answer. The API sends all four stock columns on every list endpoint now, so this
+ * should not arise — it exists so that if a future endpoint drops them again, the symptom is a
+ * missing badge rather than a confidently wrong one.
  */
 export function getProductStockStatus(product: ProductLike): ProductStockStatus {
+  const isUnknown = !hasStockData(product);
   const qte = Number(product.qte ?? 0);
   const rupture = isRupture(product);
-  const isOutOfStock = rupture || qte <= 0;
-  const threshold = Number((product as any).low_stock_threshold ?? 0);
-  const isLowStock = !isOutOfStock && threshold > 0 && qte <= threshold;
+
+  // Only let qte drive "out of stock" when we actually received it.
+  const isOutOfStock = rupture || (product.qte != null && qte <= 0);
+
+  const threshold = Number((product as ProductLike & { low_stock_threshold?: number }).low_stock_threshold ?? 0);
+  const isLowStock = !isOutOfStock && !isUnknown && product.qte != null && threshold > 0 && qte <= threshold;
 
   let stockLabel: ProductStockStatus['stockLabel'] = 'En stock';
   if (isOutOfStock) stockLabel = 'Rupture de stock';
   else if (isLowStock) stockLabel = 'Stock faible';
 
-  return { qte, isOutOfStock, isLowStock, stockLabel };
+  return { qte, isOutOfStock, isLowStock, isUnknown, stockLabel };
 }
 
 /**

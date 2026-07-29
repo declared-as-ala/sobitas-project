@@ -10,7 +10,7 @@ import { useFavorites } from '@/contexts/FavoritesContext';
 import { getStorageUrl } from '@/services/api';
 import { toast } from 'sonner';
 import { getPriceDisplay } from '@/util/productPrice';
-import { getStockDisponible, isInStock } from '@/util/cartStock';
+import { getStockDisponible, getProductStockStatus } from '@/util/cartStock';
 import { getProductImagePresentation } from '@/util/productImagePresentation';
 import { buildProductUrlPath } from '@/util/productUrl';
 import { buildProductAlt } from '@/util/productAlt';
@@ -81,6 +81,10 @@ export const ProductCard = memo(function ProductCard({
   const { isFavorite, toggleFavorite } = useFavorites();
   const [isAdding, setIsAdding] = useState(false);
   const favorite = isFavorite(product.id);
+  // The SAME call the product detail page makes. Card and page now derive their label from one
+  // function over the same four columns (qte, rupture, force_out_of_stock, low_stock_threshold),
+  // so a product cannot advertise "En stock" in a grid and "Rupture de stock" on its own page.
+  const stock = getProductStockStatus(product as any);
   const stockDisponible = getStockDisponible(product as any);
   const inCartQty = getCartQty(product.id);
   const canAddMore = stockDisponible > 0 && inCartQty < stockDisponible;
@@ -137,7 +141,6 @@ export const ProductCard = memo(function ProductCard({
       reviewCount,
       isNew,
       isBestSeller,
-      isInStock: isInStock(product as any),
       imagePresentation,
     };
   }, [product, imageContext, locale]);
@@ -162,7 +165,7 @@ export const ProductCard = memo(function ProductCard({
   const handleAddToCart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!productData.isInStock || stockDisponible <= 0) {
+    if (stock.isOutOfStock || stockDisponible <= 0) {
       toast.error('Rupture de stock');
       return;
     }
@@ -173,7 +176,7 @@ export const ProductCard = memo(function ProductCard({
     const aromesFromProduct = (product as any).aromes;
     const firstAroma = Array.isArray(aromesFromProduct) && aromesFromProduct.length > 0 ? aromesFromProduct[0] : null;
     doAddToCart(product as any, firstAroma);
-  }, [productData.isInStock, stockDisponible, inCartQty, product, doAddToCart]);
+  }, [stock.isOutOfStock, stockDisponible, inCartQty, product, doAddToCart]);
 
   void variant;
   void showDescription;
@@ -181,7 +184,7 @@ export const ProductCard = memo(function ProductCard({
 
   // Brand from the explicit prop, else a brandName the caller injected onto the product object.
   const brand = brandName || ((product as any).brandName as string | undefined);
-  const inStock = productData.isInStock && stockDisponible > 0;
+  const inStock = !stock.isOutOfStock && stockDisponible > 0;
 
   return (
     // GPT product-card design. Poppins + #FF5A00 accent, scoped to the card (card-first rollout).
@@ -286,12 +289,24 @@ export const ProductCard = memo(function ProductCard({
           )}
         </div>
 
-        {/* Trust chips — En stock is per-product; delivery + payment are site-wide constants. */}
+        {/* Trust chips. Stock is per-product and comes from getProductStockStatus — the exact
+            label the detail page shows, including "Stock faible", which the card previously could
+            not display at all because low_stock_threshold was never sent to it.
+            When the payload carries no stock columns the chip is omitted entirely rather than
+            guessed: a wrong "En stock" breaks a promise to the customer, and a wrong "Rupture"
+            kills a sale outright. */}
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] font-medium text-[#6B7280]">
-          <span className="inline-flex items-center gap-1">
-            <CircleCheck className={`h-3.5 w-3.5 shrink-0 ${inStock ? 'text-[#22C55E]' : 'text-[#6B7280]'}`} aria-hidden="true" />
-            {inStock ? 'En stock' : 'Rupture'}
-          </span>
+          {!stock.isUnknown && (
+            <span className="inline-flex items-center gap-1">
+              <CircleCheck
+                className={`h-3.5 w-3.5 shrink-0 ${
+                  stock.isOutOfStock ? 'text-[#6B7280]' : stock.isLowStock ? 'text-[#F59E0B]' : 'text-[#22C55E]'
+                }`}
+                aria-hidden="true"
+              />
+              {stock.stockLabel}
+            </span>
+          )}
           <span className="inline-flex items-center gap-1">
             <Truck className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             24–48h

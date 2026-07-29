@@ -49,17 +49,31 @@ class ApisController extends Controller
     private const MAX_PER_PAGE = 100;
 
     // ── Product select columns (DRY — never SELECT *) ──
+    //
+    // STOCK COLUMNS ARE MANDATORY IN EVERY LIST. A product card shows an "En stock" / "Rupture"
+    // chip, and it can only be right if the row carries the same four fields the product page
+    // reads: qte, rupture, force_out_of_stock, low_stock_threshold. Omit any of them and the card
+    // silently disagrees with the detail page for the same product — which is exactly what
+    // happened: force_out_of_stock and low_stock_threshold were in NONE of these three lists, so
+    // an item the admin had explicitly forced out of stock still advertised "En stock" on every
+    // grid, and PRODUCT_LIST_COLUMNS had no qte or rupture at all, so /similar_products claimed
+    // everything was available. 170 of 303 products are currently out of stock, so this was not
+    // an edge case — it was most of the catalogue.
+    //
+    // If you add a list endpoint, use one of these constants. Do not hand-roll a select().
     private const PRODUCT_LIST_COLUMNS = [
         'id', 'slug', 'designation_fr', 'cover', 'new_product', 'best_seller',
         'note', 'alt_cover', 'description_cover', 'prix', 'pack', 'promo',
         'promo_expiration_date', 'sous_categorie_id', 'brand_id',
+        'qte', 'rupture', 'force_out_of_stock', 'low_stock_threshold',
     ];
 
     // Columns for product list with relations (includes FKs for filtering)
     private const PRODUCT_FULL_LIST_COLUMNS = [
         'id', 'slug', 'designation_fr', 'cover', 'new_product', 'best_seller',
         'note', 'alt_cover', 'description_cover', 'prix', 'prix_ht', 'pack', 'promo',
-        'promo_expiration_date', 'sous_categorie_id', 'brand_id', 'qte', 'rupture',
+        'promo_expiration_date', 'sous_categorie_id', 'brand_id',
+        'qte', 'rupture', 'force_out_of_stock', 'low_stock_threshold',
         'meta_title', 'meta_description', 'seo_title', 'seo_description',
     ];
 
@@ -67,7 +81,8 @@ class ApisController extends Controller
     private const PRODUCT_LISTING = [
         'id', 'slug', 'designation_fr', 'cover', 'new_product', 'best_seller', 'note',
         'alt_cover', 'description_cover', 'prix', 'pack', 'promo', 'promo_expiration_date',
-        'qte', 'rupture', 'brand_id', 'sous_categorie_id', 'meta_title', 'meta_description', 'seo_title', 'seo_description',
+        'qte', 'rupture', 'force_out_of_stock', 'low_stock_threshold',
+        'brand_id', 'sous_categorie_id', 'meta_title', 'meta_description', 'seo_title', 'seo_description',
         // Timestamps power <lastmod> in the sitemap. Without them the frontend fell back to
         // `new Date()`, so EVERY product claimed to have been modified at the moment of the fetch —
         // Google discounts a lastmod it can prove is untrustworthy, which wasted the signal
