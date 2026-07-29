@@ -1,9 +1,36 @@
-last 2 Chrome versions
-last 2 ChromeAndroid versions
-last 2 Firefox versions
-last 2 Edge versions
-last 2 Safari versions
-last 2 iOS versions
+# Next.js's own MODERN_BROWSERSLIST_TARGET, pinned explicitly.
+#
+# DO NOT go back to "last N versions" here, and do not "fix" the stale-caniuse-lite warning by
+# running update-browserslist-db as a remedy — that makes the problem below worse, not better.
+#
+# WHAT THE OLD CONFIG DID
+# "last 2 Chrome versions" (etc.) resolved to chrome 143/142, firefox 146/145, safari 26.2/26.1.
+# Two consequences, both bad:
+#
+#   1. COMPATIBILITY. SWC compiles down to the LOWEST target in this list. With a floor of
+#      Chrome 142 / Safari 26.1 it downlevelled nothing at all, so every visitor on an older
+#      phone — Safari 17/18, any slightly aged Android WebView — was served untranspiled modern
+#      syntax. On a mobile-first storefront in Tunisia that is a live breakage risk, not a
+#      theoretical one.
+#
+#   2. 820 kB OF DEAD JAVASCRIPT ON EVERY PAGE. Those versions are NEWER than the browser-compat
+#      data bundled inside next@15.5.9's SWC. SWC therefore assumed they lacked async/await and
+#      applied its async-to-generator transform. That transform lifts a require() out of the
+#      `if (process.env.NODE_ENV !== 'production')` branch that guards it, into a generator state
+#      machine — at which point webpack can no longer prove the call dead, and pulls in
+#      next/dist/compiled/next-devtools: the entire dev error overlay, its syntax highlighter and
+#      a vendored copy of zod. 820 kB, listed in rootMainFiles, so downloaded, parsed and compiled
+#      on all 74 routes, and never executed. Upstream bug: vercel/next.js#89844 (still open; the
+#      fix, PR #89244, is unmerged, so upgrading Next does not help).
+#
+# A floor SWC's compat data already knows about keeps the require() inside an eliminable
+# `if (false)` and the devtools bundle out of the build. scripts/assert-no-dev-bundle.mjs fails
+# the build if it ever comes back.
+chrome >= 64
+edge >= 79
+firefox >= 67
+opera >= 51
+safari >= 12
 not dead
 not ie 11
 not op_mini all
