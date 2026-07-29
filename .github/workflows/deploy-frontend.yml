@@ -13,6 +13,19 @@ on:
       - ".github/workflows/deploy-frontend.yml"
   workflow_dispatch:
 
+# Serialise deploys. Two merges close together each build and push the SAME `:latest` tag, then
+# each pulls `:latest` on the VPS — so the image that ends up running is whichever build finished
+# last, not whichever commit is newest. That is not theoretical: PRs #183 and #184 merged 13s
+# apart, their deploys finished 2s apart, and the box came up running the earlier commit's image.
+# The category fix in #184 was reported green and was simply not on the server; Googlebot kept
+# seeing 20 of 79 products until the run was re-triggered by hand.
+#
+# cancel-in-progress is deliberately FALSE. Cancelling a half-finished deploy could leave the VPS
+# mid-recreate; queueing costs a few minutes and always converges on the newest commit.
+concurrency:
+  group: deploy-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: declared-as-ala/sobitas-frontend
