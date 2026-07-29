@@ -103,10 +103,16 @@ export const ProductCard = memo(function ProductCard({
       priceDisplay.hasPromo && priceDisplay.oldPrice != null
         ? Math.max(0, priceDisplay.oldPrice - priceDisplay.finalPrice)
         : 0;
-    // Rating: `note` is the numeric average (0–5). It is NULL for grid products site-wide today,
-    // so we NEVER invent a number — the card shows the real review COUNT and only prints a rating
-    // value if the backend actually provides one.
-    const ratingRaw = Number((product as any).note);
+    // Rating (0–5). `rating_value` is the average over ATTESTED reviews only — reviews with a
+    // verified flag or an order behind them — computed per request by the listing API, which is
+    // also what feeds the aggregateRating in JSON-LD, so page and markup cannot disagree.
+    // `note` is the legacy products column and is NULL on every row; kept only as a fallback for
+    // any endpoint not yet carrying the alias.
+    //
+    // We NEVER invent a number. Today this is null for every product, because the 203 reviews the
+    // site used to show had no purchase behind a single one of them. It fills in on its own as
+    // genuine reviews arrive.
+    const ratingRaw = Number((product as any).rating_value ?? (product as any).note);
     const rating = Number.isFinite(ratingRaw) && ratingRaw > 0 ? ratingRaw : null;
     const reviewCountRaw = Number(
       (product as any).review_count ?? (product as any).reviews_count ?? (product as any).avis_count,

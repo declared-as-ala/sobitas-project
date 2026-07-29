@@ -180,7 +180,31 @@ class CommandeObserver
         if (! in_array($commande->etat, PointsService::DELIVERED_STATUSES, true)) {
             return;
         }
+
+        // Stamp the delivery moment FIRST, and unconditionally. This is the clock the delayed
+        // sweep measures against, so it has to be recorded even when the request itself is
+        // switched off, already sent, or unsendable for want of an email — otherwise turning the
+        // feature on later would find a history of delivered orders with no delivery time.
+        // Wrapped separately so a missing column (migration not yet run) cannot take the send
+        // path down with it.
+        if (empty($commande->delivered_at)) {
+            try {
+                $commande->forceFill(['delivered_at' => now()])->saveQuietly();
+            } catch (\Throwable $e) {
+                Log::warning('Could not stamp delivered_at', [
+                    'commande_id' => $commande->id,
+                    'error'       => $e->getMessage(),
+                ]);
+            }
+        }
+
         if (! (bool) config('reviews.request_emails_enabled', true)) {
+            return;
+        }
+
+        // A non-zero delay hands the send to reviews:send-due-requests. Asking for a review the
+        // second an admin flips the status means asking about a product still in its box.
+        if ((int) config('reviews.request_delay_days', 3) > 0) {
             return;
         }
         if (! Schema::hasColumn('commandes', 'review_request_sent_at') || $commande->review_request_sent_at) {

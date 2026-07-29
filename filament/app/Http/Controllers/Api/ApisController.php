@@ -549,8 +549,18 @@ class ApisController extends Controller
         // Eager-load the subcategory (id,slug) so every product carries its canonical
         // /{subcat}/{slug} path at the source — the frontend no longer has to reconstruct it from
         // the categories list to avoid /shop/ 301 hops (the "Page with redirect" bucket in GSC).
+        // Real star ratings, computed from attested reviews only (Review::scopeAttested).
+        //
+        // `products.note` is a legacy column and is NULL for every row, so the grid has never had
+        // a number to show — ProductCard says as much in a comment and prints the count alone.
+        // These two aliases give it a real average to print the moment a genuine review lands,
+        // and 0/null until then. Deliberately computed, not denormalised: a cached column on
+        // products would drift the moment a review is edited, unpublished or moderated, and a
+        // wrong star rating is worse than none.
         $query = Product::where('publier', 1)
             ->with('sousCategorie:id,slug,designation_fr,categorie_id')
+            ->withCount(['reviews as review_count' => fn ($q) => $q->attested()])
+            ->withAvg(['reviews as rating_value' => fn ($q) => $q->attested()], 'note')
             ->select(self::PRODUCT_LISTING);
 
         if ($search = trim((string) $request->get('search', ''))) {
