@@ -559,9 +559,16 @@ class ApisController extends Controller
         // wrong star rating is worse than none.
         $query = Product::where('publier', 1)
             ->with('sousCategorie:id,slug,designation_fr,categorie_id')
+            // ORDER MATTERS: select() before the aggregates, never after.
+            //
+            // withCount()/withAvg() append their subqueries to the builder's column list, and
+            // select() REPLACES that list. Written the other way round the aggregates are silently
+            // discarded — the query still runs, still returns 200, and simply has no rating fields
+            // in it. That is exactly what shipped on the first attempt, and only a check against
+            // the live payload caught it.
+            ->select(self::PRODUCT_LISTING)
             ->withCount(['reviews as review_count' => fn ($q) => $q->attested()])
-            ->withAvg(['reviews as rating_value' => fn ($q) => $q->attested()], 'note')
-            ->select(self::PRODUCT_LISTING);
+            ->withAvg(['reviews as rating_value' => fn ($q) => $q->attested()], 'note');
 
         if ($search = trim((string) $request->get('search', ''))) {
             $matchingBrandIds = Brand::where('designation_fr', 'like', '%' . $search . '%')->pluck('id');
