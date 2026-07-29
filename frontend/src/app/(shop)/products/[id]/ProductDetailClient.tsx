@@ -895,20 +895,39 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   {product.designation_fr}
                 </h1>
 
-                {/* Rating + brand on one line */}
+                {/* Rating + brand on one line.
+                    ZERO REVIEWS MUST NOT LOOK LIKE A ZERO SCORE. This row used to render
+                    unconditionally, so every product in the catalogue showed five grey stars next
+                    to "(0) · 0 avis" — a filled-in scoreboard reading nil. That reads as "nobody
+                    liked this", when the truth is "nobody has said anything yet". Absence of data
+                    has to look like absence, not like a bad verdict.
+                    Removing the fabricated reviews was right; leaving this behind was not. */}
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <button
-                    type="button"
-                    onClick={() => document.getElementById('reviews')?.scrollIntoView({ behavior: 'smooth' })}
-                    className="flex items-center gap-1.5 text-left"
-                  >
-                    <div className="flex items-center gap-0.5">
-                      {[1,2,3,4,5].map((i) => (
-                        <Star key={i} className={`h-4 w-4 ${i <= Math.round(rating) ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 dark:fill-gray-700 text-gray-200 dark:text-gray-700'}`} />
-                      ))}
-                    </div>
-                    <span className="text-sm text-gray-600 dark:text-gray-400 font-medium tabular-nums transition-colors hover:text-red-600 dark:hover:text-red-400">({rating > 0 ? rating.toFixed(1) : '0'}) · {reviewCount} avis</span>
-                  </button>
+                  {reviewCount > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => document.getElementById('reviews')?.scrollIntoView({ behavior: 'smooth' })}
+                      className="flex items-center gap-1.5 text-left"
+                    >
+                      <div className="flex items-center gap-0.5">
+                        {[1,2,3,4,5].map((i) => (
+                          <Star key={i} className={`h-4 w-4 ${i <= Math.round(rating) ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 dark:fill-gray-700 text-gray-200 dark:text-gray-700'}`} />
+                        ))}
+                      </div>
+                      <span className="text-sm text-gray-600 dark:text-gray-400 font-medium tabular-nums transition-colors hover:text-red-600 dark:hover:text-red-400">({rating.toFixed(1)}) · {reviewCount} avis</span>
+                    </button>
+                  ) : (
+                    // An invitation, not a score. Same tap target, same place, but it asks for
+                    // something instead of reporting a failure — and it is the honest statement:
+                    // this product has no reviews yet.
+                    <button
+                      type="button"
+                      onClick={() => document.getElementById('reviews')?.scrollIntoView({ behavior: 'smooth' })}
+                      className="text-left text-sm font-medium text-gray-500 underline-offset-4 transition-colors hover:text-red-600 hover:underline dark:text-gray-400 dark:hover:text-red-400"
+                    >
+                      Soyez le premier à donner votre avis
+                    </button>
+                  )}
                   {product.brand?.designation_fr && (
                     <>
                       <span className="text-gray-300 dark:text-gray-700" aria-hidden="true">|</span>
