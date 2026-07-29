@@ -5,6 +5,7 @@
  */
 
 import { getStorageUrl } from '@/services/api';
+import { resolveArticleLanguage } from '@/util/articleLanguage';
 import { getEffectivePrice, hasValidPromo } from '@/util/productPrice';
 import { isInStock } from '@/util/cartStock';
 import type { Product, FAQ, Review } from '@/types';
@@ -982,7 +983,11 @@ export function buildArticleSchema(article: {
     articleSection: section,
     keywords,
     publisher: { '@type': 'Organization', name: SITE_BRAND_NAME, logo: { '@type': 'ImageObject', url: `${base}/icon.png` } },
-    inLanguage: 'fr-TN',
+    // Detected per article, not hard-coded. 31 of the 100 blog posts are written in Arabic and
+    // every one of them declared inLanguage "fr-TN", which tells Google to evaluate Arabic prose
+    // against French queries. The CMS content_lang column exists for this and is NULL on all of
+    // them, so resolveArticleLanguage falls back to script detection; an explicit value still wins.
+    inLanguage: resolveArticleLanguage(article as never).code,
   };
 }
 
