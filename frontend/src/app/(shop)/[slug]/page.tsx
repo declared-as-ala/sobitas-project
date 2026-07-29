@@ -264,3 +264,27 @@ export default async function RootSlugPage({ params }: RootSlugPageProps) {
 
   notFound();
 }
+
+/**
+ * Opt this route into the Full Route Cache.
+ *
+ * Next only registers a dynamic segment in `prerenderManifest.dynamicRoutes` when the route
+ * exports generateStaticParams. Without it the route is compiled as `ƒ` (server-rendered on
+ * demand) and `export const revalidate` above is inert — which is why every listing and product
+ * URL was answering `Cache-Control: private, no-cache, no-store` no matter how many fetch-level
+ * cache fixes landed, while param-less routes like `/` cached normally.
+ *
+ * Returning an EMPTY array is deliberate, and is enough. Verified with a controlled build against
+ * this project's own Next 15.5.9:
+ *   no generateStaticParams  -> `ƒ /[slug]`, dynamicRoutes: []          , every request re-renders
+ *   `return []`              -> `● /[slug]`, dynamicRoutes: ["/[slug]"] , 1st request MISS, 2nd HIT
+ * So on-demand ISR covers every slug; nothing needs to be enumerated.
+ *
+ * Enumerating the catalogue here would be actively worse: `next build` runs in CI where Cloudflare
+ * 403s the runner, so the list would come back empty or partial and bake bad pages — the exact
+ * failure this codebase has hit before. An empty list cannot bake anything wrong; it only skips
+ * build-time prewarming, and the first visitor to each URL warms it.
+ */
+export function generateStaticParams(): { slug: string }[] {
+  return [];
+}
