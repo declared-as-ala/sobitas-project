@@ -19,8 +19,16 @@ import { cn } from '@/app/components/ui/utils';
  * that variable to 0px removes the bar's footprint everywhere at once — a kill switch that needs
  * no code revert. Do not hardcode 56px anywhere else.
  *
- * z-tabbar (40) sits deliberately BELOW the shadcn Sheet overlay and Drawer (both z-50), so the
- * mobile menu and cart drawer cover the bar rather than fighting it.
+ * LAYERING: z-sticky-cta (30) < z-tabbar (40) < Sheet/Drawer overlays (50).
+ *
+ * The bar outranks page-level bottom bars — the PDP add-to-cart bar and its skeleton, the cart
+ * CTA, the install banner — because it is persistent app chrome and they are page chrome. Those
+ * four were all ABOVE it (z-50, and z-[9999] for the banner), which is why the raised Boutique
+ * tile below appeared half-buried on every page that has one. They now pad their content by
+ * `--tabbar-raise` so the tile overlaps their surface and never their controls.
+ *
+ * It stays BELOW the shadcn Sheet overlay and Drawer, so the mobile menu and cart drawer cover
+ * the bar rather than fighting it. That direction is deliberate; don't "fix" it.
  *
  * BOUTIQUE IS THE CENTRE TAB, AND IT IS RAISED (owner request). Two consequences worth knowing:
  *

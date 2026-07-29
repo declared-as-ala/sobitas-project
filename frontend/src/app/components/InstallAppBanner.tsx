@@ -130,9 +130,12 @@ export function InstallAppBanner() {
         style={{
           transform: show ? 'translateY(0)' : 'translateY(110%)',
           transition: 'transform 0.45s cubic-bezier(0.32,0.72,0,1)',
-          paddingBottom: 'max(0.625rem, env(safe-area-inset-bottom))',
+          // Safe-area now lives in --tabbar-h; --tabbar-raise clears the Boutique tile.
+          paddingBottom: 'calc(var(--tabbar-raise) + 0.625rem)',
         }}
-        className="fixed bottom-tabbar left-0 right-0 z-[9999] flex items-center gap-2.5 px-3 py-2.5 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] md:hidden"
+        // Was z-[9999], which buried the tab bar's raised centre tile behind a promo banner.
+        // The expanded sheet below keeps its own high z — that one is a real overlay.
+        className="fixed bottom-tabbar left-0 right-0 z-sticky-cta flex items-center gap-2.5 px-3 pt-2.5 bg-white dark:bg-gray-950 border-t border-gray-200 dark:border-gray-800 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] md:hidden"
       >
         {/* App icon */}
         <div className="relative h-11 w-11 shrink-0 rounded-xl overflow-hidden border border-gray-100 dark:border-gray-700 shadow">

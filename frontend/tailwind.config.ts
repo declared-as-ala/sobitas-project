@@ -175,10 +175,23 @@ const config: Config = {
        *  Every fixed-bottom element offsets against this one variable. */
       spacing: {
         tabbar: "var(--tabbar-h)",
+        "tabbar-raise": "var(--tabbar-raise)",
       },
       /** Named layers so stacking is decided once, not guessed per component.
-       *  Must stay below the shadcn Sheet overlay (z-50) and Drawer (z-50). */
+       *
+       *  sticky-cta < tabbar < header/overlay, in that order and for a reason:
+       *
+       *  - `sticky-cta` is PAGE chrome that stacks on top of the tab bar (PDP add-to-cart and
+       *    its skeleton twin, the cart CTA, the install banner). These used to be z-50 and
+       *    z-[9999], which put them ABOVE the tab bar — so on every product page they painted
+       *    over the raised Boutique tile that protrudes 16px out of the bar, and the site's
+       *    primary navigation target looked half-buried. They pad by `--tabbar-raise` so the
+       *    tile overlaps their surface, never their controls.
+       *  - `tabbar` is persistent APP chrome and outranks page chrome.
+       *  - Both stay below the shadcn Sheet overlay (z-50) and Drawer (z-50), which are meant
+       *    to cover the bar. */
       zIndex: {
+        "sticky-cta": "30",
         tabbar: "40",
         header: "50",
       },
