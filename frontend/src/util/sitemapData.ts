@@ -348,7 +348,12 @@ async function computeSitemapEntries(): Promise<SectionedSitemapEntry[]> {
         // Gate against live backend slugs (case-insensitive). If the category API failed to load,
         // liveCategorySlugs is empty and we skip these rather than risk emitting broken URLs.
         if (!liveCategorySlugs.has(clean.toLowerCase())) return;
-        const url = `${BASE_URL}/${encodeURIComponent(clean)}`;
+        // Lowercase like the taxonomy branches above. These slugs come from FILENAMES in
+        // content/categories/, and one of them is capitalised (Intra-Workout.json) — which is how
+        // a single uppercase URL survived the earlier pass and kept being submitted while its
+        // canonical pointed at the lowercase form. A sitemap URL whose canonical disagrees with it
+        // is exactly the "Duplicate, Google chose a different canonical" signal we are removing.
+        const url = `${BASE_URL}/${encodeURIComponent(clean.toLowerCase())}`;
         if (!seenUrls.has(url)) {
           seenUrls.add(url);
           sitemapEntries.push({
