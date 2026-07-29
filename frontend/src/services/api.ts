@@ -455,19 +455,53 @@ export async function fetchCategoryOrSubCategory(slug: string): Promise<
   }
 
   try {
-    const cat = await apiFetch<{
+    // ASK FOR EVERY PRODUCT IN THE CATEGORY, NOT THE FIRST PAGE.
+    //
+    // This called productsByCategoryId with no pagination parameters at all, and the endpoint
+    // defaults to per_page = 20. The category route has no "load more" and no pagination UI, so
+    // whatever came back in that first page was the entire category as far as a shopper could
+    // tell. Measured against the live API: Équipement showed 20 of 79, Santé & Vitalité 20 of 65,
+    // Protéines 20 of 60, Performance 20 of 51, Prise de masse 20 of 34. Only Perte de poids (14)
+    // looked correct — because it happens to have fewer than 20 products, which is exactly why
+    // the bug read as "it only shows one subcategory".
+    //
+    // 100 is the endpoint's MAX_PER_PAGE, so the loop below is what makes this correct rather
+    // than merely bigger: any category that grows past 100 keeps working instead of silently
+    // truncating again. Today it costs a single request.
+    const PER_PAGE = 100;
+    const first = await apiFetch<{
       category: Category;
       sous_categories: any[];
       products: Product[];
       brands: Brand[];
       seo?: CategorySeoFromApi;
-    }>(`productsByCategoryId/${encodeURIComponent(cleanSlug)}`);
-    if (cat?.category?.id) {
+      products_meta?: { last_page?: number; total?: number };
+    }>(`productsByCategoryId/${encodeURIComponent(cleanSlug)}?per_page=${PER_PAGE}&page=1`);
+
+    if (first?.category?.id) {
+      let products = first.products ?? [];
+      const lastPage = Number(first.products_meta?.last_page ?? 1);
+
+      if (lastPage > 1) {
+        const rest = await Promise.all(
+          Array.from({ length: lastPage - 1 }, (_, i) =>
+            apiFetch<{ products: Product[] }>(
+              `productsByCategoryId/${encodeURIComponent(cleanSlug)}?per_page=${PER_PAGE}&page=${i + 2}`
+            )
+              // One failed page must not empty the category — show what we have.
+              .then((p) => p?.products ?? [])
+              .catch(() => [] as Product[])
+          )
+        );
+        products = products.concat(...rest);
+      }
+
       return {
         type: 'category',
         data: {
-          ...cat,
-          seo: withCategorySeoEntityFallbacks(cat.seo, cat.category),
+          ...first,
+          products,
+          seo: withCategorySeoEntityFallbacks(first.seo, first.category),
         },
       };
     }
@@ -493,13 +527,36 @@ export const getProductsByCategory = async (slug: string): Promise<{
   }
   return withRetry(
     async () => {
-      const response = await api.get(`/productsByCategoryId/${cleanSlug}`);
+      // Same 20-per-page truncation as fetchCategoryOrSubCategory — see the long note there.
+      // This second call site matters just as much: ShopPageClient re-fetches the category on the
+      // CLIENT after hydration and replaces the server-rendered list with the result. Fixing only
+      // the server fetch would have looked correct in `curl` and still collapsed back to 20
+      // products the moment a real browser hydrated the page.
+      const PER_PAGE = 100;
+      const response = await api.get(`/productsByCategoryId/${cleanSlug}`, {
+        params: { per_page: PER_PAGE, page: 1 },
+      });
       if (!response.data || !response.data.category || !response.data.category.id) {
         console.warn(`Category "${cleanSlug}" not found in API response`);
         const err: any = new Error('Category not found');
         err.response = { status: 404 };
         throw err;
       }
+
+      const lastPage = Number(response.data?.products_meta?.last_page ?? 1);
+      if (lastPage > 1) {
+        const rest = await Promise.all(
+          Array.from({ length: lastPage - 1 }, (_, i) =>
+            api
+              .get(`/productsByCategoryId/${cleanSlug}`, { params: { per_page: PER_PAGE, page: i + 2 } })
+              .then((r) => (r.data?.products ?? []) as Product[])
+              // A failed page must not empty the category — render what we have.
+              .catch(() => [] as Product[])
+          )
+        );
+        return { ...response.data, products: (response.data.products ?? []).concat(...rest) };
+      }
+
       return response.data;
     },
     // Retry ONLY 5xx here. Network codes (ETIMEDOUT/ECONNRESET/ECONNABORTED) are already retried by
