@@ -48,5 +48,13 @@ Schedule::command('seo:self-heal')->dailyAt('04:30')->withoutOverlapping();
 // act behind --unpublish-unattested --force, never something a schedule should do on its own.
 Schedule::command('seo:audit-reviews')->weeklyOn(1, '05:00');
 
+// The review-request engine. Every product currently shows no stars because the 203 reviews that
+// were there had no purchase behind any of them and had to come down; genuine reviews are the only
+// way stars come back, and this is what asks for them. Sends to orders delivered
+// reviews.request_delay_days ago, capped and windowed — see the command's docblock.
+//
+// 10:00 local is deliberate: a review request that lands at 04:00 gets buried by morning mail.
+Schedule::command('reviews:send-due-requests')->dailyAt('10:00')->withoutOverlapping();
+
 Schedule::command('seo:health-report')->weeklyOn(1, '06:00'); // Monday summary of missing SEO data (logged)
 Schedule::command('seo:enrich-nutrition --limit=25')->weeklyOn(2, '03:00'); // gradual factual nutrition enrichment (OFF, by GTIN)
