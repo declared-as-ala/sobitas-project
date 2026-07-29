@@ -119,16 +119,34 @@ jobs:
             docker compose -f "$COMPOSE_FILE" up -d mysql redis
 
             echo "🗄️  Pre-deploy database backup (safety net before migrate --force)..."
-            mkdir -p /var/sobitas/backups
+            # A safety net must never become a gate. On 2026-07-28 this block killed three
+            # consecutive deploys 0.1s after the echo above — exit 2, far too fast for mysqldump to
+            # have run at all — and the SEO scheduler container sat unshipped for a day as a result.
+            #
+            # Cause: `gzip > "$BACKUP_FILE"` could not CREATE the file (the VPS filled up). A
+            # redirection failure is a fatal shell error, so it killed the whole script outright:
+            # it bypassed both `set -e`'s if-condition exemption AND the else-branch below that was
+            # written to tolerate exactly this. The tolerant branch never got a chance to run.
+            #
+            # Two fixes. Prune BEFORE writing — retention that only runs after a successful write
+            # can never free the space that write needs. And probe writability inside a SUBSHELL,
+            # so a fatal redirect kills the subshell and is caught here as a plain false.
+            mkdir -p /var/sobitas/backups 2>/dev/null || true
+            # Keep the 29 newest, so the one about to be written lands inside the cap of 30.
+            ls -1t /var/sobitas/backups/db-pre-deploy-*.sql.gz 2>/dev/null | tail -n +30 | xargs -r rm -f || true
             BACKUP_FILE="/var/sobitas/backups/db-pre-deploy-$(date +%Y%m%d-%H%M%S).sql.gz"
-            if docker exec sobitas-mysql sh -c 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --single-transaction --routines --triggers --databases "$MYSQL_DATABASE"' 2>/dev/null | gzip > "$BACKUP_FILE"; then
-              echo "✓ Backup written: $BACKUP_FILE ($(du -h "$BACKUP_FILE" 2>/dev/null | cut -f1))"
+            if ( : > "$BACKUP_FILE" ) 2>/dev/null; then
+              if docker exec sobitas-mysql sh -c 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --single-transaction --routines --triggers --databases "$MYSQL_DATABASE"' 2>/dev/null | gzip > "$BACKUP_FILE"; then
+                echo "✓ Backup written: $BACKUP_FILE ($(du -h "$BACKUP_FILE" 2>/dev/null | cut -f1))"
+              else
+                echo "⚠️  WARNING: pre-deploy DB backup FAILED — continuing deploy, but investigate backups on the VPS!"
+                rm -f "$BACKUP_FILE" || true
+              fi
             else
-              echo "⚠️  WARNING: pre-deploy DB backup FAILED — continuing deploy, but investigate backups on the VPS!"
-              rm -f "$BACKUP_FILE" || true
+              rm -f "$BACKUP_FILE" 2>/dev/null || true
+              echo "⚠️  WARNING: /var/sobitas/backups is not writable — SKIPPING the backup and continuing the deploy."
+              df -h /var 2>&1 | sed 's/^/    /'
             fi
-            # Keep only the 30 most recent pre-deploy backups
-            ls -1t /var/sobitas/backups/db-pre-deploy-*.sql.gz 2>/dev/null | tail -n +31 | xargs -r rm -f || true
 
             if ! grep -q 'APP_KEY=base64:' .env 2>/dev/null; then
               echo "🔑 APP_KEY missing, generating..."
@@ -211,16 +229,34 @@ jobs:
             docker compose -f "$COMPOSE_FILE" up -d mysql redis
 
             echo "🗄️  Pre-deploy database backup (safety net before migrate --force)..."
-            mkdir -p /var/sobitas/backups
+            # A safety net must never become a gate. On 2026-07-28 this block killed three
+            # consecutive deploys 0.1s after the echo above — exit 2, far too fast for mysqldump to
+            # have run at all — and the SEO scheduler container sat unshipped for a day as a result.
+            #
+            # Cause: `gzip > "$BACKUP_FILE"` could not CREATE the file (the VPS filled up). A
+            # redirection failure is a fatal shell error, so it killed the whole script outright:
+            # it bypassed both `set -e`'s if-condition exemption AND the else-branch below that was
+            # written to tolerate exactly this. The tolerant branch never got a chance to run.
+            #
+            # Two fixes. Prune BEFORE writing — retention that only runs after a successful write
+            # can never free the space that write needs. And probe writability inside a SUBSHELL,
+            # so a fatal redirect kills the subshell and is caught here as a plain false.
+            mkdir -p /var/sobitas/backups 2>/dev/null || true
+            # Keep the 29 newest, so the one about to be written lands inside the cap of 30.
+            ls -1t /var/sobitas/backups/db-pre-deploy-*.sql.gz 2>/dev/null | tail -n +30 | xargs -r rm -f || true
             BACKUP_FILE="/var/sobitas/backups/db-pre-deploy-$(date +%Y%m%d-%H%M%S).sql.gz"
-            if docker exec sobitas-mysql sh -c 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --single-transaction --routines --triggers --databases "$MYSQL_DATABASE"' 2>/dev/null | gzip > "$BACKUP_FILE"; then
-              echo "✓ Backup written: $BACKUP_FILE ($(du -h "$BACKUP_FILE" 2>/dev/null | cut -f1))"
+            if ( : > "$BACKUP_FILE" ) 2>/dev/null; then
+              if docker exec sobitas-mysql sh -c 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --single-transaction --routines --triggers --databases "$MYSQL_DATABASE"' 2>/dev/null | gzip > "$BACKUP_FILE"; then
+                echo "✓ Backup written: $BACKUP_FILE ($(du -h "$BACKUP_FILE" 2>/dev/null | cut -f1))"
+              else
+                echo "⚠️  WARNING: pre-deploy DB backup FAILED — continuing deploy, but investigate backups on the VPS!"
+                rm -f "$BACKUP_FILE" || true
+              fi
             else
-              echo "⚠️  WARNING: pre-deploy DB backup FAILED — continuing deploy, but investigate backups on the VPS!"
-              rm -f "$BACKUP_FILE" || true
+              rm -f "$BACKUP_FILE" 2>/dev/null || true
+              echo "⚠️  WARNING: /var/sobitas/backups is not writable — SKIPPING the backup and continuing the deploy."
+              df -h /var 2>&1 | sed 's/^/    /'
             fi
-            # Keep only the 30 most recent pre-deploy backups
-            ls -1t /var/sobitas/backups/db-pre-deploy-*.sql.gz 2>/dev/null | tail -n +31 | xargs -r rm -f || true
 
             if ! grep -q 'APP_KEY=base64:' .env 2>/dev/null; then
               echo "🔑 APP_KEY missing, generating..."
