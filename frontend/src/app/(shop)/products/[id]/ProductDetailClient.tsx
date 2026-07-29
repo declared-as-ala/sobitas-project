@@ -722,28 +722,36 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 </p>
               </div>
 
-              {/* 2. Rating + brand */}
+              {/* 2. Rating + brand — MOBILE.
+                  This is a second, independent copy of the desktop row below. It is the one the
+                  owner actually saw: the desktop copy was fixed first and this was missed, so the
+                  phone kept showing "(0) · 0 avis" while the desktop looked fine.
+                  Keep the two in lockstep — every change here needs the same change at the
+                  desktop row, and vice versa. */}
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-1">
-                <button
-                  type="button"
-                  onClick={() => document.getElementById('reviews')?.scrollIntoView({ behavior: 'smooth' })}
-                  className="group flex items-center gap-1.5 text-left"
-                >
-                  <div className="flex items-center gap-1">
-                    {[1,2,3,4,5].map((i) => (
-                      <Star
-                        key={i}
-                        className={`h-4 w-4 sm:h-5 sm:w-5 ${i <= Math.round(rating) ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 text-gray-200 dark:fill-gray-700 dark:text-gray-700'}`}
-                      />
-                    ))}
-                  </div>
-                  <span className="text-sm text-gray-600 dark:text-gray-400 font-medium tabular-nums transition-colors group-hover:text-red-600 dark:group-hover:text-red-400">
-                    ({rating > 0 ? rating.toFixed(1) : '0'}) · {reviewCount} avis
-                  </span>
-                </button>
+                {reviewCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => document.getElementById('reviews')?.scrollIntoView({ behavior: 'smooth' })}
+                    className="group flex items-center gap-1.5 text-left"
+                  >
+                    <div className="flex items-center gap-1">
+                      {[1,2,3,4,5].map((i) => (
+                        <Star
+                          key={i}
+                          className={`h-4 w-4 sm:h-5 sm:w-5 ${i <= Math.round(rating) ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 text-gray-200 dark:fill-gray-700 dark:text-gray-700'}`}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-sm text-gray-600 dark:text-gray-400 font-medium tabular-nums transition-colors group-hover:text-red-600 dark:group-hover:text-red-400">
+                      ({rating.toFixed(1)}) · {reviewCount} avis
+                    </span>
+                  </button>
+                )}
                 {product.brand?.designation_fr && (
                   <>
-                    <span className="text-gray-300 dark:text-gray-700" aria-hidden="true">|</span>
+                    {/* Separator only when there is something to its left. */}
+                    {reviewCount > 0 && <span className="text-gray-300 dark:text-gray-700" aria-hidden="true">|</span>}
                     <Link href={`/${nameToSlug(product.brand.designation_fr)}`} className="text-sm text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400">
                       {product.brand.designation_fr}
                     </Link>
@@ -895,15 +903,23 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   {product.designation_fr}
                 </h1>
 
-                {/* Rating + brand on one line.
+                {/* Rating + brand on one line — DESKTOP. Mirrored by the mobile copy above;
+                    change both together.
+
                     ZERO REVIEWS MUST NOT LOOK LIKE A ZERO SCORE. This row used to render
-                    unconditionally, so every product in the catalogue showed five grey stars next
-                    to "(0) · 0 avis" — a filled-in scoreboard reading nil. That reads as "nobody
-                    liked this", when the truth is "nobody has said anything yet". Absence of data
-                    has to look like absence, not like a bad verdict.
-                    Removing the fabricated reviews was right; leaving this behind was not. */}
+                    unconditionally, so every product showed five grey stars next to "(0) · 0 avis"
+                    — a filled-in scoreboard reading nil. That says "nobody liked this" when the
+                    truth is "nobody has said anything yet".
+
+                    At zero it now renders NOTHING here, rather than an invitation. The buy box is
+                    where purchase intent forms, so anything sitting in it is read as a product
+                    attribute — and a "be the first to review" label placed beside the price names
+                    the emptiness and turns a neutral absence into an explicit negative. The ask
+                    belongs in the reviews section further down, which already has an honest empty
+                    state ("Aucun avis pour le moment" + a write-a-review button). Hide it here,
+                    ask for it there. */}
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  {reviewCount > 0 ? (
+                  {reviewCount > 0 && (
                     <button
                       type="button"
                       onClick={() => document.getElementById('reviews')?.scrollIntoView({ behavior: 'smooth' })}
@@ -916,21 +932,11 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       </div>
                       <span className="text-sm text-gray-600 dark:text-gray-400 font-medium tabular-nums transition-colors hover:text-red-600 dark:hover:text-red-400">({rating.toFixed(1)}) · {reviewCount} avis</span>
                     </button>
-                  ) : (
-                    // An invitation, not a score. Same tap target, same place, but it asks for
-                    // something instead of reporting a failure — and it is the honest statement:
-                    // this product has no reviews yet.
-                    <button
-                      type="button"
-                      onClick={() => document.getElementById('reviews')?.scrollIntoView({ behavior: 'smooth' })}
-                      className="text-left text-sm font-medium text-gray-500 underline-offset-4 transition-colors hover:text-red-600 hover:underline dark:text-gray-400 dark:hover:text-red-400"
-                    >
-                      Soyez le premier à donner votre avis
-                    </button>
                   )}
                   {product.brand?.designation_fr && (
                     <>
-                      <span className="text-gray-300 dark:text-gray-700" aria-hidden="true">|</span>
+                      {/* Separator only when there is something to its left. */}
+                      {reviewCount > 0 && <span className="text-gray-300 dark:text-gray-700" aria-hidden="true">|</span>}
                       <Link href={`/${nameToSlug(product.brand.designation_fr)}`} className="text-sm text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400">
                         {product.brand.designation_fr}
                       </Link>
