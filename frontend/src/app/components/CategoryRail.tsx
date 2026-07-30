@@ -82,7 +82,7 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
                           alt={buildCategoryAlt(label)}
                           fill
                           sizes="(max-width: 640px) 104px, (max-width: 1024px) 124px, 200px"
-                          quality={70}
+                          quality={80}
                           loading="lazy"
                           className="object-cover object-center transition-transform duration-500 ease-out group-hover:scale-[1.07]"
                         />

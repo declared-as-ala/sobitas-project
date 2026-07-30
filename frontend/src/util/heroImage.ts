@@ -36,8 +36,22 @@ const DESKTOP_MEDIA = '(min-width: 768px)';
  */
 const MOBILE_WIDTH = 828;
 const DESKTOP_WIDTH = 1920;
-/** Must be a member of `images.qualities` in next.config.js. */
-const QUALITY = 70;
+/**
+ * Must be a member of `images.qualities` in next.config.js.
+ *
+ * 80, raised from 70. The hero is the largest thing on the page and the first thing anyone sees,
+ * and at 70 — on top of the lossy WebP the upload already produced — it visibly mushed.
+ *
+ * Measured on the real slides rather than guessed. AVIF, which is what browsers actually get:
+ *
+ *   mobile 828px    q70 37.0kB   q75 46.4kB   q80 54.9kB   q85 63.8kB   q90 72.4kB
+ *   desktop 1920px  q70 56.5kB   q75 69.9kB   q80 82.3kB   q85 93.9kB   q90 105.7kB
+ *
+ * 80 costs +18kB on mobile and is where the curve flattens: 85 and 90 add another 9kB and 18kB
+ * for far less visible gain. A 55kB hero is cheap by any standard, and the ~870kB of dead
+ * JavaScript removed from every route pays for it many times over.
+ */
+const QUALITY = 80;
 
 /**
  * Pre-generated static hero, used when the admin has no active slide (and as the safety net if
