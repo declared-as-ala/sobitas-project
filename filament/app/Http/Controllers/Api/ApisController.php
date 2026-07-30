@@ -227,10 +227,27 @@ class ApisController extends Controller
         $this->normalizeCollectionImages($paginator->getCollection(), ...$fields);
     }
 
+    /**
+     * EVERY product listing must eager-load `sousCategorie`, or the frontend cannot build a
+     * canonical product URL.
+     *
+     * getProductLink() (frontend/src/util/productUrl.ts) returns /{subcategory}/{slug} when the
+     * relation is present and falls back to the legacy /shop/{slug} when it is not — and
+     * /shop/{slug} is a 301 to the canonical form. Only allProducts() loaded the relation, so
+     * every other listing emitted redirect links: measured across the 88 listing URLs in the
+     * sitemap, 639 of 875 product anchors (73%) pointed at a redirect, and 76 products had no
+     * canonical inbound link anywhere on the site. Whole page classes were 100% redirects —
+     * /equipement, /proteines, /performance and every brand page.
+     *
+     * It is not just wasted crawl budget: those pages are what should rank for product-name
+     * queries, and they were being linked with the weakest signal available. The ItemList schema
+     * on category pages was publishing the redirect URLs too.
+     */
     private function productListQuery()
     {
         return Product::where('publier', 1)
             ->select(self::PRODUCT_FULL_LIST_COLUMNS)
+            ->with('sousCategorie:id,slug,designation_fr,categorie_id')
             ->withCount(['reviews' => fn ($q) => $q->where('publier', 1)]);
     }
 
@@ -642,7 +659,7 @@ class ApisController extends Controller
         $productsPaginator = Product::where('publier', 1)
             ->whereIn('sous_categorie_id', SousCategory::where('categorie_id', $category->id)->select('id'))
             ->select(self::PRODUCT_FULL_LIST_COLUMNS)
-            ->with('aromes:id,designation_fr', 'tags:id,designation_fr')
+            ->with('aromes:id,designation_fr', 'tags:id,designation_fr', 'sousCategorie:id,slug,designation_fr,categorie_id')
             ->latest('created_at')
             ->paginate($perPage);
 
@@ -696,7 +713,7 @@ class ApisController extends Controller
         $productsPaginator = Product::where('brand_id', $brand_id)
             ->where('publier', 1)
             ->select(self::PRODUCT_FULL_LIST_COLUMNS)
-            ->with('aromes:id,designation_fr', 'tags:id,designation_fr')
+            ->with('aromes:id,designation_fr', 'tags:id,designation_fr', 'sousCategorie:id,slug,designation_fr,categorie_id')
             ->latest('created_at')
             ->paginate($perPage);
 
@@ -764,7 +781,7 @@ class ApisController extends Controller
                     });
             })
             ->select(self::PRODUCT_FULL_LIST_COLUMNS)
-            ->with(['aromes:id,designation_fr', 'tags:id,designation_fr', 'sousCategories:id,slug,designation_fr,categorie_id'])
+            ->with(['aromes:id,designation_fr', 'tags:id,designation_fr', 'sousCategories:id,slug,designation_fr,categorie_id', 'sousCategorie:id,slug,designation_fr,categorie_id'])
             ->latest('created_at')
             ->get();
 
@@ -807,7 +824,7 @@ class ApisController extends Controller
                   ->orWhereIn('brand_id', $matchingBrandIds);
             })
             ->select(self::PRODUCT_FULL_LIST_COLUMNS)
-            ->with('aromes:id,designation_fr', 'tags:id,designation_fr')
+            ->with('aromes:id,designation_fr', 'tags:id,designation_fr', 'sousCategorie:id,slug,designation_fr,categorie_id')
             ->limit(50)
             ->get();
 
@@ -834,7 +851,7 @@ class ApisController extends Controller
         $query = Product::where('publier', 1)
             ->where('designation_fr', 'LIKE', "%{$text}%")
             ->select(self::PRODUCT_FULL_LIST_COLUMNS)
-            ->with('aromes:id,designation_fr', 'tags:id,designation_fr');
+            ->with('aromes:id,designation_fr', 'tags:id,designation_fr', 'sousCategorie:id,slug,designation_fr,categorie_id');
 
         if ($sous_category) {
             $query->where('sous_categorie_id', $sous_category->id);
@@ -1193,6 +1210,7 @@ class ApisController extends Controller
             ->where('publier', 1)
             ->where('qte', '>', 0)
             ->select(self::PRODUCT_LIST_COLUMNS)
+            ->with('sousCategorie:id,slug,designation_fr,categorie_id')
             ->withCount(['reviews' => fn ($q) => $q->where('publier', 1)])
             ->limit(4)
             ->get();
@@ -1205,7 +1223,8 @@ class ApisController extends Controller
                 ->whereNotIn('id', $existingIds)
                 ->whereHas('sousCategorie', fn ($q) => $q->where('categorie_id', $sous_category->categorie_id))
                 ->select(self::PRODUCT_LIST_COLUMNS)
-                ->withCount(['reviews' => fn ($q) => $q->where('publier', 1)])
+                ->with('sousCategorie:id,slug,designation_fr,categorie_id')
+            ->withCount(['reviews' => fn ($q) => $q->where('publier', 1)])
                 ->limit(4 - $products->count())
                 ->get();
 
