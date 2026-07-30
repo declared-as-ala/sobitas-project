@@ -46,7 +46,7 @@ function CategoryCard({ category }: { category: Category }) {
             className="object-cover object-center transition-transform duration-500 ease-out sm:group-hover:scale-105"
             sizes="(max-width: 640px) 48vw, (max-width: 1024px) 31vw, 23vw"
             loading="lazy"
-            quality={70}
+            quality={80}
             onError={() => setImageError(true)}
           />
         ) : (

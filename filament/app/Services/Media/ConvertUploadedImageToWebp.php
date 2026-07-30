@@ -11,8 +11,20 @@ use Throwable;
 
 class ConvertUploadedImageToWebp
 {
+    /**
+     * 92, not 85 — because this file is a MASTER, not what a visitor downloads.
+     *
+     * Every image here gets compressed twice: once on upload by this class, then again by Next's
+     * image optimizer, which re-encodes to AVIF/WebP at serve time. Encoding an already-lossy
+     * WebP is where the softness the owner reported comes from — generation loss, not one bad
+     * setting. The second pass is the one that controls page weight, so the master should give it
+     * the cleanest input it can rather than saving bytes nobody ships.
+     *
+     * The cost lands on disk only. Raising this does NOT make pages heavier: users are served the
+     * optimizer's output, never this file.
+     */
     public function __construct(
-        private int $quality = 85,
+        private int $quality = 92,
     ) {}
 
     /**
