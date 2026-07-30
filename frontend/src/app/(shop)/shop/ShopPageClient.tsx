@@ -420,7 +420,19 @@ function ShopContent({
   const skeletonShownAtRef = useRef<number | null>(null);
   const [filterError, setFilterError] = useState<Error | null>(null);
   const [retryCount, setRetryCount] = useState(0);
-  const [inStockOnly, setInStockOnly] = useState(true);
+  // Default OFF, so a category shows everything it contains.
+  //
+  // This defaulted to true, which hid every out-of-stock product across the shop and all category
+  // pages. Measured: Équipement showed 46 of 79, Protéines 19 of 60, Santé & Vitalité 28 of 65,
+  // Performance 23 of 51 — 42% of the catalogue invisible, and the "Rupture de stock" chip on the
+  // product card could never appear anywhere, because nothing out of stock was ever rendered.
+  //
+  // It also silently orphaned those products: their detail pages are indexable but no category
+  // page linked to them, and a shopper had no way to learn we carry the item at all.
+  //
+  // The filter itself stays — the checkbox is still there for anyone who wants it. Out-of-stock
+  // items are sorted last (see the sorting engine) so they never push a buyable product down.
+  const [inStockOnly, setInStockOnly] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [currentBrand, setCurrentBrand] = useState<Brand | null>(null);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
@@ -959,6 +971,16 @@ function ShopContent({
         return scoreB - scoreA;
       });
     }
+
+    // Buyable first, always. Out-of-stock products are now shown rather than hidden, but they must
+    // never outrank something a customer can actually put in the basket — otherwise "show
+    // everything" would degrade the top of every grid.
+    //
+    // Runs AFTER the sort engine so it takes precedence, and relies on Array#sort being stable
+    // (guaranteed since ES2019) so the chosen sort still orders products within each group.
+    filtered = [...filtered].sort(
+      (a, b) => Number(isInStock(b as never)) - Number(isInStock(a as never))
+    );
 
     return filtered;
   }, [
