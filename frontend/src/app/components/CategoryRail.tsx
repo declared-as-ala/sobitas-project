@@ -53,7 +53,9 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
       className="bg-white py-7 dark:bg-gray-950 sm:py-9"
     >
       <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8">
-        <div className="rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_12px_32px_-16px_rgba(16,24,40,0.18)] ring-1 ring-black/[0.06] sm:p-6 dark:bg-gray-900 dark:shadow-none dark:ring-white/10">
+        {/* No drop shadow on this wrapper (owner call, both breakpoints) — the hairline ring alone
+            defines the card. The individual tiles keep their hover shadow; only the outer box is flat. */}
+        <div className="rounded-2xl bg-white p-4 ring-1 ring-black/[0.06] sm:p-6 dark:bg-gray-900 dark:ring-white/10">
           <div className="mb-4 flex items-start justify-between gap-4 sm:mb-6">
             <div>
               <h2
