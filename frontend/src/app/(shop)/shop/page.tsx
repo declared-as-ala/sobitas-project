@@ -8,38 +8,36 @@ import { enrichProductsWithSubcategory } from '@/util/enrichProductSubcategory';
 import { loadForCache } from '@/util/loadForCache';
 import { ShopPageClient } from './ShopPageClient';
 
-type ShopSearchParams = Promise<Record<string, string | string[] | undefined>>;
-
-export async function generateMetadata(props: { searchParams?: ShopSearchParams }): Promise<Metadata> {
-  const searchParams = props.searchParams ? await props.searchParams : {};
-  const pageNum = Math.max(1, parseInt(String(Array.isArray(searchParams.page) ? searchParams.page[0] : searchParams.page || '1'), 10) || 1);
-  const path = '/shop';
-
-  // A "filtered" view = any faceting param (search/brand/category/orderby/sort…) beyond pure pagination.
-  // These must NOT self-canonicalize with their query string — that is what let
-  // /shop?search=WHEY%20PROTEIN, /shop?brand=9 and /shop?search={search_term_string}
-  // get indexed as duplicates. Filtered views are noindex,follow and canonicalise to
-  // the clean paginated URL so Google consolidates on the real listing.
-  const FACET_KEYS = new Set(['search', 'brand', 'category', 'orderby', 'sort', 'min_price', 'max_price', 'filter']);
-  const isFiltered = Object.keys(searchParams).some((k) => FACET_KEYS.has(k.toLowerCase()));
-
-  // Canonical carries ONLY pagination (page>1), never facets.
-  const canonicalQuery = pageNum > 1 ? `?page=${pageNum}` : undefined;
-  const canonical = buildCanonicalUrl(path, canonicalQuery);
-  // The backend /all_products endpoint ignores per_page and returns the WHOLE catalog with no
-  // `pagination` object, so getShopTotalPages() always resolved to 1 (→ rel prev/next never emitted)
-  // while downloading the entire catalog a second time per request. Drop that fetch: totalPages = 1.
-  const totalPages = 1;
-  const { prev, next } = getPrevNext(path, '', pageNum, totalPages);
+/**
+ * Deliberately does NOT read `searchParams`.
+ *
+ * `searchParams` is a dynamic API: touching it here — even only to decide a robots tag — opted the
+ * WHOLE route out of static rendering, so `export const revalidate = 300` below never took effect.
+ * The live page answered `Cache-Control: private, no-cache, no-store, max-age=0` to every visitor
+ * and Cloudflare reported `cf-cache-status: DYNAMIC`; no CDN rule can cache a page that says
+ * no-store. That is why adding Cloudflare cache rules did not improve mobile. /shop is the mobile
+ * tab bar's Boutique target and ships ~1 MB of HTML, so it is the worst page on the site to be
+ * re-rendering from scratch on every request.
+ *
+ * The noindex on faceted views (which stopped /shop?search=WHEY%20PROTEIN and
+ * /shop?search={search_term_string} being indexed as duplicates) is preserved — it moved to an
+ * `X-Robots-Tag: noindex, follow` response header in next.config.js, matched per query param.
+ * Google treats that header as equivalent to the meta tag, and being a header it is evaluated per
+ * request, so it still works while the HTML body is cached and shared.
+ *
+ * Canonical is now unconditionally /shop. For faceted URLs that is what we always wanted — they
+ * consolidate onto the real listing. For ?page=N it is a change, but rel prev/next were already
+ * inert here (totalPages was hardcoded to 1 because the backend sends no pagination object), and
+ * pagination is applied client-side in ShopPageClient.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const canonical = buildCanonicalUrl('/shop');
 
   return {
     title: { absolute: 'Boutique Protéines & Compléments en Tunisie | Protéine Tunisie' },
     description: 'Découvrez nos protéines, créatine, gainer et BCAA en Tunisie. Large choix, livraison rapide. Filtrez par marque et catégorie.',
-    ...(isFiltered ? { robots: { index: false, follow: true } } : {}),
     alternates: {
       canonical,
-      ...(prev && { prev }),
-      ...(next && { next }),
     },
     openGraph: {
       title: { absolute: 'Boutique Protéines & Compléments en Tunisie | Protéine Tunisie' },
@@ -55,20 +53,6 @@ export async function generateMetadata(props: { searchParams?: ShopSearchParams 
       images: ['/og-banner.jpg'],
     },
   };
-}
-
-function getPrevNext(path: string, search: string, page: number, totalPages: number): { prev?: string; next?: string } {
-  const params = new URLSearchParams(search || '');
-  const prevParams = new URLSearchParams(params);
-  if (page > 1) {
-    if (page === 2) prevParams.delete('page');
-    else prevParams.set('page', String(page - 1));
-  }
-  const nextParams = new URLSearchParams(params);
-  nextParams.set('page', String(page + 1));
-  const prev = page > 1 ? buildCanonicalUrl(path, prevParams.toString() ? `?${prevParams.toString()}` : undefined) : undefined;
-  const next = page < totalPages ? buildCanonicalUrl(path, `?${nextParams.toString()}`) : undefined;
-  return { prev, next };
 }
 
 // ISR (was force-dynamic → a full whole-catalog fetch + RSC render on EVERY request; the page body
@@ -135,15 +119,11 @@ export default async function ShopPage() {
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }} />
       )}
       {/*
-        ShopPageClient calls useSearchParams() at its top level. Without a Suspense boundary ABOVE
-        that call, Next bails the whole route out of static rendering, so `revalidate = 300` above
-        never applied: /shop was answering `Cache-Control: private, no-cache, no-store` to every
-        visitor and Cloudflare reported cf-cache-status: DYNAMIC, i.e. the boutique was re-rendered
-        from scratch on every single request and no CDN rule could ever help it. The Suspense inside
-        ShopPageClient is below the hook, so it could not lift the bailout.
-
-        This matters more here than anywhere else: /shop is the mobile tab bar's Boutique target and
-        it ships ~1 MB of HTML (see getShopData).
+        Required because ShopPageClient calls useSearchParams() at its top level: a static route
+        needs a Suspense boundary ABOVE that call, and the one inside ShopPageClient sits below the
+        hook. This alone did NOT make the route cacheable — reading searchParams in
+        generateMetadata was what forced dynamic rendering (see the note there). Both were needed;
+        verified by the route going from `ƒ /shop` to `○ /shop  5m` in the build output.
       */}
       <Suspense fallback={null}>
         <ShopPageClient productsData={productsData} categories={categories} brands={brands} />

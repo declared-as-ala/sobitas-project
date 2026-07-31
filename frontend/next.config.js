@@ -46,7 +46,27 @@ const nextConfig = {
     removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
   },
   async headers() {
+    // Faceted /shop views must not be indexed as duplicates of the boutique — this is what stopped
+    // /shop?search=WHEY%20PROTEIN, /shop?brand=9 and the literal /shop?search={search_term_string}
+    // (169 impressions at position 76) accumulating in the index.
+    //
+    // This used to be `robots: { index: false }` inside generateMetadata, but reading searchParams
+    // there is a dynamic API: it opted the whole route out of static rendering, so /shop answered
+    // no-store to every visitor and no Cloudflare rule could cache it. As a response header the
+    // rule is evaluated per request, so it still applies while the HTML body is cached and shared.
+    // Google documents X-Robots-Tag as equivalent to the meta robots tag.
+    //
+    // `has` entries are AND-ed within a rule, so each facet key needs its own rule to get OR.
+    // `page` is deliberately absent: pagination is not a duplicate and must stay indexable.
+    const FACET_KEYS = ['search', 'brand', 'category', 'orderby', 'sort', 'min_price', 'max_price', 'filter'];
+    const facetedShopNoindex = FACET_KEYS.map((key) => ({
+      source: '/shop',
+      has: [{ type: 'query', key }],
+      headers: [{ key: 'X-Robots-Tag', value: 'noindex, follow' }],
+    }));
+
     return [
+      ...facetedShopNoindex,
       {
         source: '/:path*',
         headers: [
