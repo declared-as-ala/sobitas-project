@@ -61,11 +61,64 @@ export function sanitizeProductHtml(html: string | null | undefined): string {
   return out;
 }
 
-/** Plain-text version (tags stripped) capped at maxLen — for meta descriptions / previews. */
+/**
+ * The entities that actually appear in this catalogue's CMS copy. Deliberately small — this is
+ * not a general HTML entity table, and an unknown entity is left alone rather than guessed at.
+ * `&amp;` is absent on purpose: it must be decoded LAST (see decodeEntities).
+ */
+const NAMED_ENTITIES: Record<string, string> = {
+  nbsp: ' ',
+  lt: '<',
+  gt: '>',
+  quot: '"',
+  apos: "'",
+  eacute: 'é',
+  egrave: 'è',
+  ecirc: 'ê',
+  agrave: 'à',
+  ccedil: 'ç',
+  ugrave: 'ù',
+  ocirc: 'ô',
+  icirc: 'î',
+  laquo: '«',
+  raquo: '»',
+  hellip: '…',
+  ndash: '–',
+  mdash: '—',
+  rsquo: '’',
+  deg: '°',
+};
+
+/**
+ * Turn entities back into the characters they stand for.
+ *
+ * `&amp;` is decoded last. Doing it first would turn "&amp;lt;" into "<" — re-animating text that
+ * was deliberately escaped.
+ */
+function decodeEntities(input: string): string {
+  return input
+    .replace(/&#(\d+);/g, (_m, dec: string) => String.fromCodePoint(Number(dec)))
+    .replace(/&#x([0-9a-f]+);/gi, (_m, hex: string) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&([a-z]+);/gi, (m, name: string) => NAMED_ENTITIES[name.toLowerCase()] ?? m)
+    .replace(/&amp;/gi, '&');
+}
+
+/**
+ * Plain-text version (tags stripped) capped at maxLen — for meta descriptions / previews.
+ *
+ * Entities are DECODED, not deleted. This used to `.replace(/&[a-z]+;/gi, ' ')`, which turned
+ * "MUSCULAIRE &amp; PERFORMANCE" into "MUSCULAIRE   PERFORMANCE" — silently dropping the word —
+ * and any caller that skipped this helper and stripped tags by hand shipped the raw entity
+ * instead: /whey-proteine's meta description reached Google reading "MUSCULAIRE &amp;amp;
+ * PERFORMANCE", because plain text containing "&amp;" gets escaped a second time on its way into
+ * the attribute. Both failures are invisible in code review and obvious in a search result.
+ *
+ * Zero-width characters are stripped too; they arrive with copy pasted out of word processors and
+ * count toward the length budget while rendering as nothing.
+ */
 export function htmlToText(html: string | null | undefined, maxLen = 300): string {
-  const cleaned = sanitizeProductHtml(html)
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/&[a-z]+;/gi, ' ')
+  const cleaned = decodeEntities(sanitizeProductHtml(html).replace(/<[^>]*>/g, ' '))
+    .replace(/[​-‍﻿]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
   return cleaned.length > maxLen ? `${cleaned.slice(0, maxLen).trim()}…` : cleaned;
