@@ -583,17 +583,29 @@ class ApisController extends Controller
         // the categories list to avoid /shop/ 301 hops (the "Page with redirect" bucket in GSC).
         // Real star ratings, computed from attested reviews only (Review::scopeAttested).
         //
-        // `products.note` is a legacy column and is NULL for every row, so the grid has never had
-        // a number to show — ProductCard says as much in a comment and prints the count alone.
-        // These two aliases give it a real average to print the moment a genuine review lands,
-        // and 0/null until then. Deliberately computed, not denormalised: a cached column on
-        // products would drift the moment a review is edited, unpublished or moderated, and a
-        // wrong star rating is worse than none.
+        // `products.note` is a legacy column, NULL on every row, so the grid never had a number to
+        // print. These two aliases give it a real average the moment a genuine review lands.
+        // Deliberately computed, not denormalised: a cached column would drift the moment a review
+        // is edited, unpublished or moderated, and a wrong star rating is worse than none.
+        //
+        // TWO THINGS HERE ARE EASY TO GET WRONG, AND I GOT BOTH WRONG FIRST TIME.
+        //
+        // 1. The rating column on `reviews` is `stars`, NOT `note`. There is no reviews.note —
+        //    confirmed against the live database. The Review model casts 'note' => 'integer',
+        //    which is vestigial and misleading; only ProductSchemaBuilder::reviewStarValue()'s
+        //    `stars ?? note` fallback keeps it alive. Averaging 'note' produced
+        //    "Unknown column 'reviews.note'" and took /api/all_products down with a 500.
+        //
+        // 2. select() must come BEFORE the aggregates. withCount()/withAvg() append their
+        //    subqueries to the builder's column list and select() REPLACES it, so calling select()
+        //    last silently discards both — the query still returns 200, just with no rating fields
+        //    at all. That failure is invisible in a status code; it has to be checked in the
+        //    payload.
         $query = Product::where('publier', 1)
             ->with('sousCategorie:id,slug,designation_fr,categorie_id')
+            ->select(self::PRODUCT_LISTING)
             ->withCount(['reviews as review_count' => fn ($q) => $q->attested()])
-            ->withAvg(['reviews as rating_value' => fn ($q) => $q->attested()], 'note')
-            ->select(self::PRODUCT_LISTING);
+            ->withAvg(['reviews as rating_value' => fn ($q) => $q->attested()], 'stars');
 
         if ($search = trim((string) $request->get('search', ''))) {
             $matchingBrandIds = Brand::where('designation_fr', 'like', '%' . $search . '%')->pluck('id');
@@ -1282,15 +1294,65 @@ class ApisController extends Controller
             'comment'    => ['required', 'string', 'max:1000'],
         ]);
 
+        // Attach the order this review is about, when there is one.
+        //
+        // Without this, a review left on the product page is unattested BY CONSTRUCTION: it never
+        // gets a commande_id, never gets verified, and so can never satisfy Review::scopeAttested.
+        // The stars would have stayed empty no matter how many customers wrote one — only reviews
+        // arriving through the tokenised email link could ever count. That is a silent dead end,
+        // and it is the whole reason on-site reviews were worthless to the rating.
+        //
+        // Matched on EMAIL, not user id, deliberately. `auth:sanctum` authenticates User (the
+        // `users` table) while `commandes.user_id` is a FK to `clients` — different tables, so
+        // comparing the two ids would quietly match the wrong person or nobody at all.
+        $commandeId = $this->deliveredOrderIdForProduct(
+            Auth::user()?->email,
+            (int) $validated['product_id']
+        );
+
         $review = Review::create([
-            'user_id'    => Auth::id(),
-            'product_id' => $validated['product_id'],
-            'stars'      => $validated['stars'] ?? 5,
-            'comment'    => $validated['comment'],
-            'publier'    => ($validated['stars'] ?? 5) >= 4 ? 1 : 0,
+            'user_id'     => Auth::id(),
+            'product_id'  => $validated['product_id'],
+            'stars'       => $validated['stars'] ?? 5,
+            'comment'     => $validated['comment'],
+            'publier'     => ($validated['stars'] ?? 5) >= 4 ? 1 : 0,
+            // `verified` is left alone on purpose — it means "an admin confirmed this", and an
+            // automatic order match is not that. scopeAttested accepts either signal, so a
+            // commande_id is enough to make the review count toward the rating.
+            'commande_id' => $commandeId,
         ]);
 
         return response()->json($review, 201);
+    }
+
+    /**
+     * Id of a DELIVERED order placed by this email that actually contained this product, or null.
+     * Newest first, so a repeat buyer's review attaches to their most recent purchase.
+     */
+    private function deliveredOrderIdForProduct(?string $email, int $productId): ?int
+    {
+        $email = is_string($email) ? trim($email) : '';
+        if ($email === '') {
+            return null;
+        }
+
+        try {
+            return Commande::query()
+                ->whereIn('etat', \App\Services\PointsService::DELIVERED_STATUSES)
+                ->where(fn ($q) => $q->where('email', $email)->orWhere('livraison_email', $email))
+                ->whereHas('details', fn ($d) => $d->where('produit_id', $productId))
+                ->orderByDesc('id')
+                ->value('id');
+        } catch (\Throwable $e) {
+            // Never let attestation lookup break a customer's submission — an unattested review
+            // is still a review worth keeping.
+            Log::warning('Review attestation lookup failed', [
+                'product_id' => $productId,
+                'error'      => $e->getMessage(),
+            ]);
+
+            return null;
+        }
     }
 
     public function seoPage(string $name)
