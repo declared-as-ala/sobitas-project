@@ -99,7 +99,14 @@ function decodeEntities(input: string): string {
   return input
     .replace(/&#(\d+);/g, (_m, dec: string) => String.fromCodePoint(Number(dec)))
     .replace(/&#x([0-9a-f]+);/gi, (_m, hex: string) => String.fromCodePoint(parseInt(hex, 16)))
-    .replace(/&([a-z]+);/gi, (m, name: string) => NAMED_ENTITIES[name.toLowerCase()] ?? m)
+    .replace(/&([a-zA-Z]+);/g, (m, name: string) => {
+      const value = NAMED_ENTITIES[name.toLowerCase()];
+      if (value === undefined) return m;
+      // "&Eacute;" must give É, not é — the table is keyed lowercase, so restore the case the
+      // author wrote. French headings are routinely title-cased, so this is not an edge case.
+      const isUpper = name[0] === name[0].toUpperCase() && name[0] !== name[0].toLowerCase();
+      return isUpper ? value.toUpperCase() : value;
+    })
     .replace(/&amp;/gi, '&');
 }
 
