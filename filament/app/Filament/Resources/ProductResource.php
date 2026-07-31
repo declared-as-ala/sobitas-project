@@ -590,6 +590,15 @@ class ProductResource extends Resource
                     ->relationship('sousCategorie', 'designation_fr')
                     ->searchable()
                     ->preload(),
+                // Find what `products:generate-content` drafted. Without this the pending drafts are
+                // invisible and would simply never be reviewed.
+                Tables\Filters\SelectFilter::make('ai_review_status')
+                    ->label('Contenu IA')
+                    ->options([
+                        'pending'  => 'Brouillon en attente',
+                        'approved' => 'Publié',
+                        'rejected' => 'Rejeté',
+                    ]),
             ])
             ->filtersFormColumns(3)
             ->actions([
@@ -597,6 +606,65 @@ class ProductResource extends Resource
                 Actions\DeleteAction::make(),
             ])
             ->bulkActions([
+                // Publish AI-drafted copy. Drafts are written by `php artisan products:generate-content`
+                // into ai_description_draft / ai_faq_draft and are invisible to customers and to
+                // Google until this runs — that human gate is the quality control, and it is what
+                // keeps a batch of generated pages away from Google's scaled-content-abuse policy.
+                Actions\BulkAction::make('approveAiContent')
+                    ->label('Publier le contenu IA')
+                    ->icon('heroicon-o-check-badge')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->modalHeading('Publier le contenu rédigé par IA ?')
+                    ->modalDescription('La description et la FAQ générées remplaceront le texte actuel des produits sélectionnés qui ont un brouillon en attente. Les autres seront ignorés.')
+                    ->modalSubmitActionLabel('Publier')
+                    ->action(function ($records) {
+                        $published = 0;
+                        $skipped = 0;
+
+                        foreach ($records as $product) {
+                            if ($product->ai_review_status !== 'pending' || blank($product->ai_description_draft)) {
+                                $skipped++;
+                                continue;
+                            }
+
+                            $product->forceFill([
+                                'description_fr'   => $product->ai_description_draft,
+                                'faq'              => $product->ai_faq_draft ?: $product->faq,
+                                'ai_review_status' => 'approved',
+                            ])->save();
+
+                            $published++;
+                        }
+
+                        \Filament\Notifications\Notification::make()
+                            ->title($published > 0 ? "{$published} fiche(s) publiée(s)" : 'Aucune fiche publiée')
+                            ->body($skipped > 0 ? "{$skipped} produit(s) ignoré(s) (aucun brouillon en attente)." : null)
+                            ->{$published > 0 ? 'success' : 'warning'}()
+                            ->send();
+                    })
+                    ->deselectRecordsAfterCompletion(),
+
+                Actions\BulkAction::make('rejectAiContent')
+                    ->label('Rejeter le contenu IA')
+                    ->icon('heroicon-o-x-mark')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->action(function ($records) {
+                        $n = 0;
+                        foreach ($records as $product) {
+                            if ($product->ai_review_status === 'pending') {
+                                $product->forceFill(['ai_review_status' => 'rejected'])->saveQuietly();
+                                $n++;
+                            }
+                        }
+                        \Filament\Notifications\Notification::make()
+                            ->title("{$n} brouillon(s) rejeté(s)")
+                            ->success()
+                            ->send();
+                    })
+                    ->deselectRecordsAfterCompletion(),
+
                 Actions\DeleteBulkAction::make()
                     ->label('Supprimer sélection'),
             ])
