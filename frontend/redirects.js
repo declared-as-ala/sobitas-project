@@ -179,18 +179,67 @@ function buildRedirects() {
     p('/categories/equipements-et-accessoires-sportifs', '/shop'),
     p('/categories/:path*', '/shop'),
 
-    // ── /category/:slug  (specific first → catch-all to /shop) ───────────
+    // ── /category/:slug ───────────────────────────────────────────────────
+    //
+    // These legacy URLs ARE STILL RANKING and the catch-all was throwing them away.
+    //
+    // Search Console, last 3 months: /category/zma sits at position 2.97 with 21 clicks and landed
+    // the visitor on the generic /shop catalogue. /category/creatine, position 14.32, 34 clicks —
+    // same. Measured across every /category/* URL with impressions: 24 of 38 redirected to the
+    // WRONG page, together carrying 1,643 impressions and 104 clicks a quarter. Google treats a
+    // redirect to an irrelevant page as a soft 404, so the ranking those URLs still hold was being
+    // spent on nothing.
+    //
+    // Almost all of them are simply /category/{slug} -> /{slug}: the slug is a real listing. Every
+    // destination below was verified live (200, no further hop) before being written here. Where
+    // the modern slug differs, the rule points at the FINAL target rather than chaining — several
+    // old rules pointed at /musculation, which itself 301s to /materiel-de-musculation, so they
+    // cost two hops to reach the right page.
+    //
+    // The catch-all stays last for genuinely unknown slugs. Keep this list in slug order.
     p('/category/749-packs', '/packs'),
-    p('/category/bandes-de-soutien-musculaire', '/musculation'),
-    p('/category/ceinture-de-musculation', '/musculation'),
+    p('/category/acides-amines', '/bcaa'),
+    p('/category/ashwagandha', '/ashwagandha'),
+    p('/category/bandes-de-soutien-musculaire', '/materiel-de-musculation'),
+    p('/category/bcaa', '/bcaa'),
+    p('/category/beta-alanine', '/beta-alanine'),
+    p('/category/boosters-hormonaux', '/boosters-hormonaux'),
+    p('/category/carbohydrates', '/glucides'),
+    p('/category/ceinture-de-musculation', '/materiel-de-musculation'),
+    p('/category/citrulline', '/citrulline'),
+    p('/category/cla', '/cla'),
+    p('/category/collagene', '/collagene'),
+    p('/category/complements-alimentaires', '/proteines'),
     p('/category/complements-d-entrainement', '/performance'),
+    p('/category/creatine', '/creatine'),
+    p('/category/eaa', '/eaa'),
+    p('/category/equipement-cardio-fitness', '/cardio-fitness'),
+    p('/category/equipements-et-accessoires-sportifs', '/equipement'),
     p('/category/fat-burner', '/bruleurs-de-graisse'),
     p('/category/gainer', '/gainers-proteines'),
-    p('/category/gants-de-musculation-et-fitness', '/musculation'),
+    p('/category/gainers-haute-energie', '/gainers-proteines'),
+    p('/category/gainers-riches-en-proteines', '/gainers-proteines'),
+    p('/category/gants-de-musculation-et-fitness', '/materiel-de-musculation'),
+    p('/category/glutamine', '/glutamine'),
+    p('/category/hmb', '/hmb'),
     p('/category/isolat-de-whey', '/whey-isolate'),
-    p('/category/materiel-de-musculation', '/musculation'),
+    p('/category/l-arginine', '/l-arginine'),
+    p('/category/l-carnitine', '/l-carnitine'),
+    p('/category/materiel-de-musculation', '/materiel-de-musculation'),
+    p('/category/omega-3', '/omega-3'),
+    p('/category/pre-workout', '/pre-workout'),
+    p('/category/prise-de-masse', '/prise-de-masse'),
     p('/category/proteine', '/proteines'),
+    p('/category/proteine-de-boeuf', '/proteine-de-boeuf'),
     p('/category/proteine-whey', '/whey-isolate'),
+    p('/category/proteines', '/proteines'),
+    p('/category/proteines-pour-cheveux', '/beaute-cheveux'),
+    p('/category/t-shirts-de-sport', '/vetements'),
+    p('/category/tribulus', '/tribulus'),
+    p('/category/vitamines', '/vitamines'),
+    p('/category/whey-hydrolysee', '/whey-hydrolysee'),
+    p('/category/zinc', '/zinc'),
+    p('/category/zma', '/zma'),
     p('/category/:path*', '/shop'),
 
     // ── /subcategories/:slug ──────────────────────────────────────────────
