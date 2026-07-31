@@ -1216,8 +1216,16 @@ function ShopContent({
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
             {!categorySeoLanding && !isSubcategory && (
+              // Must stay in sync with the crawler view's h1 (x-crawler/shop/page.tsx). Googlebot is
+              // rewritten to that route, so the two are the same page to a searcher but were two
+              // different headings: "Boutique — Protéines & Compléments Alimentaires en Tunisie" for
+              // the bot, "Tous nos produits" for everyone else. Divergent h1s on one URL are the
+              // thing that turns dynamic rendering into cloaking, and "Tous nos produits" names no
+              // product, category or country — nothing a Tunisian searcher would ever type.
               <h1 className="font-display uppercase tracking-tight leading-[0.95] text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">
-                {currentBrand ? `Produits ${currentBrand.designation_fr}` : 'Tous nos produits'}
+                {currentBrand
+                  ? `Produits ${currentBrand.designation_fr}`
+                  : 'Boutique — Protéines & Compléments Alimentaires en Tunisie'}
               </h1>
             )}
             <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-2">
