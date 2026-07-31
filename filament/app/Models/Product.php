@@ -22,6 +22,9 @@ class Product extends Model
         'seo_title', 'seo_description', 'seo_excerpt', 'seo_canonical_url', 'seo_robots_index', 'seo_robots_follow',
         'sku', 'gtin', 'mpn', 'item_condition', 'availability_override', 'price_valid_until', 'seo_image_alt',
         'sous_categorie_id', 'brand_id', 'code_product',
+        // AI-drafted copy awaiting approval. Never rendered to customers or Googlebot — publishing
+        // copies these into description_fr / faq via the "Publier le contenu IA" bulk action.
+        'ai_description_draft', 'ai_faq_draft', 'ai_generated_at', 'ai_review_status', 'ai_model',
     ];
 
     /**
@@ -54,6 +57,8 @@ class Product extends Model
         'note' => 'integer',
         'images' => 'array',
         'faq' => 'array',
+        'ai_faq_draft' => 'array',
+        'ai_generated_at' => 'datetime',
         'nutrition_images' => 'array',
         'seo_robots_index' => 'boolean',
         'seo_robots_follow' => 'boolean',
