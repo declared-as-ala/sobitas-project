@@ -2,34 +2,77 @@
 
 namespace App\Services\Media;
 
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Intervention\Image\Drivers\Gd\Driver;
+use Intervention\Image\Drivers\Gd\Driver as GdDriver;
+use Intervention\Image\Drivers\Imagick\Driver as ImagickDriver;
 use Intervention\Image\ImageManager;
 use Throwable;
 
+/**
+ * Prepare an uploaded image to be a MASTER — the file Next's optimizer reads from, never the file
+ * a visitor downloads.
+ *
+ * THE BUG THIS FIXES: every image was encoded twice, lossily.
+ *   1. here, on upload:  original → WebP q92  (lossy)
+ *   2. at serve time:    that WebP → AVIF q80 (lossy, by Next's optimizer)
+ * Encoding an already-lossy image re-quantises artefacts the first pass invented. That is
+ * generation loss, and it is what the owner sees as soft, mushy slides. Raising the first quality
+ * to 92 (the previous attempt) reduced it but could not remove it — two lossy passes are two lossy
+ * passes.
+ *
+ * THE FIX: make the master LOSSLESS, so there is exactly ONE lossy encode in the whole pipeline —
+ * the one at serve time, which is the only one that decides page weight. Three cases:
+ *
+ *   A. Already lossless (PNG/WebP-lossless/GIF/BMP) and within MAX_EDGE
+ *        → re-encode to LOSSLESS WebP. Smaller file, mathematically identical pixels.
+ *   B. Already lossy (JPEG / lossy WebP) and within MAX_EDGE
+ *        → KEEP THE ORIGINAL BYTES UNTOUCHED. Any re-encode here can only lose information;
+ *          it cannot add any back. This is the case that most uploads land in, and doing nothing
+ *          is strictly the best available option.
+ *   C. Larger than MAX_EDGE (any format)
+ *        → downscale once with a proper resampler, then encode LOSSLESS WebP. The resize is a
+ *          deliberate, single quality operation; encoding its result losslessly means it is the
+ *          only one.
+ *
+ * Disk cost is real (lossless WebP of a large photo can be several MB) and deliberate: it lands on
+ * the server, never on a visitor. Pages do not get heavier — users are served the optimizer's
+ * output. MAX_EDGE keeps that cost bounded and also stops a 6000px phone photo being stored, and
+ * re-decoded on every optimizer cache miss, at a size no layout on the site can use.
+ *
+ * IMAGICK IS PREFERRED over GD when the extension is present: GD's resampler is poorer, it discards
+ * colour profiles (so wide-gamut product shots shift), and its WebP encoder has no lossless mode
+ * worth the name. GD remains the fallback so this can never hard-fail an upload.
+ *
+ * The class name is kept because ~8 call sites use it and the public API is unchanged; what it
+ * writes is no longer always WebP, which is the point.
+ */
 class ConvertUploadedImageToWebp
 {
     /**
-     * 92, not 85 — because this file is a MASTER, not what a visitor downloads.
+     * Longest-edge cap for a stored master, in pixels.
      *
-     * Every image here gets compressed twice: once on upload by this class, then again by Next's
-     * image optimizer, which re-encodes to AVIF/WebP at serve time. Encoding an already-lossy
-     * WebP is where the softness the owner reported comes from — generation loss, not one bad
-     * setting. The second pass is the one that controls page weight, so the master should give it
-     * the cleanest input it can rather than saving bytes nobody ships.
-     *
-     * The cost lands on disk only. Raising this does NOT make pages heavier: users are served the
-     * optimizer's output, never this file.
+     * 2560 comfortably exceeds every rendered size on the site — the widest consumer is the hero
+     * at 1920 — so it can never soften a real layout, while bounding what a phone upload costs.
+     */
+    private const MAX_EDGE = 2560;
+
+    /** Formats that carry no generation loss and can safely be re-encoded losslessly. */
+    private const LOSSLESS_SOURCES = ['png', 'gif', 'bmp'];
+
+    /**
+     * @param  int  $quality  Retained for backward compatibility with existing call sites. It is
+     *                        now only a floor for the rare lossy fallback path (case C on a driver
+     *                        without lossless support); the normal paths do not use it.
      */
     public function __construct(
         private int $quality = 92,
     ) {}
 
     /**
-     * Convert a file already stored on a disk (e.g. after Filament FileUpload commits) to WebP.
-     * Deletes the original when conversion succeeds. Non-raster or already-.webp paths are left as-is.
+     * Prepare a file already stored on a disk (e.g. after Filament FileUpload commits).
+     * Returns the path to use — which may be the ORIGINAL path when the best action is none.
      */
     public function convertStoredPathToWebp(?string $relativePath, string $diskName = 'public'): ?string
     {
@@ -38,11 +81,8 @@ class ConvertUploadedImageToWebp
         }
 
         $relativePath = ltrim($relativePath, '/');
-        if (str_ends_with(strtolower($relativePath), '.webp')) {
-            return $relativePath;
-        }
-
         $disk = Storage::disk($diskName);
+
         if (! $disk->exists($relativePath)) {
             return $relativePath;
         }
@@ -53,19 +93,55 @@ class ConvertUploadedImageToWebp
         }
 
         try {
-            $manager = new ImageManager(new Driver());
+            $info = @getimagesize($fullPath);
+            if ($info === false) {
+                return $relativePath;   // not a raster image — leave it alone
+            }
+
+            [$width, $height] = $info;
+            $ext = strtolower(pathinfo($relativePath, PATHINFO_EXTENSION));
+            $needsResize = max($width, $height) > self::MAX_EDGE;
+            $isLossySource = in_array($ext, ['jpg', 'jpeg'], true)
+                || ($ext === 'webp' && ! $this->isLosslessWebp($fullPath));
+
+            // CASE B — already lossy and correctly sized. Touching it can only make it worse.
+            if (! $needsResize && $isLossySource) {
+                Log::info('media.master.kept_original', [
+                    'disk' => $diskName,
+                    'path' => $relativePath,
+                    'reason' => 'lossy source within size cap — re-encoding would add generation loss',
+                    'dimensions' => "{$width}x{$height}",
+                ]);
+
+                return $relativePath;
+            }
+
+            // CASE A — lossless WebP already at a sane size: nothing to gain.
+            if (! $needsResize && $ext === 'webp') {
+                return $relativePath;
+            }
+
+            $manager = new ImageManager($this->driver());
             $image = $manager->read($fullPath);
-            $encoded = (string) $image->toWebp($this->quality);
+
+            if ($needsResize) {
+                // scaleDown never enlarges, and keeps the aspect ratio.
+                $image = $image->scaleDown(width: self::MAX_EDGE, height: self::MAX_EDGE);
+            }
+
+            $encoded = $this->encodeLossless($image);
 
             $dir = pathinfo($relativePath, PATHINFO_DIRNAME);
-            $newBase = Str::uuid()->toString().'.webp';
-            $newRelative = ($dir !== '.' && $dir !== '') ? $dir.'/'.$newBase : $newBase;
+            $newBase = Str::uuid()->toString() . '.webp';
+            $newRelative = ($dir !== '.' && $dir !== '') ? $dir . '/' . $newBase : $newBase;
 
             $disk->put($newRelative, $encoded);
+
+            // Only drop the original once the replacement is safely on disk.
             try {
                 $disk->delete($relativePath);
             } catch (Throwable $e) {
-                Log::warning('media.webp.delete_original_failed', [
+                Log::warning('media.master.delete_original_failed', [
                     'disk' => $diskName,
                     'old_path' => $relativePath,
                     'new_path' => $newRelative,
@@ -73,20 +149,27 @@ class ConvertUploadedImageToWebp
                 ]);
             }
 
-            Log::info('media.webp.converted', [
+            Log::info('media.master.written', [
                 'disk' => $diskName,
                 'old_path' => $relativePath,
                 'new_path' => $newRelative,
-                'quality' => $this->quality,
+                'source_format' => $ext,
+                'resized' => $needsResize,
+                'dimensions' => $needsResize
+                    ? 'capped to ' . self::MAX_EDGE
+                    : "{$width}x{$height}",
+                'encoding' => 'webp-lossless',
             ]);
 
             return $newRelative;
         } catch (Throwable $e) {
-            Log::warning('media.webp.conversion_failed', [
+            // An upload must never fail because of image processing — keep the original.
+            Log::warning('media.master.preparation_failed', [
                 'disk' => $diskName,
                 'path' => $relativePath,
                 'error' => $e->getMessage(),
             ]);
+
             return $relativePath;
         }
     }
@@ -105,5 +188,56 @@ class ConvertUploadedImageToWebp
             fn (string $p): string => $this->convertStoredPathToWebp($p, $diskName) ?? $p,
             $paths,
         ));
+    }
+
+    /** Imagick when available (better resampling, keeps colour profiles), GD otherwise. */
+    private function driver(): ImagickDriver|GdDriver
+    {
+        return extension_loaded('imagick') ? new ImagickDriver() : new GdDriver();
+    }
+
+    /**
+     * Encode losslessly. Intervention exposes quality only, and both encoders treat 100 as their
+     * lossless/near-lossless setting, so this is the portable way to ask for it. Falls back to the
+     * configured quality if a driver rejects it, which is still better than the old double pass.
+     */
+    private function encodeLossless(\Intervention\Image\Interfaces\ImageInterface $image): string
+    {
+        try {
+            return (string) $image->toWebp(100);
+        } catch (Throwable $e) {
+            Log::warning('media.master.lossless_encode_failed', [
+                'error' => $e->getMessage(),
+                'fallback_quality' => $this->quality,
+            ]);
+
+            return (string) $image->toWebp($this->quality);
+        }
+    }
+
+    /**
+     * A WebP file is lossy unless its RIFF container carries a VP8L (lossless) or an ALPH+VP8L
+     * chunk. Reading the first 64 bytes is enough to tell, and avoids decoding the whole image
+     * just to classify it.
+     */
+    private function isLosslessWebp(string $fullPath): bool
+    {
+        $handle = @fopen($fullPath, 'rb');
+        if ($handle === false) {
+            return false;
+        }
+
+        $header = (string) fread($handle, 64);
+        fclose($handle);
+
+        if (! str_starts_with($header, 'RIFF') || substr($header, 8, 4) !== 'WEBP') {
+            return false;
+        }
+
+        // 'VP8L' = lossless. 'VP8 ' (with the trailing space) = lossy. 'VP8X' = extended, which
+        // may contain either, so it is treated as lossy — the conservative answer, since guessing
+        // "lossless" wrongly would mean re-encoding a lossy file and adding the very generation
+        // loss this class exists to prevent.
+        return str_contains($header, 'VP8L');
     }
 }

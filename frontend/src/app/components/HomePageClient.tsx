@@ -11,7 +11,9 @@ const HomeDeferredSections = dynamic(() => import('@/app/components/HomeDeferred
 
 import type { AccueilData, Brand, Product } from '@/types';
 import { getStorageUrl } from '@/services/api';
+import { getProductLink } from '@/util/productUrl';
 import type { HeroSlide } from '@/util/heroImage';
+import type { HeroBestSeller } from '@/app/components/HeroBestSellers';
 
 interface HomePageClientProps {
   accueil: AccueilData | null | undefined;
@@ -99,6 +101,24 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
 
   const newProducts = (safeAccueil.new_product || []).slice(0, 8).map(transformProduct).map(withBrand);
   const bestSellers = (safeAccueil.best_sellers || []).slice(0, 4).map(transformProduct).map(withBrand);
+  // Top 3 for the hero's wide-screen column. Built from the SAME payload as the rail below, so it
+  // adds no request. Promo price wins when live, and the original is passed as oldPrice so the
+  // panel can strike it through.
+  const heroBestSellers: HeroBestSeller[] = (safeAccueil.best_sellers || [])
+    .slice(0, 3)
+    .map((p) => {
+      const onPromo = Boolean(p.promo && p.promo_expiration_date && new Date(p.promo_expiration_date).getTime() > Date.now());
+      return {
+        id: p.id,
+        name: p.designation_fr || 'Produit',
+        href: getProductLink(p),
+        image: p.cover ? getStorageUrl(p.cover) : null,
+        price: onPromo ? Number(p.promo) : Number(p.prix),
+        oldPrice: onPromo ? Number(p.prix) : null,
+        ratingValue: (p as { rating_value?: number | null }).rating_value ?? null,
+        reviewCount: (p as { review_count?: number | null }).review_count ?? null,
+      };
+    });
   const packs = (safeAccueil.packs || []).slice(0, 4).map(transformProduct).map(withBrand);
   // Ventes flash: only products with promo + future promo_expiration_date (match backend logic)
   const now = Date.now();
@@ -132,7 +152,15 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
           en Tunisie
         </h1>
         {/* Above the fold - Critical content - Hero must render first */}
-        <Hero slides={heroSlides} fallbackAlt="Whey, créatine et compléments — Protéine Tunisie" />
+        {/* bestSellers powers the wide-screen column beside the slider. Same payload the
+            "Les plus vendus" rail below already uses, so it costs no extra fetch, and the column
+            is dropped entirely under 1280px. Ratings are passed through as-is: the panel renders
+            stars only when a product genuinely has reviews. */}
+        <Hero
+          slides={heroSlides}
+          fallbackAlt="Whey, créatine et compléments — Protéine Tunisie"
+          bestSellers={heroBestSellers}
+        />
 
         {/* CategoryRail sits DIRECTLY under the hero (owner request): shopping paths one tap from
             the fold, no copy strip in between. The page's single <h1> used to live in that strip;
