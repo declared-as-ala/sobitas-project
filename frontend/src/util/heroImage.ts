@@ -74,6 +74,9 @@ export type HeroSlide = {
   imageUrl: string;
   /** Optional dedicated phone crop; falls back to imageUrl. */
   imageMobileUrl?: string | null;
+  /** Short pill above the headline ("Nouveauté"). Blank = no pill. */
+  badge?: string | null;
+  /** A newline splits it: first line white, the rest accent orange (see Hero.splitTitle). */
   title?: string | null;
   subtitle?: string | null;
   ctaLabel?: string | null;

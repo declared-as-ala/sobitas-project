@@ -153,10 +153,21 @@ class SlideResource extends Resource
                 ->description('Laissez vide pour un slide sans texte. Le texte est ajouté par-dessus l\'image — ne l\'incrustez pas dans la photo.')
                 ->schema([
                     Grid::make(2)->schema([
-                        Forms\Components\TextInput::make('titre')
+                        Forms\Components\TextInput::make('badge')
+                            ->label('Badge (petite pastille)')
+                            ->maxLength(24)
+                            ->placeholder('Ex. : Nouveauté')
+                            ->helperText('Court. Affiché en pastille orange au-dessus du titre. Vide = aucune pastille.')
+                            ->columnSpan(2),
+                        // Textarea, not TextInput: the hero renders the FIRST line white and the
+                        // rest in accent orange, which is what produces the two-tone headline in
+                        // the approved design — and a single-line input cannot hold that newline.
+                        Forms\Components\Textarea::make('titre')
                             ->label('Titre')
+                            ->rows(2)
                             ->maxLength(255)
-                            ->placeholder('Ex. : Nutrition qui performe')
+                            ->placeholder("Alimente\nTa performance")
+                            ->helperText('Astuce : passez à la ligne pour couper le titre en deux — la 1ʳᵉ ligne s\'affiche en blanc, la suite en orange.')
                             ->columnSpan(2),
                         Forms\Components\Textarea::make('sous_titre')
                             ->label('Sous-titre')

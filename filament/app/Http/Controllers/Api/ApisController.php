@@ -502,6 +502,8 @@ class ApisController extends Controller
                 // the image) so it reflows, indexes and is announced by screen readers.
                 'subtitle'  => $slide->sous_titre ?? null,
                 'cta_label' => $slide->cta_label ?? null,
+                // Short pill above the headline ("NOUVEAUTÉ"). Null = no pill rendered.
+                'badge'     => $slide->badge ?? null,
                 'alt'       => $slide->alt ?? null,
                 'ordre'     => (int) ($slide->ordre ?? 0),
                 'is_active' => (bool) ($slide->is_active ?? true),

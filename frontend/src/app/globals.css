@@ -347,14 +347,35 @@ html[dir="rtl"] [data-i18n-ltr] {
    `svh` (small viewport height) keeps the mobile URL bar from covering the hero and avoids resize
    jank on scroll. The plain `vh` line is a fallback for browsers without `svh`/`env()`; where they
    are supported the second declaration wins. Keep the header numbers in sync with HeaderClient.tsx. */
+/* Hero height.
+ *
+ * Was a full-viewport band (100svh minus the header stack and tab bar). The approved hero design
+ * puts a "Meilleures ventes" column BESIDE the slider on wide screens, and a full-height slider
+ * cannot sit next to a product list without one of them scrolling — so the hero becomes a
+ * contained band whose height both columns share.
+ *
+ * Still a DEFINITE height at every breakpoint, which is the part that matters: the box is reserved
+ * before the image decodes, so the LCP image paints into a stable frame and CLS stays at 0. clamp()
+ * keeps it proportionate on short laptops without ever collapsing.
+ *
+ * Mobile keeps a taller, more portrait band because the phone hero is the single most-seen surface
+ * on the site and the artwork is the message; the svh term (not vh) means the URL bar cannot crop
+ * it and there is no resize jank when the bar hides on scroll.
+ */
 .pt-hero {
-  height: calc(100vh - 92px - var(--tabbar-h));
-  height: calc(100svh - 92px - var(--tabbar-h) - env(safe-area-inset-bottom, 0px));
+  height: 420px;
+  height: clamp(380px, calc(64svh - var(--tabbar-h) - env(safe-area-inset-bottom, 0px)), 520px);
 }
 @media (min-width: 768px) {
   .pt-hero {
-    height: calc(100vh - 156px - var(--tabbar-h));
-    height: calc(100svh - 156px - var(--tabbar-h) - env(safe-area-inset-bottom, 0px));
+    height: 400px;
+    height: clamp(360px, 46svh, 440px);
+  }
+}
+@media (min-width: 1280px) {
+  .pt-hero {
+    height: 440px;
+    height: clamp(400px, 50svh, 460px);
   }
 }
 

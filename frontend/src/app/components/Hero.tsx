@@ -1,36 +1,36 @@
 import { ArrowRight } from 'lucide-react';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
-import { HeroSliderIndicator } from '@/app/components/HeroSliderIndicator';
+import { HeroSliderControls } from '@/app/components/HeroSliderIndicator';
+import { HeroBestSellers, type HeroBestSeller } from '@/app/components/HeroBestSellers';
 import { buildHeroImageSet, type HeroSlide, type HeroImageSet } from '@/util/heroImage';
 
 /**
- * Homepage hero — the mobile LCP surface.
+ * Homepage hero — the LCP surface and, per the owner, the page's whole job: "the slider is the most
+ * important thing for us, it is the conversion and the leads."
  *
- * FULL-BLEED, FULL-HEIGHT (owner request, 2026-07). The hero fills the ENTIRE viewport width and
- * all the space AVAILABLE between the sticky header and the fixed mobile tab bar on first paint, so
- * the whole banner shows with nothing cropped by the chrome. The uploaded artwork is shown at FULL
- * OPACITY with NO dark scrim over it — the image IS the slide (the owner bakes the headline, price
- * and product shot into the artwork in the admin, then uploads it). The frontend's job is to display
- * that artwork edge-to-edge and get out of its way. Any admin text overlay (titre / sous-titre /
- * bouton) is drawn with a text-shadow only, never a dark box.
+ * LAYOUT (approved design, three breakpoints):
+ *   ≥1280px  slider + a "Meilleures ventes" column beside it, sharing one height. The dead margin
+ *            on wide screens becomes three shoppable products above the fold.
+ *   768–1279 slider alone, full width of the container.
+ *   <768px   slider alone, full-bleed edge-to-edge — no side padding, no rounding, so the artwork
+ *            gets every pixel of a phone screen.
  *
- * HEIGHT MATH — lives in `.pt-hero` (globals.css): 100svh − header stack − tab bar − safe-area.
- *   header stack mobile  = utility h-9 (36) + main h-14 (56)                    = 92px
- *   header stack desktop = utility h-9 (36) + main h-[72px] (72) + nav h-12 (48) = 156px
- *   tab bar (--tabbar-h) = 56px below 768px, 0px above.
- * `svh` (small viewport height) is used so the mobile URL bar can't cover the hero and there is no
- * resize jank on scroll (a `vh` line is the fallback). Keep the header numbers in sync with the
- * header if it ever changes.
+ * LCP INVARIANT (unchanged, and the reason this file never touches image URLs): the <img> and the
+ * page's <link rel=preload> are one derived object (util/heroImage.ts). page.tsx renders
+ * `set.preload`, this renders `set.sources`. They cannot drift, so the preload is never wasted.
  *
- * FULL WIDTH: the hero renders directly inside <main> (no max-width wrapper, no side padding), so
- * `w-full` already spans the whole viewport — there is nothing to break out of.
+ * SERVER COMPONENT. All of the above is static markup — it stays out of the client bundle so the
+ * LCP path ships no JavaScript. Exactly one client island (HeroSliderControls) drives the
+ * scroll-snap track for arrows/dots/autoplay, and it renders nothing at all for a single slide.
  *
- * LCP INVARIANT (unchanged): the <img> URL and the page's <link rel=preload> are one derived
- * object (util/heroImage.ts). This file only sets the frame box and the optional overlay — it never
- * touches the image pipeline — so the preload↔paint coupling is untouched.
+ * SCRIM POLICY. The artwork is shown at full opacity when the slide has NO caption — the owner
+ * bakes copy into some banners and a scrim over those would dim their own text. When a caption IS
+ * present the copy must stay legible over an arbitrary upload, so the slide gets a gradient
+ * weighted to the side the text sits on. Contrast is a floor, not a preference (WCAG 1.4.3).
  *
- * SERVER component. Nothing here needs state; keeping it server-side keeps the LCP markup out of
- * the client bundle. Multi-slide uses a CSS scroll-snap track (no carousel JS on the LCP path).
+ * Brand colour is `brand-500` (#F8480C, the logo orange) via the semantic token, not a hardcoded
+ * hex — see tailwind.config.ts. Large display type and pill CTAs are the graphical-accent case the
+ * token is meant for.
  */
 
 /**
@@ -50,10 +50,23 @@ function normalizeHref(raw?: string | null): string | null {
   return `/${href}`;
 }
 
+/**
+ * Split the admin's title into its white first line and the accent-orange remainder.
+ * "Alimente\nTa performance" → ["Alimente", "Ta performance"]. A single-line title stays all
+ * white, so the two-tone headline is opt-in and no existing slide changes appearance.
+ */
+function splitTitle(title: string): { lead: string; accent: string } {
+  const lines = title.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  if (lines.length <= 1) return { lead: lines[0] ?? '', accent: '' };
+  return { lead: lines[0], accent: lines.slice(1).join(' ') };
+}
+
 interface HeroProps {
   slides: HeroSlide[];
   /** Alt text used when a slide has none — keeps the LCP image described for SEO/a11y. */
   fallbackAlt: string;
+  /** Optional wide-screen "Meilleures ventes" column. Omit/empty = slider spans full width. */
+  bestSellers?: HeroBestSeller[];
 }
 
 function HeroPicture({ set, eager }: { set: HeroImageSet; eager: boolean }) {
@@ -69,8 +82,7 @@ function HeroPicture({ set, eager }: { set: HeroImageSet; eager: boolean }) {
       ))}
       {/* Raw <img>, not next/image: next/image emits a srcset and the browser picks a candidate at
           runtime, so the server cannot know which URL to preload — the preload would miss and the
-          image would download twice. One element, one URL. Full opacity, no filter: the artwork is
-          shown exactly as uploaded (owner request — "no darkness"). */}
+          image would download twice. One element, one URL. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={set.img.src}
@@ -88,42 +100,64 @@ function HeroPicture({ set, eager }: { set: HeroImageSet; eager: boolean }) {
 }
 
 /**
- * Optional admin text overlay. Renders NOTHING unless the admin filled at least one text field —
- * blank = the artwork alone, which is the common case (the owner bakes copy into the image). When
- * present it is drawn over the LIVING image with a text-SHADOW only: no dark scrim, no box, so the
- * "full opacity, no darkness" contract holds. The whole slide is one link, so the CTA is a styled
- * <span>, not a nested <a>.
+ * Caption block: badge → two-tone headline → subtitle → CTA. Anchored to the bottom on phones and
+ * vertically centred from `md` up, which is where the approved design puts it.
+ *
+ * Renders NOTHING when every field is blank — an image-only banner stays exactly as uploaded.
+ * The whole slide is one link, so the CTA is a styled <span>, never a nested <a>.
  */
-function HeroCaption({ slide }: { slide: HeroSlide | null }) {
+function HeroCaption({ slide, hasControls }: { slide: HeroSlide | null; hasControls: boolean }) {
+  const badge = slide?.badge?.trim() || '';
   const title = slide?.title?.trim() || '';
   const subtitle = slide?.subtitle?.trim() || '';
   const ctaLabel = slide?.ctaLabel?.trim() || '';
 
-  if (!title && !subtitle && !ctaLabel) return null;
+  if (!badge && !title && !subtitle && !ctaLabel) return null;
+
+  const { lead, accent } = splitTitle(title);
 
   return (
-    <div className="absolute inset-0 z-10 flex items-end">
-      {/* Extra bottom padding on mobile (pb-20) lifts the CTA clear of the slider indicator, which
-          is pinned to the bottom-centre — otherwise the two stack on a phone. Desktop has room, so
-          it keeps its tighter bottom padding. */}
-      <div className="w-full px-5 pb-20 sm:px-10 sm:pb-14 lg:px-16 lg:pb-20">
-        <div className="max-w-2xl">
+    <div className="absolute inset-0 z-20 flex items-end md:items-center">
+      {/* On phones the copy sits at the bottom, so it must clear the controls rail — but ONLY when
+          there is a rail. A single-slide banner renders no controls, and reserving the space anyway
+          left a visible band of dead pixels under the CTA. */}
+      <div
+        className={`w-full px-5 sm:px-8 md:pb-0 lg:px-12 xl:px-14 ${hasControls ? 'pb-24' : 'pb-8 sm:pb-10'}`}
+      >
+        <div className="max-w-[34rem] lg:max-w-[38rem]">
+          {badge && (
+            <span className="mb-3 inline-flex items-center rounded-md bg-brand-500 px-2.5 py-1 font-display text-[10px] font-bold uppercase tracking-[0.16em] text-white sm:mb-4 sm:text-[11px]">
+              {badge}
+            </span>
+          )}
+
           {title && (
-            <p className="font-display font-compressed text-3xl font-extrabold uppercase leading-[0.95] tracking-tight text-white [text-shadow:0_2px_20px_rgba(0,0,0,0.55)] sm:text-5xl lg:text-6xl">
-              {title}
+            /* <p>, not a heading: the page's single <h1> is the SEO block in HomePageClient, and a
+               rotating banner must not compete with it for the document outline. */
+            <p className="font-display font-compressed text-[2.1rem] font-extrabold uppercase leading-[0.92] tracking-tight text-white [text-shadow:0_2px_18px_rgba(0,0,0,0.5)] sm:text-5xl lg:text-[3.5rem] xl:text-6xl">
+              {lead}
+              {accent && (
+                <>
+                  <br />
+                  <span className="text-brand-500">{accent}</span>
+                </>
+              )}
             </p>
           )}
+
           {subtitle && (
-            <p className="mt-3 max-w-lg text-sm font-medium leading-snug text-white [text-shadow:0_1px_14px_rgba(0,0,0,0.65)] sm:mt-4 sm:text-base lg:text-lg">
+            <p className="mt-3 max-w-md text-sm font-medium leading-snug text-white/90 [text-shadow:0_1px_12px_rgba(0,0,0,0.6)] sm:mt-4 sm:text-base">
               {subtitle}
             </p>
           )}
+
           {ctaLabel && (
-            <span className="mt-5 inline-flex min-h-[48px] items-center gap-2 rounded-full bg-[#FF5A00] px-6 font-display font-extended text-sm font-bold uppercase tracking-[0.08em] text-white shadow-[0_12px_30px_rgba(255,90,0,0.45)] transition-colors group-hover:bg-[#E85200] sm:mt-6 sm:text-base">
+            <span className="mt-5 inline-flex min-h-[48px] items-center gap-2.5 rounded-full bg-brand-500 px-6 font-display text-sm font-bold uppercase tracking-[0.08em] text-white shadow-[0_10px_28px_-6px_rgba(248,72,12,0.6)] transition-colors duration-200 group-hover:bg-brand-600 sm:mt-6 sm:px-7 sm:text-[15px]">
               {ctaLabel}
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/25 transition-transform group-hover:translate-x-0.5">
-                <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-              </span>
+              <ArrowRight
+                className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
+                aria-hidden="true"
+              />
             </span>
           )}
         </div>
@@ -132,30 +166,36 @@ function HeroCaption({ slide }: { slide: HeroSlide | null }) {
   );
 }
 
-/** One banner: fills its parent, shows the image at full opacity, plus the optional caption. */
+/** One banner: image, legibility scrim (captioned slides only), caption. */
 function HeroSlideFrame({
   slide,
   eager,
   fallbackAlt,
   position,
+  hasControls = false,
 }: {
   slide: HeroSlide | null;
   eager: boolean;
   fallbackAlt: string;
   /** 1-based index + total, passed only in the multi-slide slider so links get distinct names. */
   position?: { index: number; total: number };
+  /** True when the controls rail is rendered, so the caption reserves room for it. */
+  hasControls?: boolean;
 }) {
   const set = buildHeroImageSet(slide, eager, fallbackAlt);
   // A commerce hero should always be tappable; default to the shop when the admin left the link
   // blank. The banner is one big link, so the caption's button is a <span> (no nested anchors).
   const href = normalizeHref(slide?.href) || '/shop';
 
-  const hasCaption = Boolean(slide?.title?.trim() || slide?.subtitle?.trim() || slide?.ctaLabel?.trim());
+  const hasCaption = Boolean(
+    slide?.badge?.trim() || slide?.title?.trim() || slide?.subtitle?.trim() || slide?.ctaLabel?.trim()
+  );
+
   // aria-label is set ONLY for an image-only banner. When a caption is present its visible text —
   // crucially the CTA — must FORM the link's accessible name (WCAG 2.5.3, Label-in-Name). For
   // image-only slides in a multi-slide track, append the position so each link is distinguishable
-  // (WCAG 2.4.4).
-  const baseLabel = slide?.title?.trim() || slide?.alt?.trim() || fallbackAlt;
+  // (WCAG 2.4.4). The title may contain the two-tone newline, so collapse whitespace first.
+  const baseLabel = slide?.title?.trim().replace(/\s+/g, ' ') || slide?.alt?.trim() || fallbackAlt;
   const ariaLabel = hasCaption
     ? undefined
     : position && position.total > 1
@@ -173,33 +213,39 @@ function HeroSlideFrame({
       className="group absolute inset-0 block focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-white"
     >
       <HeroPicture set={set} eager={eager} />
-      <HeroCaption slide={slide} />
+
+      {/* Legibility scrim, captioned slides only. Vertical on phones (copy sits at the bottom),
+          left-weighted from md up (copy sits left of centre) — so it darkens the text area and
+          leaves the product shot on the right of the artwork untouched. */}
+      {hasCaption && (
+        <span
+          aria-hidden="true"
+          className="absolute inset-0 z-10 bg-gradient-to-t from-black/80 via-black/35 to-transparent md:bg-gradient-to-r md:from-black/80 md:via-black/40 md:to-transparent"
+        />
+      )}
+
+      <HeroCaption slide={slide} hasControls={hasControls} />
     </LinkWithLoading>
   );
 }
 
-// FULL-BLEED, FULL-HEIGHT frame. `.pt-hero` (globals.css) sets a DEFINITE height — 100svh minus the
-// header stack — so the box is reserved before the image loads (zero CLS) and the absolutely-filled
-// slide + any percentage-height slider track resolve against it. The neutral placeholder shows only
-// for the instant before the (preloaded) LCP image paints — deliberately light, never dark.
-const FRAME_BASE = 'pt-hero relative w-full overflow-hidden bg-gray-100 dark:bg-gray-900';
+/* The slider viewport. `.pt-hero` (globals.css) sets a DEFINITE height, so the box is reserved
+   before the image loads (zero CLS) and the absolutely-filled slide resolves against it. The
+   neutral placeholder shows only for the instant before the preloaded LCP image paints. */
+const FRAME_BASE = 'pt-hero relative w-full overflow-hidden bg-gray-100 dark:bg-gray-900 sm:rounded-2xl';
 
-export function Hero({ slides, fallbackAlt }: HeroProps) {
-  if (slides.length <= 1) {
-    return (
-      <section aria-label="Bannière principale">
-        <div className={FRAME_BASE}>
-          <HeroSlideFrame slide={slides[0] ?? null} eager fallbackAlt={fallbackAlt} />
-        </div>
-      </section>
-    );
-  }
+export function Hero({ slides, fallbackAlt, bestSellers = [] }: HeroProps) {
+  const showAside = bestSellers.length > 0;
 
-  return (
-    <section aria-label="Bannière principale" aria-roledescription="carrousel">
-      {/* The frame IS the slider viewport. Slides live in a horizontal scroll-snap track that fills
-          it, so swipe/dots work at any size with no carousel JS on the LCP path. */}
+  const slider =
+    slides.length <= 1 ? (
       <div className={FRAME_BASE}>
+        <HeroSlideFrame slide={slides[0] ?? null} eager fallbackAlt={fallbackAlt} />
+      </div>
+    ) : (
+      <div className={FRAME_BASE}>
+        {/* Slides live in a horizontal scroll-snap track, so swipe works natively and the LCP path
+            carries no carousel JavaScript. The controls island only scrolls this element. */}
         <div
           id="hero-track"
           tabIndex={0}
@@ -219,15 +265,33 @@ export function Hero({ slides, fallbackAlt }: HeroProps) {
                 eager={index === 0}
                 fallbackAlt={fallbackAlt}
                 position={{ index: index + 1, total: slides.length }}
+                hasControls
               />
             </div>
           ))}
         </div>
 
-        {/* State indicator (client island): active-slide ticks with click/keyboard nav + autoplay.
-            It observes #hero-track by scroll position, so a manual swipe keeps it in sync. Centered
-            at the bottom so it clears the bottom-left caption CTA and the bottom-right FAB stack. */}
-        <HeroSliderIndicator count={slides.length} autoplayMs={6500} />
+        <HeroSliderControls count={slides.length} autoplayMs={6500} />
+      </div>
+    );
+
+  return (
+    <section
+      aria-label="Bannière principale"
+      {...(slides.length > 1 ? { 'aria-roledescription': 'carrousel' } : {})}
+      /* Full-bleed on phones (no padding, no rounding — the artwork gets the whole screen), then a
+         contained band from `sm` up, matching the rest of the page's gutters. */
+      className="w-full sm:px-4 sm:pt-4 lg:px-6 lg:pt-6"
+    >
+      <div
+        className={
+          showAside
+            ? 'mx-auto grid w-full max-w-[1560px] grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_340px]'
+            : 'mx-auto w-full max-w-[1560px]'
+        }
+      >
+        {slider}
+        {showAside && <HeroBestSellers products={bestSellers} />}
       </div>
     </section>
   );
