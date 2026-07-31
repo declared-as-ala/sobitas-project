@@ -373,6 +373,36 @@ interface ShopPageClientProps {
   categorySeoLandingBottom?: React.ReactNode;
 }
 
+type UrlFilters = { category: string | null; brand: string | null; search: string | null };
+const EMPTY_URL_FILTERS: UrlFilters = { category: null, brand: null, search: null };
+
+/**
+ * Reads the filter query params and reports them upward. Renders nothing.
+ *
+ * This exists so that `useSearchParams()` is called in a LEAF wrapped in its own Suspense boundary
+ * rather than at the top of ShopContent. Next renders the nearest Suspense fallback instead of the
+ * real subtree when a component below it reads search params during static generation — with the
+ * hook at the top of ShopContent, that meant the entire boutique (h1, product grid, every product
+ * link) was replaced by <ProductsSkeleton /> in the prerendered HTML, and the catalogue only
+ * appeared after hydration. Measured on the live page: 0 product links and no h1 in the server HTML.
+ *
+ * With the hook down here, the nearest boundary is the one around this component, which renders
+ * null either way — so ShopContent prerenders in full and the URL sync still works, with the same
+ * reactivity to client-side navigation the top-level hook had.
+ */
+function UrlFilterSync({ onChange }: { onChange: (f: UrlFilters) => void }) {
+  const searchParams = useSearchParams();
+  const category = searchParams.get('category');
+  const brand = searchParams.get('brand');
+  const search = searchParams.get('search');
+
+  useEffect(() => {
+    onChange({ category, brand, search });
+  }, [category, brand, search, onChange]);
+
+  return null;
+}
+
 function ShopContent({
   productsData,
   categories,
@@ -385,7 +415,12 @@ function ShopContent({
   categorySeoLanding,
   categorySeoLandingBottom,
 }: ShopPageClientProps) {
-  const searchParams = useSearchParams();
+  // NOTE: useSearchParams() is deliberately NOT called here — it lives in <UrlFilterSync> below.
+  // Calling it at this level is a dynamic API that opts every route rendering this component out of
+  // static rendering; on /shop that meant the boutique answered no-store to every visitor. Isolating
+  // it in a Suspense-wrapped leaf keeps full reactivity to the URL while letting the product grid
+  // render on the server. See the component definition for the full story.
+  const [urlFilters, setUrlFilters] = useState<UrlFilters>(EMPTY_URL_FILTERS);
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -461,9 +496,7 @@ function ShopContent({
 
   // Initialize from URL params or props
   useEffect(() => {
-    const category = searchParams.get('category');
-    const brand = searchParams.get('brand');
-    const search = searchParams.get('search');
+    const { category, brand, search } = urlFilters;
 
     const categoryToUse = initialCategory || category;
 
@@ -494,7 +527,7 @@ function ShopContent({
     } else {
       setSearchQuery('');
     }
-  }, [searchParams, initialCategory, initialBrand, safeProductsData.products]);
+  }, [urlFilters, initialCategory, initialBrand, safeProductsData.products]);
 
   // Get unique subcategories from ALL products (not just filtered) for proper mapping
   const subCategories = useMemo(() => {
@@ -1087,6 +1120,10 @@ function ShopContent({
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
+      {/* Own boundary, so reading search params defers only this null-rendering leaf (see above). */}
+      <Suspense fallback={null}>
+        <UrlFilterSync onChange={setUrlFilters} />
+      </Suspense>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16 animate-fade-in">
         {/* Breadcrumbs */}
