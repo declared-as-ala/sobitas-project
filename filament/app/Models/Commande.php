@@ -42,6 +42,28 @@ class Commande extends Model
 
     protected static function booted(): void
     {
+        // Every order gets a token, no matter which door it came in through.
+        //
+        // Only the storefront checkout generated one (CommandeController), so orders created in the
+        // admin panel, by the POS, or by any import had none. Live count: 92 of 1,057. The token is
+        // the ONLY way to build the login-free /avis/{token} review link, so ~91% of customers
+        // could never have been asked for a review even once orders start being marked delivered.
+        //
+        // Set on creating() rather than in each controller so there is one place it can be missed:
+        // none.
+        static::creating(function (Commande $commande): void {
+            if (empty($commande->order_token)) {
+                try {
+                    $commande->order_token = bin2hex(random_bytes(32));
+                } catch (\Throwable $e) {
+                    // Never block an order over a review link.
+                    \Illuminate\Support\Facades\Log::warning('order_token generation failed', [
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+        });
+
         // Give stock back when an order is DELETED (unless a prior cancel already restored it —
         // guarded by stock_restored_at so cancel-then-delete can't restore twice). Hooked on the
         // Commande (parent), NOT CommandeDetail, because EditCommande already restores per line on
@@ -78,12 +100,31 @@ class Commande extends Model
 
     // ── Status Labels (single source of truth) ────────────
 
+    /**
+     * THE 'livree' STATUS WAS MISSING, AND THAT IS WHY THIS SHOP HAS NO REVIEWS.
+     *
+     * The vocabulary ended at 'expidee'. There was no way to mark an order delivered — so nobody
+     * ever did. Live database: 1,057 of 1,082 orders sit at 'nouvelle_commande' and not a single
+     * one has ever been 'livree'.
+     *
+     * Two features wait on that status and have therefore never once run:
+     *   - the post-delivery review request (CommandeObserver -> SendDueReviewRequests), which is
+     *     the only source of purchase-attested reviews, which are the only thing that can put a
+     *     star rating on a product page;
+     *   - loyalty points, which PointsService awards on the transition to delivered.
+     *
+     * PointsService::DELIVERED_STATUSES has always been ['livree','livrée','livre'] — it was
+     * waiting for a value the interface could not produce. Adding it here makes the option real
+     * everywhere, because this list is the single source of truth for labels, colours and the
+     * admin dropdown.
+     */
     private const STATUS_LABELS = [
         'nouvelle_commande'       => 'Nouvelle',
         'en_cours_de_preparation' => 'Préparation',
         'prete'                   => 'Prête',
         'en_cours_de_livraison'   => 'Livraison',
         'expidee'                 => 'Expédiée',
+        'livree'                  => 'Livrée',
         'annuler'                 => 'Annulée',
     ];
 
@@ -92,7 +133,8 @@ class Commande extends Model
         'en_cours_de_preparation' => 'info',
         'prete'                   => 'primary',
         'en_cours_de_livraison'   => 'gray',
-        'expidee'                 => 'success',
+        'expidee'                 => 'info',
+        'livree'                  => 'success',
         'annuler'                 => 'danger',
     ];
 
@@ -114,6 +156,7 @@ class Commande extends Model
             'prete'                   => 'Prête',
             'en_cours_de_livraison'   => 'En cours de livraison',
             'expidee'                 => 'Expédiée',
+            'livree'                  => 'Livrée',
             'annuler'                 => 'Annulée',
         ];
     }

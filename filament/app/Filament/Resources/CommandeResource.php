@@ -260,6 +260,64 @@ class CommandeResource extends Resource
                     }),
             ])
             ->bulkActions([
+                // Mark a batch of orders delivered.
+                //
+                // Until now there was no "Livrée" status at all, so no order had ever reached it —
+                // 1,057 of 1,082 still sit at "Nouvelle". Two things wait on that transition and
+                // have consequently never run: the post-delivery review request (the only source
+                // of purchase-attested reviews, and therefore the only route to a star rating) and
+                // loyalty points.
+                //
+                // Marking one order at a time through the edit form would make catching up on a
+                // year of history impractical, which is how it would quietly not happen again.
+                //
+                // Saved with save(), NOT a mass update(): CommandeObserver has to observe the
+                // status change to stamp delivered_at, award points and arm the review request. A
+                // bulk update() bypasses model events and would silently do none of it.
+                Actions\BulkAction::make('marquerLivree')
+                    ->label('Marquer comme livrée')
+                    ->icon('heroicon-o-check-badge')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->modalHeading('Marquer ces commandes comme livrées')
+                    ->modalDescription(
+                        'Les clients concernés recevront une demande d\'avis 3 jours après, '
+                        .'et leurs points de fidélité seront crédités. Action irréversible.'
+                    )
+                    ->modalSubmitActionLabel('Confirmer')
+                    ->action(function (\Illuminate\Support\Collection $records) {
+                        $done = 0;
+                        $skipped = 0;
+
+                        foreach ($records as $record) {
+                            // Never resurrect a cancelled order, and never re-fire the observer for
+                            // one already delivered.
+                            if (in_array($record->etat, ['annuler', 'livree'], true)) {
+                                $skipped++;
+
+                                continue;
+                            }
+                            try {
+                                $record->etat = 'livree';
+                                $record->save();
+                                $done++;
+                            } catch (\Throwable $e) {
+                                $skipped++;
+                                \Illuminate\Support\Facades\Log::error('Bulk mark-delivered failed', [
+                                    'commande_id' => $record->id,
+                                    'error'       => $e->getMessage(),
+                                ]);
+                            }
+                        }
+
+                        \Filament\Notifications\Notification::make()
+                            ->title("{$done} commande(s) marquée(s) comme livrée(s)")
+                            ->body($skipped > 0 ? "{$skipped} ignorée(s) (annulée ou déjà livrée)." : null)
+                            ->success()
+                            ->send();
+                    })
+                    ->deselectRecordsAfterCompletion(),
+
                 Actions\DeleteBulkAction::make(),
             ]);
     }
