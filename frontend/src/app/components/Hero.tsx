@@ -279,19 +279,29 @@ export function Hero({ slides, fallbackAlt, bestSellers = [] }: HeroProps) {
     <section
       aria-label="Bannière principale"
       {...(slides.length > 1 ? { 'aria-roledescription': 'carrousel' } : {})}
-      /* Full-bleed on phones (no padding, no rounding — the artwork gets the whole screen), then a
-         contained band from `sm` up, matching the rest of the page's gutters. */
-      className="w-full sm:px-4 sm:pt-4 lg:px-6 lg:pt-6"
+      className="w-full sm:pt-4 lg:pt-6"
     >
-      <div
-        className={
-          showAside
-            ? 'mx-auto grid w-full max-w-[1560px] grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_340px]'
-            : 'mx-auto w-full max-w-[1560px]'
-        }
-      >
-        {slider}
-        {showAside && <HeroBestSellers products={bestSellers} />}
+      {/*
+        The SITE container, byte-for-byte: `mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8`. The header,
+        the footer and all twelve homepage sections use exactly this, and the padding must live on
+        the SAME element as max-w — putting it on the parent instead makes the content box 1400 wide
+        rather than 1400-minus-padding, which is precisely how the hero ended up hanging 32px wider
+        per side than the category rail below it.
+
+        The one deliberate deviation: `px-0` below `sm`, so the artwork stays full-bleed on phones.
+        Everything else on the page keeps px-4 there. Change this only together with the other twelve.
+      */}
+      <div className="mx-auto w-full max-w-[1400px] px-0 sm:px-6 lg:px-8">
+        <div
+          className={
+            showAside
+              ? 'grid w-full grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_340px]'
+              : 'w-full'
+          }
+        >
+          {slider}
+          {showAside && <HeroBestSellers products={bestSellers} />}
+        </div>
       </div>
     </section>
   );
