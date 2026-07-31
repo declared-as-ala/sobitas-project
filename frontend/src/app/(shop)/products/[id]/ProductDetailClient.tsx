@@ -18,6 +18,7 @@ import type { QuickOrderProduct } from '@/contexts/QuickOrderContext';
 import type { Product, Review } from '@/types';
 import { getStorageUrl, addReview, getProductDetails } from '@/services/api';
 import { hasValidPromo } from '@/util/productPrice';
+import { sanitizeProductHtml } from '@/util/sanitizeProductHtml';
 import { generateProductFallbackDescription } from '@/util/productDescriptionFallback';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -1119,7 +1120,11 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     </h2>
                     <div
                       className={`text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-neutral prose-base max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-p:text-gray-600 prose-p:dark:text-gray-400 prose-p:leading-relaxed prose-strong:text-gray-900 prose-strong:dark:text-white prose-img:rounded-lg prose-img:shadow-md overflow-hidden transition-[max-height] duration-300 ${descExpanded ? 'max-h-[5000px]' : 'max-h-60'}`}
-                      dangerouslySetInnerHTML={{ __html: product.description_fr || product.description_cover || generateProductFallbackDescription(product) }}
+                      // Sanitised, not raw. These CMS fields carry their own <h1> tags, which rendered as extra
+                      // top-level headings on the page whose only h1 should be the product name —
+                      // up to thirteen on one product. sanitizeProductHtml demotes them to <h2>.
+                      // The crawler view already ran this; the page a customer sees did not.
+                      dangerouslySetInnerHTML={{ __html: sanitizeProductHtml(product.description_fr || product.description_cover || generateProductFallbackDescription(product)) }}
                     />
                     <button
                       type="button"
@@ -1198,7 +1203,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                             <div className="w-full min-w-0 overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
                               <div
                                 className="nutrition-content text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-neutral prose-sm sm:prose-base max-w-none prose-p:leading-relaxed prose-p:my-1 sm:prose-p:my-2 prose-img:rounded-lg prose-img:shadow-md prose-img:max-w-full prose-img:h-auto prose-table:text-left prose-th:py-2 prose-th:px-2 sm:prose-th:px-3 prose-td:py-2 prose-td:px-2 sm:prose-td:px-3 prose-table:w-full min-w-[280px]"
-                                dangerouslySetInnerHTML={{ __html: product.nutrition_values || '' }}
+                                dangerouslySetInnerHTML={{ __html: sanitizeProductHtml(product.nutrition_values || '') }}
                               />
                             </div>
                           ) : !hasNutritionImages ? (
@@ -1298,7 +1303,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     ) : hasLegacyQuestionsHtml ? (
                       <div
                         className="text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-neutral prose-base max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-headings:mb-2 prose-headings:mt-4 prose-p:text-gray-600 prose-p:dark:text-gray-400 prose-p:leading-relaxed prose-p:my-2 prose-strong:text-gray-900 prose-strong:dark:text-white"
-                        dangerouslySetInnerHTML={{ __html: product.questions || '' }}
+                        dangerouslySetInnerHTML={{ __html: sanitizeProductHtml(product.questions || '') }}
                       />
                     ) : null}
                     </div>

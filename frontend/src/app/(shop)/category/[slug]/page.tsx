@@ -193,9 +193,22 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       metaTitle = lastSpace > 40 ? cut.slice(0, lastSpace) : cut;
     }
     const tunisiaKeywords = getTunisiaKeywordsForCategory(canonicalSlug);
+    // A CMS description only wins if it is long enough to BE a description.
+    //
+    // This checked the maximum (<= 500) and nothing else, so "Whey protein tunisie" — 20
+    // characters, the entire meta description on /whey-proteine — beat the generated fallback and
+    // shipped as the page's snippet. Google gives roughly 155 characters of SERP real estate;
+    // spending 20 of them on a repeat of the title throws away the one piece of copy that decides
+    // whether a searcher clicks. Several sibling categories had the same stub.
+    //
+    // 70 is deliberately forgiving: it rejects title-echo stubs while leaving any genuinely
+    // written short description intact. Below it, fall through to the category intro, then to the
+    // Tunisia-specific generator — both of which say something a buyer can act on.
+    const CMS_DESCRIPTION_MIN_LEN = 70;
+    const cmsDescription = merged.metaDescription?.trim() ?? '';
     const description =
-      merged.metaDescription && merged.metaDescription.length <= 500
-        ? merged.metaDescription
+      cmsDescription.length >= CMS_DESCRIPTION_MIN_LEN && cmsDescription.length <= 500
+        ? cmsDescription
         : (merged.intro?.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160) ||
             generateTunisiaMetaDescription(apiTitle || canonicalSlug, tunisiaKeywords));
     // merged.canonicalUrl is sous_categories.canonical_url / categs.canonical_url — free text.
