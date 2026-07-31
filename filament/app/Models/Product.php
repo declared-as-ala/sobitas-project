@@ -38,6 +38,15 @@ class Product extends Model
         'twitter_description',
         'twitter_image',
         'twitter_card',
+        // Unapproved AI drafts must not leave the admin. Without this they serialize into
+        // GET /api/product_details/{slug}, publishing copy no one has reviewed and padding every
+        // product payload with a second full description. $hidden only affects toArray()/toJson(),
+        // so Filament — which reads attributes directly — still sees them for review.
+        'ai_description_draft',
+        'ai_faq_draft',
+        'ai_generated_at',
+        'ai_review_status',
+        'ai_model',
     ];
 
     protected $casts = [
