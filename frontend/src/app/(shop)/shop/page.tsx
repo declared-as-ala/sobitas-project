@@ -1,4 +1,3 @@
-import { Suspense } from 'react';
 import { Metadata } from 'next';
 import { getAllProducts, getCategories, getAllBrands } from '@/services/api';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
@@ -118,16 +117,7 @@ export default async function ShopPage() {
       {itemListSchema && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }} />
       )}
-      {/*
-        Required because ShopPageClient calls useSearchParams() at its top level: a static route
-        needs a Suspense boundary ABOVE that call, and the one inside ShopPageClient sits below the
-        hook. This alone did NOT make the route cacheable — reading searchParams in
-        generateMetadata was what forced dynamic rendering (see the note there). Both were needed;
-        verified by the route going from `ƒ /shop` to `○ /shop  5m` in the build output.
-      */}
-      <Suspense fallback={null}>
-        <ShopPageClient productsData={productsData} categories={categories} brands={brands} />
-      </Suspense>
+      <ShopPageClient productsData={productsData} categories={categories} brands={brands} />
     </>
   );
 }
