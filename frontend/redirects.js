@@ -30,6 +30,25 @@ function buildRedirects() {
     p('/programme-dentrainement-musculation/', '/blog'),
 
     // ── Static info pages ─────────────────────────────────────────────────
+    //
+    // /page/{slug} -> /{slug}. Same defect as the /category/* catch-all below: EVERY /page/ URL
+    // was being sent to "Qui sommes-nous".
+    //
+    // Verified live before this change — /page/creatine-monohydrate-tunisie (698 impressions,
+    // position 9.58 in Search Console), /page/proteine-tunisie (205), /page/politique-de-
+    // remboursement and /page/politique-des-cookies ALL 308'd to the About Us page. Someone
+    // searching for a refund policy was shown the company bio; someone searching creatine
+    // monohydrate, from position 9, likewise.
+    //
+    // The identity mapping is right because the CMS page route IS /{slug} — app/(shop)/[slug]
+    // resolves category, then brand, then CMS page. Confirmed: /creatine-monohydrate-tunisie and
+    // /proteine-tunisie both return 200.
+    //
+    // A dead slug now 404s instead of landing on About Us. That is the correct outcome: Google
+    // reads a redirect to an unrelated page as a soft 404 anyway, and a real 404 at least stops
+    // the URL diluting a page it has nothing to do with.
+    { source: '/page/:slug', destination: '/:slug', permanent: true },
+    // Anything deeper than one segment has no /{slug} equivalent — keep the old behaviour.
     p('/page/:path*', '/qui-sommes-nous'),
     p('/connexion', '/contact'),
     p('/connexion/', '/contact'),

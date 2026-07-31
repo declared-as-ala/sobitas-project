@@ -7,6 +7,7 @@ import { getLatestArticles } from '@/services/api';
 import { getCachedArticleDetails as getArticleDetails } from '@/services/getCachedProductDetails';
 import { getStorageUrl } from '@/services/api';
 import { resolveCanonicalUrl } from '@/util/canonical';
+import { htmlToText } from '@/util/sanitizeProductHtml';
 import { resolveArticleLanguage } from '@/util/articleLanguage';
 import { buildArticleSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
 import { blogHref } from '@/util/blogSlug';
@@ -21,14 +22,20 @@ interface ArticlePageProps {
 // cache the render and revalidate hourly (fetch tags:['blog'] still allow on-demand purge).
 export const revalidate = 3600;
 
-// Helper to strip HTML and get plain text
+/**
+ * Plain text for a meta description.
+ *
+ * Delegates to htmlToText because it DECODES entities. The hand-rolled version here stripped tags
+ * and left "&eacute;" alone, so it survived into the description and was escaped a second time on
+ * its way into the attribute — Google was served, and showed searchers, the literal text
+ * "Meilleure prot&eacute;ine pour maigrir". Measured across the blog sitemap: 21 of 40 posts
+ * sampled were affected, and the blog carries this site's largest impression counts.
+ *
+ * Same defect, same cause and same fix as the category descriptions in #192; this path was simply
+ * missed. There is now one decoder, so a third copy of this bug has nowhere to live.
+ */
 function stripHtml(html: string): string {
-  if (!html) return '';
-  return html
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .substring(0, 160);
+  return htmlToText(html, 160);
 }
 
 export async function generateMetadata({ params }: ArticlePageProps): Promise<Metadata> {
@@ -41,12 +48,16 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       article.seo?.image ||
       (article.cover ? getStorageUrl(article.cover) : '');
     const description = stripHtml(article.description_fr || article.description || '');
-    const metaDescription =
+    // htmlToText wraps the RESOLVED value, not just the fallback: seo.description and
+    // meta_description_fr are CMS fields and carry the same raw entities.
+    const metaDescription = htmlToText(
       article.seo?.description ||
-      article.seo_description ||
-      article.meta_description_fr ||
-      description ||
-      `Découvrez ${article.designation_fr} sur le blog Protéine Tunisie — conseils nutrition et sport`;
+        article.seo_description ||
+        article.meta_description_fr ||
+        description ||
+        `Découvrez ${article.designation_fr} sur le blog Protéine Tunisie — conseils nutrition et sport`,
+      500
+    );
 
     // forceProteinDomain only normalised the HOST — an off-domain host, a dead path or an
     // unparseable value passed through untouched. The guard validates the whole URL.
