@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { htmlToText } from '@/util/sanitizeProductHtml';
 import { notFound, permanentRedirect, unstable_rethrow } from 'next/navigation';
 import { getErrorStatus } from '@/util/errorStatus';
 import { getCategories } from '@/services/api';
@@ -209,7 +210,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const description =
       cmsDescription.length >= CMS_DESCRIPTION_MIN_LEN && cmsDescription.length <= 500
         ? cmsDescription
-        : (merged.intro?.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160) ||
+        : // htmlToText, not a hand-rolled tag strip: the intro is CMS HTML, so "&amp;" has to be
+          // DECODED here. Stripping tags alone left the entity in the text, which then got escaped
+          // again on its way into the attribute and reached Google as a literal "&amp;amp;".
+          (htmlToText(merged.intro, 160) ||
             generateTunisiaMetaDescription(apiTitle || canonicalSlug, tunisiaKeywords));
     // merged.canonicalUrl is sous_categories.canonical_url / categs.canonical_url — free text.
     // forceProteinDomain only normalised the HOST, so it accepted '/musculation' verbatim even
