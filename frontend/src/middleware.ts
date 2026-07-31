@@ -344,6 +344,20 @@ export async function middleware(request: NextRequest) {
   // /x-crawler/category/sitemap.xml → notFound() → Googlebot got a 404 for the sitemap AND robots.txt
   // (sitemap unreadable in Search Console; robots.txt 404 = "crawl everything"). The dot guard fixes it.
   if (wantsCrawlerView && !pathname.includes('.')) {
+    // /shop is named explicitly, BEFORE the reserved-slug checks below deliberately exclude it.
+    //
+    // The boutique is the natural landing page for "proteine tunisie", and it was the one listing
+    // Googlebot could not read: a bot fetch returned ~1MB of HTML with exactly TWELVE product
+    // links, because the catalogue lives behind ShopPageClient's useSearchParams Suspense bailout
+    // and never becomes crawlable anchors. isReservedRouteSlug('shop') is true, which is correct
+    // for /cart and /blog — it just also caught the page that needed the rewrite most.
+    //
+    // Naming it here rather than loosening isReservedRouteSlug keeps that guard intact: it is what
+    // stops /sitemap.xml and /robots.txt being rewritten into a 404, which has happened before.
+    if (pathname === '/shop' || pathname === '/shop/') {
+      return NextResponse.rewrite(new URL('/x-crawler/shop', request.url));
+    }
+
     const productPath = pathname.match(/^\/([^/]+)\/([^/]+)\/?$/);
     if (productPath && !isReservedRouteSlug(productPath[1])) {
       return NextResponse.rewrite(
