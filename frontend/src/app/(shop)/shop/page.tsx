@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { Metadata } from 'next';
 import { getAllProducts, getCategories, getAllBrands } from '@/services/api';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
@@ -133,7 +134,20 @@ export default async function ShopPage() {
       {itemListSchema && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }} />
       )}
-      <ShopPageClient productsData={productsData} categories={categories} brands={brands} />
+      {/*
+        ShopPageClient calls useSearchParams() at its top level. Without a Suspense boundary ABOVE
+        that call, Next bails the whole route out of static rendering, so `revalidate = 300` above
+        never applied: /shop was answering `Cache-Control: private, no-cache, no-store` to every
+        visitor and Cloudflare reported cf-cache-status: DYNAMIC, i.e. the boutique was re-rendered
+        from scratch on every single request and no CDN rule could ever help it. The Suspense inside
+        ShopPageClient is below the hook, so it could not lift the bailout.
+
+        This matters more here than anywhere else: /shop is the mobile tab bar's Boutique target and
+        it ships ~1 MB of HTML (see getShopData).
+      */}
+      <Suspense fallback={null}>
+        <ShopPageClient productsData={productsData} categories={categories} brands={brands} />
+      </Suspense>
     </>
   );
 }
