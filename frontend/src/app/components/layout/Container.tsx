@@ -8,14 +8,14 @@ import { cn } from '@/app/components/ui/utils';
  * nearly every page and section in the app. Server component — no `'use client'`.
  *
  * On `wide`: the codebase currently runs TWO rails — DESIGN_SYSTEM §7 mandates `max-w-7xl`,
- * but the header and the homepage SEO strip use `max-w-[1400px]`. Shipping both means
+ * but the header and the homepage SEO strip use `max-w-site`. Shipping both means
  * adopting this primitive is a pure refactor with zero pixel movement. Unifying them is a
  * separate, deliberate decision — do not silently collapse `wide` into `default`.
  */
 const WIDTHS = {
   narrow: 'max-w-3xl',
   default: 'max-w-7xl',
-  wide: 'max-w-[1400px]',
+  wide: 'max-w-site',
   full: 'max-w-none',
 } as const;
 

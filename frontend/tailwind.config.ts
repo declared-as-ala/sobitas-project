@@ -177,6 +177,22 @@ const config: Config = {
         tabbar: "var(--tabbar-h)",
         "tabbar-raise": "var(--tabbar-raise)",
       },
+      maxWidth: {
+        /**
+         * THE page container. Every full-width band on the site — header, hero, category rail,
+         * every product section, footer — must use `max-w-site`, because if two of them disagree
+         * their edges visibly step in and out down the page. That is exactly the bug that shipped
+         * when the hero was built at a bespoke 1560 while everything else sat at 1400.
+         *
+         * 1600, raised from a hardcoded 1400: on a 1536px laptop viewport (a 1920 screen at 125%
+         * Windows scaling, which is what the owner uses) 1400 left a visible dead margin either
+         * side of the hero. At 1600 that class of display fills edge to edge, and a true 1920px
+         * viewport keeps a 160px gutter rather than 260px.
+         *
+         * Change it HERE and nowhere else.
+         */
+        site: "1600px",
+      },
       /** Named layers so stacking is decided once, not guessed per component.
        *
        *  sticky-cta < tabbar < header/overlay, in that order and for a reason:

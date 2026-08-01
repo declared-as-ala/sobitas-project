@@ -157,7 +157,7 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
       id="ventes-flash"
       className="border-t-2 border-red-600 bg-white py-12 dark:bg-gray-950 sm:py-16 lg:py-20"
     >
-      <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-site px-4 sm:px-6 lg:px-8">
         {/* Distinctive flash header: flame + compressed title on the left, live countdown on the
             right (drops below the title on phones). All copy on white ⇒ clean AA contrast. */}
         <div className="mb-8 flex flex-col gap-5 sm:mb-10 sm:flex-row sm:items-end sm:justify-between">

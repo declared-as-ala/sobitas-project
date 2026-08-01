@@ -29,7 +29,7 @@ import { buildCategoryAlt } from '@/util/productAlt';
  * to float under a detached tile with nothing tying the two together.
  *
  * The card wrapper aligns with the hero above it — the outer container is the site's
- * `max-w-[1400px] px-4 sm:px-6 lg:px-8`, and the card fills it edge to edge. Tiles are then inset
+ * `max-w-site px-4 sm:px-6 lg:px-8`, and the card fills it edge to edge. Tiles are then inset
  * by the card's own padding, which is what the design intends.
  *
  * Label sits UNDER the photo rather than over it. Overlaid text needs a scrim, the scrim darkens
@@ -52,7 +52,7 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
       aria-labelledby="category-rail-heading"
       className="bg-white py-7 dark:bg-gray-950 sm:py-9"
     >
-      <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-site px-4 sm:px-6 lg:px-8">
         {/* No drop shadow on this wrapper (owner call, both breakpoints) — the hairline ring alone
             defines the card. The individual tiles keep their hover shadow; only the outer box is flat. */}
         <div className="rounded-2xl bg-white p-4 ring-1 ring-black/[0.06] sm:p-6 dark:bg-gray-900 dark:ring-white/10">

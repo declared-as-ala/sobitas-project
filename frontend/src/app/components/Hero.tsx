@@ -282,20 +282,21 @@ export function Hero({ slides, fallbackAlt, bestSellers = [] }: HeroProps) {
       className="w-full sm:pt-4 lg:pt-6"
     >
       {/*
-        The SITE container, byte-for-byte: `mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8`. The header,
-        the footer and all twelve homepage sections use exactly this, and the padding must live on
-        the SAME element as max-w — putting it on the parent instead makes the content box 1400 wide
-        rather than 1400-minus-padding, which is precisely how the hero ended up hanging 32px wider
-        per side than the category rail below it.
+        The SITE container, byte-for-byte: `mx-auto max-w-site px-4 sm:px-6 lg:px-8`. The header,
+        the footer and every homepage section use exactly this, and the padding must live on the
+        SAME element as max-w — putting it on the parent instead makes the content box the full
+        max-width rather than max-width-minus-padding, which is precisely how the hero ended up
+        hanging 32px wider per side than the category rail below it. `max-w-site` is defined once
+        in tailwind.config.ts; never hardcode a pixel width here.
 
         The one deliberate deviation: `px-0` below `sm`, so the artwork stays full-bleed on phones.
         Everything else on the page keeps px-4 there. Change this only together with the other twelve.
       */}
-      <div className="mx-auto w-full max-w-[1400px] px-0 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-site px-0 sm:px-6 lg:px-8">
         <div
           className={
             showAside
-              ? 'grid w-full grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_340px]'
+              ? 'grid w-full grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]'
               : 'w-full'
           }
         >

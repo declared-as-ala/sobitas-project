@@ -50,7 +50,7 @@ export const ProductSection = memo(function ProductSection({
         ' bg-white dark:bg-gray-950'
       }
     >
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-site mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeader
           kicker={kicker}
           title={title}

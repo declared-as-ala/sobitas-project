@@ -18,7 +18,7 @@ export function PromoBanner() {
         }}
       />
 
-      <div className="relative max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
+      <div className="relative max-w-site mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
         <div className="max-w-4xl space-y-5">
           <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3.5 py-1.5 font-display uppercase tracking-[0.2em] text-[11px] sm:text-xs font-semibold text-white">
             <Flame className="h-3.5 w-3.5" aria-hidden="true" />
