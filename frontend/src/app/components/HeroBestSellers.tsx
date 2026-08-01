@@ -14,6 +14,22 @@ import { LinkWithLoading } from '@/app/components/LinkWithLoading';
  * JavaScript. Each row is ONE link to the product page, so there is no cart state, no client
  * handler, and no hydration here.
  *
+ * DESIGN SYSTEM (owner request: "make them unified with the design system")
+ * This panel used to be the only near-black surface on a light page — `bg-gray-950` with white
+ * text and its own type scale, sitting directly beside a white category card that uses none of
+ * that. It now speaks the same language as every other card on the homepage:
+ *   surface   white, `rounded-2xl`, hairline `ring-black/[0.06]`   (identical to CategoryRail)
+ *   heading   `font-display` uppercase over a `brand-500` accent rule (identical to CategoryRail)
+ *   dividers  `gray-100` hairlines rather than `white/10`
+ *   price     `brand-600`, NOT `brand-500` — per tailwind.config.ts, 600 is the action shade that
+ *             clears AA on white (4.69:1), while 500 is the logo orange for graphical accents only
+ *             (~3.5:1) and must never carry text on a light surface.
+ *
+ * Product images went 56px → 112px (owner: "bigger and clear for the user") — 112 rather than 96
+ * because the rows are ~154px tall, so 96 left ~58px of dead vertical space per row. They sit on a faint
+ * `gray-50` tile with a hairline, because these are cut-out pack shots on white — on a pure white
+ * card they would dissolve into the surface with no edge at all.
+ *
  * The orange square carries a cart glyph to match the approved design; it is `aria-hidden` and the
  * row's accessible name is the product name, because the row navigates to the product page rather
  * than adding to the cart. A real add-to-cart here would mean shipping cart JS into the LCP path
@@ -47,7 +63,7 @@ function Stars({ value }: { value: number }) {
           className={
             i < rounded
               ? 'h-3 w-3 fill-brand-500 text-brand-500'
-              : 'h-3 w-3 fill-white/15 text-white/15'
+              : 'h-3 w-3 fill-gray-200 text-gray-200 dark:fill-gray-700 dark:text-gray-700'
           }
         />
       ))}
@@ -64,16 +80,19 @@ export function HeroBestSellers({ products }: { products: HeroBestSeller[] }) {
        `hidden xl:flex` keeps it out of the DOM below 1280px. */
     <aside
       aria-label="Meilleures ventes"
-      className="pt-hero hidden flex-col overflow-hidden rounded-2xl bg-gray-950 ring-1 ring-white/10 xl:flex dark:bg-black"
+      className="pt-hero hidden flex-col overflow-hidden rounded-2xl bg-white ring-1 ring-black/[0.06] xl:flex dark:bg-gray-900 dark:ring-white/10"
     >
-      <h2 className="flex items-center gap-2 border-b border-white/10 px-4 py-3 font-display text-[11px] font-bold uppercase tracking-[0.16em] text-white">
-        <span className="h-3 w-[3px] rounded-full bg-brand-500" aria-hidden="true" />
-        Meilleures ventes
-      </h2>
+      <div className="border-b border-gray-100 px-4 py-3 dark:border-white/10">
+        <h2 className="font-display text-[13px] font-extrabold uppercase leading-none tracking-tight text-gray-900 dark:text-white">
+          Meilleures ventes
+        </h2>
+        {/* Same accent rule as the category card, so the two headings read as one system. */}
+        <span aria-hidden="true" className="mt-2 block h-[3px] w-9 rounded-full bg-brand-500" />
+      </div>
 
       {/* Rows share the remaining height evenly, and the footer link anchors the bottom so the
           panel reads as a finished block rather than a list that ran out. */}
-      <ul className="flex min-h-0 flex-1 flex-col divide-y divide-white/10">
+      <ul className="flex min-h-0 flex-1 flex-col divide-y divide-gray-100 dark:divide-white/10">
         {products.slice(0, 3).map((p) => {
           const hasRating = (p.reviewCount ?? 0) > 0 && (p.ratingValue ?? 0) > 0;
 
@@ -82,45 +101,47 @@ export function HeroBestSellers({ products }: { products: HeroBestSeller[] }) {
               <LinkWithLoading
                 href={p.href}
                 loadingMessage="Chargement..."
-                className="group flex h-full items-center gap-3 px-3 transition-colors duration-200 hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500"
+                className="group flex h-full items-center gap-3 px-3 transition-colors duration-200 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500 dark:hover:bg-white/[0.04]"
               >
-                {/* Light tile behind the pack shot: these are cut-out product photos on transparent
-                    or white, which vanish against the near-black panel without it. */}
-                <span className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white">
+                {/* 112px, up from 56. The faint tile + hairline give cut-out pack shots an edge on
+                    a white card; without it they float with no boundary. */}
+                <span className="relative flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gray-50 ring-1 ring-black/[0.04] dark:bg-gray-950 dark:ring-white/10">
                   {p.image ? (
                     <Image
                       src={p.image}
                       alt=""
-                      width={56}
-                      height={56}
+                      width={112}
+                      height={112}
                       /* Below the LCP element in priority terms: the hero banner must win the
                          network. These are small and lazy so they never compete for it. */
                       loading="lazy"
-                      sizes="56px"
-                      className="h-full w-full object-contain p-1"
+                      sizes="112px"
+                      className="h-full w-full object-contain p-1.5 transition-transform duration-300 ease-out group-hover:scale-[1.05] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
                     />
                   ) : null}
                 </span>
 
-                <span className="flex min-w-0 flex-1 flex-col gap-1">
-                  <span className="line-clamp-2 text-[13px] font-medium leading-snug text-white/90 transition-colors group-hover:text-white">
+                {/* line-clamp-3, not 2: at 112px the image leaves ~150px for the name, and two
+                    lines cut "…CHALLENGER…" mid-brand. The 154px row has room for a third. */}
+                <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <span className="line-clamp-3 text-[13px] font-semibold leading-snug text-gray-900 transition-colors group-hover:text-brand-600 dark:text-gray-100 dark:group-hover:text-brand-500">
                     {p.name}
                   </span>
 
                   {hasRating && (
                     <span className="flex items-center gap-1.5">
                       <Stars value={p.ratingValue as number} />
-                      <span className="text-[11px] tabular-nums text-white/45">({p.reviewCount})</span>
+                      <span className="text-[11px] tabular-nums text-gray-400">({p.reviewCount})</span>
                     </span>
                   )}
 
                   {p.price != null && (
                     <span className="flex items-baseline gap-1.5">
-                      <span className="font-display text-sm font-bold text-brand-500">
+                      <span className="font-display text-[15px] font-bold text-brand-600 dark:text-brand-500">
                         {Math.round(p.price)} DT
                       </span>
                       {p.oldPrice != null && p.oldPrice > p.price && (
-                        <span className="text-[11px] text-white/35 line-through">
+                        <span className="text-[11px] text-gray-400 line-through">
                           {Math.round(p.oldPrice)} DT
                         </span>
                       )}
@@ -130,7 +151,7 @@ export function HeroBestSellers({ products }: { products: HeroBestSeller[] }) {
 
                 <span
                   aria-hidden="true"
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-brand-500 text-white transition-colors duration-200 group-hover:bg-brand-600"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-white shadow-sm transition-colors duration-200 group-hover:bg-brand-700"
                 >
                   <ShoppingCart className="h-4 w-4" />
                 </span>
@@ -143,7 +164,7 @@ export function HeroBestSellers({ products }: { products: HeroBestSeller[] }) {
       <LinkWithLoading
         href="/shop"
         loadingMessage="Chargement..."
-        className="flex items-center justify-center gap-1.5 border-t border-white/10 px-4 py-3 text-[12px] font-semibold text-white/70 transition-colors hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500"
+        className="flex items-center justify-center gap-1.5 border-t border-gray-100 px-4 py-3 text-[12px] font-semibold text-gray-600 transition-colors hover:bg-gray-50 hover:text-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500 dark:border-white/10 dark:text-gray-400 dark:hover:bg-white/[0.04] dark:hover:text-brand-500"
       >
         Voir toute la boutique
         <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
