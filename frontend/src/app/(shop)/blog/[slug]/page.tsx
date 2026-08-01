@@ -7,7 +7,7 @@ import { getLatestArticles } from '@/services/api';
 import { getCachedArticleDetails as getArticleDetails } from '@/services/getCachedProductDetails';
 import { getStorageUrl } from '@/services/api';
 import { resolveCanonicalUrl } from '@/util/canonical';
-import { htmlToText } from '@/util/sanitizeProductHtml';
+import { htmlToText, truncateAtWord } from '@/util/sanitizeProductHtml';
 import { resolveArticleLanguage } from '@/util/articleLanguage';
 import { buildArticleSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
 import { blogHref } from '@/util/blogSlug';
@@ -71,7 +71,9 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
     const twitterImage = article.seo?.twitter?.image || imageUrl || '';
     return {
       title,
-      description: descriptionWithTunisia.slice(0, 160),
+      // truncateAtWord, not .slice(): the top Arabic article (5,834 impressions, 0.29% CTR)
+      // was ending its snippet on a dangling single letter because 160 landed mid-word.
+      description: truncateAtWord(descriptionWithTunisia, 160),
       robots: {
         index: article.seo?.robots?.index ?? article.seo_robots_index ?? true,
         follow: article.seo?.robots?.follow ?? article.seo_robots_follow ?? true,
@@ -86,7 +88,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       },
       openGraph: {
         title: article.seo?.open_graph?.title || title,
-        description: article.seo?.open_graph?.description || descriptionWithTunisia.slice(0, 160),
+        description: article.seo?.open_graph?.description || truncateAtWord(descriptionWithTunisia, 160),
         images: imageUrl ? [imageUrl] : ['/og-banner.jpg'],
         type: 'article',
         url: canonicalUrl,
@@ -95,7 +97,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       twitter: {
         card: (article.seo?.twitter?.card as 'summary' | 'summary_large_image') || article.twitter_card as 'summary' | 'summary_large_image' || 'summary_large_image',
         title: article.seo?.twitter?.title || title,
-        description: article.seo?.twitter?.description || descriptionWithTunisia.slice(0, 160),
+        description: article.seo?.twitter?.description || truncateAtWord(descriptionWithTunisia, 160),
         images: twitterImage ? [twitterImage] : ['/og-banner.jpg'],
       },
     };

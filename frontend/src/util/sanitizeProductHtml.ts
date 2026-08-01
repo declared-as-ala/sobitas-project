@@ -128,5 +128,59 @@ export function htmlToText(html: string | null | undefined, maxLen = 300): strin
     .replace(/[​-‍﻿]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
-  return cleaned.length > maxLen ? `${cleaned.slice(0, maxLen).trim()}…` : cleaned;
+  return truncateAtWord(cleaned, maxLen);
+}
+
+/**
+ * Cut to `maxLen` at a WORD boundary, never mid-word.
+ *
+ * A blunt `.slice(0, 160)` is what Google was actually showing searchers: the top Arabic article
+ * (5,834 impressions, 0.29% CTR) ended its snippet on a dangling "م" — a single orphaned letter.
+ * Google truncates long descriptions itself and appends its own ellipsis, so the damage here is
+ * ours alone: we hand it a string already broken mid-word.
+ *
+ * Backs off to the last space before the limit. If there is no space in range — a very long
+ * unbroken token, or a script this heuristic does not segment — it falls back to a hard cut,
+ * because returning nothing would be worse than an imperfect one.
+ */
+export function truncateAtWord(text: string, maxLen: number): string {
+  const clean = text.trim();
+  if (clean.length <= maxLen) return clean;
+
+  const window = clean.slice(0, maxLen);
+  const lastSpace = window.lastIndexOf(' ');
+  // Only honour the boundary if it keeps a reasonable amount of the text; a space at index 3 of a
+  // 160-char budget would throw away the whole snippet.
+  const cut = lastSpace > maxLen * 0.6 ? window.slice(0, lastSpace) : window;
+
+  return `${cut.replace(/[\s,;:.،؛-]+$/u, '')}…`;
+}
+
+/**
+ * Build a meta description from CMS HTML.
+ *
+ * Beyond decoding and word-safe truncation, this drops a leading repetition of the page title.
+ * Blog bodies open with their own headline, so once tags are stripped the description began by
+ * restating the title verbatim — costing ~40 of a 160-character snippet to say a thing the
+ * searcher is already reading on the line above. Same on product pages, where the description
+ * opened with the product name that is already the title.
+ */
+export function buildMetaDescription(
+  raw: string | null | undefined,
+  options: { title?: string | null; maxLen?: number } = {}
+): string {
+  const { title, maxLen = 160 } = options;
+
+  let text = htmlToText(raw, maxLen * 4).replace(/…$/, '').trim();
+
+  const heading = (title ?? '').trim();
+  if (heading) {
+    // Compare loosely: the title carries the brand suffix and punctuation the body does not.
+    const bare = heading.split('|')[0].trim();
+    if (bare && text.toLowerCase().startsWith(bare.toLowerCase())) {
+      text = text.slice(bare.length).replace(/^[\s\-–—:،,.]+/u, '').trim();
+    }
+  }
+
+  return truncateAtWord(text, maxLen);
 }

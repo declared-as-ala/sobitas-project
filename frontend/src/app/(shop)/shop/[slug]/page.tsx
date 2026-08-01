@@ -16,6 +16,7 @@ import {
   validateStructuredData,
 } from '@/util/structuredData';
 import type { Product } from '@/types';
+import { buildMetaDescription } from '@/util/sanitizeProductHtml';
 
 const ProductDetailClient = dynamic(() => import('@/app/(shop)/products/[id]/ProductDetailClient').then((m) => ({ default: m.ProductDetailClient })), {
   loading: () => <div className="min-h-screen animate-pulse bg-gray-50" />,
@@ -65,11 +66,13 @@ function productTitle(product: Product): string {
 function productDescription(product: Product, productName: string): string {
   const explicit = product.seo?.description || product.seo_description || product.meta_description || product.meta_description_fr;
   if (explicit?.trim()) {
-    const plain = explicit.replace(/<[^>]*>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim();
-    if (plain) return plain.slice(0, 160);
+    // Same two defects as the canonical product route: entities were DELETED rather than decoded
+    // (dropping words), and .slice() cut mid-word. See (shop)/[slug]/[productSlug]/page.tsx.
+    const plain = buildMetaDescription(explicit, { title: productName, maxLen: 160 });
+    if (plain) return plain;
   }
-  const plain = (product.description_fr || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
-  if (plain) return `${plain} Prix Tunisie. Produits authentiques. Livraison 24-72h. Protéine Tunisie.`;
+  const plain = buildMetaDescription(product.description_fr, { title: productName, maxLen: 90 });
+  if (plain) return `${plain} Prix Tunisie. Livraison 24-72h. Protéine Tunisie.`;
   return `Acheter ${productName} en Tunisie – Meilleur prix, livraison rapide, produits authentiques. Sousse, Tunis, toute la Tunisie. Protéine Tunisie.`;
 }
 

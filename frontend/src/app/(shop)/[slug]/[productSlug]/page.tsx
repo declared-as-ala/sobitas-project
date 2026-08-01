@@ -16,6 +16,7 @@ import {
 import { buildProductCanonicalUrl, buildProductUrlPath, getProductBreadcrumbs, isReservedRouteSlug, getProductPrimarySubCategory } from '@/util/productUrl';
 import { buildShopProductSocialMetadata } from '@/util/productSeo';
 import type { Product } from '@/types';
+import { buildMetaDescription } from '@/util/sanitizeProductHtml';
 
 const ProductDetailClient = dynamic(() => import('@/app/(shop)/products/[id]/ProductDetailClient').then((m) => ({ default: m.ProductDetailClient })), {
   loading: () => <ProductDetailSkeleton />,
@@ -44,15 +45,31 @@ function productTitle(product: Product): string {
   return `${name} – Prix Tunisie & Livraison Rapide | Protéine Tunisie`;
 }
 
-/** Meta description: benefit + authenticity + delivery + location (Tunisie). Max 160 chars. */
+/**
+ * Meta description: benefit + authenticity + delivery + location (Tunisie). Max 160 chars.
+ *
+ * Two defects fixed here, both visible in live search results:
+ *
+ * 1. `.replace(/&[a-z]+;/gi, ' ')` DELETED entities instead of decoding them, so
+ *    "MUSCULAIRE &amp; PERFORMANCE" reached Google as "MUSCULAIRE   PERFORMANCE" — the word
+ *    silently gone. This is the same bug fixed for categories in #192 and blog posts in #195;
+ *    this path was the last one still carrying it. `buildMetaDescription` decodes properly.
+ * 2. `.slice(0, 160)` cut mid-word. Google appends its own ellipsis to long descriptions, so a
+ *    snippet ending on half a word is damage we inflicted, not Google.
+ *
+ * It also drops a leading repetition of the product name, which the CMS copy almost always opens
+ * with — that name is already the title on the line above, so restating it burned ~40 characters
+ * of a 160-character budget.
+ */
 function productDescription(product: Product, productName: string): string {
   const explicit = product.seo?.description || product.seo_description || product.meta_description || product.meta_description_fr;
   if (explicit?.trim()) {
-    const plain = explicit.replace(/<[^>]*>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim();
-    if (plain) return plain.slice(0, 160);
+    const plain = buildMetaDescription(explicit, { title: productName, maxLen: 160 });
+    if (plain) return plain;
   }
-  const plain = (product.description_fr || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
-  if (plain) return `${plain} Prix Tunisie. Produits authentiques. Livraison 24-72h. Protéine Tunisie.`;
+  // Leave room for the trust line rather than truncating it away.
+  const plain = buildMetaDescription(product.description_fr, { title: productName, maxLen: 90 });
+  if (plain) return `${plain} Prix Tunisie. Livraison 24-72h. Protéine Tunisie.`;
   return `Acheter ${productName} en Tunisie – Meilleur prix, livraison rapide, produits authentiques. Sousse, Tunis, toute la Tunisie. Protéine Tunisie.`;
 }
 
