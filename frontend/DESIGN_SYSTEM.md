@@ -1,239 +1,379 @@
-# Protein.tn Design System — v3 "Editorial Minimal, one-accent red"
+# Protein.tn Storefront Design System — v4
 
-> **v3 (2026-07-21) — what changed.** The system moved from *athletic/dense* to **Editorial
-> Minimal**: whitespace-led, photography-first, fewer elements, red spent sparingly. Concretely:
-> the red header slab is gone (§2), cards are hairline-bordered rather than shadow-stacked (§3),
-> real design tokens exist (§11), `Container`/`Section` replace copy-pasted layout strings (§6),
-> there is a mobile bottom tab bar (§6), and the hero has a written LCP contract (§12).
-> §9 is no longer a freeze list — see §9.
+> Brand-level rules (logo, accent ramp, typefaces, French-only, lucide-only, ≥44px) are inherited
+> from [`../DESIGN_SYSTEM.md`](../DESIGN_SYSTEM.md). This document owns the **storefront**: tokens,
+> spacing, primitives, images, dark mode, and the LCP contract.
 
-
-The canonical visual language for the whole site. Every page and component must read as one
+The canonical visual language for protein.tn. Every page and component must read as one
 art-directed brand, not assembled parts. When redesigning a surface, conform it to this document.
-This was established on the landing page (hero, product cards, section headers, trust strip) and is
-now the standard everywhere.
 
-> **Golden rule for redesign work:** change the *look*, never the *logic*. Only touch
-> `className`, JSX layout/structure, typography, spacing, icons, and decorative motion. Do **not**
-> alter data fetching, props, API calls, `generateMetadata`, JSON-LD/structured data, SEO copy,
-> `href`s, form behavior, or server/client boundaries (`'use client'` stays exactly where it is).
+> **Golden rule:** change the *look*, never the *logic*. Only touch `className`, JSX
+> layout/structure, typography, spacing, icons, and decorative motion. Do **not** alter data
+> fetching, props, API calls, `generateMetadata`, JSON-LD, SEO copy, `href`s, form behaviour, or
+> server/client boundaries (`'use client'` stays exactly where it is).
+
+---
+
+## 0. How this document is kept true
+
+v3 drifted across **seven** commits without a single doc update. It claimed the accent was red when
+the site had gone orange, that the display face was Oswald when it had become Archivo, and that
+`max-w-7xl` was the page rail when `max-w-site` was. It drifted because **it restated values instead
+of pointing at the one place that defines them**.
+
+**The governing rule for v4:**
+
+> Every number in this document is either **(a)** a pointer to the `file:line` that defines it, or
+> **(b)** enforced by a `lint:design` rule. Prose that is neither is marked `(non-normative)`.
+
+`npm run lint:design` walks `src/**/*.tsx` against `design-baseline.json`. It **fails** when a file
+exceeds its baseline, and **fails** when a file absent from the baseline has any violation — new
+code must be clean. Counts auto-lower as debt is paid, so progress cannot be undone.
+
+*Why a script and not an ESLint rule:* `next.config.js:21` sets `eslint: { ignoreDuringBuilds: true }`
+and lint runs with `--max-warnings 999`, so an ESLint rule **cannot gate a build here**.
 
 ---
 
 ## 1. Typography
 
-| Role | Font | Utility | Notes |
-| --- | --- | --- | --- |
-| Display — titles, hero, prices, badges, countdowns | **Oswald** (condensed) | `font-display` | Always `uppercase tracking-tight`. Weights 600/700. |
-| Body / UI — paragraphs, labels, inputs, nav | **Inter** | `font-sans` (default) | Never uppercase for body copy. |
+Defined in `tailwind.config.ts:23-59`. **Three** faces, not two:
 
-- **Section titles:** `font-display uppercase tracking-tight leading-[0.95] font-bold` (see `SectionHeader`).
-- **Page (H1) titles:** same, via `PageHeader`.
-- **Kicker (eyebrow):** `font-display uppercase tracking-[0.2em] text-[11px] sm:text-xs font-semibold text-red-600 dark:text-red-400`, usually preceded by a `h-px w-5 bg-red-600` rule.
+| Role | Face | Utility |
+| --- | --- | --- |
+| Display — section titles, hero, prices, badges, countdowns | **Archivo** (variable) | `font-display` |
+| Body / UI — paragraphs, labels, inputs, nav | **Inter** | `font-sans` (default) |
+| Product cards only | **Poppins** | `font-poppins` |
+
+**`font-display` already means compressed.** `globals.css:75` sets `font-variation-settings: 'wdth' 82`
+on it in `@layer base`, so `.font-compressed` is redundant on any element that already has
+`font-display`. This is the single most surprising fact in the codebase — Archivo is not a condensed
+face by default, and the compression is applied globally rather than at the call site.
+
+- **Section titles:** `font-display uppercase tracking-tight` — use `SectionHeader`, don't re-type it.
+- **Kicker (eyebrow):** use `Kicker` (`components/layout/Kicker.tsx`).
 - **Prices / numbers:** `font-display font-bold tracking-tight tabular-nums`.
-- Body paragraphs stay Inter, normal case, `text-gray-600 dark:text-gray-400` for secondary.
+- Body copy stays Inter, normal case. **Never uppercase body copy.**
 
-## 2. Color — one accent, and only one
+Semantic sizes exist at `tailwind.config.ts:50-59`: `text-display`, `text-lead`, `text-ui`,
+`text-caption`.
 
-- **Accent = red-600**, now the brand red `#E01B24` (see §11). This is the ONLY brand color.
-  Do not introduce a second accent (no amber/orange/blue/green gradients as decoration).
-- **Spend it sparingly.** Red marks: the primary CTA, the price/promo, an active state, a kicker
-  rule, a count badge. Nothing else. A full-width red band was removed from the header in v3
-  precisely because when red is the background, red can no longer mean anything.
-- **Important:** the shadcn `--primary` token is near-black (`#030213`) **and currently broken**
-  (see §11), so the default `<Button>` is **not** red. Use `variant="brand"`, which exists for
-  exactly this — do not re-type the old `bg-red-600 hover:bg-red-700 …` string.
-- **Never invert an asset to fit a background.** The old header forced the logo white with
-  `brightness-0 invert` to survive the red bar. If an asset needs inverting to be legible, the
-  surface is wrong. (`dark:` inversion for dark mode is fine.)
-- **Surfaces:** white / `dark:bg-gray-950`, cards `dark:bg-gray-900`. Neutral grays for everything non-accent.
-- **Icon chips:** red monoline lucide icon inside `bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400` rounded square.
-- Semantic colors (green success, red error) are allowed only for genuine status (stock, form errors, toasts).
+## 2. Colour — one accent, and only one
 
-## 3. Surfaces & shape
+**The accent is ORANGE**, matched to the Protein.tn logo. Defined at `tailwind.config.ts:60-110`
+and `styles/tokens.css:26-27`.
 
-- **Flat.** No glassmorphism, no `backdrop-blur` decoration, no floating gradient "orbs"/blurred blobs,
-  no multi-stop decorative gradients. Removed on purpose during the landing redesign — do not reintroduce.
-- **Radius:** `rounded-xl` for cards/tiles/CTAs; `rounded-lg` for small chips/icon squares; `rounded-full`
-  only for pills/avatars.
-- **Borders/dividers:** thin — `border border-gray-100 dark:border-gray-800` (or `gray-200`/`gray-700`).
-  Prefer a hairline border + subtle shadow over heavy shadows.
-- **Shadows:** restrained. Cards are **hairline border + `shadow-sm` at rest → `hover:shadow-md`**.
-  No arbitrary `shadow-[0_2px_12px_rgba(...)]` values (use `shadow-card` if a custom one is truly
-  needed), no `hover:-translate-y-*` lift, no `shadow-2xl` glow stacks.
-- **`backdrop-blur` is banned outright**, including on small chips and badges. Beyond the visual
-  rule, each instance forces its own compositing layer — on a product grid that is one per card.
-- **Image tiles:** `aspect-[4/3]` (category/blog) or `aspect-square` (product), `object-cover`, `rounded-xl overflow-hidden`.
+**Two working shades, and they are not interchangeable:**
 
-## 4. Motion — calm, minimal
+| Shade | Hex | Contrast on white | Use |
+| --- | --- | --- | --- |
+| `brand-500` | `#F8480C` | ~3.5:1 | **Graphical only** — accent rules, icon fills, decorative marks. **Never white text on it, never body text in it.** |
+| `brand-600` | `#D53B04` | **4.69:1 (AA)** | **The action shade** — buttons, prices, links, active states. |
 
-- Prefer **no** entrance animation. Decorative `framer-motion`/`motion` staggers, spring physics, animated
-  SVGs, ping/pulse loops, marquees and shine sweeps are **out**. (We deleted ~490 lines of this from the trust strip.)
-- Allowed: cheap CSS transitions — `transition-colors`, `transition-transform`, `sm:group-hover:scale-105`
-  (subtle), `group-hover:translate-x-1` on a trailing arrow. Keep hover states quiet (no red ring pulses).
-- Where a component is currently `'use client'` only for motion, and removing motion lets it become a server
-  component, prefer that — but never change the client/server boundary if it also does state/effects/handlers.
+Getting these backwards is the most common way to ship an accessibility failure here.
 
-## 5. Icons
+**`red-*` is remapped to the orange ramp** (`tailwind.config.ts:82-110`). This was a deliberate
+zero-churn re-skin: ~300 existing `bg-red-600` call sites became brand orange with no file edits and
+no half-migrated period. The utility is named "red" while rendering orange — that is the accepted
+cost. **New code writes `brand-*`** (DS011).
 
-- **lucide-react** only, monoline, `strokeWidth={1.75}`ish, sized `h-4 w-4`/`h-5 w-5`.
-- Feature/trust/step icons sit in a `bg-red-50` rounded square (see §2). Inline meta icons are plain red or gray.
+- **Spend the accent sparingly.** It marks the primary CTA, the price, an active state, a kicker
+  rule, a count badge. Nothing else. When the accent is the background, it can no longer mean anything.
+- **Never invert an asset to fit a background.** If an asset needs `brightness-0 invert` to be
+  legible, the surface is wrong. (`dark:` inversion for dark mode is fine.)
+- Semantic colours (green success, red error) are for genuine status only — stock, form errors,
+  toasts. `destructive` must stay **red, not brand orange**, or a delete button becomes
+  indistinguishable from add-to-cart.
 
-## 6. Shared building blocks (reuse — do not re-invent)
+## 3. Spacing scale
 
-- **`SectionHeader`** (`components/SectionHeader.tsx`) — for a section *inside* a page: red kicker + Oswald
-  title + optional subtitle + optional right-aligned "Voir tout" link. Use for every titled section.
-- **`PageHeader`** (`components/PageHeader.tsx`) — for the top of an *interior page*: red kicker + Oswald
-  uppercase H1 + optional subtitle, optional breadcrumb/children slot. Use on listing/content/account pages.
-- **`ProductCard`** (`components/ProductCard.tsx`) — reuse for product grids; do **not** restyle it.
-  Its image geometry comes from `util/productCardFrame.ts` and is shared with `ProductCardSkeleton`
-  — if you change one, the shared constant is the only correct place to do it (§10).
-- **`Container`** (`components/layout/Container.tsx`) — the horizontal rail. Replaces inline
-  `max-w-7xl mx-auto px-4 sm:px-6 lg:px-8`. `width="wide"` is the legacy `max-w-[1400px]` rail used
-  by the header/hero; both exist so adoption is a zero-pixel refactor.
-- **`Section`** (`components/layout/Section.tsx`) — vertical rhythm + optional `surface="sunken"`
-  band. Replaces inline `py-12 sm:py-16 lg:py-20`.
-- **`Kicker`** (`components/layout/Kicker.tsx`) — the red eyebrow.
-- **`MobileTabBar`** (`components/MobileTabBar.tsx`) — mounted once in the root layout. Anything
-  `fixed` at the bottom of the viewport MUST offset against `--tabbar-h` (`bottom-tabbar`, or a
-  `calc()` that composes with it) or it will sit behind the bar. Never hardcode its height.
-- **Buttons:** primary CTA = `<Button variant="brand" size="cta">`. Secondary =
-  `variant="brandOutline"`. Quiet = `variant="brandGhost"`. Tertiary = text link with a trailing
-  `ArrowRight`. Do **not** hand-write `bg-red-600 hover:bg-red-700 …` — that string exists as a
-  variant precisely so it stops being copy-pasted.
+**This section did not exist in v3, and its absence is what produced the CategoryRail defect.**
 
-## 7. Layout & spacing
+Vertical rhythm is owned by `<Section>` (`components/layout/Section.tsx:14-19`). These are the only
+legal section paddings:
 
-- Content width: `max-w-7xl mx-auto px-4 sm:px-6 lg:px-8` (rails may use `max-w-[1400px]`).
-- Section vertical rhythm: `py-12 sm:py-16 lg:py-20` (hero/flagship sections a bit larger).
-- Grids: products `grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6`; categories `aspect-[4/3]` tiles.
-- Mobile-first; everything responsive; never cause horizontal body scroll (wide content scrolls in its own container).
+| Token | Value | Use |
+| --- | --- | --- |
+| `spacing="none"` | — | the section manages its own padding |
+| `spacing="tight"` | `py-6 sm:py-8 lg:py-10` | rails attached to a neighbour — e.g. `CategoryRail` under the hero |
+| `spacing="default"` | `py-12 sm:py-16 lg:py-20` | every normal content band |
+| `spacing="flagship"` | `py-16 sm:py-20 lg:py-24` | promo / CTA bands |
 
-## 8. Dark mode
+**Never invent a local `py-` on a section** (DS008). `py-7`, `py-9`, `py-28` are all wrong by
+construction.
 
-Every color needs a `dark:` counterpart. Standard pairs: text `text-gray-900 dark:text-white` /
-`text-gray-600 dark:text-gray-400`; surface `bg-white dark:bg-gray-950` / card `dark:bg-gray-900`;
-border `border-gray-100 dark:border-gray-800`; accent `text-red-600 dark:text-red-400`.
+### The band-boundary rule
 
-## 9. Centrally owned — change deliberately, not incidentally
+> The gap between two bands is the **upper band's `pb` plus the lower band's `pt`**. Never add a
+> compensating prop to a component to fix a neighbour's spacing — **fix the neighbour.**
 
-This was a freeze list. It is now a **care list**: these are shared or load-bearing, so changing
-them affects every page. Change them in a *dedicated* PR with a visual pass — never as a side
-effect of redesigning one page.
+**Worked example — the `tightTop` anti-pattern.** `CategoryRail` hand-rolled `py-7 sm:py-9`: roughly
+half the site rhythm, with no `lg:` step at all. To hide the resulting gap, `ProductSection` grew a
+`tightTop` prop (`pt-3 sm:pt-4`). Two components were deformed to cover for one wrong number, and the
+prop's own JSDoc had rotted into describing a component that no longer existed. The fix was to give
+the rail a correct `spacing="tight"` and delete `tightTop` outright.
 
-- **Shared components:** `ProductCard` + `ProductCardSkeleton` (must move together — §10),
-  `SectionHeader`, `PageHeader`, `ProductGrid`, `Container`, `Section`, `Kicker`, `MobileTabBar`.
-- **Config & global CSS:** `tailwind.config.ts`, `globals.css`, `styles/tokens.css`, `layout.tsx`.
-- **Do not restyle** `components/ui/*` (shadcn primitives) — extend them additively instead, the
-  way `Button` gained its `brand` variants without altering `default`.
-- **Off-limits to visual work entirely:** `middleware.ts`, `app/x-crawler/*`, anything under
-  `structuredData`/metadata, and the hero LCP contract in §12.
+Header rhythm: `SectionHeader` uses `mb-9 sm:mb-12`; a compact rail header uses `mb-4 sm:mb-6`.
+Nothing else. Card padding `p-4 sm:p-5`; compact tiles `p-3`.
 
----
+**Do not nest a padded card inside the site container.** `Container` already applies
+`px-4 sm:px-6 lg:px-8`; a card with `p-4` inside it is *additive*, so mobile content ends up 32px
+from the edge instead of 16. That was the CategoryRail bug.
 
-## 10. Refinement standards (v2 — density, responsive, loaders, perf, copy)
+## 4. Layout rails
 
-The second pass raises craft: compact, clear, fast. Apply these on top of §1–§9.
+`Container` (`components/layout/Container.tsx:15-20`) owns horizontal width. Always
+`mx-auto w-full … px-4 sm:px-6 lg:px-8`.
 
-### Spacing & rhythm
-- Section vertical padding: `py-12 sm:py-16 lg:py-20` (flagship/hero sections may reach `lg:py-24`). Never `py-8` or `py-28` — one rhythm across the whole page. Section titles keep `mb-8 sm:mb-10` (via SectionHeader/PageHeader).
-- Container: `max-w-7xl mx-auto px-4 sm:px-6 lg:px-8` everywhere (product rails may use `max-w-[1400px]`). Never exceed it (no 1600px). Keep every section's left edge aligned.
-- Card padding `p-4 sm:p-5`; compact tiles `p-3`. Favor compact, scannable density over loose padding — but stay breathable.
+| `width` | Value | Use |
+| --- | --- | --- |
+| `narrow` | `max-w-3xl` | long-form reading |
+| `default` | `max-w-7xl` | interior pages |
+| `wide` | **`max-w-site` = 1600px** (`tailwind.config.ts:180-195`) | every full-width band: header, hero, category rail, product sections, footer |
+| `full` | `max-w-none` | full-bleed |
 
-### Responsive & tap targets
-- Mobile-first. Every interactive control has a ≥ 44×44px hit area (`min-h-11 min-w-11`, or an icon-only button as `h-11 w-11 flex items-center justify-center`).
-- Product grids use the shared **`ProductGrid`**: `grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6`. No orphan rows. Category tiles `grid-cols-2 sm:grid-cols-3 lg:grid-cols-4`.
-- No horizontal body scroll; wide content scrolls inside its own `overflow-x-auto` container.
+**v3 was wrong here** — it named `max-w-7xl` as "THE" rail and instructed "never exceed it (no
+1600px)". `max-w-site` is the homepage rail and has been since the width token landed.
 
-### Loaders (ONE system)
-- The placeholder atom is `components/ui/skeleton` `<Skeleton>` (`bg-gray-200 dark:bg-gray-700 animate-pulse`). No bare `animate-pulse` divs, no hand-rolled border-spinners, no local `SkeletonLine` copies.
-- Skeletons MUST match the final layout — same container padding, same grid gaps, same aspect ratios — so there is **zero layout shift**. Reuse `ProductCardSkeleton` / `ProductsSkeleton` / `ProductDetailSkeleton` / `BlogCardSkeleton`.
-- Every data-fetching / `force-dynamic` route ships a `loading.tsx` with a layout-matching skeleton. Client pages that gate on `localStorage`/`isLoaded` render a skeleton, never a flash of the empty state.
-- `LoadingSpinner` = indeterminate/action loads only (pure-CSS spinner, no motion, server-safe). The click-triggered `GlobalLoader` must never obscure a route skeleton (no dark scrim + artificial delay over a route that has its own `loading.tsx`).
+The codebase currently runs **two** rails (`max-w-7xl` on interior routes, `max-w-site` on the
+homepage). That is a real inconsistency, and it gets resolved in **one dedicated PR** once primitive
+adoption is broad — never incidentally inside a redesign (`Container.tsx:10-13`).
 
-### No emojis / glyphs (hard rule)
-- Zero emoji or dingbat glyphs as UI — `🎉 ⚡ ✓ ✦ ★ › → ⋮` etc. Always a lucide icon. Broken-image fallbacks render a lucide icon via React state, never `document.createElement`/`innerHTML`.
+Mobile-first. Never cause horizontal body scroll; wide content scrolls inside its own
+`overflow-x-auto` container.
 
-### Copy & i18n
-- French only. No English UI labels (`New`→`Nouveau`, `OFF`/`-30% OFF`→`-30%`, `Brands`→`Marques`) and no Arabic leftovers. aria-labels in French too.
-- Tight, non-redundant microcopy; one obvious primary action per screen; real empty / loading / error states everywhere. French dates must use French month names (`toLocaleDateString('fr-FR', …)`).
+## 5. Tokens
 
-### Performance & maintainability
-- Server-first: no `'use client'` without state/effects/handlers/browser-API. No `framer-motion`/`motion` on the shopping-critical path (cards, rails, home sections) — use CSS transitions.
-- `next/image`: correct `sizes`, `priority` only on the true LCP image, `unoptimized` only for already-optimized storage/remote images (`unoptimized={isStorageImageUrl(src)}`), never blanket.
-- Prefer shared primitives (`ProductGrid`, `Skeleton`, `SectionHeader`, `PageHeader`, `EmptyState`) over copy-pasted markup. Delete dead code rather than reskinning it.
-
----
-
-## 11. Design tokens (v3)
+> **STATUS: pending the Stage 4 token-bridge repair.** Until that lands, the shadcn semantic
+> utilities in the second table are dead — see §13.
 
 Defined in `src/styles/tokens.css`, wired in `tailwind.config.ts`. Values are space-separated RGB
 triplets so Tailwind's `<alpha-value>` works (`bg-brand/10`, `text-ink-2/70`).
 
-| Token | Utility | Value (light / dark) |
+| Token | Utility | Light / dark |
 | --- | --- | --- |
-| Brand accent | `bg-brand`, `text-brand`, `hover:bg-brand-hover` | `#E01B24` / `#F87171` |
+| Brand accent | `bg-brand`, `text-brand`, `hover:bg-brand-hover` | `#D53B04` / `#FF8A4C` |
 | Page canvas | `bg-canvas` | `#FFFFFF` / `#0A0A0B` |
 | Card / sheet | `bg-elevated` | `#FFFFFF` / `#141416` |
 | Alternating band | `bg-sunken` | `#F7F6F4` (warm sand) / `#101012` |
 | Hairline | `border-hairline` | `#E8E5E1` / `#26262A` |
-| Ink 1 / 2 / 3 | `text-ink-1` … | headings / body / meta |
+| Ink 1 / 2 / 3 | `text-ink-1` / `-2` / `-3` | headings / body / meta |
 
-**The `red-*` palette is overridden to the brand ramp.** So existing `bg-red-600` is already brand
-red — there is no half-migrated state. New code should prefer `brand`. The ramp is
-**luminance-matched** to stock Tailwind red (600 sits at relative luminance 0.1676, identical to
-`#dc2626`), so contrast ratios were preserved when it changed; keep that property if you re-tune it.
+**These are theme-aware.** That is the whole point — see §8.
 
-**Known broken — do not build on it:** `tailwind.config.ts` declares the shadcn colors as
-`hsl(var(--x))` while `styles/theme.css` defines them as hex/oklch. `hsl(#ffffff)` is invalid CSS,
-so **every semantic shadcn utility is a silent no-op** — `bg-background`, `text-foreground`,
-`bg-primary`, `border-border`. That is why the codebase hardcodes `bg-white`. Repairing it would
-restyle all 47 shadcn components at once (the default `<Button>` would jump from transparent to
-near-black), so it needs its own PR with a full visual pass. Until then, use the tokens above.
+## 6. Shared building blocks (reuse — do not re-invent)
 
-**Motion opt-out:** `globals.css` clamps `transition-duration` to `.2s !important` for everything
-under 768px. New components that need a longer transition must carry `data-motion` to opt out.
+Each entry says *what it replaces*, because the failure mode here is not ignorance of the primitive,
+it is copy-pasting the string it exists to delete.
 
----
+| Primitive | Path | Replaces |
+| --- | --- | --- |
+| `Container` | `components/layout/Container.tsx` | inline `max-w-7xl mx-auto px-4 sm:px-6 lg:px-8` (33 files) |
+| `Section` | `components/layout/Section.tsx` | inline `py-12 sm:py-16 lg:py-20` (16 files) |
+| `Kicker` | `components/layout/Kicker.tsx` | the hand-rolled eyebrow |
+| `SectionHeader` | `components/SectionHeader.tsx` | kicker + title + optional "Voir tout" |
+| `PageHeader` | `components/PageHeader.tsx` | interior-page H1 block |
+| `ProductCard` | `components/ProductCard.tsx` | product grids — do **not** restyle |
+| `ProductGrid` | — | `grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6` |
+| `Skeleton` | `components/ui/skeleton.tsx` | every bare `animate-pulse` div |
+| `MobileTabBar` | `components/MobileTabBar.tsx` | mounted once in the root layout |
+
+**Reference implementation: [`components/CategoryRail.tsx`](src/app/components/CategoryRail.tsx).**
+Read that file rather than this paragraph. It is the canonical example of `Section spacing="tight"`,
+`Container width="wide"`, a derived `sizes` string, and a tile grid with no nested card.
+
+`ProductCard`'s image geometry lives in `util/productCardFrame.ts` and is shared with
+`ProductCardSkeleton` — change the shared constant, never one of the two, or you ship CLS.
+
+Anything `fixed` at the bottom of the viewport MUST offset against `--tabbar-h` (`bottom-tabbar`, or
+a `calc()` that composes with it). Never hardcode the bar's height.
+
+## 7. Images — how to derive `sizes`
+
+**Getting `sizes` wrong is silent.** Too small and the browser upscales a blurry candidate; too
+large and you ship bytes nobody sees. Neither shows up in a build, a typecheck, or a screenshot at
+your own DPR.
+
+**The rule:** `object-cover` scales by the **constraining axis**. If the source aspect and the tile
+aspect differ, the required width is *not* the tile width.
+
+> Source 4:3 in a **square** tile → the height constrains → required width = `tileWidth × 4/3`.
+> Source 4:3 in a **4:3** tile → exact fit → required width = `tileWidth`.
+
+**Worked example — `CategoryRail`** (gutters 16/24/32 per side; gaps 12 then 16; `max-w-site` 1600):
+
+| Bracket | Geometry | Derivation | `sizes` |
+| --- | --- | --- | --- |
+| mobile | 2-up, `aspect-[4/3]`, 4:3 source → exact fit | `(vw − 44)/2`, peaks 46.6vw @639 | `47vw` |
+| `sm` | 3-up, `aspect-square`, 4:3 source → scales by height | `(4/9)(1 − 80/vw)`, peaks 41.0vw @1023 | `42vw` |
+| `lg` | 6-up, capped at 1600 | `(1600−64−80)/6 = 242.7 → ×4/3 = 323.6` | `340px` |
+
+The previous `31vw` at `sm` asked for 317px where 419px was needed — a visible **1.09× upscale**.
+
+**Verify, don't assume.** Load the page, inspect the element's `currentSrc`, and confirm the chosen
+candidate width is ≥ the tile's CSS width × DPR. Buckets are `imageSizes` + `deviceSizes` in
+`next.config.js:38-39`.
+
+Other rules: `priority` only on the true LCP image (§12). `quality` must be a member of
+`next.config.js:41`. Image tiles are `aspect-[4/3]` (category/blog) or `aspect-square` (product),
+`object-cover`, `rounded-xl overflow-hidden`.
+
+## 8. Dark mode — write **fewer** classes, not more
+
+**v3 taught the opposite of this, and that is how 2,037 `dark:` variants across 114 files happened.**
+It said "every colour needs a `dark:` counterpart" and listed the pairs to memorise.
+
+**v4 rule: surfaces and ink come from tokens, and tokens are theme-aware, so they need no `dark:` at
+all.** Two classes collapse into one, every time:
+
+```
+bg-white dark:bg-gray-950            → bg-canvas
+bg-white dark:bg-gray-900            → bg-elevated
+bg-gray-50 dark:bg-gray-900          → bg-sunken
+border-gray-100 dark:border-gray-800 → border-hairline
+text-gray-900 dark:text-white        → text-ink-1
+text-gray-600 dark:text-gray-400     → text-ink-2
+text-gray-500 dark:text-gray-400     → text-ink-3
+text-red-600 dark:text-red-400       → text-brand
+bg-red-600 hover:bg-red-700          → bg-brand hover:bg-brand-hover
+```
+
+`dark:` is now reserved for **asset inversion** and **genuine one-off contrast fixes** (DS002).
+This table is the "use less CSS" instruction expressed mechanically — it is the only sanctioned way
+to write a colour.
+
+## 9. Surfaces, shape & motion
+
+- **Flat.** No glassmorphism, no floating gradient orbs, no multi-stop decorative gradients.
+- **`backdrop-blur` is banned outright** (DS009), including on chips and badges — beyond the visual
+  rule, each instance forces its own compositing layer, one per card on a product grid.
+- **Radius:** `rounded-xl` cards/tiles/CTAs; `rounded-lg` small chips; `rounded-full` pills/avatars only.
+- **Shadows:** hairline border + `shadow-sm` at rest → `hover:shadow-md`. No arbitrary
+  `shadow-[0_2px_12px_rgba(...)]` (DS005) — `shadow-card` / `shadow-card-hover` exist
+  (`tailwind.config.ts`).
+- **Motion is calm.** Prefer no entrance animation. Allowed: `transition-colors`,
+  `transition-transform`, a subtle `group-hover:scale-*`, `group-hover:translate-x-*` on a trailing
+  arrow. Prefer naming the properties (`transition-[transform,box-shadow]`) over `transition-all`,
+  which also animates things like `ring-color`.
+- **The mobile motion clamp:** `globals.css:291-301` forces
+  `animation-duration/transition-duration: .2s !important` on `*:not([data-motion])` under 768px. A
+  component needing a longer mobile transition must carry `data-motion`. Do not widen that selector —
+  `.pt-reveal`'s reduced-motion carve-out depends on `*` staying untouched, and Radix primitives
+  unmount on `animationend`.
+- **Loaders are ONE system.** `components/ui/skeleton`. Skeletons must match the final layout
+  exactly — same padding, gaps, aspect ratios — so there is zero layout shift.
+
+## 10. Hard rules
+
+| Code | Rule |
+| --- | --- |
+| DS001 | No `bg-white` / `bg-gray-*` — use `bg-canvas` / `bg-elevated` / `bg-sunken` |
+| DS002 | No manual `dark:` colour pairs — tokens are theme-aware (§8) |
+| DS003 | No `text-gray-*` — use `text-ink-1/2/3` |
+| DS004 | No `border-gray-*` — use `border-hairline` |
+| DS005 | No arbitrary `shadow-[…]` |
+| DS006 | No arbitrary hex `[#…]` — add a token |
+| DS007 | No inline `max-w-7xl` / `max-w-[1400px]` — use `<Container>` |
+| DS008 | No off-rhythm `py-*` on a `<section>` — use `<Section spacing=…>` |
+| DS009 | `backdrop-blur` banned |
+| DS010 | Zero emoji or dingbats as UI (`🎉 ⚡ ✓ ★ › →`) — lucide icons only, monoline, `h-4 w-4`/`h-5 w-5` |
+| DS011 | Prefer `brand-*` over `red-*` (`red` is a legacy alias for the same ramp) |
+
+Plus, not lint-enforceable: **French only** — no English UI labels, no Arabic leftovers,
+`aria-label`s in French, French month names via `toLocaleDateString('fr-FR', …)`. **≥44×44px** hit
+area on every interactive control. **Server-first** — no `'use client'` without
+state/effects/handlers/browser-API.
+
+## 11. Centrally owned — change deliberately
+
+Shared or load-bearing. Change in a *dedicated* PR with a visual pass, never as a side effect of
+redesigning one page.
+
+- **Shared components:** `ProductCard` + `ProductCardSkeleton` (must move together),
+  `SectionHeader`, `PageHeader`, `ProductGrid`, `Container`, `Section`, `Kicker`, `MobileTabBar`.
+- **Config & global CSS:** `tailwind.config.ts`, `globals.css`, `styles/tokens.css`, `layout.tsx`.
+- **Do not restyle `components/ui/*`** — extend additively.
+- **Off-limits to visual work entirely:** `middleware.ts`, `app/x-crawler/*`, anything under
+  `structuredData`/metadata, and the LCP contract in §12.
 
 ## 12. Hero & LCP contract (do not break)
 
 The homepage hero is the mobile LCP element. Its speed rests on one invariant:
 
-> The `<link rel="preload">` and the `<source>`/`<img>` the browser actually paints must resolve to
-> the **byte-identical URL** under the **same media query**. If they drift, the image downloads
-> twice and the preload is wasted.
+> The `<link rel="preload">` and the `<img>` the browser actually paints must resolve to the
+> **byte-identical URL** under the **same media query**. If they drift, the image downloads twice
+> and the preload is wasted.
 
-They were once two hand-maintained copies. They are now derived from a single object —
-`buildHeroImageSet()` in `src/util/heroImage.ts`. `page.tsx` renders `set.preload`; `Hero` renders
-`set.sources`. **Never hand-write a hero preload.**
+They are derived from a single object — `buildHeroImageSet()` in `src/util/heroImage.ts`. `page.tsx`
+renders `set.preload`; `Hero` renders `set.sources`. **Never hand-write a hero preload.**
 
-Rules that fall out of this, each with a reason:
+Rules that fall out of this, each with its reason:
 
-- **No `next/image` on slide 1.** It emits a `srcset` and the browser picks a candidate at runtime,
-  so the server cannot know which URL to preload. Use a raw `<img>` with one deterministic URL.
-- **Fixed widths only** (`w=828` mobile, `w=1920` desktop) and they must be members of
-  `images.deviceSizes`, or the optimizer returns 400.
-- **Never downscale a landscape image for mobile.** `object-cover` then scales by *height* and
-  drops under 1:1. Only a dedicated portrait crop gets `w=828`.
-- **No `crossOrigin` on the preload.** The fetch is same-origin and non-CORS; a mismatched CORS
-  mode makes the browser download the image twice.
+- **No `next/image` on slide 1.** It emits a `srcset` and the browser picks at runtime, so the server
+  cannot know which URL to preload. Raw `<img>`, one deterministic URL.
+- **Fixed widths only** (`w=828` mobile, `w=1920` desktop), and they must be members of
+  `images.deviceSizes` or the optimizer returns 400.
+- **Never downscale a landscape image for mobile.** `object-cover` then scales by height and drops
+  under 1:1. Only a dedicated portrait crop gets `w=828`.
+- **No `crossOrigin` on the preload.** Same-origin, non-CORS; a mismatched CORS mode downloads twice.
 - **No embla on the hero.** It replaces native scrolling with JS transforms and cannot work until
-  hydrated — exactly the window the LCP element must survive. Use a CSS scroll-snap track with
-  anchor-link dots. Embla stays for product rails.
-- **Keep the fixed heights** (`min-h-[588px] … xl:h-[640px]`). Never an aspect-ratio box: that
+  hydrated — exactly the window the LCP element must survive. CSS scroll-snap + anchor dots instead.
+  Embla stays for product rails.
+- **Keep the definite heights** (`.pt-hero`, `globals.css:365-384`). Never an aspect-ratio box: that
   resizes with the image and reintroduces CLS.
 - Slide 1 is `eager` + `fetchPriority="high"`; slides 2+ are `lazy` + `fetchPriority="low"`.
+- **Everything below the hero stays `loading="lazy"`** — six eager category tiles competing with the
+  preloaded hero is how you lose LCP.
 
 **Infrastructure this depends on:** Next's optimizer cache lives at `/app/.next/cache/images`. The
-Dockerfile must `chown` it to the runtime user *after* the `COPY`s, and docker-compose mounts a
-named volume so it survives deploys. When that write fails, Next logs `Failed to write image to
-cache` and serves anyway — so a cold cache is **silent** and every request re-transcodes. Verify
-with `x-nextjs-cache: HIT` on a second request.
+Dockerfile must `chown` it to the runtime user *after* the `COPY`s, and docker-compose mounts a named
+volume so it survives deploys. When that write fails, Next logs `Failed to write image to cache` and
+serves anyway — a cold cache is **silent** and every request re-transcodes. Verify with
+`x-nextjs-cache: HIT` on a second request.
 
----
+## 13. Known broken / in-flight
 
-## 13. RTL
+Dated and owned. **The PR that fixes an entry deletes it in the same commit.**
 
-`globals.css` overrides physical-direction utilities with `!important` for `html[dir="rtl"]`
+### The token bridge is severed — *open, 2026-08-01*
+
+`tailwind.config.ts:122-161` declares the shadcn colours as `hsl(var(--x))` while `styles/theme.css`
+defines them as hex/oklch/rgba. `hsl(#ffffff)` is invalid CSS, so the declaration is dropped and
+**every shadcn semantic utility is a silent no-op**: `bg-background`, `text-foreground`, `bg-card`,
+`bg-primary`, `bg-muted`, `bg-accent`, `border-border`, `ring-ring`.
+
+Confirmed in built CSS — these rules also emit **no `--tw-bg-opacity`**, so the opacity modifiers
+(`hover:bg-primary/90`, `ring-ring/50`, `dark:bg-input/30`) are dead too.
+
+Live consequences today:
+
+- `globals.css:97` `body { @apply bg-background text-foreground }` sets **nothing**. The page is
+  white because that is the UA default.
+- `globals.css:57` `* { @apply border-border outline-ring/50 }` sets nothing, so bare borders fall
+  back to preflight `#e5e7eb` — visibly wrong on dark surfaces.
+- `ui/button.tsx`'s `default` variant renders a **transparent button**. 11 call sites are affected in
+  production (the rest pass their own `bg-*`, which `tailwind-merge` uses to strip `bg-primary`).
+
+Blast radius when repaired: **18 primitives**, not 47 — 23 of the 46 files in `ui/` are imported by
+nothing at all, and 5 more reference no broken token. (v3 said 47; that was never measured.)
+
+**Origin:** this styling layer was a Figma Make export (Tailwind v4 flavoured) hand-downgraded to
+v3. v4 reads raw colour values; v3's convention is `hsl(var())`. The downgrade severed the bridge and
+the failure was silent, so the codebase routed around it for months. Do not "fix" this by adopting
+Tailwind v4 — revisit v4 only after the bridge is repaired.
+
+### Two page rails — *open*
+`max-w-7xl` on interior routes vs `max-w-site` on the homepage. Resolve in one dedicated PR (§4).
+
+### Two loyalty point systems — *open*
+`LoyaltyPointTransaction` and `UserPointTransaction` run in parallel. Not a design-system issue, but
+it surfaces in account UI.
+
+### `CategoryGrid` has zero consumers — *open*
+Kept deliberately: `HomePageClient.tsx:210-218` documents it as the intended block for category
+landing pages. Delete it or use it; do not leave it undecided indefinitely.
+
+## 14. RTL
+
+`globals.css:196-281` overrides physical-direction utilities with `!important` for `html[dir="rtl"]`
 (~85 lines). New components should prefer logical properties, or they will break in Arabic.
