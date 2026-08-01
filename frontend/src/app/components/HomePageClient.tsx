@@ -179,7 +179,6 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
               products={bestSellers as any}
               showBadge
               badgeText="Top Vendu"
-              tightTop
             />
           </div>
         )}

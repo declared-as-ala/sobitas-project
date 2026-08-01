@@ -24,9 +24,6 @@ interface ProductSectionProps {
   viewAllLabel?: string;
   /** Image presentation context for product cards. */
   imageContext?: 'default' | 'packs';
-  /** Reduce the top padding — used when this section directly follows the compact H1 lede so there
-   *  isn't a big empty gap between them. */
-  tightTop?: boolean;
 }
 
 export const ProductSection = memo(function ProductSection({
@@ -40,16 +37,15 @@ export const ProductSection = memo(function ProductSection({
   viewAllHref = '/shop',
   viewAllLabel = 'Voir tout',
   imageContext = 'default',
-  tightTop = false,
 }: ProductSectionProps) {
   return (
-    <section
-      id={id}
-      className={
-        (tightTop ? 'pt-3 sm:pt-4 pb-12 sm:pb-16 lg:pb-20' : 'py-12 sm:py-16 lg:py-20') +
-        ' bg-white dark:bg-gray-950'
-      }
-    >
+    /* One rhythm, no exceptions. This carried a `tightTop` prop (`pt-3 sm:pt-4`) that existed
+       solely to absorb the CategoryRail's undersized `py-7` above it — its own JSDoc described
+       "the compact H1 lede", a component that no longer exists. The rail now uses the shared
+       `Section spacing="tight"` token and owns its own bottom padding, so the compensation is
+       gone. See DESIGN_SYSTEM §3: the gap between two bands is the upper band's `pb` plus the
+       lower band's `pt` — never add a prop here to fix a neighbour's spacing. */
+    <section id={id} className="bg-white py-12 dark:bg-gray-950 sm:py-16 lg:py-20">
       <div className="max-w-site mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeader
           kicker={kicker}
