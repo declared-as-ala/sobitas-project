@@ -7,7 +7,7 @@ import { getLatestArticles } from '@/services/api';
 import { getCachedArticleDetails as getArticleDetails } from '@/services/getCachedProductDetails';
 import { getStorageUrl } from '@/services/api';
 import { resolveCanonicalUrl } from '@/util/canonical';
-import { htmlToText, truncateAtWord } from '@/util/sanitizeProductHtml';
+import { buildMetaDescription, htmlToText, truncateAtWord } from '@/util/sanitizeProductHtml';
 import { resolveArticleLanguage } from '@/util/articleLanguage';
 import { buildArticleSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
 import { blogHref } from '@/util/blogSlug';
@@ -48,15 +48,22 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       article.seo?.image ||
       (article.cover ? getStorageUrl(article.cover) : '');
     const description = stripHtml(article.description_fr || article.description || '');
-    // htmlToText wraps the RESOLVED value, not just the fallback: seo.description and
-    // meta_description_fr are CMS fields and carry the same raw entities.
-    const metaDescription = htmlToText(
+    // The headline, resolved BEFORE the description because the description is built relative to
+    // it — an article body opens with its own headline, so stripping tags leaves the title
+    // restated as the first words of the snippet.
+    const articleHeadline =
+      article.seo?.title || article.seo_title || article.meta_title || article.designation_fr || 'Blog';
+
+    // buildMetaDescription wraps the RESOLVED value, not just the fallback: seo.description and
+    // meta_description_fr are CMS fields and carry the same raw entities AND the same repeated
+    // headline. It decodes, drops that repetition, and truncates on a word boundary.
+    const metaDescription = buildMetaDescription(
       article.seo?.description ||
         article.seo_description ||
         article.meta_description_fr ||
         description ||
         `Découvrez ${article.designation_fr} sur le blog Protéine Tunisie — conseils nutrition et sport`,
-      500
+      { title: articleHeadline, maxLen: 500 }
     );
 
     // forceProteinDomain only normalised the HOST — an off-domain host, a dead path or an
@@ -66,7 +73,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       `/blog/${encodeURIComponent(article.slug || slug)}`
     );
     const articleLanguage = resolveArticleLanguage(article);
-    const title = article.seo?.title || article.seo_title || article.meta_title || article.designation_fr || 'Blog';
+    const title = articleHeadline;
     const descriptionWithTunisia = metaDescription.includes('Tunisie') ? metaDescription : `${metaDescription} Conseils nutrition sportive Tunisie — Protéine Tunisie.`;
     const twitterImage = article.seo?.twitter?.image || imageUrl || '';
     return {
