@@ -62,6 +62,57 @@ class ConvertUploadedImageToWebp
     private const LOSSLESS_SOURCES = ['png', 'gif', 'bmp'];
 
     /**
+     * Wall-clock budget for ALL image work in a single HTTP request, in seconds.
+     *
+     * WHY THIS EXISTS — it is a regression fix, and the regression was mine.
+     *
+     * Making the master lossless (the whole point of this class) also made encoding far more
+     * expensive: `toWebp(100)` on a 2560px image costs seconds, and the production PHP image ships
+     * GD, not Imagick, which is the slower of the two. That was survivable for a single slide.
+     *
+     * It was not survivable for a product. `FileUpload::make('images')->multiple()` calls
+     * `saveUploadedFileUsing` once PER FILE, all inside the one save request, so a gallery of five
+     * large PNGs serialises five expensive encodes back to back. nginx caps that request at
+     * `fastcgi_read_timeout 60s` (nginx/configuration.conf), so the save died with a 504, Livewire
+     * received HTML where it expected JSON, and the admin showed a page-load error. Intermittent by
+     * nature: it depended entirely on how many images were attached and how big they were.
+     *
+     * A timeout is NOT a catchable exception — the existing try/catch could never have helped. The
+     * only reliable defence is to stop starting work we cannot finish in time.
+     *
+     * 25s leaves comfortable headroom under the 60s cap for the rest of the save (validation, the
+     * INSERT, relationship syncs, observers) even on a slow disk. When the budget is gone the
+     * original file is kept, which is the same well-trodden branch every other failure path returns:
+     * a correct, serveable image that simply has not been optimised. A product saved with a slightly
+     * larger master beats a product the client cannot save at all.
+     */
+    private const REQUEST_TIME_BUDGET = 25.0;
+
+    /**
+     * Seconds of image work already spent in THIS request, across every instance of this class.
+     *
+     * A static is the right scope ONLY under PHP-FPM, where each request gets a fresh process and
+     * statics therefore reset by themselves. It is the wrong scope in a long-running process —
+     * `queue:work` and `schedule:work` both stay alive across many jobs, so this would accumulate
+     * forever and eventually refuse to convert anything at all, silently and permanently.
+     *
+     * Hence `budgetApplies()`: the budget exists to survive nginx's `fastcgi_read_timeout`, and
+     * there is no gateway in front of a console process. CLI does the full work, uncapped.
+     */
+    private static float $timeSpent = 0.0;
+
+    /** The budget guards an HTTP request against the gateway timeout; console has no gateway. */
+    private static function budgetApplies(): bool
+    {
+        try {
+            return ! app()->runningInConsole();
+        } catch (Throwable) {
+            // No container (unlikely here) — assume web and stay conservative.
+            return true;
+        }
+    }
+
+    /**
      * @param  int  $quality  Retained for backward compatibility with existing call sites. It is
      *                        now only a floor for the rare lossy fallback path (case C on a driver
      *                        without lossless support); the normal paths do not use it.
@@ -121,6 +172,25 @@ class ConvertUploadedImageToWebp
                 return $relativePath;
             }
 
+            // Everything past this point is the expensive path — decode, optional resize, encode.
+            // Cases A and B above cost only a stat and a 64-byte header read, so they are never
+            // gated; this is the only work that can run a request into the gateway timeout.
+            if (self::budgetApplies() && self::$timeSpent >= self::REQUEST_TIME_BUDGET) {
+                Log::warning('media.master.skipped_over_budget', [
+                    'disk' => $diskName,
+                    'path' => $relativePath,
+                    'dimensions' => "{$width}x{$height}",
+                    'spent_seconds' => round(self::$timeSpent, 2),
+                    'budget_seconds' => self::REQUEST_TIME_BUDGET,
+                    'reason' => 'request time budget exhausted — original kept so the save still completes',
+                ]);
+
+                return $relativePath;
+            }
+
+            // Time the real work so the budget reflects this machine's actual cost, not a guess.
+            $startedAt = microtime(true);
+
             $manager = new ImageManager($this->driver());
             $image = $manager->read($fullPath);
 
@@ -130,6 +200,14 @@ class ConvertUploadedImageToWebp
             }
 
             $encoded = $this->encodeLossless($image);
+
+            // Free the decoded bitmap before writing. A 2560px RGBA frame is ~26 MB, and a gallery
+            // save holds one per iteration; without this, several in sequence walk toward the
+            // 512M memory_limit.
+            unset($image, $manager);
+
+            $elapsed = microtime(true) - $startedAt;
+            self::$timeSpent += $elapsed;
 
             $dir = pathinfo($relativePath, PATHINFO_DIRNAME);
             $newBase = Str::uuid()->toString() . '.webp';
@@ -159,6 +237,11 @@ class ConvertUploadedImageToWebp
                     ? 'capped to ' . self::MAX_EDGE
                     : "{$width}x{$height}",
                 'encoding' => 'webp-lossless',
+                // Timings are logged so the budget can be tuned against reality instead of a guess,
+                // and so a slow driver shows up in the logs before it shows up as a failed save.
+                'seconds' => round($elapsed, 2),
+                'request_total_seconds' => round(self::$timeSpent, 2),
+                'driver' => extension_loaded('imagick') ? 'imagick' : 'gd',
             ]);
 
             return $newRelative;
