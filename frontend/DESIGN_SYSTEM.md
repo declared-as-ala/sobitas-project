@@ -144,11 +144,25 @@ Mobile-first. Never cause horizontal body scroll; wide content scrolls inside it
 
 ## 5. Tokens
 
-> **STATUS: pending the Stage 4 token-bridge repair.** Until that lands, the shadcn semantic
-> utilities in the second table are dead — see §13.
-
 Defined in `src/styles/tokens.css`, wired in `tailwind.config.ts`. Values are space-separated RGB
 triplets so Tailwind's `<alpha-value>` works (`bg-brand/10`, `text-ink-2/70`).
+
+**The shadcn semantic names now resolve to these same tokens** — `bg-background` is `--c-canvas`,
+`bg-primary` is `--c-brand`, `border-border` is `--c-hairline`, and so on. One source of truth. Both
+vocabularies are live and equivalent; prefer the `--c-*`-named utilities (`bg-canvas`, `text-ink-1`)
+in app code, and let `components/ui/*` keep the shadcn names it ships with.
+
+Two tokens exist only to be paired, and must not be replaced by literals:
+
+| Token | Why it is not a constant |
+| --- | --- |
+| `--c-on-brand` | The foreground that sits **on** the accent. White in light mode; **near-black in dark**, because white on the dark accent `#FF8A4C` measures ~2.2:1 and fails AA outright. |
+| `--c-danger` | Destructive stays **red in both themes**, never brand orange — a delete button must not look like add-to-cart. |
+
+**Primary CTA = `<Button>` with no variant.** `variant="default"` *is* the brand button now that
+`--primary` is the accent; `outline` is its secondary form and `ghost` the quiet one. The old
+`brand` / `brandOutline` / `brandGhost` variants were deleted — they existed only because
+`--primary` was near-black and broken, and they had zero usages.
 
 | Token | Utility | Light / dark |
 | --- | --- | --- |
@@ -335,32 +349,27 @@ serves anyway — a cold cache is **silent** and every request re-transcodes. Ve
 
 Dated and owned. **The PR that fixes an entry deletes it in the same commit.**
 
-### The token bridge is severed — *open, 2026-08-01*
+### ~~The token bridge is severed~~ — *FIXED 2026-08-02*
 
-`tailwind.config.ts:122-161` declares the shadcn colours as `hsl(var(--x))` while `styles/theme.css`
-defines them as hex/oklch/rgba. `hsl(#ffffff)` is invalid CSS, so the declaration is dropped and
-**every shadcn semantic utility is a silent no-op**: `bg-background`, `text-foreground`, `bg-card`,
-`bg-primary`, `bg-muted`, `bg-accent`, `border-border`, `ring-ring`.
+Resolved. The shadcn names now point at the `--c-*` tokens (§5). Kept here as a short record
+because the failure mode is worth recognising again:
 
-Confirmed in built CSS — these rules also emit **no `--tw-bg-opacity`**, so the opacity modifiers
-(`hover:bg-primary/90`, `ring-ring/50`, `dark:bg-input/30`) are dead too.
+`hsl(var(--x))` wrapped around a hex/oklch value is **invalid CSS, so the browser drops the whole
+declaration silently.** No build error, no console warning, no red squiggle — the utility simply
+does nothing, and a codebase quietly grows 2,000 hardcoded workarounds around the hole. `body`'s
+background, the universal border rule, and the default `<Button>`'s fill were all no-ops for months.
 
-Live consequences today:
+Two lessons that generalise:
 
-- `globals.css:97` `body { @apply bg-background text-foreground }` sets **nothing**. The page is
-  white because that is the UA default.
-- `globals.css:57` `* { @apply border-border outline-ring/50 }` sets nothing, so bare borders fall
-  back to preflight `#e5e7eb` — visibly wrong on dark surfaces.
-- `ui/button.tsx`'s `default` variant renders a **transparent button**. 11 call sites are affected in
-  production (the rest pass their own `bg-*`, which `tailwind-merge` uses to strip `bg-primary`).
+1. **Verify tokens in the emitted stylesheet, not the config.** The config looked correct. The
+   built CSS is where `hsl(#ffffff)` shows up. A missing `--tw-bg-opacity` next to a colour rule is
+   the tell that a token is dead.
+2. **Repairing a dead token activates it.** `text-muted-foreground` had never rendered, so nobody
+   noticed that `--c-ink-3` failed WCAG AA (4.06:1 on the sand band). Fixing plumbing exposes
+   whatever was hiding behind it — re-check contrast after any token repair, don't assume.
 
-Blast radius when repaired: **18 primitives**, not 47 — 23 of the 46 files in `ui/` are imported by
-nothing at all, and 5 more reference no broken token. (v3 said 47; that was never measured.)
-
-**Origin:** this styling layer was a Figma Make export (Tailwind v4 flavoured) hand-downgraded to
-v3. v4 reads raw colour values; v3's convention is `hsl(var())`. The downgrade severed the bridge and
-the failure was silent, so the codebase routed around it for months. Do not "fix" this by adopting
-Tailwind v4 — revisit v4 only after the bridge is repaired.
+**Origin:** a Figma Make export (Tailwind v4 flavoured) hand-downgraded to v3. v4 reads raw colour
+values; v3's convention is `hsl(var())`. Do not reintroduce v4 syntax until v4 is actually installed.
 
 ### Two page rails — *open*
 `max-w-7xl` on interior routes vs `max-w-site` on the homepage. Resolve in one dedicated PR (§4).
