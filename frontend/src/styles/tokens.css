@@ -26,6 +26,16 @@
   --c-brand: 213 59 4; /* #D53B04 */
   --c-brand-hover: 182 51 4; /* #B63304 */
 
+  /* Text/icon colour that sits ON the accent. NOT a constant — see the .dark block: white on
+   * the dark-mode accent (#FF8A4C) measures ~2.2:1, a hard AA failure. Anything that pairs a
+   * foreground with --c-brand must use this, never a literal white. */
+  --c-on-brand: 255 255 255;
+
+  /* Destructive stays RED, deliberately never the brand orange. Delete, cancel and remove must
+   * not look like add-to-cart — that similarity is how a customer destroys something by
+   * reflex. This is the one place a second hue is correct. */
+  --c-danger: 220 38 38; /* #DC2626 */
+
   /* ---- Surfaces (theme-switchable) ---------------------------------------- */
   --c-canvas: 255 255 255; /* page background */
   --c-elevated: 255 255 255; /* cards, sheets, dropdowns */
@@ -61,6 +71,14 @@
   /* Lighter, warmer accent so the orange stays legible on dark surfaces. */
   --c-brand: 255 138 76; /* #FF8A4C */
   --c-brand-hover: 255 168 119; /* #FFA877 */
+
+  /* Near-black ON the light accent, not white. White on #FF8A4C is ~2.2:1 and fails AA
+   * outright; #0A0A0B on it measures ~10.6:1. If the accent is ever re-tuned, adjust THIS
+   * to keep contrast — never darken --c-brand, which would undo the reason it lightens here. */
+  --c-on-brand: 10 10 11;
+
+  /* Lighter red so danger stays legible on dark surfaces, same reasoning as the accent. */
+  --c-danger: 248 113 113; /* #F87171 */
 
   --c-canvas: 10 10 11;
   --c-elevated: 20 20 22;
