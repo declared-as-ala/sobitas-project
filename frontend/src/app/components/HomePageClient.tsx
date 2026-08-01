@@ -239,7 +239,7 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
           className="py-12 sm:py-16 lg:py-20 bg-white dark:bg-gray-950 border-t border-gray-100 dark:border-gray-800"
           aria-label="Informations sur la protéine en Tunisie"
         >
-          <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-site mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl">
             {/* h2, not h1 — the page's single h1 is the visually-hidden one at the top of <main>,
                 so this crawlable block leads with a keyword-rich h2. */}

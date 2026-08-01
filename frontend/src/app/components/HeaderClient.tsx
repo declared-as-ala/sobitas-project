@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { usePathname, useRouter } from 'next/navigation';
+import { buildWhatsAppHref, WHATSAPP_ARIA_LABEL, WHATSAPP_ICON_PATH } from '@/util/whatsapp';
 import {
   ShoppingCart,
   User,
@@ -315,7 +316,7 @@ export function HeaderClient() {
           removes the old two-state "lag" where the `scrolled` boolean flipped back and forth at a
           single threshold. Only the main bar + nav below are sticky. */}
       <div className="font-poppins bg-[#111827] text-gray-300">
-        <div className="hidden md:flex max-w-[1400px] mx-auto h-9 px-4 lg:px-8 items-center justify-between text-xs">
+        <div className="hidden md:flex max-w-site mx-auto h-9 px-4 lg:px-8 items-center justify-between text-xs">
           <div className="flex items-center gap-3">
             <a href={`tel:${PHONE.replace(/\s/g, '')}`} className="flex items-center gap-1.5 hover:text-[#FF5A00] transition-colors shrink-0" aria-label={`Appeler ${PHONE}`}>
               <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -408,7 +409,7 @@ export function HeaderClient() {
 
         {/* DESKTOP main bar: white surface, orange logo, wide search, ghost icon buttons. */}
         <div className="hidden md:block bg-white dark:bg-gray-950">
-          <div className="max-w-[1400px] mx-auto px-4 lg:px-8">
+          <div className="max-w-site mx-auto px-4 lg:px-8">
             <div className="flex items-center gap-6 h-[72px]">
               <Link href="/" className="flex-shrink-0 transition-opacity duration-200 hover:opacity-80" aria-label="Proteine Tunisie - Accueil">
                 {/* Logo is NOT `priority`: next/image priority injects a fetchpriority=high preload
@@ -539,7 +540,7 @@ export function HeaderClient() {
           className="hidden md:block bg-white dark:bg-gray-950 border-t border-[#EAECEF] dark:border-gray-800"
           aria-label="Navigation principale"
         >
-          <div className="max-w-[1400px] mx-auto px-4 lg:px-8">
+          <div className="max-w-site mx-auto px-4 lg:px-8">
             <div className="flex items-center gap-4 h-12">
               {/* The nav items scroll horizontally WITHIN this container (flex-1 min-w-0 +
                   overflow-x-auto) so a long nav can never overflow the page and force a body-level
@@ -581,6 +582,26 @@ export function HeaderClient() {
                   );
                 })}
               </div>
+
+              {/* WhatsApp, promoted out of the floating bubble and into the nav (owner request).
+                  On desktop the FAB sat in the bottom-right corner, far from the moment someone
+                  decides to ask a question; here it sits beside the pack CTA where the intent is.
+                  The floating button is hidden from `md` up so there is exactly ONE WhatsApp
+                  affordance per breakpoint — see WhatsAppFab. Secondary styling (outlined, not
+                  filled) so it supports the orange pack CTA rather than competing with it. */}
+              <a
+                href={buildWhatsAppHref()}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={WHATSAPP_ARIA_LABEL}
+                className="shrink-0 inline-flex items-center gap-2 rounded-lg border border-[#25D366]/40 bg-[#25D366]/10 px-3 py-2 text-[14px] font-semibold text-[#128C4A] transition-all duration-200 hover:border-[#25D366] hover:bg-[#25D366] hover:text-white active:scale-[0.98] whitespace-nowrap dark:text-[#25D366] dark:hover:text-white"
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="currentColor" aria-hidden="true">
+                  <path d={WHATSAPP_ICON_PATH} />
+                </svg>
+                {/* Label only where the nav has room; the icon + aria-label carry it below xl. */}
+                <span className="hidden xl:inline">WhatsApp</span>
+              </a>
 
               {packBuilderLink && (
                 <NavigationLink

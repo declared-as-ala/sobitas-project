@@ -363,19 +363,23 @@ html[dir="rtl"] [data-i18n-ltr] {
  * it and there is no resize jank when the bar hides on scroll.
  */
 .pt-hero {
-  height: 420px;
-  height: clamp(380px, calc(64svh - var(--tabbar-h) - env(safe-area-inset-bottom, 0px)), 520px);
+  height: 440px;
+  height: clamp(400px, calc(66svh - var(--tabbar-h) - env(safe-area-inset-bottom, 0px)), 540px);
 }
 @media (min-width: 768px) {
   .pt-hero {
-    height: 400px;
-    height: clamp(360px, 46svh, 440px);
+    height: 470px;
+    height: clamp(430px, 56svh, 540px);
   }
 }
 @media (min-width: 1280px) {
   .pt-hero {
-    height: 440px;
-    height: clamp(400px, 50svh, 460px);
+    /* Raised again (owner: "make them much bigger in height"). On a 1536×730 laptop viewport —
+       a 1920 screen at 125% Windows scaling, which is what the owner uses — 62svh resolves to
+       ~452px, so the 500px floor is what actually applies there and is the number that matters.
+       The 620px ceiling stops it becoming a letterbox on a tall 1440p display. */
+    height: 520px;
+    height: clamp(500px, 62svh, 620px);
   }
 }
 

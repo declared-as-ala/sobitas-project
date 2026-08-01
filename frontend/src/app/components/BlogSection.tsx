@@ -81,7 +81,7 @@ export function BlogSection({ articles }: BlogSectionProps) {
 
   return (
     <section className="py-12 sm:py-16 lg:py-20 bg-gray-50 dark:bg-gray-900 overflow-hidden">
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-site mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeader
           kicker="Le blog"
           title="Nos derniers articles"
