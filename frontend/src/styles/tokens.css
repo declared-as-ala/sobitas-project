@@ -49,7 +49,14 @@
    * Warmth can increase once `gray-*` is fully migrated. */
   --c-ink-1: 10 10 11; /* #0A0A0B — headings, primary text */
   --c-ink-2: 87 87 94; /* #57575E — body copy */
-  --c-ink-3: 120 120 127; /* #78787F — meta, captions, placeholders */
+  /* #6C6C73, darkened from #78787F. The old value failed WCAG AA in BOTH the places it is
+   * meant to be used: 4.28:1 on --c-canvas and 4.06:1 on --c-sunken, against a 4.5:1 minimum.
+   * That went unnoticed because `text-ink-3` had zero usages and `text-muted-foreground` — which
+   * now resolves here — was a dead no-op until the token bridge was repaired. Measured after:
+   * 5.21:1 on canvas, 4.83:1 on sunken. Sunken is the binding constraint, not canvas: a lighter
+   * background yields HIGHER contrast for the same ink, so anything that passes on the sand band
+   * passes on white. Re-tune against sunken. */
+  --c-ink-3: 108 108 115; /* #6C6C73 — meta, captions, placeholders */
 
   /* ---- Mobile tab bar -----------------------------------------------------
    * ONE knob that every fixed-bottom element (body offset, WhatsApp FAB,
