@@ -267,13 +267,33 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
     }
     const viewport = window.visualViewport;
     if (!viewport) return;
-    const updateHeight = () => setMobileSheetHeight(viewport.height);
+
+    // `resize` only. This used to also listen to `scroll`, which on visualViewport fires on EVERY
+    // frame while the page moves — each one calling setState, and the resulting height flows into
+    // an inline style, so React re-rendered and the browser re-laid-out the sheet per frame. That
+    // is a measurable share of the 549ms presentation delay profiled on the search interaction.
+    // The keyboard opening/closing is a RESIZE of the visual viewport, which is the actual signal
+    // this effect wants; scroll never carried information it needed.
+    //
+    // rAF-coalesced because resize can still burst during the keyboard animation, and rounded
+    // because sub-pixel viewport heights would defeat React's bail-out on an unchanged value and
+    // re-render for a difference nobody can see.
+    let frame = 0;
+    const updateHeight = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        setMobileSheetHeight((prev) => {
+          const next = Math.round(viewport.height);
+          return prev === next ? prev : next;
+        });
+      });
+    };
     updateHeight();
     viewport.addEventListener('resize', updateHeight);
-    viewport.addEventListener('scroll', updateHeight);
     return () => {
+      if (frame) cancelAnimationFrame(frame);
       viewport.removeEventListener('resize', updateHeight);
-      viewport.removeEventListener('scroll', updateHeight);
       setMobileSheetHeight(null);
     };
   }, [variant, mounted, isOpen]);
