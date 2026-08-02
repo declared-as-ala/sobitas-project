@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\ProductResource\Pages;
 
 use App\Filament\Resources\ProductResource;
+use App\Support\LegacyColumnDefaults;
 use Filament\Actions;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Support\Facades\Schema;
@@ -84,6 +85,24 @@ class CreateProduct extends CreateRecord
             }
         }
 
-        return $data;
+        /*
+         * `products` is a LEGACY table with no migration behind it, so it carries columns that are
+         * NOT NULL with no DEFAULT and no field anywhere in this form. With MySQL strict mode on
+         * (config/database.php), omitting one of those makes the INSERT fail:
+         *
+         *     SQLSTATE[HY000]: General error: 1364 Field 'xxx' doesn't have a default value
+         *
+         * That is a QueryException, so Laravel renders its styled 500 page, and Livewire — which
+         * expects JSON back — surfaces it to the admin as "Erreur lors du chargement de la page".
+         * It hits CREATE only, because an UPDATE writes just the dirty columns; that is exactly
+         * why editing a product works and adding one does not.
+         *
+         * This asks the database which columns are mandatory and supplies the same zero values
+         * MySQL itself would have used with strict mode off — rather than turning strict mode off
+         * globally, which would also silence real truncation and type errors. See
+         * LegacyColumnDefaults; it logs every column it fills, and when that log line stops
+         * appearing the schema is finally under migration control and this call can go.
+         */
+        return LegacyColumnDefaults::fill('products', $data);
     }
 }
