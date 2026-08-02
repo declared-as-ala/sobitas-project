@@ -300,6 +300,42 @@ html[dir="rtl"] [data-i18n-ltr] {
   }
 }
 
+/* ---------------------------------------------------------------------------------------------
+ * .pt-defer — skip rendering work for off-screen sections.
+ *
+ * MEASURED PROBLEM. Search Console reports INP > 200ms on 408 mobile URLs (419ms on the homepage).
+ * Profiling under 4x CPU throttling showed the cost is NOT in our handlers:
+ *
+ *     search button  552ms  =  3ms input delay + 0ms processing + 549ms PRESENTATION
+ *     logo link      320ms  =  2ms input delay + 1ms processing + 317ms PRESENTATION
+ *
+ * Processing is ~0ms. Nearly all of it is presentation delay — the browser producing the next
+ * frame. Opening the search sheet inserts 63 elements and costs +164 style recalculations and
+ * +159 layout passes, because every one of those passes walks the WHOLE 2,012-element document.
+ *
+ * `content-visibility: auto` makes the browser skip style, layout and paint for a subtree while
+ * it is outside the viewport, so those passes stop traversing content nobody is looking at. It is
+ * the correct tool here precisely because the problem is document size, not handler cost.
+ *
+ * `contain-intrinsic-size: auto 600px` is NOT optional: without a placeholder size the skipped
+ * section collapses to zero height, the scrollbar jumps, and we trade an INP win for a CLS
+ * regression. `auto` makes the browser remember the real size once rendered and reuse it.
+ *
+ * SEO IS UNAFFECTED. This is a pure rendering optimisation — the DOM is unchanged, the markup is
+ * fully present in the server-rendered HTML, and Googlebot reads the DOM. Verified by asserting
+ * the deferred sections' text still appears in the fetched HTML.
+ *
+ * Applied ONLY below 1024px. Desktop has neither the CPU constraint nor the INP failure, and the
+ * `.pt-reveal` scroll-driven animations above are gated to >=1024px — a subtree that is skipped
+ * cannot drive a view() timeline, so overlapping them would silently kill the reveals.
+ * ------------------------------------------------------------------------------------------- */
+@media (max-width: 1023px) {
+  .pt-defer {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 600px;
+  }
+}
+
 /* Respect user's motion preferences */
 @media (prefers-reduced-motion: reduce) {
   /* Kill smooth scrolling too. `html` carries `scroll-behavior: smooth` (and the hero track adds

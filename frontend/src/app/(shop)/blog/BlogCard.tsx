@@ -51,9 +51,12 @@ export function BlogCard({ article, priority = false, excerpt, readingMinutes, t
               <Newspaper className="h-10 w-10 text-gray-300 dark:text-gray-700" strokeWidth={1.5} aria-hidden="true" />
             </div>
           )}
-          {/* Floating date pill (magazine style) — moves the date onto the cover, freeing the footer */}
+          {/* Floating date pill (magazine style) — moves the date onto the cover, freeing the footer.
+              Opaque chip rather than bg-white/90 + backdrop-blur-sm: `backdrop-blur` is banned
+              (DESIGN_SYSTEM §9) and on a blog grid it was one compositing layer per card. At 90%
+              opacity the blur was doing almost nothing anyway; solid reads more crisply. */}
           {date && (
-            <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-gray-800 shadow-sm backdrop-blur-sm dark:bg-gray-950/80 dark:text-gray-100">
+            <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-gray-800 shadow-sm dark:bg-gray-950 dark:text-gray-100">
               <Calendar className="h-3 w-3 text-red-600 dark:text-red-400" strokeWidth={2} aria-hidden="true" />
               {format(date, 'd MMM yyyy', { locale: fr })}
             </span>

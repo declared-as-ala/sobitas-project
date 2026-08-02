@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Noto_Sans_Arabic, Archivo, Poppins } from "next/font/google";
 import { Suspense } from "react";
+
 import Script from "next/script";
 import { cn } from "@/app/components/ui/utils";
 import "./globals.css";
@@ -9,7 +10,8 @@ import { Providers } from "@/app/providers";
 import { GlobalLoader } from "@/app/components/GlobalLoader";
 import { NavigationHandler } from "@/app/components/NavigationHandler";
 import { DeferredToaster } from "@/app/components/DeferredToaster";
-import { InstallAppBanner } from "@/app/components/InstallAppBanner";
+// PWA install prompt, moved off the critical path — see DeferredInstallBanner for why.
+import { DeferredInstallBanner } from "@/app/components/DeferredInstallBanner";
 import { WhatsAppFab } from "@/app/components/WhatsAppFab";
 import { MobileTabBar } from "@/app/components/MobileTabBar";
 import { LOCALE_STORAGE_KEY } from "@/i18n";
@@ -286,7 +288,7 @@ export default async function RootLayout({
             {children}
             <GlobalLoader />
             <DeferredToaster />
-            <InstallAppBanner />
+            <DeferredInstallBanner />
             <WhatsAppFab />
             {/* Mounted once here, not per page, so it never remounts on navigation. */}
             <MobileTabBar />

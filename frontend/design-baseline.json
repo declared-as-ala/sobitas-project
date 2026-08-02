@@ -1,0 +1,651 @@
+{
+  "src/app/(shop)/account/AccountPage.tsx": {
+    "DS001": 4,
+    "DS002": 3,
+    "DS004": 2,
+    "DS007": 1,
+    "DS011": 3
+  },
+  "src/app/(shop)/account/AccountSkeletons.tsx": {
+    "DS001": 8,
+    "DS002": 5,
+    "DS004": 2,
+    "DS007": 3
+  },
+  "src/app/(shop)/account/FidelitySection.tsx": {
+    "DS001": 8,
+    "DS002": 47,
+    "DS003": 27,
+    "DS004": 12,
+    "DS011": 26
+  },
+  "src/app/(shop)/account/OrdersSection.tsx": {
+    "DS001": 10,
+    "DS002": 35,
+    "DS003": 12,
+    "DS004": 10,
+    "DS011": 30
+  },
+  "src/app/(shop)/account/ProfileSection.tsx": {
+    "DS001": 2,
+    "DS002": 6,
+    "DS003": 5,
+    "DS004": 6,
+    "DS011": 12
+  },
+  "src/app/(shop)/account/orders/OrdersPageClient.tsx": {
+    "DS001": 2,
+    "DS002": 1,
+    "DS007": 1
+  },
+  "src/app/(shop)/account/orders/[id]/page.tsx": {
+    "DS001": 18,
+    "DS002": 51,
+    "DS003": 29,
+    "DS004": 24,
+    "DS007": 2,
+    "DS011": 14
+  },
+  "src/app/(shop)/avis/[token]/AvisClient.tsx": {
+    "DS001": 8,
+    "DS002": 23,
+    "DS003": 14,
+    "DS004": 8,
+    "DS008": 1,
+    "DS011": 7
+  },
+  "src/app/(shop)/blog/BlogCard.tsx": {
+    "DS001": 8,
+    "DS002": 13,
+    "DS003": 9,
+    "DS004": 4,
+    "DS011": 9
+  },
+  "src/app/(shop)/blog/BlogListSkeleton.tsx": {
+    "DS001": 2,
+    "DS002": 1,
+    "DS007": 1,
+    "DS008": 1
+  },
+  "src/app/(shop)/blog/BlogPageClient.tsx": {
+    "DS001": 8,
+    "DS002": 18,
+    "DS003": 13,
+    "DS004": 10,
+    "DS007": 1,
+    "DS011": 26
+  },
+  "src/app/(shop)/blog/BlogPager.tsx": {
+    "DS002": 3,
+    "DS003": 3,
+    "DS004": 2,
+    "DS011": 4
+  },
+  "src/app/(shop)/blog/BlogRecommendedProducts.tsx": {
+    "DS001": 2,
+    "DS002": 5,
+    "DS003": 3,
+    "DS004": 4
+  },
+  "src/app/(shop)/blog/BlogSeoBlock.tsx": {
+    "DS001": 2,
+    "DS002": 9,
+    "DS003": 5,
+    "DS004": 4,
+    "DS011": 6
+  },
+  "src/app/(shop)/blog/BlogTaxonomySkeleton.tsx": {
+    "DS001": 2,
+    "DS002": 1,
+    "DS007": 1,
+    "DS008": 1
+  },
+  "src/app/(shop)/blog/[slug]/ArticleDetailClient.tsx": {
+    "DS001": 18,
+    "DS002": 41,
+    "DS003": 34,
+    "DS004": 20,
+    "DS011": 44
+  },
+  "src/app/(shop)/blog/[slug]/loading.tsx": {
+    "DS001": 4,
+    "DS002": 3,
+    "DS004": 2
+  },
+  "src/app/(shop)/blog/category/[slug]/page.tsx": {
+    "DS001": 2,
+    "DS002": 6,
+    "DS003": 8,
+    "DS007": 1,
+    "DS008": 1,
+    "DS011": 10
+  },
+  "src/app/(shop)/blog/page.tsx": {
+    "DS002": 2,
+    "DS003": 3,
+    "DS007": 1,
+    "DS011": 2
+  },
+  "src/app/(shop)/blog/tag/[slug]/page.tsx": {
+    "DS001": 2,
+    "DS002": 6,
+    "DS003": 8,
+    "DS007": 1,
+    "DS008": 1,
+    "DS011": 10
+  },
+  "src/app/(shop)/brand/[slug]/loading.tsx": {
+    "DS001": 2,
+    "DS002": 1,
+    "DS007": 1
+  },
+  "src/app/(shop)/brands/BrandsPageClient.tsx": {
+    "DS001": 20,
+    "DS002": 36,
+    "DS003": 24,
+    "DS004": 14,
+    "DS011": 33
+  },
+  "src/app/(shop)/cart/page.tsx": {
+    "DS001": 30,
+    "DS002": 63,
+    "DS003": 33,
+    "DS004": 30,
+    "DS005": 2,
+    "DS007": 4,
+    "DS008": 1,
+    "DS011": 39
+  },
+  "src/app/(shop)/category/CategorySeoLanding.tsx": {
+    "DS001": 32,
+    "DS002": 78,
+    "DS003": 41,
+    "DS004": 30,
+    "DS011": 84
+  },
+  "src/app/(shop)/category/CategorySeoLandingExpandable.tsx": {
+    "DS002": 1,
+    "DS011": 4
+  },
+  "src/app/(shop)/category/[slug]/loading.tsx": {
+    "DS007": 1
+  },
+  "src/app/(shop)/category/[slug]/page.tsx": {
+    "DS007": 2
+  },
+  "src/app/(shop)/checkout/CheckoutFooterCTA.tsx": {
+    "DS001": 8,
+    "DS002": 19,
+    "DS003": 15,
+    "DS004": 6,
+    "DS005": 2,
+    "DS011": 8
+  },
+  "src/app/(shop)/checkout/CheckoutPage.tsx": {
+    "DS001": 48,
+    "DS002": 170,
+    "DS003": 127,
+    "DS004": 58,
+    "DS005": 1,
+    "DS011": 90
+  },
+  "src/app/(shop)/contact/ContactPageClient.tsx": {
+    "DS001": 8,
+    "DS002": 28,
+    "DS003": 19,
+    "DS004": 6,
+    "DS007": 1,
+    "DS011": 32
+  },
+  "src/app/(shop)/contact/loading.tsx": {
+    "DS001": 6,
+    "DS002": 5,
+    "DS004": 4,
+    "DS007": 1
+  },
+  "src/app/(shop)/faqs/FAQsPageClient.tsx": {
+    "DS001": 6,
+    "DS002": 11,
+    "DS003": 5,
+    "DS004": 6,
+    "DS011": 8
+  },
+  "src/app/(shop)/faqs/loading.tsx": {
+    "DS001": 4,
+    "DS002": 4,
+    "DS004": 4
+  },
+  "src/app/(shop)/favoris/FavorisPageClient.tsx": {
+    "DS001": 4,
+    "DS002": 7,
+    "DS003": 3,
+    "DS004": 2,
+    "DS007": 1,
+    "DS011": 6
+  },
+  "src/app/(shop)/offres/OffresPageClient.tsx": {
+    "DS001": 2,
+    "DS002": 2,
+    "DS003": 1,
+    "DS004": 2,
+    "DS007": 1,
+    "DS011": 2
+  },
+  "src/app/(shop)/offres/loading.tsx": {
+    "DS001": 2,
+    "DS002": 1,
+    "DS007": 1
+  },
+  "src/app/(shop)/order-confirmation/[id]/page.tsx": {
+    "DS001": 20,
+    "DS002": 67,
+    "DS003": 39,
+    "DS004": 32,
+    "DS011": 28
+  },
+  "src/app/(shop)/pack-builder/PackBuilderClient.tsx": {
+    "DS001": 12,
+    "DS002": 44,
+    "DS003": 32,
+    "DS004": 14,
+    "DS011": 30
+  },
+  "src/app/(shop)/packs/PacksPageClient.tsx": {
+    "DS001": 2,
+    "DS002": 1,
+    "DS007": 1
+  },
+  "src/app/(shop)/packs/loading.tsx": {
+    "DS001": 2,
+    "DS002": 1,
+    "DS007": 1
+  },
+  "src/app/(shop)/page/[slug]/PageContentClient.tsx": {
+    "DS001": 13,
+    "DS002": 23,
+    "DS003": 37,
+    "DS004": 20,
+    "DS008": 2,
+    "DS011": 27
+  },
+  "src/app/(shop)/page/[slug]/loading.tsx": {
+    "DS001": 6,
+    "DS002": 4,
+    "DS004": 2,
+    "DS008": 2
+  },
+  "src/app/(shop)/products/[id]/ProductDetailClient.tsx": {
+    "DS001": 48,
+    "DS002": 154,
+    "DS003": 105,
+    "DS004": 64,
+    "DS005": 1,
+    "DS007": 2,
+    "DS011": 98
+  },
+  "src/app/(shop)/products/[id]/reviews/ProductReviewsPageClient.tsx": {
+    "DS001": 20,
+    "DS002": 41,
+    "DS003": 37,
+    "DS004": 14,
+    "DS011": 11
+  },
+  "src/app/(shop)/proteine-sousse/page.tsx": {
+    "DS001": 11,
+    "DS002": 28,
+    "DS003": 26,
+    "DS004": 12,
+    "DS011": 15
+  },
+  "src/app/(shop)/qui-sommes-nous/AboutPageClient.tsx": {
+    "DS001": 34,
+    "DS002": 60,
+    "DS003": 44,
+    "DS004": 30,
+    "DS008": 1,
+    "DS011": 40
+  },
+  "src/app/(shop)/qui-sommes-nous/loading.tsx": {
+    "DS001": 12,
+    "DS002": 10,
+    "DS004": 8
+  },
+  "src/app/(shop)/shop/CategoryFallbackClient.tsx": {
+    "DS002": 3,
+    "DS007": 1,
+    "DS011": 8
+  },
+  "src/app/(shop)/shop/ProductDetailFallbackClient.tsx": {
+    "DS002": 3,
+    "DS011": 8
+  },
+  "src/app/(shop)/shop/ShopPageClient.tsx": {
+    "DS001": 32,
+    "DS002": 65,
+    "DS003": 36,
+    "DS004": 34,
+    "DS007": 2,
+    "DS011": 58
+  },
+  "src/app/(shop)/shop/SubCategoryFallbackClient.tsx": {
+    "DS002": 3,
+    "DS007": 1,
+    "DS011": 8
+  },
+  "src/app/(shop)/shop/SubCategoryPageClient.tsx": {
+    "DS001": 2,
+    "DS002": 8,
+    "DS003": 2,
+    "DS007": 1,
+    "DS011": 16
+  },
+  "src/app/(shop)/shop/[slug]/[subcategory]/loading.tsx": {
+    "DS007": 1
+  },
+  "src/app/(shop)/shop/[slug]/error.tsx": {
+    "DS002": 3,
+    "DS007": 1,
+    "DS011": 8
+  },
+  "src/app/(shop)/shop/[slug]/loading.tsx": {
+    "DS007": 1
+  },
+  "src/app/(shop)/shop/[slug]/page.tsx": {
+    "DS001": 1
+  },
+  "src/app/(shop)/shop/loading.tsx": {
+    "DS007": 1
+  },
+  "src/app/components/AddressSelector.tsx": {
+    "DS001": 2,
+    "DS002": 3,
+    "DS003": 1,
+    "DS004": 2,
+    "DS011": 10
+  },
+  "src/app/components/AuthShell.tsx": {
+    "DS001": 5,
+    "DS002": 6,
+    "DS003": 5,
+    "DS008": 1,
+    "DS011": 9
+  },
+  "src/app/components/BlogCardSkeleton.tsx": {
+    "DS001": 2,
+    "DS002": 3,
+    "DS004": 4
+  },
+  "src/app/components/BlogSection.tsx": {
+    "DS001": 8,
+    "DS002": 11,
+    "DS003": 5,
+    "DS004": 6,
+    "DS011": 17
+  },
+  "src/app/components/BrandsSection.tsx": {
+    "DS001": 6,
+    "DS002": 5,
+    "DS003": 2,
+    "DS004": 2,
+    "DS011": 4
+  },
+  "src/app/components/CartDrawer.tsx": {
+    "DS001": 22,
+    "DS002": 35,
+    "DS003": 19,
+    "DS004": 12,
+    "DS011": 23
+  },
+  "src/app/components/CategoryGrid.tsx": {
+    "DS001": 4,
+    "DS002": 3,
+    "DS011": 1
+  },
+  "src/app/components/EmptyState.tsx": {
+    "DS002": 6,
+    "DS003": 3,
+    "DS011": 11
+  },
+  "src/app/components/FeaturesSection.tsx": {
+    "DS001": 6,
+    "DS002": 8,
+    "DS003": 3,
+    "DS004": 2,
+    "DS008": 1,
+    "DS011": 4
+  },
+  "src/app/components/FlashProductCard.tsx": {
+    "DS001": 9,
+    "DS002": 11,
+    "DS003": 5,
+    "DS004": 2,
+    "DS011": 11
+  },
+  "src/app/components/FooterClient.tsx": {
+    "DS001": 19,
+    "DS003": 20,
+    "DS004": 4,
+    "DS011": 50
+  },
+  "src/app/components/GlobalLoader.tsx": {
+    "DS002": 1,
+    "DS011": 2
+  },
+  "src/app/components/HeaderClient.tsx": {
+    "DS001": 48,
+    "DS002": 57,
+    "DS003": 41,
+    "DS004": 13,
+    "DS005": 4,
+    "DS006": 123,
+    "DS011": 4
+  },
+  "src/app/components/Hero.tsx": {
+    "DS001": 2,
+    "DS002": 1,
+    "DS005": 1
+  },
+  "src/app/components/HeroBestSellers.tsx": {
+    "DS001": 8,
+    "DS002": 12,
+    "DS003": 9,
+    "DS004": 3
+  },
+  "src/app/components/HeroSliderIndicator.tsx": {
+    "DS001": 3
+  },
+  "src/app/components/HomePageClient.tsx": {
+    "DS001": 6,
+    "DS002": 10,
+    "DS003": 8,
+    "DS004": 4,
+    "DS011": 4
+  },
+  "src/app/components/InstallAppBanner.tsx": {
+    "DS001": 14,
+    "DS002": 32,
+    "DS003": 14,
+    "DS004": 6,
+    "DS005": 1,
+    "DS011": 39
+  },
+  "src/app/components/LanguageSwitcher.tsx": {
+    "DS001": 6,
+    "DS002": 6,
+    "DS003": 2,
+    "DS004": 2,
+    "DS011": 6
+  },
+  "src/app/components/LoadingSpinner.tsx": {
+    "DS001": 2,
+    "DS002": 5,
+    "DS003": 2,
+    "DS004": 2
+  },
+  "src/app/components/MobileProductsMenu.tsx": {
+    "DS001": 14,
+    "DS002": 19,
+    "DS003": 10,
+    "DS004": 10,
+    "DS011": 21
+  },
+  "src/app/components/MobileTabBar.tsx": {
+    "DS001": 2,
+    "DS002": 9,
+    "DS003": 6,
+    "DS004": 3,
+    "DS011": 9
+  },
+  "src/app/components/NotFoundContent.tsx": {
+    "DS002": 7,
+    "DS003": 6,
+    "DS004": 2,
+    "DS011": 10
+  },
+  "src/app/components/PackCardImage.tsx": {
+    "DS001": 4,
+    "DS002": 3,
+    "DS003": 2,
+    "DS006": 2
+  },
+  "src/app/components/PageHeader.tsx": {
+    "DS002": 4,
+    "DS003": 3,
+    "DS011": 4
+  },
+  "src/app/components/ProductCard.tsx": {
+    "DS001": 5,
+    "DS002": 9,
+    "DS003": 2,
+    "DS004": 1,
+    "DS006": 29
+  },
+  "src/app/components/ProductCardSkeleton.tsx": {
+    "DS001": 2,
+    "DS002": 2,
+    "DS004": 1,
+    "DS006": 1
+  },
+  "src/app/components/ProductDetailSkeleton.tsx": {
+    "DS001": 14,
+    "DS002": 13,
+    "DS004": 12,
+    "DS007": 2
+  },
+  "src/app/components/ProductSection.tsx": {
+    "DS001": 2,
+    "DS002": 1
+  },
+  "src/app/components/ProductsDropdown.tsx": {
+    "DS001": 6,
+    "DS002": 10,
+    "DS003": 5,
+    "DS004": 4,
+    "DS006": 4,
+    "DS007": 1,
+    "DS008": 1,
+    "DS011": 12
+  },
+  "src/app/components/ProductsSkeleton.tsx": {
+    "DS002": 1,
+    "DS003": 2
+  },
+  "src/app/components/PromoBanner.tsx": {
+    "DS001": 4,
+    "DS002": 1,
+    "DS011": 4
+  },
+  "src/app/components/QuickOrderDrawer.tsx": {
+    "DS001": 24,
+    "DS002": 82,
+    "DS003": 59,
+    "DS004": 28,
+    "DS011": 46
+  },
+  "src/app/components/SafeImage.tsx": {
+    "DS001": 6,
+    "DS002": 6,
+    "DS003": 6
+  },
+  "src/app/components/ScrollToTop.tsx": {
+    "DS011": 2
+  },
+  "src/app/components/SearchBar.tsx": {
+    "DS001": 32,
+    "DS002": 28,
+    "DS003": 18,
+    "DS004": 11,
+    "DS005": 1,
+    "DS006": 50
+  },
+  "src/app/components/SectionHeader.tsx": {
+    "DS002": 6,
+    "DS003": 4,
+    "DS004": 2,
+    "DS011": 8
+  },
+  "src/app/components/ShopBreadcrumbs.tsx": {
+    "DS011": 4
+  },
+  "src/app/components/VentesFlashSection.tsx": {
+    "DS001": 2,
+    "DS002": 6,
+    "DS003": 3,
+    "DS011": 10
+  },
+  "src/app/components/WhatsAppFab.tsx": {
+    "DS005": 2,
+    "DS006": 5
+  },
+  "src/app/components/crawler/CrawlerCategoryView.tsx": {
+    "DS003": 2,
+    "DS011": 4
+  },
+  "src/app/components/crawler/CrawlerProductView.tsx": {
+    "DS003": 6,
+    "DS004": 1,
+    "DS011": 3
+  },
+  "src/app/components/layout/Container.tsx": {
+    "DS007": 1
+  },
+  "src/app/components/layout/Kicker.tsx": {
+    "DS002": 2,
+    "DS011": 6
+  },
+  "src/app/error.tsx": {
+    "DS001": 4,
+    "DS002": 5,
+    "DS003": 5,
+    "DS004": 2,
+    "DS011": 2
+  },
+  "src/app/forgot-password/ForgotPasswordClient.tsx": {
+    "DS001": 2,
+    "DS002": 3,
+    "DS003": 3,
+    "DS004": 2,
+    "DS011": 6
+  },
+  "src/app/login/LoginPageClient.tsx": {
+    "DS002": 3,
+    "DS003": 4,
+    "DS011": 14
+  },
+  "src/app/not-found.tsx": {
+    "DS001": 2,
+    "DS002": 1
+  },
+  "src/app/register/RegisterPage.tsx": {
+    "DS002": 3,
+    "DS003": 9,
+    "DS011": 16
+  },
+  "src/app/reset-password/ResetPasswordClient.tsx": {
+    "DS001": 6,
+    "DS002": 9,
+    "DS003": 7,
+    "DS004": 4,
+    "DS011": 15
+  }
+}

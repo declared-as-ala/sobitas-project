@@ -127,7 +127,10 @@ export default function AvisClient({ token }: { token: string }) {
                 <div className="mb-6 flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-900 dark:bg-emerald-950/30">
                   <CheckCircle2 className="h-6 w-6 shrink-0 text-emerald-600" aria-hidden="true" />
                   <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
-                    Vous avez donné votre avis sur tous vos produits. Merci beaucoup ! 🙏
+                    {/* No emoji in UI (DESIGN_SYSTEM §10) — the CheckCircle2 beside this
+                        already carries the sentiment, and an emoji renders differently on every
+                        platform. */}
+                    Vous avez donné votre avis sur tous vos produits. Merci beaucoup !
                   </p>
                 </div>
               )}

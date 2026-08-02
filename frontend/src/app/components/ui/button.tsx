@@ -20,21 +20,19 @@ const buttonVariants = cva(
           "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
         link: "text-primary underline-offset-4 hover:underline",
 
-        /**
-         * BRAND variants (DESIGN_SYSTEM.md v3 §6). Added rather than changing `default`,
-         * so every existing <Button> renders byte-identically.
+        /*
+         * `brand`, `brandOutline` and `brandGhost` were REMOVED here.
          *
-         * These exist because the shadcn `--primary` token is near-black (#030213) AND
-         * currently broken (see styles/tokens.css), so `variant="default"` is NOT the brand
-         * CTA. Before this, every red button in the app repeated the literal string
-         * "bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide".
+         * They existed for one reason: `--primary` was near-black AND broken, so
+         * `variant="default"` was not — could not be — the brand CTA. Both halves of that are
+         * now false. `--primary` resolves to `--c-brand`, so `default` IS the brand CTA,
+         * `outline` and `ghost` are its correct secondary and quiet forms, and a fourth,
+         * fifth and sixth variant saying the same thing is how a component library rots.
+         *
+         * Removing them cost nothing: all three had ZERO usages anywhere in src/ — they were
+         * added defensively and never adopted. Guarded by `tsc --noEmit`, since the cva
+         * variant union is typed and any surviving call site would fail the build.
          */
-        brand:
-          "bg-red-600 text-white hover:bg-red-700 font-display uppercase tracking-wide shadow-sm",
-        brandOutline:
-          "border border-red-600 text-red-600 bg-transparent hover:bg-red-50 dark:text-red-400 dark:border-red-400 dark:hover:bg-red-950/40 font-display uppercase tracking-wide",
-        brandGhost:
-          "text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",

@@ -162,12 +162,16 @@ const nextConfig = {
       '@radix-ui/react-dropdown-menu',
       '@radix-ui/react-accordion',
       '@radix-ui/react-tabs',
-      '@radix-ui/react-tooltip',
+      // '@radix-ui/react-tooltip' and 'motion' removed: both packages are gone. Tooltip's only
+      // consumer was ui/sidebar.tsx (itself never imported), and `motion` had zero imports in src/
+      // at all. Listing an uninstalled package here is harmless but misleading — it reads as
+      // "we ship this and tuned it".
+      // '@radix-ui/react-dialog' STAYS: ui/dialog.tsx was dead, but ui/sheet.tsx — the mobile menu
+      // and cart drawer — imports the package directly.
       '@radix-ui/react-dialog',
       '@radix-ui/react-select',
       '@radix-ui/react-checkbox',
       '@radix-ui/react-slider',
-      'motion',
       'sonner',
       'date-fns',
     ],

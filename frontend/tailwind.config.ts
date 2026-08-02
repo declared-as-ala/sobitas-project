@@ -119,46 +119,78 @@ const config: Config = {
           2: "rgb(var(--c-ink-2) / <alpha-value>)",
           3: "rgb(var(--c-ink-3) / <alpha-value>)",
         },
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
+        /**
+         * THE SHADCN SEMANTIC TOKENS — repaired.
+         *
+         * These were declared as `hsl(var(--background))` while styles/theme.css defined
+         * `--background: #ffffff`, `--foreground: oklch(...)`, `--border: rgba(0,0,0,.1)`,
+         * `--input: transparent`. `hsl(#ffffff)` is not valid CSS, so the browser DROPPED every
+         * one of these declarations. Confirmed in the built stylesheet, where the emitted rule
+         * was `.bg-primary{background-color:hsl(var(--primary))}` with no `--tw-bg-opacity`
+         * alongside it — which also proves the opacity modifiers (`hover:bg-primary/90`,
+         * `ring-ring/50`, `dark:bg-input/30`) were dead, not just the base colours.
+         *
+         * What that silently cost, live, for months:
+         *   globals.css `body { @apply bg-background text-foreground }`  → set NOTHING. The page
+         *     was white because that is the user-agent default, and dark mode had no body colour.
+         *   globals.css `* { @apply border-border outline-ring/50 }`     → set NOTHING, so bare
+         *     borders fell back to preflight #e5e7eb — light grey on dark surfaces.
+         *   ui/button.tsx `default: "bg-primary text-primary-foreground"` → a TRANSPARENT button.
+         *
+         * THE REPAIR: point these at the `--c-*` tokens in styles/tokens.css, which are real
+         * space-separated RGB triplets that already work. One source of truth instead of two
+         * parallel namespaces drifting apart — which is what caused this in the first place.
+         * Using `rgb(... / <alpha-value>)` also makes the opacity modifiers function for the
+         * first time.
+         *
+         * The alternative — unwrapping hsl() and hand-converting ~30 oklch/hex values in
+         * theme.css to HSL triplets — was rejected: it keeps two namespaces alive forever, and
+         * shadcn's cool-slate defaults visibly fight the warm brand neutral (--c-hairline).
+         *
+         * `--primary` is now the BRAND ACCENT, so `variant="default"` is the brand CTA and the
+         * three unused `brand*` Button variants become redundant (removed in a follow-up commit).
+         *
+         * theme.css's shadcn block is now vestigial. Left in place deliberately: deleting it in
+         * the same commit as the flip would make a revert ambiguous.
+         */
+        background: "rgb(var(--c-canvas) / <alpha-value>)",
+        foreground: "rgb(var(--c-ink-1) / <alpha-value>)",
         card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
+          DEFAULT: "rgb(var(--c-elevated) / <alpha-value>)",
+          foreground: "rgb(var(--c-ink-1) / <alpha-value>)",
         },
         popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
+          DEFAULT: "rgb(var(--c-elevated) / <alpha-value>)",
+          foreground: "rgb(var(--c-ink-1) / <alpha-value>)",
         },
         primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
+          DEFAULT: "rgb(var(--c-brand) / <alpha-value>)",
+          // NOT white — see --c-on-brand in tokens.css. White on the dark-mode accent is ~2.2:1.
+          foreground: "rgb(var(--c-on-brand) / <alpha-value>)",
         },
         secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
+          DEFAULT: "rgb(var(--c-sunken) / <alpha-value>)",
+          foreground: "rgb(var(--c-ink-1) / <alpha-value>)",
         },
         muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
+          DEFAULT: "rgb(var(--c-sunken) / <alpha-value>)",
+          foreground: "rgb(var(--c-ink-3) / <alpha-value>)",
         },
         accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
+          // The shadcn `accent` is a HOVER SURFACE, not the brand accent — it is what
+          // `variant="ghost"` and `variant="outline"` tint on hover. Pointing it at the brand
+          // orange would flood every quiet control with colour on hover.
+          DEFAULT: "rgb(var(--c-sunken) / <alpha-value>)",
+          foreground: "rgb(var(--c-ink-1) / <alpha-value>)",
         },
         destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
+          DEFAULT: "rgb(var(--c-danger) / <alpha-value>)",
+          foreground: "rgb(var(--c-on-brand) / <alpha-value>)",
         },
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        chart: {
-          "1": "hsl(var(--chart-1))",
-          "2": "hsl(var(--chart-2))",
-          "3": "hsl(var(--chart-3))",
-          "4": "hsl(var(--chart-4))",
-          "5": "hsl(var(--chart-5))",
-        },
+        border: "rgb(var(--c-hairline) / <alpha-value>)",
+        input: "rgb(var(--c-hairline) / <alpha-value>)",
+        ring: "rgb(var(--c-brand) / <alpha-value>)",
+        // `chart.*` deleted with ui/chart.tsx and recharts — nothing references these utilities.
       },
       borderRadius: {
         lg: "var(--radius)",

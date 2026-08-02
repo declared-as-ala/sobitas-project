@@ -11,11 +11,7 @@ import {
   type ReactNode,
 } from 'react';
 import { usePathname } from 'next/navigation';
-import { ar } from './locales/ar';
-import { en } from './locales/en';
 import { fr, type TranslationKey } from './locales/fr';
-import { legacyArabic, legacyArabicPatterns } from './legacy-ar';
-import { legacyEnglish, legacyEnglishPatterns } from './legacy-en';
 import {
   DEFAULT_LOCALE,
   LOCALE_COOKIE,
@@ -25,8 +21,64 @@ import {
   isLocale,
   type Locale,
 } from '.';
-import { getArabicSeo } from './seo-ar';
-import { getEnglishSeo } from './seo-en';
+/**
+ * NON-FRENCH DATA IS LOADED ON DEMAND, NOT IMPORTED.
+ *
+ * These modules — locales/ar, locales/en, legacy-ar (15 kB), legacy-en (7 kB), seo-ar, seo-en —
+ * used to be static imports, and a comment here asserted the build tree-shook them away because
+ * every use sits behind `MULTILOCALE_ENABLED`, a compile-time `false`.
+ *
+ * It did not. Scanning the built client chunks for Arabic codepoints found the dictionaries in
+ * 7065 (31 kB) and 7742 (76 kB), and the network trace shows BOTH loading before FCP. Every
+ * French visitor was paying for Arabic and English on a site running in French-only mode.
+ *
+ * Nor does narrowing the flag's type help: TypeScript types are erased, so `const X: boolean =
+ * false` and `const X = false` emit identical JavaScript — verified, same chunk hashes.
+ *
+ * `import()` is the only mechanism that guarantees a separate chunk regardless of what the
+ * minifier can prove. With MULTILOCALE_ENABLED false these are never fetched at all; if it is
+ * ever switched on, they arrive the first time a non-French locale is chosen and translation
+ * falls back to French for the few hundred milliseconds in between — which is exactly the
+ * behaviour the feature already has on first paint.
+ */
+type LegacyTable = {
+  dict: Record<string, string>;
+  patterns: ReadonlyArray<readonly [RegExp, string]>;
+};
+
+const EMPTY_LEGACY: LegacyTable = { dict: {}, patterns: [] };
+
+/** Shape the SEO modules return; kept explicit here because they are no longer statically typed
+ *  through a direct import. */
+type LocalizedSeo = { title: string; description: string } | null | undefined;
+
+const legacyTables: Partial<Record<Locale, LegacyTable>> = {};
+let seoLoaders: { ar: (p: string) => LocalizedSeo; en: (p: string) => LocalizedSeo } | null = null;
+
+/** Fetch the AR/EN payloads for `locale`. No-op for French, and for an already-loaded locale. */
+async function loadLocaleAssets(locale: Locale): Promise<void> {
+  if (!MULTILOCALE_ENABLED || locale === 'fr') return;
+
+  if (!dictionaries[locale]) {
+    const mod = locale === 'ar' ? await import('./locales/ar') : await import('./locales/en');
+    dictionaries[locale] = locale === 'ar' ? (mod as { ar: typeof fr }).ar : (mod as { en: typeof fr }).en;
+  }
+
+  if (!legacyTables[locale]) {
+    if (locale === 'ar') {
+      const m = await import('./legacy-ar');
+      legacyTables.ar = { dict: m.legacyArabic, patterns: m.legacyArabicPatterns };
+    } else {
+      const m = await import('./legacy-en');
+      legacyTables.en = { dict: m.legacyEnglish, patterns: m.legacyEnglishPatterns };
+    }
+  }
+
+  if (!seoLoaders) {
+    const [arSeo, enSeo] = await Promise.all([import('./seo-ar'), import('./seo-en')]);
+    seoLoaders = { ar: arSeo.getArabicSeo, en: enSeo.getEnglishSeo };
+  }
+}
 
 type Values = Record<string, string | number>;
 
@@ -42,15 +94,9 @@ type I18nValue = {
 };
 
 const I18nContext = createContext<I18nValue | null>(null);
-// French is the only client locale today (MULTILOCALE_ENABLED === false), so only the French
-// dictionary needs to ship. en/ar (+ the legacy/seo maps used below) are referenced ONLY inside
-// `if (MULTILOCALE_ENABLED)` guards — a compile-time `false` — so the production build tree-shakes
-// ~30KB of unused translation data off every page's first-load JS. They stay in the repo for the
-// future server-side i18n rework.
+// French is the only dictionary that ships. ar/en are added by loadLocaleAssets() on demand —
+// see the note above it for why the previous "it tree-shakes" claim was measurably wrong.
 const dictionaries: Partial<Record<Locale, typeof fr>> = { fr };
-if (MULTILOCALE_ENABLED) {
-  Object.assign(dictionaries, { en, ar });
-}
 const translatedNodes = new WeakMap<Text, string>();
 const translatedAttributes = new WeakMap<Element, Map<string, string>>();
 const ATTRIBUTES = ['placeholder', 'title', 'aria-label', 'alt'] as const;
@@ -73,8 +119,10 @@ function translateLegacyText(text: string, locale: Locale): string {
   const clean = text.trim();
   if (!clean) return text;
 
-  const legacy = locale === 'ar' ? legacyArabic : locale === 'en' ? legacyEnglish : {};
-  const patterns = locale === 'ar' ? legacyArabicPatterns : locale === 'en' ? legacyEnglishPatterns : [];
+  // Falls back to the French source text until the chunk resolves — see loadLocaleAssets.
+  const table = legacyTables[locale] ?? EMPTY_LEGACY;
+  const legacy = table.dict;
+  const patterns = table.patterns;
   const exact = legacy[clean] ?? legacy[clean.toLocaleUpperCase('fr-FR')];
   if (exact) return `${leading}${exact}${trailing}`;
 
@@ -146,6 +194,9 @@ function translateTree(root: ParentNode, locale: Locale) {
 export function I18nProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE);
+  // Bumped when a lazily-loaded locale chunk arrives, so text already on screen re-translates.
+  // Stays at 0 forever while MULTILOCALE_ENABLED is false — loadLocaleAssets returns immediately.
+  const [, setAssetsVersion] = useState(0);
   const observerRef = useRef<MutationObserver | null>(null);
 
   useEffect(() => {
@@ -199,9 +250,22 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     return () => observerRef.current?.disconnect();
   }, [locale]);
 
+  // Pull the AR/EN chunks in as soon as a non-French locale is active. No-op while
+  // MULTILOCALE_ENABLED is false, which is why none of that data reaches a French visitor.
+  useEffect(() => {
+    let cancelled = false;
+    void loadLocaleAssets(locale).then(() => {
+      // Re-render so the freshly loaded dictionary is applied to already-rendered text.
+      if (!cancelled) setAssetsVersion((v) => v + 1);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [locale]);
+
   useEffect(() => {
     if (!MULTILOCALE_ENABLED || locale === 'fr') return;
-    const seo = locale === 'ar' ? getArabicSeo(pathname) : getEnglishSeo(pathname);
+    const seo = seoLoaders ? (locale === 'ar' ? seoLoaders.ar(pathname) : seoLoaders.en(pathname)) : null;
     if (!seo) return;
     const applySeo = () => {
       if (document.title !== seo.title) document.title = seo.title;

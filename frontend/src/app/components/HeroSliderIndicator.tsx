@@ -170,9 +170,13 @@ export function HeroSliderControls({
 
   const pad = (n: number) => String(n).padStart(2, '0');
 
+  // bg-black/45, not /35 + backdrop-blur. `backdrop-blur` is banned (DESIGN_SYSTEM §9): each
+  // instance forces its own compositing layer, and these sit directly over the LCP image on
+  // every page load. A slightly denser scrim gives the same separation from the photograph for
+  // no compositing cost.
   const arrow =
-    'pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-black/35 text-white ' +
-    'backdrop-blur-[2px] transition-colors duration-200 hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 ' +
+    'pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-black/45 text-white ' +
+    'transition-colors duration-200 hover:bg-black/65 focus-visible:outline-none focus-visible:ring-2 ' +
     'focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black/40 motion-reduce:transition-none';
 
   return (

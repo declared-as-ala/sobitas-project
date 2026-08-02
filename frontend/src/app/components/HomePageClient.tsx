@@ -171,7 +171,7 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
         {/* Best-sellers FIRST — shoppers reach the most-sold products immediately after the hero,
             then the "what we do" trust band, then the rest of the rails. */}
         {(safeAccueil.best_sellers?.length ?? 0) > 0 && (
-          <div className="pt-reveal" data-motion>
+          <div className="pt-reveal pt-defer" data-motion>
             <ProductSection
               id="products"
               kicker="Best-sellers"
@@ -179,7 +179,6 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
               products={bestSellers as any}
               showBadge
               badgeText="Top Vendu"
-              tightTop
             />
           </div>
         )}
@@ -190,7 +189,7 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
         </div>
 
         {(safeAccueil.new_product?.length ?? 0) > 0 && (
-          <div className="pt-reveal" data-motion>
+          <div className="pt-reveal pt-defer" data-motion>
             <ProductSection
               kicker="Nouveautés"
               title="Nouveaux produits"
@@ -202,7 +201,7 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
         )}
 
         {flashSales.length > 0 && (
-          <div className="pt-reveal" data-motion>
+          <div className="pt-reveal pt-defer" data-motion>
             <VentesFlashSection products={flashSales as any} />
           </div>
         )}
@@ -218,7 +217,7 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
             block for them — but it is dead code today, so do not assume it is exercised. */}
 
         {(safeAccueil.packs?.length ?? 0) > 0 && (
-          <div className="pt-reveal" data-motion>
+          <div className="pt-reveal pt-defer" data-motion>
             <ProductSection
               id="packs"
               kicker="Économisez"
@@ -232,11 +231,15 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
         )}
 
         {/* Below the fold - idle-loaded client islands */}
-        <HomeDeferredSections articles={safeAccueil.last_articles || []} brands={brands} />
+        <div className="pt-defer">
+          <HomeDeferredSections articles={safeAccueil.last_articles || []} brands={brands} />
+        </div>
 
-        {/* SEO text block – visible, crawlable content near bottom of homepage */}
+        {/* SEO text block – visible, crawlable content near bottom of homepage.
+            `pt-defer` skips RENDERING it while off-screen; the markup is still fully present in
+            the server-rendered HTML, which is what Googlebot reads. Asserted in verification. */}
         <section
-          className="py-12 sm:py-16 lg:py-20 bg-white dark:bg-gray-950 border-t border-gray-100 dark:border-gray-800"
+          className="pt-defer py-12 sm:py-16 lg:py-20 bg-white dark:bg-gray-950 border-t border-gray-100 dark:border-gray-800"
           aria-label="Informations sur la protéine en Tunisie"
         >
           <div className="max-w-site mx-auto px-4 sm:px-6 lg:px-8">
