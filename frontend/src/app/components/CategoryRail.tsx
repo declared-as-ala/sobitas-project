@@ -70,7 +70,7 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
         <div>
           <h2
             id="category-rail-heading"
-            className="font-display text-lg font-extrabold uppercase leading-none tracking-tight text-gray-900 dark:text-white sm:text-2xl lg:text-[26px]"
+            className="font-display text-lg font-extrabold uppercase leading-none tracking-tight text-ink-1 sm:text-2xl lg:text-[26px]"
           >
             Acheter par objectif
           </h2>
@@ -86,7 +86,7 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
             minimum. The text itself does not grow; only the tappable area does. */}
         <Link
           href="/shop"
-          className="group inline-flex min-h-[44px] shrink-0 items-center gap-1.5 text-xs font-semibold text-gray-600 transition-colors hover:text-brand-600 dark:text-gray-400 dark:hover:text-brand-500 sm:text-sm"
+          className="group inline-flex min-h-[44px] shrink-0 items-center gap-1.5 text-xs font-semibold text-ink-2 transition-colors hover:text-brand sm:text-sm"
         >
           Tout voir
           <ArrowRight
@@ -110,7 +110,7 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
                    `transition-[transform,box-shadow]`, not `transition-all`: `all` also animates
                    `ring-color`, so every hover on a six-tile grid recalculated a property that
                    changes instantly anyway. */
-                className="group flex h-full flex-col overflow-hidden rounded-xl bg-white ring-1 ring-black/[0.07] transition-[transform,box-shadow] duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:ring-brand-500/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 motion-reduce:transition-none motion-reduce:hover:translate-y-0 dark:bg-gray-950 dark:ring-white/10"
+                className="group flex h-full flex-col overflow-hidden rounded-xl bg-elevated ring-1 ring-hairline transition-[transform,box-shadow] duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:ring-brand-500/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
               >
                 {/* `aspect-[4/3]` on phones, MATCHING the 4:3 source exactly, so nothing is
                     cropped in either axis. The old `16/10` (=1.60) was WIDER than the source
@@ -121,7 +121,7 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
                     against 182px for 4:3, so the square is the bigger presentation there and it
                     is the approved 6-up design. It does crop horizontally at sm+; that is the
                     accepted trade. */}
-                <div className="relative aspect-[4/3] w-full overflow-hidden bg-gray-100 sm:aspect-square dark:bg-gray-900">
+                <div className="relative aspect-[4/3] w-full overflow-hidden bg-sunken sm:aspect-square">
                   {category.cover ? (
                     <Image
                       src={getStorageUrl(category.cover)}
@@ -152,9 +152,13 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
                        same row as ones that have photography, so a flat grey square reads as a
                        broken image. Verified necessary: the build-time payload had covers for
                        only 3 of the 6 categories even though all 6 have one now, so this branch
-                       WILL render whenever a cover is added late. */
+                       WILL render whenever a cover is added late.
+
+                       `neutral-*` is a deliberate literal, not a missed migration: this tile must
+                       read as an intentional dark surface in BOTH themes, so it must NOT follow
+                       the canvas token the way every other surface here does. */
                     <div
-                      className="flex h-full w-full items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 dark:from-gray-900 dark:to-black"
+                      className="flex h-full w-full items-center justify-center bg-gradient-to-br from-neutral-900 to-neutral-800"
                       aria-hidden="true"
                     >
                       <span className="font-display font-compressed text-3xl font-extrabold uppercase text-white/25">
@@ -164,7 +168,7 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
                   )}
                 </div>
 
-                <p className="flex flex-1 items-center justify-center border-t border-gray-100 px-2 py-2.5 text-center font-display text-[11px] font-bold uppercase leading-tight tracking-wide text-gray-900 transition-colors group-hover:text-brand-600 dark:border-white/10 dark:text-gray-100 dark:group-hover:text-brand-500 sm:py-3 sm:text-[12px]">
+                <p className="flex flex-1 items-center justify-center border-t border-hairline px-2 py-2.5 text-center font-display text-[11px] font-bold uppercase leading-tight tracking-wide text-ink-1 transition-colors group-hover:text-brand sm:py-3 sm:text-[12px]">
                   {label}
                 </p>
               </Link>

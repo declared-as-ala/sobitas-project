@@ -73,12 +73,17 @@ const RULES = [
     msg: 'inline page rail — use <Container> (§4, §6)',
   },
   {
-    // Only the values that are OFF the scale. py-1..py-6 are legitimate on small elements;
-    // these five are the "invented a rhythm" numbers, and py-7 is precisely what broke
-    // CategoryRail and forced ProductSection to grow a compensating prop.
+    // PADDING only, not margin. The first run flagged `mb-9` in SectionHeader — which is the
+    // rhythm DESIGN_SYSTEM §3 explicitly mandates for section headers. A rule that contradicts
+    // the document it enforces destroys trust in both. Vertical band rhythm is expressed as
+    // padding on the section; margins are component-level and out of scope here.
+    //
+    // Only values OFF the scale: p-1..p-6 are legitimate on small elements. These are the
+    // "invented a rhythm" numbers, and py-7 is precisely what broke CategoryRail and forced
+    // ProductSection to grow a compensating prop.
     id: 'DS008',
-    re: /\b(?:p|m)[ytb]?-(?:7|9|11|13|14|17|18|19|21|22|23|26|27|28)\b/g,
-    msg: 'off-scale spacing — use <Section spacing=…> or the documented scale (§3)',
+    re: /\bp[ytb]?-(?:7|9|11|13|14|17|18|19|21|22|23|26|27|28)\b/g,
+    msg: 'off-scale padding — use <Section spacing=…> or the documented scale (§3)',
   },
   {
     id: 'DS009',
@@ -182,13 +187,21 @@ if (args.includes('--update')) {
 if (args.includes('--report')) {
   const target = args.find((a) => !a.startsWith('--'));
   if (target) {
-    const key = Object.keys(details).find((k) => k.endsWith(target.replace(/\\/g, '/')));
-    if (!key) {
-      console.log(`no violations in ${target}`);
+    // Substring match, not endsWith: keys end in `.tsx`, so `--report CategoryRail` — the way
+    // anyone actually types it — never matched and the tool cheerfully reported "no violations".
+    // A linter that under-reports is worse than no linter.
+    const needle = target.replace(/\\/g, '/');
+    const matches = Object.keys(details).filter((k) => k.includes(needle));
+    if (!matches.length) {
+      const known = Object.keys(current).some((k) => k.includes(needle));
+      console.log(known ? `no violations in ${target}` : `no file matching "${target}" (check the path)`);
       process.exit(0);
     }
-    console.log(`\n${key}\n`);
-    for (const h of details[key]) console.log(`  ${String(h.line).padStart(5)}  ${h.rule} x${h.n}  ${h.text}`);
+    if (matches.length > 1) console.log(`${matches.length} files match "${target}":`);
+    for (const key of matches) {
+      console.log(`\n${key}\n`);
+      for (const h of details[key]) console.log(`  ${String(h.line).padStart(5)}  ${h.rule} x${h.n}  ${h.text}`);
+    }
     process.exit(0);
   }
   const ranked = Object.entries(current)

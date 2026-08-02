@@ -144,7 +144,6 @@
     "DS002": 36,
     "DS003": 24,
     "DS004": 14,
-    "DS008": 1,
     "DS011": 33
   },
   "src/app/(shop)/cart/page.tsx": {
@@ -266,14 +265,14 @@
     "DS002": 23,
     "DS003": 37,
     "DS004": 20,
-    "DS008": 3,
+    "DS008": 2,
     "DS011": 27
   },
   "src/app/(shop)/page/[slug]/loading.tsx": {
     "DS001": 6,
     "DS002": 4,
     "DS004": 2,
-    "DS008": 3
+    "DS008": 2
   },
   "src/app/(shop)/products/[id]/ProductDetailClient.tsx": {
     "DS001": 48,
@@ -303,7 +302,7 @@
     "DS002": 60,
     "DS003": 44,
     "DS004": 30,
-    "DS008": 2,
+    "DS008": 1,
     "DS011": 40
   },
   "src/app/(shop)/qui-sommes-nous/loading.tsx": {
@@ -401,12 +400,6 @@
     "DS001": 4,
     "DS002": 3,
     "DS011": 1
-  },
-  "src/app/components/CategoryRail.tsx": {
-    "DS001": 7,
-    "DS002": 9,
-    "DS003": 5,
-    "DS004": 1
   },
   "src/app/components/EmptyState.tsx": {
     "DS002": 6,
@@ -589,7 +582,6 @@
     "DS002": 6,
     "DS003": 4,
     "DS004": 2,
-    "DS008": 1,
     "DS011": 8
   },
   "src/app/components/ShopBreadcrumbs.tsx": {
