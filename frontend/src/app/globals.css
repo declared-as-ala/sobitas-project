@@ -58,6 +58,42 @@
   }
 
   /**
+   * THE AUTOMATIC BAND SEAM (DESIGN_SYSTEM.md v5 §4).
+   *
+   * Every `<Section>` emits `data-band`, and any band that directly follows another gets a 1px
+   * rule. This exists because the band architecture cannot rely on fill alone:
+   *
+   *   light theme   slab vs canvas = 19.26:1  — the fill IS the boundary
+   *   dark theme    slab vs canvas =  1.39:1  — the fill is NOT a boundary
+   *
+   * Without this, "more black" is an architecture that only exists for half the users. The rule
+   * resolves in the LOWER band's own token scope, so a slab following a white band draws
+   * #6A6A75 (5.34:1 against the white above it) and a white band following a slab draws #D6D2CC.
+   * In dark theme every slab seam is #767682 — 3.18:1 against the band and 4.41:1 against the
+   * canvas — so bands are separated by something that clears the 3:1 UI floor rather than by a
+   * 1.39:1 fill difference.
+   *
+   * Emitted by the primitive, never by call sites, so a seam can't be forgotten. The adjacent
+   * sibling selector also means the FIRST band on a page correctly has no top rule.
+   */
+  [data-band] + [data-band] {
+    border-top: 1px solid rgb(var(--c-rule));
+  }
+
+  /**
+   * Windows High Contrast / forced-colors flattens every background, which would merge all the
+   * bands into one sheet. Re-draw the structure with borders, which forced-colors preserves.
+   */
+  @media (forced-colors: active) {
+    [data-band] + [data-band] {
+      border-top: 1px solid CanvasText;
+    }
+    .pt-plate {
+      border: 1px solid CanvasText;
+    }
+  }
+
+  /**
    * `font-display` MEANS COMPRESSED. All 300 usages across 56 files were written against Oswald,
    * which is a condensed face by construction — nothing ever had to ask for compression. Archivo
    * is a normal-width grotesque, so swapping the family silently widened every heading, price,

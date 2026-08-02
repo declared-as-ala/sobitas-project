@@ -64,39 +64,34 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
        No `surface`: HomePageClient already paints the page background, so a second one here was
        a redundant `dark:` pair. */
     <Section spacing="tight" width="wide" aria-labelledby="category-rail-heading">
-      {/* `items-end`, not `items-start`: it baselines "Tout voir" against the accent rule instead
-          of against the top of the heading, which is why the link needed a magic `pt-1` before. */}
-      <div className="mb-4 flex items-end justify-between gap-4 sm:mb-6">
-        <div>
-          <h2
-            id="category-rail-heading"
-            className="font-display text-lg font-extrabold uppercase leading-none tracking-tight text-ink-1 sm:text-2xl lg:text-[26px]"
-          >
-            Acheter par objectif
-          </h2>
-          {/* The accent rule from the approved design. Purely decorative — hidden from the
-              accessibility tree so it is not announced between the heading and the links. */}
-          <span
-            aria-hidden="true"
-            className="mt-2 block h-[3px] w-9 rounded-full bg-brand-500 sm:mt-2.5 sm:w-11"
-          />
-        </div>
+      <SectionHeader
+        id="category-rail-heading"
+        kicker="Par objectif"
+        title="Acheter par objectif"
+        viewAllHref="/shop"
+        viewAllLabel="Tout voir"
+        /* "2" — a support band that carries navigation rather than merchandising. It goes
+           18/26px → 30/40px, which is the "make the font bigger" ask, but it stays a step below
+           the four rails that actually sell. */
+        scale="2"
+      />
 
-        {/* min-h-[44px]: the hit box was the height of 12px text — roughly 20px, under the 44px
-            minimum. The text itself does not grow; only the tappable area does. */}
-        <Link
-          href="/shop"
-          className="group inline-flex min-h-[44px] shrink-0 items-center gap-1.5 text-xs font-semibold text-ink-2 transition-colors hover:text-brand sm:text-sm"
-        >
-          Tout voir
-          <ArrowRight
-            className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none"
-            aria-hidden="true"
-          />
-        </Link>
-      </div>
+      {/* THE 3px BRAND RULE UNDER THE HEADING IS GONE. The kicker already carries the brand mark,
+          and two accent devices stacked on one heading is a theme tell — it is the single most
+          common ornament on a purchased WordPress template. One accent per heading.
 
-      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6">
+          THE GRID IS NOW FULL-BLEED AND GUTTERLESS. `-mx-4 sm:-mx-6 lg:-mx-8` cancels the
+          Container's own padding, and `gap-px` on `bg-rule` turns the six tiles into ONE object
+          divided by hairlines instead of six cards scattered on a surface.
+
+          What that buys, measured at 390px: the tile goes 158×118.5 → 194×146 (+51% image area)
+          purely by reclaiming the 32px of side padding and the 12px gaps — the owner's "we have
+          a lot of space where we can make the images wider", delivered without making the band
+          any taller. At 1440 the tile goes 243 → 266px wide.
+
+          The `sm:grid-cols-3` tier is KEPT deliberately: dropping it would regress 640–1023px
+          from three tiles to two half-width ones. */}
+      <ul className="-mx-4 grid grid-cols-2 gap-px bg-rule sm:-mx-6 sm:grid-cols-3 lg:-mx-8 lg:grid-cols-6">
         {items.map((category) => {
           const href = `/${category.slug}`;
           const label = (category.designation_fr || '').trim();
@@ -110,7 +105,13 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
                    `transition-[transform,box-shadow]`, not `transition-all`: `all` also animates
                    `ring-color`, so every hover on a six-tile grid recalculated a property that
                    changes instantly anyway. */
-                className="group flex h-full flex-col overflow-hidden rounded-xl bg-elevated ring-1 ring-hairline transition-[transform,box-shadow] duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:ring-brand-500/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+                /* The bordered card is gone: no ring, no rounding, no shadow at rest. Six white
+                   boxes with hairline borders on a white page is a WordPress grid; six
+                   photographs butted together with black caption plates is merchandising.
+                   `focus-visible:ring-focus` resolves in the CANVAS band's scope (#D53B04,
+                   4.71:1) because the slab class below is on the PLATE, never on this link —
+                   putting a scope on a focusable element paints its ring on the parent band. */
+                className="group flex h-full flex-col overflow-hidden bg-elevated transition-[transform,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus motion-reduce:transition-none motion-reduce:hover:translate-y-0"
               >
                 {/* `aspect-[4/3]` on phones, MATCHING the 4:3 source exactly, so nothing is
                     cropped in either axis. The old `16/10` (=1.60) was WIDER than the source
@@ -168,9 +169,21 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
                   )}
                 </div>
 
-                <p className="flex flex-1 items-center justify-center border-t border-hairline px-2 py-2.5 text-center font-display text-[11px] font-bold uppercase leading-tight tracking-wide text-ink-1 transition-colors group-hover:text-brand sm:py-3 sm:text-[12px]">
-                  {label}
-                </p>
+                {/* A SOLID CAPTION PLATE, not a hairline-bordered strip.
+                    `.pt-slab` re-points the token scope for this subtree only, so `text-ink-1`
+                    resolves to #F5F4F2 on #0E0E12 — 17.52:1 in light, 12.98:1 in dark. That is
+                    PROVABLE regardless of which photograph the admin uploads, which is precisely
+                    what a gradient scrim over arbitrary artwork can never be.
+                    h-12/h-14 is also the tap-target guarantee, and the label goes 11px → 13/14px. */}
+                <div className="pt-slab flex h-12 flex-1 items-center justify-between gap-2 px-3 sm:h-14 sm:px-4">
+                  <span className="min-w-0 font-display font-compressed text-[13px] font-bold uppercase leading-tight tracking-[0.03em] text-ink-1 sm:text-sm">
+                    {label}
+                  </span>
+                  <ArrowRight
+                    className="h-4 w-4 shrink-0 text-brand transition-transform duration-300 group-hover:translate-x-1 motion-reduce:transition-none"
+                    aria-hidden="true"
+                  />
+                </div>
               </Link>
             </li>
           );

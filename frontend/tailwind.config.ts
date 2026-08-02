@@ -113,6 +113,31 @@ const config: Config = {
         elevated: "rgb(var(--c-elevated) / <alpha-value>)",
         sunken: "rgb(var(--c-sunken) / <alpha-value>)",
         hairline: "rgb(var(--c-hairline) / <alpha-value>)",
+        /**
+         * TWO boundary weights, because they do different jobs and one value cannot do both.
+         *
+         *   hairline      a border on a component that ALSO has its own fill (card, input,
+         *                 chip). Decorative, so no contrast floor applies.
+         *   rule          a band seam or a cell divider that sits alongside a fill change.
+         *   rule-strong   a divider that is the SOLE boundary between two otherwise identical
+         *                 surfaces — the brand wall's `gap-px` matrix. WCAG 1.4.11 applies:
+         *                 measured 3.34:1 on white, 4.10:1 on the dark plate.
+         *
+         * Using `hairline` where `rule-strong` is required is the failure mode this split exists
+         * to prevent: it looks fine and measures 1.26:1.
+         */
+        rule: "rgb(var(--c-rule) / <alpha-value>)",
+        "rule-strong": "rgb(var(--c-rule-strong) / <alpha-value>)",
+        /**
+         * Stock semantics, not decoration. These replaced #22C55E (2.28:1 on white) and #F59E0B
+         * (2.15:1) — colours that read as "status" but carried none. They are band-aware, so the
+         * same `text-ok` renders #15803D on a white card and #22C55E on the black slab.
+         */
+        ok: "rgb(var(--c-ok) / <alpha-value>)",
+        warn: "rgb(var(--c-warn) / <alpha-value>)",
+        /** Focus ring colour, band-aware. Never put a scope class on a focusable element: the
+         *  ring resolves in the element's own scope but paints on the PARENT band's surface. */
+        focus: "rgb(var(--c-focus) / <alpha-value>)",
         ink: {
           DEFAULT: "rgb(var(--c-ink-1) / <alpha-value>)",
           1: "rgb(var(--c-ink-1) / <alpha-value>)",

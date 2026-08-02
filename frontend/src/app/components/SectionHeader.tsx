@@ -1,64 +1,112 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 
+/**
+ * The ONLY place a section heading size is decided (DESIGN_SYSTEM.md v5 §2).
+ *
+ * ── WHY THIS COMPONENT OWNS THE SCALE ─────────────────────────────────────────────────────
+ * The homepage shipped SEVEN section-heading sizes on desktop (13, 24, 26, 30, 40, 52, 60px)
+ * and SIX on mobile, measured. Nobody chose seven sizes; seven sizes HAPPENED, because five
+ * components each hardcoded their own clamp — this one, CategoryRail, VentesFlashSection,
+ * PromoBanner and the homepage SEO block. Intermediate sizes with no rule behind them are
+ * exactly what makes a page look like a purchased theme.
+ *
+ * They collapse to THREE, and which one you get is decided by COMMERCIAL ROLE, not by taste and
+ * not by what surface the band happens to sit on:
+ *
+ *   scale="1"  56 / 40px   THE RAILS THAT SELL — Les plus vendus, Ventes flash,
+ *                          Nouveaux produits, Nos packs. Reserved to those four.
+ *   scale="2"  40 / 30px   Support bands — Acheter par objectif, Nos derniers articles.
+ *   scale="3"  28 / 22px   Bands that sell nothing directly — Nos marques partenaires — and
+ *                          the DEFAULT, which is what keeps ProductDetailClient's "Produits
+ *                          similaires" from out-ranking the product's own H1 across 391 PDPs.
+ *
+ * A logo wall getting a bigger heading than the best-seller rail is a real failure mode of any
+ * "consistent" scale that keys off background colour. Here the brand wall is deliberately the
+ * SMALLEST heading on the page and the highest-intent rail is the largest.
+ *
+ * ── THE TYPE ITSELF ───────────────────────────────────────────────────────────────────────
+ * Hierarchy is carried by Archivo's VARIABLE WIDTH AXIS, not by more sizes. A 12px kicker at
+ * wdth 112 with 0.22em tracking, over a 56px headline at wdth 82 with -0.02em tracking, is a
+ * 4.7x size ratio AND a 30-point width delta AND a 0.24em tracking delta — three axes of
+ * contrast out of two type sizes. That width contrast is the brand's signature and it is only
+ * possible because the display face has a real width axis.
+ *
+ * ── BAND-AGNOSTIC ─────────────────────────────────────────────────────────────────────────
+ * Every `gray-*` and `red-*` literal is gone. Because this renders purely in tokens, the SAME
+ * component is correct on canvas, on sand, on the black slab and on the orange strip, in both
+ * themes, with no variant prop and no `dark:` class.
+ */
+
+/** 1 = the rails that sell · 2 = support bands · 3 = everything else (default). */
+export type SectionHeaderScale = '1' | '2' | '3';
+
+const TITLE_SCALE: Record<SectionHeaderScale, string> = {
+  '1': 'text-[2.5rem] lg:text-[3.5rem]',
+  '2': 'text-[1.875rem] lg:text-[2.5rem]',
+  '3': 'text-[1.375rem] lg:text-[1.75rem]',
+};
+
 interface SectionHeaderProps {
-  /** Small red uppercase label above the title (e.g. "Nouveautés"). */
+  /** Small uppercase brand-coloured label above the title (e.g. "Nouveautés"). */
   kicker?: string;
   title: string;
   subtitle?: string;
   /** Optional right-aligned "Voir tout" link. */
   viewAllHref?: string;
   viewAllLabel?: string;
+  /** See the table above. Defaults to the SMALLEST — opting up is a deliberate act. */
+  scale?: SectionHeaderScale;
+  /** Rendered before the kicker text (a lucide glyph, e.g. Flame on Ventes flash). */
+  icon?: React.ReactNode;
+  /** Set when the heading is referenced by an `aria-labelledby` on the band. */
+  id?: string;
 }
 
-/**
- * Shared section header for the landing page — the anchor of the design system.
- *
- * The type here carries the whole brand: a WIDE letterspaced kicker (Archivo at wdth 112%) set
- * against a COMPRESSED headline (wdth 82%). That width contrast is the signature — it is what
- * makes a section read as art-directed rather than as a heading with a label stuck on top, and
- * it is only possible because the display face has a real width axis. Red stays the one accent,
- * spent on the kicker rule alone.
- */
 export function SectionHeader({
   kicker,
   title,
   subtitle,
   viewAllHref,
   viewAllLabel = 'Voir tout',
+  scale = '3',
+  icon,
+  id,
 }: SectionHeaderProps) {
   return (
-    <div className="flex flex-row items-end justify-between gap-4 mb-9 sm:mb-12">
+    // mb-6/mb-8, from mb-9/mb-12. The heading block is part of the band's body, not a third
+    // thing floating between the band's padding and its content.
+    <div className="mb-6 flex flex-row items-end justify-between gap-4 sm:mb-8">
       <div className="min-w-0">
         {kicker && (
-          <span className="pt-kicker mb-3 inline-flex items-center gap-2.5 text-red-600 dark:text-red-400">
-            <span className="h-px w-7 bg-red-600 dark:bg-red-400" aria-hidden="true" />
+          <span className="pt-kicker mb-2.5 inline-flex items-center gap-2.5 text-brand">
+            {icon ?? <span className="h-px w-7 bg-brand" aria-hidden="true" />}
             {kicker}
           </span>
         )}
-        {/* Capped at 2.5rem (40px) on desktop, not 3.25rem. SectionHeader is NOT a landing-page
-            component — ProductDetailClient renders it for "Produits similaires", where a 52px
-            section heading was visually larger than the product's own H1 and inverted the page's
-            hierarchy. 40px still reads as a display headline against 16px body. */}
-        <h2 className="font-display font-compressed uppercase tracking-[-0.015em] leading-[0.94] font-extrabold text-gray-950 dark:text-white text-[1.75rem] sm:text-[2.125rem] lg:text-[2.5rem]">
+        <h2
+          id={id}
+          className={`font-display font-compressed font-extrabold uppercase leading-[0.94] tracking-[-0.02em] text-ink-1 ${TITLE_SCALE[scale]}`}
+        >
           {title}
         </h2>
-        {subtitle && (
-          <p className="mt-2 max-w-xl text-sm sm:text-base text-gray-600 dark:text-gray-400">
-            {subtitle}
-          </p>
-        )}
+        {subtitle && <p className="mt-2 max-w-xl text-sm text-ink-2 sm:text-base">{subtitle}</p>}
       </div>
 
       {viewAllHref && (
-        <div className="hidden sm:block flex-shrink-0 pb-1">
+        // min-h-[44px]: this was a ~34px pill, below the 44px tap floor. It is also the only
+        // control in the band, so it is worth being reachable.
+        <div className="hidden shrink-0 pb-1 sm:block">
           <Link
             href={viewAllHref}
             aria-label={viewAllLabel}
-            className="group inline-flex items-center gap-2 rounded-full border border-gray-200 px-4 py-2 font-display font-extended uppercase tracking-[0.12em] text-[11px] font-semibold text-gray-900 transition-colors hover:border-red-600 hover:text-red-600 dark:border-gray-800 dark:text-white dark:hover:border-red-400 dark:hover:text-red-400"
+            className="group inline-flex min-h-[44px] items-center gap-2 rounded-full border border-hairline px-5 font-display font-extended text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-1 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2"
           >
             {viewAllLabel}
-            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
+            <ArrowRight
+              className="h-4 w-4 transition-transform group-hover:translate-x-1"
+              aria-hidden="true"
+            />
           </Link>
         </div>
       )}

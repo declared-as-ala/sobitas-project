@@ -1,62 +1,140 @@
 /**
- * protein.tn design tokens — "Editorial Minimal" (DESIGN_SYSTEM.md v3)
+ * protein.tn design tokens — "Black Slab" band architecture (DESIGN_SYSTEM.md v5)
  *
  * WHY THIS FILE IS SEPARATE FROM theme.css
- * theme.css holds the shadcn variables, and those are currently BROKEN: tailwind.config.ts
- * wraps them as `hsl(var(--x))` while theme.css defines them as hex/oklch, so `hsl(#ffffff)`
- * is invalid CSS and every semantic shadcn utility (`bg-background`, `text-foreground`,
- * `bg-primary`, `border-border`) is a silent no-op site-wide. That is why the codebase
- * hardcodes `bg-white` / `bg-red-600` everywhere. Repairing it would restyle all 47 shadcn
- * components at once (the default <Button> would jump from transparent to near-black), so it
- * is deliberately deferred to its own PR with a full visual pass.
+ * theme.css holds the vestigial shadcn variable block. tailwind.config.ts no longer reads it —
+ * the shadcn semantic names (`--background`, `--primary`, `--border`, …) were repaired by
+ * re-pointing them at the `--c-*` tokens defined here, so this file is the single source of
+ * colour truth for the whole storefront. theme.css is left in place only so a revert of that
+ * repair stays unambiguous; nothing consumes it.
  *
- * This file is a PARALLEL, working token namespace. It is imported AFTER theme.css so it can
- * never be clobbered, and it touches none of the shadcn vars.
+ * ── THE TWO-LAYER MODEL ───────────────────────────────────────────────────────────────────
  *
- * Values are space-separated RGB triplets so Tailwind's `<alpha-value>` works
- * (`bg-brand/10`, `text-ink-1/70`, ...). That is the correct Tailwind v3 pattern.
+ *   SOURCE tokens  (--page-*, --slab-*, --promo-*)  hold every literal, exactly once.
+ *   CONSUMED tokens (--c-*)                          are pointers. Tailwind only ever reads these.
+ *
+ * `.dark` overrides SOURCE sets only. A band scope (`.pt-slab`, `.pt-plate`, `.pt-promo`) just
+ * re-points the CONSUMED set at a different source set. Two consequences that are the whole
+ * reason for the indirection:
+ *
+ *   1. A component written with `bg-elevated text-ink-1 border-hairline` renders correctly on
+ *      white, on sand, on the black slab and on the orange strip, in BOTH themes, with no
+ *      `dark:` variant and no `onSlab` prop. The band decides; the component doesn't know.
+ *   2. `.pt-plate` (a white card punched out of the black slab) restores page scope by pointing
+ *      at `--page-*`. It needs no `.dark` block of its own, because `--page-*` already flipped.
+ *
+ * Every literal below was contrast-checked in both themes before it was written. Values that
+ * carry a measured ratio in a comment are load-bearing — do not "tidy" them.
+ *
+ * ── THE ONE RULE THAT KEEPS DARK MODE HONEST ──────────────────────────────────────────────
+ * A band is never separated from its neighbour by fill alone. `[data-band] + [data-band]` draws
+ * a 1px `--c-rule` seam automatically (globals.css), resolved in the LOWER band's own scope. In
+ * light theme the fills do the work (slab vs canvas is 19.26:1); in dark theme they cannot
+ * (1.39:1), so the seam is what preserves the architecture. It is emitted by the `Section`
+ * primitive, never by call sites, so it can't be forgotten.
  */
 
 :root {
-  /* ---- Brand accent -------------------------------------------------------
-   * Orange is the ONLY accent, matched to the Protein.tn logo (#F8480C).
-   * brand-600 (#D53B04) is the ACTION shade — deepened from the raw logo orange so
-   * white-on-it clears WCAG AA 4.5:1 (measured 4.69:1). To re-tune the whole site's
-   * accent, change these two lines (and the `red`/`brand` hex ramp in tailwind.config.ts). */
-  --c-brand: 213 59 4; /* #D53B04 */
-  --c-brand-hover: 182 51 4; /* #B63304 */
+  /* ═══════════════ SOURCE: PAGE scope — the default surfaces ═══════════════ */
 
-  /* Text/icon colour that sits ON the accent. NOT a constant — see the .dark block: white on
-   * the dark-mode accent (#FF8A4C) measures ~2.2:1, a hard AA failure. Anything that pairs a
-   * foreground with --c-brand must use this, never a literal white. */
-  --c-on-brand: 255 255 255;
+  --page-canvas: 255 255 255; /* #FFFFFF  page background */
+  --page-elevated: 255 255 255; /* #FFFFFF  cards, sheets, dropdowns */
+  --page-sunken: 247 246 244; /* #F7F6F4  warm sand — alternating bands */
 
+  /* Two boundary weights, because they do different jobs and one value cannot do both.
+   *   hairline  a border on a component that ALSO has its own fill (card, input, chip).
+   *             Purely decorative, so no contrast floor applies.
+   *   rule      a band seam or a divider between two cells. Where it is the SOLE cue it must
+   *             clear 3:1 (WCAG 1.4.11), which is what `rule-strong` is for. */
+  --page-hairline: 232 229 225; /* #E8E5E1 */
+  --page-rule: 214 210 204; /* #D6D2CC  band seams — 1.51:1 on canvas, a soft structural line */
+  --page-rule-strong: 140 140 146; /* #8C8C92  3.34:1 on white — for the brand wall, where the
+                                    * gap between two identical cells IS the only boundary */
+
+  --page-ink-1: 10 10 11; /* #0A0A0B  headings          19.79:1 on canvas */
+  --page-ink-2: 87 87 94; /* #57575E  body               7.17:1 */
+  /* #6C6C73, darkened from #78787F. The old value failed AA in BOTH places it is used: 4.28:1 on
+   * canvas and 4.06:1 on sunken, against a 4.5:1 minimum. It went unnoticed while the token
+   * bridge was severed and `text-muted-foreground` was a no-op. Measured after: 5.21:1 canvas,
+   * 4.82:1 sunken. SUNKEN is the binding constraint — a lighter background yields HIGHER contrast
+   * for the same ink, so anything that passes on sand passes on white. Re-tune against sand. */
+  --page-ink-3: 108 108 115; /* #6C6C73  meta, captions, placeholders */
+
+  /* Orange is the ONLY accent, matched to the Protein.tn logo. #D53B04 is the ACTION shade,
+   * deepened from the raw logo orange so white-on-it AND it-on-white both clear AA (4.71:1).
+   *
+   * MEASURED LIMIT, and it is a real one: on the sand band this is 4.36:1 — BELOW AA. Never put
+   * `text-brand` on `bg-sunken`. Put the element on a `bg-elevated` plate first (4.71:1), which
+   * is exactly what the SEO block's category chips and the blog rail do. */
+  --page-brand: 213 59 4; /* #D53B04 */
+  --page-brand-hover: 182 51 4; /* #B63304 */
+  --page-on-brand: 255 255 255; /* text/icon ON the accent — NOT a constant, see .dark */
+
+  --page-focus: 213 59 4; /* #D53B04  focus rings, in page scope */
+
+  /* Stock semantics. These replaced #22C55E (2.28:1) and #F59E0B (2.15:1), which were decorative
+   * greens/ambers masquerading as status colour on a white card. */
+  --page-ok: 21 128 61; /* #15803D  in stock       5.02:1 */
+  --page-warn: 180 83 9; /* #B45309  low stock      5.02:1 */
   /* Destructive stays RED, deliberately never the brand orange. Delete, cancel and remove must
-   * not look like add-to-cart — that similarity is how a customer destroys something by
-   * reflex. This is the one place a second hue is correct. */
-  --c-danger: 220 38 38; /* #DC2626 */
+   * not look like add-to-cart — that similarity is how a customer destroys something by reflex.
+   * This is the one place a second hue is correct. */
+  --page-danger: 220 38 38; /* #DC2626 */
 
-  /* ---- Surfaces (theme-switchable) ---------------------------------------- */
-  --c-canvas: 255 255 255; /* page background */
-  --c-elevated: 255 255 255; /* cards, sheets, dropdowns */
-  --c-sunken: 247 246 244; /* warm sand — alternating section bands */
-  --c-hairline: 232 229 225; /* the ONLY border colour in Editorial Minimal */
+  /* ═══════════════ SOURCE: SLAB scope — the near-black bands ═══════════════ */
+  /* Header, hero stage, trust strip, Ventes flash, Nos packs. In LIGHT theme the slab steps far
+   * DOWN from the canvas (19.26:1). In DARK theme it steps UP (1.39:1 lighter than the page) —
+   * because a slab is defined as "the surface that steps AWAY from the canvas", and in dark that
+   * direction reverses. The alternation survives even though the polarity does not.
+   *
+   * Note what does NOT appear in the `.dark` block below: slab INK and slab BRAND. A slab is a
+   * dark surface in both themes, so the dark theme's own accent is already the right one for it.
+   * Only the four slab SURFACES move. */
+  --slab-canvas: 14 14 18; /* #0E0E12 */
+  --slab-elevated: 255 255 255; /* cards on a slab are WHITE PLATES — the punch-out moment */
+  --slab-sunken: 32 32 39; /* #202027  wells: the header search field, countdown tiles */
+  --slab-hairline: 58 58 66; /* #3A3A42 */
+  --slab-rule: 106 106 117; /* #6A6A75  3.61:1 on the slab, 5.34:1 on canvas */
+  --slab-rule-strong: 106 106 117;
 
-  /* ---- Ink (theme-switchable) ---------------------------------------------
-   * Near-neutral with a whisper of warmth. Deliberately LOW warmth: hundreds of
-   * legacy cool `gray-*` utilities are still in the codebase, and a fully warm
-   * stone-like neutral sitting next to cool gray-500 (#6b7280) reads as a bug.
-   * Warmth can increase once `gray-*` is fully migrated. */
-  --c-ink-1: 10 10 11; /* #0A0A0B — headings, primary text */
-  --c-ink-2: 87 87 94; /* #57575E — body copy */
-  /* #6C6C73, darkened from #78787F. The old value failed WCAG AA in BOTH the places it is
-   * meant to be used: 4.28:1 on --c-canvas and 4.06:1 on --c-sunken, against a 4.5:1 minimum.
-   * That went unnoticed because `text-ink-3` had zero usages and `text-muted-foreground` — which
-   * now resolves here — was a dead no-op until the token bridge was repaired. Measured after:
-   * 5.21:1 on canvas, 4.83:1 on sunken. Sunken is the binding constraint, not canvas: a lighter
-   * background yields HIGHER contrast for the same ink, so anything that passes on the sand band
-   * passes on white. Re-tune against sunken. */
-  --c-ink-3: 108 108 115; /* #6C6C73 — meta, captions, placeholders */
+  --slab-ink-1: 245 244 242; /* #F5F4F2  17.52:1 on the slab */
+  --slab-ink-2: 198 198 204; /* #C6C6CC  11.33:1 */
+  --slab-ink-3: 160 160 168; /* #A0A0A8   7.42:1 */
+
+  --slab-brand: 255 138 76; /* #FF8A4C   8.25:1 on the slab */
+  --slab-brand-hover: 255 168 119; /* #FFA877 */
+  --slab-on-brand: 10 10 11; /* #0A0A0B on #FF8A4C = 8.47:1. White on it is 3.55:1 and FAILS. */
+  --slab-focus: 255 138 76;
+  --slab-ok: 34 197 94; /* #22C55E  8.45:1 on the slab — correct HERE, wrong on white */
+  --slab-warn: 251 191 36; /* #FBBF24 11.54:1 */
+  --slab-danger: 248 113 113; /* #F87171 */
+
+  /* The border of a white PLATE sitting on a slab. In light the 19.26:1 fill difference is the
+   * edge and this is barely used; in dark the plate-vs-slab delta collapses to 1.29:1, so the
+   * border becomes the only boundary and has to clear 3:1 on its own. See .dark. */
+  --slab-plate-hairline: 232 229 225; /* #E8E5E1 */
+
+  /* ═══════════════ SOURCE: PROMO scope — the one orange band ═══════════════ */
+  --promo-canvas: 213 59 4; /* #D53B04  white on it = 4.71:1 */
+  --promo-brand: 182 51 4; /* #B63304  the CTA LABEL, which sits on a white pill (6.06:1) */
+
+  /* ═══════════════ CONSUMED: what every Tailwind utility actually reads ═══════════════ */
+  --c-canvas: var(--page-canvas);
+  --c-elevated: var(--page-elevated);
+  --c-sunken: var(--page-sunken);
+  --c-hairline: var(--page-hairline);
+  --c-rule: var(--page-rule);
+  --c-rule-strong: var(--page-rule-strong);
+  --c-ink-1: var(--page-ink-1);
+  --c-ink-2: var(--page-ink-2);
+  --c-ink-3: var(--page-ink-3);
+  --c-brand: var(--page-brand);
+  --c-brand-hover: var(--page-brand-hover);
+  --c-on-brand: var(--page-on-brand);
+  --c-focus: var(--page-focus);
+  --c-ok: var(--page-ok);
+  --c-warn: var(--page-warn);
+  --c-danger: var(--page-danger);
 
   /* ---- Mobile tab bar -----------------------------------------------------
    * ONE knob that every fixed-bottom element (body offset, WhatsApp FAB,
@@ -75,26 +153,151 @@
 }
 
 .dark {
+  /* ONLY source sets are overridden here. Nothing re-declares a --c-* pointer, so every band
+     scope below keeps working with no `.dark .pt-slab` rule anywhere. */
+
+  --page-canvas: 10 10 11; /* #0A0A0B */
+  --page-elevated: 20 20 22; /* #141416 */
+  /* #191A1D, RAISED from #101012. That old value was a real latent bug, not a redesign artefact:
+   * #101012 against the #0A0A0B canvas measures 1.041:1 — so every alternating sand band on the
+   * entire site was INVISIBLE in dark mode, less separated than light mode's own 1.08:1. This
+   * measures 1.14:1, and every ink still clears AA on it (ink-1 15.83, ink-2 9.41, ink-3 5.92,
+   * brand 7.45). Site-wide by design: it also moves bg-secondary / bg-muted / bg-accent through
+   * the shadcn bridge. */
+  --page-sunken: 25 26 29; /* #191A1D */
+  --page-hairline: 38 38 42; /* #26262A */
+  --page-rule: 67 67 76; /* #43434C */
+  --page-rule-strong: 118 118 130; /* #767682  4.10:1 on #141416 */
+
+  --page-ink-1: 245 244 242;
+  --page-ink-2: 190 190 196;
+  --page-ink-3: 150 150 157;
+
   /* Lighter, warmer accent so the orange stays legible on dark surfaces. */
-  --c-brand: 255 138 76; /* #FF8A4C */
-  --c-brand-hover: 255 168 119; /* #FFA877 */
+  --page-brand: 255 138 76; /* #FF8A4C */
+  --page-brand-hover: 255 168 119; /* #FFA877 */
+  /* Near-black ON the light accent, not white. White on #FF8A4C is 3.55:1 and fails AA outright;
+   * #0A0A0B on it measures 8.47:1. If the accent is ever re-tuned, adjust THIS to keep contrast
+   * — never darken --page-brand, which would undo the reason it lightens here. */
+  --page-on-brand: 10 10 11;
+  --page-focus: 255 138 76;
 
-  /* Near-black ON the light accent, not white. White on #FF8A4C is ~2.2:1 and fails AA
-   * outright; #0A0A0B on it measures ~10.6:1. If the accent is ever re-tuned, adjust THIS
-   * to keep contrast — never darken --c-brand, which would undo the reason it lightens here. */
-  --c-on-brand: 10 10 11;
+  --page-ok: 34 197 94; /* #22C55E  8.69:1 on the dark canvas */
+  --page-warn: 251 191 36; /* #FBBF24 11.85:1 */
+  --page-danger: 248 113 113; /* #F87171 */
 
-  /* Lighter red so danger stays legible on dark surfaces, same reasoning as the accent. */
-  --c-danger: 248 113 113; /* #F87171 */
+  /* THE INVERSION. Four surface lines, and nothing else — slab ink and slab brand are already
+     correct for a dark surface, so they are byte-identical to :root. */
+  --slab-canvas: 42 42 48; /* #2A2A30 — LIGHTER than the #0A0A0B page */
+  --slab-elevated: 20 20 22; /* #141416 — plates become recessed wells, not white cards */
+  --slab-sunken: 16 16 18; /* #101012 */
+  --slab-hairline: 74 74 84; /* #4A4A54 */
+  --slab-rule: 118 118 130; /* #767682  3.18:1 on the slab, 4.41:1 on the dark canvas */
+  --slab-rule-strong: 118 118 130;
+  /* The plate-vs-slab fill delta is 1.29:1 in dark — not an edge. The border becomes the only
+     boundary, so it must clear 3:1: #767682 is 3.18:1 against the band, 4.10:1 against the plate. */
+  --slab-plate-hairline: 118 118 130;
 
-  --c-canvas: 10 10 11;
-  --c-elevated: 20 20 22;
-  --c-sunken: 16 16 18;
-  --c-hairline: 38 38 42;
+  /* NOT the theme accent. `bg-brand` in dark resolves to #FF8A4C, and a full-bleed 120px band of
+   * that across a #0A0A0B page is a flashbang. #8A2E0C is a static ramp shade (brand-800): still
+   * unmistakably the brand hue, holds white at 8.48:1, and gives this band the largest dark-mode
+   * surface deltas on the page (2.33:1 vs canvas, 1.68:1 vs slab).
+   *
+   * The general rule, now that it has bitten once: theme-aware accent for TYPE and small marks,
+   * static ramp shade for any large filled surface. */
+  --promo-canvas: 138 46 12; /* #8A2E0C */
+  --promo-brand: 138 46 12;
+}
 
-  --c-ink-1: 245 244 242;
-  --c-ink-2: 190 190 196;
-  --c-ink-3: 150 150 157;
+/* ═══════════════════════════ THE THREE BAND SCOPES ═══════════════════════════
+ *
+ * Applied ONLY by `<Section surface=…>`, by `<header>`, and by the mobile Sheet's own header row.
+ *
+ * NEVER put a scope class on a focusable element. `focus-visible:ring-focus` resolves in the
+ * element's OWN scope but paints on the parent band's surface — a #FF8A4C ring drawn on white is
+ * 2.34:1. Scope the plate, not the link.
+ *
+ * The scope class and `.pt-defer` must sit on the SAME element. `content-visibility: auto` skips
+ * the descendants' paint, not the element's own box decoration, so a slab background on a CHILD
+ * of a deferred wrapper renders as a white box until it scrolls into view.
+ */
+
+/* Near-black band. Emits no `bg-*` utility — it paints its own background-color, so nothing at
+   Tailwind's utility layer can win on source order (tokens.css is imported before
+   `@tailwind utilities`). That is why `Section`'s surface map maps slab to this class ALONE. */
+.pt-slab {
+  --c-canvas: var(--slab-canvas);
+  --c-elevated: var(--slab-elevated);
+  --c-sunken: var(--slab-sunken);
+  --c-hairline: var(--slab-hairline);
+  --c-rule: var(--slab-rule);
+  --c-rule-strong: var(--slab-rule-strong);
+  --c-ink-1: var(--slab-ink-1);
+  --c-ink-2: var(--slab-ink-2);
+  --c-ink-3: var(--slab-ink-3);
+  --c-brand: var(--slab-brand);
+  --c-brand-hover: var(--slab-brand-hover);
+  --c-on-brand: var(--slab-on-brand);
+  --c-focus: var(--slab-focus);
+  --c-ok: var(--slab-ok);
+  --c-warn: var(--slab-warn);
+  --c-danger: var(--slab-danger);
+
+  background-color: rgb(var(--c-canvas));
+  color: rgb(var(--c-ink-2));
+}
+
+/* A PLATE re-enters PAGE scope: the white card punched out of a black slab. Used by product
+ * cards, the brand-wall cells and the hero aside.
+ *
+ * It re-declares `color` as well as `background-color`, and that is not redundant: without the
+ * `color` line the slab's inherited ink (#C6C6CC) lands on a white card at 1.70:1. Verified. */
+.pt-plate {
+  --c-canvas: var(--page-canvas);
+  --c-elevated: var(--page-elevated);
+  --c-sunken: var(--page-sunken);
+  --c-hairline: var(--slab-plate-hairline);
+  --c-rule: var(--page-rule);
+  --c-rule-strong: var(--page-rule-strong);
+  --c-ink-1: var(--page-ink-1);
+  --c-ink-2: var(--page-ink-2);
+  --c-ink-3: var(--page-ink-3);
+  --c-brand: var(--page-brand);
+  --c-brand-hover: var(--page-brand-hover);
+  --c-on-brand: var(--page-on-brand);
+  --c-focus: var(--page-focus);
+  --c-ok: var(--page-ok);
+  --c-warn: var(--page-warn);
+  --c-danger: var(--page-danger);
+
+  background-color: rgb(var(--c-elevated));
+  color: rgb(var(--c-ink-2));
+}
+
+/* THE ORANGE STRIP. A COMPLETE override set, deliberately — a partial one is how you ship
+ * #6C6C73 on orange at 1.11:1, or `bg-brand text-on-brand` rendering #0A0A0B on #8A2E0C (2.33:1)
+ * in dark. White is the ONLY ink here: nothing lighter clears 4.5:1 on #D53B04, and white/70
+ * composites to #F2C4B4 at 2.99:1. */
+.pt-promo {
+  --c-canvas: var(--promo-canvas);
+  --c-elevated: 255 255 255;
+  --c-sunken: 255 255 255;
+  --c-hairline: 255 255 255;
+  --c-rule: 255 255 255;
+  --c-rule-strong: 255 255 255;
+  --c-ink-1: 255 255 255;
+  --c-ink-2: 255 255 255;
+  --c-ink-3: 255 255 255;
+  --c-brand: var(--promo-brand);
+  --c-brand-hover: var(--promo-brand);
+  --c-on-brand: 255 255 255;
+  --c-focus: 255 255 255;
+  --c-ok: 255 255 255;
+  --c-warn: 255 255 255;
+  --c-danger: 255 255 255;
+
+  background-color: rgb(var(--c-canvas));
+  color: rgb(var(--c-ink-1));
 }
 
 /* MobileTabBar is `md:hidden`, so its footprint exists only below 768px.

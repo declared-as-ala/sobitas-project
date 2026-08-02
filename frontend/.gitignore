@@ -40,3 +40,6 @@ next-env.d.ts
 
 # scratch / dev test scripts
 /scratch/
+
+# Visual-regression screenshots from scripts/visual-snap.mjs — local review artefacts, never committed.
+/.snap/
