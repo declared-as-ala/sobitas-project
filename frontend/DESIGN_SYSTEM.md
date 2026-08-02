@@ -33,6 +33,21 @@ code must be clean. Counts auto-lower as debt is paid, so progress cannot be und
 *Why a script and not an ESLint rule:* `next.config.js:21` sets `eslint: { ignoreDuringBuilds: true }`
 and lint runs with `--max-warnings 999`, so an ESLint rule **cannot gate a build here**.
 
+*Why a baseline and not a clean rule:* there are **5,788 violations across 108 files** today. A rule
+that fails on all of them gets disabled within a day. The baseline makes the debt visible and
+strictly monotonic without blocking anyone.
+
+```
+npm run lint:design                    check — this is what CI runs
+npm run lint:design -- --report        rank the worst files: the migration work queue
+npm run lint:design -- --report <file> itemise one file, with line numbers
+npm run lint:design:update             regenerate the baseline (review the diff in the PR)
+```
+
+`components/ui/*` is excluded — it is upstream shadcn vocabulary, updated by re-vendoring rather
+than by hand. Comments and `console.*` calls are stripped before counting: a file should never look
+worse for documenting the rule it is explaining, and a developer log line is not UI.
+
 ---
 
 ## 1. Typography

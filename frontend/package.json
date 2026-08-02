@@ -9,6 +9,8 @@
     "postbuild": "node scripts/assert-no-dev-bundle.mjs",
     "start": "cross-env NODE_OPTIONS=--no-deprecation next start",
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx --max-warnings 999",
+    "lint:design": "node scripts/lint-design.mjs",
+    "lint:design:update": "node scripts/lint-design.mjs --update",
     "typecheck": "node scripts/ensure-next-types.mjs && tsc --noEmit",
     "verify-seo": "node scripts/verify-seo.js",
     "seo-audit-category": "node scripts/seo-audit-category.js"
