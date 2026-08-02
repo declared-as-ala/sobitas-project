@@ -11,7 +11,25 @@ export const LOCALE_COOKIE = 'sobitas_locale';
  * content) to bring the switcher back. When false: the LanguageSwitcher is hidden and the app
  * ignores/clears any persisted ar/en so the site stays clean French.
  */
-export const MULTILOCALE_ENABLED: boolean = false;
+/**
+ * DO NOT rely on this flag to keep the AR/EN data out of the bundle — it does not, and cannot.
+ *
+ * I18nProvider.tsx used to claim the build "tree-shakes ~30KB of unused translation data off every
+ * page's first-load JS". That was false. Verified by scanning the built client chunks for Arabic
+ * codepoints: the dictionaries were present in 7065 (31 kB) and 7742 (76 kB), BOTH of which the
+ * network trace shows loading before FCP. Every French visitor downloaded Arabic and English
+ * dictionaries for a feature that is switched off.
+ *
+ * The tempting fix — dropping the `: boolean` annotation so the type narrows to literal `false` —
+ * does nothing either. TypeScript types are ERASED at compile time; `const X: boolean = false` and
+ * `const X = false` emit byte-identical JavaScript. Measured: same chunk hashes, same Arabic data.
+ * A type annotation can never influence what a minifier can prove.
+ *
+ * The data is kept out by LOADING IT LAZILY (see I18nProvider), which depends on nothing but
+ * `import()`. If this flag is ever flipped to `true`, the tables are fetched on demand the first
+ * time a non-French locale is selected.
+ */
+export const MULTILOCALE_ENABLED = false;
 
 export function isLocale(value: unknown): value is Locale {
   return value === 'fr' || value === 'en' || value === 'ar';
