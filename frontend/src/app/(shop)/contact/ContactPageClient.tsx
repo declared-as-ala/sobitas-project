@@ -43,7 +43,7 @@ export default function ContactPageClient({
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-950">
+    <div className="min-h-screen bg-canvas">
 <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
         <div className="mb-10 sm:mb-12">
           <PageHeader
@@ -57,16 +57,16 @@ export default function ContactPageClient({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {/* Contact Information */}
           <div className="space-y-6">
-            <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 space-y-6">
+            <div className="rounded-xl border border-hairline bg-elevated p-6 space-y-6">
               <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 flex h-11 w-11 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400">
+                <div className="flex-shrink-0 flex h-11 w-11 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/40 text-brand">
                   <Phone className="h-5 w-5" strokeWidth={1.75} />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="font-display uppercase tracking-wide text-sm font-semibold text-gray-900 dark:text-white mb-1">
+                  <h3 className="font-display uppercase tracking-wide text-sm font-semibold text-ink-1 mb-1">
                     Téléphone
                   </h3>
-                  <div className="flex flex-col gap-1 text-gray-600 dark:text-gray-400">
+                  <div className="flex flex-col gap-1 text-ink-2">
                     <a
                       href="tel:73200169"
                       className="inline-flex min-h-11 items-center rounded-lg -mx-2 px-2 transition-colors hover:text-red-600 hover:bg-red-50/60 dark:hover:text-red-400 dark:hover:bg-red-950/30"
@@ -85,14 +85,14 @@ export default function ContactPageClient({
 
               {coordinates?.email && (
                 <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 flex h-11 w-11 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400">
+                  <div className="flex-shrink-0 flex h-11 w-11 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/40 text-brand">
                     <Mail className="h-5 w-5" strokeWidth={1.75} />
                   </div>
                   <div className="min-w-0">
-                    <h3 className="font-display uppercase tracking-wide text-sm font-semibold text-gray-900 dark:text-white mb-1">
+                    <h3 className="font-display uppercase tracking-wide text-sm font-semibold text-ink-1 mb-1">
                       Email
                     </h3>
-                    <p className="text-gray-600 dark:text-gray-400">
+                    <p className="text-ink-2">
                       <a
                         href={`mailto:${coordinates.email}`}
                         className="inline-flex min-h-11 items-center break-all rounded-lg -mx-2 px-2 transition-colors hover:text-red-600 hover:bg-red-50/60 dark:hover:text-red-400 dark:hover:bg-red-950/30"
@@ -106,14 +106,14 @@ export default function ContactPageClient({
 
               {coordinates?.adresse && (
                 <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 flex h-11 w-11 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400">
+                  <div className="flex-shrink-0 flex h-11 w-11 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/40 text-brand">
                     <MapPin className="h-5 w-5" strokeWidth={1.75} />
                   </div>
                   <div className="min-w-0">
-                    <h3 className="font-display uppercase tracking-wide text-sm font-semibold text-gray-900 dark:text-white mb-1">
+                    <h3 className="font-display uppercase tracking-wide text-sm font-semibold text-ink-1 mb-1">
                       Adresse
                     </h3>
-                    <p className="text-gray-600 dark:text-gray-400 break-words">
+                    <p className="text-ink-2 break-words">
                       {coordinates.adresse}
                     </p>
                   </div>
@@ -121,17 +121,17 @@ export default function ContactPageClient({
               )}
 
               <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 flex h-11 w-11 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400">
+                <div className="flex-shrink-0 flex h-11 w-11 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/40 text-brand">
                   <Clock className="h-5 w-5" strokeWidth={1.75} />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="font-display uppercase tracking-wide text-sm font-semibold text-gray-900 dark:text-white mb-1">
+                  <h3 className="font-display uppercase tracking-wide text-sm font-semibold text-ink-1 mb-1">
                     Horaires
                   </h3>
-                  <p className="text-gray-600 dark:text-gray-400">
+                  <p className="text-ink-2">
                     <span className="inline-flex items-center gap-1.5">
                       Lundi
-                      <ArrowRight className="h-3.5 w-3.5 text-red-600 dark:text-red-400" strokeWidth={1.75} aria-hidden="true" />
+                      <ArrowRight className="h-3.5 w-3.5 text-brand" strokeWidth={1.75} aria-hidden="true" />
                       Samedi
                     </span>
                     {' : 10 h – 19 h 30'}
@@ -143,8 +143,8 @@ export default function ContactPageClient({
             </div>
 
             {coordinates?.gelocalisation && (
-              <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-6">
-                <h3 className="font-display uppercase tracking-wide text-sm font-semibold text-gray-900 dark:text-white mb-4">
+              <div className="rounded-xl border border-hairline bg-elevated p-6">
+                <h3 className="font-display uppercase tracking-wide text-sm font-semibold text-ink-1 mb-4">
                   Localisation
                 </h3>
                 <div
@@ -157,7 +157,7 @@ export default function ContactPageClient({
 
           {/* Contact Form */}
           <div className="lg:col-span-2">
-            <form onSubmit={handleSubmit} className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 space-y-6">
+            <form onSubmit={handleSubmit} className="rounded-xl border border-hairline bg-elevated p-6 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -203,7 +203,7 @@ export default function ContactPageClient({
 
               <Button
                 type="submit"
-                className="w-full bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide"
+                className="w-full bg-brand hover:bg-brand-hover text-white font-display uppercase tracking-wide"
                 size="lg"
                 disabled={isSubmitting}
               >

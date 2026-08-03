@@ -255,9 +255,29 @@ was available.
 Edge caching addressed TTFB and most of the render-blocking figure. FCP is now **2103 ms** live and
 is what gates LCP. The remaining levers are in the code:
 
-1. **The stylesheet is 196 kB** (2,399 rules), most of it unused on any one page — the accumulated
-   cost of ~2,037 hand-written `dark:` variants. The token migration *deletes* those rules rather
-   than rewriting them. It also unblocks `experimental.inlineCss`, which currently **loses**
-   (measured: FCP 1523→1264 ms and LCP 3570→3336 ms, but TBT 316→608 ms and score 81→77, because
-   inlining 196 kB trades a round trip for main-thread parse work — see `next.config.js`).
-2. **236 inline SVG icons** = 103 kB of the HTML document and 707 of its 2,000 DOM elements.
+Both of the items previously listed here were **measured and found not to be worth doing**. Recorded
+so they are not proposed again:
+
+1. ~~"The stylesheet is 196 kB, mostly the cost of ~2,037 `dark:` variants; the token migration
+   deletes those rules."~~ **Wrong — Tailwind deduplicates.** 1,781 `dark:` occurrences in source
+   emit only **184 CSS rules = 22.9 kB = 11.4%** of the 201 kB sheet. Completing the entire
+   migration across all 95 files removes at most that 11.4%, and only if every last `dark:` goes.
+   The migration is still right — one vocabulary, theme-aware tokens, no hand-paired colours — but
+   it is a **correctness and maintainability** project, not an FCP lever, and should not be sold as
+   one. The sheet is large because 695 distinct selectors × responsive variants = 2,356 blocks;
+   shrinking it means reducing the *variety* of utilities in use, which no mechanical pass can do.
+2. ~~"236 inline SVG icons = 103 kB of the document."~~ **True uncompressed, irrelevant compressed.**
+   Deleting every icon takes the document from 33.5 kB to 30.8 kB brotli; a `<use>` sprite saves
+   2.1 kB. Brotli already removes the repetition.
+
+Also measured and rejected: `experimental.inlineCss` (FCP 1523→1264 ms and LCP 3570→3336 ms, but
+TBT 316→608 ms and score 81→77 — inlining 196 kB trades a round trip for main-thread parse work,
+see `next.config.js`), and stripping unused DB columns from the RSC payload (11.8 kB raw, ~1 kB
+compressed).
+
+**What actually remains is not a code change: it is the 28-day wait.** Field Core Web Vitals — the
+numbers Search Console reports — are a rolling 28-day window. The field TTFB of 0.8 s that gated
+everything was measured *before* edge caching existed; the edge now answers in ~40 ms. That
+improvement is already shipped and will surface in the field data over the coming month without
+further work. Re-measure then, and let the new field numbers pick the next target rather than
+guessing at one.
