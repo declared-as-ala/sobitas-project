@@ -564,12 +564,72 @@ html[dir="rtl"] [data-i18n-ltr] {
   18%, 100% { opacity: 1; }
 }
 
+/* --------------------------------------------------------------------------
+   STICKY PACK BAR (pack builder, below lg)
+   --------------------------------------------------------------------------
+   Sits directly ON TOP of the mobile tab bar rather than under it. Both are fixed, so without
+   this the pack total and its CTA are covered by Accueil/Favoris/Boutique — on exactly the screen
+   where the summary matters most.
+
+   Uses the same `--tabbar-h` knob every other bottom-anchored element reads (tokens.css: 56px
+   below 768px, 0 above), plus the safe-area inset so it clears the iPhone home indicator instead
+   of sitting on it. Reading the shared variable rather than hardcoding 56px is what keeps this
+   correct the day the tab bar's height changes.
+   -------------------------------------------------------------------------- */
+.pt-packbar {
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+}
+
 .pt-hero {
-  height: 440px;
-  height: clamp(400px, calc(66svh - var(--tabbar-h) - env(safe-area-inset-bottom, 0px)), 540px);
+  /* THE FLOOR IS THE NUMBER THAT MATTERS — it is what actually binds on a phone.
+     Owner, iPhone 13: "the slider image is cropped from the top." Measured with
+     scripts/measure-hero.mjs at the real Safari SMALL viewport (390x746, not the 844 screen
+     height): the frame came out 390x436 against an 828x1035 source, so `cover` scaled by width and
+     threw away 52px vertically — 26px off the top — before the 34px safe-area inset made it worse.
+
+     The admin's mobile slide crop is 828x1035, i.e. aspect 0.800, so at 390 CSS px wide the
+     ZERO-CROP height is 390 / 0.800 = 487px. A 500px floor clears that on every phone in the
+     matrix, which flips the cover axis from width to height and drops the vertical crop to zero:
+
+       iPhone 13      390 wide -> needs 487, gets 500   0px cropped
+       15 Pro Max     430 wide -> needs 537, gets 560   0px cropped
+       Pixel / Galaxy 412 wide -> needs 515, gets 552   0px cropped
+       small Android  360 wide -> needs 450, gets 496   0px cropped
+
+     The svh term is raised to 78% so it stays above the floor on tall phones rather than pinning
+     everything to 500px, and the 620px ceiling stops a very tall device turning the hero into a
+     full-screen takeover the visitor has to scroll past to learn the site sells anything.
+
+     Measure, do not compute: headless Chrome has no retractable toolbars, so `svh` there equals
+     the full screen height and this bug is INVISIBLE unless the viewport is set to the real small
+     viewport. The first measurement run reported "0px cropped" for exactly that reason.
+
+     SIZED BY ASPECT RATIO, NOT BY VIEWPORT. Tuning an `svh` expression to land near 487px only
+     ever gets close — the first attempt cleared the top crop but overshot the height, which flips
+     `cover` to scale by height and throws away up to 57px off the SIDES instead. Trading a top
+     crop for a side crop is not a fix. The admin's mobile crop is 828x1035, which is exactly 4:5,
+     so asking for 4/5 gives width x 1.25 at every width and the crop is zero on BOTH axes:
+
+       360 -> 450    390 -> 488    412 -> 515    430 -> 538
+
+     `aspect-ratio` costs nothing in CLS terms: the width is known at layout time, so the height is
+     too — the box is reserved before paint exactly as a fixed height was. The min/max keep a very
+     narrow or very wide phone inside sane bounds, and if a future slide is uploaded at a different
+     ratio `cover` still handles it, just with some crop again. */
+  height: auto;
+  aspect-ratio: 4 / 5;
+  min-height: 440px;
+  max-height: 620px;
 }
 @media (min-width: 768px) {
   .pt-hero {
+    /* Undo the mobile aspect-ratio sizing explicitly. `height` alone would already win — a
+       definite height makes `aspect-ratio` inert — but `min-height: 440px` would silently raise
+       this breakpoint's 430px floor, and a value that moves because of a rule written for another
+       breakpoint is the kind of drift that gets "fixed" twice. */
+    aspect-ratio: auto;
+    min-height: 0;
+    max-height: none;
     height: 470px;
     height: clamp(430px, 56svh, 540px);
   }
