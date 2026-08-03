@@ -14,7 +14,7 @@ import { getStockDisponible, getProductStockStatus } from '@/util/cartStock';
 import { getProductImagePresentation } from '@/util/productImagePresentation';
 import { buildProductUrlPath } from '@/util/productUrl';
 import { buildProductAlt } from '@/util/productAlt';
-import { useState, useMemo, memo, useCallback } from 'react';
+import { useState, useMemo, memo, useCallback, startTransition } from 'react';
 import { useI18n } from '@/i18n/I18nProvider';
 import { localizedField, localizedName } from '@/i18n/content';
 type Product = ApiProduct | {
@@ -169,9 +169,21 @@ export const ProductCard = memo(function ProductCard({
       image,
       ...(selectedAroma && { selectedAroma }),
     };
+    // ORDER MATTERS, and so does what is urgent.
+    //
+    // `setIsAdding(true)` is the only thing the shopper is waiting to see — the button flips to
+    // "Ajouté !". It stays urgent, so it is in the very next frame, which is the frame INP stops
+    // the clock on.
+    //
+    // The toast is not. Mounting a sonner toast into its portal was running inside the tap
+    // handler, ahead of the paint, to show a message that says the same thing as the button that
+    // just changed and the drawer that is about to open. `startTransition` moves it into a second,
+    // interruptible render pass — visually identical, off the critical interaction path.
     setIsAdding(true);
     addToCart(cartProduct, 1);
-    toast.success('Produit ajouté au panier');
+    startTransition(() => {
+      toast.success('Produit ajouté au panier');
+    });
     setTimeout(() => setIsAdding(false), 500);
   }, [productData.priceDisplay.finalPrice, productData.image, addToCart]);
 

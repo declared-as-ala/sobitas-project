@@ -182,6 +182,64 @@ const nextConfig = {
      * homepage.
      */
     optimizeCss: false,
+
+    /*
+     * INLINE THE CSS INTO THE HTML. This is what `optimizeCss` was supposed to do and never could.
+     *
+     * PageSpeed mobile on protein.tn, 2026-08-03: "Render-blocking requests — Est savings of
+     * 1,700 ms", the largest single item in the report by a wide margin. The page ships three
+     * <link rel="stylesheet"> tags that React emits with `data-precedence` and blocks rendering
+     * on, and on a slow 4G connection each one is a round trip that cannot start until the HTML
+     * has arrived. TTFB in the field is 0.8s, so the CSS does not even begin to download until
+     * roughly a second in, and nothing paints until it lands.
+     *
+     * `inlineCss` is the App Router's own mechanism — React emits the CSS as <style> in the
+     * document instead of as links — so there is no round trip and no render-blocking request.
+     * It requires Next >= 15.2; this project resolves to 15.5.9 (the `^15.1.6` range in
+     * package.json had already floated well past the pinned comment elsewhere in this repo).
+     *
+     * The trade is real and worth stating: the CSS is no longer separately cacheable across
+     * navigations, and the document grows by the size of the sheet. Here that is ~28 kB raw and
+     * far less over the wire, against removing three blocking round trips on the metric that is
+     * failing. On a Tunisian mobile connection that is not a close call.
+     *
+     * ── AND IT IS OFF, BECAUSE IT WAS MEASURED AND IT LOSES ───────────────────────────────
+     * Unlike `optimizeCss`, this one WORKS: a production build with it on serves 1 inline <style>
+     * and 0 render-blocking stylesheets, confirmed in the rendered HTML. It is off anyway, and the
+     * numbers are why. Median of 5 runs, same machine, tight spread (75-80) so this is signal:
+     *
+     *                     off        on
+     *     FCP          1523 ms   1264 ms     -259  better
+     *     LCP          3570 ms   3336 ms     -234  better
+     *     TBT           316 ms    608 ms     +292  WORSE, and crosses from "good" into "POOR"
+     *     score            81        77
+     *
+     * The cause is not the flag, it is what the flag has to inline: THE MAIN STYLESHEET IS 196 kB
+     * (228 kB across all three), minified, 2,399 rules. `inlineCss` is designed for small
+     * per-route CSS; handing it a sheet that size moves a network round trip onto the main thread
+     * as parse and style-recalc work, and on a 4x-throttled phone that costs more than the round
+     * trip it saves. The document goes 437 kB -> 897 kB.
+     *
+     * So the 1,700 ms of render-blocking PageSpeed reports is real, but inlining is the wrong
+     * lever for it. The two right ones, in order of effort:
+     *
+     *   1. THE CDN. `cf-cache-status: DYNAMIC` on protein.tn — Cloudflare is not caching the HTML
+     *      at all, despite the origin sending `s-maxage=300, stale-while-revalidate`. Field TTFB
+     *      is 0.8s, and the CSS request cannot even START until the document arrives, so most of
+     *      that 1,700 ms is the TTFB in disguise. Caching the HTML at the edge fixes the
+     *      render-blocking estimate AND the LCP AND the TTFB together. Owner action — and it needs
+     *      care, because the `vary: rsc, next-router-state-tree, …` header means a naive
+     *      "Cache Everything" rule can serve an RSC payload to a browser expecting HTML.
+     *   2. THE STYLESHEET. 196 kB is the accumulated cost of 2,037 hand-written `dark:` variants
+     *      and ~5,260 lint-flagged literals across 95 files: every distinct arbitrary value
+     *      generates its own rule. Token migration (DESIGN_SYSTEM §8) deletes rules rather than
+     *      rewriting them. Once the sheet is small, revisit this flag — it becomes a pure win.
+     *
+     * VERIFY AFTER ANY NEXT UPGRADE, whichever way this is set. `optimizeCss` sat in this file for
+     * months doing nothing because nobody checked the rendered HTML. The check is one line:
+     *     curl -s https://protein.tn/ | grep -c '<style'
+     */
+    inlineCss: false,
     // Disable the client-side Router Cache for both dynamic and static pages.
     // With non-zero values the browser REUSES a prefetched RSC payload for that many
     // seconds — so a <Link> prefetched while a page's data was momentarily empty/stale
