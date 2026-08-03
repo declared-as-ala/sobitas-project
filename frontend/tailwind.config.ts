@@ -113,6 +113,46 @@ const config: Config = {
         elevated: "rgb(var(--c-elevated) / <alpha-value>)",
         sunken: "rgb(var(--c-sunken) / <alpha-value>)",
         hairline: "rgb(var(--c-hairline) / <alpha-value>)",
+        /**
+         * TWO boundary weights, because they do different jobs and one value cannot do both.
+         *
+         *   hairline      a border on a component that ALSO has its own fill (card, input,
+         *                 chip). Decorative, so no contrast floor applies.
+         *   rule          a band seam or a cell divider that sits alongside a fill change.
+         *   rule-strong   a divider that is the SOLE boundary between two otherwise identical
+         *                 surfaces — the brand wall's `gap-px` matrix. WCAG 1.4.11 applies:
+         *                 measured 3.34:1 on white, 4.10:1 on the dark plate.
+         *
+         * Using `hairline` where `rule-strong` is required is the failure mode this split exists
+         * to prevent: it looks fine and measures 1.26:1.
+         */
+        rule: "rgb(var(--c-rule) / <alpha-value>)",
+        "rule-strong": "rgb(var(--c-rule-strong) / <alpha-value>)",
+        /**
+         * Stock semantics, not decoration. These replaced #22C55E (2.28:1 on white) and #F59E0B
+         * (2.15:1) — colours that read as "status" but carried none. They are band-aware, so the
+         * same `text-ok` renders #15803D on a white card and #22C55E on the black slab.
+         */
+        ok: "rgb(var(--c-ok) / <alpha-value>)",
+        warn: "rgb(var(--c-warn) / <alpha-value>)",
+        /** Focus ring colour, band-aware. Never put a scope class on a focusable element: the
+         *  ring resolves in the element's own scope but paints on the PARENT band's surface. */
+        focus: "rgb(var(--c-focus) / <alpha-value>)",
+        /**
+         * The foreground that sits ON the accent — `bg-brand text-on-brand`.
+         *
+         * NOT optional and NOT a constant. In light theme it is white on #D53B04 (4.71:1). In the
+         * slab scope and in dark theme the accent lightens to #FF8A4C, where white measures
+         * 2.34:1 and fails AA outright; `--c-on-brand` flips to #0A0A0B there (8.47:1).
+         *
+         * This entry was missing for one commit while eight call sites already used
+         * `text-on-brand`. Tailwind emits nothing for an undefined colour — no error, no warning —
+         * so every one of those buttons silently INHERITED its band's body ink instead. On the
+         * near-black header that rendered the pack CTA's label at 1.37:1. Caught by the automated
+         * contrast sweep, not by looking at it, which is the whole argument for running the sweep:
+         * a missing utility is invisible in review and invisible in the build.
+         */
+        "on-brand": "rgb(var(--c-on-brand) / <alpha-value>)",
         ink: {
           DEFAULT: "rgb(var(--c-ink-1) / <alpha-value>)",
           1: "rgb(var(--c-ink-1) / <alpha-value>)",

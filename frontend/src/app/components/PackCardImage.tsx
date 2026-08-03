@@ -54,8 +54,11 @@ export function PackCardImage({
   // Background is WHITE to match the card body (ProductCard root is bg-white). It used to be
   // gray-50 while the body was white, drawing a visible two-tone seam across every card in light
   // mode. One surface, no seam.
+  // No corner radius of its own. The card is `overflow-hidden rounded-2xl`, so it clips this box
+  // correctly whichever way round the layout is — `rounded-t-2xl` was right for the vertical card
+  // and wrong for the horizontal phone row, where the image is on the LEFT.
   const wrapperClasses = cn(
-    'relative w-full flex-shrink-0 overflow-hidden rounded-t-2xl',
+    'relative h-full w-full flex-shrink-0 overflow-hidden',
     // 'dark' = the GPT card's diagonal charcoal gradient so packshots pop; 'light' = white.
     isDark
       ? 'bg-gradient-to-br from-[#1b1f2a] to-[#0e1118]'
@@ -79,12 +82,15 @@ export function PackCardImage({
         loadingMessage="Chargement"
       >
         {imageSrc && !hasError ? (
-          // The padded box: `absolute inset-[9%]` for contain gives the packshot real, uniform
-          // breathing room. This is a POSITIONED, SIZED element, so the Image `fill` (which sets
+          // The padded box. This is a POSITIONED, SIZED element, so the Image `fill` (which sets
           // inline `inset:0`) fills THIS inset box — the old approach put padding on the link and
           // it was silently ignored, because fill's containing block was the padding box, so the
           // packshot went edge-to-edge. Cover mode fills the whole frame (inset-0).
-          <span className={cn('absolute block', isContain ? 'inset-[9%]' : 'inset-0')}>
+          //
+          // inset-[5%], down from 9%. The frame went square → 5:4 to shorten the card; dropping
+          // the inset gives most of that height back TO THE PACKSHOT rather than to padding, so
+          // the product shrinks ~5% instead of ~20%.
+          <span className={cn('absolute block', isContain ? 'inset-[5%]' : 'inset-0')}>
             <Image
               src={imageSrc}
               alt={imageAlt || productName}

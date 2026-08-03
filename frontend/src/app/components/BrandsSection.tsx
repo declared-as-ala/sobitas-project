@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Skeleton } from '@/app/components/ui/skeleton';
 import { SectionHeader } from '@/app/components/SectionHeader';
+import { Section } from '@/app/components/layout/Section';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { getAllBrands, getStorageUrl } from '@/services/api';
 import type { Brand } from '@/types';
@@ -27,7 +28,7 @@ function BrandCard({ brand }: { brand: Brand }) {
       href={`/${brandSlug}`}
       loadingMessage={`Chargement de ${brand.designation_fr}...`}
       aria-label={`Voir les produits ${brand.designation_fr}`}
-      className="group flex aspect-[3/2] items-center justify-center rounded-2xl border border-gray-100 bg-white p-4 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-red-200 hover:shadow-md dark:border-gray-800 dark:bg-gray-900 dark:hover:border-red-500/30"
+      className="pt-plate group flex aspect-[3/2] items-center justify-center p-4 transition-colors duration-300 hover:bg-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
     >
       {logoUrl && !imageError ? (
         <Image
@@ -35,13 +36,22 @@ function BrandCard({ brand }: { brand: Brand }) {
           alt={buildBrandAlt(brand.designation_fr, brand.alt_cover)}
           width={200}
           height={100}
-          className="max-h-[70%] max-w-[82%] object-contain opacity-90 transition-all duration-300 group-hover:scale-105 group-hover:opacity-100"
-          sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 16vw"
+          className="max-h-[68%] max-w-[80%] object-contain transition-transform duration-300 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+          /* Re-derived for the 3 / 4 / 6 matrix — the old string was written for a 2 / 3 / 4 / 6
+             grid and over-fetched by roughly 2x on phones.
+             Container gutters 16 / 24 / 32 per side, `gap-px`, `max-w-site` = 1600. The LOGO is
+             capped at `max-w-[80%]` of its cell, so the required width is 0.8 x cell, not the cell:
+               mobile  3-up  cell = (vw - 34)/3   -> 0.8x = 24.3vw @390   -> 26vw
+               sm      4-up  cell = (vw - 51)/4   -> 0.8x = 19.0vw @1023  -> 20vw
+               lg      6-up  cell = (1600-69)/6 = 255px -> 0.8x = 204px   -> 210px
+             All three still resolve inside the existing imageSizes buckets, so no new optimizer
+             variants are generated and nothing is re-fetched. */
+          sizes="(min-width: 1024px) 210px, (min-width: 640px) 20vw, 26vw"
           loading="lazy"
           onError={() => setImageError(true)}
         />
       ) : (
-        <span className="line-clamp-2 px-2 text-center text-xs sm:text-sm font-semibold text-gray-700 transition-colors group-hover:text-red-600 dark:text-gray-300 dark:group-hover:text-red-400">
+        <span className="line-clamp-2 px-2 text-center text-xs font-semibold text-ink-1 transition-colors group-hover:text-brand sm:text-sm">
           {brand.designation_fr}
         </span>
       )}
@@ -77,25 +87,33 @@ export function BrandsSection({ brands: brandsProp }: { brands?: Brand[] }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const gridClass = 'grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-6';
+  /*
+   * ONE OBJECT, NOT TWELVE. `gap-px` over `bg-rule-strong` lets the rule colour through the 1px
+   * gaps, so the wall is a single rectangle divided into cells rather than twelve cards floating
+   * on a surface. That deletes twelve `border` + twelve `shadow-sm` + twelve `hover:shadow-md` +
+   * twelve `hover:-translate-y-0.5` declarations.
+   *
+   * `rule-strong`, not `hairline`: here the rule is the SOLE boundary between two otherwise
+   * identical white cells, so WCAG 1.4.11 applies and it must clear 3:1. Measured 3.34:1 on white
+   * and 4.10:1 on the dark plate. `hairline` would look fine and measure 1.26:1.
+   *
+   * 3-up on phones rather than 2-up: brand marks are wide and short, so a 129x86 cell at 390px is
+   * ample for a wordmark and twelve brands become FOUR rows instead of six.
+   */
+  const gridClass =
+    'grid grid-cols-3 gap-px overflow-hidden rounded-2xl bg-rule-strong sm:grid-cols-4 lg:grid-cols-6';
 
   // Fixed grid skeleton while fetching — reserves the final layout, zero layout shift.
   if (isLoading) {
     return (
-      <section className="py-12 sm:py-16 lg:py-20 bg-white dark:bg-gray-950">
-        <div className="max-w-site mx-auto px-4 sm:px-6 lg:px-8">
-          <SectionHeader
-            kicker="Marques"
-            title="Nos marques partenaires"
-            subtitle="Distributeur officiel des plus grandes marques internationales."
-          />
+      <Section surface="sunken" spacing="tight" width="wide" defer>
+          <SectionHeader title="Nos marques partenaires" scale="3" />
           <div className={gridClass} aria-hidden="true">
             {Array.from({ length: MAX_BRANDS }).map((_, i) => (
-              <Skeleton key={i} className="aspect-[3/2] rounded-2xl" />
+              <Skeleton key={i} className="aspect-[3/2] rounded-none" />
             ))}
           </div>
-        </div>
-      </section>
+      </Section>
     );
   }
 
@@ -104,14 +122,16 @@ export function BrandsSection({ brands: brandsProp }: { brands?: Brand[] }) {
   }
 
   return (
-    <section className="py-12 sm:py-16 lg:py-20 bg-white dark:bg-gray-950">
-      <div className="max-w-site mx-auto px-4 sm:px-6 lg:px-8">
+    <Section surface="sunken" spacing="tight" width="wide" defer>
+        {/* No kicker, no subtitle. "Partenaires officiels" above "Nos marques partenaires" above
+            "Distributeur officiel des plus grandes marques internationales" is the same sentence
+            three times, and it pushed a logo wall — which explains itself instantly — down by
+            ~70px. The heading alone labels the grid; the logos are the content. */}
         <SectionHeader
-          kicker="Marques"
           title="Nos marques partenaires"
-          subtitle="Distributeur officiel des plus grandes marques internationales."
           viewAllHref="/brands"
           viewAllLabel="Toutes les marques"
+          scale="3"
         />
 
         <div className={gridClass}>
@@ -119,7 +139,6 @@ export function BrandsSection({ brands: brandsProp }: { brands?: Brand[] }) {
             <BrandCard key={brand.id} brand={brand} />
           ))}
         </div>
-      </div>
-    </section>
+    </Section>
   );
 }

@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, LayoutGrid, Heart, User, ShoppingCart, type LucideIcon } from 'lucide-react';
-import { useCart } from '@/app/contexts/CartContext';
-import { useFavorites } from '@/contexts/FavoritesContext';
+import { useCartActions, useCartCount } from '@/app/contexts/CartContext';
+import { useFavoritesCount } from '@/contexts/FavoritesContext';
 import { cn } from '@/app/components/ui/utils';
 
 /**
@@ -57,15 +57,18 @@ type TabItem = {
 
 export function MobileTabBar() {
   const pathname = usePathname() || '/';
-  const { getTotalItems, setCartDrawerOpen } = useCart();
-  const { count: favoritesCount } = useFavorites();
+  // Narrow subscriptions — same reason as HeaderClient. This bar is fixed on screen on every
+  // mobile page, so anything that re-renders it re-renders during every cart interaction.
+  const { setCartDrawerOpen } = useCartActions();
+  const cartCountValue = useCartCount();
+  const favoritesCount = useFavoritesCount();
 
   // /checkout already has its own fixed CTA footer (.checkout-cta-footer) plus a keyboard-open
   // variant. Two stacked fixed footers would eat the viewport and demote the one action that
   // matters on that screen.
   if (HIDDEN_ON.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return null;
 
-  const cartCount = getTotalItems();
+  const cartCount = cartCountValue;
   const isShop = pathname.startsWith('/shop') || pathname.startsWith('/category') || pathname === '/offres' || pathname === '/packs';
 
   // Boutique is deliberately absent from these two lists — it is the raised centre tile rendered

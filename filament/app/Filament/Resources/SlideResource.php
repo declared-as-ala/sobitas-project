@@ -15,6 +15,7 @@ use Filament\Tables;
 use Filament\Actions;
 use Filament\Tables\Table;
 use App\Services\Media\ConvertUploadedImageToWebp;
+use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Log;
 // Aliased: `Schema` is already taken by Filament\Schemas\Schema (the form() signature).
 use Illuminate\Support\Facades\Schema as DbSchema;
@@ -107,7 +108,7 @@ class SlideResource extends Resource
     {
         return $schema->columns(1)->schema([
             Section::make('Images')
-                ->description('Un slide = une ligne. L\'image mobile est optionnelle mais recommandée : une photo panoramique recadrée sur un téléphone perd souvent le sujet.')
+                ->description('Un slide = une image, rien d\'autre. Tout le texte (titre, accroche, bouton) doit être intégré DANS l\'image au moment du design. L\'image mobile est optionnelle mais fortement recommandée : une image panoramique recadrée sur un téléphone perd presque toujours le sujet et le texte.')
                 ->schema([
                     FileUpload::make('image')
                         ->label('Image (ordinateur)')
@@ -120,7 +121,11 @@ class SlideResource extends Resource
                         ->maxSize(4096)
                         ->required()
                         ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
-                        ->helperText('2400 × 1000 px recommandé. Gardez les 40% de gauche calmes : c\'est là que le titre s\'affiche. N\'incrustez aucun texte dans l\'image. Max 4 Mo.')
+                        // Reversed instruction (owner, 2026-08-03). It used to say "n'incrustez
+                        // aucun texte" because the site painted its own overlay; the site no
+                        // longer paints anything, so the opposite is now true and leaving the old
+                        // sentence would produce blank-looking banners.
+                        ->helperText('2400 × 1000 px recommandé. Le texte doit être intégré dans l\'image — le site n\'ajoute plus aucun texte par-dessus. Évitez de placer du texte dans les 60 px de gauche et de droite : les flèches du carrousel s\'y affichent. Max 4 Mo.')
                         ->deletable(true)
                         ->downloadable(false)
                         ->openable(false)
@@ -139,7 +144,7 @@ class SlideResource extends Resource
                         ->imagePreviewHeight('280')
                         ->maxSize(4096)
                         ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
-                        ->helperText('1200 × 1500 px recommandé (portrait). Sujet dans les 55% du haut, bas calme pour le texte. Si vide, l\'image ordinateur est utilisée. Max 4 Mo.')
+                        ->helperText('1200 × 1500 px recommandé (portrait), texte intégré dans l\'image. Si vide, l\'image ordinateur est utilisée — elle sera alors recadrée et une partie du texte peut disparaître sur téléphone. Max 4 Mo.')
                         ->deletable(true)
                         ->downloadable(false)
                         ->openable(false)
@@ -149,41 +154,44 @@ class SlideResource extends Resource
                         ->saveUploadedFileUsing(fn (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string => self::storeAsWebp($file)),
                 ]),
 
-            Section::make('Texte affiché sur l\'image')
-                ->description('Laissez vide pour un slide sans texte. Le texte est ajouté par-dessus l\'image — ne l\'incrustez pas dans la photo.')
+            /*
+             * THE "TEXTE AFFICHÉ SUR L'IMAGE" SECTION IS GONE.
+             *
+             * It held Badge, Titre, Sous-titre and Texte du bouton, and the storefront painted all
+             * four over the artwork on a dark plate. Owner, 2026-08-03, after reviewing with a
+             * client: "take off all the text shown on the slide — generate an image in any
+             * graphic-design tool and put it in the slider, and that's all."
+             *
+             * The four COLUMNS are deliberately left in the database and still returned by the
+             * API. Dropping them would be an irreversible migration on a table whose schema is not
+             * in version control (see the 2026_08_03 migration and Phase 0), to delete text the
+             * owner spent time writing. Removing the FIELDS is enough: nothing writes them and
+             * nothing renders them, and `titre` is still read once — as a fallback source for the
+             * alt text, so existing slides keep a real description instead of a generic one.
+             */
+            Section::make('Destination et référencement')
+                ->description('Les deux seules informations texte d\'un slide. Aucune des deux ne s\'affiche sur l\'image.')
                 ->schema([
                     Grid::make(2)->schema([
-                        Forms\Components\TextInput::make('badge')
-                            ->label('Badge (petite pastille)')
-                            ->maxLength(24)
-                            ->placeholder('Ex. : Nouveauté')
-                            ->helperText('Court. Affiché en pastille orange au-dessus du titre. Vide = aucune pastille.')
-                            ->columnSpan(2),
-                        // Textarea, not TextInput: the hero renders the FIRST line white and the
-                        // rest in accent orange, which is what produces the two-tone headline in
-                        // the approved design — and a single-line input cannot hold that newline.
-                        Forms\Components\Textarea::make('titre')
-                            ->label('Titre')
-                            ->rows(2)
-                            ->maxLength(255)
-                            ->placeholder("Alimente\nTa performance")
-                            ->helperText('Astuce : passez à la ligne pour couper le titre en deux — la 1ʳᵉ ligne s\'affiche en blanc, la suite en orange.')
-                            ->columnSpan(2),
-                        Forms\Components\Textarea::make('sous_titre')
-                            ->label('Sous-titre')
-                            ->rows(2)
-                            ->maxLength(500)
-                            ->placeholder('Une phrase courte. Ex. : Whey, créatine et compléments 100% authentiques.')
-                            ->columnSpan(2),
-                        Forms\Components\TextInput::make('cta_label')
-                            ->label('Texte du bouton')
-                            ->maxLength(120)
-                            ->placeholder('Ex. : Découvrir la gamme'),
                         Forms\Components\TextInput::make('lien')
-                            ->label('Lien du bouton')
+                            ->label('Lien du slide')
                             ->maxLength(500)
-                            ->placeholder('/shop/proteines')
-                            ->helperText('Chemin interne (/shop/proteines) ou URL complète.'),
+                            ->placeholder('Ex. : /proteine-whey')
+                            // The whole banner is the link now that there is no button, so this
+                            // matters MORE than it did, not less. Left empty the slide still goes
+                            // somewhere (/shop), which is why a blank link is invisible in testing
+                            // and only shows up as every banner sending traffic to one generic page.
+                            ->helperText('Toute l\'image est cliquable. Vide = le slide envoie vers /shop. Chemin interne (/proteine-whey) ou URL complète.')
+                            ->columnSpan(2),
+                        Forms\Components\TextInput::make('alt')
+                            ->label('Texte alternatif (SEO)')
+                            ->maxLength(255)
+                            ->placeholder('Ex. : Athlète tenant un pot de whey Protein.tn')
+                            // Now the ONLY text a slide carries, and the only thing Google and a
+                            // screen reader can read from the banner — so it is worth more than it
+                            // was when a headline was also in the HTML.
+                            ->helperText('Décrit l\'image pour Google et les lecteurs d\'écran. C\'est désormais le seul texte du slide : décrivez ce que montre l\'image, y compris le texte qui y est intégré.')
+                            ->columnSpan(2),
                     ]),
                 ]),
 
@@ -210,15 +218,89 @@ class SlideResource extends Resource
                                 ? ((int) Slide::max('ordre')) + 1
                                 : 0)
                             ->helperText('Le plus petit chiffre passe en premier. Vous pouvez aussi glisser-déposer les lignes.'),
-                        Forms\Components\TextInput::make('alt')
-                            ->label('Texte alternatif (SEO)')
-                            ->maxLength(255)
-                            ->placeholder('Ex. : Athlète tenant un pot de whey Protein.tn')
-                            ->helperText('Décrit l\'image pour Google et les lecteurs d\'écran. Important pour le référencement.')
-                            ->columnSpan(2),
                     ]),
                 ]),
         ]);
+    }
+
+    /**
+     * The fields whose loss must be REPORTED rather than swallowed.
+     *
+     * Keyed by form field → human label, so the warning names what the admin actually typed. Down
+     * to the two that remain on the form; the removed editorial fields cannot fail to save because
+     * nothing writes them any more. `lien` stays because it is one of the two columns proven to be
+     * missing from every migration — the original silent-write-failure this guard was built for.
+     */
+    private const VERIFIED_TEXT_FIELDS = [
+        'lien' => 'Lien du slide',
+        'alt'  => 'Texte alternatif',
+    ];
+
+    /**
+     * Read the row back after a save and shout if something the admin typed did not persist.
+     *
+     * ── WHY THIS EXISTS ───────────────────────────────────────────────────────────────────
+     * The owner's report was "it says it saved, but it's not showing". That sentence describes a
+     * SILENT WRITE FAILURE, and it is the single most expensive kind of bug to own: the admin has
+     * no way to distinguish "the field did not save" from "the field saved but the site is
+     * cached" from "the field saved and I am looking at the wrong slide". They retype it, it
+     * fails again, and they lose trust in the panel.
+     *
+     * Filament's green "Enregistré" toast reports that the SQL statement ran, not that the value
+     * landed. When a column is missing, or is silently truncated, or a mutator drops the value,
+     * the statement can succeed while the attribute does not survive. This re-reads the row from
+     * the database and compares it to what was submitted.
+     *
+     * It is deliberately a WARNING, not an exception: the rest of the slide did save, and
+     * throwing here would roll that back and make things worse. It stays on screen (persistent)
+     * because the whole point is that a transient green toast is what hid this for weeks.
+     *
+     * Cost is one indexed primary-key SELECT per save of a table with a handful of rows.
+     */
+    public static function verifyPersisted(Slide $record, array $data): void
+    {
+        $fresh = $record->fresh();
+
+        if (! $fresh) {
+            return;
+        }
+
+        $lost = [];
+
+        foreach (self::VERIFIED_TEXT_FIELDS as $column => $label) {
+            $submitted = trim((string) ($data[$column] ?? ''));
+
+            if ($submitted === '') {
+                continue; // Cleared on purpose, or never filled — nothing to verify.
+            }
+
+            $stored = trim((string) ($fresh->getAttribute($column) ?? ''));
+
+            if ($stored === '') {
+                $lost[] = $label;
+                Log::error('slides.field_did_not_persist', [
+                    'record_id' => $record->getKey(),
+                    'column'    => $column,
+                    'submitted' => mb_substr($submitted, 0, 120),
+                    'exists'    => DbSchema::hasColumn('slides', $column),
+                ]);
+            }
+        }
+
+        if ($lost === []) {
+            return;
+        }
+
+        Notification::make()
+            ->danger()
+            ->title('Certains champs n\'ont PAS été enregistrés')
+            ->body(
+                'Le reste du slide est enregistré, mais ces champs sont revenus vides : '
+                . implode(', ', $lost)
+                . '. Ce n\'est pas une erreur de votre part — signalez-le au développeur.'
+            )
+            ->persistent()
+            ->send();
     }
 
     public static function table(Table $table): Table
@@ -232,11 +314,14 @@ class SlideResource extends Resource
                     ->height(60)
                     ->width(120)
                     ->extraImgAttributes(['style' => 'object-fit:cover;border-radius:6px;']),
-                Tables\Columns\TextColumn::make('titre')
-                    ->label('Titre')
+                // `alt` rather than `titre`: the title is no longer displayed anywhere, so a list
+                // keyed on it would identify rows by a field the admin can no longer edit.
+                Tables\Columns\TextColumn::make('alt')
+                    ->label('Description (SEO)')
+                    ->limit(50)
                     ->searchable()
                     ->sortable()
-                    ->default('—'),
+                    ->placeholder('— manquant —'),
                 Tables\Columns\IconColumn::make('image_mobile')
                     ->label('Mobile')
                     ->boolean()
@@ -290,7 +375,11 @@ class SlideResource extends Resource
                         $data['image_mobile'] = ImagePath::normalize($data['image_mobile'] ?? null);
 
                         return $data;
-                    }),
+                    })
+                    // Re-read the row and warn if anything the admin typed did not land. See
+                    // verifyPersisted() — "it says saved but it's not showing" is exactly the
+                    // report this makes impossible to get again without a diagnosis attached.
+                    ->after(fn (Slide $record, array $data) => self::verifyPersisted($record, $data)),
                 Actions\DeleteAction::make()
                     ->before(fn (Slide $record) => self::purgeImages($record, 'slide.delete')),
             ])

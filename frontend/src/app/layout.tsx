@@ -13,6 +13,10 @@ import { DeferredToaster } from "@/app/components/DeferredToaster";
 // PWA install prompt, moved off the critical path — see DeferredInstallBanner for why.
 import { DeferredInstallBanner } from "@/app/components/DeferredInstallBanner";
 import { WhatsAppFab } from "@/app/components/WhatsAppFab";
+// The cart drawer's mount point. It used to be the last element of HeaderClient, which forced that
+// ~1,050-line component to subscribe to the drawer's open state — so every add-to-cart re-rendered
+// the entire header inside the tap handler. See CartDrawerHost for the measurements.
+import { CartDrawerHost } from "@/app/components/CartDrawerHost";
 import { MobileTabBar } from "@/app/components/MobileTabBar";
 import { LOCALE_STORAGE_KEY } from "@/i18n";
 
@@ -292,6 +296,7 @@ export default async function RootLayout({
             <WhatsAppFab />
             {/* Mounted once here, not per page, so it never remounts on navigation. */}
             <MobileTabBar />
+            <CartDrawerHost />
           </Providers>
         </ThemeProvider>
       </body>

@@ -159,10 +159,8 @@ export default async function Home() {
       // No cache-bust param: it would change the URL on every render, breaking both the
       // preload↔paint match and the optimizer's 30-day cache.
       imageMobileUrl: s.cover_mobile ? getStorageUrl(s.cover_mobile) : null,
-      badge: (s as { badge?: string | null }).badge ?? null,
-      title: s.title,
-      subtitle: s.subtitle,
-      ctaLabel: s.cta_label,
+      // Image, destination, description. Nothing is painted over the artwork any more — see the
+      // policy note at the top of components/Hero.tsx.
       href: s.link,
       alt: s.alt,
     }));

@@ -5,8 +5,8 @@ import { ShoppingCart, Heart, Flame, Star, BadgeCheck, CircleCheck, Truck, Shiel
 import { Button } from '@/app/components/ui/button';
 import { PackCardImage } from '@/app/components/PackCardImage';
 import type { Product as ApiProduct } from '@/types';
-import { useCart } from '@/app/contexts/CartContext';
-import { useFavorites } from '@/contexts/FavoritesContext';
+import { useCartActions, useCartQty } from '@/app/contexts/CartContext';
+import { useFavoritesActions, useIsFavorite } from '@/contexts/FavoritesContext';
 import { getStorageUrl } from '@/services/api';
 import { toast } from 'sonner';
 import { getPriceDisplay } from '@/util/productPrice';
@@ -14,7 +14,7 @@ import { getStockDisponible, getProductStockStatus } from '@/util/cartStock';
 import { getProductImagePresentation } from '@/util/productImagePresentation';
 import { buildProductUrlPath } from '@/util/productUrl';
 import { buildProductAlt } from '@/util/productAlt';
-import { useState, useMemo, memo, useCallback } from 'react';
+import { useState, useMemo, memo, useCallback, startTransition } from 'react';
 import { useI18n } from '@/i18n/I18nProvider';
 import { localizedField, localizedName } from '@/i18n/content';
 type Product = ApiProduct | {
@@ -77,16 +77,29 @@ export const ProductCard = memo(function ProductCard({
   brandName,
 }: ProductCardProps) {
   const { locale } = useI18n();
-  const { addToCart, getCartQty } = useCart();
-  const { isFavorite, toggleFavorite } = useFavorites();
+  /*
+   * NARROW HOOKS, NOT `useCart()` / `useFavorites()`. This is the INP fix and this component is
+   * where it pays, because it is rendered 23 times on the homepage and ~40 on /shop.
+   *
+   * `useCart()` returns an object that changes on every cart mutation, and `useFavorites()` one
+   * that changes on every heart tap. Both re-render EVERY consumer, so a single tap re-rendered
+   * the entire grid plus the header — between the tap and the next paint, which is exactly what
+   * INP measures. Field CWV said 408 ms and FAILED; lab TBT said 50 ms and "good", because TBT
+   * only looks at page load and never presses anything.
+   *
+   * The actions never change identity, and the two subscriptions return a number and a boolean
+   * for THIS product only, so React's Object.is bailout keeps the other 22 cards untouched.
+   */
+  const { addToCart } = useCartActions();
+  const { toggleFavorite } = useFavoritesActions();
   const [isAdding, setIsAdding] = useState(false);
-  const favorite = isFavorite(product.id);
+  const favorite = useIsFavorite(product.id);
   // The SAME call the product detail page makes. Card and page now derive their label from one
   // function over the same four columns (qte, rupture, force_out_of_stock, low_stock_threshold),
   // so a product cannot advertise "En stock" in a grid and "Rupture de stock" on its own page.
   const stock = getProductStockStatus(product as any);
   const stockDisponible = getStockDisponible(product as any);
-  const inCartQty = getCartQty(product.id);
+  const inCartQty = useCartQty(product.id);
   const canAddMore = stockDisponible > 0 && inCartQty < stockDisponible;
 
   const productData = useMemo(() => {
@@ -156,9 +169,21 @@ export const ProductCard = memo(function ProductCard({
       image,
       ...(selectedAroma && { selectedAroma }),
     };
+    // ORDER MATTERS, and so does what is urgent.
+    //
+    // `setIsAdding(true)` is the only thing the shopper is waiting to see — the button flips to
+    // "Ajouté !". It stays urgent, so it is in the very next frame, which is the frame INP stops
+    // the clock on.
+    //
+    // The toast is not. Mounting a sonner toast into its portal was running inside the tap
+    // handler, ahead of the paint, to show a message that says the same thing as the button that
+    // just changed and the drawer that is about to open. `startTransition` moves it into a second,
+    // interruptible render pass — visually identical, off the critical interaction path.
     setIsAdding(true);
     addToCart(cartProduct, 1);
-    toast.success('Produit ajouté au panier');
+    startTransition(() => {
+      toast.success('Produit ajouté au panier');
+    });
     setTimeout(() => setIsAdding(false), 500);
   }, [productData.priceDisplay.finalPrice, productData.image, addToCart]);
 
@@ -189,8 +214,21 @@ export const ProductCard = memo(function ProductCard({
   return (
     // GPT product-card design. Poppins + #FF5A00 accent, scoped to the card (card-first rollout).
     // MUST stay geometrically in lockstep with ProductCardSkeleton or the swap shifts layout.
-    <article className="group font-poppins flex h-full w-full min-w-0 flex-col overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-sm transition-shadow duration-200 ease-out [@media(hover:hover)]:hover:shadow-lg dark:border-gray-800 dark:bg-gray-900">
-      <div className="relative">
+    /*
+      A ROW ON PHONES, A COLUMN FROM `sm`.
+      `flex-row sm:flex-col` is the whole mechanism: at one column per row a VERTICAL card is as
+      tall as a full-width image (~500px), while a horizontal one is only as tall as its text
+      (~180px). Same information, same one-per-row reading order the owner asked for, a third of
+      the height. See ProductGrid for the three iterations this went through.
+
+      `relative` is new and load-bearing: the favourite button is positioned against the CARD now,
+      not against the image. In the row layout the image is a 124px thumbnail on the left, so a
+      heart anchored to it would sit on top of the packshot instead of in the card's corner.
+    */
+    <article className="pt-plate group font-poppins relative flex h-full w-full min-w-0 flex-row overflow-hidden rounded-2xl border border-hairline shadow-sm transition-shadow duration-200 ease-out sm:flex-col [@media(hover:hover)]:hover:shadow-lg">
+      {/* 124px thumbnail on phones, full-width image from `sm`. `self-stretch` gives the frame's
+          `h-full` a height to resolve against (see util/productCardFrame.ts). */}
+      <div className="relative w-[124px] shrink-0 self-stretch sm:w-auto sm:self-auto">
         <PackCardImage
           imageSrc={productData.image}
           productName={productData.name}
@@ -204,31 +242,41 @@ export const ProductCard = memo(function ProductCard({
           priority={priority}
         />
 
-        {/* Favourite — white circle, top-right */}
-        <button
-          type="button"
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(toFavoriteProduct(product)); }}
-          className="pointer-events-auto absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-md ring-1 ring-black/5 transition-transform hover:scale-105 dark:bg-gray-800 dark:ring-white/10"
-          aria-label={favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-        >
-          <Heart className={`h-[18px] w-[18px] ${favorite ? 'fill-[#FF5A00] text-[#FF5A00]' : 'text-[#6B7280] dark:text-gray-300'}`} />
-        </button>
+        {/* Badges — top-left. Discount = the brand accent; Rupture / TOP VENTE = a dark chip.
 
-        {/* Badges — top-left. Discount = the #FF5A00 accent; "TOP VENTE" = dark ink chip. */}
-        <div className="pointer-events-none absolute left-3 top-3 z-10 flex flex-col items-start gap-1.5">
+            THE DARK CHIPS CARRY `.pt-slab`, NOT `bg-ink-1 text-white`. That pairing was a real
+            dark-mode defect, found by scripts/audit-contrast.mjs: `--c-ink-1` INVERTS with the
+            theme, so in dark mode `bg-ink-1` resolves to #F5F4F2 and the chip rendered white text
+            on a near-white pill at 1.10:1. Sixteen of them on the homepage alone.
+
+            The rule this establishes: an element that must stay dark in BOTH themes is a SCOPE
+            (`.pt-slab`), never an ink token used as a fill. `bg-ink-1` means "the colour of type",
+            and the colour of type is supposed to flip. */}
+        <div className="pointer-events-none absolute left-2 top-2 z-10 flex flex-col items-start gap-1 sm:left-3 sm:top-3 sm:gap-1.5">
           {!inStock && (
-            <span className="inline-flex items-center rounded-lg bg-[#111827] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white shadow-sm">
+            <span className="pt-slab inline-flex items-center rounded-lg px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-1 shadow-sm sm:px-2.5 sm:py-1 sm:text-[11px]">
               Rupture
             </span>
           )}
           {inStock && productData.priceDisplay.hasPromo && productData.discount > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-lg bg-[#FF5A00] px-2.5 py-1 text-[11px] font-bold tabular-nums tracking-wide text-white shadow-sm">
+            <span className="inline-flex items-center gap-1 rounded-lg bg-brand px-2 py-0.5 text-[10px] font-bold tabular-nums tracking-wide text-on-brand shadow-sm sm:px-2.5 sm:py-1 sm:text-[11px]">
               <Flame className="h-3 w-3 shrink-0" aria-hidden="true" />
               -{productData.discount}%
             </span>
           )}
-          {inStock && (productData.isBestSeller || (showBadge && badgeText)) && (
-            <span className="inline-flex items-center gap-1 rounded-lg bg-[#111827] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white shadow-sm">
+          {/* `showBadge !== false` — an explicit opt-out, not a change of default.
+              A "TOP VENDU" pill on every card in a rail headed "LES PLUS VENDUS" (or "FLASH" under
+              "VENTES FLASH", or "NEW" under "NOUVEAUX PRODUITS") repeats the heading four times
+              and, on the 124px phone thumbnail, covers about 40% of the packshot. A badge only
+              carries information when it DIFFERS from what the surrounding band already says.
+
+              It stays on by default, because on /shop, /favoris and search results the products
+              are mixed and "Top vente" is genuinely a per-product fact. Only the homepage rails,
+              which state it in their own h2, pass `showBadge={false}`.
+
+              The DISCOUNT badge above is untouched: −7% is per-product and no heading states it. */}
+          {inStock && showBadge !== false && (productData.isBestSeller || badgeText) && (
+            <span className="pt-slab inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-1 shadow-sm sm:px-2.5 sm:py-1 sm:text-[11px]">
               <Star className="h-3 w-3 shrink-0 fill-[#FFB020] text-[#FFB020]" aria-hidden="true" />
               {badgeText || 'Top vente'}
             </span>
@@ -236,20 +284,51 @@ export const ProductCard = memo(function ProductCard({
         </div>
       </div>
 
-      {/* Body */}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 px-4 py-4">
+      {/* Favourite — anchored to the CARD, so it lands in the top-right corner in both layouts.
+          36px circle with a 44px tap area via `after:-inset-1`: the visual control can shrink on
+          a phone, the TARGET cannot — 44px is the floor. */}
+      <button
+        type="button"
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(toFavoriteProduct(product)); }}
+        className="pointer-events-auto absolute right-2 top-2 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-elevated shadow-md ring-1 ring-hairline transition-transform after:absolute after:-inset-1 after:content-[''] hover:scale-105 sm:right-3 sm:top-3"
+        aria-label={favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+      >
+        <Heart className={`h-[18px] w-[18px] ${favorite ? 'fill-brand text-brand' : 'text-ink-3'}`} />
+      </button>
+
+      {/*
+        Body — SIX stacked rows became FOUR (owner: "the card height is so long").
+
+        Rows are the expensive dimension on a card, because every one of them costs its own height
+        PLUS a gap. What changed:
+          · savings pill    moved onto the PRICE row (it is a property of the price, not a fact of
+                            its own) — removes a 20px row and its 8px gap
+          · "Paiement à la livraison"  deleted. It is already stated in the trust strip under the
+                            hero and again on the product page, and here it was the chip that
+                            wrapped the meta row onto a second line on every narrow column —
+                            costing ~20px on cards where it was pure repetition
+          · gap-2 → gap-1.5, py-4 → py-3.5 is NOT used (off the 4px lattice); padding stays 16px
+        Combined with the 5:4 image frame this takes the desktop card from ~608px to ~465px.
+      */}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-1.5 px-3 py-3 sm:px-4 sm:py-4">
         {/* Brand + verified — only when the name resolved (grid payload carries brand_id only). */}
+        {/* `pr-9` on phones ONLY on the two rows that sit in the favourite button's vertical band
+            (it is 36px tall at `top-2`, so it overlaps the brand row and the title's first line).
+            Padding the whole body instead would cost 36px of width on the price, the meta row and
+            the CTA — the rows that need it most in a 234px column. */}
         {brand && (
-          <div className="flex min-w-0 items-center gap-1">
-            <span className="truncate text-[11px] font-semibold uppercase tracking-wide text-[#FF5A00]">{brand}</span>
-            <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-[#FF5A00]" aria-label="Marque authentique" />
+          <div className="flex min-w-0 items-center gap-1 pr-9 sm:pr-0">
+            <span className="truncate text-[11px] font-semibold uppercase tracking-wide text-brand">{brand}</span>
+            <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-brand" aria-label="Marque authentique" />
           </div>
         )}
 
-        <LinkWithLoading href={buildProductUrlPath(product as any)} className="block min-w-0" loadingMessage="Chargement">
+        <LinkWithLoading href={buildProductUrlPath(product as any)} className="block min-w-0 pr-9 sm:pr-0" loadingMessage="Chargement">
           <h3
             title={productData.name}
-            className="line-clamp-2 min-h-[2.75rem] text-[15px] font-bold leading-snug text-[#111827] transition-colors [@media(hover:hover)]:group-hover:text-[#FF5A00] dark:text-white"
+            /* 13px in a 173px phone column, 15 from `sm`. The `min-h` is the two-line reservation
+               that keeps every card in a row the same height — it scales with the size. */
+            className="line-clamp-2 min-h-[2.375rem] text-[13px] font-bold leading-snug text-ink-1 transition-colors sm:min-h-[2.75rem] sm:text-[15px] [@media(hover:hover)]:group-hover:text-brand"
           >
             {productData.name}
           </h3>
@@ -258,33 +337,41 @@ export const ProductCard = memo(function ProductCard({
         {/* Rating. Numeric average only if the backend actually provides `note` (null in the grid
             today) — never fabricated. The review COUNT is real. */}
         {productData.reviewCount > 0 && (
-          <div className="flex items-center gap-1.5 text-[12px] text-[#6B7280]">
+          <div className="flex items-center gap-1.5 text-[12px] text-ink-3">
             <Star className="h-3.5 w-3.5 shrink-0 fill-[#FFB020] text-[#FFB020]" aria-hidden="true" />
             {productData.rating != null && (
-              <span className="font-semibold text-[#111827] dark:text-white">{productData.rating.toFixed(1)}</span>
+              <span className="font-semibold text-ink-1">{productData.rating.toFixed(1)}</span>
             )}
             <span>({productData.reviewCount} avis)</span>
           </div>
         )}
 
-        {/* Price + struck + savings */}
-        <div className="flex flex-col gap-1">
-          <div className="flex flex-nowrap items-baseline gap-2">
-            <span className="whitespace-nowrap text-2xl font-bold tabular-nums text-[#FF5A00]">
-              {Math.round(productData.priceDisplay.finalPrice)} DT
+        {/* Price · struck · savings — ONE row, wrapping only if it has to.
+            The savings pill used to be its own row beneath. It is a restatement of the difference
+            between the two numbers beside it, so it belongs on the same line as them; `flex-wrap`
+            plus `ml-auto` puts it at the right edge on a wide column and drops it under the price
+            only on a genuinely narrow one. */}
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+          <span className="whitespace-nowrap text-xl font-bold tabular-nums text-brand sm:text-2xl">
+            {Math.round(productData.priceDisplay.finalPrice)} DT
+          </span>
+          {productData.priceDisplay.hasPromo && productData.priceDisplay.oldPrice != null && (
+            <span
+              className="whitespace-nowrap text-[13px] text-ink-3 line-through tabular-nums sm:text-sm"
+              aria-label={`Prix barré: ${productData.priceDisplay.oldPrice.toFixed(2)} DT`}
+            >
+              {Math.round(productData.priceDisplay.oldPrice)} DT
             </span>
-            {productData.priceDisplay.hasPromo && productData.priceDisplay.oldPrice != null && (
-              <span
-                className="whitespace-nowrap text-sm text-[#6B7280] line-through tabular-nums"
-                aria-label={`Prix barré: ${productData.priceDisplay.oldPrice.toFixed(2)} DT`}
-              >
-                {Math.round(productData.priceDisplay.oldPrice)} DT
-              </span>
-            )}
-          </div>
+          )}
+          {/* `text-ink-1`, NOT `text-brand`. The accent on a 10% tint of ITSELF composites to
+              #D03B04 on #FBEBE6 = 4.07:1 in light theme — an AA failure invisible to review,
+              because both values are "the brand colour" and the pill obviously reads as orange.
+              (Dark is fine at 6.76:1; only light fails, which is the harder case to notice.)
+              Ink on the tint is 17.6:1 / 12:1 and the pill still reads as brand-tinted, because
+              the TINT carries the colour and the text does not have to. */}
           {productData.savings > 0 && (
-            <span className="inline-flex w-fit items-center rounded-md bg-[#FF5A00]/10 px-2 py-0.5 text-[11px] font-semibold text-[#FF5A00]">
-              Économisez {Math.round(productData.savings)} DT
+            <span className="ml-auto inline-flex shrink-0 items-center rounded-md bg-brand/10 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-ink-1">
+              −{Math.round(productData.savings)} DT
             </span>
           )}
         </div>
@@ -295,36 +382,36 @@ export const ProductCard = memo(function ProductCard({
             When the payload carries no stock columns the chip is omitted entirely rather than
             guessed: a wrong "En stock" breaks a promise to the customer, and a wrong "Rupture"
             kills a sale outright. */}
-        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] font-medium text-[#6B7280]">
+        {/* ONE line, never two. "Paiement à la livraison" is gone from the card: it is stated in
+            the trust strip under the hero and again on the product page, and it was the chip that
+            wrapped this row onto a second line in every narrow column — ~20px per card, spent on
+            repetition. Stock + delivery window are the two facts that are per-PRODUCT. */}
+        <div className="flex flex-nowrap items-center gap-x-2 overflow-hidden text-[10px] font-medium text-ink-3 sm:gap-x-3 sm:text-[11px]">
           {!stock.isUnknown && (
-            <span className="inline-flex items-center gap-1">
+            <span className="inline-flex min-w-0 items-center gap-1">
               <CircleCheck
                 className={`h-3.5 w-3.5 shrink-0 ${
-                  stock.isOutOfStock ? 'text-[#6B7280]' : stock.isLowStock ? 'text-[#F59E0B]' : 'text-[#22C55E]'
+                  stock.isOutOfStock ? 'text-ink-3' : stock.isLowStock ? 'text-warn' : 'text-ok'
                 }`}
                 aria-hidden="true"
               />
-              {stock.stockLabel}
+              <span className="truncate">{stock.stockLabel}</span>
             </span>
           )}
-          <span className="inline-flex items-center gap-1">
+          <span className="inline-flex shrink-0 items-center gap-1">
             <Truck className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             24–48h
           </span>
-          <span className="inline-flex items-center gap-1">
-            <Shield className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            Paiement à la livraison
-          </span>
         </div>
 
-        {/* CTA */}
+        {/* CTA. min-h 44, not 46: 44 is the tap-target floor and 46 was two pixels of nothing. */}
         <div className="mt-auto pt-1">
           <Button
             size="sm"
-            className={`flex w-full min-h-[46px] items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold leading-none whitespace-nowrap transition-all duration-150 active:scale-[0.98] ${
+            className={`flex w-full min-h-[44px] items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold leading-none whitespace-nowrap transition-colors duration-150 active:scale-[0.98] ${
               inStock && canAddMore
-                ? 'bg-[#FF5A00] text-white shadow-md hover:bg-[#E85200] hover:shadow-lg'
-                : 'cursor-not-allowed bg-[#E5E7EB] text-[#6B7280] dark:bg-gray-700 dark:text-gray-400'
+                ? 'bg-brand text-on-brand shadow-md hover:bg-brand-hover hover:shadow-lg'
+                : 'cursor-not-allowed bg-sunken text-ink-3'
             }`}
             onClick={handleAddToCart}
             disabled={isAdding || !inStock || !canAddMore}
@@ -332,13 +419,23 @@ export const ProductCard = memo(function ProductCard({
           >
             <ShoppingCart className="size-4 shrink-0" aria-hidden="true" />
             {!inStock ? (
-              <span className="truncate">Rupture de stock</span>
+              <span className="truncate">Rupture</span>
             ) : !canAddMore ? (
               <span className="truncate">Stock max</span>
             ) : isAdding ? (
               <span className="truncate">Ajouté !</span>
             ) : (
-              <span className="truncate">Ajouter au panier</span>
+              /* "AJOUTER" ON PHONES, "AJOUTER AU PANIER" FROM `sm` (owner, in DevTools: "add to
+                 panier — that's bad; I just put the word 'Ajouter' with the icon, it looks good").
+                 On the 1-up mobile card the text column is ~190px wide and the full label at 14px
+                 measured ~150px, so the button was almost entirely text with the cart glyph
+                 crushed against it. `au panier` is redundant next to a cart icon in the first
+                 place — the icon IS the noun. The `aria-label` on the Button above still reads
+                 "Ajouter {product} au panier" at every width, so nothing is lost to a screen
+                 reader; this is purely what is drawn. */
+              <span className="truncate">
+                Ajouter<span className="hidden sm:inline"> au panier</span>
+              </span>
             )}
           </Button>
         </div>

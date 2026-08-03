@@ -72,7 +72,7 @@ function SearchResults({
 
   if (!query.trim()) {
     return (
-      <p className="px-1 py-6 text-center text-[13px] leading-snug text-[#6B7280] dark:text-gray-400">
+      <p className="px-1 py-6 text-center text-[13px] leading-snug text-ink-3 dark:text-gray-400">
         Tapez pour rechercher des protéines, gainers, compléments…
       </p>
     );
@@ -81,11 +81,11 @@ function SearchResults({
   if (products.length === 0) {
     return (
       <div className="py-10 text-center">
-        <Search className="mx-auto h-8 w-8 text-[#D1D5DB] dark:text-gray-600" aria-hidden />
-        <p className="mt-3 text-[14px] font-semibold text-[#111827] dark:text-gray-100">
+        <Search className="mx-auto h-8 w-8 text-ink-3 dark:text-gray-600" aria-hidden />
+        <p className="mt-3 text-[14px] font-semibold text-ink-1 dark:text-gray-100">
           Aucun produit trouvé
         </p>
-        <p className="mt-1 px-6 text-[13px] leading-snug text-[#6B7280] dark:text-gray-400">
+        <p className="mt-1 px-6 text-[13px] leading-snug text-ink-3 dark:text-gray-400">
           Rien ne correspond à «&nbsp;{query.trim()}&nbsp;». Essayez d&apos;autres termes.
         </p>
       </div>
@@ -101,12 +101,12 @@ function SearchResults({
           key={product.id}
           href={buildProductUrlPath(product)}
           onClick={onProductClick}
-          className="flex items-center gap-3 rounded-xl p-2 transition-colors hover:bg-[#F5F6F8] focus:bg-[#F5F6F8] focus:outline-none dark:hover:bg-gray-800 dark:focus:bg-gray-800"
+          className="flex items-center gap-3 rounded-xl p-2 transition-colors hover:bg-sunken focus:bg-sunken focus:outline-none dark:hover:bg-gray-800 dark:focus:bg-gray-800"
           loadingMessage="Chargement"
         >
           {/* object-CONTAIN, not cover. Supplement covers are studio shots of a tub on white with
               its own margin; cover crops the lid and the label off a 48px square. */}
-          <span className="relative block h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-[#F5F6F8] dark:bg-gray-800">
+          <span className="relative block h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-sunken dark:bg-gray-800">
             {product.cover ? (
               <Image
                 src={getStorageUrl(product.cover)}
@@ -119,7 +119,7 @@ function SearchResults({
             ) : null}
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-[14px] font-medium text-[#111827] dark:text-gray-100">
+            <span className="block truncate text-[14px] font-medium text-ink-1 dark:text-gray-100">
               {product.designation_fr}
             </span>
             <span className="mt-0.5 block text-[13px]">
@@ -128,17 +128,17 @@ function SearchResults({
                 if (pd.hasPromo && pd.oldPrice != null) {
                   return (
                     <>
-                      <span className="text-[#6B7280] line-through dark:text-gray-500">
+                      <span className="text-ink-3 line-through dark:text-gray-500">
                         {pd.oldPrice.toFixed(2)} DT
                       </span>
-                      <span className="ml-1.5 font-semibold text-[#FF5A00]">
+                      <span className="ml-1.5 font-semibold text-brand">
                         {pd.finalPrice.toFixed(2)} DT
                       </span>
                     </>
                   );
                 }
                 return (
-                  <span className="font-semibold text-[#111827] dark:text-gray-200">
+                  <span className="font-semibold text-ink-1 dark:text-gray-200">
                     {pd.finalPrice.toFixed(2)} DT
                   </span>
                 );
@@ -157,7 +157,7 @@ function SearchResults({
   if (showAllScrollable) {
     return (
       <>
-        <p className="px-1 pb-2 text-[12px] font-semibold uppercase tracking-wide text-[#FF5A00]">
+        <p className="px-1 pb-2 text-[12px] font-semibold uppercase tracking-wide text-brand">
           {products.length} résultat{products.length !== 1 ? 's' : ''}
         </p>
         {resultList}
@@ -170,7 +170,7 @@ function SearchResults({
       {resultList}
       <Button
         variant="ghost"
-        className="mt-2 w-full justify-center gap-2 border-t border-[#E5E7EB] pt-3 text-[13px] font-semibold text-[#FF5A00] hover:bg-[#F5F6F8] hover:text-[#E85200] dark:border-gray-800 dark:hover:bg-gray-800"
+        className="mt-2 w-full justify-center gap-2 border-t border-hairline pt-3 text-[13px] font-semibold text-brand hover:bg-sunken hover:text-brand-hover dark:border-gray-800 dark:hover:bg-gray-800"
         onClick={onViewAll}
         asChild
       >
@@ -321,14 +321,18 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
           <Button
             variant="ghost"
             size="icon"
+            /* 48px box / 26px glyph, matching the burger beside it (owner asked for a bigger
+               search icon on mobile). Tokens rather than `hover:bg-gray-100 dark:hover:bg-gray-800`
+               — the header is `bg-canvas` now, and a hardcoded gray-100 hover is a light-mode
+               literal that shows as a pale block on the dark canvas. */
             className={cn(
-              'h-11 w-11 min-h-11 min-w-11',
-              'hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl active:scale-95 transition-transform',
+              'h-12 w-12 min-h-12 min-w-12',
+              'hover:bg-ink-1/[0.04] rounded-xl active:scale-95 transition-transform',
               className
             )}
             aria-label="Rechercher un produit"
           >
-            <Search className="h-6 w-6" />
+            <Search className="h-[26px] w-[26px]" />
           </Button>
         </SheetTrigger>
         {/* `font-poppins` and the #111827 / #6B7280 / #E5E7EB / #F5F6F8 / #FF5A00 palette below are
@@ -347,12 +351,12 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
 
           <div className="flex flex-col h-full min-h-0 overflow-hidden">
             {/* HEADER — back + field, on a hairline. Mirrors the drawer's own header row. */}
-            <div className="flex shrink-0 items-center gap-2 border-b border-[#E5E7EB] bg-white px-3 py-3 dark:border-gray-800 dark:bg-gray-950">
+            <div className="flex shrink-0 items-center gap-2 border-b border-hairline bg-white px-3 py-3 dark:border-gray-800 dark:bg-gray-950">
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
                 aria-label="Fermer la recherche"
-                className="flex h-11 w-11 min-h-11 min-w-11 shrink-0 items-center justify-center rounded-xl text-[#6B7280] transition-colors hover:bg-[#F5F6F8] hover:text-[#111827] dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
+                className="flex h-11 w-11 min-h-11 min-w-11 shrink-0 items-center justify-center rounded-xl text-ink-3 transition-colors hover:bg-sunken hover:text-ink-1 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
               >
                 {/* A real ArrowLeft. This was `ArrowRight` + `rotate-180` — same pixels, but the
                     transform is dead weight and the JSX lied about what it drew. */}
@@ -361,7 +365,7 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
 
               <form onSubmit={handleSubmit} role="search" className="min-w-0 flex-1">
                 <div className="relative flex items-center">
-                  <Search className="pointer-events-none absolute left-3 h-4 w-4 text-[#6B7280]" aria-hidden />
+                  <Search className="pointer-events-none absolute left-3 h-4 w-4 text-ink-3" aria-hidden />
                   {/* A raw <input>, not the shadcn <Input>. That primitive's base classes are
                       `border-input bg-background … focus-visible:ring-offset-2`, and the first two
                       are silent no-ops (DESIGN_SYSTEM §11) while the offset ring fought the focus
@@ -378,14 +382,14 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
                     aria-label="Rechercher un produit"
                     /* pl-10, not the drawer's pl-9: this field is ~90px wider, and at that width
                        the caret rendered flush against the magnifier. */
-                    className="w-full min-h-[44px] rounded-xl border border-[#E5E7EB] bg-[#F5F6F8] pl-10 pr-11 text-[14px] text-[#111827] placeholder:text-[#6B7280] transition-colors focus:border-[#FF5A00] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#FF5A00]/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-400 dark:focus:bg-gray-900"
+                    className="w-full min-h-[44px] rounded-xl border border-hairline bg-sunken pl-10 pr-11 text-[14px] text-ink-1 placeholder:text-ink-3 transition-colors focus:border-brand focus:bg-white focus:outline-none focus:ring-2 focus:ring-focus/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-400 dark:focus:bg-gray-900"
                   />
                   {query ? (
                     <button
                       type="button"
                       onClick={handleClear}
                       aria-label="Effacer la recherche"
-                      className="absolute right-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-[#6B7280] transition-colors hover:bg-white hover:text-[#FF5A00] dark:hover:bg-gray-700"
+                      className="absolute right-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-ink-3 transition-colors hover:bg-white hover:text-brand dark:hover:bg-gray-700"
                     >
                       <X className="h-4 w-4" aria-hidden />
                     </button>
@@ -393,7 +397,7 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
                     <button
                       type="submit"
                       aria-label="Rechercher"
-                      className="absolute right-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-[#6B7280] transition-colors hover:bg-white hover:text-[#FF5A00] dark:hover:bg-gray-700"
+                      className="absolute right-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-ink-3 transition-colors hover:bg-white hover:text-brand dark:hover:bg-gray-700"
                     >
                       <Search className="h-4 w-4" aria-hidden />
                     </button>
@@ -423,7 +427,7 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
                    make it a starting point, and each one is a real query typed into the same
                    field, so there is no second code path to keep in sync. */
                 <div className="pt-2">
-                  <h3 className="px-1 text-[12px] font-semibold uppercase tracking-wide text-[#FF5A00]">
+                  <h3 className="px-1 text-[12px] font-semibold uppercase tracking-wide text-brand">
                     Recherches populaires
                   </h3>
                   <ul className="mt-3 flex flex-wrap gap-2">
@@ -435,15 +439,15 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
                             setQuery(term);
                             inputRef.current?.focus();
                           }}
-                          className="flex min-h-11 items-center gap-1.5 rounded-xl border border-[#E5E7EB] bg-[#F5F6F8] px-3.5 text-[13px] font-medium text-[#111827] transition-colors hover:border-[#FF5A00] hover:text-[#FF5A00] dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:border-[#FF5A00]"
+                          className="flex min-h-11 items-center gap-1.5 rounded-xl border border-hairline bg-sunken px-3.5 text-[13px] font-medium text-ink-1 transition-colors hover:border-brand hover:text-brand dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:border-brand"
                         >
-                          <TrendingUp className="h-3.5 w-3.5 shrink-0 text-[#6B7280]" aria-hidden />
+                          <TrendingUp className="h-3.5 w-3.5 shrink-0 text-ink-3" aria-hidden />
                           {term}
                         </button>
                       </li>
                     ))}
                   </ul>
-                  <p className="mt-6 px-1 text-[13px] leading-snug text-[#6B7280] dark:text-gray-400">
+                  <p className="mt-6 px-1 text-[13px] leading-snug text-ink-3 dark:text-gray-400">
                     Cherchez un produit, une marque ou un objectif — protéines, gainers, compléments.
                   </p>
                 </div>
@@ -454,10 +458,10 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
                 inset into the padding; the old `safe-area-pb` class is not defined anywhere in the
                 codebase, so on a notched phone this button sat under the home indicator. */}
             {query.trim() && (
-              <div className="shrink-0 border-t border-[#E5E7EB] bg-white px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] dark:border-gray-800 dark:bg-gray-950">
+              <div className="shrink-0 border-t border-hairline bg-white px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] dark:border-gray-800 dark:bg-gray-950">
                 <Button
                   onClick={handleSubmit}
-                  className="h-12 w-full rounded-xl bg-[#FF5A00] text-[15px] font-semibold text-white transition-colors hover:bg-[#E85200]"
+                  className="h-12 w-full rounded-xl bg-brand text-[15px] font-semibold text-white transition-colors hover:bg-brand-hover"
                 >
                   <Search className="mr-2 h-5 w-5" aria-hidden />
                   Voir tous les résultats
@@ -475,7 +479,7 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
     <div className={cn('relative flex-1', className)}>
       <form onSubmit={handleSubmit} className="relative">
         <Search
-          className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none z-10"
+          className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-3 pointer-events-none z-10"
           aria-hidden
         />
         <Input
@@ -503,13 +507,16 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
              `bg-gray-100 dark:bg-gray-900` inside a `dark:bg-gray-950` bar is #111827 on #030712,
              a 1.14:1 ratio — invisible. A hairline works in both themes regardless of how the bar
              behind it is coloured later. */
-          className="w-full pl-11 pr-24 h-12 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 shadow-[inset_0_1px_2px_rgba(17,24,39,0.04)] transition-[background-color,border-color,box-shadow] duration-200 hover:border-gray-300 focus:border-[#FF5A00]/50 focus:bg-white focus:ring-4 focus:ring-[#FF5A00]/10 focus-visible:border-[#FF5A00]/50 focus-visible:bg-white focus-visible:ring-4 focus-visible:ring-[#FF5A00]/10 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-400 dark:hover:border-gray-600 dark:focus:border-[#FF5A00]/50 dark:focus:bg-gray-800"
+          /* Tokens, so the field follows whatever surface the bar is given later without a single
+             `dark:` pair. `bg-sunken` inside a `bg-canvas` bar is the well; the hairline is what
+             actually draws it (see above — fill contrast alone has broken this field twice). */
+          className="w-full pl-11 pr-24 h-12 rounded-xl border border-hairline bg-sunken text-ink-1 placeholder:text-ink-3 shadow-[inset_0_1px_2px_rgba(17,24,39,0.04)] transition-[background-color,border-color,box-shadow] duration-200 hover:border-rule focus:border-brand focus:bg-canvas focus:ring-4 focus:ring-focus/10 focus-visible:border-brand focus-visible:bg-canvas focus-visible:ring-4 focus-visible:ring-focus/10"
           aria-label="Rechercher un produit"
         />
         {/* Orange search button (GPT header). */}
         <button
           type="submit"
-          className="absolute right-1.5 top-1/2 flex h-9 w-11 -translate-y-1/2 items-center justify-center rounded-lg bg-[#FF5A00] text-white shadow-sm transition-all duration-150 hover:bg-[#E85200] hover:shadow-md active:scale-95"
+          className="absolute right-1.5 top-1/2 flex h-9 w-11 -translate-y-1/2 items-center justify-center rounded-lg bg-brand text-on-brand shadow-sm transition-colors duration-150 hover:bg-brand-hover active:scale-95"
           aria-label="Rechercher"
         >
           <Search className="h-[18px] w-[18px]" aria-hidden />
@@ -530,7 +537,7 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
 
       {isPopoverOpen && showResults && (
         <div
-          className="absolute left-0 right-0 top-full mt-1 z-50 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-lg p-3 max-h-[400px] overflow-y-auto"
+          className="absolute left-0 right-0 top-full mt-2 z-50 rounded-xl border border-hairline bg-elevated shadow-lg p-3 max-h-[400px] overflow-y-auto"
           onMouseDown={(e) => e.preventDefault()}
         >
           <SearchResults

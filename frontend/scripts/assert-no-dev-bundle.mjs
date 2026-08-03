@@ -25,7 +25,22 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
-const CHUNKS = join(process.cwd(), '.next', 'static', 'chunks');
+/**
+ * MUST honour NEXT_DIST_DIR, exactly as next.config.js does.
+ *
+ * This was hardcoded to `.next`, and the moment a build was pointed elsewhere
+ * (`NEXT_DIST_DIR=.next-verify npm run build`, which exists so a verify build cannot clobber a
+ * running dev server) the check silently audited the WRONG DIRECTORY — a dev server's `.next/`.
+ * It then reported "clean, scanned 1 chunks" for a build it had never looked at, and on the next
+ * run reported a 7.4 MB dev main-app.js as a production failure. Both answers were fiction.
+ *
+ * A guard that reads a path the build did not write is worse than no guard: it converts an unproven
+ * claim into a green check. If the directory is missing the script exits 0 by design (see below),
+ * so a drifted path fails OPEN — which is precisely why it has to be derived from the same env var
+ * the build uses rather than assumed.
+ */
+const DIST = process.env.NEXT_DIST_DIR || '.next';
+const CHUNKS = join(process.cwd(), DIST, 'static', 'chunks');
 
 /** Strings that exist only in dev-only Next.js code. Each is independently damning. */
 const FORBIDDEN = [
@@ -50,7 +65,7 @@ try {
   files = walk(CHUNKS);
 } catch {
   // No build output — nothing to assert against. Don't fail a non-build invocation.
-  console.log('assert-no-dev-bundle: no .next/static/chunks, skipping.');
+  console.log(`assert-no-dev-bundle: no ${DIST}/static/chunks, skipping.`);
   process.exit(0);
 }
 

@@ -2,9 +2,12 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { Hero } from '@/app/components/Hero';
 import { CategoryRail } from '@/app/components/CategoryRail';
+import { Section } from '@/app/components/layout/Section';
 
 // Below-fold sections: defer JS evaluation until after first paint
-const FeaturesSection = dynamic(() => import('@/app/components/FeaturesSection').then(m => ({ default: m.FeaturesSection })), { ssr: true });
+// FeaturesSection is NOT imported here any more — it is rendered by Hero, as the foot of the hero
+// band. It was `dynamic()` for no benefit anyway: `{ ssr: true }` on a zero-JS server component
+// buys nothing and costs a chunk boundary.
 const VentesFlashSection = dynamic(() => import('@/app/components/VentesFlashSection').then(m => ({ default: m.VentesFlashSection })), { ssr: true });
 const ProductSection = dynamic(() => import('@/app/components/ProductSection').then(m => ({ default: m.ProductSection })), { ssr: true });
 const HomeDeferredSections = dynamic(() => import('@/app/components/HomeDeferredSections').then(m => ({ default: m.HomeDeferredSections })), { ssr: true });
@@ -140,7 +143,7 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
        nothing. Verified in Chrome: the ancestor chain reported `DIV ox=hidden oy=auto` as the
        nearest scroll container. `clip` clips identically without creating a scroller.
        Old-Safari safety net is unchanged: body still carries `overflow-x: hidden`. */
-    <div className="min-h-screen w-full max-w-full overflow-x-clip bg-white dark:bg-gray-950">
+    <div className="min-h-screen w-full max-w-full overflow-x-clip bg-canvas">
 
       <main>
         {/* The page's single <h1>, visually hidden. The owner asked for no copy strip under the
@@ -162,47 +165,90 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
           bestSellers={heroBestSellers}
         />
 
+        {/*
+          ── THE BAND SEQUENCE (DESIGN_SYSTEM v6 §4) ───────────────────────────────────────────
+          Read this list top-to-bottom; it is the page's entire colour architecture and it is
+          decided HERE, never inside a section component.
+
+              hero + trust    canvas          artwork supplies the darkness; the trust row is a
+                                              CARD inside this band, not a band of its own
+              catégories      sunken
+              plus vendus     canvas
+              ventes flash    sunken          + the four black countdown tiles
+              nouveautés      canvas
+              packs           sunken
+              promo strip     ORANGE          the one saturated band
+              blog            canvas
+              marques         sunken
+              bloc SEO        canvas
+
+          TWO INVARIANTS, both asserted by scripts/measure-bands.mjs:
+            1. No two adjacent bands share a surface, so the automatic 1px seam always has a
+               colour change to reinforce and never has to carry a boundary alone.
+            2. Exactly ONE saturated band and ZERO dark bands. v5 had five dark bands here; the
+               owner's verdict was that black had stopped being emphasis and become the page.
+               Black now appears only in the 36px utility bar, the countdown tiles, the hero
+               caption plate, the product badges and the footer.
+
+          The whole sequence inverted when the trust row moved into the hero — it had been a band,
+          and removing a band from the middle of an alternating list flips every surface after it.
+          That is the cost of alternation and it is worth paying; the alternative is bands that
+          decide their own colour, which is how the page ended up with three 160px white-on-white
+          voids before v5.
+
+          The trust row still lands BEFORE browsing, which is the point: for a Tunisian
+          cash-on-delivery shopper the free-delivery threshold and "paiement à la livraison" are
+          objection-handling, and neither does much work after the products.
+
+          `pt-defer` is a PROP on the Section, never on a wrapper: `content-visibility: auto`
+          skips a subtree's paint but NOT the element's own box decoration, so a surface class on
+          a CHILD of a deferred wrapper renders as a bare rectangle until it scrolls in.
+          `pt-reveal` stays on the outer div because it drives a `view()` timeline that must not
+          sit inside a skipped subtree.
+        */}
+
         {/* CategoryRail sits DIRECTLY under the hero (owner request): shopping paths one tap from
             the fold, no copy strip in between. The page's single <h1> used to live in that strip;
             it now lives in the crawlable SEO block near the bottom (still exactly one h1, still
             carrying the "Protéine Tunisie" query), so removing the strip costs no ranking signal. */}
         <CategoryRail categories={safeAccueil.categories || []} />
 
-        {/* Best-sellers FIRST — shoppers reach the most-sold products immediately after the hero,
-            then the "what we do" trust band, then the rest of the rails. */}
+
+
+        {/* Les plus vendus — CANVAS. The highest-intent rail on the site, so it carries the
+            page's largest heading (scale="1"). */}
         {(safeAccueil.best_sellers?.length ?? 0) > 0 && (
-          <div className="pt-reveal pt-defer" data-motion>
+          <div className="pt-reveal" data-motion>
             <ProductSection
               id="products"
               kicker="Best-sellers"
               title="Les plus vendus"
               products={bestSellers as any}
-              showBadge
-              badgeText="Top Vendu"
+              /* No per-card badge: the h2 above already says these are the best sellers, and on a
+                 124px phone thumbnail the pill covered ~40% of the packshot. See ProductCard. */
+              showBadge={false}
+              defer
             />
           </div>
         )}
 
-        {/* "Ce que nous faisons" / trust badges — after the flagship products */}
-        <div className="pt-reveal" data-motion>
-          <FeaturesSection />
-        </div>
+        {/* Ventes flash moved ABOVE Nouveaux produits: the discount moment should land before the
+            newest, least-discounted rail. SLAB — white product plates punched out of black. */}
+        {flashSales.length > 0 && (
+          <div className="pt-reveal" data-motion>
+            <VentesFlashSection products={flashSales as any} />
+          </div>
+        )}
 
         {(safeAccueil.new_product?.length ?? 0) > 0 && (
-          <div className="pt-reveal pt-defer" data-motion>
+          <div className="pt-reveal" data-motion>
             <ProductSection
               kicker="Nouveautés"
               title="Nouveaux produits"
               products={newProducts as any}
-              showBadge
-              badgeText="New"
+              showBadge={false}
+              defer
             />
-          </div>
-        )}
-
-        {flashSales.length > 0 && (
-          <div className="pt-reveal pt-defer" data-motion>
-            <VentesFlashSection products={flashSales as any} />
           </div>
         )}
 
@@ -216,8 +262,14 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
             deleted because the category landing pages are the next phase and it is the natural
             block for them — but it is dead code today, so do not assume it is exercised. */}
 
+        {/* Nos packs — canvas, `default` spacing. It was the page's SECOND slab band at `feature`
+            spacing, which is what tipped the page from "one dark accent" into "a dark theme": two
+            near-black merchandising bands 1,500px apart read as the page's base colour rather
+            than as emphasis. It keeps the "Économisez" kicker and a `scale="1"` heading, which is
+            what actually marks it as an offer. `feature` is now reserved to Ventes flash alone —
+            two dominant bands is zero dominant bands. */}
         {(safeAccueil.packs?.length ?? 0) > 0 && (
-          <div className="pt-reveal pt-defer" data-motion>
+          <div className="pt-reveal" data-motion>
             <ProductSection
               id="packs"
               kicker="Économisez"
@@ -226,6 +278,8 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
               viewAllHref="/packs"
               viewAllLabel="Voir tous les packs"
               imageContext="packs"
+              surface="sunken"
+              defer
             />
           </div>
         )}
@@ -238,39 +292,37 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
         {/* SEO text block – visible, crawlable content near bottom of homepage.
             `pt-defer` skips RENDERING it while off-screen; the markup is still fully present in
             the server-rendered HTML, which is what Googlebot reads. Asserted in verification. */}
-        <section
-          className="pt-defer py-12 sm:py-16 lg:py-20 bg-white dark:bg-gray-950 border-t border-gray-100 dark:border-gray-800"
+        <Section
+          spacing="tight"
+          width="wide"
+          defer
+          /* The page's last band. Below `sm` every band is `pb-0` so it reads as connected to its
+             neighbour; this one's neighbour is the footer, so it gets its bottom padding back. */
+          last
           aria-label="Informations sur la protéine en Tunisie"
         >
-          <div className="max-w-site mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="max-w-4xl">
+          {/* TWO COLUMNS at lg: prose left, the internal-link chips right. That halves the height
+              without deleting a single crawlable word — these are real internal ranking links and
+              the prose is the page's only long-form copy. The `border-t` is gone because the
+              automatic band seam draws it now. */}
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-12">
+            <div className="max-w-[62ch]">
             {/* h2, not h1 — the page's single h1 is the visually-hidden one at the top of <main>,
                 so this crawlable block leads with a keyword-rich h2. */}
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-4">
+            <h2 className="font-display font-compressed text-[1.875rem] font-extrabold uppercase leading-[0.94] tracking-[-0.02em] text-ink-1 mb-4 lg:text-[2.5rem]">
               Nutrition sportive Tunisie : protéine, whey et créatine de qualité
             </h2>
-            <nav aria-label="Catégories compléments populaires" className="mb-6 flex flex-wrap gap-2 sm:gap-3">
-              {PRIORITY_SHOP_CATEGORY_LINKS.map(({ href, label }) => (
-                <Link
-                  key={href}
-                  href={href}
-                  className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/80 px-3 py-1.5 text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-100 hover:border-red-400 hover:text-red-600 dark:hover:border-red-700 dark:hover:text-red-400 transition-colors"
-                >
-                  {label}
-                </Link>
-              ))}
-            </nav>
-            <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
+            <p className="text-sm sm:text-base text-ink-2 leading-relaxed mb-4">
               Chez <strong>Protein.tn</strong>, nous accompagnons les sportifs tunisiens avec une sélection rigoureuse de{' '}
               <strong>protéines</strong>, <strong>whey</strong>, <strong>créatine</strong>, gainers et{' '}
               <strong>compléments alimentaires</strong> (BCAA, oméga 3, vitamines, brûleurs) — pour la performance, la
               prise de masse ou la sèche. Chaque produit est choisi pour son authenticité, son profil nutritionnel et son
               rapport qualité / prix, avec une fiche détaillée pour vous aider à faire le bon choix.
             </p>
-            <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white mt-6 mb-3">
+            <h2 className="font-display font-compressed text-[1.375rem] font-extrabold uppercase leading-[0.94] tracking-[-0.02em] text-ink-1 mt-8 mb-3 lg:text-[1.75rem]">
               Livraison en Tunisie & avis clients
             </h2>
-            <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 leading-relaxed">
+            <p className="text-sm sm:text-base text-ink-2 leading-relaxed">
               Nous livrons partout en Tunisie via des partenaires fiables, avec un suivi précis de vos colis et des
               délais optimisés pour Sousse, Tunis, Sfax et les autres régions. Les <strong>avis clients</strong> laissés
               sur nos produits vous permettent de vérifier la satisfaction des sportifs qui utilisent déjà nos
@@ -278,8 +330,21 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
               confiance sur <strong>Proteine Tunisie</strong> et rejoignez la communauté Protein.tn.
             </p>
             </div>
+
+            {/* Right column: the six high-intent internal links. */}
+            <nav aria-label="Catégories compléments populaires" className="flex flex-wrap gap-2 lg:content-start">
+              {PRIORITY_SHOP_CATEGORY_LINKS.map(({ href, label }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className="inline-flex min-h-[44px] items-center rounded-full border border-hairline bg-elevated px-4 text-xs sm:text-sm font-medium text-ink-1 transition-colors hover:border-brand hover:text-brand"
+                >
+                  {label}
+                </Link>
+              ))}
+            </nav>
           </div>
-        </section>
+        </Section>
       </main>
 
     </div>

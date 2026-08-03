@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import { ArrowRight, ShoppingCart, Star } from 'lucide-react';
+import { ArrowRight, ChevronRight, Star } from 'lucide-react';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 
 /**
@@ -14,26 +14,34 @@ import { LinkWithLoading } from '@/app/components/LinkWithLoading';
  * JavaScript. Each row is ONE link to the product page, so there is no cart state, no client
  * handler, and no hydration here.
  *
- * DESIGN SYSTEM (owner request: "make them unified with the design system")
- * This panel used to be the only near-black surface on a light page — `bg-gray-950` with white
- * text and its own type scale, sitting directly beside a white category card that uses none of
- * that. It now speaks the same language as every other card on the homepage:
- *   surface   white, `rounded-2xl`, hairline `ring-black/[0.06]`   (identical to CategoryRail)
- *   heading   `font-display` uppercase over a `brand-500` accent rule (identical to CategoryRail)
- *   dividers  `gray-100` hairlines rather than `white/10`
- *   price     `brand-600`, NOT `brand-500` — per tailwind.config.ts, 600 is the action shade that
- *             clears AA on white (4.69:1), while 500 is the logo orange for graphical accents only
- *             (~3.5:1) and must never carry text on a light surface.
+ * DESIGN SYSTEM — A RANKED TOP 3 (DESIGN_SYSTEM v6 §4).
  *
- * Product images went 56px → 112px (owner: "bigger and clear for the user") — 112 rather than 96
- * because the rows are ~154px tall, so 96 left ~58px of dead vertical space per row. They sit on a faint
- * `gray-50` tile with a hairline, because these are cut-out pack shots on white — on a pure white
- * card they would dissolve into the surface with no edge at all.
+ * Owner, 2026-08-03: "the one that shows the products beside the slides is not good, it's not
+ * looking good." Four concrete faults, each fixed here:
  *
- * The orange square carries a cart glyph to match the approved design; it is `aria-hidden` and the
- * row's accessible name is the product name, because the row navigates to the product page rather
- * than adding to the cart. A real add-to-cart here would mean shipping cart JS into the LCP path
- * for three products, which is the wrong trade for the fold.
+ *   1. NO RANK. It was three products in a box with nothing saying they were the best-selling
+ *      three. The whole value of this slot is the ranking, so the ranking is now VISIBLE — 01/02/03
+ *      in the compressed display face, which is also the cheapest possible way to make the panel
+ *      look designed rather than generated.
+ *   2. THE ORANGE SQUARE WAS A LIE. A cart glyph on a row that navigates to a product page is a
+ *      false affordance, and three saturated orange squares stacked vertically were the loudest
+ *      thing in the panel while carrying the least meaning. Replaced by a chevron in the faintest
+ *      ink, which is what "this row goes somewhere" actually looks like.
+ *   3. THE IMAGE WAS TOO BIG FOR THE ROW. At 112px it left ~150px for the name, so titles wrapped
+ *      to three lines and every row read as a wall of text. 88px is the largest size that keeps
+ *      the name to two lines at this column width, and two lines is what makes three rows scan.
+ *   4. NO INTERNAL RHYTHM. Padding was `px-3` with `gap-3` and a 12px header — none of it on the
+ *      grid. Now: 16px gutters, 16px gaps, 12/16px header padding, all multiples of 4/8.
+ *
+ * SERVER COMPONENT, deliberately: it is above the fold and must not cost the LCP path any
+ * JavaScript. Each row is ONE link, so there is no cart state and no hydration here.
+ *
+ * COLOUR. The hero band is the page canvas now, so this panel no longer needs `.pt-plate` to climb
+ * back out of a black stage — it is a plain `bg-elevated` card with a hairline, and every token in
+ * it resolves in page scope in both themes with zero `dark:` classes.
+ *
+ * The price uses `text-brand` = #D53B04 (4.71:1 on white) — the action shade. brand-500 (#F8480C)
+ * is 3.55:1 on white and is a GRAPHICAL accent only; it must never carry text.
  *
  * RATINGS: shown only when the product actually has reviews. This catalogue currently has none, and
  * rendering "0 avis" or an empty five-star row is negative social proof — worse than showing
@@ -63,7 +71,7 @@ function Stars({ value }: { value: number }) {
           className={
             i < rounded
               ? 'h-3 w-3 fill-brand-500 text-brand-500'
-              : 'h-3 w-3 fill-gray-200 text-gray-200 dark:fill-gray-700 dark:text-gray-700'
+              : 'h-3 w-3 fill-hairline text-hairline'
           }
         />
       ))}
@@ -80,20 +88,19 @@ export function HeroBestSellers({ products }: { products: HeroBestSeller[] }) {
        `hidden xl:flex` keeps it out of the DOM below 1280px. */
     <aside
       aria-label="Meilleures ventes"
-      className="pt-hero hidden flex-col overflow-hidden rounded-2xl bg-white ring-1 ring-black/[0.06] xl:flex dark:bg-gray-900 dark:ring-white/10"
+      className="pt-hero hidden flex-col overflow-hidden rounded-2xl border border-hairline bg-elevated xl:flex"
     >
-      <div className="border-b border-gray-100 px-4 py-3 dark:border-white/10">
-        <h2 className="font-display text-[13px] font-extrabold uppercase leading-none tracking-tight text-gray-900 dark:text-white">
-          Meilleures ventes
-        </h2>
-        {/* Same accent rule as the category card, so the two headings read as one system. */}
-        <span aria-hidden="true" className="mt-2 block h-[3px] w-9 rounded-full bg-brand-500" />
+      {/* The header is the panel's only tinted area — a 1px rule plus a sand fill, which is what
+          separates it from the rows without spending a heading size on the job. */}
+      <div className="flex items-center justify-between gap-3 border-b border-hairline bg-sunken px-4 py-3">
+        <h2 className="pt-kicker text-ink-1">Meilleures ventes</h2>
+        <span className="pt-kicker text-[10px] text-brand">Top 3</span>
       </div>
 
       {/* Rows share the remaining height evenly, and the footer link anchors the bottom so the
           panel reads as a finished block rather than a list that ran out. */}
-      <ul className="flex min-h-0 flex-1 flex-col divide-y divide-gray-100 dark:divide-white/10">
-        {products.slice(0, 3).map((p) => {
+      <ul className="flex min-h-0 flex-1 flex-col divide-y divide-hairline">
+        {products.slice(0, 3).map((p, i) => {
           const hasRating = (p.reviewCount ?? 0) > 0 && (p.ratingValue ?? 0) > 0;
 
           return (
@@ -101,11 +108,17 @@ export function HeroBestSellers({ products }: { products: HeroBestSeller[] }) {
               <LinkWithLoading
                 href={p.href}
                 loadingMessage="Chargement..."
-                className="group flex h-full items-center gap-3 px-3 transition-colors duration-200 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500 dark:hover:bg-white/[0.04]"
+                className="group flex h-full items-center gap-4 px-4 transition-colors duration-200 hover:bg-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
               >
-                {/* 112px, up from 56. The faint tile + hairline give cut-out pack shots an edge on
-                    a white card; without it they float with no boundary. */}
-                <span className="relative flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gray-50 ring-1 ring-black/[0.04] dark:bg-gray-950 dark:ring-white/10">
+                {/* 112px, up from 88 (owner: "the product's images look kind of small").
+                    The 24px the rank numeral used to occupy as its own column went straight into
+                    the image — the rank is now a chip ON the tile, which costs no row width at
+                    all. Panel widened 364→400px at the same time, so the name still gets ~200px
+                    and stays at two lines.
+
+                    The tile + hairline give cut-out pack shots an edge on a white card; without
+                    them they float with no boundary. */}
+                <span className="relative flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-hairline bg-sunken">
                   {p.image ? (
                     <Image
                       src={p.image}
@@ -119,29 +132,41 @@ export function HeroBestSellers({ products }: { products: HeroBestSeller[] }) {
                       className="h-full w-full object-contain p-1.5 transition-transform duration-300 ease-out group-hover:scale-[1.05] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
                     />
                   ) : null}
+
+                  {/* THE RANK, as a chip on the tile. `aria-hidden` because the list order already
+                      conveys it and "01" announced before every product name is noise.
+                      `.pt-slab` rather than `bg-ink-1`: this must stay dark in BOTH themes, and an
+                      ink token inverts (see ProductCard's badges for the bug that taught us). */}
+                  <span
+                    aria-hidden="true"
+                    className="pt-slab absolute left-0 top-0 rounded-br-lg rounded-tl-xl px-1.5 py-0.5 font-display font-compressed text-[11px] font-extrabold leading-none tabular-nums text-ink-1"
+                  >
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
                 </span>
 
-                {/* line-clamp-3, not 2: at 112px the image leaves ~150px for the name, and two
-                    lines cut "…CHALLENGER…" mid-brand. The 154px row has room for a third. */}
-                <span className="flex min-w-0 flex-1 flex-col gap-1.5">
-                  <span className="line-clamp-3 text-[13px] font-semibold leading-snug text-gray-900 transition-colors group-hover:text-brand-600 dark:text-gray-100 dark:group-hover:text-brand-500">
+                {/* line-clamp-2. At 112px inside a 400px panel the name gets ~200px, which fits two
+                    lines of 13px text — and two lines is what lets three rows scan as a list
+                    instead of as prose. */}
+                <span className="flex min-w-0 flex-1 flex-col gap-2">
+                  <span className="line-clamp-2 text-[13px] font-semibold leading-snug text-ink-1 transition-colors group-hover:text-brand">
                     {p.name}
                   </span>
 
                   {hasRating && (
                     <span className="flex items-center gap-1.5">
                       <Stars value={p.ratingValue as number} />
-                      <span className="text-[11px] tabular-nums text-gray-400">({p.reviewCount})</span>
+                      <span className="text-[11px] tabular-nums text-ink-3">({p.reviewCount})</span>
                     </span>
                   )}
 
                   {p.price != null && (
-                    <span className="flex items-baseline gap-1.5">
-                      <span className="font-display text-[15px] font-bold text-brand-600 dark:text-brand-500">
+                    <span className="flex items-baseline gap-2">
+                      <span className="font-display text-[1.0625rem] font-extrabold leading-none tabular-nums text-brand">
                         {Math.round(p.price)} DT
                       </span>
                       {p.oldPrice != null && p.oldPrice > p.price && (
-                        <span className="text-[11px] text-gray-400 line-through">
+                        <span className="text-[11px] tabular-nums text-ink-3 line-through">
                           {Math.round(p.oldPrice)} DT
                         </span>
                       )}
@@ -149,12 +174,12 @@ export function HeroBestSellers({ products }: { products: HeroBestSeller[] }) {
                   )}
                 </span>
 
-                <span
+                {/* A chevron, not an orange cart square. This row NAVIGATES; a cart glyph promised
+                    an action it never performed. */}
+                <ChevronRight
                   aria-hidden="true"
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-white shadow-sm transition-colors duration-200 group-hover:bg-brand-700"
-                >
-                  <ShoppingCart className="h-4 w-4" />
-                </span>
+                  className="h-5 w-5 shrink-0 text-ink-3 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-brand motion-reduce:transition-none"
+                />
               </LinkWithLoading>
             </li>
           );
@@ -164,10 +189,13 @@ export function HeroBestSellers({ products }: { products: HeroBestSeller[] }) {
       <LinkWithLoading
         href="/shop"
         loadingMessage="Chargement..."
-        className="flex items-center justify-center gap-1.5 border-t border-gray-100 px-4 py-3 text-[12px] font-semibold text-gray-600 transition-colors hover:bg-gray-50 hover:text-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500 dark:border-white/10 dark:text-gray-400 dark:hover:bg-white/[0.04] dark:hover:text-brand-500"
+        className="group flex items-center justify-center gap-2 border-t border-hairline px-4 py-3.5 font-display font-extended text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-1 transition-colors hover:bg-sunken hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
       >
         Voir toute la boutique
-        <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+        <ArrowRight
+          className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1 motion-reduce:transition-none"
+          aria-hidden="true"
+        />
       </LinkWithLoading>
     </aside>
   );
