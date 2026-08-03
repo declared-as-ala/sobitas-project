@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, type ReactNode, type FormEvent } from 'react';
+import { useState, useEffect, useRef, type ReactNode, type FormEvent } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
@@ -298,6 +298,64 @@ export function HeaderClient() {
 
   const isActiveNav = (href: string) => (href === '/' ? pathname === '/' : pathname === href);
 
+  /**
+   * COMPACT-ON-SCROLL. Writes one attribute on one DOM node; React is never told.
+   *
+   * That is the entire design constraint. This component is ~1,050 lines inside a client
+   * boundary, so a `useState` here would re-render the nav, both dropdowns, the search island and
+   * the cart badge on every scroll-direction change — on a site whose measured problem is INP.
+   * A ref plus `toggleAttribute` costs one attribute write and lets CSS do the rest
+   * (`[data-compact]` in globals.css).
+   *
+   * Three guards, each for a specific failure:
+   *   THRESHOLD 140  never collapse near the top of the page. Without it, the tiniest downward
+   *                  nudge at y=10 hides the nav before the user has scrolled anywhere.
+   *   DELTA 8        ignore sub-pixel and rubber-band jitter. iOS overscroll reports a stream of
+   *                  ±1-3px deltas at rest; without this the header would flicker at the top and
+   *                  bottom of every page.
+   *   rAF coalesce   `scroll` can fire many times per frame. The handler only schedules; the read
+   *                  happens once per frame, so the attribute is written at most 60x/s and never
+   *                  mid-layout.
+   *
+   * `passive: true` so the listener can never block scrolling. Reading `window.scrollY` in a rAF
+   * callback is a cheap cached read and does not force a synchronous layout the way reading
+   * `getBoundingClientRect()` here would.
+   */
+  const headerRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+
+    const THRESHOLD = 140;
+    const DELTA = 8;
+    let last = window.scrollY;
+    let scheduled = false;
+
+    const apply = () => {
+      scheduled = false;
+      const y = window.scrollY;
+      const moved = y - last;
+
+      if (Math.abs(moved) < DELTA) return;
+      last = y;
+
+      // Compact only while moving DOWN and past the threshold. Any upward movement restores it
+      // immediately, which is the behaviour that makes a collapsing header usable rather than
+      // annoying: the nav comes back the instant you reach for it.
+      el.toggleAttribute('data-compact', y > THRESHOLD && moved > 0);
+    };
+
+    const onScroll = () => {
+      if (scheduled) return;
+      scheduled = true;
+      requestAnimationFrame(apply);
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   // While the shopper is typing, the drawer's scrollable middle shows results instead of the nav.
   const showSidebarSearch = sidebarQuery.trim().length > 0;
   // True between a keystroke and the debounce firing — keeps the skeleton up so results never flash
@@ -395,7 +453,10 @@ export function HeaderClient() {
           1px rule IS the boundary and it has to be the STRONGER of the two weights (#D6D2CC, not
           the #E8E5E1 hairline). No shadow — a drop shadow under a full-width bar is the single
           most recognisable "purchased theme" tell, and the rule does the same job at 1px. */}
-      <header className="bg-canvas font-poppins sticky top-0 z-50 w-full border-b border-rule">
+      <header
+        ref={headerRef}
+        className="bg-canvas font-poppins sticky top-0 z-50 w-full border-b border-rule"
+      >
         {/* MOBILE main bar — logo LEFT, then SEARCH + BURGER only (owner request). Compte and
             Panier used to live here too; they were removed because MobileTabBar already carries
             both, one thumb-tap away at the bottom of every screen. Duplicating them up here cost
@@ -410,7 +471,7 @@ export function HeaderClient() {
               were already at the 44px tap floor, so this is about legibility at arm's length
               rather than about hit area — a 24px glyph on a 6.1" screen at 60cm subtends less
               than a 16px glyph did on the phones this floor was written for. */}
-          <div className="flex items-center justify-between w-full px-3 min-[380px]:px-4 gap-2 h-16 py-2.5">
+          <div className="pt-hdr-bar pt-hdr-bar-mobile flex items-center justify-between w-full px-3 min-[380px]:px-4 gap-2 h-16 py-2.5">
             {/* min-w-0 + shrink: the LOGO is what gives way on a narrow phone. With only two
                 controls left this is no longer tight, but the rule stays — it is what guarantees
                 the burger can never be pushed off-screen and made unreachable. The icon cluster
@@ -433,7 +494,7 @@ export function HeaderClient() {
                 alt="Proteine Tunisie"
                 width={140}
                 height={48}
-                className="h-11 w-auto max-w-full object-contain object-left"
+                className="pt-hdr-logo h-11 w-auto max-w-full object-contain object-left"
                 loading="eager"
               />
             </Link>
@@ -459,7 +520,7 @@ export function HeaderClient() {
         {/* DESKTOP main bar: white surface, orange logo, wide search, ghost icon buttons. */}
         <div className="hidden md:block">
           <div className="max-w-site mx-auto px-4 lg:px-8">
-            <div className="flex items-center gap-6 h-[72px]">
+            <div className="pt-hdr-bar pt-hdr-bar-desktop flex items-center gap-6 h-[72px]">
               <Link href="/" className="flex-shrink-0 transition-opacity duration-200 hover:opacity-80" aria-label="Proteine Tunisie - Accueil">
                 {/* Logo is NOT `priority`: next/image priority injects a fetchpriority=high preload
                     that ignores the responsive `hidden`/`md:block` split, so a phone was preloading
@@ -470,7 +531,7 @@ export function HeaderClient() {
                   alt="Proteine Tunisie"
                   width={200}
                   height={70}
-                  className="h-9 lg:h-10 w-auto object-contain dark:brightness-0 dark:invert"
+                  className="pt-hdr-logo h-9 lg:h-10 w-auto object-contain dark:brightness-0 dark:invert"
                 />
               </Link>
 
@@ -590,7 +651,7 @@ export function HeaderClient() {
              given `bg-sunken` for structure, and that is a contrast decision rather than a taste
              one: the active item is `text-brand`, which measures 4.71:1 on white but only 4.36:1
              on sand — below AA. Structure here comes from the rule, not from a second fill. */
-          className="hidden md:block border-t border-hairline"
+          className="pt-hdr-nav hidden md:block border-t border-hairline"
           aria-label="Navigation principale"
         >
           <div className="max-w-site mx-auto px-4 lg:px-8">

@@ -38,12 +38,31 @@ import { Container, type ContainerWidth } from './Container';
  * on the same lattice, so vertical relationships resolve as ratios instead of as near-misses.
  *
  *   strip     12 / 16            one row tall
- *   tight     32 / 40 / 48       navigation & prose
- *   default   40 / 48 / 64       every product or content grid
- *   feature   48 / 64 / 80       the band that must dominate its neighbours
+ *   tight     24 / 32            navigation & prose
+ *   default   32 / 40            every product or content grid
+ *   feature   40 / 48            the band that must dominate its neighbours
  *
- * Each step is the previous one plus exactly one 8px unit at mobile and two at desktop, so the
- * hierarchy between two adjacent bands is always legible and never accidental.
+ * ── THE SCALE CAME DOWN BY A THIRD (owner, 2026-08-03, with the gaps circled) ─────────────
+ * "Those white spaces make the page look messy — the sections are not uniform, not connected."
+ *
+ * They circled three boundaries and they were the three biggest sums in the page. THE GAP
+ * BETWEEN TWO BANDS IS THE UPPER BAND'S `pb` PLUS THE LOWER BAND'S `pt` — this file's own rule,
+ * three paragraphs down — and the previous values made that arithmetic ugly at desktop:
+ *
+ *     hero(48)      + catégories(48)   =  96px
+ *     catégories(48)+ plus vendus(64)  = 112px
+ *     ventes flash(80) + nouveautés(64)= 144px   ← the one they circled hardest
+ *
+ * 144px of nothing between two sections reads as a mistake no matter how carefully each number
+ * was chosen, and that is the trap in "make the spacing bigger and consistent": consistency in
+ * the SCALE does not give you consistency in the GAPS, because gaps are sums.
+ *
+ * The correct amount of padding is however much the band needs to breathe INSIDE its own colour,
+ * and no more — the fill change plus the 1px seam is what separates it from its neighbour, not
+ * the emptiness. At these values the same three boundaries are 64 / 72 / 88px.
+ *
+ * Every value is still a multiple of 8, and each step is still exactly one 8px unit above the
+ * previous at mobile and two at desktop.
  */
 const SPACING = {
   none: '',
@@ -55,16 +74,16 @@ const SPACING = {
   /** Anything exactly one row tall: the trust/COD strip, the orange promo strip. */
   strip: 'py-3 sm:py-4',
   /** Support bands carrying navigation or prose: the category rail, brand wall, SEO block. */
-  tight: 'py-8 sm:py-10 lg:py-12',
+  tight: 'py-6 lg:py-8',
   /** Every canvas/sunken product or content grid. */
-  default: 'py-10 sm:py-12 lg:py-16',
+  default: 'py-8 lg:py-10',
   /**
    * Reserved for the band that must out-weigh its neighbours — Ventes flash, and nothing else.
    * Emphasis now comes from padding + a live countdown rather than from a black fill, so this
    * step is what replaces the slab it used to be. If a second section asks for `feature`, the
    * answer is no: two dominant bands is zero dominant bands.
    */
-  feature: 'py-12 sm:py-16 lg:py-20',
+  feature: 'py-10 lg:py-12',
 } as const;
 
 /**

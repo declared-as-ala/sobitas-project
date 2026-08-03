@@ -224,7 +224,7 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
             right (drops below the title on phones). All copy on white ⇒ clean AA contrast.
             24/32/40 to match SectionHeader's own margin — this band hand-rolls its header because
             of the countdown, so the number has to be kept in step by hand. */}
-        <div className="mb-6 flex flex-col gap-6 sm:mb-8 sm:flex-row sm:items-end sm:justify-between lg:mb-10">
+        <div className="mb-5 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between lg:mb-6">
           <div className="min-w-0">
             {/*
               THE FLAME PULSES — the owner asked for "animation with a flash" on desktop.

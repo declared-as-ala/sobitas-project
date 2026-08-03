@@ -74,11 +74,12 @@ export function SectionHeader({
   id,
 }: SectionHeaderProps) {
   return (
-    /* 24 / 32 / 40 — one 8px unit per breakpoint, matching the band scale's own growth in
-       Section.tsx. The heading block is part of the band's body, not a third thing floating
-       between the band's padding and its content, so its bottom margin must always be strictly
-       smaller than the band's own `pt` (32/40/64 at `default`). It is, at every breakpoint. */
-    <div className="mb-6 flex flex-row items-end justify-between gap-4 sm:mb-8 lg:mb-10">
+    /* 20 / 24 — down from 24/32/40 along with the band scale.
+       The heading block is part of the band's body, not a third thing floating between the band's
+       padding and its content, so its bottom margin must stay strictly SMALLER than the band's
+       own `pt` (32/40 at `default`). At the old 40px it was larger than `tight`'s 24px top
+       padding, which is precisely why the category band read as a heading adrift in a field. */
+    <div className="mb-5 flex flex-row items-end justify-between gap-4 lg:mb-6">
       <div className="min-w-0">
         {kicker && (
           <span className="pt-kicker mb-2.5 inline-flex items-center gap-2.5 text-brand">

@@ -107,12 +107,7 @@ export function BrandsSection({ brands: brandsProp }: { brands?: Brand[] }) {
   if (isLoading) {
     return (
       <Section surface="sunken" spacing="tight" width="wide" defer>
-          <SectionHeader
-            kicker="Partenaires officiels"
-            title="Nos marques partenaires"
-            subtitle="Distributeur officiel des plus grandes marques internationales."
-            scale="3"
-          />
+          <SectionHeader title="Nos marques partenaires" scale="3" />
           <div className={gridClass} aria-hidden="true">
             {Array.from({ length: MAX_BRANDS }).map((_, i) => (
               <Skeleton key={i} className="aspect-[3/2] rounded-none" />
@@ -128,10 +123,12 @@ export function BrandsSection({ brands: brandsProp }: { brands?: Brand[] }) {
 
   return (
     <Section surface="sunken" spacing="tight" width="wide" defer>
+        {/* No kicker, no subtitle. "Partenaires officiels" above "Nos marques partenaires" above
+            "Distributeur officiel des plus grandes marques internationales" is the same sentence
+            three times, and it pushed a logo wall — which explains itself instantly — down by
+            ~70px. The heading alone labels the grid; the logos are the content. */}
         <SectionHeader
-          kicker="Partenaires officiels"
           title="Nos marques partenaires"
-          subtitle="Distributeur officiel des plus grandes marques internationales."
           viewAllHref="/brands"
           viewAllLabel="Toutes les marques"
           scale="3"

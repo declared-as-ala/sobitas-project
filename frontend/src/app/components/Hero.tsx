@@ -364,7 +364,7 @@ export function Hero({ slides, fallbackAlt, bestSellers = [] }: HeroProps) {
       data-band-first=""
       aria-label="Bannière principale"
       {...(slides.length > 1 ? { 'aria-roledescription': 'carrousel' } : {})}
-      className="w-full bg-canvas pb-8 pt-0 sm:pt-4 lg:pb-12"
+      className="w-full bg-canvas pb-6 pt-0 sm:pt-4 lg:pb-8"
     >
       {/*
         The SITE container, byte-for-byte: `mx-auto max-w-site px-4 sm:px-6 lg:px-8`. The header,

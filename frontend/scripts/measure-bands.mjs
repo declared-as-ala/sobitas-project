@@ -28,10 +28,14 @@ const ROUTE = one('route', '/');
 const WIDTH = Number(one('width', '1440'));
 const THEME = one('theme', 'light');
 
-/** The four legal band paddings at each breakpoint, from Section.tsx SPACING. */
+/**
+ * The four legal band paddings at each breakpoint, from Section.tsx SPACING.
+ * KEEP IN SYNC BY HAND — this file is the only thing that catches a call site inventing a fifth
+ * value, so a drifted table silently stops enforcing the scale.
+ */
 const LEGAL = {
-  390: { strip: 12, tight: 32, default: 40, feature: 48, stage: 0 },
-  1440: { strip: 16, tight: 48, default: 64, feature: 80, stage: 0 },
+  390: { strip: 12, tight: 24, default: 32, feature: 40, stage: 0 },
+  1440: { strip: 16, tight: 32, default: 40, feature: 48, stage: 0 },
 };
 
 const CHROME = [
@@ -116,13 +120,27 @@ const bands = await page.evaluate(() => {
 const legal = LEGAL[WIDTH] || LEGAL[1440];
 const legalValues = new Set(Object.values(legal));
 
+/**
+ * The gap a VISITOR sees between two sections is not either band's padding — it is the sum of the
+ * upper band's `pb` and the lower band's `pt`. That distinction is the whole reason this column
+ * exists: the owner circled three boundaries on a screenshot as "white space that makes the page
+ * look messy", and every individual padding involved was a defensible number from the scale. The
+ * SUMS were 96, 112 and 144px. A scale can be perfectly consistent and still produce gaps that
+ * are not, because gaps are sums — so the sums are what must be reported.
+ *
+ * GAP_WARN is the point at which a boundary starts reading as a mistake rather than as a break.
+ */
+const GAP_WARN = WIDTH < 768 ? 72 : 104;
+
 console.log(`\n${ROUTE}  @${WIDTH}px  ${THEME}\n`);
-console.log('  #  band                          top   height   pt   pb   surface   seam');
-console.log('  ' + '-'.repeat(76));
+console.log('  #  band                          top   height   pt   pb    gap   surface   seam');
+console.log('  ' + '-'.repeat(84));
 
 let offScale = 0;
 let sharedSurface = 0;
+let wideGaps = 0;
 let prevBg = null;
+let prevPb = null;
 
 bands.forEach((b, i) => {
   const ptOk = legalValues.has(b.pt);
@@ -130,23 +148,31 @@ bands.forEach((b, i) => {
   if (!ptOk || !pbOk) offScale++;
   const clash = prevBg !== null && prevBg === b.bg;
   if (clash) sharedSurface++;
+
+  const gap = prevPb === null ? null : prevPb + b.pt;
+  const gapWide = gap !== null && gap > GAP_WARN;
+  if (gapWide) wideGaps++;
+
   prevBg = b.bg;
+  prevPb = b.pb;
 
   console.log(
     `  ${String(i + 1).padStart(2)}  ${b.label.padEnd(28).slice(0, 28)}` +
       `${String(b.top).padStart(6)}${String(b.height).padStart(8)}` +
       `${String(b.pt).padStart(5)}${ptOk ? ' ' : '!'}${String(b.pb).padStart(4)}${pbOk ? ' ' : '!'}` +
-      `  ${b.bg.padEnd(9)} ${b.first ? 'first' : b.borderTop}` +
+      `${(gap === null ? '—' : String(gap)).padStart(6)}${gapWide ? '!' : ' '}` +
+      ` ${b.bg.padEnd(9)} ${b.first ? 'first' : b.borderTop}` +
       (clash ? '   <-- SAME SURFACE AS ABOVE' : '')
   );
 });
 
 const doc = await page.evaluate(() => document.documentElement.scrollHeight);
-console.log('\n  ' + '-'.repeat(76));
+console.log('\n  ' + '-'.repeat(84));
 console.log(`  ${bands.length} bands, document ${doc}px`);
 console.log(`  off-scale paddings (marked !): ${offScale}`);
 console.log(`  adjacent bands sharing a surface: ${sharedSurface}`);
+console.log(`  boundaries wider than ${GAP_WARN}px: ${wideGaps}`);
 console.log(`  legal paddings @${WIDTH}: ${[...legalValues].sort((a, b) => a - b).join(' / ')}\n`);
 
 await browser.close();
-process.exit(offScale > 0 || sharedSurface > 0 ? 1 : 0);
+process.exit(offScale > 0 || sharedSurface > 0 || wideGaps > 0 ? 1 : 0);

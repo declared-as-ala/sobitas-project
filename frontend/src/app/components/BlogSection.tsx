@@ -101,10 +101,13 @@ export function BlogSection({ articles }: BlogSectionProps) {
 
   return (
     <Section spacing="tight" width="wide" defer>
+      {/* Subtitle removed. "Conseils d'experts en nutrition, entraînement et santé pour optimiser
+          vos performances" is a description of a blog, and the reader is looking at three article
+          titles that describe themselves. It cost a line of body copy plus its margin at the top
+          of every homepage scroll and told nobody anything. */}
       <SectionHeader
         kicker="Le blog"
         title="Nos derniers articles"
-        subtitle="Conseils d'experts en nutrition, entraînement et santé pour optimiser vos performances."
         viewAllHref="/blog"
         viewAllLabel="Voir tous les articles"
         /* "2" — a support band. It informs rather than sells, so it sits one step below the four

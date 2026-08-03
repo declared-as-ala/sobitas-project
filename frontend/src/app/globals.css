@@ -446,6 +446,66 @@ html[dir="rtl"] [data-i18n-ltr] {
  */
 
 /* ==============================================================================================
+ * THE COMPACT HEADER — shrinks on scroll down, restores on scroll up.
+ *
+ * ── WHY THE STATE IS A DOM ATTRIBUTE AND NOT REACT STATE ──────────────────────────────────
+ * HeaderClient is 1,052 lines inside `'use client'`. Driving this from `useState` would
+ * re-render that whole subtree — the nav, both dropdowns, the search island, the cart badge —
+ * twice per scroll-direction change, on a site whose measured problem is INP (>200ms on 408
+ * mobile URLs, 419ms on the homepage). So the listener writes ONE attribute onto one node and
+ * React never learns anything happened. Everything below is a CSS consequence of that attribute.
+ *
+ * ── WHAT COLLAPSES ────────────────────────────────────────────────────────────────────────
+ * Desktop: the nav row folds to zero and the main bar loses 16px (72 -> 56), so a scrolling
+ *          reader gets ~64px of viewport back and keeps the logo, the search field and the cart.
+ * Mobile:  only the bar shrinks (64 -> 52) — the nav row is `hidden md:block` and there is
+ *          nothing else to give.
+ *
+ * `height` is animated rather than `transform`, deliberately. A transform would slide the bar
+ * out from under the page without freeing any space, so content would sit behind a header that
+ * still occupies its original box. Two elements changing height on a sticky bar is a contained
+ * layout cost; the whole point is that the space is actually returned.
+ *
+ * `overflow: hidden` on the nav row is what lets its height animate to 0 without the links
+ * spilling; `visibility` follows so a collapsed nav is not a set of invisible tab stops.
+ * ============================================================================================ */
+.pt-hdr-bar,
+.pt-hdr-nav,
+.pt-hdr-logo {
+  transition: height 0.22s ease, opacity 0.18s ease;
+}
+
+.pt-hdr-nav {
+  overflow: hidden;
+}
+
+[data-compact] .pt-hdr-bar-desktop {
+  height: 56px;
+}
+[data-compact] .pt-hdr-bar-mobile {
+  height: 52px;
+}
+[data-compact] .pt-hdr-logo {
+  height: 32px;
+}
+[data-compact] .pt-hdr-nav {
+  height: 0;
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* WCAG 2.3.3. The collapse still HAPPENS — it is a layout state, not decoration, and removing it
+   would leave a reduced-motion user with a header that never gives space back. Only the tween is
+   dropped, so the change is instant instead of animated. */
+@media (prefers-reduced-motion: reduce) {
+  .pt-hdr-bar,
+  .pt-hdr-nav,
+  .pt-hdr-logo {
+    transition: none;
+  }
+}
+
+/* ==============================================================================================
  * VENTES FLASH — the two animations on the page, and why they are CSS.
  *
  * The owner asked for "animation with a flash" on the flash-sale band. The obvious reach is
