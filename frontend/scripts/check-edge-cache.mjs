@@ -144,13 +144,22 @@ if (imgSrc) {
   if (heroSrc) console.log(`         (this is the hero preload = the mobile LCP element)`);
 }
 
-// ── 7. OPT-IN: prove the cache key actually SEPARATES formats (the --fmt Transform Rule). ────
-// Not run by default, because it is the one test that can cause the damage it looks for: if the
-// Transform Rule is absent, the plain-client request below pins the URL to JPEG for 30 days. It
-// deliberately probes a PRODUCT THUMBNAIL rather than the hero, so a failed run costs a thumbnail
-// and not the LCP element. Run it once, after deploying the rule, then purge if it fails.
-if (argv.includes('--probe-format')) {
-  console.log('\n  format cache-key separation  [--probe-format]');
+// ── 7. Prove ONLY AVIF can ever enter the image cache. ───────────────────────────────────────
+// THE DESIGN THIS TESTS. Cloudflare Free has no way to put `Accept` into the cache key: custom
+// cache keys are Enterprise, dynamic Rewrite URL rules are Pro+, and Snippets are not available on
+// this account either. So instead of separating the formats, the cache rule ADMITS ONLY ONE of
+// them: `/_next/image` is Eligible for cache *only when the request advertises AVIF*. Every other
+// client — WebP-only, legacy, crawler, curl — misses the rule and goes to the origin, which
+// negotiates correctly as it always did.
+//
+// Poisoning then becomes impossible rather than merely unlikely: the only requests that can ever
+// populate an entry are the ones that produce AVIF, so the only thing an entry can ever contain is
+// AVIF. That is a stronger guarantee than the format-in-the-cache-key design it replaces, and it
+// costs the ~5% of traffic without AVIF support their edge cache hit.
+//
+// Safe to run unconditionally: the legacy request below cannot cache, which is the point.
+console.log('\n  only AVIF may enter the image cache');
+{
   const thumb = [...doc1.body.matchAll(/(\/_next\/image\?url=[^"'\s>]+)/g)]
     .map((m) => m[1].replace(/&amp;/g, '&'))
     .find((u) => u !== heroSrc);
@@ -158,16 +167,23 @@ if (argv.includes('--probe-format')) {
   if (!thumb) {
     console.log('   —     no non-hero image found to probe');
   } else {
+    await get(thumb, ACCEPT_IMAGE);
     const modern = await get(thumb, ACCEPT_IMAGE);
-    const legacy = await get(thumb, 'image/png,image/*'); // a client with no AVIF and no WebP
+    const legacy = await get(thumb, 'image/png,image/*'); // no AVIF, no WebP
     const modernAgain = await get(thumb, ACCEPT_IMAGE);
 
-    check('a modern client gets AVIF', modern.type === 'image/avif', modern.type);
-    check('a legacy client gets a DIFFERENT format', legacy.type !== modern.type, `${legacy.type} vs ${modern.type}`);
+    check('an AVIF client is cached at the edge', modern.cache === 'HIT', `cf-cache-status: ${modern.cache}`);
+    check('…and receives AVIF', modern.type === 'image/avif', modern.type);
     check(
-      'the legacy request did NOT displace the modern one',
+      'a legacy client is NOT cached (so it can never poison)',
+      legacy.cache !== 'HIT',
+      `cf-cache-status: ${legacy.cache}${legacy.cache === 'HIT' ? ' — the AVIF condition is missing from the image cache rule' : ''}`,
+    );
+    check('…and receives a format it can actually decode', legacy.type !== 'image/avif', legacy.type);
+    check(
+      'the legacy request did not displace the AVIF entry',
       modernAgain.type === 'image/avif',
-      `${modernAgain.type}${modernAgain.type !== 'image/avif' ? ' — the Transform Rule is not in effect; PURGE this URL' : ''}`,
+      `${modernAgain.type}${modernAgain.type !== 'image/avif' ? ' — PURGE this URL' : ''}`,
     );
   }
 }

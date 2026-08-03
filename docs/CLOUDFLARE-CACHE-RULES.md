@@ -117,71 +117,74 @@ on may be the most important image on the site.
 **Caching → Configuration → Purge Everything.** Verified afterwards: the hero preload returns
 `image/avif · 43 kB`, down from `image/jpeg · 78 kB`.
 
-### Owner action 2: put the format in the cache key
+### Owner action 2: admit ONLY AVIF into the image cache
 
-Cloudflare's cache key includes the **query string** on every plan. Next's optimizer reads only
-`url`, `w` and `q` and **ignores any extra parameter** — verified against the live origin:
+> **What is NOT available on this account.** protein.tn is on the Cloudflare **Free** plan.
+> Custom cache keys (which would let `Accept` join the key) are Enterprise. Dynamic **Rewrite URL**
+> rules — which could append a format token — need Pro or above; Free supports static values only,
+> and a static value cannot read a request header. **Snippets** are not available here either.
+> Earlier revisions of this document specified each of those in turn. None are creatable.
 
-```
-/_next/image?url=…&w=750&q=70            -> 200 image/avif  28,801 B
-/_next/image?url=…&w=750&q=70&fmt=avif   -> 200 image/avif  28,801 B   (identical)
-/_next/image?url=…&w=750&q=70&fmt=jpg    -> 200 image/jpeg  54,231 B   (separate cache entry)
-```
+What *is* available, and is already proven on this account by the RSC rule, is a **header condition
+in a Cache Rule**. That is enough, because the problem does not actually require separating the
+formats — it only requires that **one** format can ever enter the cache.
 
-So appending a format token derived from `Accept` gives one cache entry per format. The origin
-keeps negotiating exactly as it does today; only Cloudflare's filing changes.
+**So: make `/_next/image` eligible for cache _only when the request advertises AVIF_.** Every other
+client — WebP-only, legacy, crawler, curl, monitoring probe — fails the condition, is never cached,
+and goes to the origin, which negotiates correctly exactly as it does today.
 
-> **Not Transform Rules — protein.tn is on the Cloudflare FREE plan.** Rewrite URL rules on Free
-> support *static* values only, and a static value cannot read the `Accept` header. An earlier
-> revision of this document specified three dynamic Rewrite URL rules; they are not creatable on
-> this account. **Snippets** are, and one snippet replaces all three.
+Poisoning stops being unlikely and becomes **impossible**: the only requests that can populate an
+entry are the ones that produce AVIF, so the only thing an entry can contain is AVIF. That is a
+stronger guarantee than the format-in-the-cache-key designs above, and it is free.
 
-**Where:** Cloudflare dashboard → **protein.tn** → **Rules** → **Snippets** → **Create Snippet**.
+**Cost:** the ~5% of visitors whose browser predates AVIF lose the edge cache on images and fetch
+from the origin instead. `Server-Timing` shows the origin at ~98 ms, and those same visitors keep
+their browser cache (`max-age=2592000`), so this is a small penalty on a small minority — paid to
+remove a correctness bug that affects them *right now*.
 
-Name: `image-format-cache-key`. Code:
-
-```js
-export default {
-  async fetch(request) {
-    const url = new URL(request.url);
-
-    // Already tagged (or a retry) — pass straight through, so this can never loop.
-    if (url.searchParams.has('fmt')) return fetch(request);
-
-    // Cloudflare ignores `Vary: Accept`, so without this every image format would share ONE
-    // cache entry and the first visitor's browser would decide the format for everyone.
-    const accept = request.headers.get('accept') || '';
-    const fmt = accept.includes('image/avif') ? 'avif'
-              : accept.includes('image/webp') ? 'webp'
-              : 'base';
-
-    url.searchParams.set('fmt', fmt);
-    return fetch(new Request(url.toString(), request));
-  },
-};
-```
-
-Match expression (**Edit expression**):
+**Where:** **Caching → Cache Rules → `Cache Next.js optimized images` → Edit**. Replace the
+expression with:
 
 ```
-starts_with(http.request.uri.path, "/_next/image")
+(starts_with(http.request.uri.path, "/_next/image")
+ and any(http.request.headers["accept"][*] contains "image/avif"))
 ```
 
-**Exactly one branch of that `if/else` chain can win, so there is no ordering to get wrong.** That
-is deliberate — see the post-mortem below, where a design that depended on rule ordering was
-ordered wrong.
+Settings stay as they are: **Eligible for cache** · Edge TTL **Use cache-control header if present,
+bypass cache if not** · Browser TTL **Respect origin TTL**.
 
-**Revert:** Rules → Snippets → toggle off, then Purge Everything. Immediate.
+**⚠️ Also check the `Cache static assets` rule.** If its expression matches `/_next/` broadly, it
+will also match `/_next/image` — and because Cache Rules are **last-match-wins**, whichever of the
+two sits lower would decide. Add this line to the static-assets rule so the two can never overlap:
 
-Then **Purge Everything** again (the rewrite changes every image cache key) and verify:
+```
+and not starts_with(http.request.uri.path, "/_next/image")
+```
+
+With that, the rules are disjoint and ordering is irrelevant again.
+
+**Revert:** put the old expression back and Purge Everything.
+
+Then **Purge Everything** and verify:
 
 ```bash
-node frontend/scripts/check-edge-cache.mjs --probe-format
+node frontend/scripts/check-edge-cache.mjs
 ```
 
-`--probe-format` is opt-in because it is the one check that can cause the fault it tests for: if
-the rules are absent, its legacy-client request pins that URL to JPEG. It probes a product
-thumbnail rather than the hero so a failed run costs a thumbnail, not the LCP element.
+The section headed *"only AVIF may enter the image cache"* is the acceptance test. Before the
+change it reports the live defect:
+
+```
+FAIL  a legacy client is NOT cached (so it can never poison)
+      (cf-cache-status: HIT — the AVIF condition is missing from the image cache rule)
+FAIL  …and receives a format it can actually decode   (image/avif)
+```
+
+That second line is not hypothetical. Today a browser older than Safari 16.4 / Firefox 93 /
+Chrome 85 asks for a product photo and is handed AVIF it cannot decode — a **broken image** — for
+as long as the 30-day entry lives. It probes a product thumbnail rather than the hero, and it is
+safe to run unconditionally because after the change the legacy request cannot be cached at all,
+which is precisely the property being asserted.
 
 ---
 
