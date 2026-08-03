@@ -26,7 +26,73 @@ TTFB **consistent**, and `stale-while-revalidate` means no shopper ever waits fo
 
 ---
 
-## Rule 1 — bypass cache for React/router requests
+## ⛔ CORRECTION — the two-rule version below was WRONG. Use ONE rule.
+
+**Applied and then measured on the live site (`scripts/check-edge-cache.mjs`), the two-rule
+version failed exactly where it mattered:**
+
+```
+RSC / router request (the one that can break the site)
+  FAIL  bypasses the cache                        (cf-cache-status: HIT)
+  FAIL  returns a React payload, NOT cached HTML  (starts "<!DOCTYPE html>")
+```
+
+A separate "bypass" rule ordered *above* a "cache" rule does not protect anything, because
+**Cloudflare Cache Rules are not first-match-wins.** Every matching rule applies, and where two
+rules set the same thing, **the last one wins**. So Rule 2 ("Eligible for cache") simply overrode
+Rule 1 ("Bypass cache") on every RSC request. Firewall/WAF rules stop at the first match; Cache
+Rules do not, and mixing up those two semantics is what produced this.
+
+**The fix is to stop relying on rule ordering at all: put the exclusion inside the caching rule, so
+there is only ONE rule and nothing to override it.**
+
+### What to do now
+
+1. **Delete** (or disable) `1 — Bypass cache: Next.js RSC requests`. It is doing nothing.
+2. **Edit** `2 — Cache HTML at the edge` and replace its expression with the block below. The only
+   change is the four `not any(...)` lines at the top.
+3. Keep its settings as they are: Eligible for cache · Edge TTL "Use cache-control header if
+   present, bypass cache if not" · Browser TTL "Respect origin TTL".
+
+```
+(http.request.method eq "GET"
+ and not any(http.request.headers["rsc"][*] ne "")
+ and not any(http.request.headers["next-router-prefetch"][*] ne "")
+ and not any(http.request.headers["next-router-state-tree"][*] ne "")
+ and not any(http.request.headers["next-router-segment-prefetch"][*] ne "")
+ and not starts_with(http.request.uri.path, "/_next/")
+ and not starts_with(http.request.uri.path, "/api")
+ and not starts_with(http.request.uri.path, "/api-proxy")
+ and not starts_with(http.request.uri.path, "/account")
+ and not starts_with(http.request.uri.path, "/cart")
+ and not starts_with(http.request.uri.path, "/checkout")
+ and not starts_with(http.request.uri.path, "/login")
+ and not starts_with(http.request.uri.path, "/register")
+ and not starts_with(http.request.uri.path, "/forgot-password")
+ and not starts_with(http.request.uri.path, "/reset-password"))
+```
+
+4. **Caching → Configuration → Purge Everything.** The cache currently holds entries created under
+   the broken rule and they must not be replayed.
+5. Re-run `node frontend/scripts/check-edge-cache.mjs` — it must report **0 failures**.
+
+`any(headers[*] ne "")` is Cloudflare's documented idiom for "this header is present with a
+value", and it is why the expression is not simply `headers["rsc"] ne ""`: the field is a *map of
+arrays*, so it has to be tested element-wise.
+
+### How bad was it while it was wrong?
+
+Not an outage, but not harmless. Next's router asks for a URL with `RSC: 1`, gets HTML back,
+detects the mismatch and falls back to a **full page reload** — so soft navigation silently
+degraded into a whole-page fetch, and every prefetch was wasted bandwidth. The sharper risk is the
+mirror image: if an RSC *prefetch* had been the first request to populate a cold cache entry, the
+next ordinary visitor to that URL would have been served React flight data as their document — a
+blank page. The verification script checks for that case specifically (`doc3`), and it had not
+happened, but it was available.
+
+---
+
+## ~~Rule 1~~ — superseded, see the correction above
 
 **Where:** Cloudflare dashboard → select **protein.tn** → left menu **Caching** → **Cache Rules** →
 **Create rule**
