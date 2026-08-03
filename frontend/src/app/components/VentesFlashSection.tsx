@@ -104,12 +104,19 @@ const CountdownDisplay = memo(function CountdownDisplay({ expirationDate }: { ex
       </span>
       <div className="grid grid-cols-4 gap-2" aria-hidden="true">
         {units.map(({ value, label }) => (
-          // A well on the slab (#202027 light / #101012 dark) with its own hairline, so the tile
-          // reads as inset rather than relying on the fill alone. Digits are `text-brand`: 6.93:1
-          // on the well in light, 8.14:1 in dark.
+          /*
+           * THESE TILES ARE THE BLACK ON THIS PAGE, and they are the argument for the whole v6
+           * rule. The band around them is now white. Four near-black squares with orange digits
+           * are unmissable on it — far more urgent than they were as slightly-darker wells inside
+           * a black band, where they had a 1.4:1 fill difference to work with and disappeared.
+           *
+           * `.pt-slab` scopes them, so `bg-sunken` inside resolves to the slab's own well and
+           * `text-brand` to #FF8A4C — 8.14:1 on it. Emphasis is scarcity: ~230x64px of black on
+           * a 1440px page, spent on the one element whose entire job is to say "hurry".
+           */
           <div
             key={label}
-            className="flex min-w-[3.75rem] flex-col items-center justify-center rounded-lg border border-hairline bg-sunken px-2 py-2 sm:min-w-[4.25rem] sm:py-2.5"
+            className="pt-slab flex min-w-[3.75rem] flex-col items-center justify-center rounded-xl px-2 py-3 sm:min-w-[4.25rem]"
           >
             <span className="font-display font-compressed text-[1.75rem] font-extrabold leading-none tabular-nums text-brand sm:text-[2.25rem]">
               {value == null ? '--' : String(value).padStart(2, '0')}
@@ -182,23 +189,34 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
       : 'Réductions exceptionnelles sur nos meilleurs produits — pour une durée limitée.';
 
   return (
-    // White surface (not a red tint): the tint pushed the small kicker text below AA contrast, and
-    // the section reads as distinctive from the plain rails via its own bold header + the orange
-    // top rule + the live countdown — not via a background wash.
-    /* THE FLAGSHIP SLAB BAND. `border-t-2 border-red-600` is deleted: the colour change from the
-       white rail above IS the edge (19.26:1), and a red hairline on black says nothing. The white
-       product cards are punched out of it, which is the treatment a discount moment deserves and
-       which no amount of white-on-white typography can buy. */
+    /*
+     * THE DOMINANT BAND, WITHOUT BEING A BLACK ONE (v6).
+     *
+     * v5 made this `surface="slab"` — a full-width near-black band with white product plates
+     * punched out of it. It was the most striking thing on the page and it was also, together
+     * with Nos packs, why the page read as a dark theme.
+     *
+     * Dominance is now bought with three things that cost no ink:
+     *   1. `spacing="feature"` (48/64/80) — the ONLY band on the page at that step, so it is
+     *      physically the tallest and the eye reads that as importance.
+     *   2. `scale="1"` typography and a live countdown, which no other band has.
+     *   3. FOUR BLACK TILES. See CountdownDisplay — the black is spent there, on ~230x64px,
+     *      instead of on 900px of band.
+     * It sits on the page canvas between two sand bands, so the seams above and below do the
+     * separating.
+     */
     <Section
       id="ventes-flash"
-      surface="slab"
+      surface="base"
       spacing="feature"
       width="wide"
       defer
     >
         {/* Distinctive flash header: flame + compressed title on the left, live countdown on the
-            right (drops below the title on phones). All copy on white ⇒ clean AA contrast. */}
-        <div className="mb-6 flex flex-col gap-5 sm:mb-8 sm:flex-row sm:items-end sm:justify-between">
+            right (drops below the title on phones). All copy on white ⇒ clean AA contrast.
+            24/32/40 to match SectionHeader's own margin — this band hand-rolls its header because
+            of the countdown, so the number has to be kept in step by hand. */}
+        <div className="mb-6 flex flex-col gap-6 sm:mb-8 sm:flex-row sm:items-end sm:justify-between lg:mb-10">
           <div className="min-w-0">
             <span className="pt-kicker mb-2.5 inline-flex items-center gap-2 text-brand">
               <Flame className="h-4 w-4" aria-hidden="true" />

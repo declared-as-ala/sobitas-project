@@ -475,7 +475,7 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
     <div className={cn('relative flex-1', className)}>
       <form onSubmit={handleSubmit} className="relative">
         <Search
-          className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none z-10"
+          className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-3 pointer-events-none z-10"
           aria-hidden
         />
         <Input
@@ -503,13 +503,16 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
              `bg-gray-100 dark:bg-gray-900` inside a `dark:bg-gray-950` bar is #111827 on #030712,
              a 1.14:1 ratio — invisible. A hairline works in both themes regardless of how the bar
              behind it is coloured later. */
-          className="w-full pl-11 pr-24 h-12 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 shadow-[inset_0_1px_2px_rgba(17,24,39,0.04)] transition-[background-color,border-color,box-shadow] duration-200 hover:border-gray-300 focus:border-brand/50 focus:bg-white focus:ring-4 focus:ring-focus/10 focus-visible:border-brand/50 focus-visible:bg-white focus-visible:ring-4 focus-visible:ring-focus/10 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-400 dark:hover:border-gray-600 dark:focus:border-brand/50 dark:focus:bg-gray-800"
+          /* Tokens, so the field follows whatever surface the bar is given later without a single
+             `dark:` pair. `bg-sunken` inside a `bg-canvas` bar is the well; the hairline is what
+             actually draws it (see above — fill contrast alone has broken this field twice). */
+          className="w-full pl-11 pr-24 h-12 rounded-xl border border-hairline bg-sunken text-ink-1 placeholder:text-ink-3 shadow-[inset_0_1px_2px_rgba(17,24,39,0.04)] transition-[background-color,border-color,box-shadow] duration-200 hover:border-rule focus:border-brand focus:bg-canvas focus:ring-4 focus:ring-focus/10 focus-visible:border-brand focus-visible:bg-canvas focus-visible:ring-4 focus-visible:ring-focus/10"
           aria-label="Rechercher un produit"
         />
         {/* Orange search button (GPT header). */}
         <button
           type="submit"
-          className="absolute right-1.5 top-1/2 flex h-9 w-11 -translate-y-1/2 items-center justify-center rounded-lg bg-brand text-white shadow-sm transition-all duration-150 hover:bg-brand-hover hover:shadow-md active:scale-95"
+          className="absolute right-1.5 top-1/2 flex h-9 w-11 -translate-y-1/2 items-center justify-center rounded-lg bg-brand text-on-brand shadow-sm transition-colors duration-150 hover:bg-brand-hover active:scale-95"
           aria-label="Rechercher"
         >
           <Search className="h-[18px] w-[18px]" aria-hidden />
@@ -530,7 +533,7 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
 
       {isPopoverOpen && showResults && (
         <div
-          className="absolute left-0 right-0 top-full mt-1 z-50 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-lg p-3 max-h-[400px] overflow-y-auto"
+          className="absolute left-0 right-0 top-full mt-2 z-50 rounded-xl border border-hairline bg-elevated shadow-lg p-3 max-h-[400px] overflow-y-auto"
           onMouseDown={(e) => e.preventDefault()}
         >
           <SearchResults

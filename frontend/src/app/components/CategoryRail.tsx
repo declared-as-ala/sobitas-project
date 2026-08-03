@@ -77,22 +77,26 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
         scale="2"
       />
 
-      {/* THE 3px BRAND RULE UNDER THE HEADING IS GONE. The kicker already carries the brand mark,
-          and two accent devices stacked on one heading is a theme tell — it is the single most
-          common ornament on a purchased WordPress template. One accent per heading.
+      {/* THE GRID IS ALIGNED TO THE CONTAINER, not full-bleed (owner, 2026-08-03: "the header of
+          the search by category… and the cards… there's no padding for them").
 
-          THE GRID IS NOW FULL-BLEED AND GUTTERLESS. `-mx-4 sm:-mx-6 lg:-mx-8` cancels the
-          Container's own padding, and `gap-px` on `bg-rule` turns the six tiles into ONE object
-          divided by hairlines instead of six cards scattered on a surface.
+          v5 pulled this grid out to the screen edges with `-mx-4 sm:-mx-6 lg:-mx-8` to buy wider
+          tiles. It did — and it also meant the section's own heading sat 16px in from the edge
+          while the tiles it labelled sat at 0. Two elements in the same band on two different
+          rails is what reads as "no padding": the eye sees the misalignment before it sees the
+          extra 36px of photograph. Alignment wins; it is the cheaper of the two by far.
 
-          What that buys, measured at 390px: the tile goes 158×118.5 → 194×146 (+51% image area)
-          purely by reclaiming the 32px of side padding and the 12px gaps — the owner's "we have
-          a lot of space where we can make the images wider", delivered without making the band
-          any taller. At 1440 the tile goes 243 → 266px wide.
+          Cost, measured: at 390px the tile goes 194 → 179px wide (−7.7%); at 1440 it is unchanged
+          at 256px, because the desktop grid was never gutter-bound. The mobile loss is worth an
+          edge the whole band shares.
+
+          Still ONE OBJECT, not six cards: `gap-px` over `bg-rule` with a single `rounded-2xl`
+          clip and one hairline border around the whole block. Six separately-bordered rounded
+          cards on a white page is the WordPress category widget.
 
           The `sm:grid-cols-3` tier is KEPT deliberately: dropping it would regress 640–1023px
           from three tiles to two half-width ones. */}
-      <ul className="-mx-4 grid grid-cols-2 gap-px bg-rule sm:-mx-6 sm:grid-cols-3 lg:-mx-8 lg:grid-cols-6">
+      <ul className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-hairline bg-rule sm:grid-cols-3 lg:grid-cols-6">
         {items.map((category) => {
           const href = `/${category.slug}`;
           const label = (category.designation_fr || '').trim();
@@ -103,16 +107,22 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
                 href={href}
                 /* `h-full` + the flex column keep every card the same height when one label
                    wraps to two lines — otherwise the grid rows go ragged.
-                   `transition-[transform,box-shadow]`, not `transition-all`: `all` also animates
-                   `ring-color`, so every hover on a six-tile grid recalculated a property that
-                   changes instantly anyway. */
-                /* The bordered card is gone: no ring, no rounding, no shadow at rest. Six white
-                   boxes with hairline borders on a white page is a WordPress grid; six
-                   photographs butted together with black caption plates is merchandising.
+
+                   THE TILE NO LONGER LIFTS ON HOVER (owner: "when I hover on them, they grow in
+                   a bad way"). `hover:-translate-y-1 hover:shadow-xl` is a CARD gesture, and
+                   these are not cards — they are six cells fused into one block by a 1px gap.
+                   Lifting one cell tore a 4px hole in the block and dropped a shadow onto its
+                   neighbours, which is why it read as broken rather than as responsive.
+
+                   What replaces it is contained entirely INSIDE the cell, so the block never
+                   deforms: the photograph scales 1.04, the caption picks up the sand fill, and
+                   the arrow steps 4px right. `transition-colors` here; the transform lives on the
+                   image where it belongs.
+
                    `focus-visible:ring-focus` resolves in the CANVAS band's scope (#D53B04,
-                   4.71:1) because the slab class below is on the PLATE, never on this link —
-                   putting a scope on a focusable element paints its ring on the parent band. */
-                className="group flex h-full flex-col overflow-hidden bg-elevated transition-[transform,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+                   4.71:1). Never put a band scope on a focusable element — the ring resolves in
+                   the element's own scope but paints on the parent's surface. */
+                className="group flex h-full flex-col overflow-hidden bg-elevated transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
               >
                 {/* `aspect-[4/3]` on phones, MATCHING the 4:3 source exactly, so nothing is
                     cropped in either axis. The old `16/10` (=1.60) was WIDER than the source
@@ -129,25 +139,25 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
                       src={getStorageUrl(category.cover)}
                       alt={buildCategoryAlt(label)}
                       fill
-                      /* Re-derived after the outer card was removed — the tiles are wider now, so
-                         the old string under-fetched. Gutters 16/24/32 per side, gaps 12 then 16,
-                         `max-w-site` = 1600.
+                      /* Re-derived for the container-aligned grid. Gutters 16/24/32 per side,
+                         gaps are 1px now (`gap-px`), `max-w-site` = 1600.
                            mobile  2-up, aspect matches the 4:3 source → required = tile width.
-                                   (vw − 44)/2 peaks at 46.6vw @639 → 47vw, unchanged.
+                                   (vw − 33)/2 peaks at 47.4vw @639 → 48vw.
                            sm      3-up into a SQUARE tile from a 4:3 source → object-cover scales
-                                   by HEIGHT → required = tile × 4/3 = (4/9)(1 − 80/vw), peaking at
-                                   41.0vw @1023 → 42vw. The old 31vw asked 317px where 419px was
-                                   needed: a visible 1.09× upscale.
-                           lg      (1600 − 64 − 80)/6 = 242.7px tile → × 4/3 = 323.6 → 340px
-                                   (rounded up; vw includes the scrollbar). Still the 384 bucket.
-                         Both old and new filter to the same candidate list, so the srcset is
-                         unchanged and no new optimizer variants are generated. */
-                      sizes="(min-width: 1024px) 340px, (min-width: 640px) 42vw, 47vw"
+                                   by HEIGHT → required = tile × 4/3 = (4/3)(vw − 50)/3, peaking
+                                   at 42.3vw @1023 → 43vw.
+                           lg      (1600 − 64 − 5)/6 = 255.2px tile → × 4/3 = 340.2 → 350px
+                                   (rounded up; vw includes the scrollbar).
+                         Bucket check: Next filters `allSizes` by deviceSizes[0] × min(percent)/100
+                         = 480 × 0.43 = 206.4, against 201.6 before. Both land between the 128 and
+                         256 entries, so the candidate list is IDENTICAL and no new optimizer
+                         variants are generated — nothing is re-fetched by this change. */
+                      sizes="(min-width: 1024px) 350px, (min-width: 640px) 43vw, 48vw"
                       quality={80}
                       /* Stays lazy on purpose: these sit just under the hero, and letting six
                          tiles compete with the preloaded hero image is how you lose LCP. */
                       loading="lazy"
-                      className="object-cover object-center transition-transform duration-500 ease-out group-hover:scale-[1.06] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+                      className="object-cover object-center transition-transform duration-500 ease-out group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
                     />
                   ) : (
                     /* Branded fallback, not an empty box. A category with no cover sits in the
@@ -170,18 +180,24 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
                   )}
                 </div>
 
-                {/* A SOLID CAPTION PLATE, not a hairline-bordered strip.
-                    `.pt-slab` re-points the token scope for this subtree only, so `text-ink-1`
-                    resolves to #F5F4F2 on #0E0E12 — 17.52:1 in light, 12.98:1 in dark. That is
-                    PROVABLE regardless of which photograph the admin uploads, which is precisely
-                    what a gradient scrim over arbitrary artwork can never be.
-                    h-12/h-14 is also the tap-target guarantee, and the label goes 11px → 13/14px. */}
-                <div className="pt-slab flex h-12 flex-1 items-center justify-between gap-2 px-3 sm:h-14 sm:px-4">
+                {/* THE CAPTION IS LIGHT (v6). It was `.pt-slab` — a near-black plate under every
+                    tile — and six of those in a row under six dark photographs is what turned this
+                    band into a black wall. On the page's own `bg-elevated` the label is plain
+                    `text-ink-1` (#0A0A0B, 19.8:1) and the whole rail belongs to the light page.
+
+                    PADDING IS REAL AND ON THE GRID (owner: "there's no padding for them"). It was
+                    `h-12 px-3` — a fixed 48px box with 12px of side padding and no vertical
+                    padding at all, so the type was centred in a box rather than set in a plate.
+                    Now `px-4 py-4` (16px, every side) with `min-h` as a floor rather than a fixed
+                    height, so a two-line category name grows the plate instead of being squeezed.
+                    16px also equals the container gutter, so the label sits on the same left rail
+                    as the section heading above it. */}
+                <div className="flex min-h-[56px] flex-1 items-center justify-between gap-3 px-4 py-4 transition-colors duration-200 group-hover:bg-sunken sm:min-h-[60px]">
                   <span className="min-w-0 font-display font-compressed text-[13px] font-bold uppercase leading-tight tracking-[0.03em] text-ink-1 sm:text-sm">
                     {label}
                   </span>
                   <ArrowRight
-                    className="h-4 w-4 shrink-0 text-brand transition-transform duration-300 group-hover:translate-x-1 motion-reduce:transition-none"
+                    className="h-4 w-4 shrink-0 text-brand transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transition-none"
                     aria-hidden="true"
                   />
                 </div>

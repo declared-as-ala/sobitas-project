@@ -12,6 +12,11 @@
     "lint:design": "node scripts/lint-design.mjs",
     "lint:design:update": "node scripts/lint-design.mjs --update",
     "typecheck": "node scripts/ensure-next-types.mjs && tsc --noEmit",
+    "audit:contrast": "node scripts/audit-contrast.mjs",
+    "audit:bands": "node scripts/measure-bands.mjs",
+    "audit:console": "node scripts/check-console.mjs",
+    "snap": "node scripts/visual-snap.mjs",
+    "snap:region": "node scripts/snap-region.mjs",
     "verify-seo": "node scripts/verify-seo.js",
     "seo-audit-category": "node scripts/seo-audit-category.js"
   },

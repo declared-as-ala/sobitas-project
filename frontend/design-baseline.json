@@ -375,20 +375,6 @@
     "DS002": 3,
     "DS004": 4
   },
-  "src/app/components/BlogSection.tsx": {
-    "DS001": 8,
-    "DS002": 11,
-    "DS003": 5,
-    "DS004": 6,
-    "DS011": 17
-  },
-  "src/app/components/BrandsSection.tsx": {
-    "DS001": 6,
-    "DS002": 5,
-    "DS003": 2,
-    "DS004": 2,
-    "DS011": 4
-  },
   "src/app/components/CartDrawer.tsx": {
     "DS001": 22,
     "DS002": 35,
@@ -405,14 +391,6 @@
     "DS002": 6,
     "DS003": 3,
     "DS011": 11
-  },
-  "src/app/components/FeaturesSection.tsx": {
-    "DS001": 6,
-    "DS002": 8,
-    "DS003": 3,
-    "DS004": 2,
-    "DS008": 1,
-    "DS011": 4
   },
   "src/app/components/FlashProductCard.tsx": {
     "DS001": 9,
@@ -432,33 +410,12 @@
     "DS011": 2
   },
   "src/app/components/HeaderClient.tsx": {
-    "DS001": 48,
-    "DS002": 57,
-    "DS003": 41,
-    "DS004": 13,
-    "DS005": 4,
-    "DS006": 123,
-    "DS011": 4
-  },
-  "src/app/components/Hero.tsx": {
-    "DS001": 2,
-    "DS002": 1,
-    "DS005": 1
-  },
-  "src/app/components/HeroBestSellers.tsx": {
-    "DS001": 8,
-    "DS002": 12,
-    "DS003": 9,
-    "DS004": 3
-  },
-  "src/app/components/HeroSliderIndicator.tsx": {
-    "DS001": 3
-  },
-  "src/app/components/HomePageClient.tsx": {
-    "DS001": 6,
-    "DS002": 10,
-    "DS003": 8,
-    "DS004": 4,
+    "DS001": 36,
+    "DS002": 44,
+    "DS003": 39,
+    "DS004": 5,
+    "DS005": 2,
+    "DS006": 3,
     "DS011": 4
   },
   "src/app/components/InstallAppBanner.tsx": {
@@ -514,11 +471,7 @@
     "DS011": 4
   },
   "src/app/components/ProductCard.tsx": {
-    "DS001": 5,
-    "DS002": 9,
-    "DS003": 2,
-    "DS004": 1,
-    "DS006": 29
+    "DS006": 4
   },
   "src/app/components/ProductCardSkeleton.tsx": {
     "DS001": 2,
@@ -532,16 +485,11 @@
     "DS004": 12,
     "DS007": 2
   },
-  "src/app/components/ProductSection.tsx": {
-    "DS001": 2,
-    "DS002": 1
-  },
   "src/app/components/ProductsDropdown.tsx": {
     "DS001": 6,
     "DS002": 10,
     "DS003": 5,
     "DS004": 4,
-    "DS006": 4,
     "DS007": 1,
     "DS008": 1,
     "DS011": 12
@@ -549,11 +497,6 @@
   "src/app/components/ProductsSkeleton.tsx": {
     "DS002": 1,
     "DS003": 2
-  },
-  "src/app/components/PromoBanner.tsx": {
-    "DS001": 4,
-    "DS002": 1,
-    "DS011": 4
   },
   "src/app/components/QuickOrderDrawer.tsx": {
     "DS001": 24,
@@ -571,27 +514,14 @@
     "DS011": 2
   },
   "src/app/components/SearchBar.tsx": {
-    "DS001": 32,
-    "DS002": 28,
-    "DS003": 18,
-    "DS004": 11,
-    "DS005": 1,
-    "DS006": 50
-  },
-  "src/app/components/SectionHeader.tsx": {
-    "DS002": 6,
-    "DS003": 4,
-    "DS004": 2,
-    "DS011": 8
+    "DS001": 25,
+    "DS002": 23,
+    "DS003": 13,
+    "DS004": 5,
+    "DS005": 1
   },
   "src/app/components/ShopBreadcrumbs.tsx": {
     "DS011": 4
-  },
-  "src/app/components/VentesFlashSection.tsx": {
-    "DS001": 2,
-    "DS002": 6,
-    "DS003": 3,
-    "DS011": 10
   },
   "src/app/components/WhatsAppFab.tsx": {
     "DS005": 2,

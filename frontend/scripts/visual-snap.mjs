@@ -133,15 +133,32 @@ for (const theme of THEMES) {
       try {
         await page.goto(url, { waitUntil: 'networkidle2', timeout: 60_000 });
 
-        // Force every `content-visibility: auto` band to lay out, or the full-page shot captures
-        // collapsed placeholders instead of the sections you are trying to review.
+        /**
+         * Force every `content-visibility: auto` band to lay out, or the full-page shot captures
+         * collapsed placeholders instead of the sections you are trying to review — AND then wait
+         * for the lazy images that scrolling just triggered to actually decode.
+         *
+         * The second half is not belt-and-braces. With a flat 500ms wait this script produced a
+         * homepage shot whose brand wall was twelve empty cells and whose blog rail was three grey
+         * rectangles. Both were investigated as layout bugs; both were fine. Probing the live page
+         * reported `complete: true` and `naturalWidth: 209` for the exact logos the PNG showed as
+         * blank. Waiting on a CONDITION instead of a duration is the difference between a review
+         * artefact you can trust and one you have to re-verify by hand.
+         */
         await page.evaluate(async () => {
           for (let y = 0; y < document.body.scrollHeight; y += 600) {
             window.scrollTo(0, y);
-            await new Promise((r) => setTimeout(r, 50));
+            await new Promise((r) => setTimeout(r, 60));
           }
           window.scrollTo(0, 0);
-          await new Promise((r) => setTimeout(r, 500));
+
+          const deadline = Date.now() + 15_000;
+          const pending = () =>
+            Array.from(document.images).filter((i) => !i.complete || i.naturalWidth === 0);
+          while (pending().length > 0 && Date.now() < deadline) {
+            await new Promise((r) => setTimeout(r, 200));
+          }
+          await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 300)));
         });
 
         await page.screenshot({ path: path.join(OUT, name), fullPage: true });

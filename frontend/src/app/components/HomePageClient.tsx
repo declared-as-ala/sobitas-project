@@ -164,19 +164,40 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
         />
 
         {/*
-          THE TRUST STRIP MOVED UP, and it is the same black surface as the hero above it.
-          Header + hero + this strip are now ONE mass, and the free-delivery threshold plus
-          "paiement à la livraison" land BEFORE browsing rather than after it — the order a
-          cash-on-delivery shopper needs. It also deletes two of the page's measured dead gaps
-          (80+80 desktop, 96+48 mobile) outright, because a `strip` band has no gap to either
-          neighbour it shares a surface with.
+          ── THE BAND SEQUENCE (DESIGN_SYSTEM v6 §4) ───────────────────────────────────────────
+          Read this list top-to-bottom; it is the page's entire colour architecture and it is
+          decided HERE, never inside a section component.
 
-          `pt-defer` is NOT on a wrapper any more — it is a prop on the Section, so it lands on
-          the same element as the surface class. `content-visibility: auto` skips a subtree's
-          paint but NOT the element's own box decoration, so a slab background on a CHILD of a
-          deferred wrapper renders as a white rectangle until it scrolls in: every black band
-          would flash white on scroll. `pt-reveal` stays on the outer div because it drives a
-          `view()` timeline that must not sit inside a skipped subtree.
+              hero            canvas          artwork supplies the darkness
+              trust strip     sunken
+              catégories      canvas
+              plus vendus     sunken
+              ventes flash    canvas          + the four black countdown tiles
+              nouveautés      sunken
+              packs           canvas
+              promo strip     ORANGE          the one saturated band
+              blog            sunken
+              marques         canvas
+              bloc SEO        sunken
+
+          TWO INVARIANTS:
+            1. No two adjacent bands share a surface, so the automatic 1px seam always has a
+               colour change to reinforce and never has to carry a boundary alone.
+            2. Exactly ONE saturated band and ZERO dark bands. v5 had five dark bands here; the
+               owner's verdict was that black had stopped being emphasis and become the page.
+               Black now appears only in the 36px utility bar, the countdown tiles, the hero
+               caption plate and the footer.
+
+          THE TRUST STRIP SITS SECOND on purpose: the free-delivery threshold and "paiement à la
+          livraison" land BEFORE browsing rather than after it — the order a cash-on-delivery
+          shopper needs — and a `strip` band between two others deletes two of the page's measured
+          dead gaps (80+80 desktop, 96+48 mobile).
+
+          `pt-defer` is a PROP on the Section, never on a wrapper: `content-visibility: auto`
+          skips a subtree's paint but NOT the element's own box decoration, so a surface class on
+          a CHILD of a deferred wrapper renders as a bare rectangle until it scrolls in.
+          `pt-reveal` stays on the outer div because it drives a `view()` timeline that must not
+          sit inside a skipped subtree.
         */}
         <FeaturesSection />
 
@@ -221,6 +242,7 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
               products={newProducts as any}
               showBadge
               badgeText="New"
+              surface="sunken"
               defer
             />
           </div>
@@ -236,9 +258,12 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
             deleted because the category landing pages are the next phase and it is the natural
             block for them — but it is dead code today, so do not assume it is exercised. */}
 
-        {/* Nos packs — the second SLAB merchandising band. Four white plates on black is the
-            treatment a bundle deserves, and it is what makes the packs read as an offer rather
-            than as one more product rail. */}
+        {/* Nos packs — canvas, `default` spacing. It was the page's SECOND slab band at `feature`
+            spacing, which is what tipped the page from "one dark accent" into "a dark theme": two
+            near-black merchandising bands 1,500px apart read as the page's base colour rather
+            than as emphasis. It keeps the "Économisez" kicker and a `scale="1"` heading, which is
+            what actually marks it as an offer. `feature` is now reserved to Ventes flash alone —
+            two dominant bands is zero dominant bands. */}
         {(safeAccueil.packs?.length ?? 0) > 0 && (
           <div className="pt-reveal" data-motion>
             <ProductSection
@@ -249,8 +274,6 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
               viewAllHref="/packs"
               viewAllLabel="Voir tous les packs"
               imageContext="packs"
-              surface="slab"
-              spacing="feature"
               defer
             />
           </div>

@@ -33,10 +33,11 @@ import { buildHeroImageSet, type HeroSlide, type HeroImageSet } from '@/util/her
  * composites to at worst #2F2F30, where white text is 13.4:1 no matter what the photograph is.
  * Contrast is a floor, not a preference (WCAG 1.4.3). The gradient is kept purely as a blend.
  *
- * COLOUR. This band carries `.pt-slab`, so `bg-brand` / `text-brand` / `text-on-brand` resolve to
- * the slab-scoped accent (#FF8A4C on #0A0A0B, 8.47:1). They used to be `bg-brand-500` with white
- * on top — #F8480C under white is 3.55:1 and fails AA outright. brand-500 remains a GRAPHICAL
- * accent only; it must never carry text.
+ * COLOUR. The BAND is the page canvas; only the caption PLATE is dark, and it carries `.pt-scrim`,
+ * so `bg-brand` / `text-brand` / `text-on-brand` inside it resolve to the slab-scoped accent
+ * (#FF8A4C, 8.47:1 with near-black on it) while everything outside the plate stays in page scope.
+ * They used to be `bg-brand-500` with white on top — #F8480C under white is 3.55:1 and fails AA
+ * outright. brand-500 remains a GRAPHICAL accent only; it must never carry text.
  */
 
 /**
@@ -151,7 +152,15 @@ function HeroCaption({ slide, hasControls }: { slide: HeroSlide | null; hasContr
             of a property of the image someone happened to upload.
             `inline-block` so the plate hugs the copy rather than always painting a full-width
             slab — an image-only slide already renders nothing at all (see the guard above). */}
-        <div className="inline-block max-w-[34rem] rounded-xl bg-[#0A0A0B]/85 px-5 py-4 backdrop-blur-[2px] sm:px-6 sm:py-5 lg:max-w-[38rem]">
+        {/* `.pt-scrim` (tokens.css) is the plate AND the token scope in one class — the fill and
+            the ink can no longer disagree. Everything inside is written in plain tokens, so the
+            same markup would be correct if this plate were ever moved onto a light surface. */}
+        {/* No `backdrop-blur`. It was here from the gradient-scrim era, when the plate was thin
+            enough that blurring the artwork behind it did some work. At 86% opacity it is
+            invisible, and it forces a compositing layer directly over the LCP image on every page
+            load — which is why DESIGN_SYSTEM §9 bans it and scripts/lint-design.mjs (DS009) flags
+            it. Caught by the linter, not by eye. */}
+        <div className="pt-scrim inline-block max-w-[34rem] rounded-2xl px-5 py-4 sm:px-6 sm:py-5 lg:max-w-[38rem]">
           {badge && (
             <span className="mb-3 inline-flex items-center rounded-md bg-brand px-2.5 py-1 font-display text-[10px] font-bold uppercase tracking-[0.16em] text-on-brand sm:mb-4 sm:text-[11px]">
               {badge}
@@ -161,7 +170,7 @@ function HeroCaption({ slide, hasControls }: { slide: HeroSlide | null; hasContr
           {title && (
             /* <p>, not a heading: the page's single <h1> is the SEO block in HomePageClient, and a
                rotating banner must not compete with it for the document outline. */
-            <p className="font-display font-compressed text-[2.1rem] font-extrabold uppercase leading-[0.92] tracking-tight text-white sm:text-5xl lg:text-[3.5rem] xl:text-6xl">
+            <p className="font-display font-compressed text-[2.1rem] font-extrabold uppercase leading-[0.92] tracking-tight text-ink-1 sm:text-5xl lg:text-[3.5rem] xl:text-6xl">
               {lead}
               {accent && (
                 <>
@@ -173,7 +182,7 @@ function HeroCaption({ slide, hasControls }: { slide: HeroSlide | null; hasContr
           )}
 
           {subtitle && (
-            <p className="mt-3 max-w-md text-sm font-medium leading-snug text-white/95 sm:mt-4 sm:text-base">
+            <p className="mt-3 max-w-md text-sm font-medium leading-snug text-ink-2 sm:mt-4 sm:text-base">
               {subtitle}
             </p>
           )}
@@ -262,14 +271,15 @@ function HeroSlideFrame({
 /* The slider viewport. `.pt-hero` (globals.css) sets a DEFINITE height, so the box is reserved
    before the image loads (zero CLS) and the absolutely-filled slide resolves against it. The
    neutral placeholder shows only for the instant before the preloaded LCP image paints. */
-/* `bg-sunken`, not `bg-gray-100 dark:bg-gray-900`: this is the colour that shows for the instant
-   before the preloaded LCP image paints. Inside the black stage a light-grey rectangle flashed
-   under a near-black header; the token resolves to the slab's own well (#202027 / #101012) because
-   the band scope re-points it, so the pre-paint frame is dark in both themes.
+/* `bg-sunken` is the colour that shows for the instant before the preloaded LCP image paints —
+   warm sand rather than a cold grey, so the pre-paint frame belongs to the page.
 
-   `sm:rounded-2xl` is GONE. The stage supplies the frame now, and dropping the rounding hands the
-   artwork back the 2x16px the corners were insetting. */
-const FRAME_BASE = 'pt-hero relative w-full overflow-hidden bg-sunken';
+   `sm:rounded-2xl` is BACK. v5 removed it because the artwork sat inside a full-bleed black stage
+   where a rounded corner had nothing to round against. On a white page the frame is the only thing
+   giving the banner an edge, and a hard-cornered full-width photograph butted against a white
+   header reads as a browser rendering a raw image. Phones stay square: there the banner IS
+   full-bleed, so there are no corners to round. */
+const FRAME_BASE = 'pt-hero relative w-full overflow-hidden bg-sunken sm:rounded-2xl';
 
 export function Hero({ slides, fallbackAlt, bestSellers = [] }: HeroProps) {
   const showAside = bestSellers.length > 0;
@@ -314,20 +324,23 @@ export function Hero({ slides, fallbackAlt, bestSellers = [] }: HeroProps) {
 
   return (
     /*
-     * THE HERO IS A STAGE (DESIGN_SYSTEM v5 §4).
+     * THE HERO IS A LIGHT BAND HOLDING DARK ARTWORK (DESIGN_SYSTEM v6 §4).
      *
-     * `pt-slab` makes this band near-black (#0E0E12 light / #2A2A30 dark) and, because the header
-     * carries the same scope, the two read as ONE continuous black mass with no seam between them.
-     * The trust strip directly below is the same surface again, so the page opens with ~700px of
-     * black and the first white the eye meets is the category rail — which is what makes that rail
-     * land as a hard cut rather than as one more white section on a white sheet.
+     * v5 made this band `pt-slab` so the header, the hero and the trust strip fused into ~700px of
+     * near-black. That is the single change the owner pushed back on hardest, and they were right:
+     * the artwork the admin uploads is ALREADY dark and high-contrast, so painting the band behind
+     * it black adds no contrast and simply doubles the black. Here the band is the page's own
+     * canvas and the photograph supplies the darkness — the same visual weight, a tenth of the ink.
      *
-     * `data-band` opts it into the automatic 1px seam rule. `py-0` is load-bearing at BOTH ends:
-     * no top padding so the hero is flush against the header, no bottom padding because the trust
-     * strip supplies it and there must be no gap between the artwork and the trust row.
-     *
-     * The vertical padding that used to sit here (`sm:pt-4 lg:pt-6`) is gone with it — that gap
-     * only existed to separate a white hero from a white header.
+     * VERTICAL RHYTHM:
+     *   phones     pt-0  — the artwork is full-bleed and must start at the header's edge
+     *   sm+        pt-4 (16px). The frame is rounded from `sm`, and a rounded rectangle butted
+     *              against the header's horizontal rule reads as a rendering fault; 16px is the
+     *              least that separates them. It is deliberately the `strip` value from the
+     *              spacing scale rather than a fourth number — scripts/measure-bands.mjs asserts
+     *              that every band padding on the page is one of the scale's values, and the
+     *              first draft of this band failed that check with a bespoke 32px.
+     *   bottom     pb-0 always. The trust strip below supplies the separation with its own fill.
      *
      * LCP CONTRACT UNTOUCHED. buildHeroImageSet, the <picture> sources, fetchPriority="high",
      * loading="eager" and the <link rel=preload> pair are all unchanged, and `.pt-hero` keeps its
@@ -339,7 +352,7 @@ export function Hero({ slides, fallbackAlt, bestSellers = [] }: HeroProps) {
       data-band-first=""
       aria-label="Bannière principale"
       {...(slides.length > 1 ? { 'aria-roledescription': 'carrousel' } : {})}
-      className="pt-slab w-full py-0"
+      className="w-full bg-canvas pb-0 pt-0 sm:pt-4"
     >
       {/*
         The SITE container, byte-for-byte: `mx-auto max-w-site px-4 sm:px-6 lg:px-8`. The header,
@@ -356,7 +369,7 @@ export function Hero({ slides, fallbackAlt, bestSellers = [] }: HeroProps) {
         <div
           className={
             showAside
-              ? 'grid w-full grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]'
+              ? 'grid w-full grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_364px] xl:gap-6'
               : 'w-full'
           }
         >

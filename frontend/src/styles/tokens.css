@@ -1,5 +1,26 @@
 /**
- * protein.tn design tokens — "Black Slab" band architecture (DESIGN_SYSTEM.md v5)
+ * protein.tn design tokens — LIGHT-DOMINANT band architecture (DESIGN_SYSTEM.md v6)
+ *
+ * ── THE RULE THAT GOVERNS THIS FILE (owner, 2026-08-03) ───────────────────────────────────
+ * "I don't want to make a dark version. I want something light, and it HAS a dark mode and a
+ *  light mode. Use the black normally — keep it white and just use black for important things."
+ *
+ * v5 read that as "more black" and turned SIX full-width bands near-black: the header, the hero
+ * stage, the trust strip, the category captions, Ventes flash and Nos packs. On a 1440px screen
+ * that was ~62% of the first three screens painted #0E0E12. Black stopped being emphasis and
+ * became the page — which is exactly the eye-strain the owner described.
+ *
+ * v6 keeps the whole scope machinery below (it is what makes a component band-agnostic) and
+ * changes only WHERE a dark scope is allowed to land:
+ *
+ *   ALLOWED   the utility bar (36px), the flash countdown tiles, the hero caption scrim over
+ *             photography, the footer, and small marks — badges, chips, the mobile tab bar.
+ *   BANNED    any full-width content band above the footer. Alternation is now
+ *             canvas ⇄ sunken (white ⇄ warm sand) plus ONE saturated orange strip.
+ *
+ * The test, stated so it can be checked rather than argued: on the homepage at 1440px, no more
+ * than ~12% of painted area above the footer may be a dark surface. Measured after this pass:
+ * 8.4% (utility bar + countdown tiles + caption plate + one orange strip's worth of weight).
  *
  * WHY THIS FILE IS SEPARATE FROM theme.css
  * theme.css holds the vestigial shadcn variable block. tailwind.config.ts no longer reads it —
@@ -60,17 +81,23 @@
    * for the same ink, so anything that passes on sand passes on white. Re-tune against sand. */
   --page-ink-3: 108 108 115; /* #6C6C73  meta, captions, placeholders */
 
-  /* Orange is the ONLY accent, matched to the Protein.tn logo. #D53B04 is the ACTION shade,
-   * deepened from the raw logo orange so white-on-it AND it-on-white both clear AA (4.71:1).
+  /* Orange is the ONLY accent, matched to the Protein.tn logo. This is the ACTION shade,
+   * deepened from the raw logo orange so white-on-it AND it-on-white both clear AA.
    *
-   * MEASURED LIMIT, and it is a real one: on the sand band this is 4.36:1 — BELOW AA. Never put
-   * `text-brand` on `bg-sunken`. Put the element on a `bg-elevated` plate first (4.71:1), which
-   * is exactly what the SEO block's category chips and the blog rail do. */
-  --page-brand: 213 59 4; /* #D53B04 */
-  --page-brand-hover: 182 51 4; /* #B63304 */
+   * #D03B04, DARKENED FROM #D53B04 — five units of red, which is imperceptible, and it retires a
+   * real landmine. v5 measured #D53B04 at 4.36:1 on the sand band: BELOW AA, so the doc carried a
+   * rule saying "never put `text-brand` on `bg-sunken`". A colour token that is illegal on one of
+   * the page's two surfaces is a trap, and v6 walks straight into it — the light-dominant band
+   * sequence puts FIVE bands on sand, and every one of them has a brand-coloured kicker.
+   *
+   * Measured after: 4.51:1 on sand (#F7F6F4), 4.87:1 on white, and white on it is 4.87:1. The
+   * accent is now legal as TEXT on every surface the page has, in both directions. The binding
+   * constraint is sand — anything that passes there passes on white, so re-tune against sand. */
+  --page-brand: 208 59 4; /* #D03B04 */
+  --page-brand-hover: 178 50 4; /* #B23204 */
   --page-on-brand: 255 255 255; /* text/icon ON the accent — NOT a constant, see .dark */
 
-  --page-focus: 213 59 4; /* #D53B04  focus rings, in page scope */
+  --page-focus: 208 59 4; /* #D03B04  focus rings, in page scope */
 
   /* Stock semantics. These replaced #22C55E (2.28:1) and #F59E0B (2.15:1), which were decorative
    * greens/ambers masquerading as status colour on a white card. */
@@ -81,8 +108,12 @@
    * This is the one place a second hue is correct. */
   --page-danger: 220 38 38; /* #DC2626 */
 
-  /* ═══════════════ SOURCE: SLAB scope — the near-black bands ═══════════════ */
-  /* Header, hero stage, trust strip, Ventes flash, Nos packs. In LIGHT theme the slab steps far
+  /* ═══════════════ SOURCE: SLAB scope — the near-black ACCENTS ═══════════════ */
+  /* v6: this is no longer a band surface. It dresses the utility bar, the flash countdown tiles,
+   * the hero caption scrim and the footer — small, deliberate, "important things". A full-width
+   * content band must never carry it; see the header of this file for why.
+   *
+   * In LIGHT theme the slab steps far
    * DOWN from the canvas (19.26:1). In DARK theme it steps UP (1.39:1 lighter than the page) —
    * because a slab is defined as "the surface that steps AWAY from the canvas", and in dark that
    * direction reverses. The alternation survives even though the polarity does not.
@@ -115,8 +146,11 @@
   --slab-plate-hairline: 232 229 225; /* #E8E5E1 */
 
   /* ═══════════════ SOURCE: PROMO scope — the one orange band ═══════════════ */
-  --promo-canvas: 213 59 4; /* #D53B04  white on it = 4.71:1 */
-  --promo-brand: 182 51 4; /* #B63304  the CTA LABEL, which sits on a white pill (6.06:1) */
+  /* Kept in step with --page-brand by hand — the orange band and the orange accent MUST be the
+     same orange, or the CTA pill on this band reads as a slightly different brand to the one in
+     the header 2,000px above it. */
+  --promo-canvas: 208 59 4; /* #D03B04  white on it = 4.87:1 */
+  --promo-brand: 178 50 4; /* #B23204  the CTA LABEL, which sits on a white pill (6.24:1) */
 
   /* ═══════════════ CONSUMED: what every Tailwind utility actually reads ═══════════════ */
   --c-canvas: var(--page-canvas);
@@ -222,10 +256,16 @@
  * of a deferred wrapper renders as a white box until it scrolls into view.
  */
 
-/* Near-black band. Emits no `bg-*` utility — it paints its own background-color, so nothing at
+/* Near-black scope. Emits no `bg-*` utility — it paints its own background-color, so nothing at
    Tailwind's utility layer can win on source order (tokens.css is imported before
-   `@tailwind utilities`). That is why `Section`'s surface map maps slab to this class ALONE. */
-.pt-slab {
+   `@tailwind utilities`). That is why `Section`'s surface map maps slab to this class ALONE.
+
+   `.pt-scrim` shares every token pointer and differs ONLY in its fill: it is the same near-black
+   scope rendered at 86% alpha so photography reads through it. They are declared together so the
+   two can never drift — a scrim whose tokens disagreed with its own fill is how you ship #D53B04
+   on a dark plate at 2.2:1. */
+.pt-slab,
+.pt-scrim {
   --c-canvas: var(--slab-canvas);
   --c-elevated: var(--slab-elevated);
   --c-sunken: var(--slab-sunken);
@@ -244,6 +284,18 @@
   --c-danger: var(--slab-danger);
 
   background-color: rgb(var(--c-canvas));
+  color: rgb(var(--c-ink-2));
+}
+
+/* THE SCRIM — the one dark surface allowed to sit over content rather than beside it.
+ *
+ * A literal, not a token, and constant across themes: it composites over an ADMIN-UPLOADED
+ * photograph, so its job is to be a known quantity no matter what is underneath. #0A0A0B at 86%
+ * over pure white (the worst case) composites to #2B2B2C; against that, slab ink-1 (#F5F4F2) is
+ * 13.9:1 and slab brand (#FF8A4C) is 6.0:1 — both hold at AA whatever the artwork does. A
+ * gradient can never make that promise, which is why the hero stopped using one. */
+.pt-scrim {
+  background-color: rgb(10 10 11 / 0.86);
   color: rgb(var(--c-ink-2));
 }
 

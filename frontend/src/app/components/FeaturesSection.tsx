@@ -11,17 +11,23 @@ import { Section } from '@/app/components/layout/Section';
  * rows plus a 96px gap. It also sat BELOW the best-seller rail, so a first-time visitor met the
  * products before any of the reassurances that make them buy.
  *
- * Now it is `surface="slab"` + `spacing="strip"`, directly under the hero — the same surface — so
- * the two fuse into one black mass separated by nothing but the automatic 1px rule. Both dead gaps
- * disappear, and "Livraison gratuite dès 300 DT / 100% authentique / Paiement à la livraison /
- * Support 7j/7" now lands BEFORE browsing. For a Tunisian cash-on-delivery shopper that is the
+ * Now it is `surface="sunken"` + `spacing="strip"`, directly under the hero, so both dead gaps
+ * disappear and "Livraison gratuite dès 300 DT / 100% authentique / Paiement à la livraison /
+ * Support 7j/7" lands BEFORE browsing. For a Tunisian cash-on-delivery shopper that is the
  * objection-handling order: the free-delivery threshold is a basket driver and COD is the payment
  * reassurance, and neither does much work after the products.
  *
- * COLOUR IS TOKENS, NOT LITERALS. The band scope supplies the surface, so there is not a single
- * `dark:` class here. The pale `bg-red-50` icon chip is deleted — a tinted square is meaningless on
- * black and it was the last decorative container in the row. Icons are bare lucide glyphs in
- * `text-brand`, which resolves to #FF8A4C on the slab (8.25:1 light / 6.11:1 dark).
+ * SAND, NOT BLACK (v6). It was `surface="slab"`, which fused it to a black hero into one ~700px
+ * dark mass. On sand it still separates cleanly from the white hero band above and the white
+ * category rail below — a strip is the one place a 1.08:1 fill difference is enough, because it is
+ * only 68px tall and the two 1px band seams bracket it.
+ *
+ * COLOUR IS TOKENS, NOT LITERALS — there is not a single `dark:` class here. The pale `bg-red-50`
+ * icon chip is deleted; it was the last decorative container in the row. Icons are bare lucide
+ * glyphs in `text-brand` = #D53B04 on sand. That measures 4.36:1, which is BELOW the 4.5:1 text
+ * floor but comfortably above the 3:1 floor for graphical objects (WCAG 1.4.11) — and these are
+ * icons, not text. The words beside them are `text-ink-1` (17.9:1) and `text-ink-2` (6.7:1). Do
+ * not "tidy" the icon colour onto a label.
  *
  * DESCRIPTIONS ARE NOT CLIPPED AND NOT SET IN THE FAINTEST INK. They were `text-xs` in
  * `text-gray-500`. "Gratuite dès 300 DT, partout en Tunisie" is the highest-value string on the
@@ -44,18 +50,24 @@ const features = [
 
 export function FeaturesSection() {
   return (
-    <Section surface="slab" spacing="strip" width="wide" aria-labelledby="features-heading">
+    <Section surface="sunken" spacing="strip" width="wide" aria-labelledby="features-heading">
       <h2 id="features-heading" className="sr-only">
         Pourquoi choisir Protéine Tunisie
       </h2>
 
-      {/* 2x2 on phones, one row from md. `divide-*` draws the rules, so no cell needs its own
-          background and the hairline colour comes from the band's scope in both themes. */}
-      <ul className="grid grid-cols-2 divide-x divide-y divide-hairline md:grid-cols-4 md:divide-y-0">
+      {/* 2x2 on phones, one row from md.
+          `gap-px` over `bg-hairline`, NOT `divide-x divide-y`. Tailwind's `divide-x` compiles to
+          `& > * ~ *`, which in a TWO-COLUMN grid puts a left border on child 3 as well — a stray
+          vertical rule hanging at the left edge of the second row. It was invisible while this
+          strip was black-on-black; on sand it is a visible defect. A 1px gap cannot be wrong about
+          which edges are interior, because it only ever paints where two cells actually meet. */}
+      <ul className="grid grid-cols-2 gap-px bg-hairline md:grid-cols-4">
         {features.map(({ Icon, title, description }) => (
           <li
             key={title}
-            className="flex min-h-[68px] items-center gap-3 px-3 py-2.5 sm:gap-3.5 sm:px-5 md:min-h-0"
+            /* 8px grid: gap-3 (12) → gap-4 (16), px-4 (16) → px-6 (24), py-3 (12). The v5 values
+               were gap-3.5 (14) / px-5 (20) / py-2.5 (10) — three off-grid numbers in one row. */
+            className="flex min-h-[68px] items-center gap-3 bg-sunken px-4 py-3 sm:gap-4 sm:px-6 md:min-h-0"
           >
             <Icon className="h-5 w-5 shrink-0 text-brand" strokeWidth={1.75} aria-hidden="true" />
             <div className="min-w-0">

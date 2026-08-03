@@ -214,10 +214,19 @@ export const ProductCard = memo(function ProductCard({
           <Heart className={`h-[18px] w-[18px] ${favorite ? 'fill-brand text-brand' : 'text-ink-3'}`} />
         </button>
 
-        {/* Badges — top-left. Discount = the #FF5A00 accent; "TOP VENTE" = dark ink chip. */}
+        {/* Badges — top-left. Discount = the brand accent; Rupture / TOP VENTE = a dark chip.
+
+            THE DARK CHIPS CARRY `.pt-slab`, NOT `bg-ink-1 text-white`. That pairing was a real
+            dark-mode defect, found by scripts/audit-contrast.mjs: `--c-ink-1` INVERTS with the
+            theme, so in dark mode `bg-ink-1` resolves to #F5F4F2 and the chip rendered white text
+            on a near-white pill at 1.10:1. Sixteen of them on the homepage alone.
+
+            The rule this establishes: an element that must stay dark in BOTH themes is a SCOPE
+            (`.pt-slab`), never an ink token used as a fill. `bg-ink-1` means "the colour of type",
+            and the colour of type is supposed to flip. */}
         <div className="pointer-events-none absolute left-3 top-3 z-10 flex flex-col items-start gap-1.5">
           {!inStock && (
-            <span className="inline-flex items-center rounded-lg bg-ink-1 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white shadow-sm">
+            <span className="pt-slab inline-flex items-center rounded-lg px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-ink-1 shadow-sm">
               Rupture
             </span>
           )}
@@ -228,7 +237,7 @@ export const ProductCard = memo(function ProductCard({
             </span>
           )}
           {inStock && (productData.isBestSeller || (showBadge && badgeText)) && (
-            <span className="inline-flex items-center gap-1 rounded-lg bg-ink-1 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white shadow-sm">
+            <span className="pt-slab inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-ink-1 shadow-sm">
               <Star className="h-3 w-3 shrink-0 fill-[#FFB020] text-[#FFB020]" aria-hidden="true" />
               {badgeText || 'Top vente'}
             </span>

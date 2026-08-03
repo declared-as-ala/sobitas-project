@@ -170,14 +170,25 @@ export function HeroSliderControls({
 
   const pad = (n: number) => String(n).padStart(2, '0');
 
-  // bg-black/45, not /35 + backdrop-blur. `backdrop-blur` is banned (DESIGN_SYSTEM §9): each
-  // instance forces its own compositing layer, and these sit directly over the LCP image on
-  // every page load. A slightly denser scrim gives the same separation from the photograph for
-  // no compositing cost.
+  /**
+   * `.pt-scrim` (tokens.css), not `bg-black/45`.
+   *
+   * These controls sit over ARTWORK THE ADMIN UPLOADS, so their contrast is only knowable if the
+   * surface underneath them is. /45 over a pure-white banner composites to #8C8C8C, where the
+   * white chevron measures 2.90:1 — under the 3:1 floor for a graphical control (WCAG 1.4.11) on
+   * exactly the kind of bright banner a supplement brand ships. The scrim is 86%, composites to
+   * at worst #2B2B2C, and puts the chevron at 12.6:1 whatever the photograph does.
+   *
+   * It also carries the slab TOKEN scope, so the ring, the ink and the accent inside these
+   * controls all resolve against a dark surface instead of being hand-written literals.
+   *
+   * No `backdrop-blur` (DESIGN_SYSTEM §9): each instance forces its own compositing layer, and
+   * these sit directly over the LCP image on every page load.
+   */
   const arrow =
-    'pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-black/45 text-white ' +
-    'transition-colors duration-200 hover:bg-black/65 focus-visible:outline-none focus-visible:ring-2 ' +
-    'focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black/40 motion-reduce:transition-none';
+    'pt-scrim pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full border border-hairline text-ink-1 ' +
+    'transition-colors duration-200 hover:border-brand focus-visible:outline-none focus-visible:ring-2 ' +
+    'focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-transparent motion-reduce:transition-none';
 
   return (
     <div
@@ -211,28 +222,34 @@ export function HeroSliderControls({
         <ChevronRight className="h-5 w-5" aria-hidden="true" />
       </button>
 
-      {/* Bottom rail: counter + progress on the left, dots on the right. */}
+      {/* Bottom rail: counter + progress on the left, dots on the right.
+
+          BOTH CLUSTERS SIT ON THEIR OWN SCRIM PILL. They used to be bare white type and bare
+          white dots with a `text-shadow` doing the legibility work — and a text-shadow is exactly
+          the kind of "looks fine on the banner I tested" fix that fails silently on the next
+          upload. On a white banner the counter measured 1.08:1 and the inactive dots were
+          invisible. A pill is 8px of extra chrome and makes both provable. */}
       <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 px-5 pb-5 sm:px-8 sm:pb-6 lg:px-12 xl:px-14">
-        <div className="pointer-events-none flex items-center gap-3">
-          <span className="font-display text-sm font-bold tabular-nums text-white [text-shadow:0_1px_10px_rgba(0,0,0,0.6)] sm:text-base">
+        <div className="pt-scrim pointer-events-none flex items-center gap-3 rounded-full px-4 py-2">
+          <span className="font-display text-sm font-bold tabular-nums text-ink-1 sm:text-base">
             {pad(active + 1)}
           </span>
           {/* The rule doubles as the autoplay progress bar, so the dwell is visible rather than a
               surprise. Fixed width keeps the counter from shifting as the index changes. */}
-          <span className="relative block h-[2px] w-12 overflow-hidden rounded-full bg-white/30 sm:w-16">
+          <span className="relative block h-[2px] w-12 overflow-hidden rounded-full bg-rule sm:w-16">
             <span
               ref={progressRef}
               data-motion
-              className="absolute inset-y-0 left-0 block rounded-full bg-brand-500"
+              className="absolute inset-y-0 left-0 block rounded-full bg-brand"
               style={{ width: '0%' }}
             />
           </span>
-          <span className="font-display text-sm font-bold tabular-nums text-white/60 [text-shadow:0_1px_10px_rgba(0,0,0,0.6)] sm:text-base">
+          <span className="font-display text-sm font-bold tabular-nums text-ink-3 sm:text-base">
             {pad(count)}
           </span>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="pt-scrim flex items-center gap-1 rounded-full px-2">
           {Array.from({ length: count }).map((_, i) => {
             const isActive = i === active;
             return (
@@ -251,8 +268,8 @@ export function HeroSliderControls({
                   data-motion
                   className={cn(
                     'block h-[6px] rounded-full transition-[width,background-color] duration-300 ease-out',
-                    'group-focus-visible:ring-2 group-focus-visible:ring-white group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-black/50',
-                    isActive ? 'w-5 bg-brand-500' : 'w-[6px] bg-white/55 group-hover:bg-white',
+                    'group-focus-visible:ring-2 group-focus-visible:ring-focus group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-transparent',
+                    isActive ? 'w-5 bg-brand' : 'w-[6px] bg-ink-3 group-hover:bg-ink-1',
                   )}
                 />
               </button>

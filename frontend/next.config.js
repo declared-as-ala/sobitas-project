@@ -15,6 +15,20 @@ const parentLockfile = path.join(__dirname, '..', 'package-lock.json');
 const monoRepoRoot = fs.existsSync(parentLockfile) ? path.join(__dirname, '..') : undefined;
 
 const nextConfig = {
+  /**
+   * Build output directory, overridable so a production build can run WITHOUT destroying a dev
+   * server's assets.
+   *
+   * `next dev` and `next build` both write `.next/`. Running a build (or `next start`) while a dev
+   * server is up leaves the running server serving HTML that references stylesheet hashes the
+   * build has just replaced — every CSS request 404s and the site renders as unstyled HTML. That
+   * happened here: a page served at 400 bytes of CSS instead of 328 kB, and it looked like a
+   * catastrophic regression rather than two processes sharing one directory.
+   *
+   * `NEXT_DIST_DIR=.next-verify npm run build` gives the build its own directory. Default is
+   * unchanged, so CI and the Dockerfile are unaffected.
+   */
+  distDir: process.env.NEXT_DIST_DIR || '.next',
   output: 'standalone',
   ...(monoRepoRoot && { outputFileTracingRoot: monoRepoRoot }),
   reactStrictMode: true,

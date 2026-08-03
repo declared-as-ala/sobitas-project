@@ -315,14 +315,22 @@ export function HeaderClient() {
           the page under its own weight. No JS, no state, no max-height animation: this is what
           removes the old two-state "lag" where the `scrolled` boolean flipped back and forth at a
           single threshold. Only the main bar + nav below are sticky. */}
-      <div className="font-poppins bg-ink-1 text-gray-300">
-        <div className="hidden md:flex max-w-site mx-auto h-9 px-4 lg:px-8 items-center justify-between text-xs">
+      {/* THE ONE DARK STRIP IN THE CHROME, and it is 36px tall.
+          `.pt-slab` rather than `bg-ink-1`: `bg-ink-1` inverts with the theme, so in dark mode
+          this row rendered a #F5F4F2 bar with `text-gray-300` on it — 1.6:1, unreadable. The
+          scope keeps it dark in BOTH themes and gives its contents real ink tokens. */}
+      <div className="pt-slab font-poppins">
+        <div className="hidden md:flex max-w-site mx-auto h-9 px-4 lg:px-8 items-center justify-between text-xs text-ink-2">
           <div className="flex items-center gap-3">
             <a href={`tel:${PHONE.replace(/\s/g, '')}`} className="flex items-center gap-1.5 hover:text-brand transition-colors shrink-0" aria-label={`Appeler ${PHONE}`}>
               <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden />
               <span>{PHONE}</span>
             </a>
-            <span className="text-white/20">|</span>
+            {/* A real 1px rule, not a "|" glyph. A pipe character is TEXT — it inherits a font,
+                a line-height and a colour that a contrast audit then has to judge as text (it
+                measured 3.61:1 and was reported as a failure it could never pass, because a
+                divider is not supposed to be legible). A 1px box is unambiguously a separator. */}
+            <span className="h-3 w-px shrink-0 bg-rule" aria-hidden="true" />
             <a href={`tel:${PHONE_FIXE.replace(/\s/g, '')}`} className="flex items-center gap-1.5 hover:text-brand transition-colors shrink-0" aria-label={`Appeler ${PHONE_FIXE}`}>
               <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden />
               <span>{PHONE_FIXE}</span>
@@ -343,7 +351,7 @@ export function HeaderClient() {
             <span>{DELIVERY_MSG}</span>
           </span>
         </div>
-        <div className="md:hidden flex h-9 px-4 items-center justify-center text-[11px] text-gray-300">
+        <div className="md:hidden flex h-9 px-4 items-center justify-center text-[11px] text-ink-2">
           <Truck className="h-3.5 w-3.5 mr-1.5 shrink-0 text-ok" aria-hidden />
           <span className="min-w-0 truncate">{DELIVERY_MSG}</span>
         </div>
@@ -351,7 +359,15 @@ export function HeaderClient() {
 
       {/* Sticky header = main bar + nav row only. Pure-CSS `sticky top-0`; no scroll listener, no
           collapse — nothing to jitter. z-50 keeps it above page content and the hero pin. */}
-      <header className="pt-slab font-poppins sticky top-0 z-50 w-full border-b border-hairline">
+      {/* WHITE, not black (owner, 2026-08-03: "even the header going black, that's bad — keep it
+          white and just use black for important things").
+
+          `bg-canvas` + `border-b border-rule`, and the border weight is the load-bearing part: a
+          sticky white bar over white page content has no fill difference to separate it, so the
+          1px rule IS the boundary and it has to be the STRONGER of the two weights (#D6D2CC, not
+          the #E8E5E1 hairline). No shadow — a drop shadow under a full-width bar is the single
+          most recognisable "purchased theme" tell, and the rule does the same job at 1px. */}
+      <header className="bg-canvas font-poppins sticky top-0 z-50 w-full border-b border-rule">
         {/* MOBILE main bar — logo LEFT, then SEARCH + BURGER only (owner request). Compte and
             Panier used to live here too; they were removed because MobileTabBar already carries
             both, one thumb-tap away at the bottom of every screen. Duplicating them up here cost
@@ -408,7 +424,7 @@ export function HeaderClient() {
         </div>
 
         {/* DESKTOP main bar: white surface, orange logo, wide search, ghost icon buttons. */}
-        <div className="pt-slab hidden md:block">
+        <div className="hidden md:block">
           <div className="max-w-site mx-auto px-4 lg:px-8">
             <div className="flex items-center gap-6 h-[72px]">
               <Link href="/" className="flex-shrink-0 transition-opacity duration-200 hover:opacity-80" aria-label="Proteine Tunisie - Accueil">
@@ -537,7 +553,11 @@ export function HeaderClient() {
         {/* DESKTOP nav row — icon + label; active item is #FF5A00 with a 2px underline; the
             pack-builder entry renders as an orange button pinned to the right. */}
         <nav
-          className="pt-slab hidden md:block border-t border-hairline"
+          /* Same white surface as the bar above it, divided by a hairline. The nav row is NOT
+             given `bg-sunken` for structure, and that is a contrast decision rather than a taste
+             one: the active item is `text-brand`, which measures 4.71:1 on white but only 4.36:1
+             on sand — below AA. Structure here comes from the rule, not from a second fill. */
+          className="hidden md:block border-t border-hairline"
           aria-label="Navigation principale"
         >
           <div className="max-w-site mx-auto px-4 lg:px-8">
@@ -587,14 +607,25 @@ export function HeaderClient() {
                   On desktop the FAB sat in the bottom-right corner, far from the moment someone
                   decides to ask a question; here it sits beside the pack CTA where the intent is.
                   The floating button is hidden from `md` up so there is exactly ONE WhatsApp
-                  affordance per breakpoint — see WhatsAppFab. Secondary styling (outlined, not
-                  filled) so it supports the orange pack CTA rather than competing with it. */}
+                  affordance per breakpoint — see WhatsAppFab.
+
+                  FILLED, NOT OUTLINED, and that is a contrast fix rather than a restyle. The
+                  outlined version set the label in #25D366, which measured 5.87:1 while the nav
+                  was a black slab and 1.98:1 the moment it became white — a hard AA failure found
+                  by scripts/audit-contrast.mjs. No single green literal can pass on both a white
+                  and a near-black bar, and this cannot use a token because WhatsApp green must
+                  NOT flip with the theme; it is someone else's brand.
+
+                  Inverting it solves that permanently: the FILL is the literal (so recognition is
+                  preserved and it is identical in both themes) and the label is near-black on it
+                  at 9.92:1. It stays visually secondary to the orange pack CTA by being smaller
+                  and by using a hue no other control on the site uses. */}
               <a
                 href={buildWhatsAppHref()}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={WHATSAPP_ARIA_LABEL}
-                className="shrink-0 inline-flex items-center gap-2 rounded-lg border border-hairline bg-transparent px-3 py-2 text-[14px] font-semibold text-[#25D366] transition-all duration-200 hover:border-[#25D366] hover:bg-[#25D366] hover:text-[#0A0A0B] active:scale-[0.98] whitespace-nowrap"
+                className="shrink-0 inline-flex items-center gap-2 rounded-lg bg-[#25D366] px-3 py-2 text-[14px] font-semibold text-[#0A0A0B] transition-colors duration-200 hover:bg-[#1EBE5A] active:scale-[0.98] whitespace-nowrap"
               >
                 <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="currentColor" aria-hidden="true">
                   <path d={WHATSAPP_ICON_PATH} />

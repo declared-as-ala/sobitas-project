@@ -74,9 +74,11 @@ export function SectionHeader({
   id,
 }: SectionHeaderProps) {
   return (
-    // mb-6/mb-8, from mb-9/mb-12. The heading block is part of the band's body, not a third
-    // thing floating between the band's padding and its content.
-    <div className="mb-6 flex flex-row items-end justify-between gap-4 sm:mb-8">
+    /* 24 / 32 / 40 — one 8px unit per breakpoint, matching the band scale's own growth in
+       Section.tsx. The heading block is part of the band's body, not a third thing floating
+       between the band's padding and its content, so its bottom margin must always be strictly
+       smaller than the band's own `pt` (32/40/64 at `default`). It is, at every breakpoint. */
+    <div className="mb-6 flex flex-row items-end justify-between gap-4 sm:mb-8 lg:mb-10">
       <div className="min-w-0">
         {kicker && (
           <span className="pt-kicker mb-2.5 inline-flex items-center gap-2.5 text-brand">

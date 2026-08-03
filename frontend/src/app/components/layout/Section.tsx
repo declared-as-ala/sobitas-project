@@ -27,26 +27,44 @@ import { Container, type ContainerWidth } from './Container';
  * `grep -rn flagship src/` returned this file's definition and nothing else — zero call sites —
  * so no surface can silently keep the 96px that produced the 160px gaps.
  */
+/**
+ * ── THE SCALE IS FOUR STEPS AND EVERY NUMBER IS A MULTIPLE OF 8 ────────────────────────────
+ *
+ * v5's scale was 12/14/16 · 24/32/36 · 32/40/48 · 40/48/56. Three of those twelve numbers (14,
+ * 36, 56) are not multiples of 8, so no two bands on the page were ever an exact multiple of
+ * each other's rhythm and the eye read the whole column as slightly arbitrary — the owner's
+ * "bad spacings / bad calculation". Snapping to an 8px grid is not pedantry: it is what makes
+ * band padding, the 8px grid gaps, the 8px card padding steps and the 4px icon insets all land
+ * on the same lattice, so vertical relationships resolve as ratios instead of as near-misses.
+ *
+ *   strip     12 / 16            one row tall
+ *   tight     32 / 40 / 48       navigation & prose
+ *   default   40 / 48 / 64       every product or content grid
+ *   feature   48 / 64 / 80       the band that must dominate its neighbours
+ *
+ * Each step is the previous one plus exactly one 8px unit at mobile and two at desktop, so the
+ * hierarchy between two adjacent bands is always legible and never accidental.
+ */
 const SPACING = {
   none: '',
   /**
    * Sub-bands fused into one continuous surface, where the separation is a 1px rule rather than
-   * space. The hero stage and the trust strip below it are one black mass; this is how.
+   * space. The hero owns its own internal frame; this is how it gets no band padding at all.
    */
   stage: 'py-0',
   /** Anything exactly one row tall: the trust/COD strip, the orange promo strip. */
-  strip: 'py-3 sm:py-3.5 lg:py-4',
+  strip: 'py-3 sm:py-4',
   /** Support bands carrying navigation or prose: the category rail, brand wall, SEO block. */
-  tight: 'py-6 sm:py-8 lg:py-9',
-  /** Every canvas/sunken product or content grid. Down from the old 48/64/80. */
-  default: 'py-8 sm:py-10 lg:py-12',
+  tight: 'py-8 sm:py-10 lg:py-12',
+  /** Every canvas/sunken product or content grid. */
+  default: 'py-10 sm:py-12 lg:py-16',
   /**
-   * The two SLAB merchandising bands — Ventes flash and Nos packs — and nothing else. Black
-   * needs more internal air than white or it reads as cramped, and inside a coloured band that
-   * padding reads as the band's own body rather than as a gap between things. If a third
-   * section asks for `feature`, the answer is no.
+   * Reserved for the band that must out-weigh its neighbours — Ventes flash, and nothing else.
+   * Emphasis now comes from padding + a live countdown rather than from a black fill, so this
+   * step is what replaces the slab it used to be. If a second section asks for `feature`, the
+   * answer is no: two dominant bands is zero dominant bands.
    */
-  feature: 'py-10 sm:py-12 lg:py-14',
+  feature: 'py-12 sm:py-16 lg:py-20',
 } as const;
 
 /**
@@ -63,12 +81,19 @@ const SPACING = {
  * with no `dark:` variant and no `onSlab` prop.
  */
 const SURFACES = {
+  /** White in light, near-black in dark. The page's default. */
   base: '',
+  /** Warm sand (#F7F6F4). The ONLY alternate a content band may use. */
   sunken: 'bg-sunken',
   elevated: 'bg-elevated',
-  /** Near-black in light (#0E0E12); charcoal proud of black in dark (#2A2A30). */
+  /**
+   * Near-black. RETAINED but BANNED for content bands as of v6 — see the head of tokens.css.
+   * It survives because the footer and the utility bar legitimately need a dark scope and they
+   * reach for it directly; routing a `<Section surface="slab">` through here is what produced a
+   * page the owner described as hurting to look at. Alternation is canvas ⇄ sunken.
+   */
   slab: 'pt-slab',
-  /** The single orange band. #D53B04 light / #8A2E0C dark. */
+  /** The single orange band. #D53B04 light / #8A2E0C dark. One per page, no exceptions. */
   promo: 'pt-promo',
 } as const;
 

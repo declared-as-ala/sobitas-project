@@ -33,7 +33,11 @@ import { ArrowRight, Flame } from 'lucide-react';
  */
 export function PromoBanner() {
   return (
-    <Section surface="promo" spacing="strip" width="wide" className="relative overflow-hidden">
+    /* `tight` (32/40/48), not `strip` (12/16). `strip` is defined as "anything exactly one row
+       tall" and this band is not — it carries a 40/56px headline. At 16px of padding the −30%
+       nearly touched both band seams. This is the spacing scale doing its job: the band asked for
+       a value between two steps, and the answer is to move up a step, never to hand-roll a `py-`. */
+    <Section surface="promo" spacing="tight" width="wide" className="relative overflow-hidden">
       {/* The one texture on the page. Zero cost, and it stops the band being a flat rectangle. */}
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.08]"

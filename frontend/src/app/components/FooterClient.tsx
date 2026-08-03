@@ -184,7 +184,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
                   {isSubscribing ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" /> ...</>) : "S'abonner"}
                 </Button>
               </div>
-              <p className="text-xs text-gray-500">En vous abonnant, vous acceptez de recevoir nos offres par email.</p>
+              <p className="text-xs text-gray-400">En vous abonnant, vous acceptez de recevoir nos offres par email.</p>
             </form>
           </div>
 
@@ -453,7 +453,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
                     'S\'abonner'
                   )}
                 </Button>
-                <p className="text-xs text-gray-500 mt-4">
+                <p className="text-xs text-gray-400 mt-4">
                   En vous abonnant, vous acceptez de recevoir nos offres par email
                 </p>
               </form>
