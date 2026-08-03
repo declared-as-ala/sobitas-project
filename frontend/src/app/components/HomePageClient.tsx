@@ -296,6 +296,9 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
           spacing="tight"
           width="wide"
           defer
+          /* The page's last band. Below `sm` every band is `pb-0` so it reads as connected to its
+             neighbour; this one's neighbour is the footer, so it gets its bottom padding back. */
+          last
           aria-label="Informations sur la protéine en Tunisie"
         >
           {/* TWO COLUMNS at lg: prose left, the internal-link chips right. That halves the height

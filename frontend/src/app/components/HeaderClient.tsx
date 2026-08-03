@@ -307,19 +307,49 @@ export function HeaderClient() {
    * A ref plus `toggleAttribute` costs one attribute write and lets CSS do the rest
    * (`[data-compact]` in globals.css).
    *
-   * Three guards, each for a specific failure:
-   *   THRESHOLD 140  never collapse near the top of the page. Without it, the tiniest downward
-   *                  nudge at y=10 hides the nav before the user has scrolled anywhere.
-   *   DELTA 8        ignore sub-pixel and rubber-band jitter. iOS overscroll reports a stream of
-   *                  ±1-3px deltas at rest; without this the header would flicker at the top and
-   *                  bottom of every page.
-   *   rAF coalesce   `scroll` can fire many times per frame. The handler only schedules; the read
-   *                  happens once per frame, so the attribute is written at most 60x/s and never
-   *                  mid-layout.
+   * ── THE OSCILLATION BUG, AND WHY THE FIRST VERSION COULD NOT AVOID IT ─────────────────────
+   * Owner, 2026-08-03: "when I scroll down and it collapses there is a bug — it keeps open and
+   * close, open and close, open and close."
+   *
+   * That was not jitter and no amount of delta-filtering would have stopped it. THIS HEADER IS
+   * `position: sticky`, WHICH MEANS IT IS STILL IN NORMAL FLOW. Collapsing it therefore makes the
+   * DOCUMENT SHORTER by exactly the amount collapsed, and every element after it moves up by that
+   * amount. Chrome's scroll anchoring then does its job: it picks a node in the viewport, notices
+   * it moved, and adjusts `scrollY` by the same amount to keep it visually still.
+   *
+   * That adjustment is delivered to us as an ordinary `scroll` event — pointing the OTHER WAY:
+   *
+   *     collapse (−64px)  →  anchoring sets scrollY −= 64  →  we read moved = −64  →  "scrolling
+   *     up!"  →  expand (+64px)  →  anchoring sets scrollY += 64  →  moved = +64  →  collapse …
+   *
+   * The first version's `DELTA 8` guard was written for ±1-3px rubber-band noise, so a phantom
+   * delta of 64 sailed through it. The loop is deterministic, which is exactly why it read as a
+   * continuous flicker rather than as an occasional glitch.
+   *
+   * Two things fix it, and both are needed:
+   *
+   *   SETTLE 320   After every flip, swallow all scroll events for longer than the CSS transition
+   *                (180ms), resyncing `last` each time. Anchoring compensates continuously while
+   *                the height interpolates, so the window has to outlast the animation. This is
+   *                the actual fix: our own layout change can no longer be read as user intent.
+   *   TRAVEL 40    Flip on CUMULATIVE one-way travel, not on a single event's delta, with the
+   *                accumulator reset on every direction change. 3px of trackpad noise can never
+   *                add up to 40, and a genuine reversal reaches it in one flick.
+   *
+   *   ENTER 160    Never compact near the top of the page.
+   *   RELEASE 80   Always expanded near the top, whatever the direction — so the header cannot be
+   *                left collapsed at y=0 by a fast fling.
+   *   rAF coalesce `scroll` fires many times per frame; the handler only schedules, so the
+   *                attribute is written at most once per frame and never mid-layout.
    *
    * `passive: true` so the listener can never block scrolling. Reading `window.scrollY` in a rAF
    * callback is a cheap cached read and does not force a synchronous layout the way reading
    * `getBoundingClientRect()` here would.
+   *
+   * scripts/check-header-compact.mjs now scrolls in realistic 40px steps and COUNTS the state
+   * changes with a MutationObserver: a monotonic scroll down must produce exactly one. The old
+   * test jumped straight from y=0 to y=900 in a single `scrollTo`, which is precisely why it
+   * passed 6/6 on a header that flickered continuously in a real browser.
    */
   const headerRef = useRef<HTMLElement | null>(null);
 
@@ -327,23 +357,47 @@ export function HeaderClient() {
     const el = headerRef.current;
     if (!el) return;
 
-    const THRESHOLD = 140;
-    const DELTA = 8;
+    const ENTER = 160;
+    const RELEASE = 80;
+    const TRAVEL = 40;
+    const SETTLE = 320;
+
     let last = window.scrollY;
+    let travel = 0;
+    let compact = false;
+    let settleUntil = 0;
     let scheduled = false;
 
     const apply = () => {
       scheduled = false;
       const y = window.scrollY;
+      const now = performance.now();
+
+      // Everything inside this window is our own collapse rippling back through scroll anchoring.
+      // `last` is resynced so the swallowed distance is not counted once the window closes.
+      if (now < settleUntil) {
+        last = y;
+        travel = 0;
+        return;
+      }
+
       const moved = y - last;
-
-      if (Math.abs(moved) < DELTA) return;
       last = y;
+      if (moved === 0) return;
 
-      // Compact only while moving DOWN and past the threshold. Any upward movement restores it
-      // immediately, which is the behaviour that makes a collapsing header usable rather than
-      // annoying: the nav comes back the instant you reach for it.
-      el.toggleAttribute('data-compact', y > THRESHOLD && moved > 0);
+      // Direction change resets the accumulator, so noise can never accumulate into a flip.
+      travel = Math.sign(moved) === Math.sign(travel) ? travel + moved : moved;
+
+      let next = compact;
+      if (y <= RELEASE) next = false;
+      else if (travel >= TRAVEL && y > ENTER) next = true;
+      else if (travel <= -TRAVEL) next = false;
+
+      if (next === compact) return;
+      compact = next;
+      travel = 0;
+      settleUntil = now + SETTLE;
+      el.toggleAttribute('data-compact', compact);
     };
 
     const onScroll = () => {
@@ -655,7 +709,10 @@ export function HeaderClient() {
           aria-label="Navigation principale"
         >
           <div className="max-w-site mx-auto px-4 lg:px-8">
-            <div className="flex items-center gap-4 h-12">
+            {/* `pt-hdr-navrow` — the compact state shrinks this row 48 -> 40px rather than folding
+                the whole nav away. The height has to be explicit in BOTH states or it cannot
+                transition (see globals.css); `h-12` is that explicit resting value. */}
+            <div className="pt-hdr-navrow flex items-center gap-4 h-12">
               {/* The nav items scroll horizontally WITHIN this container (flex-1 min-w-0 +
                   overflow-x-auto) so a long nav can never overflow the page and force a body-level
                   horizontal scrollbar on tablet/small-laptop widths. The orange pack CTA is a

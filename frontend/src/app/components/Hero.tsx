@@ -364,7 +364,12 @@ export function Hero({ slides, fallbackAlt, bestSellers = [] }: HeroProps) {
       data-band-first=""
       aria-label="Bannière principale"
       {...(slides.length > 1 ? { 'aria-roledescription': 'carrousel' } : {})}
-      className="w-full bg-canvas pb-6 pt-0 sm:pt-4 lg:pb-8"
+      /* `pb-0` on phones (owner, in DevTools: "I took off the padding bottom so it looks like it's
+         connected with the category section"). Same rule as the band scale in Section.tsx — below
+         `sm` a band's bottom padding is zero and the gap is the NEXT band's top padding alone.
+         The hero is not a `<Section>` (it owns its own full-bleed frame), so it states the rule
+         itself rather than inheriting it. */
+      className="w-full bg-canvas pb-0 pt-0 sm:pb-6 sm:pt-4 lg:pb-8"
     >
       {/*
         The SITE container, byte-for-byte: `mx-auto max-w-site px-4 sm:px-6 lg:px-8`. The header,

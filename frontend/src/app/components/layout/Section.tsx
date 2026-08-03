@@ -63,6 +63,29 @@ import { Container, type ContainerWidth } from './Container';
  *
  * Every value is still a multiple of 8, and each step is still exactly one 8px unit above the
  * previous at mobile and two at desktop.
+ *
+ * ── ON PHONES A BAND HAS NO BOTTOM PADDING AT ALL ─────────────────────────────────────────
+ * The owner opened DevTools on the live page and removed the bottom padding from the hero and
+ * from the category rail by hand — "so it looks like it's connected" — and set the best-seller
+ * rail's top padding to 1em. Three separate edits, but they are one rule, so this is where it
+ * lives rather than as three overrides in three call sites:
+ *
+ *     BELOW `sm`, THE GAP BETWEEN TWO BANDS IS THE LOWER BAND'S `pt`, AND NOTHING ELSE.
+ *
+ * That is the logical end of this file's own doctrine. Separation is a fill change plus a 1px
+ * seam; emptiness was never doing the work. On a 390px screen the sum of two paddings is a much
+ * larger fraction of the viewport than the same sum at 1440 — 64px is 7.6% of a phone screen and
+ * 4.4% of a laptop — so the boundary that reads as "considered" on desktop reads as "disconnected"
+ * on a phone. Halving both numbers would have kept the sum arithmetic; removing one side removes
+ * the arithmetic. Every mobile boundary is now a single value that can be read off this table:
+ *
+ *     strip     12   ·  tight  24   ·  default  16   ·  feature  24
+ *
+ * From `sm` up the symmetric scale returns unchanged — desktop was not the complaint, and the
+ * circled gaps were fixed there in the previous pass.
+ *
+ * The page's LAST band is the exception and takes `last` (below), or its final line of copy would
+ * butt straight into the footer with nothing between them.
  */
 const SPACING = {
   none: '',
@@ -74,16 +97,16 @@ const SPACING = {
   /** Anything exactly one row tall: the trust/COD strip, the orange promo strip. */
   strip: 'py-3 sm:py-4',
   /** Support bands carrying navigation or prose: the category rail, brand wall, SEO block. */
-  tight: 'py-6 lg:py-8',
+  tight: 'pb-0 pt-6 sm:py-6 lg:py-8',
   /** Every canvas/sunken product or content grid. */
-  default: 'py-8 lg:py-10',
+  default: 'pb-0 pt-4 sm:py-8 lg:py-10',
   /**
    * Reserved for the band that must out-weigh its neighbours — Ventes flash, and nothing else.
    * Emphasis now comes from padding + a live countdown rather than from a black fill, so this
    * step is what replaces the slab it used to be. If a second section asks for `feature`, the
    * answer is no: two dominant bands is zero dominant bands.
    */
-  feature: 'py-10 lg:py-12',
+  feature: 'pb-0 pt-6 sm:py-10 lg:py-12',
 } as const;
 
 /**
@@ -142,6 +165,15 @@ export interface SectionProps {
    * the seam is not an adjacent-sibling rule.
    */
   first?: boolean;
+  /**
+   * Set on the LAST band of a page. Below `sm` every band has `pb-0` so it reads as connected to
+   * the one beneath it (see the scale above) — but the last band's neighbour is the footer, and
+   * copy that touches a dark slab with zero space reads as a rendering fault rather than as
+   * connection. This restores the band's own mobile top value on its bottom edge. It is the one
+   * exception, and it is a prop rather than a `:last-child` rule because bands are rendered by
+   * seven different components and the page, not the component, knows which one is last.
+   */
+  last?: boolean;
   'aria-label'?: string;
   'aria-labelledby'?: string;
   children: ReactNode;
@@ -157,9 +189,24 @@ export function Section({
   containerClassName,
   defer = false,
   first = false,
+  last = false,
   children,
   ...rest
 }: SectionProps) {
+  // Mirrors the mobile `pt` of each step, so the last band is symmetric on a phone instead of
+  // being open at the bottom. Deliberately UNPREFIXED and appended after the scale: `cn` is
+  // tailwind-merge, so it replaces the scale's `pb-0` at mobile, while the scale's own `sm:py-*`
+  // still wins from `sm` up (a responsive variant beats a base utility). No fifth padding value
+  // ever reaches desktop.
+  const LAST_PB: Record<keyof typeof SPACING, string> = {
+    none: '',
+    stage: '',
+    strip: '',
+    tight: 'pb-6',
+    default: 'pb-4',
+    feature: 'pb-6',
+  };
+
   return (
     <Tag
       // `data-band` is what globals.css keys the automatic 1px seam off. Every band carries it,
@@ -167,7 +214,13 @@ export function Section({
       // band on a page correctly has no rule above it.
       data-band=""
       {...(first ? { 'data-band-first': '' } : {})}
-      className={cn(SPACING[spacing], SURFACES[surface], defer && 'pt-defer', className)}
+      className={cn(
+        SPACING[spacing],
+        last && LAST_PB[spacing],
+        SURFACES[surface],
+        defer && 'pt-defer',
+        className
+      )}
       {...rest}
     >
       {container ? (

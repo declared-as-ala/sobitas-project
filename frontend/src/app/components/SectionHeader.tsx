@@ -41,8 +41,19 @@ import { ArrowRight } from 'lucide-react';
 /** 1 = the rails that sell · 2 = support bands · 3 = everything else (default). */
 export type SectionHeaderScale = '1' | '2' | '3';
 
+/**
+ * Scale 1's MOBILE step is 2rem, not 2.5rem — the owner set it by hand in DevTools on "Les plus
+ * vendus" and it is the right call for a reason worth writing down. 40px in the compressed display
+ * face put "LES PLUS VENDUS" within ~20px of the full 390px content width, so the four rail
+ * headings were each one long word away from wrapping to two lines, and a heading that wraps is
+ * a heading whose size is deciding the page's rhythm for it. At 32px the longest of them
+ * ("NOUVEAUX PRODUITS") clears the rail with room to spare, and the 1.75x ratio to scale 3 (22px)
+ * is preserved — the hierarchy is intact, it is just no longer fighting the viewport.
+ *
+ * Desktop is untouched: 56 / 40 / 28 was never the complaint.
+ */
 const TITLE_SCALE: Record<SectionHeaderScale, string> = {
-  '1': 'text-[2.5rem] lg:text-[3.5rem]',
+  '1': 'text-[2rem] lg:text-[3.5rem]',
   '2': 'text-[1.875rem] lg:text-[2.5rem]',
   '3': 'text-[1.375rem] lg:text-[1.75rem]',
 };
@@ -61,6 +72,16 @@ interface SectionHeaderProps {
   icon?: React.ReactNode;
   /** Set when the heading is referenced by an `aria-labelledby` on the band. */
   id?: string;
+  /**
+   * Centre the heading block below `sm` (owner set this by hand on "Acheter par objectif").
+   *
+   * Only correct for a band whose CONTENT is also symmetric — the category rail is a full-bleed
+   * 2-up grid on phones, so a left-aligned label sat on a rail that nothing else in the band
+   * shares. Every other band is a left-aligned grid or list, and a centred heading over
+   * left-aligned content is the thing that makes a page look like a template. Hence a prop with
+   * one call site rather than a change to the component.
+   */
+  centerOnMobile?: boolean;
 }
 
 export function SectionHeader({
@@ -72,6 +93,7 @@ export function SectionHeader({
   scale = '3',
   icon,
   id,
+  centerOnMobile = false,
 }: SectionHeaderProps) {
   return (
     /* 20 / 24 — down from 24/32/40 along with the band scale.
@@ -79,8 +101,12 @@ export function SectionHeader({
        padding and its content, so its bottom margin must stay strictly SMALLER than the band's
        own `pt` (32/40 at `default`). At the old 40px it was larger than `tight`'s 24px top
        padding, which is precisely why the category band read as a heading adrift in a field. */
-    <div className="mb-5 flex flex-row items-end justify-between gap-4 lg:mb-6">
-      <div className="min-w-0">
+    <div
+      className={`mb-5 flex flex-row items-end justify-between gap-4 lg:mb-6 ${
+        centerOnMobile ? 'max-sm:justify-center' : ''
+      }`}
+    >
+      <div className={`min-w-0 ${centerOnMobile ? 'max-sm:text-center' : ''}`}>
         {kicker && (
           <span className="pt-kicker mb-2.5 inline-flex items-center gap-2.5 text-brand">
             {icon ?? <span className="h-px w-7 bg-brand" aria-hidden="true" />}

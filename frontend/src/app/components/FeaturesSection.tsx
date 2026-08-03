@@ -39,6 +39,22 @@ import { Truck, ShieldCheck, Banknote, Headset } from 'lucide-react';
  * floor as well as the 3:1 graphical one. Labels are `text-ink-1` (17.9:1), descriptions
  * `text-ink-2` (6.7:1).
  *
+ * ── AND IT IS NOW DESKTOP-ONLY (owner, 2026-08-03) ────────────────────────────────────────
+ * "I took the trust badges off the mobile — I made it simple."
+ *
+ * Worth stating what that costs and why it is still right. On a phone this row sat between the
+ * slider and the first shopping path, and its four claims were the last thing between a shopper
+ * and the products. One of the four — the free-delivery threshold — is ALREADY on screen above
+ * it, in the utility strip at the very top of every mobile page ("Livraison gratuite à partir de
+ * 300 DT"), so the row was partly repeating itself. The other three are restated on the product
+ * page, which is where a Tunisian cash-on-delivery shopper actually needs them, at the moment of
+ * the decision rather than 1,200px before it.
+ *
+ * `hidden sm:block`, NOT a conditional render: the markup stays in the server HTML, so nothing is
+ * removed from what a crawler reads, and the `sr-only` h2 still labels it for assistive tech that
+ * ignores the breakpoint. The row is genuinely rendered at ≥640px — this is a layout decision,
+ * not a bot/human split.
+ *
  * Still a SERVER component with zero client JS.
  */
 
@@ -51,7 +67,7 @@ const features = [
 
 export function FeaturesSection() {
   return (
-    <section aria-labelledby="features-heading" className="mt-4 lg:mt-6">
+    <section aria-labelledby="features-heading" className="hidden sm:block sm:mt-4 lg:mt-6">
       <h2 id="features-heading" className="sr-only">
         Pourquoi choisir Protéine Tunisie
       </h2>

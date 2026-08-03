@@ -72,12 +72,18 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
           plus a kicker it was announcing itself louder than "Les plus vendus" directly below it,
           which is the rail that actually converts. Scale "3" is 22/28px — enough to label the
           grid, not enough to compete with it. The photographs are the content here. */}
+      {/* CENTRED BELOW `sm` (owner set `margin: 0 auto` on it in DevTools). The grid under it is
+          full-bleed on phones — it has no left rail for the heading to align to, because the
+          container gutters are cancelled by `-mx-4`. A left-aligned label 16px in from the edge,
+          over tiles that start at 0, was the only thing in the band not on the same axis. This is
+          the one band where centring is right; see the prop's note in SectionHeader. */}
       <SectionHeader
         id="category-rail-heading"
         title="Acheter par objectif"
         viewAllHref="/shop"
         viewAllLabel="Tout voir"
         scale="3"
+        centerOnMobile
       />
 
       {/* FULL-BLEED ON PHONES, CONTAINER-ALIGNED FROM `sm`.

@@ -455,24 +455,37 @@ html[dir="rtl"] [data-i18n-ltr] {
  * mobile URLs, 419ms on the homepage). So the listener writes ONE attribute onto one node and
  * React never learns anything happened. Everything below is a CSS consequence of that attribute.
  *
- * ── WHAT COLLAPSES ────────────────────────────────────────────────────────────────────────
- * Desktop: the nav row folds to zero and the main bar loses 16px (72 -> 56), so a scrolling
- *          reader gets ~64px of viewport back and keeps the logo, the search field and the cart.
- * Mobile:  only the bar shrinks (64 -> 52) — the nav row is `hidden md:block` and there is
- *          nothing else to give.
+ * ── NOTHING IS REMOVED, ONLY TIGHTENED (owner, 2026-08-03) ────────────────────────────────
+ * "When you compact it, don't make it so much compact — keep all the things with it."
+ *
+ * The first version folded the whole desktop nav row to `height: 0`. That was the biggest single
+ * saving (49px) and it was the wrong one: it took the primary navigation off the screen at the
+ * exact moment a reader is deepest in the page and most likely to want it. Every control now
+ * survives the collapse; what changes is only how much air sits around it.
+ *
+ *   desktop   bar     72 -> 58   nav row  48 -> 40   logo  40 -> 30     header 122 -> 100
+ *   mobile    bar     64 -> 54                       logo  44 -> 36     header  65 ->  55
+ *
+ * 22px on desktop and 10px on mobile, with the mobile utility strip's own 36px already scrolling
+ * away under its own weight. Less than the 64px the fold bought, and worth it: a nav that
+ * disappears when you scroll is a nav you have to scroll back up to use.
+ *
+ * The nav row keeps an explicit height at BOTH states (`.pt-hdr-navrow`, 48px in the markup)
+ * because `height` cannot transition from `auto` — the first version animated to 0 from an
+ * unset height and simply snapped. Two explicit pixel values interpolate.
  *
  * `height` is animated rather than `transform`, deliberately. A transform would slide the bar
  * out from under the page without freeing any space, so content would sit behind a header that
- * still occupies its original box. Two elements changing height on a sticky bar is a contained
- * layout cost; the whole point is that the space is actually returned.
+ * still occupies its original box. The whole point is that the space is actually returned.
  *
- * `overflow: hidden` on the nav row is what lets its height animate to 0 without the links
- * spilling; `visibility` follows so a collapsed nav is not a set of invisible tab stops.
+ * 180ms, not 220: the JS settle window that stops the collapse from being re-read as user scroll
+ * (see HeaderClient) has to outlast this transition, and every millisecond here is a millisecond
+ * the header ignores a genuine flick. Fast enough to feel immediate, slow enough not to snap.
  * ============================================================================================ */
 .pt-hdr-bar,
-.pt-hdr-nav,
+.pt-hdr-navrow,
 .pt-hdr-logo {
-  transition: height 0.22s ease, opacity 0.18s ease;
+  transition: height 0.18s ease;
 }
 
 .pt-hdr-nav {
@@ -480,18 +493,19 @@ html[dir="rtl"] [data-i18n-ltr] {
 }
 
 [data-compact] .pt-hdr-bar-desktop {
-  height: 56px;
+  height: 58px;
+}
+[data-compact] .pt-hdr-bar-desktop .pt-hdr-logo {
+  height: 30px;
+}
+[data-compact] .pt-hdr-navrow {
+  height: 40px;
 }
 [data-compact] .pt-hdr-bar-mobile {
-  height: 52px;
+  height: 54px;
 }
-[data-compact] .pt-hdr-logo {
-  height: 32px;
-}
-[data-compact] .pt-hdr-nav {
-  height: 0;
-  opacity: 0;
-  visibility: hidden;
+[data-compact] .pt-hdr-bar-mobile .pt-hdr-logo {
+  height: 36px;
 }
 
 /* WCAG 2.3.3. The collapse still HAPPENS — it is a layout state, not decoration, and removing it
@@ -499,7 +513,7 @@ html[dir="rtl"] [data-i18n-ltr] {
    dropped, so the change is instant instead of animated. */
 @media (prefers-reduced-motion: reduce) {
   .pt-hdr-bar,
-  .pt-hdr-nav,
+  .pt-hdr-navrow,
   .pt-hdr-logo {
     transition: none;
   }

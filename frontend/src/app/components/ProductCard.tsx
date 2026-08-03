@@ -400,7 +400,17 @@ export const ProductCard = memo(function ProductCard({
             ) : isAdding ? (
               <span className="truncate">Ajouté !</span>
             ) : (
-              <span className="truncate">Ajouter au panier</span>
+              /* "AJOUTER" ON PHONES, "AJOUTER AU PANIER" FROM `sm` (owner, in DevTools: "add to
+                 panier — that's bad; I just put the word 'Ajouter' with the icon, it looks good").
+                 On the 1-up mobile card the text column is ~190px wide and the full label at 14px
+                 measured ~150px, so the button was almost entirely text with the cart glyph
+                 crushed against it. `au panier` is redundant next to a cart icon in the first
+                 place — the icon IS the noun. The `aria-label` on the Button above still reads
+                 "Ajouter {product} au panier" at every width, so nothing is lost to a screen
+                 reader; this is purely what is drawn. */
+              <span className="truncate">
+                Ajouter<span className="hidden sm:inline"> au panier</span>
+              </span>
             )}
           </Button>
         </div>
