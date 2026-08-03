@@ -155,9 +155,33 @@ const nextConfig = {
     return buildRedirects();
   },
   experimental: {
-    // Inline critical CSS and load non-critical CSS asynchronously to eliminate render-blocking.
-    // Requires `critters` devDependency.
-    optimizeCss: true,
+    /*
+     * `optimizeCss` IS OFF, AND THE COMMENT THAT USED TO BE HERE WAS WRONG.
+     *
+     * It read "Inline critical CSS and load non-critical CSS asynchronously to eliminate
+     * render-blocking. Requires `critters` devDependency." — and was set to `true`. Two things
+     * were false about that, both verified against the live site and a local production build on
+     * 2026-08-03:
+     *
+     *   1. `critters` WAS NOT INSTALLED. Not in dependencies, not in devDependencies, not in the
+     *      lockfile. The flag has therefore never done anything since the day it was added.
+     *   2. Installing it changes nothing. With critters@0.0.25 present and `optimizeCss: true`,
+     *      a fresh production build still serves ZERO inline <style> blocks and THREE
+     *      render-blocking <link rel="stylesheet"> tags. `optimizeCss` is a Pages-Router-era
+     *      option; in the App Router, React itself emits the stylesheet links with
+     *      `data-precedence` and blocks rendering on them, and critters never sees the document.
+     *
+     * That mattered because the config was the reason nobody looked at render-blocking CSS: the
+     * comment asserted the problem was already solved. Lighthouse mobile disagrees —
+     * `render-blocking-resources` is a live finding on protein.tn (150ms) and on a local
+     * production build (343ms).
+     *
+     * Left OFF rather than deleted, with this note, so the next person does not re-add it on the
+     * same reasoning. If the render-blocking CSS is to be fixed it needs a different mechanism,
+     * and the honest first step is making the sheet smaller — 25 of its 28 kB are unused on the
+     * homepage.
+     */
+    optimizeCss: false,
     // Disable the client-side Router Cache for both dynamic and static pages.
     // With non-zero values the browser REUSES a prefetched RSC payload for that many
     // seconds — so a <Link> prefetched while a page's data was momentarily empty/stale

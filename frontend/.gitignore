@@ -43,3 +43,8 @@ next-env.d.ts
 
 # Visual-regression screenshots from scripts/visual-snap.mjs — local review artefacts, never committed.
 /.snap/
+
+# Lighthouse reports from scripts/perf.mjs — machine-specific, regenerate locally
+.perf/
+.next-prod/
+.next-verify/
