@@ -112,6 +112,20 @@ export type ServerSlide = {
   title: string | null;
   subtitle: string | null;
   cta_label: string | null;
+  /**
+   * The short pill above the headline ("NOUVEAUTÉ", "PRISE DE MASSE").
+   *
+   * This field was MISSING from the type and from the mapper below, while app/page.tsx read
+   * `(s as { badge?: string | null }).badge` off the result — a cast onto an object that never
+   * carried the property, so the cast silenced the only error that would have caught it. The
+   * badge therefore resolved to null for every slide and the pill has never rendered, no matter
+   * what the admin typed. Verified against the live API, which returns
+   * `"badge": "PRISE DE MASSE"` for slide 11 while the page showed no pill.
+   *
+   * Declared here rather than cast at the call site precisely so the next omission is a type
+   * error instead of a silent null.
+   */
+  badge: string | null;
   link: string | null;
   alt: string | null;
 };
@@ -166,6 +180,7 @@ export async function getServerSlides(): Promise<ServerSlidesResult> {
         title: s.title ?? s.titre ?? null,
         subtitle: s.subtitle ?? s.sous_titre ?? null,
         cta_label: s.cta_label ?? null,
+        badge: s.badge ?? null,
         link: s.link ?? s.lien ?? null,
         alt: s.alt ?? null,
       }));

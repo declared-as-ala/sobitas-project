@@ -34,9 +34,19 @@ export const PRODUCT_IMAGE_FRAME: Record<ProductImageMode, string> = {
    * `aspect-[5/4]`, not a fixed height: the box must scale with the column so the grid stays
    * fluid, and a definite ratio still reserves the box before the image loads (CLS 0).
    */
-  contain: 'aspect-[5/4]',
-  cover: 'h-[200px] sm:h-[220px] lg:h-[240px]',
-  'cover-zoom': 'h-[200px] sm:h-[220px] lg:h-[240px]',
+  /**
+   * PHONES: `h-full`, because the card is a horizontal ROW there — a 124px-wide thumbnail on the
+   * left that must stretch to whatever height the text beside it needs. An aspect ratio would
+   * pin it to 99px and leave a hole under it.
+   * `sm` AND UP: `aspect-[5/4]`, the vertical card's image box.
+   *
+   * `h-full` is a definite height here and not a guess: the wrapper is `self-stretch` inside a
+   * flex row, so its height resolves from the row. That matters because PackCardImage positions
+   * the packshot with `absolute inset-[5%]`, which needs a resolved containing block.
+   */
+  contain: 'h-full sm:h-auto sm:aspect-[5/4]',
+  cover: 'h-full sm:h-[220px] lg:h-[240px]',
+  'cover-zoom': 'h-full sm:h-[220px] lg:h-[240px]',
 };
 
 export function productImageFrame(mode: ProductImageMode = 'contain'): string {

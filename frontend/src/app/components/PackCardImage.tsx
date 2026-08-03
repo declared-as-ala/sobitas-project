@@ -54,8 +54,11 @@ export function PackCardImage({
   // Background is WHITE to match the card body (ProductCard root is bg-white). It used to be
   // gray-50 while the body was white, drawing a visible two-tone seam across every card in light
   // mode. One surface, no seam.
+  // No corner radius of its own. The card is `overflow-hidden rounded-2xl`, so it clips this box
+  // correctly whichever way round the layout is — `rounded-t-2xl` was right for the vertical card
+  // and wrong for the horizontal phone row, where the image is on the LEFT.
   const wrapperClasses = cn(
-    'relative w-full flex-shrink-0 overflow-hidden rounded-t-2xl',
+    'relative h-full w-full flex-shrink-0 overflow-hidden',
     // 'dark' = the GPT card's diagonal charcoal gradient so packshots pop; 'light' = white.
     isDark
       ? 'bg-gradient-to-br from-[#1b1f2a] to-[#0e1118]'

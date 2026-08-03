@@ -263,7 +263,10 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
             asserting two things match is not a mechanism for keeping them matched. */}
         <ProductGrid>
           {products.map((product) => (
-            <ProductCard key={product.id} product={product as any} showBadge badgeText="Flash" />
+            /* No "FLASH" pill: the band is headed VENTES FLASH and every card in it is a flash
+               offer, so the badge repeated the heading once per card while covering the packshot.
+               The −24% discount badge still renders — that one is per-product. */
+            <ProductCard key={product.id} product={product as any} showBadge={false} />
           ))}
         </ProductGrid>
 

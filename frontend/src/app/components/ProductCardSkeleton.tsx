@@ -19,8 +19,12 @@ export function ProductCardSkeleton({ mode = 'contain' }: { mode?: ProductImageM
     // Tokens, not `bg-white dark:bg-gray-900` + a hardcoded #E5E7EB border: this sits directly
     // beside real ProductCards (`.pt-plate border-hairline`) and a skeleton on a different surface
     // than the card it stands in for is a visible seam mid-grid.
-    <div className="pt-plate flex h-full w-full min-w-0 flex-col overflow-hidden rounded-2xl border border-hairline shadow-sm">
-      <Skeleton className={cn('w-full rounded-none', productImageFrame(mode))} />
+    // Row on phones, column from `sm` — must mirror ProductCard's own `flex-row sm:flex-col`
+    // exactly, or the skeleton→card swap changes the layout direction mid-load.
+    <div className="pt-plate flex h-full w-full min-w-0 flex-row overflow-hidden rounded-2xl border border-hairline shadow-sm sm:flex-col">
+      <div className="w-[124px] shrink-0 self-stretch sm:w-auto sm:self-auto">
+        <Skeleton className={cn('w-full rounded-none', productImageFrame(mode))} />
+      </div>
       {/* Geometry must match ProductCard's body EXACTLY or the skeleton→card swap shifts layout.
           Four rows now, not six — the savings pill moved onto the price row and the third trust
           chip is gone. Kept in lockstep by hand; there is no shared definition for the body. */}

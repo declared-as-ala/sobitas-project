@@ -410,7 +410,7 @@
     "DS011": 2
   },
   "src/app/components/HeaderClient.tsx": {
-    "DS001": 36,
+    "DS001": 35,
     "DS002": 44,
     "DS003": 39,
     "DS004": 5,
@@ -508,7 +508,7 @@
     "DS011": 2
   },
   "src/app/components/SearchBar.tsx": {
-    "DS001": 25,
+    "DS001": 23,
     "DS002": 23,
     "DS003": 13,
     "DS004": 5,

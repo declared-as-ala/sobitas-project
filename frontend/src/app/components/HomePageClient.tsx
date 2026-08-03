@@ -224,8 +224,9 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
               kicker="Best-sellers"
               title="Les plus vendus"
               products={bestSellers as any}
-              showBadge
-              badgeText="Top Vendu"
+              /* No per-card badge: the h2 above already says these are the best sellers, and on a
+                 124px phone thumbnail the pill covered ~40% of the packshot. See ProductCard. */
+              showBadge={false}
               defer
             />
           </div>
@@ -245,8 +246,7 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
               kicker="Nouveautés"
               title="Nouveaux produits"
               products={newProducts as any}
-              showBadge
-              badgeText="New"
+              showBadge={false}
               defer
             />
           </div>

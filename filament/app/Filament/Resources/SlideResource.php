@@ -15,6 +15,7 @@ use Filament\Tables;
 use Filament\Actions;
 use Filament\Tables\Table;
 use App\Services\Media\ConvertUploadedImageToWebp;
+use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Log;
 // Aliased: `Schema` is already taken by Filament\Schemas\Schema (the form() signature).
 use Illuminate\Support\Facades\Schema as DbSchema;
@@ -162,12 +163,20 @@ class SlideResource extends Resource
                         // Textarea, not TextInput: the hero renders the FIRST line white and the
                         // rest in accent orange, which is what produces the two-tone headline in
                         // the approved design — and a single-line input cannot hold that newline.
+                        // The placeholder MUST read as an example, not as content.
+                        //
+                        // Live data check: of the six editorial fields on this form, exactly two
+                        // are NULL on every published slide — `titre` and `lien` — and those were
+                        // exactly the two whose placeholder did NOT start with "Ex. :". Every
+                        // field prefixed "Ex. :" was filled in. Grey placeholder text that looks
+                        // like a real value reads as "already filled" to a non-technical admin,
+                        // which is why the hero has been running with no headline and no link.
                         Forms\Components\Textarea::make('titre')
                             ->label('Titre')
                             ->rows(2)
                             ->maxLength(255)
-                            ->placeholder("Alimente\nTa performance")
-                            ->helperText('Astuce : passez à la ligne pour couper le titre en deux — la 1ʳᵉ ligne s\'affiche en blanc, la suite en orange.')
+                            ->placeholder("Ex. : Alimente\nEx. : Ta performance")
+                            ->helperText('OBLIGATOIRE pour afficher le grand titre. Le texte gris ci-dessus n\'est qu\'un exemple — tapez le vôtre. Astuce : passez à la ligne pour couper le titre en deux — la 1ʳᵉ ligne s\'affiche en blanc, la suite en orange.')
                             ->columnSpan(2),
                         Forms\Components\Textarea::make('sous_titre')
                             ->label('Sous-titre')
@@ -182,8 +191,12 @@ class SlideResource extends Resource
                         Forms\Components\TextInput::make('lien')
                             ->label('Lien du bouton')
                             ->maxLength(500)
-                            ->placeholder('/shop/proteines')
-                            ->helperText('Chemin interne (/shop/proteines) ou URL complète.'),
+                            ->placeholder('Ex. : /proteine-whey')
+                            // Same reason as `titre` above: this placeholder read as a value.
+                            // Left empty, the whole banner still links somewhere (the hero falls
+                            // back to /shop) — so a blank link is invisible in testing and only
+                            // shows up as every slide sending traffic to the same generic page.
+                            ->helperText('Vide = le slide envoie vers /shop. Chemin interne (/proteine-whey) ou URL complète.'),
                     ]),
                 ]),
 
@@ -219,6 +232,86 @@ class SlideResource extends Resource
                     ]),
                 ]),
         ]);
+    }
+
+    /**
+     * The editorial fields whose loss must be REPORTED rather than swallowed.
+     *
+     * Keyed by form field → human label, so the warning names what the admin actually typed.
+     */
+    private const VERIFIED_TEXT_FIELDS = [
+        'titre'      => 'Titre',
+        'lien'       => 'Lien du bouton',
+        'badge'      => 'Badge',
+        'sous_titre' => 'Sous-titre',
+        'cta_label'  => 'Texte du bouton',
+    ];
+
+    /**
+     * Read the row back after a save and shout if something the admin typed did not persist.
+     *
+     * ── WHY THIS EXISTS ───────────────────────────────────────────────────────────────────
+     * The owner's report was "it says it saved, but it's not showing". That sentence describes a
+     * SILENT WRITE FAILURE, and it is the single most expensive kind of bug to own: the admin has
+     * no way to distinguish "the field did not save" from "the field saved but the site is
+     * cached" from "the field saved and I am looking at the wrong slide". They retype it, it
+     * fails again, and they lose trust in the panel.
+     *
+     * Filament's green "Enregistré" toast reports that the SQL statement ran, not that the value
+     * landed. When a column is missing, or is silently truncated, or a mutator drops the value,
+     * the statement can succeed while the attribute does not survive. This re-reads the row from
+     * the database and compares it to what was submitted.
+     *
+     * It is deliberately a WARNING, not an exception: the rest of the slide did save, and
+     * throwing here would roll that back and make things worse. It stays on screen (persistent)
+     * because the whole point is that a transient green toast is what hid this for weeks.
+     *
+     * Cost is one indexed primary-key SELECT per save of a table with a handful of rows.
+     */
+    public static function verifyPersisted(Slide $record, array $data): void
+    {
+        $fresh = $record->fresh();
+
+        if (! $fresh) {
+            return;
+        }
+
+        $lost = [];
+
+        foreach (self::VERIFIED_TEXT_FIELDS as $column => $label) {
+            $submitted = trim((string) ($data[$column] ?? ''));
+
+            if ($submitted === '') {
+                continue; // Cleared on purpose, or never filled — nothing to verify.
+            }
+
+            $stored = trim((string) ($fresh->getAttribute($column) ?? ''));
+
+            if ($stored === '') {
+                $lost[] = $label;
+                Log::error('slides.field_did_not_persist', [
+                    'record_id' => $record->getKey(),
+                    'column'    => $column,
+                    'submitted' => mb_substr($submitted, 0, 120),
+                    'exists'    => DbSchema::hasColumn('slides', $column),
+                ]);
+            }
+        }
+
+        if ($lost === []) {
+            return;
+        }
+
+        Notification::make()
+            ->danger()
+            ->title('Certains champs n\'ont PAS été enregistrés')
+            ->body(
+                'Le reste du slide est enregistré, mais ces champs sont revenus vides : '
+                . implode(', ', $lost)
+                . '. Ce n\'est pas une erreur de votre part — signalez-le au développeur.'
+            )
+            ->persistent()
+            ->send();
     }
 
     public static function table(Table $table): Table
@@ -290,7 +383,11 @@ class SlideResource extends Resource
                         $data['image_mobile'] = ImagePath::normalize($data['image_mobile'] ?? null);
 
                         return $data;
-                    }),
+                    })
+                    // Re-read the row and warn if anything the admin typed did not land. See
+                    // verifyPersisted() — "it says saved but it's not showing" is exactly the
+                    // report this makes impossible to get again without a diagnosis attached.
+                    ->after(fn (Slide $record, array $data) => self::verifyPersisted($record, $data)),
                 Actions\DeleteAction::make()
                     ->before(fn (Slide $record) => self::purgeImages($record, 'slide.delete')),
             ])

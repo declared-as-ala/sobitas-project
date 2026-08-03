@@ -321,14 +321,18 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
           <Button
             variant="ghost"
             size="icon"
+            /* 48px box / 26px glyph, matching the burger beside it (owner asked for a bigger
+               search icon on mobile). Tokens rather than `hover:bg-gray-100 dark:hover:bg-gray-800`
+               — the header is `bg-canvas` now, and a hardcoded gray-100 hover is a light-mode
+               literal that shows as a pale block on the dark canvas. */
             className={cn(
-              'h-11 w-11 min-h-11 min-w-11',
-              'hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl active:scale-95 transition-transform',
+              'h-12 w-12 min-h-12 min-w-12',
+              'hover:bg-ink-1/[0.04] rounded-xl active:scale-95 transition-transform',
               className
             )}
             aria-label="Rechercher un produit"
           >
-            <Search className="h-6 w-6" />
+            <Search className="h-[26px] w-[26px]" />
           </Button>
         </SheetTrigger>
         {/* `font-poppins` and the #111827 / #6B7280 / #E5E7EB / #F5F6F8 / #FF5A00 palette below are

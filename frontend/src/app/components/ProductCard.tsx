@@ -189,8 +189,21 @@ export const ProductCard = memo(function ProductCard({
   return (
     // GPT product-card design. Poppins + #FF5A00 accent, scoped to the card (card-first rollout).
     // MUST stay geometrically in lockstep with ProductCardSkeleton or the swap shifts layout.
-    <article className="pt-plate group font-poppins flex h-full w-full min-w-0 flex-col overflow-hidden rounded-2xl border border-hairline shadow-sm transition-shadow duration-200 ease-out [@media(hover:hover)]:hover:shadow-lg">
-      <div className="relative">
+    /*
+      A ROW ON PHONES, A COLUMN FROM `sm`.
+      `flex-row sm:flex-col` is the whole mechanism: at one column per row a VERTICAL card is as
+      tall as a full-width image (~500px), while a horizontal one is only as tall as its text
+      (~180px). Same information, same one-per-row reading order the owner asked for, a third of
+      the height. See ProductGrid for the three iterations this went through.
+
+      `relative` is new and load-bearing: the favourite button is positioned against the CARD now,
+      not against the image. In the row layout the image is a 124px thumbnail on the left, so a
+      heart anchored to it would sit on top of the packshot instead of in the card's corner.
+    */
+    <article className="pt-plate group font-poppins relative flex h-full w-full min-w-0 flex-row overflow-hidden rounded-2xl border border-hairline shadow-sm transition-shadow duration-200 ease-out sm:flex-col [@media(hover:hover)]:hover:shadow-lg">
+      {/* 124px thumbnail on phones, full-width image from `sm`. `self-stretch` gives the frame's
+          `h-full` a height to resolve against (see util/productCardFrame.ts). */}
+      <div className="relative w-[124px] shrink-0 self-stretch sm:w-auto sm:self-auto">
         <PackCardImage
           imageSrc={productData.image}
           productName={productData.name}
@@ -203,19 +216,6 @@ export const ProductCard = memo(function ProductCard({
           product={product as any}
           priority={priority}
         />
-
-        {/* Favourite — white circle, top-right */}
-        <button
-          type="button"
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(toFavoriteProduct(product)); }}
-          /* 40x40 with a 44px tap area via `after:`, not a 36px box. In a 173px phone column the
-             visual control has to shrink, but the TARGET must not — 44px is the floor and the
-             pseudo-element buys it without making the circle look heavy on the packshot. */
-          className="pointer-events-auto absolute right-2 top-2 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-elevated shadow-md ring-1 ring-hairline transition-transform after:absolute after:-inset-1 after:content-[''] hover:scale-105 sm:right-3 sm:top-3"
-          aria-label={favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-        >
-          <Heart className={`h-[18px] w-[18px] ${favorite ? 'fill-brand text-brand' : 'text-ink-3'}`} />
-        </button>
 
         {/* Badges — top-left. Discount = the brand accent; Rupture / TOP VENTE = a dark chip.
 
@@ -239,7 +239,18 @@ export const ProductCard = memo(function ProductCard({
               -{productData.discount}%
             </span>
           )}
-          {inStock && (productData.isBestSeller || (showBadge && badgeText)) && (
+          {/* `showBadge !== false` — an explicit opt-out, not a change of default.
+              A "TOP VENDU" pill on every card in a rail headed "LES PLUS VENDUS" (or "FLASH" under
+              "VENTES FLASH", or "NEW" under "NOUVEAUX PRODUITS") repeats the heading four times
+              and, on the 124px phone thumbnail, covers about 40% of the packshot. A badge only
+              carries information when it DIFFERS from what the surrounding band already says.
+
+              It stays on by default, because on /shop, /favoris and search results the products
+              are mixed and "Top vente" is genuinely a per-product fact. Only the homepage rails,
+              which state it in their own h2, pass `showBadge={false}`.
+
+              The DISCOUNT badge above is untouched: −7% is per-product and no heading states it. */}
+          {inStock && showBadge !== false && (productData.isBestSeller || badgeText) && (
             <span className="pt-slab inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-1 shadow-sm sm:px-2.5 sm:py-1 sm:text-[11px]">
               <Star className="h-3 w-3 shrink-0 fill-[#FFB020] text-[#FFB020]" aria-hidden="true" />
               {badgeText || 'Top vente'}
@@ -247,6 +258,18 @@ export const ProductCard = memo(function ProductCard({
           )}
         </div>
       </div>
+
+      {/* Favourite — anchored to the CARD, so it lands in the top-right corner in both layouts.
+          36px circle with a 44px tap area via `after:-inset-1`: the visual control can shrink on
+          a phone, the TARGET cannot — 44px is the floor. */}
+      <button
+        type="button"
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(toFavoriteProduct(product)); }}
+        className="pointer-events-auto absolute right-2 top-2 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-elevated shadow-md ring-1 ring-hairline transition-transform after:absolute after:-inset-1 after:content-[''] hover:scale-105 sm:right-3 sm:top-3"
+        aria-label={favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+      >
+        <Heart className={`h-[18px] w-[18px] ${favorite ? 'fill-brand text-brand' : 'text-ink-3'}`} />
+      </button>
 
       {/*
         Body — SIX stacked rows became FOUR (owner: "the card height is so long").
@@ -264,14 +287,18 @@ export const ProductCard = memo(function ProductCard({
       */}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-1.5 px-3 py-3 sm:px-4 sm:py-4">
         {/* Brand + verified — only when the name resolved (grid payload carries brand_id only). */}
+        {/* `pr-9` on phones ONLY on the two rows that sit in the favourite button's vertical band
+            (it is 36px tall at `top-2`, so it overlaps the brand row and the title's first line).
+            Padding the whole body instead would cost 36px of width on the price, the meta row and
+            the CTA — the rows that need it most in a 234px column. */}
         {brand && (
-          <div className="flex min-w-0 items-center gap-1">
+          <div className="flex min-w-0 items-center gap-1 pr-9 sm:pr-0">
             <span className="truncate text-[11px] font-semibold uppercase tracking-wide text-brand">{brand}</span>
             <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-brand" aria-label="Marque authentique" />
           </div>
         )}
 
-        <LinkWithLoading href={buildProductUrlPath(product as any)} className="block min-w-0" loadingMessage="Chargement">
+        <LinkWithLoading href={buildProductUrlPath(product as any)} className="block min-w-0 pr-9 sm:pr-0" loadingMessage="Chargement">
           <h3
             title={productData.name}
             /* 13px in a 173px phone column, 15 from `sm`. The `min-h` is the two-line reservation
@@ -373,15 +400,7 @@ export const ProductCard = memo(function ProductCard({
             ) : isAdding ? (
               <span className="truncate">Ajouté !</span>
             ) : (
-              /* "Ajouter" in a 173px phone column, the full label from `sm`. At 2-up the long
-                 label rendered as "Ajouter au p…" — a truncated CTA is a broken CTA.
-                 WCAG 2.5.3 (Label in Name) still holds: the accessible name below is
-                 "Ajouter {produit} au panier", which CONTAINS the visible string either way, so
-                 voice control still matches on what the user can see. */
-              <>
-                <span className="truncate sm:hidden">Ajouter</span>
-                <span className="hidden truncate sm:inline">Ajouter au panier</span>
-              </>
+              <span className="truncate">Ajouter au panier</span>
             )}
           </Button>
         </div>

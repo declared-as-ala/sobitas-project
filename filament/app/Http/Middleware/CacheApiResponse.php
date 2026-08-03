@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\ApiResponseCache;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -128,6 +129,13 @@ class CacheApiResponse
                         ],
                     ], $ttl);
                     $cachePutMs = (microtime(true) - $cachePutStart) * 1000;
+
+                    // Record the key so an admin save can invalidate this endpoint immediately
+                    // instead of waiting out the TTL. MISS path only — this runs at most once per
+                    // URL per TTL, never on the hot HIT path above. See ApiResponseCache.
+                    if ($group = ApiResponseCache::groupFor($request)) {
+                        ApiResponseCache::register($group, $cacheKey);
+                    }
                     
                     // Release lock if we acquired it
                     if ($lockAcquired && $lock) {

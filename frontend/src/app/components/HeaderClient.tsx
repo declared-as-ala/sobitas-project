@@ -403,7 +403,14 @@ export function HeaderClient() {
             stays on the right; it opens the 100%-width sidebar, which still lists Panier /
             Favoris / Compte for anyone who looks for them at the top. */}
         <div className="md:hidden">
-          <div className="flex items-center justify-between w-full px-3 min-[380px]:px-4 gap-2 h-14 py-2">
+          {/* h-16 (64px), up from h-14 (56px), with py-2.5 (owner: on mobile "the logo bigger, the
+              search icon bigger, and the burger bigger").
+              The bar grows by ONE 8px unit and every control grows into the space that creates:
+              logo 40 → 44px, the two icon buttons 44 → 48px, their glyphs 24 → 26px. The controls
+              were already at the 44px tap floor, so this is about legibility at arm's length
+              rather than about hit area — a 24px glyph on a 6.1" screen at 60cm subtends less
+              than a 16px glyph did on the phones this floor was written for. */}
+          <div className="flex items-center justify-between w-full px-3 min-[380px]:px-4 gap-2 h-16 py-2.5">
             {/* min-w-0 + shrink: the LOGO is what gives way on a narrow phone. With only two
                 controls left this is no longer tight, but the rule stays — it is what guarantees
                 the burger can never be pushed off-screen and made unreachable. The icon cluster
@@ -418,34 +425,32 @@ export function HeaderClient() {
                   fetchpriority=high preload.
                   Sized by CLASS only: the old inline `height:auto` overrode the height class, so the
                   logo rendered at its intrinsic ~150px width and ate the space the burger needed.
-                  h-10 (40px) rather than the old h-8: dropping Compte and Panier from this bar
-                  freed the room, and 40px is exactly the row's content box (h-14 minus py-2), so
-                  the logo grows into space that already existed instead of making the bar taller.
-                  At this height the mark is ~117px wide — still comfortable at 320px next to the
-                  two 44px controls. */}
+                  h-11 (44px): exactly the row's content box (h-16 minus py-2.5), so the logo fills
+                  the bar rather than floating in it. At this height the mark is ~129px wide, which
+                  still leaves 320px phones room for the two 48px controls plus gutters. */}
               <Image
                 src={headerLogoUrl}
                 alt="Proteine Tunisie"
                 width={140}
                 height={48}
-                className="h-10 w-auto max-w-full object-contain object-left"
+                className="h-11 w-auto max-w-full object-contain object-left"
                 loading="eager"
               />
             </Link>
 
-            <div className="flex items-center gap-0.5 flex-shrink-0">
+            <div className="flex items-center gap-1 flex-shrink-0">
               <SearchBar variant="mobile" />
 
-              {/* Burger — far right */}
+              {/* Burger — far right. 48px box, 26px glyph. */}
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-11 w-11 min-h-11 min-w-11 flex-shrink-0 rounded-xl -mr-1 hover:bg-ink-1/[0.04] dark:hover:bg-white/5 transition-[background-color,transform] duration-200 active:scale-95"
+                className="h-12 w-12 min-h-12 min-w-12 flex-shrink-0 rounded-xl -mr-1 hover:bg-ink-1/[0.04] transition-[background-color,transform] duration-200 active:scale-95"
                 onClick={() => setMobileMenuOpen(true)}
                 aria-label="Menu"
                 aria-expanded={mobileMenuOpen}
               >
-                <Menu className="h-6 w-6" aria-hidden />
+                <Menu className="h-[26px] w-[26px]" aria-hidden />
               </Button>
             </div>
           </div>

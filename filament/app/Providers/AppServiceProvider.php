@@ -13,6 +13,7 @@ use App\Models\Commande;
 use App\Models\Page;
 use App\Models\Product;
 use App\Models\Review;
+use App\Models\Slide;
 use App\Models\SousCategory;
 use App\Models\User;
 use App\Observers\CommandeObserver;
@@ -20,6 +21,7 @@ use App\Observers\PageSeoObserver;
 use App\Observers\ProductSeoObserver;
 use App\Observers\ReviewObserver;
 use App\Observers\SitemapTouchObserver;
+use App\Observers\SlideCacheObserver;
 use App\Observers\UserObserver;
 use Filament\Facades\Filament;
 use Illuminate\Auth\Notifications\ResetPassword;
@@ -67,6 +69,11 @@ class AppServiceProvider extends ServiceProvider
         Commande::observe(CommandeObserver::class);
         Review::observe(ReviewObserver::class);
         User::observe(UserObserver::class);
+
+        // A slide edit must reach the storefront NOW, not in ~10 minutes. The hero sits behind
+        // Laravel's cache.api:300 AND Next's 5-minute ISR window, and nothing used to connect the
+        // admin to either — which is exactly why saving a slide looked like it did nothing.
+        Slide::observe(SlideCacheObserver::class);
 
         // Self-healing SEO: auto-fill empty meta title/description + image alt on every product save
         Product::observe(ProductSeoObserver::class);
