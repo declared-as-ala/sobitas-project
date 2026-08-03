@@ -84,6 +84,79 @@ common file types)` and `Cache Next.js optimized images`. Those are left alone.
 
 ---
 
+## ⚠️ The SAME bug, on a second axis: images
+
+`Vary` is ignored for `Accept` too, and `/_next/image` negotiates its format from `Accept`. So one
+cache entry per URL is shared by every format, and **whichever client asks first decides what
+everyone else gets**. Measured on the live site — the same URL, cold, filled by three clients:
+
+```
+AVIF client first   -> image/avif     49,259 B
+WebP client first   -> image/webp     88,222 B
+plain client first  -> image/jpeg    163,558 B
+```
+
+…and then, asking those same URLs with a *different* `Accept`:
+
+```
+the AVIF-filled entry, asked by a plain client -> image/avif   <- a browser that cannot decode
+                                                                  AVIF receives AVIF: BROKEN IMAGE
+the JPEG-filled entry, asked by an AVIF client -> image/jpeg   <- 114 kB instead of 49 kB
+```
+
+**This happened in production.** On 2026-08-03 the homepage hero — the mobile LCP element — was
+serving an 80 kB JPEG to every visitor instead of a ~50 kB AVIF, pinned for the full
+`max-age=2592000` (**30 days**). Cause: `check-edge-cache.mjs` sent no `Accept` header, so Node
+defaulted to a bare wildcard, Next correctly answered JPEG, and Cloudflare cached it. An audit of
+all 468 `/_next/image` URLs on the homepage found 463 correctly AVIF and exactly that one wrong —
+which is the point: it only takes one request from one badly-behaved client, and the URL it lands
+on may be the most important image on the site.
+
+### Owner action: purge the poisoned entry
+
+**Caching → Configuration → Purge Everything.** (A single-URL purge would also work but the
+optimizer URL is long and easy to mistype; a full purge costs one cold window.)
+
+### The fix: put the format in the cache key
+
+Cloudflare's cache key includes the **query string** on every plan. Next's optimizer reads only
+`url`, `w` and `q` and **ignores any extra parameter** — verified against the live origin:
+
+```
+/_next/image?url=…&w=750&q=70            -> 200 image/avif  28,801 B
+/_next/image?url=…&w=750&q=70&fmt=avif   -> 200 image/avif  28,801 B   (identical)
+/_next/image?url=…&w=750&q=70&fmt=jpg    -> 200 image/jpeg  54,231 B   (separate cache entry)
+```
+
+So a **URL Rewrite** that appends a format token derived from `Accept` gives one cache entry per
+format, on any plan, for free. The origin keeps negotiating exactly as it does today.
+
+**Where:** Cloudflare dashboard → **protein.tn** → **Rules** → **Transform Rules** → **Rewrite URL**
+→ **Create rule**. Three rules. For each: leave **Path** on *Preserve*, set **Query** to
+**Rewrite to… → Dynamic**, and paste the value shown.
+
+| # | Rule name | Match expression | Query value (Dynamic) |
+|---|---|---|---|
+| 1 | `img fmt: avif` | `starts_with(http.request.uri.path, "/_next/image") and any(http.request.headers["accept"][*] contains "image/avif")` | `concat(http.request.uri.query, "&fmt=avif")` |
+| 2 | `img fmt: webp` | `starts_with(http.request.uri.path, "/_next/image") and not any(http.request.headers["accept"][*] contains "image/avif") and any(http.request.headers["accept"][*] contains "image/webp")` | `concat(http.request.uri.query, "&fmt=webp")` |
+| 3 | `img fmt: base` | `starts_with(http.request.uri.path, "/_next/image") and not any(http.request.headers["accept"][*] contains "image/avif") and not any(http.request.headers["accept"][*] contains "image/webp")` | `concat(http.request.uri.query, "&fmt=base")` |
+
+**The three conditions are mutually exclusive by construction, so rule order does not matter.**
+That is deliberate, and it is the lesson from the post-mortem below: a design that depends on
+ordering is a design that will eventually be ordered wrong.
+
+Then **Purge Everything** again (the rewrite changes every image cache key) and verify:
+
+```bash
+node frontend/scripts/check-edge-cache.mjs --probe-format
+```
+
+`--probe-format` is opt-in because it is the one check that can cause the fault it tests for: if
+the rules are absent, its legacy-client request pins that URL to JPEG. It probes a product
+thumbnail rather than the hero so a failed run costs a thumbnail, not the LCP element.
+
+---
+
 ## Verify it — do not trust the dashboard
 
 ```bash
