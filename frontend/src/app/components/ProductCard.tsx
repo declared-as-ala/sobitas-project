@@ -5,8 +5,8 @@ import { ShoppingCart, Heart, Flame, Star, BadgeCheck, CircleCheck, Truck, Shiel
 import { Button } from '@/app/components/ui/button';
 import { PackCardImage } from '@/app/components/PackCardImage';
 import type { Product as ApiProduct } from '@/types';
-import { useCart } from '@/app/contexts/CartContext';
-import { useFavorites } from '@/contexts/FavoritesContext';
+import { useCartActions, useCartQty } from '@/app/contexts/CartContext';
+import { useFavoritesActions, useIsFavorite } from '@/contexts/FavoritesContext';
 import { getStorageUrl } from '@/services/api';
 import { toast } from 'sonner';
 import { getPriceDisplay } from '@/util/productPrice';
@@ -77,16 +77,29 @@ export const ProductCard = memo(function ProductCard({
   brandName,
 }: ProductCardProps) {
   const { locale } = useI18n();
-  const { addToCart, getCartQty } = useCart();
-  const { isFavorite, toggleFavorite } = useFavorites();
+  /*
+   * NARROW HOOKS, NOT `useCart()` / `useFavorites()`. This is the INP fix and this component is
+   * where it pays, because it is rendered 23 times on the homepage and ~40 on /shop.
+   *
+   * `useCart()` returns an object that changes on every cart mutation, and `useFavorites()` one
+   * that changes on every heart tap. Both re-render EVERY consumer, so a single tap re-rendered
+   * the entire grid plus the header — between the tap and the next paint, which is exactly what
+   * INP measures. Field CWV said 408 ms and FAILED; lab TBT said 50 ms and "good", because TBT
+   * only looks at page load and never presses anything.
+   *
+   * The actions never change identity, and the two subscriptions return a number and a boolean
+   * for THIS product only, so React's Object.is bailout keeps the other 22 cards untouched.
+   */
+  const { addToCart } = useCartActions();
+  const { toggleFavorite } = useFavoritesActions();
   const [isAdding, setIsAdding] = useState(false);
-  const favorite = isFavorite(product.id);
+  const favorite = useIsFavorite(product.id);
   // The SAME call the product detail page makes. Card and page now derive their label from one
   // function over the same four columns (qte, rupture, force_out_of_stock, low_stock_threshold),
   // so a product cannot advertise "En stock" in a grid and "Rupture de stock" on its own page.
   const stock = getProductStockStatus(product as any);
   const stockDisponible = getStockDisponible(product as any);
-  const inCartQty = getCartQty(product.id);
+  const inCartQty = useCartQty(product.id);
   const canAddMore = stockDisponible > 0 && inCartQty < stockDisponible;
 
   const productData = useMemo(() => {

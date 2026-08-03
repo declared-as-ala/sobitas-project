@@ -39,8 +39,8 @@ import { SearchBar } from './SearchBar';
 import { Button } from '@/app/components/ui/button';
 import { useTheme } from 'next-themes';
 import { ProductsDropdown } from './ProductsDropdown';
-import { useCart } from '@/app/contexts/CartContext';
-import { useFavorites } from '@/contexts/FavoritesContext';
+import { useCartActions, useCartCount } from '@/app/contexts/CartContext';
+import { useFavoritesCount } from '@/contexts/FavoritesContext';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   DropdownMenu,
@@ -63,9 +63,10 @@ import { LanguageSwitcher } from './LanguageSwitcher';
 import { useI18n } from '@/i18n/I18nProvider';
 import { MULTILOCALE_ENABLED } from '@/i18n';
 
-// CartDrawer is interaction-gated (opens on cart click) and carries no SEO content, so lazy-load
-// it — this keeps its `vaul` drawer chunk out of every page's first-load JS.
-const CartDrawer = dynamic(() => import('./CartDrawer').then((m) => ({ default: m.CartDrawer })), { ssr: false });
+// CartDrawer no longer lives here — it moved to components/CartDrawerHost.tsx, mounted at the
+// layout level. Keeping it here meant this ~1,050-line component had to subscribe to the drawer's
+// open state, so every add-to-cart re-rendered the whole header inside the tap handler. See the
+// note in CartDrawerHost for the measurements.
 
 const PHONE = '+216 27 612 500';
 const PHONE_FIXE = '+216 73 200 169';
@@ -223,10 +224,14 @@ export function HeaderClient() {
     sidebar: normalizeNavigationItems(ssrNavigation.sidebar),
   }));
 
-  const { getTotalItems, cartDrawerOpen, setCartDrawerOpen } = useCart();
-  const { count: favoritesCount } = useFavorites();
+  // NARROW SUBSCRIPTIONS. `useCart()` here re-rendered all ~1,050 lines of this component on every
+  // cart change; the header only ever needed the badge number and a way to open the drawer.
+  // `useCartCount()` returns a number, so React bails out unless the count actually moved, and
+  // `useCartActions()` never changes identity at all.
+  const { setCartDrawerOpen } = useCartActions();
+  const cartItemsCount = useCartCount();
+  const favoritesCount = useFavoritesCount();
   const { isAuthenticated, user, logout } = useAuth();
-  const cartItemsCount = getTotalItems();
 
   useEffect(() => {
     // Fallback only: when the server fetch failed (empty SSR nav), fetch client-side as before.
@@ -1267,7 +1272,6 @@ export function HeaderClient() {
         </SheetContent>
       </Sheet>
 
-      <CartDrawer open={cartDrawerOpen} onOpenChange={setCartDrawerOpen} />
     </>
   );
 }
