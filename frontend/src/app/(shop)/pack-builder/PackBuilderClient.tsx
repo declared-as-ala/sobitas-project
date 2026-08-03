@@ -14,6 +14,7 @@ import { getStockDisponible } from '@/util/cartStock';
 import type { Product, PackQuote } from '@/types';
 import { toast } from 'sonner';
 import { Plus, Minus, Trash2, ShoppingCart, Percent, Loader2, Package, TrendingUp } from 'lucide-react';
+import { PackAdvisor, type AdvisorResult } from './PackAdvisor';
 
 export interface PackBuilderGroup {
   slug: string;
@@ -119,6 +120,34 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
   const total = quote ? quote.total : subtotal;
   const nextTier = quote?.next_tier ?? null;
 
+  /**
+   * The advisor's answer, applied to the picker below: the recommended categories are reordered
+   * to the top and the first one is scrolled to.
+   *
+   * REORDERING, NOT FILTERING. Hiding the other categories would make the advisor a gate rather
+   * than a suggestion — a visitor whose goal is "perte de poids" can still want a pre-workout,
+   * and a recommendation that removes options is a recommendation people learn to distrust.
+   */
+  const [categoryOrder, setCategoryOrder] = useState<string[] | null>(null);
+
+  const availableSlugs = useMemo(() => groups.map((g) => g.slug), [groups]);
+
+  const orderedGroups = useMemo(() => {
+    if (!categoryOrder) return groups;
+    const rank = new Map(categoryOrder.map((slug, i) => [slug, i]));
+    return [...groups].sort((a, b) => (rank.get(a.slug) ?? 99) - (rank.get(b.slug) ?? 99));
+  }, [groups, categoryOrder]);
+
+  const handleAdvisorApply = useCallback((result: AdvisorResult) => {
+    setCategoryOrder(result.categoryOrder);
+    // Let the reorder commit before scrolling, or we scroll to where the group used to be.
+    requestAnimationFrame(() => {
+      const first = result.categoryOrder[0];
+      if (!first) return;
+      document.getElementById(`group-${first}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, []);
+
   const handleAddPackToCart = useCallback(() => {
     if (entries.length === 0) {
       toast.error('Ajoutez au moins un produit à votre pack');
@@ -131,30 +160,38 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
   }, [entries, addToCart, setPackDiscount, router]);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-950">
+    <div className="min-h-screen bg-canvas">
 
       <main className="max-w-site mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
         <PageHeader
           kicker="Pack sur mesure"
           title="Composez votre pack"
-          subtitle="Sélectionnez vos produits et profitez d'une remise groupée automatique : plus votre pack est important, plus vous économisez."
+          subtitle="Répondez à une question, ajustez les quantités, et la remise groupée s'applique toute seule : plus votre pack est important, plus vous économisez."
         />
+
+        {/* The guided entry point. Everything below it still works untouched for a visitor who
+            already knows what they want and scrolls straight past. */}
+        {groups.length > 0 && (
+          <div className="mt-6">
+            <PackAdvisor onApply={handleAdvisorApply} availableSlugs={availableSlugs} />
+          </div>
+        )}
 
         {/* Tiers explainer */}
         <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
           {PACK_TIERS.map((tier) => (
             <div
               key={tier.min}
-              className="flex items-center gap-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 p-4"
+              className="flex items-center gap-3 rounded-xl border border-hairline bg-sunken p-4"
             >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand">
                 <Percent className="h-5 w-5" aria-hidden="true" />
               </span>
               <div>
-                <p className="font-display font-bold tracking-tight text-lg text-gray-900 dark:text-white">
+                <p className="font-display font-bold tracking-tight text-lg text-ink-1">
                   -{tier.percent}%
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-xs text-ink-3">
                   dès {tier.min} DT d&apos;achat
                 </p>
               </div>
@@ -174,11 +211,11 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
           <div className="mt-8 grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8">
             {/* Product picker */}
             <div className="space-y-10 min-w-0">
-              {groups.map((group) => (
-                <section key={group.slug} aria-labelledby={`group-${group.slug}`}>
+              {orderedGroups.map((group) => (
+                <section key={group.slug} id={`group-${group.slug}`} aria-labelledby={`group-${group.slug}-h`} className="scroll-mt-24">
                   <h2
-                    id={`group-${group.slug}`}
-                    className="font-display uppercase tracking-tight text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4"
+                    id={`group-${group.slug}-h`}
+                    className="font-display uppercase tracking-tight text-xl sm:text-2xl font-bold text-ink-1 mb-4"
                   >
                     {group.label}
                   </h2>
@@ -195,7 +232,7 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
                           className={`flex flex-col rounded-xl border p-3 transition-colors ${
                             qty > 0
                               ? 'border-red-300 dark:border-red-800 bg-red-50/40 dark:bg-red-950/10'
-                              : 'border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900'
+                              : 'border-hairline bg-elevated'
                           }`}
                         >
                           <div className="relative aspect-square rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-800 mb-2">
@@ -216,11 +253,11 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
                           </div>
                           <h3
                             title={product.designation_fr}
-                            className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white leading-snug line-clamp-2 min-h-[2.25rem]"
+                            className="text-xs sm:text-sm font-semibold text-ink-1 leading-snug line-clamp-2 min-h-[2.25rem]"
                           >
                             {product.designation_fr}
                           </h3>
-                          <p className="mt-1 font-display font-bold tracking-tight tabular-nums text-red-600 dark:text-red-400">
+                          <p className="mt-1 font-display font-bold tracking-tight tabular-nums text-brand">
                             {price.toFixed(2)} DT
                           </p>
                           <div className="mt-2">
@@ -234,7 +271,7 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
                                 >
                                   {qty === 1 ? <Trash2 className="h-4 w-4" /> : <Minus className="h-4 w-4" />}
                                 </button>
-                                <span className="font-display font-bold tabular-nums text-gray-900 dark:text-white">
+                                <span className="font-display font-bold tabular-nums text-ink-1">
                                   {qty}
                                 </span>
                                 <button
@@ -256,7 +293,7 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
                                 className={`w-full min-h-[44px] rounded-lg font-semibold text-xs sm:text-sm ${
                                   outOfStock
                                     ? 'bg-gray-300 dark:bg-gray-700 text-white cursor-not-allowed'
-                                    : 'bg-red-600 hover:bg-red-700 text-white'
+                                    : 'bg-brand hover:bg-brand-hover text-white'
                                 }`}
                               >
                                 <Plus className="h-4 w-4 mr-1 shrink-0" aria-hidden="true" />
@@ -274,20 +311,20 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
 
             {/* Sticky summary */}
             <aside className="lg:sticky lg:top-24 h-fit">
-              <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm overflow-hidden">
-                <div className="border-b border-gray-100 dark:border-gray-800 px-4 sm:px-5 py-4">
-                  <h2 className="flex items-center gap-2 font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white">
-                    <ShoppingCart className="h-5 w-5 text-red-600 dark:text-red-400" aria-hidden="true" />
+              <div className="rounded-xl border border-hairline bg-elevated shadow-sm overflow-hidden">
+                <div className="border-b border-hairline px-4 sm:px-5 py-4">
+                  <h2 className="flex items-center gap-2 font-display uppercase tracking-tight text-lg text-ink-1">
+                    <ShoppingCart className="h-5 w-5 text-brand" aria-hidden="true" />
                     Votre pack
                   </h2>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <p className="text-xs text-ink-3 mt-1">
                     {itemCount} article{itemCount !== 1 ? 's' : ''}
                   </p>
                 </div>
 
                 <div className="p-4 sm:p-5 space-y-4">
                   {entries.length === 0 ? (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">
+                    <p className="text-sm text-ink-3 py-4 text-center">
                       Aucun produit sélectionné. Ajoutez des produits pour composer votre pack.
                     </p>
                   ) : (
@@ -297,7 +334,7 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
                           <span className="min-w-0 flex-1 truncate text-gray-700 dark:text-gray-300">
                             <span className="tabular-nums text-gray-400">{qty}×</span> {product.designation_fr}
                           </span>
-                          <span className="shrink-0 font-display font-semibold tabular-nums text-gray-900 dark:text-white">
+                          <span className="shrink-0 font-display font-semibold tabular-nums text-ink-1">
                             {(getEffectivePrice(product as never) * qty).toFixed(2)} DT
                           </span>
                         </li>
@@ -305,17 +342,17 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
                     </ul>
                   )}
 
-                  <div className="border-t border-gray-100 dark:border-gray-800 pt-4 space-y-2">
+                  <div className="border-t border-hairline pt-4 space-y-2">
                     <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Sous-total</span>
-                      <span className="font-display font-semibold tabular-nums text-gray-900 dark:text-white">
+                      <span className="text-ink-2">Sous-total</span>
+                      <span className="font-display font-semibold tabular-nums text-ink-1">
                         {subtotal.toFixed(2)} DT
                       </span>
                     </div>
                     {discountAmount > 0 && (
                       <div className="flex justify-between items-center text-sm">
-                        <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
-                          <Percent className="h-4 w-4 text-red-600 dark:text-red-400" aria-hidden="true" />
+                        <span className="text-ink-2 flex items-center gap-1.5">
+                          <Percent className="h-4 w-4 text-brand" aria-hidden="true" />
                           Remise pack{quote?.tier_label ? ` (${quote.tier_label})` : ` (-${discountPercent}%)`}
                         </span>
                         <span className="font-display font-semibold tabular-nums text-green-600 dark:text-green-400">
@@ -323,12 +360,12 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
                         </span>
                       </div>
                     )}
-                    <div className="border-t border-gray-100 dark:border-gray-800 pt-2 flex justify-between items-baseline">
-                      <span className="font-display uppercase tracking-tight text-base text-gray-900 dark:text-white flex items-center gap-1.5">
+                    <div className="border-t border-hairline pt-2 flex justify-between items-baseline">
+                      <span className="font-display uppercase tracking-tight text-base text-ink-1 flex items-center gap-1.5">
                         Total
                         {quoteLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-gray-400" aria-hidden="true" />}
                       </span>
-                      <span className="font-display font-bold tracking-tight tabular-nums text-2xl text-red-600 dark:text-red-400">
+                      <span className="font-display font-bold tracking-tight tabular-nums text-2xl text-brand">
                         {total.toFixed(2)} DT
                       </span>
                     </div>
@@ -337,7 +374,7 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
                   {/* Next-tier nudge */}
                   {nextTier && (
                     <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50/60 dark:bg-red-950/20 border border-red-100 dark:border-red-900/40">
-                      <TrendingUp className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5 shrink-0" aria-hidden="true" />
+                      <TrendingUp className="h-4 w-4 text-brand mt-0.5 shrink-0" aria-hidden="true" />
                       <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
                         Ajoutez {nextTier.remaining.toFixed(2)} DT pour obtenir -{nextTier.percent}%
                       </p>
@@ -349,7 +386,7 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
                     size="lg"
                     onClick={handleAddPackToCart}
                     disabled={entries.length === 0}
-                    className="w-full min-h-[52px] rounded-xl font-display uppercase tracking-wide bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+                    className="w-full min-h-[52px] rounded-xl font-display uppercase tracking-wide bg-brand hover:bg-brand-hover text-white disabled:opacity-50"
                   >
                     <ShoppingCart className="h-5 w-5 mr-2" aria-hidden="true" />
                     Ajouter le pack au panier
