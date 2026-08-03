@@ -40,7 +40,7 @@ Route::get('unsubscribe', function () {
 
 Route::redirect('login-redirect', 'login')->name('login');
 
-Route::middleware(['auth', 'no.cache.print'])->group(function () {
+Route::middleware(['auth', 'back.office', 'no.cache.print'])->group(function () {
     Route::get('factures/{facture}/print', function (Facture $facture) {
         $facture->load('client');
         $details_facture = DetailsFacture::where('facture_id', $facture->id)
@@ -268,7 +268,7 @@ Route::middleware(['auth', 'no.cache.print'])->group(function () {
 });
 
 // Dashboard export + email preview - accessible via Filament auth
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'back.office'])->group(function () {
     Route::get('admin/global-search', \App\Http\Controllers\GlobalSearchController::class)
         ->name('admin.global-search');
     Route::get('email-campaign-preview', \App\Http\Controllers\EmailPreviewController::class)

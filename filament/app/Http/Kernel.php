@@ -96,5 +96,7 @@ class Kernel extends HttpKernel
         'throttle' => ThrottleRequests::class,
         'verified' => EnsureEmailIsVerified::class,
         'no.cache.print' => \App\Http\Middleware\DisableBrowserCacheForPrintDocuments::class,
+        // Staff-only. `auth` alone lets PARTNERS (same 'web' guard) reach back-office routes.
+        'back.office' => \App\Http\Middleware\EnsureBackOfficeRole::class,
     ];
 }
