@@ -146,10 +146,10 @@ export default function AboutPageClient({
   const statIcons = [Award, Star, Truck];
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-950">
+    <div className="min-h-screen bg-canvas">
 <main>
         {/* ── Hero ── */}
-        <section className="border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-950">
+        <section className="border-b border-hairline bg-canvas">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 md:py-20">
             <PageHeader
               align="center"
@@ -160,13 +160,13 @@ export default function AboutPageClient({
               <div className="flex flex-wrap items-center justify-center gap-3">
                 <Link
                   href="/shop"
-                  className="inline-flex items-center gap-2 rounded-xl bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 text-sm font-display uppercase tracking-wide font-semibold transition-colors"
+                  className="inline-flex items-center gap-2 rounded-xl bg-brand hover:bg-brand-hover text-white px-5 py-2.5 text-sm font-display uppercase tracking-wide font-semibold transition-colors"
                 >
                   <Package className="h-4 w-4" /> Nos produits
                 </Link>
                 <Link
                   href="/contact"
-                  className="inline-flex items-center gap-2 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white px-5 py-2.5 text-sm font-semibold transition-colors hover:border-red-600 hover:text-red-600 dark:hover:border-red-400 dark:hover:text-red-400"
+                  className="inline-flex items-center gap-2 rounded-xl border border-gray-200 dark:border-gray-700 text-ink-1 px-5 py-2.5 text-sm font-semibold transition-colors hover:border-red-600 hover:text-red-600 dark:hover:border-red-400 dark:hover:text-red-400"
                 >
                   <Users className="h-4 w-4" /> Nous contacter
                 </Link>
@@ -177,7 +177,7 @@ export default function AboutPageClient({
 
         {/* ── Stats ── */}
         {keyNumbers.length > 0 && (
-          <section className="py-12 sm:py-16 lg:py-20 bg-white dark:bg-gray-950">
+          <section className="py-12 sm:py-16 lg:py-20 bg-canvas">
             <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
                 {keyNumbers.map((stat, i) => {
@@ -188,21 +188,21 @@ export default function AboutPageClient({
                   return (
                     <div
                       key={i}
-                      className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 sm:p-8 text-center transition-shadow hover:shadow-md"
+                      className="rounded-xl border border-hairline bg-elevated p-6 sm:p-8 text-center transition-shadow hover:shadow-md"
                     >
-                      <div className="w-12 h-12 sm:w-14 sm:h-14 mx-auto mb-4 rounded-lg bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 flex items-center justify-center">
+                      <div className="w-12 h-12 sm:w-14 sm:h-14 mx-auto mb-4 rounded-lg bg-red-50 dark:bg-red-950/40 text-brand flex items-center justify-center">
                         <Icon className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={1.75} />
                       </div>
                       <div
                         className={
                           isNumeric
-                            ? 'font-display font-bold tracking-tight tabular-nums text-3xl sm:text-4xl lg:text-5xl text-gray-900 dark:text-white mb-2'
-                            : 'font-display font-bold uppercase tracking-tight leading-tight text-xl sm:text-2xl text-gray-900 dark:text-white mb-2 text-balance'
+                            ? 'font-display font-bold tracking-tight tabular-nums text-3xl sm:text-4xl lg:text-5xl text-ink-1 mb-2'
+                            : 'font-display font-bold uppercase tracking-tight leading-tight text-xl sm:text-2xl text-ink-1 mb-2 text-balance'
                         }
                       >
                         {stat.value}
                       </div>
-                      <div className="text-sm sm:text-base text-gray-600 dark:text-gray-400 font-medium">{stat.label}</div>
+                      <div className="text-sm sm:text-base text-ink-2 font-medium">{stat.label}</div>
                     </div>
                   );
                 })}
@@ -212,16 +212,16 @@ export default function AboutPageClient({
         )}
 
         {/* ── Dynamic content ── */}
-        <section className="py-12 sm:py-16 lg:py-20 bg-white dark:bg-gray-950">
+        <section className="py-12 sm:py-16 lg:py-20 bg-canvas">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             {loading ? (
               <div className="space-y-6 sm:space-y-8">
                 {Array.from({ length: 2 }).map((_, i) => (
                   <div
                     key={i}
-                    className="rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm p-5 sm:p-8"
+                    className="rounded-xl bg-elevated border border-hairline shadow-sm p-5 sm:p-8"
                   >
-                    <div className="flex items-center gap-3 mb-5 pb-4 border-b border-gray-100 dark:border-gray-800">
+                    <div className="flex items-center gap-3 mb-5 pb-4 border-b border-hairline">
                       <Skeleton className="w-1 h-6 rounded-full" />
                       <Skeleton className="h-6 w-48 max-w-full rounded" />
                     </div>
@@ -239,11 +239,11 @@ export default function AboutPageClient({
                 {parsedContent.sections.map((section, i) => (
                   <div
                     key={i}
-                    className="rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow p-5 sm:p-8"
+                    className="rounded-xl bg-elevated border border-hairline shadow-sm hover:shadow-md transition-shadow p-5 sm:p-8"
                   >
-                    <div className="flex items-center gap-3 mb-5 pb-4 border-b border-gray-100 dark:border-gray-800">
+                    <div className="flex items-center gap-3 mb-5 pb-4 border-b border-hairline">
                       <div className="w-1 h-6 rounded-full bg-red-600 flex-shrink-0" />
-                      <h2 className="font-display uppercase tracking-tight leading-[0.95] font-bold text-xl sm:text-2xl text-gray-900 dark:text-white">{section.title}</h2>
+                      <h2 className="font-display uppercase tracking-tight leading-[0.95] font-bold text-xl sm:text-2xl text-ink-1">{section.title}</h2>
                     </div>
                     <div
                       className="prose prose-sm sm:prose-base max-w-none dark:prose-invert
@@ -260,7 +260,7 @@ export default function AboutPageClient({
                 {parsedContent.lists.map((list, li) => (
                   <div
                     key={`list-${li}`}
-                    className="rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-5 sm:p-8"
+                    className="rounded-xl bg-sunken border border-hairline p-5 sm:p-8"
                   >
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                       {list.items.map((item, ii) => {
@@ -268,9 +268,9 @@ export default function AboutPageClient({
                         return (
                           <div
                             key={ii}
-                            className="flex items-start gap-3 p-4 rounded-xl bg-white dark:bg-gray-950 border border-gray-100 dark:border-gray-800 transition-colors hover:border-red-200 dark:hover:border-red-900/60"
+                            className="flex items-start gap-3 p-4 rounded-xl bg-canvas border border-hairline transition-colors hover:border-red-200 dark:hover:border-red-900/60"
                           >
-                            <div className="flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 flex items-center justify-center">
+                            <div className="flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-red-50 dark:bg-red-950/40 text-brand flex items-center justify-center">
                               <Icon className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={1.75} />
                             </div>
                             <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 font-medium leading-relaxed flex-1">{item}</p>
@@ -283,7 +283,7 @@ export default function AboutPageClient({
 
                 {/* Remaining paragraphs */}
                 {parsedContent.paragraphs.length > 0 && (
-                  <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm p-5 sm:p-8">
+                  <div className="rounded-xl bg-elevated border border-hairline shadow-sm p-5 sm:p-8">
                     <div
                       className="prose prose-sm sm:prose-base max-w-none dark:prose-invert prose-p:text-gray-600 dark:prose-p:text-gray-400 prose-p:leading-7 prose-a:text-red-600 dark:prose-a:text-red-400 prose-strong:text-gray-900 dark:prose-strong:text-white [&_table]:block [&_table]:w-max [&_table]:max-w-full [&_table]:overflow-x-auto"
                       dangerouslySetInnerHTML={{ __html: parsedContent.paragraphs.join('') }}
@@ -293,7 +293,7 @@ export default function AboutPageClient({
 
                 {/* Fallback raw HTML */}
                 {parsedContent.sections.length === 0 && parsedContent.lists.length === 0 && parsedContent.paragraphs.length === 0 && (
-                  <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm p-5 sm:p-8">
+                  <div className="rounded-xl bg-elevated border border-hairline shadow-sm p-5 sm:p-8">
                     <div
                       className="prose prose-sm sm:prose-base max-w-none dark:prose-invert
                         prose-headings:text-gray-900 dark:prose-headings:text-white prose-h2:pb-3 prose-h2:border-b prose-h2:border-gray-200 dark:prose-h2:border-gray-800 prose-h2:font-display prose-h2:uppercase prose-h2:tracking-tight
@@ -312,35 +312,35 @@ export default function AboutPageClient({
         </section>
 
         {/* ── Map ── */}
-        <section className="py-12 sm:py-16 lg:py-20 bg-white dark:bg-gray-950">
+        <section className="py-12 sm:py-16 lg:py-20 bg-canvas">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center gap-3 mb-6 sm:mb-8 justify-center">
               <div className="h-px flex-1 bg-gray-100 dark:bg-gray-800" />
-              <h2 className="font-display uppercase tracking-tight leading-[0.95] font-bold text-xl sm:text-2xl text-gray-900 dark:text-white flex items-center gap-2 flex-shrink-0">
-                <MapPin className="h-5 w-5 text-red-600 dark:text-red-400" strokeWidth={1.75} /> Notre localisation
+              <h2 className="font-display uppercase tracking-tight leading-[0.95] font-bold text-xl sm:text-2xl text-ink-1 flex items-center gap-2 flex-shrink-0">
+                <MapPin className="h-5 w-5 text-brand" strokeWidth={1.75} /> Notre localisation
               </h2>
               <div className="h-px flex-1 bg-gray-100 dark:bg-gray-800" />
             </div>
 
-            <div className="rounded-xl overflow-hidden shadow-sm border border-gray-100 dark:border-gray-800">
+            <div className="rounded-xl overflow-hidden shadow-sm border border-hairline">
               {coordinates?.gelocalisation ? (
                 <div className="h-52 sm:h-72 lg:h-96 w-full"
                   dangerouslySetInnerHTML={{ __html: coordinates.gelocalisation }} />
               ) : (
-                <div className="h-52 sm:h-72 bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+                <div className="h-52 sm:h-72 bg-sunken flex items-center justify-center">
                   <p className="text-gray-400 dark:text-gray-500 text-sm">Carte en cours de chargement…</p>
                 </div>
               )}
-              <div className="p-5 sm:p-7 bg-white dark:bg-gray-900">
+              <div className="p-5 sm:p-7 bg-elevated">
                 <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-                  <div className="w-11 h-11 rounded-lg bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 flex items-center justify-center flex-shrink-0">
+                  <div className="w-11 h-11 rounded-lg bg-red-50 dark:bg-red-950/40 text-brand flex items-center justify-center flex-shrink-0">
                     <MapPin className="h-5 w-5" strokeWidth={1.75} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-display uppercase tracking-wide text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-1 break-words">Protein.tn — STE BITOUTA D&apos;ARTICLE DE SPORT</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 break-words mb-1">{coordinates?.adresse || 'Sousse, Tunisie'}</p>
-                    {coordinates?.phone && <p className="text-sm text-gray-500 dark:text-gray-400"><span className="font-semibold text-gray-700 dark:text-gray-300">Tél :</span> {coordinates.phone}</p>}
-                    {coordinates?.email && <p className="text-sm text-gray-500 dark:text-gray-400 break-all"><span className="font-semibold text-gray-700 dark:text-gray-300">Email :</span> {coordinates.email}</p>}
+                    <h3 className="font-display uppercase tracking-wide text-base sm:text-lg font-semibold text-ink-1 mb-1 break-words">Protein.tn — STE BITOUTA D&apos;ARTICLE DE SPORT</h3>
+                    <p className="text-sm text-ink-3 break-words mb-1">{coordinates?.adresse || 'Sousse, Tunisie'}</p>
+                    {coordinates?.phone && <p className="text-sm text-ink-3"><span className="font-semibold text-gray-700 dark:text-gray-300">Tél :</span> {coordinates.phone}</p>}
+                    {coordinates?.email && <p className="text-sm text-ink-3 break-all"><span className="font-semibold text-gray-700 dark:text-gray-300">Email :</span> {coordinates.email}</p>}
                   </div>
                 </div>
               </div>
@@ -349,33 +349,33 @@ export default function AboutPageClient({
         </section>
 
         {/* ── CTA ── */}
-        <section className="py-12 sm:py-16 lg:py-20 bg-gray-50 dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800">
+        <section className="py-12 sm:py-16 lg:py-20 bg-sunken border-t border-hairline">
           <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
-            <span className="inline-flex items-center gap-2 mb-3 font-display uppercase tracking-[0.2em] text-[11px] sm:text-xs font-semibold text-red-600 dark:text-red-400">
+            <span className="inline-flex items-center gap-2 mb-3 font-display uppercase tracking-[0.2em] text-[11px] sm:text-xs font-semibold text-brand">
               <span className="h-px w-5 bg-red-600 dark:bg-red-400" aria-hidden="true" />
               Rejoignez-nous
             </span>
-            <h2 className="font-display uppercase tracking-tight leading-[0.95] font-bold text-2xl sm:text-3xl md:text-4xl text-gray-900 dark:text-white mb-4">
+            <h2 className="font-display uppercase tracking-tight leading-[0.95] font-bold text-2xl sm:text-3xl md:text-4xl text-ink-1 mb-4">
               Rejoignez la communauté Protein.tn
             </h2>
-            <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base md:text-lg mb-8 leading-relaxed max-w-2xl mx-auto">
+            <p className="text-ink-2 text-sm sm:text-base md:text-lg mb-8 leading-relaxed max-w-2xl mx-auto">
               Que vous soyez athlète professionnel, passionné de fitness ou débutant — Protein.tn est votre partenaire pour atteindre vos objectifs.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link
                 href="/shop"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm sm:text-base font-display uppercase tracking-wide font-semibold transition-colors"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-brand hover:bg-brand-hover text-white text-sm sm:text-base font-display uppercase tracking-wide font-semibold transition-colors"
               >
                 <Package className="h-4 w-4" /> Découvrir nos produits
               </Link>
               <Link
                 href="/contact"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-sm sm:text-base font-semibold transition-colors hover:border-red-600 hover:text-red-600 dark:hover:border-red-400 dark:hover:text-red-400"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 text-ink-1 text-sm sm:text-base font-semibold transition-colors hover:border-red-600 hover:text-red-600 dark:hover:border-red-400 dark:hover:text-red-400"
               >
                 <Users className="h-4 w-4" /> Nous contacter
               </Link>
             </div>
-            <p className="mt-7 text-xs sm:text-sm text-gray-500 dark:text-gray-400 max-w-xl mx-auto">
+            <p className="mt-7 text-xs sm:text-sm text-ink-3 max-w-xl mx-auto">
               <strong className="text-gray-700 dark:text-gray-300">Proteine Tunisie – Protein.tn :</strong> Votre expert en nutrition sportive depuis 2010. Basé à Sousse, livraison rapide partout en Tunisie.
             </p>
           </div>

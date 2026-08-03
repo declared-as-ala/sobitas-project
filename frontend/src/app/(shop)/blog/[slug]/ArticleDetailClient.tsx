@@ -233,7 +233,7 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
           <Button
             asChild
             variant="ghost"
-            className="mb-4 sm:mb-6 min-h-11 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+            className="mb-4 sm:mb-6 min-h-11 text-ink-2 hover:text-red-600 dark:hover:text-red-400"
           >
             <Link href="/blog">
               <ArrowLeft className="h-4 w-4 mr-2" />
@@ -241,19 +241,19 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
             </Link>
           </Button>
 
-          <article className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+          <article className="bg-elevated rounded-xl border border-hairline shadow-sm overflow-hidden">
             {/* Article Header */}
             <header className="px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-4 sm:pb-6">
-              <span className="inline-flex items-center gap-2 mb-3 font-display uppercase tracking-[0.2em] text-[11px] sm:text-xs font-semibold text-red-600 dark:text-red-400">
+              <span className="inline-flex items-center gap-2 mb-3 font-display uppercase tracking-[0.2em] text-[11px] sm:text-xs font-semibold text-brand">
                 <span className="h-px w-5 bg-red-600 dark:bg-red-400" aria-hidden="true" />
                 Blog
               </span>
-              <h1 className="font-display uppercase tracking-tight leading-[1.1] sm:leading-[1.05] font-bold text-gray-900 dark:text-white text-2xl sm:text-4xl lg:text-5xl mb-4 sm:mb-6 text-balance break-words">
+              <h1 className="font-display uppercase tracking-tight leading-[1.1] sm:leading-[1.05] font-bold text-ink-1 text-2xl sm:text-4xl lg:text-5xl mb-4 sm:mb-6 text-balance break-words">
                 {decodeHtmlEntities(article.designation_fr || '')}
               </h1>
 
               {/* Meta Information */}
-              <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm sm:text-base text-gray-600 dark:text-gray-400">
+              <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm sm:text-base text-ink-2">
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={1.75} />
                   <span>{format(articleDate, 'd MMMM yyyy', { locale: fr })}</span>
@@ -276,7 +276,7 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
                     variant="ghost"
                     size="sm"
                     onClick={handleShare}
-                    className="min-h-11 w-full justify-center text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 sm:w-auto"
+                    className="min-h-11 w-full justify-center text-ink-2 hover:text-red-600 dark:hover:text-red-400 sm:w-auto"
                   >
                     <Share2 className="h-4 w-4 mr-2" />
                     Partager
@@ -329,10 +329,10 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
               </div>
               {article.related_shop_categories && article.related_shop_categories.length > 0 ? (
                 <nav
-                  className="mt-8 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 p-4 sm:p-6"
+                  className="mt-8 rounded-xl border border-hairline bg-sunken p-4 sm:p-6"
                   aria-label="Catégories boutique liées"
                 >
-                  <h2 className="font-display uppercase tracking-tight text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-3">
+                  <h2 className="font-display uppercase tracking-tight text-lg sm:text-xl font-bold text-ink-1 mb-3">
                     Voir aussi sur la boutique
                   </h2>
                   <ul className="flex flex-wrap gap-2 sm:gap-3">
@@ -351,12 +351,12 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
               ) : null}
               {(articleCategories.length > 0 || articleTags.length > 0) && (
                 <nav
-                  className="mt-8 flex flex-col gap-4 border-t border-gray-100 dark:border-gray-800 pt-6"
+                  className="mt-8 flex flex-col gap-4 border-t border-hairline pt-6"
                   aria-label="Catégorie et tags de l'article"
                 >
                   {articleCategories.length > 0 && (
                     <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                      <span className="inline-flex items-center gap-1.5 font-display text-[11px] sm:text-xs font-semibold uppercase tracking-[0.2em] text-red-600 dark:text-red-400">
+                      <span className="inline-flex items-center gap-1.5 font-display text-[11px] sm:text-xs font-semibold uppercase tracking-[0.2em] text-brand">
                         <FolderOpen className="h-3.5 w-3.5" aria-hidden="true" />
                         Catégorie
                       </span>
@@ -373,7 +373,7 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
                   )}
                   {articleTags.length > 0 && (
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="inline-flex items-center gap-1.5 font-display text-[11px] sm:text-xs font-semibold uppercase tracking-[0.2em] text-red-600 dark:text-red-400">
+                      <span className="inline-flex items-center gap-1.5 font-display text-[11px] sm:text-xs font-semibold uppercase tracking-[0.2em] text-brand">
                         <Tag className="h-3.5 w-3.5" aria-hidden="true" />
                         Tags
                       </span>
@@ -396,18 +396,18 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
 
           {/* Internal linking: creatine category CTA for creatine-related articles */}
           {/\bcréatine\b|\bcreatine\b/i.test(`${article.designation_fr ?? ''} ${article.description_fr ?? ''}`) && (
-            <div className="mt-6 p-4 sm:p-5 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
-              <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Prêt à passer à l'action ?</p>
+            <div className="mt-6 p-4 sm:p-5 rounded-xl border border-hairline bg-sunken">
+              <p className="text-sm font-semibold text-ink-1 mb-1">Prêt à passer à l'action ?</p>
               <p className="text-sm text-gray-700 dark:text-gray-300">
-                <Link href="/creatine" className="text-red-600 dark:text-red-400 font-medium hover:underline">Voir toutes nos créatines disponibles en Tunisie</Link> : monohydrate, micronisée, Creapure®, capsules — livraison rapide et paiement à la livraison partout en Tunisie.
+                <Link href="/creatine" className="text-brand font-medium hover:underline">Voir toutes nos créatines disponibles en Tunisie</Link> : monohydrate, micronisée, Creapure®, capsules — livraison rapide et paiement à la livraison partout en Tunisie.
               </p>
             </div>
           )}
           {/* Internal linking: whey category for whey-related articles */}
           {/\bwhey\b|\bprot[eé]ine\s+(lactos[eé]rum|lait)\b/i.test(`${article.designation_fr ?? ''} ${article.description_fr ?? ''}`) && (
-            <div className="mt-6 p-4 sm:p-5 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
+            <div className="mt-6 p-4 sm:p-5 rounded-xl border border-hairline bg-sunken">
               <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
-                <Link href="/proteine-whey" className="text-red-600 dark:text-red-400 font-medium hover:underline">Whey protein Tunisie</Link> au meilleur prix : livraison rapide, produits originaux. <Link href="/proteine-whey" className="text-red-600 dark:text-red-400 hover:underline">Acheter whey en Tunisie</Link> – découvrez notre sélection de <Link href="/proteine-whey" className="text-red-600 dark:text-red-400 hover:underline">meilleure whey protein</Link> sur Proteine Tunisie.
+                <Link href="/proteine-whey" className="text-brand font-medium hover:underline">Whey protein Tunisie</Link> au meilleur prix : livraison rapide, produits originaux. <Link href="/proteine-whey" className="text-brand hover:underline">Acheter whey en Tunisie</Link> – découvrez notre sélection de <Link href="/proteine-whey" className="text-brand hover:underline">meilleure whey protein</Link> sur Proteine Tunisie.
               </p>
             </div>
           )}
@@ -415,7 +415,7 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
           {/* Related Articles */}
           {relatedArticles.length > 0 && (
             <div className="mt-8 sm:mt-12 lg:mt-16 pt-8 sm:pt-12 border-t border-gray-200 dark:border-gray-800">
-              <h2 className="font-display uppercase tracking-tight leading-[0.95] text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-6 sm:mb-8">
+              <h2 className="font-display uppercase tracking-tight leading-[0.95] text-2xl sm:text-3xl font-bold text-ink-1 mb-6 sm:mb-8">
                 Articles similaires
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">

@@ -299,7 +299,7 @@ export function BlogPageClient({ articles, blogCategories, blogTags }: BlogPageC
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-950">
+    <div className="min-h-screen bg-canvas">
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
         <div className="mb-10 sm:mb-12">
@@ -318,7 +318,7 @@ export function BlogPageClient({ articles, blogCategories, blogTags }: BlogPageC
                   className={`inline-flex min-h-11 items-center rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
                     activeCategory === cat.id
                       ? 'border-red-600 bg-red-600 text-white'
-                      : 'border-gray-200 bg-white text-gray-700 hover:border-red-600 hover:text-red-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-red-400 dark:hover:text-red-400'
+                      : 'border-gray-200 bg-elevated text-gray-700 hover:border-red-600 hover:text-red-600 dark:border-gray-800 dark:text-gray-300 dark:hover:border-red-400 dark:hover:text-red-400'
                   }`}
                 >
                   {cat.label}
@@ -333,7 +333,7 @@ export function BlogPageClient({ articles, blogCategories, blogTags }: BlogPageC
               <div className="mt-5 flex flex-col gap-3">
                 {blogCategoryLinks.length > 0 && (
                   <nav className="flex flex-wrap items-center gap-2 sm:gap-2.5" aria-label="Parcourir les catégories du blog">
-                    <span className="inline-flex items-center gap-1.5 font-display text-[11px] sm:text-xs font-semibold uppercase tracking-[0.2em] text-red-600 dark:text-red-400">
+                    <span className="inline-flex items-center gap-1.5 font-display text-[11px] sm:text-xs font-semibold uppercase tracking-[0.2em] text-brand">
                       <FolderOpen className="h-3.5 w-3.5" aria-hidden="true" />
                       Catégories
                     </span>
@@ -341,7 +341,7 @@ export function BlogPageClient({ articles, blogCategories, blogTags }: BlogPageC
                       <Link
                         key={cat.slug}
                         href={`/blog/category/${cat.slug}`}
-                        className="inline-flex min-h-9 items-center rounded-full border border-gray-200 bg-white px-3.5 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:border-red-600 hover:text-red-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-red-400 dark:hover:text-red-400"
+                        className="inline-flex min-h-9 items-center rounded-full border border-gray-200 bg-elevated px-3.5 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:border-red-600 hover:text-red-600 dark:border-gray-800 dark:text-gray-300 dark:hover:border-red-400 dark:hover:text-red-400"
                       >
                         {decodeHtmlEntities(cat.name)}
                       </Link>
@@ -350,7 +350,7 @@ export function BlogPageClient({ articles, blogCategories, blogTags }: BlogPageC
                 )}
                 {blogTagLinks.length > 0 && (
                   <nav className="flex flex-wrap items-center gap-2" aria-label="Parcourir les tags du blog">
-                    <span className="inline-flex items-center gap-1.5 font-display text-[11px] sm:text-xs font-semibold uppercase tracking-[0.2em] text-red-600 dark:text-red-400">
+                    <span className="inline-flex items-center gap-1.5 font-display text-[11px] sm:text-xs font-semibold uppercase tracking-[0.2em] text-brand">
                       <Tag className="h-3.5 w-3.5" aria-hidden="true" />
                       Tags
                     </span>
@@ -358,7 +358,7 @@ export function BlogPageClient({ articles, blogCategories, blogTags }: BlogPageC
                       <Link
                         key={t.slug}
                         href={`/blog/tag/${t.slug}`}
-                        className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-sm text-gray-600 transition-colors hover:border-red-600 hover:text-red-600 dark:border-gray-800 dark:bg-gray-900/60 dark:text-gray-400 dark:hover:border-red-400 dark:hover:text-red-400"
+                        className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-sm text-ink-2 transition-colors hover:border-red-600 hover:text-red-600 dark:border-gray-800 dark:bg-gray-900/60 dark:hover:border-red-400 dark:hover:text-red-400"
                       >
                         {decodeHtmlEntities(t.name)}
                       </Link>
@@ -372,7 +372,7 @@ export function BlogPageClient({ articles, blogCategories, blogTags }: BlogPageC
 
         {sortedArticles.length === 0 ? (
           <div className="text-center py-16">
-            <p className="text-gray-500 dark:text-gray-400">Aucun article dans cette catégorie.</p>
+            <p className="text-ink-3">Aucun article dans cette catégorie.</p>
           </div>
         ) : (
           <>
@@ -401,7 +401,7 @@ export function BlogPageClient({ articles, blogCategories, blogTags }: BlogPageC
                   <ChevronLeft className="h-5 w-5" aria-hidden="true" />
                 </button>
                 <span
-                  className="min-w-[4rem] text-center font-display font-semibold tabular-nums text-gray-900 dark:text-white"
+                  className="min-w-[4rem] text-center font-display font-semibold tabular-nums text-ink-1"
                   aria-live="polite"
                 >
                   {currentPage} / {totalPages}

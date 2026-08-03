@@ -11,7 +11,7 @@ import type { Article } from '@/types';
  * "Nos derniers articles" — the last homepage band to be migrated, and it was carrying four
  * separate problems at once. All four are fixed here.
  *
- * 1. COLOUR. It hand-wrote `bg-gray-50 dark:bg-gray-900` — a COOL grey — while every other band
+ * 1. COLOUR. It hand-wrote `bg-sunken` — a COOL grey — while every other band
  *    on the page uses the warm sand `--page-sunken` (#F7F6F4). Two greys that are 4 points apart
  *    in hue and 2 in lightness do not read as "two surfaces"; they read as one surface rendered
  *    wrong. It also used `red-600` in five places, which is the DESTRUCTIVE colour, not the brand
