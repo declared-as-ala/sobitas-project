@@ -199,8 +199,8 @@ export function ProductsDropdown({
           // Mirrors the sibling nav links' shared underline vocabulary (HeaderClient.tsx): a 2px
           // accent bar that wipes in on hover and stays pinned when active. Desktop-only row, so the
           // 300ms after: transition is never hit by the mobile 0.2s clamp.
-          'group relative inline-flex items-center gap-1.5 h-full text-[14px] font-semibold whitespace-nowrap transition-colors duration-200 after:pointer-events-none after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-[#FF5A00] after:origin-left after:scale-x-0 after:transition-transform after:duration-300 after:ease-out hover:after:scale-x-100',
-          active ? 'text-[#FF5A00] after:scale-x-100' : 'text-[#111827] dark:text-gray-200 hover:text-[#FF5A00]'
+          'group relative inline-flex items-center gap-1.5 h-full text-[14px] font-semibold whitespace-nowrap transition-colors duration-200 after:pointer-events-none after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-brand after:origin-left after:scale-x-0 after:transition-transform after:duration-300 after:ease-out hover:after:scale-x-100',
+          active ? 'text-brand after:scale-x-100' : 'text-ink-1 dark:text-gray-200 hover:text-brand'
         )}
         loadingMessage="Chargement de la boutique..."
         onMouseEnter={prefetchShop}

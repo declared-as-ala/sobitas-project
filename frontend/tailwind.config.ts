@@ -138,6 +138,21 @@ const config: Config = {
         /** Focus ring colour, band-aware. Never put a scope class on a focusable element: the
          *  ring resolves in the element's own scope but paints on the PARENT band's surface. */
         focus: "rgb(var(--c-focus) / <alpha-value>)",
+        /**
+         * The foreground that sits ON the accent — `bg-brand text-on-brand`.
+         *
+         * NOT optional and NOT a constant. In light theme it is white on #D53B04 (4.71:1). In the
+         * slab scope and in dark theme the accent lightens to #FF8A4C, where white measures
+         * 2.34:1 and fails AA outright; `--c-on-brand` flips to #0A0A0B there (8.47:1).
+         *
+         * This entry was missing for one commit while eight call sites already used
+         * `text-on-brand`. Tailwind emits nothing for an undefined colour — no error, no warning —
+         * so every one of those buttons silently INHERITED its band's body ink instead. On the
+         * near-black header that rendered the pack CTA's label at 1.37:1. Caught by the automated
+         * contrast sweep, not by looking at it, which is the whole argument for running the sweep:
+         * a missing utility is invisible in review and invisible in the build.
+         */
+        "on-brand": "rgb(var(--c-on-brand) / <alpha-value>)",
         ink: {
           DEFAULT: "rgb(var(--c-ink-1) / <alpha-value>)",
           1: "rgb(var(--c-ink-1) / <alpha-value>)",

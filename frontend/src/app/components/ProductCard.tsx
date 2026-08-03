@@ -189,7 +189,7 @@ export const ProductCard = memo(function ProductCard({
   return (
     // GPT product-card design. Poppins + #FF5A00 accent, scoped to the card (card-first rollout).
     // MUST stay geometrically in lockstep with ProductCardSkeleton or the swap shifts layout.
-    <article className="group font-poppins flex h-full w-full min-w-0 flex-col overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-sm transition-shadow duration-200 ease-out [@media(hover:hover)]:hover:shadow-lg dark:border-gray-800 dark:bg-gray-900">
+    <article className="pt-plate group font-poppins flex h-full w-full min-w-0 flex-col overflow-hidden rounded-2xl border border-hairline shadow-sm transition-shadow duration-200 ease-out [@media(hover:hover)]:hover:shadow-lg">
       <div className="relative">
         <PackCardImage
           imageSrc={productData.image}
@@ -208,27 +208,27 @@ export const ProductCard = memo(function ProductCard({
         <button
           type="button"
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(toFavoriteProduct(product)); }}
-          className="pointer-events-auto absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-md ring-1 ring-black/5 transition-transform hover:scale-105 dark:bg-gray-800 dark:ring-white/10"
+          className="pointer-events-auto absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-elevated shadow-md ring-1 ring-hairline transition-transform hover:scale-105"
           aria-label={favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
         >
-          <Heart className={`h-[18px] w-[18px] ${favorite ? 'fill-[#FF5A00] text-[#FF5A00]' : 'text-[#6B7280] dark:text-gray-300'}`} />
+          <Heart className={`h-[18px] w-[18px] ${favorite ? 'fill-brand text-brand' : 'text-ink-3'}`} />
         </button>
 
         {/* Badges — top-left. Discount = the #FF5A00 accent; "TOP VENTE" = dark ink chip. */}
         <div className="pointer-events-none absolute left-3 top-3 z-10 flex flex-col items-start gap-1.5">
           {!inStock && (
-            <span className="inline-flex items-center rounded-lg bg-[#111827] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white shadow-sm">
+            <span className="inline-flex items-center rounded-lg bg-ink-1 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white shadow-sm">
               Rupture
             </span>
           )}
           {inStock && productData.priceDisplay.hasPromo && productData.discount > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-lg bg-[#FF5A00] px-2.5 py-1 text-[11px] font-bold tabular-nums tracking-wide text-white shadow-sm">
+            <span className="inline-flex items-center gap-1 rounded-lg bg-brand px-2.5 py-1 text-[11px] font-bold tabular-nums tracking-wide text-on-brand shadow-sm">
               <Flame className="h-3 w-3 shrink-0" aria-hidden="true" />
               -{productData.discount}%
             </span>
           )}
           {inStock && (productData.isBestSeller || (showBadge && badgeText)) && (
-            <span className="inline-flex items-center gap-1 rounded-lg bg-[#111827] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white shadow-sm">
+            <span className="inline-flex items-center gap-1 rounded-lg bg-ink-1 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white shadow-sm">
               <Star className="h-3 w-3 shrink-0 fill-[#FFB020] text-[#FFB020]" aria-hidden="true" />
               {badgeText || 'Top vente'}
             </span>
@@ -241,15 +241,15 @@ export const ProductCard = memo(function ProductCard({
         {/* Brand + verified — only when the name resolved (grid payload carries brand_id only). */}
         {brand && (
           <div className="flex min-w-0 items-center gap-1">
-            <span className="truncate text-[11px] font-semibold uppercase tracking-wide text-[#FF5A00]">{brand}</span>
-            <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-[#FF5A00]" aria-label="Marque authentique" />
+            <span className="truncate text-[11px] font-semibold uppercase tracking-wide text-brand">{brand}</span>
+            <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-brand" aria-label="Marque authentique" />
           </div>
         )}
 
         <LinkWithLoading href={buildProductUrlPath(product as any)} className="block min-w-0" loadingMessage="Chargement">
           <h3
             title={productData.name}
-            className="line-clamp-2 min-h-[2.75rem] text-[15px] font-bold leading-snug text-[#111827] transition-colors [@media(hover:hover)]:group-hover:text-[#FF5A00] dark:text-white"
+            className="line-clamp-2 min-h-[2.75rem] text-[15px] font-bold leading-snug text-ink-1 transition-colors [@media(hover:hover)]:group-hover:text-brand"
           >
             {productData.name}
           </h3>
@@ -258,10 +258,10 @@ export const ProductCard = memo(function ProductCard({
         {/* Rating. Numeric average only if the backend actually provides `note` (null in the grid
             today) — never fabricated. The review COUNT is real. */}
         {productData.reviewCount > 0 && (
-          <div className="flex items-center gap-1.5 text-[12px] text-[#6B7280]">
+          <div className="flex items-center gap-1.5 text-[12px] text-ink-3">
             <Star className="h-3.5 w-3.5 shrink-0 fill-[#FFB020] text-[#FFB020]" aria-hidden="true" />
             {productData.rating != null && (
-              <span className="font-semibold text-[#111827] dark:text-white">{productData.rating.toFixed(1)}</span>
+              <span className="font-semibold text-ink-1">{productData.rating.toFixed(1)}</span>
             )}
             <span>({productData.reviewCount} avis)</span>
           </div>
@@ -270,20 +270,26 @@ export const ProductCard = memo(function ProductCard({
         {/* Price + struck + savings */}
         <div className="flex flex-col gap-1">
           <div className="flex flex-nowrap items-baseline gap-2">
-            <span className="whitespace-nowrap text-2xl font-bold tabular-nums text-[#FF5A00]">
+            <span className="whitespace-nowrap text-2xl font-bold tabular-nums text-brand">
               {Math.round(productData.priceDisplay.finalPrice)} DT
             </span>
             {productData.priceDisplay.hasPromo && productData.priceDisplay.oldPrice != null && (
               <span
-                className="whitespace-nowrap text-sm text-[#6B7280] line-through tabular-nums"
+                className="whitespace-nowrap text-sm text-ink-3 line-through tabular-nums"
                 aria-label={`Prix barré: ${productData.priceDisplay.oldPrice.toFixed(2)} DT`}
               >
                 {Math.round(productData.priceDisplay.oldPrice)} DT
               </span>
             )}
           </div>
+          {/* `text-ink-1`, NOT `text-brand`. The accent on a 10% tint of ITSELF composites to
+              #D53B04 on #FBEBE6 = 4.07:1 in light theme — an AA failure invisible to review,
+              because both values are "the brand colour" and the pill obviously reads as orange.
+              (Dark is fine at 6.76:1; only light fails, which is the harder case to notice.)
+              Ink on the tint is 17.6:1 / 12:1 and the pill still reads as brand-tinted, because
+              the TINT carries the colour and the text does not have to. */}
           {productData.savings > 0 && (
-            <span className="inline-flex w-fit items-center rounded-md bg-[#FF5A00]/10 px-2 py-0.5 text-[11px] font-semibold text-[#FF5A00]">
+            <span className="inline-flex w-fit items-center rounded-md bg-brand/10 px-2 py-0.5 text-[11px] font-semibold text-ink-1">
               Économisez {Math.round(productData.savings)} DT
             </span>
           )}
@@ -295,12 +301,12 @@ export const ProductCard = memo(function ProductCard({
             When the payload carries no stock columns the chip is omitted entirely rather than
             guessed: a wrong "En stock" breaks a promise to the customer, and a wrong "Rupture"
             kills a sale outright. */}
-        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] font-medium text-[#6B7280]">
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] font-medium text-ink-3">
           {!stock.isUnknown && (
             <span className="inline-flex items-center gap-1">
               <CircleCheck
                 className={`h-3.5 w-3.5 shrink-0 ${
-                  stock.isOutOfStock ? 'text-[#6B7280]' : stock.isLowStock ? 'text-[#F59E0B]' : 'text-[#22C55E]'
+                  stock.isOutOfStock ? 'text-ink-3' : stock.isLowStock ? 'text-warn' : 'text-ok'
                 }`}
                 aria-hidden="true"
               />
@@ -323,8 +329,8 @@ export const ProductCard = memo(function ProductCard({
             size="sm"
             className={`flex w-full min-h-[46px] items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold leading-none whitespace-nowrap transition-all duration-150 active:scale-[0.98] ${
               inStock && canAddMore
-                ? 'bg-[#FF5A00] text-white shadow-md hover:bg-[#E85200] hover:shadow-lg'
-                : 'cursor-not-allowed bg-[#E5E7EB] text-[#6B7280] dark:bg-gray-700 dark:text-gray-400'
+                ? 'bg-brand text-on-brand shadow-md hover:bg-brand-hover hover:shadow-lg'
+                : 'cursor-not-allowed bg-sunken text-ink-3'
             }`}
             onClick={handleAddToCart}
             disabled={isAdding || !inStock || !canAddMore}
