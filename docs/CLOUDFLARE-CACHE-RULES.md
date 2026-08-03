@@ -112,12 +112,12 @@ all 468 `/_next/image` URLs on the homepage found 463 correctly AVIF and exactly
 which is the point: it only takes one request from one badly-behaved client, and the URL it lands
 on may be the most important image on the site.
 
-### Owner action: purge the poisoned entry
+### Owner action 1: purge the poisoned entry — DONE 2026-08-03
 
-**Caching → Configuration → Purge Everything.** (A single-URL purge would also work but the
-optimizer URL is long and easy to mistype; a full purge costs one cold window.)
+**Caching → Configuration → Purge Everything.** Verified afterwards: the hero preload returns
+`image/avif · 43 kB`, down from `image/jpeg · 78 kB`.
 
-### The fix: put the format in the cache key
+### Owner action 2: put the format in the cache key
 
 Cloudflare's cache key includes the **query string** on every plan. Next's optimizer reads only
 `url`, `w` and `q` and **ignores any extra parameter** — verified against the live origin:
@@ -128,22 +128,50 @@ Cloudflare's cache key includes the **query string** on every plan. Next's optim
 /_next/image?url=…&w=750&q=70&fmt=jpg    -> 200 image/jpeg  54,231 B   (separate cache entry)
 ```
 
-So a **URL Rewrite** that appends a format token derived from `Accept` gives one cache entry per
-format, on any plan, for free. The origin keeps negotiating exactly as it does today.
+So appending a format token derived from `Accept` gives one cache entry per format. The origin
+keeps negotiating exactly as it does today; only Cloudflare's filing changes.
 
-**Where:** Cloudflare dashboard → **protein.tn** → **Rules** → **Transform Rules** → **Rewrite URL**
-→ **Create rule**. Three rules. For each: leave **Path** on *Preserve*, set **Query** to
-**Rewrite to… → Dynamic**, and paste the value shown.
+> **Not Transform Rules — protein.tn is on the Cloudflare FREE plan.** Rewrite URL rules on Free
+> support *static* values only, and a static value cannot read the `Accept` header. An earlier
+> revision of this document specified three dynamic Rewrite URL rules; they are not creatable on
+> this account. **Snippets** are, and one snippet replaces all three.
 
-| # | Rule name | Match expression | Query value (Dynamic) |
-|---|---|---|---|
-| 1 | `img fmt: avif` | `starts_with(http.request.uri.path, "/_next/image") and any(http.request.headers["accept"][*] contains "image/avif")` | `concat(http.request.uri.query, "&fmt=avif")` |
-| 2 | `img fmt: webp` | `starts_with(http.request.uri.path, "/_next/image") and not any(http.request.headers["accept"][*] contains "image/avif") and any(http.request.headers["accept"][*] contains "image/webp")` | `concat(http.request.uri.query, "&fmt=webp")` |
-| 3 | `img fmt: base` | `starts_with(http.request.uri.path, "/_next/image") and not any(http.request.headers["accept"][*] contains "image/avif") and not any(http.request.headers["accept"][*] contains "image/webp")` | `concat(http.request.uri.query, "&fmt=base")` |
+**Where:** Cloudflare dashboard → **protein.tn** → **Rules** → **Snippets** → **Create Snippet**.
 
-**The three conditions are mutually exclusive by construction, so rule order does not matter.**
-That is deliberate, and it is the lesson from the post-mortem below: a design that depends on
-ordering is a design that will eventually be ordered wrong.
+Name: `image-format-cache-key`. Code:
+
+```js
+export default {
+  async fetch(request) {
+    const url = new URL(request.url);
+
+    // Already tagged (or a retry) — pass straight through, so this can never loop.
+    if (url.searchParams.has('fmt')) return fetch(request);
+
+    // Cloudflare ignores `Vary: Accept`, so without this every image format would share ONE
+    // cache entry and the first visitor's browser would decide the format for everyone.
+    const accept = request.headers.get('accept') || '';
+    const fmt = accept.includes('image/avif') ? 'avif'
+              : accept.includes('image/webp') ? 'webp'
+              : 'base';
+
+    url.searchParams.set('fmt', fmt);
+    return fetch(new Request(url.toString(), request));
+  },
+};
+```
+
+Match expression (**Edit expression**):
+
+```
+starts_with(http.request.uri.path, "/_next/image")
+```
+
+**Exactly one branch of that `if/else` chain can win, so there is no ordering to get wrong.** That
+is deliberate — see the post-mortem below, where a design that depended on rule ordering was
+ordered wrong.
+
+**Revert:** Rules → Snippets → toggle off, then Purge Everything. Immediate.
 
 Then **Purge Everything** again (the rewrite changes every image cache key) and verify:
 
