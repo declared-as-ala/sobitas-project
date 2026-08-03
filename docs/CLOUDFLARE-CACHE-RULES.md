@@ -153,19 +153,28 @@ expression with:
 Settings stay as they are: **Eligible for cache** · Edge TTL **Use cache-control header if present,
 bypass cache if not** · Browser TTL **Respect origin TTL**.
 
-**⚠️ Also check the `Cache static assets` rule.** If its expression matches `/_next/` broadly, it
-will also match `/_next/image` — and because Cache Rules are **last-match-wins**, whichever of the
-two sits lower would decide. Add this line to the static-assets rule so the two can never overlap:
+**The `Cache static assets` rule needed no change — verified, not assumed.** The concern was that if
+it matched `/_next/` broadly it would also match `/_next/image`, and last-match-wins would let it
+override the AVIF condition. Probed on the live site with a cold URL:
 
 ```
-and not starts_with(http.request.uri.path, "/_next/image")
+LEGACY client, same cold URL, 5 times:
+  DYNAMIC -> DYNAMIC -> DYNAMIC -> DYNAMIC -> DYNAMIC
+then an AVIF client on that same URL:  image/avif
 ```
 
-With that, the rules are disjoint and ordering is irrelevant again.
+Five legacy requests, never once cached. Nothing overrides the AVIF condition, so no exclusion line
+is required.
+
+> **Method note.** A first probe used `&q=75` and returned `DYNAMIC -> MISS`, which read as
+> "something is making legacy requests cacheable". It was a bad probe: `q=75` is a quality real
+> thumbnails use, so that URL was not cold. `MISS` is not proof of a rule problem and neither is a
+> single sample — the re-probe used an untouched source image at an unused quality and took five
+> samples. Cold-URL selection is part of the test, not a detail.
 
 **Revert:** put the old expression back and Purge Everything.
 
-Then **Purge Everything** and verify:
+Then verify:
 
 ```bash
 node frontend/scripts/check-edge-cache.mjs
