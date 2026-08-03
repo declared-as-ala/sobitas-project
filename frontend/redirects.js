@@ -11,6 +11,41 @@ function buildRedirects() {
       permanent: true,
     },
 
+    /**
+     * ── Partner vanity subdomains → apex + ?ref= ─────────────────────────
+     *
+     * `coach-ali.protein.tn/whey` → `protein.tn/whey?ref=coach-ali`
+     *
+     * Owner: "we can make it subdomain but point to same website, and the only thing change is
+     * the sub is unique so from the sub I know the ref — it looks more pro." This delivers exactly
+     * that: a partner hands out a subdomain, and the referral is carried without them ever seeing
+     * a query string.
+     *
+     * IT REDIRECTS RATHER THAN SERVING THE SITE ON THE SUBDOMAIN, and that is not a shortcut —
+     * serving would put a full, indexable copy of the entire catalogue on every partner hostname.
+     * `robots.ts`, `sitemap` and `canonical.ts` all bake `https://protein.tn` at build time, so N
+     * partners would mean N duplicate storefronts all pointing their canonicals at the apex while
+     * Google crawled them anyway. For a site whose central problem is indexation, that is the last
+     * thing to introduce. It would also fragment the Cloudflare cache once per partner, since the
+     * cache key includes the hostname.
+     *
+     * 307, NOT 308. A permanent redirect is cached by the browser forever against that hostname,
+     * so if a partner is ever renamed or removed, every device that visited keeps redirecting to
+     * a dead code. Attribution links must stay revocable.
+     *
+     * The `:sub` pattern excludes `www` and `admin` by construction — `www` is matched by the rule
+     * above and never reaches here, and `admin.protein.tn` resolves to the Laravel origin, not to
+     * this app. The character class also refuses dots, so it cannot match a deeper label.
+     *
+     * NOTE: this rule is inert until wildcard DNS exists. See docs/PARTNER-SUBDOMAINS.md.
+     */
+    {
+      source: '/:path*',
+      has: [{ type: 'host', value: '(?<sub>[a-z0-9](?:[a-z0-9-]{1,30}[a-z0-9])?)\\.protein\\.tn' }],
+      destination: 'https://protein.tn/:path*?ref=:sub',
+      permanent: false,
+    },
+
     // ── Locale prefix ─────────────────────────────────────────────────────
     p('/en', '/'),
     p('/en/', '/'),
