@@ -106,7 +106,7 @@ export function BrandsSection({ brands: brandsProp }: { brands?: Brand[] }) {
   // Fixed grid skeleton while fetching — reserves the final layout, zero layout shift.
   if (isLoading) {
     return (
-      <Section spacing="tight" width="wide" defer>
+      <Section surface="sunken" spacing="tight" width="wide" defer>
           <SectionHeader
             kicker="Partenaires officiels"
             title="Nos marques partenaires"
@@ -127,7 +127,7 @@ export function BrandsSection({ brands: brandsProp }: { brands?: Brand[] }) {
   }
 
   return (
-    <Section spacing="tight" width="wide" defer>
+    <Section surface="sunken" spacing="tight" width="wide" defer>
         <SectionHeader
           kicker="Partenaires officiels"
           title="Nos marques partenaires"

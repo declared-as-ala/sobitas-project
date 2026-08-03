@@ -5,7 +5,9 @@ import { CategoryRail } from '@/app/components/CategoryRail';
 import { Section } from '@/app/components/layout/Section';
 
 // Below-fold sections: defer JS evaluation until after first paint
-const FeaturesSection = dynamic(() => import('@/app/components/FeaturesSection').then(m => ({ default: m.FeaturesSection })), { ssr: true });
+// FeaturesSection is NOT imported here any more — it is rendered by Hero, as the foot of the hero
+// band. It was `dynamic()` for no benefit anyway: `{ ssr: true }` on a zero-JS server component
+// buys nothing and costs a chunk boundary.
 const VentesFlashSection = dynamic(() => import('@/app/components/VentesFlashSection').then(m => ({ default: m.VentesFlashSection })), { ssr: true });
 const ProductSection = dynamic(() => import('@/app/components/ProductSection').then(m => ({ default: m.ProductSection })), { ssr: true });
 const HomeDeferredSections = dynamic(() => import('@/app/components/HomeDeferredSections').then(m => ({ default: m.HomeDeferredSections })), { ssr: true });
@@ -168,30 +170,35 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
           Read this list top-to-bottom; it is the page's entire colour architecture and it is
           decided HERE, never inside a section component.
 
-              hero            canvas          artwork supplies the darkness
-              trust strip     sunken
-              catégories      canvas
-              plus vendus     sunken
-              ventes flash    canvas          + the four black countdown tiles
-              nouveautés      sunken
-              packs           canvas
+              hero + trust    canvas          artwork supplies the darkness; the trust row is a
+                                              CARD inside this band, not a band of its own
+              catégories      sunken
+              plus vendus     canvas
+              ventes flash    sunken          + the four black countdown tiles
+              nouveautés      canvas
+              packs           sunken
               promo strip     ORANGE          the one saturated band
-              blog            sunken
-              marques         canvas
-              bloc SEO        sunken
+              blog            canvas
+              marques         sunken
+              bloc SEO        canvas
 
-          TWO INVARIANTS:
+          TWO INVARIANTS, both asserted by scripts/measure-bands.mjs:
             1. No two adjacent bands share a surface, so the automatic 1px seam always has a
                colour change to reinforce and never has to carry a boundary alone.
             2. Exactly ONE saturated band and ZERO dark bands. v5 had five dark bands here; the
                owner's verdict was that black had stopped being emphasis and become the page.
                Black now appears only in the 36px utility bar, the countdown tiles, the hero
-               caption plate and the footer.
+               caption plate, the product badges and the footer.
 
-          THE TRUST STRIP SITS SECOND on purpose: the free-delivery threshold and "paiement à la
-          livraison" land BEFORE browsing rather than after it — the order a cash-on-delivery
-          shopper needs — and a `strip` band between two others deletes two of the page's measured
-          dead gaps (80+80 desktop, 96+48 mobile).
+          The whole sequence inverted when the trust row moved into the hero — it had been a band,
+          and removing a band from the middle of an alternating list flips every surface after it.
+          That is the cost of alternation and it is worth paying; the alternative is bands that
+          decide their own colour, which is how the page ended up with three 160px white-on-white
+          voids before v5.
+
+          The trust row still lands BEFORE browsing, which is the point: for a Tunisian
+          cash-on-delivery shopper the free-delivery threshold and "paiement à la livraison" are
+          objection-handling, and neither does much work after the products.
 
           `pt-defer` is a PROP on the Section, never on a wrapper: `content-visibility: auto`
           skips a subtree's paint but NOT the element's own box decoration, so a surface class on
@@ -199,7 +206,6 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
           `pt-reveal` stays on the outer div because it drives a `view()` timeline that must not
           sit inside a skipped subtree.
         */}
-        <FeaturesSection />
 
         {/* CategoryRail sits DIRECTLY under the hero (owner request): shopping paths one tap from
             the fold, no copy strip in between. The page's single <h1> used to live in that strip;
@@ -209,7 +215,7 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
 
 
 
-        {/* Les plus vendus — SUNKEN. The highest-intent rail on the site, so it carries the
+        {/* Les plus vendus — CANVAS. The highest-intent rail on the site, so it carries the
             page's largest heading (scale="1"). */}
         {(safeAccueil.best_sellers?.length ?? 0) > 0 && (
           <div className="pt-reveal" data-motion>
@@ -220,7 +226,6 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
               products={bestSellers as any}
               showBadge
               badgeText="Top Vendu"
-              surface="sunken"
               defer
             />
           </div>
@@ -242,7 +247,6 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
               products={newProducts as any}
               showBadge
               badgeText="New"
-              surface="sunken"
               defer
             />
           </div>
@@ -274,6 +278,7 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
               viewAllHref="/packs"
               viewAllLabel="Voir tous les packs"
               imageContext="packs"
+              surface="sunken"
               defer
             />
           </div>
@@ -288,7 +293,6 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
             `pt-defer` skips RENDERING it while off-screen; the markup is still fully present in
             the server-rendered HTML, which is what Googlebot reads. Asserted in verification. */}
         <Section
-          surface="sunken"
           spacing="tight"
           width="wide"
           defer

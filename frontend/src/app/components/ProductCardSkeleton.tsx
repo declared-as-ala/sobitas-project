@@ -16,21 +16,24 @@ import type { ProductImageMode } from '@/util/productImagePresentation';
  */
 export function ProductCardSkeleton({ mode = 'contain' }: { mode?: ProductImageMode }) {
   return (
-    <div className="flex h-full w-full min-w-0 flex-col overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
+    // Tokens, not `bg-white dark:bg-gray-900` + a hardcoded #E5E7EB border: this sits directly
+    // beside real ProductCards (`.pt-plate border-hairline`) and a skeleton on a different surface
+    // than the card it stands in for is a visible seam mid-grid.
+    <div className="pt-plate flex h-full w-full min-w-0 flex-col overflow-hidden rounded-2xl border border-hairline shadow-sm">
       <Skeleton className={cn('w-full rounded-none', productImageFrame(mode))} />
-      <div className="flex flex-1 flex-col gap-2 px-4 py-4">
+      {/* Geometry must match ProductCard's body EXACTLY or the skeleton→card swap shifts layout.
+          Four rows now, not six — the savings pill moved onto the price row and the third trust
+          chip is gone. Kept in lockstep by hand; there is no shared definition for the body. */}
+      <div className="flex flex-1 flex-col gap-1.5 px-3 py-3 sm:px-4 sm:py-4">
         {/* Title: two lines ≈ 44px, matching the card's min-h-[2.75rem] title box. */}
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-3/4" />
-        {/* Rating row */}
-        <Skeleton className="h-3.5 w-24" />
-        {/* Price + savings pill */}
-        <Skeleton className="h-7 w-28" />
-        <Skeleton className="h-4 w-32" />
-        {/* Trust chips */}
-        <Skeleton className="h-3.5 w-full" />
+        {/* Price row (price + struck + savings pill all on one line) */}
+        <Skeleton className="h-7 w-36" />
+        {/* Meta row — one line */}
+        <Skeleton className="h-3.5 w-2/3" />
         {/* CTA */}
-        <Skeleton className="mt-auto h-[46px] w-full rounded-xl" />
+        <Skeleton className="mt-auto h-[44px] w-full rounded-xl" />
       </div>
     </div>
   );

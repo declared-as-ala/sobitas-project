@@ -8,6 +8,7 @@ import Link from 'next/link';
 // square image + no-cramping treatment as every other rail. The promo -%\ badge already renders
 // from ProductCard's own price logic.
 import { ProductCard } from './ProductCard';
+import { ProductGrid } from './ProductGrid';
 import { Button } from '@/app/components/ui/button';
 import { Section } from '@/app/components/layout/Section';
 import { ArrowRight, Clock, Flame } from 'lucide-react';
@@ -118,7 +119,14 @@ const CountdownDisplay = memo(function CountdownDisplay({ expirationDate }: { ex
             key={label}
             className="pt-slab flex min-w-[3.75rem] flex-col items-center justify-center rounded-xl px-2 py-3 sm:min-w-[4.25rem]"
           >
-            <span className="font-display font-compressed text-[1.75rem] font-extrabold leading-none tabular-nums text-brand sm:text-[2.25rem]">
+            {/* `.pt-tick` puts a single 900ms fade on the SECONDS tile only — the one digit that
+                actually changes every second, so the motion carries information instead of just
+                being decoration. Desktop + no-reduced-motion only, same gate as the flame. */}
+            <span
+              className={`font-display font-compressed text-[1.75rem] font-extrabold leading-none tabular-nums text-brand sm:text-[2.25rem] ${
+                label === 'Sec' ? 'pt-tick' : ''
+              }`}
+            >
               {value == null ? '--' : String(value).padStart(2, '0')}
             </span>
             <span className="mt-1 text-[10px] uppercase tracking-wide text-ink-3">{label}</span>
@@ -207,7 +215,7 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
      */
     <Section
       id="ventes-flash"
-      surface="base"
+      surface="sunken"
       spacing="feature"
       width="wide"
       defer
@@ -218,8 +226,21 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
             of the countdown, so the number has to be kept in step by hand. */}
         <div className="mb-6 flex flex-col gap-6 sm:mb-8 sm:flex-row sm:items-end sm:justify-between lg:mb-10">
           <div className="min-w-0">
+            {/*
+              THE FLAME PULSES — the owner asked for "animation with a flash" on desktop.
+
+              CSS keyframes (`.pt-flame`, globals.css), NOT framer-motion. `motion` is a 0-import
+              dependency here and pulling it in for one 4-line loop would ship a ~34 kB animation
+              runtime plus a client boundary onto the LCP path, on a page where the owner's other
+              stated priority is mobile performance. A `@keyframes` rule costs bytes measured in
+              the tens and runs entirely on the compositor.
+
+              Gated to >=1024px and to `prefers-reduced-motion: no-preference` inside the rule
+              itself, so phones — where the CPU budget is tight and the mobile motion clamp already
+              caps transitions at 0.2s — get a static flame.
+            */}
             <span className="pt-kicker mb-2.5 inline-flex items-center gap-2 text-brand">
-              <Flame className="h-4 w-4" aria-hidden="true" />
+              <Flame className="pt-flame h-4 w-4" aria-hidden="true" />
               Offres limitées
             </span>
             <h2 className="font-display font-compressed text-[2rem] font-extrabold uppercase leading-[0.92] tracking-[-0.015em] text-ink-1 sm:text-[2.75rem] lg:text-[3.5rem]">
@@ -235,14 +256,16 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
           )}
         </div>
 
-        {/* Shared grid rhythm — matches ProductGrid (2 → 3 → 4, no orphan rows) */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 lg:gap-6">
+        {/* THE SHARED ProductGrid, not a copy of it. This hand-rolled the same class string with a
+            comment claiming it "matches ProductGrid" — and it had already drifted: when the grid
+            went 2-up on phones this stayed at `grid-cols-1`, so the flash band measured 2,415px on
+            a phone against 910px for the identical four-card rail directly above it. A comment
+            asserting two things match is not a mechanism for keeping them matched. */}
+        <ProductGrid>
           {products.map((product) => (
-            <div key={product.id} className="w-full min-w-0">
-              <ProductCard product={product as any} showBadge badgeText="Flash" />
-            </div>
+            <ProductCard key={product.id} product={product as any} showBadge badgeText="Flash" />
           ))}
-        </div>
+        </ProductGrid>
 
         <div className="mt-8 flex justify-center">
           <Button

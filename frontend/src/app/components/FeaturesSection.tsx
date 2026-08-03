@@ -1,56 +1,57 @@
-import { Truck, ShieldCheck, CreditCard, Headphones } from 'lucide-react';
-import { Section } from '@/app/components/layout/Section';
+import { Truck, ShieldCheck, Banknote, Headset } from 'lucide-react';
 
 /**
- * The trust / cash-on-delivery strip — the FOOT of the hero stage, not a band of its own.
+ * The trust / cash-on-delivery row — the FOOT OF THE HERO, not a band of its own.
  *
- * WHAT CHANGED, AND WHY IT MATTERS MORE THAN IT LOOKS
+ * ── WHY IT IS NO LONGER A <Section> ───────────────────────────────────────────────────────
+ * Owner, 2026-08-03: "the badges of shipping and those stuff — it looks like it's connected,
+ * there's no spacing between them and the slider, and it looks like it's wide. No need to be wide.
+ * Maybe you can make it as wide as the header up there."
  *
- * It used to be a white band between two other white bands. Measured on the live page at 1440px it
- * was 98px of content carrying 160px of dead white around it; at 390px it was ~352px of stacked
- * rows plus a 96px gap. It also sat BELOW the best-seller rail, so a first-time visitor met the
- * products before any of the reassurances that make them buy.
+ * Both halves of that are the same cause. As a full-bleed `surface="sunken"` band its FILL ran to
+ * the screen edges (so it read as "wide" next to a header whose content stops at the rail), and a
+ * band has no gap to its neighbour by design (so it read as glued to the slider).
  *
- * Now it is `surface="sunken"` + `spacing="strip"`, directly under the hero, so both dead gaps
- * disappear and "Livraison gratuite dès 300 DT / 100% authentique / Paiement à la livraison /
- * Support 7j/7" lands BEFORE browsing. For a Tunisian cash-on-delivery shopper that is the
- * objection-handling order: the free-delivery threshold is a basket driver and COD is the payment
- * reassurance, and neither does much work after the products.
+ * It is now a CARD rendered inside the hero band: same container as the slider and the header, a
+ * real `mt-4 lg:mt-6` above it, a hairline and a radius so it is visibly one object. It reads as
+ * the hero's footer, which is also what it is editorially — the reassurances that answer the
+ * banner's offer.
  *
- * SAND, NOT BLACK (v6). It was `surface="slab"`, which fused it to a black hero into one ~700px
- * dark mass. On sand it still separates cleanly from the white hero band above and the white
- * category rail below — a strip is the one place a 1.08:1 fill difference is enough, because it is
- * only 68px tall and the two 1px band seams bracket it.
+ * Keeping it inside the hero band is what preserves the canvas ⇄ sunken alternation. As a separate
+ * band on the page canvas it would have been the second white band in a row; see the sequence in
+ * HomePageClient.
  *
- * COLOUR IS TOKENS, NOT LITERALS — there is not a single `dark:` class here. The pale `bg-red-50`
- * icon chip is deleted; it was the last decorative container in the row. Icons are bare lucide
- * glyphs in `text-brand` = #D53B04 on sand. That measures 4.36:1, which is BELOW the 4.5:1 text
- * floor but comfortably above the 3:1 floor for graphical objects (WCAG 1.4.11) — and these are
- * icons, not text. The words beside them are `text-ink-1` (17.9:1) and `text-ink-2` (6.7:1). Do
- * not "tidy" the icon colour onto a label.
+ * ── MOBILE IS THE POINT ───────────────────────────────────────────────────────────────────
+ * At 390px the four labels wrapped to two and three lines each ("PAIEMENT À LA LIVRAISON" took
+ * three), so a 68px row became 96px of ragged text.
  *
- * DESCRIPTIONS ARE NOT CLIPPED AND NOT SET IN THE FAINTEST INK. They were `text-xs` in
- * `text-gray-500`. "Gratuite dès 300 DT, partout en Tunisie" is the highest-value string on the
- * page for average order value, and setting it in the lowest-contrast colour available was the
- * wrong trade. They are `text-ink-2` (11.33:1 on the slab).
+ * The first attempt shortened the labels to one word each — "LIVRAISON", "PAIEMENT" — and that was
+ * worse than the wrapping: "Livraison" alone says nothing a shopper did not assume, and the whole
+ * value of this row is the SPECIFICS (free over 300 DT, pay on delivery). Cutting the words cut
+ * the message.
  *
- * MOBILE IS A 2x2 GRID, NOT FOUR STACKED ROWS — all four reassurances on one screen instead of
- * being scrolled past one at a time.
+ * The type is what shrinks instead: 11px label / 10px description on phones against 14/12 from
+ * `sm`. In a 2-up grid at 390px each cell has ~124px of text column, and "PAIEMENT À LA LIVRAISON"
+ * in the compressed display face at 11px measures ~120px — one line. Every description also fits
+ * one line at 10px. Nothing is truncated and nothing is lost.
  *
- * Still a SERVER component with zero client JS. The `gap-px` background hack is replaced by real
- * `divide-*` rules, so cells no longer paint their own background just to fake dividers.
+ * COLOUR IS TOKENS. Icons are `text-brand` = #D03B04 on sand: 4.51:1, which clears the 4.5:1 text
+ * floor as well as the 3:1 graphical one. Labels are `text-ink-1` (17.9:1), descriptions
+ * `text-ink-2` (6.7:1).
+ *
+ * Still a SERVER component with zero client JS.
  */
 
 const features = [
-  { Icon: Truck, title: 'Livraison rapide', description: 'Gratuite dès 300 DT, partout en Tunisie' },
-  { Icon: ShieldCheck, title: '100% authentique', description: 'Produits originaux, certifiés' },
-  { Icon: CreditCard, title: 'Paiement à la livraison', description: 'Ou par carte bancaire' },
-  { Icon: Headphones, title: 'Support 7j/7', description: 'Une équipe à votre écoute' },
+  { Icon: Truck, title: 'Livraison rapide', description: 'Gratuite dès 300 DT' },
+  { Icon: ShieldCheck, title: '100% authentique', description: 'Produits certifiés' },
+  { Icon: Banknote, title: 'Paiement à la livraison', description: 'Ou par carte bancaire' },
+  { Icon: Headset, title: 'Support 7j/7', description: 'Une équipe à l’écoute' },
 ] as const;
 
 export function FeaturesSection() {
   return (
-    <Section surface="sunken" spacing="strip" width="wide" aria-labelledby="features-heading">
+    <section aria-labelledby="features-heading" className="mt-4 lg:mt-6">
       <h2 id="features-heading" className="sr-only">
         Pourquoi choisir Protéine Tunisie
       </h2>
@@ -58,30 +59,30 @@ export function FeaturesSection() {
       {/* 2x2 on phones, one row from md.
           `gap-px` over `bg-hairline`, NOT `divide-x divide-y`. Tailwind's `divide-x` compiles to
           `& > * ~ *`, which in a TWO-COLUMN grid puts a left border on child 3 as well — a stray
-          vertical rule hanging at the left edge of the second row. It was invisible while this
-          strip was black-on-black; on sand it is a visible defect. A 1px gap cannot be wrong about
+          vertical rule hanging at the left edge of the second row. A 1px gap cannot be wrong about
           which edges are interior, because it only ever paints where two cells actually meet. */}
-      <ul className="grid grid-cols-2 gap-px bg-hairline md:grid-cols-4">
+      <ul className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-hairline bg-hairline md:grid-cols-4">
         {features.map(({ Icon, title, description }) => (
           <li
             key={title}
-            /* 8px grid: gap-3 (12) → gap-4 (16), px-4 (16) → px-6 (24), py-3 (12). The v5 values
-               were gap-3.5 (14) / px-5 (20) / py-2.5 (10) — three off-grid numbers in one row. */
-            className="flex min-h-[68px] items-center gap-3 bg-sunken px-4 py-3 sm:gap-4 sm:px-6 md:min-h-0"
+            className="flex min-h-[56px] items-center gap-2 bg-sunken px-3 py-2.5 sm:min-h-[60px] sm:gap-3 sm:px-4 sm:py-3 md:min-h-0 lg:px-5"
           >
-            <Icon className="h-5 w-5 shrink-0 text-brand" strokeWidth={1.75} aria-hidden="true" />
+            <Icon
+              className="h-4 w-4 shrink-0 text-brand sm:h-5 sm:w-5"
+              strokeWidth={1.75}
+              aria-hidden="true"
+            />
             <div className="min-w-0">
-              <p className="font-display font-compressed text-[13px] font-bold uppercase leading-tight tracking-[0.03em] text-ink-1 sm:text-sm">
+              <p className="font-display font-compressed text-[11px] font-bold uppercase leading-tight tracking-[0.02em] text-ink-1 sm:text-sm sm:tracking-[0.03em]">
                 {title}
               </p>
-              {/* No clamp. See the note above: the 300 DT threshold is the point of this row. */}
-              <p className="mt-0.5 text-[11px] leading-snug text-ink-2 sm:text-[12px]">
+              <p className="mt-0.5 text-[10px] leading-snug text-ink-2 sm:text-[12px]">
                 {description}
               </p>
             </div>
           </li>
         ))}
       </ul>
-    </Section>
+    </section>
   );
 }

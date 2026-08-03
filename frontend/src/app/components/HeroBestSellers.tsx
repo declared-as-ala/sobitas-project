@@ -110,40 +110,44 @@ export function HeroBestSellers({ products }: { products: HeroBestSeller[] }) {
                 loadingMessage="Chargement..."
                 className="group flex h-full items-center gap-4 px-4 transition-colors duration-200 hover:bg-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
               >
-                {/* THE RANK. `aria-hidden` because the list order already conveys it to assistive
-                    tech, and "01" announced before every product name is noise. Set in the
-                    compressed display face at the SAME size as the price so the two read as a
-                    matched pair bracketing the row. */}
-                <span
-                  aria-hidden="true"
-                  /* `text-ink-3` (#6C6C73, 5.21:1), not `text-hairline`. A rank numeral set in the
-                     boundary colour is 1.09:1 — a ghost. It carries information, so it clears AA
-                     even though it is aria-hidden. */
-                  className="w-6 shrink-0 text-center font-display font-compressed text-[1.375rem] font-extrabold leading-none tabular-nums text-ink-3 transition-colors duration-200 group-hover:text-brand"
-                >
-                  {String(i + 1).padStart(2, '0')}
-                </span>
+                {/* 112px, up from 88 (owner: "the product's images look kind of small").
+                    The 24px the rank numeral used to occupy as its own column went straight into
+                    the image — the rank is now a chip ON the tile, which costs no row width at
+                    all. Panel widened 364→400px at the same time, so the name still gets ~200px
+                    and stays at two lines.
 
-                {/* 88px. The tile + hairline give cut-out pack shots an edge on a white card;
-                    without it they float with no boundary. */}
-                <span className="relative flex h-[88px] w-[88px] shrink-0 items-center justify-center overflow-hidden rounded-xl border border-hairline bg-sunken">
+                    The tile + hairline give cut-out pack shots an edge on a white card; without
+                    them they float with no boundary. */}
+                <span className="relative flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-hairline bg-sunken">
                   {p.image ? (
                     <Image
                       src={p.image}
                       alt=""
-                      width={88}
-                      height={88}
+                      width={112}
+                      height={112}
                       /* Below the LCP element in priority terms: the hero banner must win the
                          network. These are small and lazy so they never compete for it. */
                       loading="lazy"
-                      sizes="88px"
-                      className="h-full w-full object-contain p-2 transition-transform duration-300 ease-out group-hover:scale-[1.05] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+                      sizes="112px"
+                      className="h-full w-full object-contain p-1.5 transition-transform duration-300 ease-out group-hover:scale-[1.05] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
                     />
                   ) : null}
+
+                  {/* THE RANK, as a chip on the tile. `aria-hidden` because the list order already
+                      conveys it and "01" announced before every product name is noise.
+                      `.pt-slab` rather than `bg-ink-1`: this must stay dark in BOTH themes, and an
+                      ink token inverts (see ProductCard's badges for the bug that taught us). */}
+                  <span
+                    aria-hidden="true"
+                    className="pt-slab absolute left-0 top-0 rounded-br-lg rounded-tl-xl px-1.5 py-0.5 font-display font-compressed text-[11px] font-extrabold leading-none tabular-nums text-ink-1"
+                  >
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
                 </span>
 
-                {/* line-clamp-2. At 88px the name gets ~170px, which fits two lines of 13px text —
-                    and two lines is what lets three rows scan as a list instead of as prose. */}
+                {/* line-clamp-2. At 112px inside a 400px panel the name gets ~200px, which fits two
+                    lines of 13px text — and two lines is what lets three rows scan as a list
+                    instead of as prose. */}
                 <span className="flex min-w-0 flex-1 flex-col gap-2">
                   <span className="line-clamp-2 text-[13px] font-semibold leading-snug text-ink-1 transition-colors group-hover:text-brand">
                     {p.name}

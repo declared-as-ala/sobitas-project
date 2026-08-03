@@ -208,7 +208,10 @@ export const ProductCard = memo(function ProductCard({
         <button
           type="button"
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(toFavoriteProduct(product)); }}
-          className="pointer-events-auto absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-elevated shadow-md ring-1 ring-hairline transition-transform hover:scale-105"
+          /* 40x40 with a 44px tap area via `after:`, not a 36px box. In a 173px phone column the
+             visual control has to shrink, but the TARGET must not — 44px is the floor and the
+             pseudo-element buys it without making the circle look heavy on the packshot. */
+          className="pointer-events-auto absolute right-2 top-2 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-elevated shadow-md ring-1 ring-hairline transition-transform after:absolute after:-inset-1 after:content-[''] hover:scale-105 sm:right-3 sm:top-3"
           aria-label={favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
         >
           <Heart className={`h-[18px] w-[18px] ${favorite ? 'fill-brand text-brand' : 'text-ink-3'}`} />
@@ -224,20 +227,20 @@ export const ProductCard = memo(function ProductCard({
             The rule this establishes: an element that must stay dark in BOTH themes is a SCOPE
             (`.pt-slab`), never an ink token used as a fill. `bg-ink-1` means "the colour of type",
             and the colour of type is supposed to flip. */}
-        <div className="pointer-events-none absolute left-3 top-3 z-10 flex flex-col items-start gap-1.5">
+        <div className="pointer-events-none absolute left-2 top-2 z-10 flex flex-col items-start gap-1 sm:left-3 sm:top-3 sm:gap-1.5">
           {!inStock && (
-            <span className="pt-slab inline-flex items-center rounded-lg px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-ink-1 shadow-sm">
+            <span className="pt-slab inline-flex items-center rounded-lg px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-1 shadow-sm sm:px-2.5 sm:py-1 sm:text-[11px]">
               Rupture
             </span>
           )}
           {inStock && productData.priceDisplay.hasPromo && productData.discount > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-lg bg-brand px-2.5 py-1 text-[11px] font-bold tabular-nums tracking-wide text-on-brand shadow-sm">
+            <span className="inline-flex items-center gap-1 rounded-lg bg-brand px-2 py-0.5 text-[10px] font-bold tabular-nums tracking-wide text-on-brand shadow-sm sm:px-2.5 sm:py-1 sm:text-[11px]">
               <Flame className="h-3 w-3 shrink-0" aria-hidden="true" />
               -{productData.discount}%
             </span>
           )}
           {inStock && (productData.isBestSeller || (showBadge && badgeText)) && (
-            <span className="pt-slab inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-ink-1 shadow-sm">
+            <span className="pt-slab inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-1 shadow-sm sm:px-2.5 sm:py-1 sm:text-[11px]">
               <Star className="h-3 w-3 shrink-0 fill-[#FFB020] text-[#FFB020]" aria-hidden="true" />
               {badgeText || 'Top vente'}
             </span>
@@ -245,8 +248,21 @@ export const ProductCard = memo(function ProductCard({
         </div>
       </div>
 
-      {/* Body */}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 px-4 py-4">
+      {/*
+        Body — SIX stacked rows became FOUR (owner: "the card height is so long").
+
+        Rows are the expensive dimension on a card, because every one of them costs its own height
+        PLUS a gap. What changed:
+          · savings pill    moved onto the PRICE row (it is a property of the price, not a fact of
+                            its own) — removes a 20px row and its 8px gap
+          · "Paiement à la livraison"  deleted. It is already stated in the trust strip under the
+                            hero and again on the product page, and here it was the chip that
+                            wrapped the meta row onto a second line on every narrow column —
+                            costing ~20px on cards where it was pure repetition
+          · gap-2 → gap-1.5, py-4 → py-3.5 is NOT used (off the 4px lattice); padding stays 16px
+        Combined with the 5:4 image frame this takes the desktop card from ~608px to ~465px.
+      */}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-1.5 px-3 py-3 sm:px-4 sm:py-4">
         {/* Brand + verified — only when the name resolved (grid payload carries brand_id only). */}
         {brand && (
           <div className="flex min-w-0 items-center gap-1">
@@ -258,7 +274,9 @@ export const ProductCard = memo(function ProductCard({
         <LinkWithLoading href={buildProductUrlPath(product as any)} className="block min-w-0" loadingMessage="Chargement">
           <h3
             title={productData.name}
-            className="line-clamp-2 min-h-[2.75rem] text-[15px] font-bold leading-snug text-ink-1 transition-colors [@media(hover:hover)]:group-hover:text-brand"
+            /* 13px in a 173px phone column, 15 from `sm`. The `min-h` is the two-line reservation
+               that keeps every card in a row the same height — it scales with the size. */
+            className="line-clamp-2 min-h-[2.375rem] text-[13px] font-bold leading-snug text-ink-1 transition-colors sm:min-h-[2.75rem] sm:text-[15px] [@media(hover:hover)]:group-hover:text-brand"
           >
             {productData.name}
           </h3>
@@ -276,30 +294,32 @@ export const ProductCard = memo(function ProductCard({
           </div>
         )}
 
-        {/* Price + struck + savings */}
-        <div className="flex flex-col gap-1">
-          <div className="flex flex-nowrap items-baseline gap-2">
-            <span className="whitespace-nowrap text-2xl font-bold tabular-nums text-brand">
-              {Math.round(productData.priceDisplay.finalPrice)} DT
+        {/* Price · struck · savings — ONE row, wrapping only if it has to.
+            The savings pill used to be its own row beneath. It is a restatement of the difference
+            between the two numbers beside it, so it belongs on the same line as them; `flex-wrap`
+            plus `ml-auto` puts it at the right edge on a wide column and drops it under the price
+            only on a genuinely narrow one. */}
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+          <span className="whitespace-nowrap text-xl font-bold tabular-nums text-brand sm:text-2xl">
+            {Math.round(productData.priceDisplay.finalPrice)} DT
+          </span>
+          {productData.priceDisplay.hasPromo && productData.priceDisplay.oldPrice != null && (
+            <span
+              className="whitespace-nowrap text-[13px] text-ink-3 line-through tabular-nums sm:text-sm"
+              aria-label={`Prix barré: ${productData.priceDisplay.oldPrice.toFixed(2)} DT`}
+            >
+              {Math.round(productData.priceDisplay.oldPrice)} DT
             </span>
-            {productData.priceDisplay.hasPromo && productData.priceDisplay.oldPrice != null && (
-              <span
-                className="whitespace-nowrap text-sm text-ink-3 line-through tabular-nums"
-                aria-label={`Prix barré: ${productData.priceDisplay.oldPrice.toFixed(2)} DT`}
-              >
-                {Math.round(productData.priceDisplay.oldPrice)} DT
-              </span>
-            )}
-          </div>
+          )}
           {/* `text-ink-1`, NOT `text-brand`. The accent on a 10% tint of ITSELF composites to
-              #D53B04 on #FBEBE6 = 4.07:1 in light theme — an AA failure invisible to review,
+              #D03B04 on #FBEBE6 = 4.07:1 in light theme — an AA failure invisible to review,
               because both values are "the brand colour" and the pill obviously reads as orange.
               (Dark is fine at 6.76:1; only light fails, which is the harder case to notice.)
               Ink on the tint is 17.6:1 / 12:1 and the pill still reads as brand-tinted, because
               the TINT carries the colour and the text does not have to. */}
           {productData.savings > 0 && (
-            <span className="inline-flex w-fit items-center rounded-md bg-brand/10 px-2 py-0.5 text-[11px] font-semibold text-ink-1">
-              Économisez {Math.round(productData.savings)} DT
+            <span className="ml-auto inline-flex shrink-0 items-center rounded-md bg-brand/10 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-ink-1">
+              −{Math.round(productData.savings)} DT
             </span>
           )}
         </div>
@@ -310,33 +330,33 @@ export const ProductCard = memo(function ProductCard({
             When the payload carries no stock columns the chip is omitted entirely rather than
             guessed: a wrong "En stock" breaks a promise to the customer, and a wrong "Rupture"
             kills a sale outright. */}
-        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] font-medium text-ink-3">
+        {/* ONE line, never two. "Paiement à la livraison" is gone from the card: it is stated in
+            the trust strip under the hero and again on the product page, and it was the chip that
+            wrapped this row onto a second line in every narrow column — ~20px per card, spent on
+            repetition. Stock + delivery window are the two facts that are per-PRODUCT. */}
+        <div className="flex flex-nowrap items-center gap-x-2 overflow-hidden text-[10px] font-medium text-ink-3 sm:gap-x-3 sm:text-[11px]">
           {!stock.isUnknown && (
-            <span className="inline-flex items-center gap-1">
+            <span className="inline-flex min-w-0 items-center gap-1">
               <CircleCheck
                 className={`h-3.5 w-3.5 shrink-0 ${
                   stock.isOutOfStock ? 'text-ink-3' : stock.isLowStock ? 'text-warn' : 'text-ok'
                 }`}
                 aria-hidden="true"
               />
-              {stock.stockLabel}
+              <span className="truncate">{stock.stockLabel}</span>
             </span>
           )}
-          <span className="inline-flex items-center gap-1">
+          <span className="inline-flex shrink-0 items-center gap-1">
             <Truck className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             24–48h
           </span>
-          <span className="inline-flex items-center gap-1">
-            <Shield className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            Paiement à la livraison
-          </span>
         </div>
 
-        {/* CTA */}
+        {/* CTA. min-h 44, not 46: 44 is the tap-target floor and 46 was two pixels of nothing. */}
         <div className="mt-auto pt-1">
           <Button
             size="sm"
-            className={`flex w-full min-h-[46px] items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold leading-none whitespace-nowrap transition-all duration-150 active:scale-[0.98] ${
+            className={`flex w-full min-h-[44px] items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold leading-none whitespace-nowrap transition-colors duration-150 active:scale-[0.98] ${
               inStock && canAddMore
                 ? 'bg-brand text-on-brand shadow-md hover:bg-brand-hover hover:shadow-lg'
                 : 'cursor-not-allowed bg-sunken text-ink-3'
@@ -347,13 +367,21 @@ export const ProductCard = memo(function ProductCard({
           >
             <ShoppingCart className="size-4 shrink-0" aria-hidden="true" />
             {!inStock ? (
-              <span className="truncate">Rupture de stock</span>
+              <span className="truncate">Rupture</span>
             ) : !canAddMore ? (
               <span className="truncate">Stock max</span>
             ) : isAdding ? (
               <span className="truncate">Ajouté !</span>
             ) : (
-              <span className="truncate">Ajouter au panier</span>
+              /* "Ajouter" in a 173px phone column, the full label from `sm`. At 2-up the long
+                 label rendered as "Ajouter au p…" — a truncated CTA is a broken CTA.
+                 WCAG 2.5.3 (Label in Name) still holds: the accessible name below is
+                 "Ajouter {produit} au panier", which CONTAINS the visible string either way, so
+                 voice control still matches on what the user can see. */
+              <>
+                <span className="truncate sm:hidden">Ajouter</span>
+                <span className="hidden truncate sm:inline">Ajouter au panier</span>
+              </>
             )}
           </Button>
         </div>

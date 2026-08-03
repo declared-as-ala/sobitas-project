@@ -415,7 +415,7 @@
     "DS003": 39,
     "DS004": 5,
     "DS005": 2,
-    "DS006": 3,
+    "DS006": 1,
     "DS011": 4
   },
   "src/app/components/InstallAppBanner.tsx": {
@@ -472,12 +472,6 @@
   },
   "src/app/components/ProductCard.tsx": {
     "DS006": 4
-  },
-  "src/app/components/ProductCardSkeleton.tsx": {
-    "DS001": 2,
-    "DS002": 2,
-    "DS004": 1,
-    "DS006": 1
   },
   "src/app/components/ProductDetailSkeleton.tsx": {
     "DS001": 14,

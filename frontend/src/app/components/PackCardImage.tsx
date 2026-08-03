@@ -79,12 +79,15 @@ export function PackCardImage({
         loadingMessage="Chargement"
       >
         {imageSrc && !hasError ? (
-          // The padded box: `absolute inset-[9%]` for contain gives the packshot real, uniform
-          // breathing room. This is a POSITIONED, SIZED element, so the Image `fill` (which sets
+          // The padded box. This is a POSITIONED, SIZED element, so the Image `fill` (which sets
           // inline `inset:0`) fills THIS inset box — the old approach put padding on the link and
           // it was silently ignored, because fill's containing block was the padding box, so the
           // packshot went edge-to-edge. Cover mode fills the whole frame (inset-0).
-          <span className={cn('absolute block', isContain ? 'inset-[9%]' : 'inset-0')}>
+          //
+          // inset-[5%], down from 9%. The frame went square → 5:4 to shorten the card; dropping
+          // the inset gives most of that height back TO THE PACKSHOT rather than to padding, so
+          // the product shrinks ~5% instead of ~20%.
+          <span className={cn('absolute block', isContain ? 'inset-[5%]' : 'inset-0')}>
             <Image
               src={imageSrc}
               alt={imageAlt || productName}

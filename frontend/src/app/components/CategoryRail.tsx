@@ -64,39 +64,43 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
     /* `width="wide"` is `max-w-site` — the same rail as the hero and every other homepage band.
        No `surface`: HomePageClient already paints the page background, so a second one here was
        a redundant `dark:` pair. */
-    <Section spacing="tight" width="wide" aria-labelledby="category-rail-heading">
+    <Section surface="sunken" spacing="tight" width="wide" aria-labelledby="category-rail-heading">
+      {/* SCALE 3, and no kicker (owner: "that's a big title — no need. I just want to show the
+          user that they can browse by category and directly do that").
+
+          This band is pure navigation: it sells nothing, it just routes. At scale "2" (30/40px)
+          plus a kicker it was announcing itself louder than "Les plus vendus" directly below it,
+          which is the rail that actually converts. Scale "3" is 22/28px — enough to label the
+          grid, not enough to compete with it. The photographs are the content here. */}
       <SectionHeader
         id="category-rail-heading"
-        kicker="Par objectif"
         title="Acheter par objectif"
         viewAllHref="/shop"
         viewAllLabel="Tout voir"
-        /* "2" — a support band that carries navigation rather than merchandising. It goes
-           18/26px → 30/40px, which is the "make the font bigger" ask, but it stays a step below
-           the four rails that actually sell. */
-        scale="2"
+        scale="3"
       />
 
-      {/* THE GRID IS ALIGNED TO THE CONTAINER, not full-bleed (owner, 2026-08-03: "the header of
-          the search by category… and the cards… there's no padding for them").
+      {/* FULL-BLEED ON PHONES, CONTAINER-ALIGNED FROM `sm`.
+          Owner: "for mobile, browse by category — I want it full width, no padding for the images
+          so they can see it, and the text a bit bigger."
 
-          v5 pulled this grid out to the screen edges with `-mx-4 sm:-mx-6 lg:-mx-8` to buy wider
-          tiles. It did — and it also meant the section's own heading sat 16px in from the edge
-          while the tiles it labelled sat at 0. Two elements in the same band on two different
-          rails is what reads as "no padding": the eye sees the misalignment before it sees the
-          extra 36px of photograph. Alignment wins; it is the cheaper of the two by far.
+          `-mx-4` cancels the Container's own 16px gutters, so at 390px each tile goes 179 → 194px
+          wide: +17% image area for zero extra band height. The radius and the side borders come
+          off with it, because a rounded card that touches both screen edges reads as a rendering
+          fault rather than as a decision. From `sm` the grid returns to the rail and becomes one
+          rounded, bordered block again — there, alignment with the heading is what matters, and
+          that was the v6 fix the owner asked for on desktop.
 
-          Cost, measured: at 390px the tile goes 194 → 179px wide (−7.7%); at 1440 it is unchanged
-          at 256px, because the desktop grid was never gutter-bound. The mobile loss is worth an
-          edge the whole band shares.
+          The misalignment complaint and this one are not in conflict: on desktop the heading and
+          the grid share a rail; on a phone there is no rail to share, because the band is only
+          32px wider than the grid in the first place.
 
-          Still ONE OBJECT, not six cards: `gap-px` over `bg-rule` with a single `rounded-2xl`
-          clip and one hairline border around the whole block. Six separately-bordered rounded
-          cards on a white page is the WordPress category widget.
+          Still ONE OBJECT, not six cards: `gap-px` over `bg-rule`. Six separately-bordered rounded
+          cards is the WordPress category widget.
 
-          The `sm:grid-cols-3` tier is KEPT deliberately: dropping it would regress 640–1023px
-          from three tiles to two half-width ones. */}
-      <ul className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-hairline bg-rule sm:grid-cols-3 lg:grid-cols-6">
+          `sm:grid-cols-3` is KEPT deliberately: dropping it would regress 640–1023px from three
+          tiles to two half-width ones. */}
+      <ul className="-mx-4 grid grid-cols-2 gap-px overflow-hidden border-y border-hairline bg-rule sm:mx-0 sm:grid-cols-3 sm:rounded-2xl sm:border-x lg:grid-cols-6">
         {items.map((category) => {
           const href = `/${category.slug}`;
           const label = (category.designation_fr || '').trim();
@@ -139,20 +143,20 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
                       src={getStorageUrl(category.cover)}
                       alt={buildCategoryAlt(label)}
                       fill
-                      /* Re-derived for the container-aligned grid. Gutters 16/24/32 per side,
-                         gaps are 1px now (`gap-px`), `max-w-site` = 1600.
-                           mobile  2-up, aspect matches the 4:3 source → required = tile width.
-                                   (vw − 33)/2 peaks at 47.4vw @639 → 48vw.
-                           sm      3-up into a SQUARE tile from a 4:3 source → object-cover scales
-                                   by HEIGHT → required = tile × 4/3 = (4/3)(vw − 50)/3, peaking
-                                   at 42.3vw @1023 → 43vw.
+                      /* Re-derived for the full-bleed-on-mobile grid. Gaps are 1px (`gap-px`);
+                         gutters are 0 below `sm`, then 24/32 per side; `max-w-site` = 1600.
+                           mobile  2-up FULL-BLEED, aspect matches the 4:3 source → required =
+                                   tile width = (vw − 1)/2 ≈ 50vw.
+                           sm      3-up on the rail, into a SQUARE tile from a 4:3 source →
+                                   object-cover scales by HEIGHT → required = tile × 4/3 =
+                                   (4/3)(vw − 50)/3, peaking at 42.3vw @1023 → 43vw.
                            lg      (1600 − 64 − 5)/6 = 255.2px tile → × 4/3 = 340.2 → 350px
                                    (rounded up; vw includes the scrollbar).
                          Bucket check: Next filters `allSizes` by deviceSizes[0] × min(percent)/100
-                         = 480 × 0.43 = 206.4, against 201.6 before. Both land between the 128 and
-                         256 entries, so the candidate list is IDENTICAL and no new optimizer
-                         variants are generated — nothing is re-fetched by this change. */
-                      sizes="(min-width: 1024px) 350px, (min-width: 640px) 43vw, 48vw"
+                         = 480 × 0.43 = 206.4 — unchanged, because `sm` is still the smallest
+                         percentage in the string. Same candidate list, no new optimizer variants,
+                         nothing re-fetched. */
+                      sizes="(min-width: 1024px) 350px, (min-width: 640px) 43vw, 50vw"
                       quality={80}
                       /* Stays lazy on purpose: these sit just under the hero, and letting six
                          tiles compete with the preloaded hero image is how you lose LCP. */
@@ -192,8 +196,12 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
                     height, so a two-line category name grows the plate instead of being squeezed.
                     16px also equals the container gutter, so the label sits on the same left rail
                     as the section heading above it. */}
-                <div className="flex min-h-[56px] flex-1 items-center justify-between gap-3 px-4 py-4 transition-colors duration-200 group-hover:bg-sunken sm:min-h-[60px]">
-                  <span className="min-w-0 font-display font-compressed text-[13px] font-bold uppercase leading-tight tracking-[0.03em] text-ink-1 sm:text-sm">
+                <div className="flex min-h-[56px] flex-1 items-center justify-between gap-2 px-3 py-3 transition-colors duration-200 group-hover:bg-sunken sm:min-h-[60px] sm:gap-3 sm:px-4 sm:py-4">
+                  {/* 15px on phones (up from 13), 14 from `sm`. That inversion is deliberate: the
+                      phone tile is the widest this label ever gets relative to its column, and it
+                      is the only place the label is read at arm's length. Owner asked for bigger
+                      mobile text specifically. */}
+                  <span className="min-w-0 font-display font-compressed text-[15px] font-bold uppercase leading-tight tracking-[0.02em] text-ink-1 sm:text-sm">
                     {label}
                   </span>
                   <ArrowRight

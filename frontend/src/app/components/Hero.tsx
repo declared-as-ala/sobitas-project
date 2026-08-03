@@ -2,6 +2,7 @@ import { ArrowRight } from 'lucide-react';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { HeroSliderControls } from '@/app/components/HeroSliderIndicator';
 import { HeroBestSellers, type HeroBestSeller } from '@/app/components/HeroBestSellers';
+import { FeaturesSection } from '@/app/components/FeaturesSection';
 import { buildHeroImageSet, type HeroSlide, type HeroImageSet } from '@/util/heroImage';
 
 /**
@@ -155,12 +156,20 @@ function HeroCaption({ slide, hasControls }: { slide: HeroSlide | null; hasContr
         {/* `.pt-scrim` (tokens.css) is the plate AND the token scope in one class — the fill and
             the ink can no longer disagree. Everything inside is written in plain tokens, so the
             same markup would be correct if this plate were ever moved onto a light surface. */}
-        {/* No `backdrop-blur`. It was here from the gradient-scrim era, when the plate was thin
-            enough that blurring the artwork behind it did some work. At 86% opacity it is
-            invisible, and it forces a compositing layer directly over the LCP image on every page
-            load — which is why DESIGN_SYSTEM §9 bans it and scripts/lint-design.mjs (DS009) flags
-            it. Caught by the linter, not by eye. */}
-        <div className="pt-scrim inline-block max-w-[34rem] rounded-2xl px-5 py-4 sm:px-6 sm:py-5 lg:max-w-[38rem]">
+        {/* THE PLATE HUGS THE COPY (owner: "the text zone looks so big, and its background covers
+            the images of the slider").
+
+            It was `max-w-[34rem] px-5 py-4` growing to `38rem px-6 py-5` — a 608px-wide, ~180px-tall
+            rectangle over the middle of every banner. Two changes, no loss of legibility:
+              · max-width 34→26rem (30→30rem at lg). The copy is a subtitle, not a paragraph; at
+                26rem it still sets two comfortable lines and covers ~40% less artwork.
+              · padding 20/24 → 16/20. The plate is a legibility device, not a card.
+            The 86% fill is UNCHANGED and is not negotiable — it is the only reason the contrast on
+            this copy is knowable at all over an arbitrary upload (see .pt-scrim in tokens.css).
+
+            No `backdrop-blur`. At 86% opacity it is invisible, and it forces a compositing layer
+            directly over the LCP image on every page load — DESIGN_SYSTEM §9, lint rule DS009. */}
+        <div className="pt-scrim inline-block max-w-[26rem] rounded-2xl px-4 py-3.5 sm:px-5 sm:py-4 lg:max-w-[30rem]">
           {badge && (
             <span className="mb-3 inline-flex items-center rounded-md bg-brand px-2.5 py-1 font-display text-[10px] font-bold uppercase tracking-[0.16em] text-on-brand sm:mb-4 sm:text-[11px]">
               {badge}
@@ -170,7 +179,7 @@ function HeroCaption({ slide, hasControls }: { slide: HeroSlide | null; hasContr
           {title && (
             /* <p>, not a heading: the page's single <h1> is the SEO block in HomePageClient, and a
                rotating banner must not compete with it for the document outline. */
-            <p className="font-display font-compressed text-[2.1rem] font-extrabold uppercase leading-[0.92] tracking-tight text-ink-1 sm:text-5xl lg:text-[3.5rem] xl:text-6xl">
+            <p className="font-display font-compressed text-[1.875rem] font-extrabold uppercase leading-[0.92] tracking-tight text-ink-1 sm:text-[2.75rem] lg:text-[3.25rem]">
               {lead}
               {accent && (
                 <>
@@ -182,13 +191,16 @@ function HeroCaption({ slide, hasControls }: { slide: HeroSlide | null; hasContr
           )}
 
           {subtitle && (
-            <p className="mt-3 max-w-md text-sm font-medium leading-snug text-ink-2 sm:mt-4 sm:text-base">
+            /* line-clamp-3: the admin field is free text and a long paragraph would grow the plate
+               back to the size this change just removed. Three lines is a subtitle; more is a
+               landing page, and it belongs on the page the banner links to. */
+            <p className="mt-2.5 line-clamp-3 text-[13px] font-medium leading-snug text-ink-2 sm:mt-3 sm:text-[15px]">
               {subtitle}
             </p>
           )}
 
           {ctaLabel && (
-            <span className="mt-5 inline-flex min-h-[48px] items-center gap-2.5 rounded-full bg-brand px-6 font-display text-sm font-bold uppercase tracking-[0.08em] text-on-brand transition-colors duration-200 group-hover:bg-brand-hover sm:mt-6 sm:px-7 sm:text-[15px]">
+            <span className="mt-4 inline-flex min-h-[44px] items-center gap-2 rounded-full bg-brand px-5 font-display text-[13px] font-bold uppercase tracking-[0.08em] text-on-brand transition-colors duration-200 group-hover:bg-brand-hover sm:mt-5 sm:px-6 sm:text-sm">
               {ctaLabel}
               <ArrowRight
                 className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
@@ -352,7 +364,7 @@ export function Hero({ slides, fallbackAlt, bestSellers = [] }: HeroProps) {
       data-band-first=""
       aria-label="Bannière principale"
       {...(slides.length > 1 ? { 'aria-roledescription': 'carrousel' } : {})}
-      className="w-full bg-canvas pb-0 pt-0 sm:pt-4"
+      className="w-full bg-canvas pb-8 pt-0 sm:pt-4 lg:pb-12"
     >
       {/*
         The SITE container, byte-for-byte: `mx-auto max-w-site px-4 sm:px-6 lg:px-8`. The header,
@@ -369,12 +381,26 @@ export function Hero({ slides, fallbackAlt, bestSellers = [] }: HeroProps) {
         <div
           className={
             showAside
-              ? 'grid w-full grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_364px] xl:gap-6'
+              ? 'grid w-full grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_400px] xl:gap-6'
               : 'w-full'
           }
         >
           {slider}
           {showAside && <HeroBestSellers products={bestSellers} />}
+        </div>
+
+        {/* THE TRUST ROW LIVES HERE, inside the hero band and on the hero's own container.
+            It used to be a separate full-bleed `sunken` band, which is what made it read as both
+            "glued to the slider" (bands have no gap by design) and "wider than the header" (its
+            fill ran to the screen edges while the header's content stops at the rail). As a card
+            in this container it is exactly as wide as the header above it, and it carries its own
+            `mt-4 lg:mt-6`. See FeaturesSection for the rest.
+
+            The one wrinkle: on phones the slider is full-bleed (`px-0` above) while this row is
+            not, so it needs the gutters back. `px-4 sm:px-0` does that without giving the artwork
+            side padding it must not have. */}
+        <div className="px-4 sm:px-0">
+          <FeaturesSection />
         </div>
       </div>
     </section>

@@ -335,6 +335,34 @@ export function HeaderClient() {
               <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden />
               <span>{PHONE_FIXE}</span>
             </a>
+            <span className="h-3 w-px shrink-0 bg-rule" aria-hidden="true" />
+            {/*
+              WHATSAPP LIVES HERE NOW, not in the nav row (owner: "find a way for the WhatsApp
+              button on desktop, and you can choose another icon for it").
+
+              It was a filled #25D366 pill sitting immediately beside the orange pack CTA — two
+              saturated buttons, 12px apart, competing at the loudest point of the chrome. In the
+              contact strip it sits with the two phone numbers and the address, which is where a
+              shopper looks for a way to reach a shop, and it stops fighting the one button on the
+              page that is supposed to win.
+
+              It also permanently settles the contrast problem. WhatsApp green is somebody else's
+              brand, so it cannot be a token and cannot flip with the theme — and no single green
+              literal passes AA on both a white bar and a near-black one. This strip is `.pt-slab`,
+              i.e. dark in BOTH themes, so #25D366 measures 8.53:1 here and is simply correct.
+            */}
+            <a
+              href={buildWhatsAppHref()}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={WHATSAPP_ARIA_LABEL}
+              className="flex shrink-0 items-center gap-1.5 font-medium text-[#25D366] transition-opacity hover:opacity-80"
+            >
+              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="currentColor" aria-hidden="true">
+                <path d={WHATSAPP_ICON_PATH} />
+              </svg>
+              <span>WhatsApp</span>
+            </a>
           </div>
           <a
             href={MAPS_URL}
@@ -603,36 +631,15 @@ export function HeaderClient() {
                 })}
               </div>
 
-              {/* WhatsApp, promoted out of the floating bubble and into the nav (owner request).
-                  On desktop the FAB sat in the bottom-right corner, far from the moment someone
-                  decides to ask a question; here it sits beside the pack CTA where the intent is.
-                  The floating button is hidden from `md` up so there is exactly ONE WhatsApp
-                  affordance per breakpoint — see WhatsAppFab.
+              {/* WhatsApp used to sit HERE, as a filled green pill 12px from the orange pack CTA.
+                  Two saturated buttons side by side is two primary actions, which is none — and
+                  the owner called it out directly. It moved up into the dark contact strip at the
+                  top of this file, where the green is both legible in either theme and next to the
+                  phone numbers a shopper is already scanning for. The desktop nav row now has
+                  exactly ONE button, and it is the one that sells.
 
-                  FILLED, NOT OUTLINED, and that is a contrast fix rather than a restyle. The
-                  outlined version set the label in #25D366, which measured 5.87:1 while the nav
-                  was a black slab and 1.98:1 the moment it became white — a hard AA failure found
-                  by scripts/audit-contrast.mjs. No single green literal can pass on both a white
-                  and a near-black bar, and this cannot use a token because WhatsApp green must
-                  NOT flip with the theme; it is someone else's brand.
-
-                  Inverting it solves that permanently: the FILL is the literal (so recognition is
-                  preserved and it is identical in both themes) and the label is near-black on it
-                  at 9.92:1. It stays visually secondary to the orange pack CTA by being smaller
-                  and by using a hue no other control on the site uses. */}
-              <a
-                href={buildWhatsAppHref()}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={WHATSAPP_ARIA_LABEL}
-                className="shrink-0 inline-flex items-center gap-2 rounded-lg bg-[#25D366] px-3 py-2 text-[14px] font-semibold text-[#0A0A0B] transition-colors duration-200 hover:bg-[#1EBE5A] active:scale-[0.98] whitespace-nowrap"
-              >
-                <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="currentColor" aria-hidden="true">
-                  <path d={WHATSAPP_ICON_PATH} />
-                </svg>
-                {/* Label only where the nav has room; the icon + aria-label carry it below xl. */}
-                <span className="hidden xl:inline">WhatsApp</span>
-              </a>
+                  There is still exactly one WhatsApp affordance per breakpoint: the floating
+                  bubble (WhatsAppFab) is `md:hidden` and covers phones. */}
 
               {packBuilderLink && (
                 <NavigationLink

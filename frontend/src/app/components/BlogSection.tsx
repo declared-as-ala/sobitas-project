@@ -100,7 +100,7 @@ export function BlogSection({ articles }: BlogSectionProps) {
   const displayArticles = articles.slice(0, MAX_ARTICLES);
 
   return (
-    <Section surface="sunken" spacing="tight" width="wide" defer>
+    <Section spacing="tight" width="wide" defer>
       <SectionHeader
         kicker="Le blog"
         title="Nos derniers articles"

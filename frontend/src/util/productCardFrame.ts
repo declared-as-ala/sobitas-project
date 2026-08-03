@@ -16,13 +16,27 @@ import type { ProductImageMode } from '@/util/productImagePresentation';
  * client boundary along with it.
  */
 export const PRODUCT_IMAGE_FRAME: Record<ProductImageMode, string> = {
-  // SQUARE for object-contain. Supplement packshots (tubs, bottles) are roughly square, so a 4:5
-  // portrait frame left big empty top/bottom margins that read as "dirty / half-empty". A square
-  // frame hugs the product, is consistent at every breakpoint, and is the standard e-commerce
-  // packshot box. The whole packshot still stays visible (object-contain).
-  contain: 'aspect-square',
-  cover: 'h-[220px] sm:h-[240px] lg:h-[260px] xl:h-[280px]',
-  'cover-zoom': 'h-[220px] sm:h-[240px] lg:h-[260px] xl:h-[280px]',
+  /**
+   * 5:4 LANDSCAPE for object-contain, down from `aspect-square`.
+   *
+   * The square frame made the image box as tall as the card was wide — 350px on a 4-up desktop
+   * grid — which is what made the card ~608px tall and the page long enough that the owner asked
+   * to "use the width better than the height".
+   *
+   * 5:4 is the widest ratio that does not shrink the PRODUCT. The packshot is `object-contain`
+   * inside `inset-[9%]`, so a tub roughly 1:1 is height-constrained in both frames: at 350px wide
+   * the rendered packshot is ~286px square in a square box and ~229px square in a 5:4 box. That
+   * is a 20% smaller product for 70px less card — a bad trade on its own, which is why the inset
+   * drops from 9% to 5% at the same time (PackCardImage). Net: ~271px of packshot, 5% smaller,
+   * for a card that is 70px shorter. Across the homepage's five card rows that is ~350px of
+   * scrolling removed.
+   *
+   * `aspect-[5/4]`, not a fixed height: the box must scale with the column so the grid stays
+   * fluid, and a definite ratio still reserves the box before the image loads (CLS 0).
+   */
+  contain: 'aspect-[5/4]',
+  cover: 'h-[200px] sm:h-[220px] lg:h-[240px]',
+  'cover-zoom': 'h-[200px] sm:h-[220px] lg:h-[240px]',
 };
 
 export function productImageFrame(mode: ProductImageMode = 'contain'): string {
