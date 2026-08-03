@@ -30,28 +30,43 @@ function getErrorStatus(e: unknown): number | null {
   return null;
 }
 
+/**
+ * NO `searchParams` HERE. This is deliberate, and removing it is the fix for a 500 that took down
+ * every product without a subcategory.
+ *
+ * This route is ISR: `revalidate = 300` plus `generateStaticParams` (see the note at the bottom)
+ * puts it in the Full Route Cache, so Next renders it in a STATIC context and stores the result.
+ * `searchParams` is per-request data. Reading it in a statically-rendered route throws
+ * `DYNAMIC_SERVER_USAGE`, which surfaces as a bare 500.
+ *
+ * WHY IT HID FOR SO LONG. Almost every product HAS a subcategory, and those `permanentRedirect`
+ * to `/{subcat}/{slug}` — the redirect unwinds the render before the failure can matter, so they
+ * 301 correctly. Only a product with NO subcategory falls through and actually renders this page.
+ * Until someone created one, that branch had never executed in production.
+ *
+ * It also survives `next build`, which is what makes it so easy to ship: at build time there is no
+ * request, so `searchParams` is inert. Verified both halves — forcing the slug into
+ * `generateStaticParams` prerenders it with no error, while requesting the same slug on-demand
+ * from `next start` throws `DYNAMIC_SERVER_USAGE`. A green build proves nothing here.
+ *
+ * WHAT WAS LOST, AND WHY THAT IS THE RIGHT TRADE. `searchParams` fed exactly one thing: appending
+ * the incoming query string (UTMs) to the category URL when a product 404s. That is a redirect off
+ * a legacy URL for a product that no longer exists — the rarest path on the site — and preserving
+ * campaign parameters through it is worth far less than every subcategory-less product being
+ * reachable at all. The alternative, `export const dynamic = 'force-dynamic'`, would fix the crash
+ * by making EVERY product page uncacheable, trading a rare 500 for a permanent TTFB regression on
+ * the site's most important template.
+ */
 export type PageProps = {
   params: Promise<{ slug: string }>;
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
 // ISR: revalidate every 5min for product pages
 export const revalidate = 300;
 
-/** Build /:slug category URL and preserve query params (UTM, etc.) for redirect. */
-function buildCategoryRedirectUrl(
-  slug: string,
-  searchParams: Record<string, string | string[] | undefined> | undefined
-): string {
-  const base = `/${encodeURIComponent(slug)}`;
-  if (!searchParams || Object.keys(searchParams).length === 0) return base;
-  const q = new URLSearchParams();
-  Object.entries(searchParams).forEach(([key, value]) => {
-    if (Array.isArray(value)) value.forEach((v) => q.append(key, String(v)));
-    else if (value != null && value !== '') q.set(key, String(value));
-  });
-  const query = q.toString();
-  return query ? `${base}?${query}` : base;
+/** Build the /:slug category URL a missing product redirects to. */
+function buildCategoryRedirectUrl(slug: string): string {
+  return `/${encodeURIComponent(slug)}`;
 }
 
 /** CTR-optimized product title for Tunisia SERP (aim: position #1). Format: Product Name – Prix Tunisie & Livraison Rapide | Protéine Tunisie */
@@ -104,11 +119,10 @@ function ensureProductionDomain(url: string, fallbackPath: string): string {
   }
 }
 
-export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const cleanSlug = slug?.trim();
   if (!cleanSlug) return { title: 'Produit | Protéine Tunisie' };
-  const search = searchParams ? await searchParams : undefined;
   try {
     const product = await getCachedProductDetails(cleanSlug);
     if (product?.id) {
@@ -142,7 +156,7 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   } catch (e) {
     unstable_rethrow(e);
     if (getErrorStatus(e) === 404) {
-      permanentRedirect(buildCategoryRedirectUrl(cleanSlug, search));
+      permanentRedirect(buildCategoryRedirectUrl(cleanSlug));
     }
     // TRANSIENT: rethrow so a throttled backend yields an uncached 5xx, not a 200 titled
     // "Produit | Protéine Tunisie" with no canonical. Matches the page body, which already rethrows.
@@ -156,12 +170,10 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
  * Now redirects with 301 to new SEO-friendly URL /{sousCategorySlug}/{productSlug}
  * unless the product has no subcategory (edge case).
  */
-export default async function ShopProductPage({ params, searchParams }: PageProps) {
+export default async function ShopProductPage({ params }: PageProps) {
   const { slug } = await params;
   const cleanSlug = slug?.trim();
   if (!cleanSlug) notFound();
-
-  const search = searchParams ? await searchParams : undefined;
 
   // 1) Try product first
   let product: Product | null = null;
@@ -171,7 +183,7 @@ export default async function ShopProductPage({ params, searchParams }: PageProp
     unstable_rethrow(e);
     if (getErrorStatus(e) === 404) {
       // Product not found → try category redirect
-      permanentRedirect(buildCategoryRedirectUrl(cleanSlug, search));
+      permanentRedirect(buildCategoryRedirectUrl(cleanSlug));
     }
     // Transient failure: rethrow instead of caching a wrong 404 on this ISR route.
     throw e;
@@ -179,7 +191,7 @@ export default async function ShopProductPage({ params, searchParams }: PageProp
 
   if (!product?.id) {
     // Product not found → redirect to category
-    permanentRedirect(buildCategoryRedirectUrl(cleanSlug, search));
+    permanentRedirect(buildCategoryRedirectUrl(cleanSlug));
   }
 
   const safeProduct = product!;
