@@ -33,7 +33,23 @@ const IGNORE = [
   /ResizeObserver loop/i,             // benign browser-internal, fires from Radix measurements
   /Download the React DevTools/i,
   /\[Fast Refresh\]/i,
+  // Next's App Router cancels its own in-flight RSC prefetches when a link leaves the viewport or
+  // the page navigates. An aborted `?_rsc=` request is the router working correctly, not a failure.
+  /[?&]_rsc=.*ERR_ABORTED/,
 ];
+
+/**
+ * KNOWN DEV-ONLY NOISE — do NOT add to IGNORE.
+ *
+ * `/shop` reports a hydration mismatch on Radix's generated `aria-controls` IDs
+ * (`radix-_R_6f95…` vs `radix-_R_pt4…`) against `next dev`. Verified NOT to occur against a
+ * production build (`NEXT_DIST_DIR=.next-verify npm run build` + `next start`), because it comes
+ * from the dev server's double-render changing React's `useId` sequence.
+ *
+ * It is recorded here rather than silenced so that a REAL id mismatch — which would look identical
+ * — is not swallowed. Reproduce against a production server before concluding anything about
+ * hydration.
+ */
 
 const CHROME = [
   process.env.PUPPETEER_EXECUTABLE_PATH,
@@ -58,7 +74,11 @@ for (const route of ROUTES) {
   const found = [];
   const record = (kind, text) => {
     if (IGNORE.some((re) => re.test(text))) return;
-    found.push(`${kind}: ${text.replace(/\s+/g, ' ').slice(0, 300)}`);
+    // `--full` prints the whole message. React's hydration error carries the actual server-vs-client
+    // DIFF several hundred characters in, so the truncated form tells you a mismatch exists and
+    // nothing about where — which is the only part you need.
+    const limit = process.argv.includes('--full') ? 4000 : 300;
+    found.push(`${kind}: ${text.replace(/\s+/g, ' ').slice(0, limit)}`);
   };
   page.on('console', (m) => {
     if (m.type() === 'error' || m.type() === 'warning') record(m.type(), m.text());
