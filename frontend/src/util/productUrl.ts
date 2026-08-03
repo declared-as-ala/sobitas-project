@@ -121,6 +121,8 @@ export function isReservedRouteSlug(slug: string): boolean {
     //   human → 200, "Composez votre pack — Protéine Tunisie"
     // scripts/check-reserved-routes.mjs now fails the build if this list drifts from app/ again.
     'pack-builder',
+    // Caught by that same check on its first build — which is the point of having it.
+    'partenaires',
     'api',
     'admin',
     '_next',

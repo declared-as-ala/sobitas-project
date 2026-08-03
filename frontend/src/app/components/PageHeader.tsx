@@ -9,6 +9,16 @@ interface PageHeaderProps {
   subtitle?: string;
   /** Optional slot below the header — breadcrumbs, filters, count, CTA, etc. */
   children?: ReactNode;
+  /**
+   * A single control that belongs BESIDE the title rather than under it — the page's secondary
+   * door (e.g. "Accès Pro" on the pack builder), never its primary action.
+   *
+   * It sits on the title's baseline row from `sm` up and drops to its own row on a phone, because
+   * below 640px a title and a button on one line leaves ~140px for a compressed 30px headline and
+   * the headline is what the page is. Use `children` for anything that is a group of things;
+   * this slot is deliberately singular so a page cannot grow a toolbar here by accident.
+   */
+  action?: ReactNode;
   /** Center the header (used on auth / marketing pages). Defaults to left-aligned. */
   align?: 'left' | 'center';
   /** Render the title as an <h1> (default) or <h2> for secondary page sections. */
@@ -25,6 +35,7 @@ export function PageHeader({
   title,
   subtitle,
   children,
+  action,
   align = 'left',
   as = 'h1',
 }: PageHeaderProps) {
@@ -35,20 +46,29 @@ export function PageHeader({
     <header className={centered ? 'text-center' : ''}>
       {kicker && (
         <span
-          className={`pt-kicker inline-flex items-center gap-2 mb-2 text-red-600 dark:text-red-400 ${
+          className={`pt-kicker inline-flex items-center gap-2 mb-2 text-brand ${
             centered ? 'justify-center' : ''
           }`}
         >
-          <span className="h-px w-5 bg-red-600 dark:bg-red-400" aria-hidden="true" />
+          <span className="h-px w-5 bg-brand" aria-hidden="true" />
           {kicker}
         </span>
       )}
-      <Title className="font-display font-compressed uppercase tracking-tight leading-[0.95] font-extrabold text-gray-950 dark:text-white text-3xl sm:text-4xl lg:text-5xl">
-        {title}
-      </Title>
+      <div
+        className={
+          action
+            ? 'flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-6'
+            : undefined
+        }
+      >
+        <Title className="font-display font-compressed uppercase tracking-tight leading-[0.95] font-extrabold text-ink-1 text-3xl sm:text-4xl lg:text-5xl">
+          {title}
+        </Title>
+        {action && <div className="shrink-0">{action}</div>}
+      </div>
       {subtitle && (
         <p
-          className={`mt-3 text-sm sm:text-base text-gray-600 dark:text-gray-400 ${
+          className={`mt-3 text-sm sm:text-base text-ink-2 ${
             centered ? 'mx-auto max-w-2xl' : 'max-w-2xl'
           }`}
         >

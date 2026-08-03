@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { PageHeader } from '@/app/components/PageHeader';
@@ -13,7 +14,7 @@ import { getEffectivePrice } from '@/util/productPrice';
 import { getStockDisponible } from '@/util/cartStock';
 import type { Product, PackQuote } from '@/types';
 import { toast } from 'sonner';
-import { Plus, Minus, Trash2, ShoppingCart, Percent, Loader2, Package, TrendingUp } from 'lucide-react';
+import { Plus, Minus, Trash2, ShoppingCart, Percent, Loader2, Package, TrendingUp, BadgeCheck } from 'lucide-react';
 import { PackAdvisor, type AdvisorResult } from './PackAdvisor';
 
 export interface PackBuilderGroup {
@@ -167,6 +168,22 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
           kicker="Pack sur mesure"
           title="Composez votre pack"
           subtitle="Répondez à une question, ajustez les quantités, et la remise groupée s'applique toute seule : plus votre pack est important, plus vous économisez."
+          action={
+            /* Coaches and gyms buy packs repeatedly and at volume — this page is where they
+               already are, so it is where the professional programme is worth naming. Outlined,
+               not filled: the filled brand button on this page is "Ajouter au panier", and two
+               solid orange CTAs competing for the same eye is how the primary one gets ignored. */
+            <Link
+              href="/partenaires"
+              className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-hairline bg-canvas px-4 text-sm font-semibold text-ink-1 transition-colors [@media(hover:hover)]:hover:border-brand [@media(hover:hover)]:hover:text-brand"
+            >
+              <BadgeCheck className="h-4 w-4 text-brand" aria-hidden="true" />
+              <span>
+                Accès Pro
+                <span className="hidden text-ink-3 sm:inline"> — coachs &amp; salles</span>
+              </span>
+            </Link>
+          }
         />
 
         {/* The guided entry point. Everything below it still works untouched for a visitor who

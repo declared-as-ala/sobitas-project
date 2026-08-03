@@ -18,6 +18,7 @@ import { WhatsAppFab } from "@/app/components/WhatsAppFab";
 // the entire header inside the tap handler. See CartDrawerHost for the measurements.
 import { CartDrawerHost } from "@/app/components/CartDrawerHost";
 import { MobileTabBar } from "@/app/components/MobileTabBar";
+import { ReferralCapture } from "@/app/components/ReferralCapture";
 import { LOCALE_STORAGE_KEY } from "@/i18n";
 
 const inter = Inter({
@@ -297,6 +298,7 @@ export default async function RootLayout({
             {/* Mounted once here, not per page, so it never remounts on navigation. */}
             <MobileTabBar />
             <CartDrawerHost />
+            <ReferralCapture />
           </Providers>
         </ThemeProvider>
       </body>
