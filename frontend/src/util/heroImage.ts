@@ -68,19 +68,28 @@ const STATIC_HERO = {
   height: 941,
 } as const;
 
+/**
+ * A slide is an IMAGE, a destination and an alt string. Nothing else.
+ *
+ * Owner, 2026-08-03, after reviewing with a client: "take off all the text shown on the slide.
+ * The slide will be like edge to edge — generate an image in any graphic-design tool and put it in
+ * the slider, and that's all. No descriptions, no buttons, no badges. Just the image and the alt
+ * of the image."
+ *
+ * `badge`, `title`, `subtitle` and `ctaLabel` are GONE from the type, not merely unused, so a call
+ * site cannot quietly reintroduce an overlay. The columns still exist in the database and the API
+ * still returns them; the mapper in siteChrome.server.ts reads `title` only as a fallback SOURCE
+ * for `alt`, which is where that text belongs now — describing the artwork rather than covering it.
+ */
 export type HeroSlide = {
   id: number | string;
   /** Absolute desktop image URL (already through getStorageUrl). */
   imageUrl: string;
   /** Optional dedicated phone crop; falls back to imageUrl. */
   imageMobileUrl?: string | null;
-  /** Short pill above the headline ("Nouveauté"). Blank = no pill. */
-  badge?: string | null;
-  /** A newline splits it: first line white, the rest accent orange (see Hero.splitTitle). */
-  title?: string | null;
-  subtitle?: string | null;
-  ctaLabel?: string | null;
+  /** Where the banner links. Blank falls back to /shop — a commerce hero is always tappable. */
   href?: string | null;
+  /** Describes the artwork. The ONLY text a slide carries, and it is never painted on the image. */
   alt?: string | null;
 };
 
@@ -134,7 +143,7 @@ export function buildHeroImageSet(slide: HeroSlide | null, eager: boolean, fallb
   // the frame. Reusing the desktop URL keeps it sharp and, because both entries are then the same
   // string, collapses the two preloads into one request instead of two.
   const mobileSrc = slide.imageMobileUrl ? optimized(slide.imageMobileUrl, MOBILE_WIDTH) : desktopSrc;
-  const alt = slide.alt || slide.title || fallbackAlt;
+  const alt = slide.alt?.trim() || fallbackAlt;
 
   // When there is no dedicated phone crop both breakpoints resolve to the same URL, so the
   // <source> and the second preload would be pure duplication — and two <link>s sharing an href

@@ -1,4 +1,3 @@
-import { ArrowRight } from 'lucide-react';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { HeroSliderControls } from '@/app/components/HeroSliderIndicator';
 import { HeroBestSellers, type HeroBestSeller } from '@/app/components/HeroBestSellers';
@@ -24,26 +23,38 @@ import { buildHeroImageSet, type HeroSlide, type HeroImageSet } from '@/util/her
  * LCP path ships no JavaScript. Exactly one client island (HeroSliderControls) drives the
  * scroll-snap track for arrows/dots/autoplay, and it renders nothing at all for a single slide.
  *
- * LEGIBILITY POLICY. The artwork is shown at full opacity when the slide has NO caption — the
- * owner bakes copy into some banners and a scrim over those would dim their own text.
+ * ── A SLIDE IS AN IMAGE. THAT IS THE WHOLE POLICY. ────────────────────────────────────────
+ * Owner, 2026-08-03, after reviewing with a client: "take off all the text shown on the slide —
+ * the slide will be edge to edge. Generate an image in any graphic-design tool, put it in the
+ * slider, and that's all. No descriptions, no buttons, no badges. Just the image and its alt."
  *
- * When a caption IS present the copy sits on a SOLID PLATE, not on a gradient. The admin uploads
- * arbitrary artwork, so a scrim's contrast is unknowable: measured over a blown-out white banner,
- * the old gradient's mid-stop composited to #BFBFBF and white text on it was 1.84:1 — a severe AA
- * failure that appeared only for certain uploads, which is the worst kind of bug to own. The plate
- * composites to at worst #2F2F30, where white text is 13.4:1 no matter what the photograph is.
- * Contrast is a floor, not a preference (WCAG 1.4.3). The gradient is kept purely as a blend.
+ * So the badge, the two-tone headline, the subtitle, the CTA button, the solid legibility plate
+ * and the gradient scrim are all DELETED — not hidden behind a flag, not left as unused props.
+ * The type in util/heroImage.ts no longer carries the fields, so there is nowhere for an overlay
+ * to come back from without a deliberate change.
  *
- * COLOUR. The BAND is the page canvas; only the caption PLATE is dark, and it carries `.pt-scrim`,
- * so `bg-brand` / `text-brand` / `text-on-brand` inside it resolve to the slab-scoped accent
- * (#FF8A4C, 8.47:1 with near-black on it) while everything outside the plate stays in page scope.
- * They used to be `bg-brand-500` with white on top — #F8480C under white is 3.55:1 and fails AA
- * outright. brand-500 remains a GRAPHICAL accent only; it must never carry text.
+ * Three things follow from that, and all three are improvements rather than costs:
+ *
+ *   LEGIBILITY STOPS BEING OUR PROBLEM. The plate existed because a scrim over an arbitrary admin
+ *   upload can never be proven to clear 4.5:1 — measured over a blown-out banner the old gradient
+ *   composited to #BFBFBF and white copy on it was 1.84:1. With no copy on the artwork there is no
+ *   contrast ratio to fail. Whoever designs the banner controls its own legibility, in the tool
+ *   where they can see it.
+ *
+ *   THE ARROWS STOP COLLIDING. Measured at 390px, the two 44px chevrons sat at x 8–52 and 338–382
+ *   while the caption plate spanned x 20–370 — both arrows overlapped the copy on every slide.
+ *   With no copy, they overlap nothing.
+ *
+ *   THE LCP PAINT GETS SIMPLER. The band no longer stacks a full-bleed gradient and an 86%-opaque
+ *   rounded plate over the LCP image, so the largest paint is the image and nothing else.
+ *
+ * `alt` is the only text a slide carries and it is never drawn — it describes the artwork for
+ * search engines and screen readers, which is the job the title was doing badly.
  */
 
 /**
- * The admin's "Lien du bouton" is free text with no URL validation on the Filament side, so two
- * natural mistakes have to be absorbed here rather than shipping a broken CTA:
+ * The admin's slide link is free text with no URL validation on the Filament side, so two natural
+ * mistakes have to be absorbed here rather than shipping a broken banner:
  *   "www.protein.tn/shop"  → treated by the browser as a RELATIVE path (/…/www.protein.tn/shop)
  *   "shop/proteines"       → same problem, resolves against the current path
  * Anything already absolute or root-relative passes through untouched. Returns null for blank
@@ -56,17 +67,6 @@ function normalizeHref(raw?: string | null): string | null {
   // A bare host (contains a dot before the first slash) is an external link missing its scheme.
   if (/^[^/]+\.[^/]+/.test(href)) return `https://${href}`;
   return `/${href}`;
-}
-
-/**
- * Split the admin's title into its white first line and the accent-orange remainder.
- * "Alimente\nTa performance" → ["Alimente", "Ta performance"]. A single-line title stays all
- * white, so the two-tone headline is opt-in and no existing slide changes appearance.
- */
-function splitTitle(title: string): { lead: string; accent: string } {
-  const lines = title.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-  if (lines.length <= 1) return { lead: lines[0] ?? '', accent: '' };
-  return { lead: lines[0], accent: lines.slice(1).join(' ') };
 }
 
 interface HeroProps {
@@ -108,152 +108,44 @@ function HeroPicture({ set, eager }: { set: HeroImageSet; eager: boolean }) {
 }
 
 /**
- * Caption block: badge → two-tone headline → subtitle → CTA. Anchored to the bottom on phones and
- * vertically centred from `md` up, which is where the approved design puts it.
+ * One banner: an image, wrapped in a link. Nothing is drawn on top of it.
  *
- * Renders NOTHING when every field is blank — an image-only banner stays exactly as uploaded.
- * The whole slide is one link, so the CTA is a styled <span>, never a nested <a>.
+ * There is no caption, no scrim and no `hasControls` prop any more. `hasControls` existed solely
+ * to reserve bottom padding so the copy cleared the arrows/dots rail; with no copy there is
+ * nothing to clear, and the slider's own controls sit over artwork the designer laid out knowing
+ * they would be there.
  */
-function HeroCaption({ slide, hasControls }: { slide: HeroSlide | null; hasControls: boolean }) {
-  const badge = slide?.badge?.trim() || '';
-  const title = slide?.title?.trim() || '';
-  const subtitle = slide?.subtitle?.trim() || '';
-  const ctaLabel = slide?.ctaLabel?.trim() || '';
-
-  if (!badge && !title && !subtitle && !ctaLabel) return null;
-
-  const { lead, accent } = splitTitle(title);
-
-  return (
-    <div className="absolute inset-0 z-20 flex items-end md:items-center">
-      {/* On phones the copy sits at the bottom, so it must clear the controls rail — but ONLY when
-          there is a rail. A single-slide banner renders no controls, and reserving the space anyway
-          left a visible band of dead pixels under the CTA. */}
-      {/* THE LEFT PADDING CLEARS THE ARROW RAIL. Measured on the live site, the previous values
-          put the caption UNDERNEATH the previous-slide button at every width from 768px up:
-
-            768px   28px of overlap        1280px   4px
-            1024px  12px of overlap        1440px   4px
-
-          The arrow is `absolute left-2 sm:left-4` at 44x44 (HeroSliderIndicator), so from `sm` it
-          occupies 16–60px. The caption padded 32/48/56px — always short of 60. On phones the
-          caption is bottom-anchored while the arrows are vertically centred, so there is no
-          collision there and `px-5` is kept to let the copy use the full width of a small screen.
-          72px from `sm` clears the button with 12px to spare. */}
-      <div
-        className={`w-full px-5 sm:pl-[4.5rem] sm:pr-8 md:pb-0 lg:pl-20 lg:pr-12 xl:pl-24 xl:pr-14 ${hasControls ? 'pb-24' : 'pb-8 sm:pb-10'}`}
-      >
-        {/* A SOLID PLATE, not a gradient.
-            The admin uploads arbitrary artwork, so a scrim's contrast is unknowable: over a
-            blown-out white banner a `from-black/70` gradient composites to roughly #4D4D4D and
-            white body copy on it measures ~2.9:1 — a hard AA failure that only appears for
-            certain uploads, which is the worst kind. #0A0A0B at 85% composites to at worst
-            #2F2F30 over pure white; white on that is 13.4:1 and the brand accent 5.7:1,
-            regardless of the photograph. Legibility becomes a property of the component instead
-            of a property of the image someone happened to upload.
-            `inline-block` so the plate hugs the copy rather than always painting a full-width
-            slab — an image-only slide already renders nothing at all (see the guard above). */}
-        {/* `.pt-scrim` (tokens.css) is the plate AND the token scope in one class — the fill and
-            the ink can no longer disagree. Everything inside is written in plain tokens, so the
-            same markup would be correct if this plate were ever moved onto a light surface. */}
-        {/* THE PLATE HUGS THE COPY (owner: "the text zone looks so big, and its background covers
-            the images of the slider").
-
-            It was `max-w-[34rem] px-5 py-4` growing to `38rem px-6 py-5` — a 608px-wide, ~180px-tall
-            rectangle over the middle of every banner. Two changes, no loss of legibility:
-              · max-width 34→26rem (30→30rem at lg). The copy is a subtitle, not a paragraph; at
-                26rem it still sets two comfortable lines and covers ~40% less artwork.
-              · padding 20/24 → 16/20. The plate is a legibility device, not a card.
-            The 86% fill is UNCHANGED and is not negotiable — it is the only reason the contrast on
-            this copy is knowable at all over an arbitrary upload (see .pt-scrim in tokens.css).
-
-            No `backdrop-blur`. At 86% opacity it is invisible, and it forces a compositing layer
-            directly over the LCP image on every page load — DESIGN_SYSTEM §9, lint rule DS009. */}
-        <div className="pt-scrim inline-block max-w-[26rem] rounded-2xl px-4 py-3.5 sm:px-5 sm:py-4 lg:max-w-[30rem]">
-          {badge && (
-            <span className="mb-3 inline-flex items-center rounded-md bg-brand px-2.5 py-1 font-display text-[10px] font-bold uppercase tracking-[0.16em] text-on-brand sm:mb-4 sm:text-[11px]">
-              {badge}
-            </span>
-          )}
-
-          {title && (
-            /* <p>, not a heading: the page's single <h1> is the SEO block in HomePageClient, and a
-               rotating banner must not compete with it for the document outline. */
-            <p className="font-display font-compressed text-[1.875rem] font-extrabold uppercase leading-[0.92] tracking-tight text-ink-1 sm:text-[2.75rem] lg:text-[3.25rem]">
-              {lead}
-              {accent && (
-                <>
-                  <br />
-                  <span className="text-brand">{accent}</span>
-                </>
-              )}
-            </p>
-          )}
-
-          {subtitle && (
-            /* line-clamp-3: the admin field is free text and a long paragraph would grow the plate
-               back to the size this change just removed. Three lines is a subtitle; more is a
-               landing page, and it belongs on the page the banner links to. */
-            <p className="mt-2.5 line-clamp-3 text-[13px] font-medium leading-snug text-ink-2 sm:mt-3 sm:text-[15px]">
-              {subtitle}
-            </p>
-          )}
-
-          {ctaLabel && (
-            <span className="mt-4 inline-flex min-h-[44px] items-center gap-2 rounded-full bg-brand px-5 font-display text-[13px] font-bold uppercase tracking-[0.08em] text-on-brand transition-colors duration-200 group-hover:bg-brand-hover sm:mt-5 sm:px-6 sm:text-sm">
-              {ctaLabel}
-              <ArrowRight
-                className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
-                aria-hidden="true"
-              />
-            </span>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/** One banner: image, legibility scrim (captioned slides only), caption. */
 function HeroSlideFrame({
   slide,
   eager,
   fallbackAlt,
   position,
-  hasControls = false,
 }: {
   slide: HeroSlide | null;
   eager: boolean;
   fallbackAlt: string;
   /** 1-based index + total, passed only in the multi-slide slider so links get distinct names. */
   position?: { index: number; total: number };
-  /** True when the controls rail is rendered, so the caption reserves room for it. */
-  hasControls?: boolean;
 }) {
   const set = buildHeroImageSet(slide, eager, fallbackAlt);
   // A commerce hero should always be tappable; default to the shop when the admin left the link
-  // blank. The banner is one big link, so the caption's button is a <span> (no nested anchors).
+  // blank. The whole banner is the link — that is what replaces the CTA button.
   const href = normalizeHref(slide?.href) || '/shop';
 
-  const hasCaption = Boolean(
-    slide?.badge?.trim() || slide?.title?.trim() || slide?.subtitle?.trim() || slide?.ctaLabel?.trim()
-  );
-
-  // aria-label is set ONLY for an image-only banner. When a caption is present its visible text —
-  // crucially the CTA — must FORM the link's accessible name (WCAG 2.5.3, Label-in-Name). For
-  // image-only slides in a multi-slide track, append the position so each link is distinguishable
-  // (WCAG 2.4.4). The title may contain the two-tone newline, so collapse whitespace first.
-  const baseLabel = slide?.title?.trim().replace(/\s+/g, ' ') || slide?.alt?.trim() || fallbackAlt;
-  const ariaLabel = hasCaption
-    ? undefined
-    : position && position.total > 1
+  // The link has no visible text, so it needs an accessible name, and `alt` is now the only place
+  // one can come from. In a multi-slide track the position is appended so two banners can never
+  // present as the same link (WCAG 2.4.4). The <img> keeps the same alt; a screen reader announces
+  // the link by its aria-label, so the two do not double up.
+  const baseLabel = slide?.alt?.trim() || fallbackAlt;
+  const ariaLabel =
+    position && position.total > 1
       ? `${baseLabel} — diapositive ${position.index} sur ${position.total}`
       : baseLabel;
 
   return (
     <LinkWithLoading
       href={href}
-      {...(ariaLabel ? { 'aria-label': ariaLabel } : {})}
+      aria-label={ariaLabel}
       loadingMessage="Chargement..."
       /* ring-INSET: the frame is overflow-hidden, which would clip a normal focus outline drawn at
          the border box. An inset ring paints inside the box so the keyboard focus indicator on this
@@ -261,21 +153,6 @@ function HeroSlideFrame({
       className="group absolute inset-0 block focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-white"
     >
       <HeroPicture set={set} eager={eager} />
-
-      {/* Legibility scrim, captioned slides only. Vertical on phones (copy sits at the bottom),
-          left-weighted from md up (copy sits left of centre) — so it darkens the text area and
-          leaves the product shot on the right of the artwork untouched. */}
-      {/* The gradient stays as a BLEND between the artwork and the caption plate, but it is no
-          longer what makes the copy legible — the solid plate in HeroCaption does that. A gradient
-          over an arbitrary admin upload can never be proven to clear 4.5:1; a solid plate can. */}
-      {hasCaption && (
-        <span
-          aria-hidden="true"
-          className="absolute inset-0 z-10 bg-gradient-to-t from-black/70 via-black/25 to-transparent md:bg-gradient-to-r md:from-black/70 md:via-black/25 md:to-transparent"
-        />
-      )}
-
-      <HeroCaption slide={slide} hasControls={hasControls} />
     </LinkWithLoading>
   );
 }
@@ -324,7 +201,6 @@ export function Hero({ slides, fallbackAlt, bestSellers = [] }: HeroProps) {
                 eager={index === 0}
                 fallbackAlt={fallbackAlt}
                 position={{ index: index + 1, total: slides.length }}
-                hasControls
               />
             </div>
           ))}

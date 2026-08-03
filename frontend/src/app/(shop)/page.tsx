@@ -159,14 +159,8 @@ export default async function Home() {
       // No cache-bust param: it would change the URL on every render, breaking both the
       // preload↔paint match and the optimizer's 30-day cache.
       imageMobileUrl: s.cover_mobile ? getStorageUrl(s.cover_mobile) : null,
-      // NOT `(s as { badge?: … }).badge` — that cast is how this silently returned null for
-      // months: getServerSlides() never mapped `badge`, and the cast suppressed the type error
-      // that would have said so. ServerSlide now declares the field, so a future omission fails
-      // the build instead of quietly removing the pill from every slide.
-      badge: s.badge,
-      title: s.title,
-      subtitle: s.subtitle,
-      ctaLabel: s.cta_label,
+      // Image, destination, description. Nothing is painted over the artwork any more — see the
+      // policy note at the top of components/Hero.tsx.
       href: s.link,
       alt: s.alt,
     }));

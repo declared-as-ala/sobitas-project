@@ -105,27 +105,19 @@ export async function getServerFooter(): Promise<ServerFooterData> {
  * A failure (or an empty list) returns [] and the hero falls back to its built-in static image —
  * see buildHeroImageSet. That keeps the CI-build case safe too, where the public API 403s.
  */
+/**
+ * A slide, as the storefront needs it: an image, a destination, and a description.
+ *
+ * `title`, `subtitle`, `cta_label` and `badge` are gone (owner, 2026-08-03 — "no descriptions, no
+ * buttons, no badges, just the image and its alt"). The COLUMNS still exist and the API still
+ * returns them; nothing is dropped from the database and this change is reversible. They simply
+ * stop crossing into the render layer, so there is no path by which text can reappear over the
+ * artwork. See util/heroImage.ts.
+ */
 export type ServerSlide = {
   id: number | string;
   cover: string | null;
   cover_mobile: string | null;
-  title: string | null;
-  subtitle: string | null;
-  cta_label: string | null;
-  /**
-   * The short pill above the headline ("NOUVEAUTÉ", "PRISE DE MASSE").
-   *
-   * This field was MISSING from the type and from the mapper below, while app/page.tsx read
-   * `(s as { badge?: string | null }).badge` off the result — a cast onto an object that never
-   * carried the property, so the cast silenced the only error that would have caught it. The
-   * badge therefore resolved to null for every slide and the pill has never rendered, no matter
-   * what the admin typed. Verified against the live API, which returns
-   * `"badge": "PRISE DE MASSE"` for slide 11 while the page showed no pill.
-   *
-   * Declared here rather than cast at the call site precisely so the next omission is a type
-   * error instead of a silent null.
-   */
-  badge: string | null;
   link: string | null;
   alt: string | null;
 };
@@ -177,12 +169,12 @@ export async function getServerSlides(): Promise<ServerSlidesResult> {
         // names, but this keeps working if either side is deployed first.
         cover: s.cover ?? s.image ?? null,
         cover_mobile: s.cover_mobile ?? s.image_mobile ?? null,
-        title: s.title ?? s.titre ?? null,
-        subtitle: s.subtitle ?? s.sous_titre ?? null,
-        cta_label: s.cta_label ?? null,
-        badge: s.badge ?? null,
         link: s.link ?? s.lien ?? null,
-        alt: s.alt ?? null,
+        // `title` is kept ONLY as a fallback SOURCE for alt, never as something rendered. Every
+        // existing slide already has a titre typed by the owner, and it describes the artwork
+        // perfectly well — throwing it away would have left those banners with generic alt text
+        // and cost real image-search signal for no reason. New slides fill `alt` directly.
+        alt: s.alt ?? s.title ?? s.titre ?? null,
       }));
 
     return { slides, failed: false };
